@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
@@ -86,7 +87,6 @@ type
     FGUIDProps: TZInterbase6StatementGUIDProps;
     FISC_TR_HANDLE: TISC_TR_HANDLE;
     FIBConnection: IZInterbase6Connection;
-    FTinyBuffer: Array[Byte] of AnsiChar;
     FClientCP: word;
   protected
     procedure Open; override;
@@ -164,7 +164,9 @@ type
     function IsAutoIncrement({%H-}ColumnIndex: Integer): Boolean; override;
   End;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
 {$IFNDEF FPC}
@@ -1259,7 +1261,6 @@ function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len:
 var
   TempDate: TZTimeStamp;
   XSQLVAR: PXSQLVAR;
-  dDT,tDT: TDateTime;
   label set_Results;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1334,33 +1335,25 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        if not TryEncodeDate(TempDate.Year, TempDate.Month, TempDate.Day, dDT) then
-                          dDT := 0;
-                        if not TryEncodeTime(TempDate.Hour, TempDate.Minute,
-                                TempDate.Second, TempDate.Fractions div 10, tDT) then
-                          tDT :=0;
-                        if dDT < 0
-                        then dDT := dDT-tDT
-                        else dDT := dDT+tDT;
-                        ZSysUtils.DateTimeToRawSQLTimeStamp(dDT, Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
+                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(TempDate.Year,
+                          TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
+                          Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                       end;
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToRawSQLDate(SysUtils.EncodeDate(TempDate.Year,TempDate.Month, TempDate.Day),
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateFormatLen;
+                        Len := ZSysUtils.DateTimeToRawSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                          Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToRawSQLTime(SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10),
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.TimeFormatLen;
+                        Len := DateTimeToRawSQLTime(TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
       else raise EZIBConvertError.Create(Format(SErrorConvertionField,
         [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
@@ -1384,7 +1377,6 @@ function TZInterbase6XSQLDAResultSet.GetPWideChar(ColumnIndex: Integer;
 var
   TempDate: TZTimeStamp;
   XSQLVAR: PXSQLVAR;
-  dDT,tDT: TDateTime;
   P: PAnsiChar;
   label set_Results;
 begin
@@ -1475,33 +1467,25 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        if not TryEncodeDate(TempDate.Year, TempDate.Month, TempDate.Day, dDT) then
-                          dDT := 0;
-                        if not TryEncodeTime(TempDate.Hour, TempDate.Minute,
-                                TempDate.Second, TempDate.Fractions div 10, tDT) then
-                          tDT :=0;
-                        if dDT < 0
-                        then dDT := dDT-tDT
-                        else dDT := dDT+tDT;
-                        ZSysUtils.DateTimeToUnicodeSQLTimeStamp(dDT, Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateTimeFormatLen;
+                        Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(TempDate.Year,
+                          TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
+                          Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                       end;
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToUnicodeSQLDate(SysUtils.EncodeDate(TempDate.Year,TempDate.Month, TempDate.Day),
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.DateFormatLen;
+                        Len := ZSysUtils.DateTimeToUnicodeSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                          Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        ZSysUtils.DateTimeToUnicodeSQLTime(SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10),
-                          Result, ConSettings.ReadFormatSettings, False);
-                        Len := ConSettings.ReadFormatSettings.TimeFormatLen;
+                        Len := ZSysUtils.DateTimeToUnicodeSQLTime(TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions div 10,
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
       else raise EZIBConvertError.Create(Format(SErrorConvertionField,
         [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
@@ -1711,10 +1695,19 @@ begin
             case FieldSqlType of
               stBytes: Precision := XSQLVAR.sqllen;
               stShort, stSmall, stInteger, stLong: Signed := True;
+              stCurrency, stBigDecimal: begin
+                Signed  := True;
+                Scale   := -XSQLVAR.sqlscale;
+                //first digit does not count because of overflow (FB does not allow this)
+                case XSQLVAR.sqltype and not (1) of
+                  SQL_SHORT:  Precision := 4;
+                  SQL_LONG:   Precision := 9;
+                  SQL_INT64:  Precision := 18;
+                end;
+              end;
             end;
           end;
         end;
-
         ReadOnly := (TableName = '') or (ColumnName = '') or
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
@@ -1901,5 +1894,5 @@ begin
   Loaded := True;
   {$ENDIF}
 end;
-
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

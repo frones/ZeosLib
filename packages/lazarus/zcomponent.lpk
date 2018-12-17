@@ -26,7 +26,7 @@
     <Description Value="Zeos Database Components
 "/>
     <Version Major="7" Minor="3"/>
-    <Files Count="6">
+    <Files Count="19">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>
         <HasRegisterProc Value="True"/>
@@ -52,6 +52,58 @@
         <Filename Value="..\..\src\component\ZGroupedConnection.pas"/>
         <UnitName Value="ZGroupedConnection"/>
       </Item6>
+      <Item7>
+        <Filename Value="..\..\src\component\ZIBEventAlerter.pas"/>
+        <UnitName Value="ZIBEventAlerter"/>
+      </Item7>
+      <Item8>
+        <Filename Value="..\..\src\component\ZPgEventAlerter.pas"/>
+        <UnitName Value="ZPgEventAlerter"/>
+      </Item8>
+      <Item9>
+        <Filename Value="..\..\src\component\ZSqlMetadata.pas"/>
+        <UnitName Value="ZSqlMetadata"/>
+      </Item9>
+      <Item10>
+        <Filename Value="..\..\src\component\ZSqlMonitor.pas"/>
+        <UnitName Value="ZSqlMonitor"/>
+      </Item10>
+      <Item11>
+        <Filename Value="..\..\src\component\ZSqlProcessor.pas"/>
+        <UnitName Value="ZSqlProcessor"/>
+      </Item11>
+      <Item12>
+        <Filename Value="..\..\src\component\ZSqlUpdate.pas"/>
+        <UnitName Value="ZSqlUpdate"/>
+      </Item12>
+      <Item13>
+        <Filename Value="..\..\src\component\ZStoredProcedure.pas"/>
+        <UnitName Value="ZStoredProcedure"/>
+      </Item13>
+      <Item14>
+        <Filename Value="..\..\src\component\ZAbstractConnection.pas"/>
+        <UnitName Value="ZAbstractConnection"/>
+      </Item14>
+      <Item15>
+        <Filename Value="..\..\src\component\ZAbstractDataset.pas"/>
+        <UnitName Value="ZAbstractDataset"/>
+      </Item15>
+      <Item16>
+        <Filename Value="..\..\src\component\ZAbstractRODataset.pas"/>
+        <UnitName Value="ZAbstractRODataset"/>
+      </Item16>
+      <Item17>
+        <Filename Value="..\..\src\component\ZAbstractTable.pas"/>
+        <UnitName Value="ZAbstractTable"/>
+      </Item17>
+      <Item18>
+        <Filename Value="..\..\src\component\ZSqlStrings.pas"/>
+        <UnitName Value="ZSqlStrings"/>
+      </Item18>
+      <Item19>
+        <Filename Value="..\..\src\component\ZStreamBlob.pas"/>
+        <UnitName Value="ZStreamBlob"/>
+      </Item19>
     </Files>
     <RequiredPkgs Count="7">
       <Item1>

@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Types, Classes, SysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcConnection, ZDbcASA, ZURL;
@@ -251,7 +252,9 @@ type
     constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses ZFastCode, ZDbcASAUtils, ZSysUtils, ZSelectSchema;
 
@@ -1631,7 +1634,7 @@ begin
 //      Result.UpdateSmall(TableColColumnTypeIndex,
 //        Ord(ConvertASAJDBCToSqlType(GetSmallByName('DATA_TYPE'))));
       Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
-      //Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('COLUMN_SIZE'));
+      Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('BUFFER_LENGTH'));
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('DECIMAL_DIGITS'));
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmallByName('NUM_PREC_RADIX'));
@@ -2442,7 +2445,5 @@ begin
     Close;
   end;
 end;
-
+{$ENDIF ZEOS_DISABLE_ASA}
 end.
-
-

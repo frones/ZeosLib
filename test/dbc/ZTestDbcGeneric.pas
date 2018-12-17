@@ -253,8 +253,10 @@ var
   Metadata: IZDatabaseMetadata;
 begin
   if ProtocolType in [protMySQL, protSQLite, protFreeTDS, protMSSQL,
-                      protADO, protSyBase, protASA, protOleDB] then
+                      protADO, protSyBase, protASA, protOleDB, protODBC] then begin
+    BlankCheck;
     Exit; //not in build sripts because they depend to locale settings
+  end;
 
   Metadata := Connection.GetMetadata;
   if not Metadata.GetDatabaseInfo.SupportsMixedCaseQuotedIdentifiers then
@@ -646,9 +648,12 @@ begin
     '/* ? and those marks? Are they ignored too?'+LineEnding+
     '? Are they ignored on a multi-line comment as well?*/'+LineEnding+
     '-- ? and those marks? Are they ignored too? On a single line comment?');
+  Check(Stmt <> nil, 'We got a stmt');
+  if ProtocolType = protADO then //ado raises nice exceptions. The ms implementation seems buggy
+    Exit; //we can't help -> skip it! Except we would force the tokenizer to scip the comments!
   Stmt.SetInt(FirstDbcIndex, 1);
   with stmt.ExecuteQueryPrepared do begin
-    Next;
+    Check(Next, 'There is on row to see');
     Close;
   end;
   Stmt.Close;

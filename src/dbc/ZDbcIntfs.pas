@@ -193,6 +193,7 @@ type
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil; const LibLocation: String = ''): String;
+    procedure AddGarbage(const Value: IZInterface);
   end;
 
   {** Database Driver interface. }
@@ -1128,8 +1129,11 @@ type
     FLogCS: TCriticalSection;     // thread-safety for logging listeners
     FDrivers: IZCollection;
     FLoggingListeners: IZCollection;
+    FGarbageCollector: IZCollection;
+    FTimer: TZThreadTimer;
     FHasLoggingListener: Boolean;
     procedure LogEvent(const Event: TZLoggingEvent);
+    procedure ClearGarbageCollector;
   public
     constructor Create;
     destructor Destroy; override;
@@ -1160,6 +1164,7 @@ type
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil; const LibLocation: String = ''): String;
+    procedure AddGarbage(const Value: IZInterface);
   end;
 
 { TZDriverManager }
@@ -1173,7 +1178,9 @@ begin
   FLogCS := TCriticalSection.Create;
   FDrivers := TZCollection.Create;
   FLoggingListeners := TZCollection.Create;
+  FGarbageCollector := TZCollection.Create;
   FHasLoggingListener := False;
+  FTimer := TZThreadTimer.Create(ClearGarbageCollector, 1000, True);
 end;
 
 {**
@@ -1183,6 +1190,7 @@ destructor TZDriverManager.Destroy;
 begin
   FDrivers := nil;
   FLoggingListeners := nil;
+  FreeAndNil(FTimer);
   FreeAndNil(FDriversCS);
   FreeAndNil(FLogCS);
   inherited Destroy;
@@ -1322,6 +1330,17 @@ begin
   Result := GetConnectionWithParams(Url, nil);
 end;
 
+procedure TZDriverManager.AddGarbage(const Value: IZInterface);
+begin
+  FTimer.Reset; //take care the garbe will be cleared a little bit later
+  FDriversCS.Enter;
+  try
+    FGarbageCollector.Add(Value);
+  finally
+    FDriversCS.Leave;
+  end;
+end;
+
 {**
   Adds a logging listener to log SQL events.
   @param Listener a logging interface to be added.
@@ -1441,6 +1460,16 @@ begin
   begin
     LogEvent(Event);
     Event.Free;
+  end;
+end;
+
+procedure TZDriverManager.ClearGarbageCollector;
+begin
+  FDriversCS.Enter;
+  try
+    FGarbageCollector.Clear;
+  finally
+    FDriversCS.Leave;
   end;
 end;
 

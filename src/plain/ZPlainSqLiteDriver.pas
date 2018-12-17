@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE}
+
 uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver;
 
@@ -307,7 +309,11 @@ type
     function GetDescription: string; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 
 uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -444,6 +450,8 @@ function TZSQLite3PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for SQLite 3';
 end;
+
+{$ENDIF ZEOS_DISABLE_SQLITE}
 
 end.
 

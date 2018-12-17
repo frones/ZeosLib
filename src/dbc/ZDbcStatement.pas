@@ -60,7 +60,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
-  ZDbcUtils;
+  ZDbcUtils, FmtBCD;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -94,7 +94,6 @@ type
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
     FCursorName: RawByteString;
-    FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
@@ -209,9 +208,10 @@ type
     function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; virtual;
   end;
 
-  TZBindType = (zbtNull, zbt8Byte, zbtRawString, zbtUTF8String, {$IFNDEF NEXTGEN}zbtAnsiString,{$ENDIF}
+  TZBindType = (zbtNull, zbt8Byte, zbt4Byte,
+    zbtRawString, zbtUTF8String, {$IFNDEF NEXTGEN}zbtAnsiString,{$ENDIF}
     zbtUniString, zbtCharByRef, zbtBinByRef, zbtGUID, zbtBytes, zbtArray,
-    zbtLob, zbtPointer, zbtBCD, zbtTimeStamp);
+    zbtLob, zbtPointer, zbtBCD, zbtTimeStamp, zbtCustom);
 
   PZBindValue = ^TZBindValue;
   TZBindValue = record
@@ -222,12 +222,24 @@ type
   end;
   PZBufRec = ^TZBufRec;
   TZBufRec = record
-    Buf: Pointer;
     Len: LengthInt;
+    Buf: Pointer;
   end;
-  P8Bytes = PInt64;
+  PZCustomData =  ^TZCustomData;
+  TZCustomData = packed record
+    Len: LengthInt;
+    //data goes here : array[0..?] of byte;
+  end;
 
-  PZBcd = ^TZBcd;
+const
+  TZBindTypeSize: array[TZBindType] of Integer = (0,{$IFNDEF CPU64}8{$ELSE}0{$ENDIF}, 0,
+    0, 0, {$IFNDEF NEXTGEN}0,{$ENDIF}
+    0, SizeOf(TZCharRec), SizeOf(TZBufRec), SizeOf(TGUID), 0, SizeOf(TZArray),
+    0, 0, SizeOf(TBCD), SizeOf(TZTimeStamp), 0);
+type
+  P8Bytes = PInt64;
+  P4Bytes = PCardinal;
+
   PZTimeStamp = ^TZTimeStamp;
 
   PZTParamValueArray = ^TZTParamValueArray;
@@ -264,7 +276,8 @@ type
 
     procedure Put(Index: Integer; Value: Boolean); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes); overload;
-    procedure Put(Index: Integer; const Value: TZBCD); overload;
+    procedure Put(Index: Integer; SQLType: TZSQLType; _4Byte: P4Bytes); overload;
+    procedure Put(Index: Integer; const Value: TBCD); overload;
     procedure Put(Index: Integer; const Value: TZTimeStamp); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: TBytes); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); overload;
@@ -274,6 +287,8 @@ type
     procedure Put(Index: Integer; const Value: TZArray); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: IZBLob); overload;
     procedure Put(Index: Integer; Value: PZBindValue); overload;
+    procedure Put(Index: Integer; const Value: TGUID); overload;
+    function AquireCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
 
     procedure SetCount(NewCount: Integer);
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
@@ -419,7 +434,7 @@ type
     procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
     procedure GetCurrency(Index: Integer; out Result: Currency); overload; virtual;
     procedure GetDouble(Index: Integer; out Result: Double); overload; virtual;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); overload; virtual;
+    procedure GetBigDecimal(Index: Integer; var Result: TBCD); overload; virtual;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); overload; virtual;
     procedure GetDateTime(Index: Integer; out Result: TDateTime); virtual;
     procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); overload; virtual;
@@ -468,12 +483,13 @@ type
     procedure Unprepare; override;
   end;
 
-  TZUCS2PreparedStatement = class(TZAbstractPreparedStatement2)
+  TZUTF16PreparedStatement = class(TZAbstractPreparedStatement2)
   protected
     FInParamDefaultValues: TUnicodeStringDynArray;
     procedure BindUniStr(Index: Integer; const Value: ZWideString); overload; virtual;
     procedure BindUniStr(Index: Integer; Buf: PWideChar; CodePoints: LengthInt); overload; virtual;
     property InParamDefaultValues: TUnicodeStringDynArray read FInParamDefaultValues;
+    procedure SetBindCapacity(Capacity: Integer); override;
   public
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
@@ -488,7 +504,7 @@ type
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
   end;
 
-  TZUCS2ParamDetectPreparedStatement = class(TZUCS2PreparedStatement)
+  TZUTF16ParamDetectPreparedStatement = class(TZUTF16PreparedStatement)
   protected
     FCachedQueryUni: TUnicodeStringDynArray;
     FNCharDetected: PBooleanDynArray;
@@ -528,7 +544,7 @@ type
     procedure GetOrdinal(Index: Integer; out Result: UInt64); override;
     procedure GetCurrency(Index: Integer; out Result: Currency); override;
     procedure GetDouble(Index: Integer; out Result: Double); override;
-    procedure GetBigDecimal(Index: Integer; var Result: TZBCD); override;
+    procedure GetBigDecimal(Index: Integer; var Result: TBCD); override;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); override;
     procedure GetDateTime(Index: Integer; out Result: TDateTime); override;
     procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); override;
@@ -1196,8 +1212,11 @@ begin
     AfterClose;
   finally
     FClosed := True;
-    if RefCountAdded then
+    if RefCountAdded then begin
+      if (RefCount = 1) then
+        DriverManager.AddGarbage(Self);
       _Release;
+    end;
   end;
 end;
 
@@ -3797,6 +3816,20 @@ end;
 
 { TZBindList }
 
+function TZBindList.AquireCustomValue(Index: Integer; SQLType: TZSQLType;
+  Len: LengthInt): Pointer;
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, SQLType, zbtCustom);
+  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ <> Len) then
+    ClearValue(Index);
+  if BindValue.Value = nil then begin
+    GetMem(BindValue.Value, SizeOf(LengthInt)+Len);
+    PLengthInt(BindValue.Value)^ := Len;
+  end;
+  Result := PAnsiChar(BindValue.Value)+SizeOf(LengthInt);
+end;
+
 procedure TZBindList.BindValuesToStatement(Stmt: TZAbstractPreparedStatement2;
   SupportsBidirectionalParms: Boolean);
 var
@@ -3814,6 +3847,16 @@ begin
       else Inc(J);
       case BindValue.BindType of
         zbtNull: IStmt.SetNull(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType);
+        zbt4Byte: case BindValue.SQLType of
+                    stByte:     IStmt.SetByte(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
+                    stShort:    IStmt.SetShort(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInteger(@BindValue.Value)^);
+                    stWord:     IStmt.SetWord(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
+                    stSmall:    IStmt.SetSmall(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInteger(@BindValue.Value)^);
+                    stLongWord: IStmt.SetUInt(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
+                    stInteger:  IStmt.SetInt(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInteger(@BindValue.Value)^);
+                    stFloat:    IStmt.SetFloat(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PSingle(@BindValue.Value)^);
+                    //else RaiseUnsupportedException
+                  end;
         zbt8Byte: case BindValue.SQLType of
                     stByte:     IStmt.SetByte(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
                     stShort:    IStmt.SetShort(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
@@ -3868,28 +3911,27 @@ procedure TZBindList.ClearValue(Index: Integer);
 var BindValue: PZBindValue;
 begin
   BindValue := Get(Index);
-  if BindValue.Value <> nil then
-    case BindValue.BindType of
-      zbtRawString,
-      zbtUTF8String
-      {$IFNDEF NO_ANSISTRING}
-      ,zbtAnsiString{$ENDIF}:
-        RawByteString(BindValue.Value) := ''; //dec refcnt
-      zbtUniString: ZWideString(BindValue.Value) := '';
-      zbtBytes:     TBytes(BindValue.Value) := nil;
-      zbtLob:       IZBlob(BindValue.Value) := nil;
-      zbtPointer:   BindValue.Value := nil;
-      zbt8Byte:     begin
-                      {$IFNDEF CPU64}
-                      FreeMem(BindValue.Value);
-                      {$ENDIF}
-                      BindValue.Value := nil;
-                    end;
-      else begin
-        FreeMem(BindValue.Value);
-        BindValue.Value := nil;
-      end;
+  if BindValue.Value <> nil then begin
+    if TZBindTypeSize[BindValue.BindType] = 0 then
+      case BindValue.BindType of
+        zbtRawString,
+        zbtUTF8String
+        {$IFNDEF NO_ANSISTRING}
+        ,zbtAnsiString{$ENDIF}: RawByteString(BindValue.Value) := ''; //dec refcnt
+        zbtUniString: ZWideString(BindValue.Value) := '';
+        zbtBytes:     TBytes(BindValue.Value) := nil;
+        zbtLob:       IZBlob(BindValue.Value) := nil;
+        zbtCustom:    begin
+                        FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
+                        BindValue.Value := nil;
+                      end;
+        else          BindValue.Value := nil;
+      end
+    else begin
+      FreeMem(BindValue.Value, TZBindTypeSize[BindValue.BindType]);
+      BindValue.Value := nil;
     end;
+  end;
 end;
 
 constructor TZBindList.Create(ConSettings: PZConSettings);
@@ -4145,13 +4187,13 @@ begin
   PZTimeStamp(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.Put(Index: Integer; const Value: TZBCD);
+procedure TZBindList.Put(Index: Integer; const Value: TBCD);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, stArray, zbtBCD);
   if BindValue.Value = nil then
-    GetMem(BindValue.Value, SizeOf(TZBCD));
-  PZBCD(BindValue.Value)^ := Value;
+    GetMem(BindValue.Value, SizeOf(TBCD));
+  PBCD(BindValue.Value)^ := Value;
 end;
 
 procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
@@ -4223,6 +4265,7 @@ begin
   case Value.BindType of
     zbtNull:      SetNull(Index, Value.SQLType);
     zbt8Byte:     Put(Index, Value.SQLType, P8Bytes(Value.Value));
+    zbt4Byte:     Put(Index, Value.SQLType, P4Bytes(Value.Value));
     zbtRawString: Put(Index, Value.SQLType, RawByteString(Value.Value), FConSettings.ClientCodePage.CP);
     zbtUTF8String:Put(Index, Value.SQLType, RawByteString(Value.Value), zCP_UTF8);
     {$IFNDEF NEXTGEN}
@@ -4236,9 +4279,16 @@ begin
     zbtArray:     Put(Index, PZArray(Value.Value)^);
     zbtLob:       Put(Index, Value.SQLType, IZBLob(Value.Value));
     zbtPointer:   AquireBuffer(Index, Value.SQLType, Value.BindType).Value := Value.Value;
-    zbtBCD:       Put(Index, PZBCD(Value.Value)^);
+    zbtBCD:       Put(Index, PBCD(Value.Value)^);
     zbtTimeStamp: Put(Index, PZTimeStamp(Value.Value)^)
   end;
+end;
+
+procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; _4Byte: P4Bytes);
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, SQLType, zbt4Byte);
+  P4Bytes(@BindValue.Value)^ := _4Byte^;
 end;
 
 procedure TZBindList.SetCapacity(NewCapacity: Integer);
@@ -4676,7 +4726,7 @@ end;
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
 
 procedure TZAbstractPreparedStatement2.GetBigDecimal(Index: Integer;
-  var Result: TZBCD);
+  var Result: TBCD);
 begin
   AlignParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
@@ -5081,9 +5131,9 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>byte</code> value.
+  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
   The driver converts this
-  to an SQL <code>Byte</code> value when it sends it to the database.
+  to an SQL <code>BYTE</code> value when it sends it to the database.
 
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
@@ -5384,7 +5434,7 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>usigned int</code> value.
+  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
   The driver converts this
   to an SQL <code>INTEGER</code> value when it sends it to the database.
 
@@ -5477,9 +5527,9 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
   The driver converts this
-  to an SQL <code>SMALLINT</code> value when it sends it to the database.
+  to an SQL <code>WORD</code> value when it sends it to the database.
 
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
@@ -5524,8 +5574,11 @@ begin
     FLastResultSet.Close;
   if Assigned(FOpenResultSet) then
     IZResultSet(FOpenResultSet).Close;
-  if RefCountAdded then
+  if RefCountAdded then begin
+    if (RefCount = 1) then
+      DriverManager.AddGarbage(Self);
     _Release; //possible running into destructor now if just a ResultSet was last owner of Self-interface
+  end;
 end;
 
 {**
@@ -5559,6 +5612,15 @@ begin
     FInitialArrayCount := Len
   else if (FInitialArrayCount <> 0) and (Len <> FInitialArrayCount) and (SQLType <> stDataSet) then
     raise Exception.Create('Array count does not equal with initial count!')
+end;
+
+procedure TZBindList.Put(Index: Integer; const Value: TGUID);
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, stGUID, zbtGUID);
+  if BindValue.Value = nil then
+    GetMem(BindValue.Value, SizeOf(TGUID));
+  PGUID(BindValue.Value)^ := Value;
 end;
 
 { TZRawPreparedStatement }
@@ -5753,16 +5815,16 @@ begin
 end;
 {$ENDIF}
 
-{ TZUCS2PreparedStatement }
+{ TZUTF16PreparedStatement }
 
-procedure TZUCS2PreparedStatement.BindUniStr(Index: Integer;
+procedure TZUTF16PreparedStatement.BindUniStr(Index: Integer;
   const Value: ZWideString);
 begin
   CheckParameterIndex(Index);
   FBindList.Put(Index, stUnicodeString, Value);
 end;
 
-procedure TZUCS2PreparedStatement.BindUniStr(Index: Integer;
+procedure TZUTF16PreparedStatement.BindUniStr(Index: Integer;
   Buf: PWideChar; CodePoints: LengthInt);
 begin
   FBindList.Put(Index, stUnicodeString, Buf, CodePoints, zCP_UTF16);
@@ -5779,14 +5841,22 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IFNDEF NEXTGEN}
-procedure TZUCS2PreparedStatement.SetAnsiString(ParameterIndex: Integer;
+{$IFNDEF NO_ANSISTRING}
+procedure TZUTF16PreparedStatement.SetAnsiString(ParameterIndex: Integer;
   const Value: AnsiString);
 begin
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
     PRawToUnicode(Pointer(Value), Length(Value), zOSCodePage))
 end;
-{$ENDIF NEXTGEN}
+{$ENDIF NO_ANSISTRING}
+
+procedure TZUTF16PreparedStatement.SetBindCapacity(Capacity: Integer);
+begin
+  inherited SetBindCapacity(Capacity);
+  if Length(FInParamDefaultValues) <> BindList.Capacity then
+    SetLength(FInParamDefaultValues, BindList.Capacity);
+end;
+
 
 {**
   Sets the designated parameter to a Java <code>TZCharRec</code> value.
@@ -5799,7 +5869,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZUCS2PreparedStatement.SetCharRec(ParameterIndex: Integer;
+procedure TZUTF16PreparedStatement.SetCharRec(ParameterIndex: Integer;
   const Value: TZCharRec);
 begin
   if ZCompatibleCodePages(Value.CP, zCP_UTF16) then
@@ -5815,7 +5885,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param Value the default value normally defined in the field's DML SQL statement
 }
-procedure TZUCS2PreparedStatement.SetDefaultValue(ParameterIndex: Integer;
+procedure TZUTF16PreparedStatement.SetDefaultValue(ParameterIndex: Integer;
   const Value: string);
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -5841,7 +5911,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZUCS2PreparedStatement.SetRawByteString(
+procedure TZUTF16PreparedStatement.SetRawByteString(
   ParameterIndex: Integer; const Value: RawByteString);
 begin
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
@@ -5859,7 +5929,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZUCS2PreparedStatement.SetString(ParameterIndex: Integer;
+procedure TZUTF16PreparedStatement.SetString(ParameterIndex: Integer;
   const Value: String);
 begin
   {$IFDEF UNICODE}
@@ -5881,7 +5951,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZUCS2PreparedStatement.SetUnicodeString(
+procedure TZUTF16PreparedStatement.SetUnicodeString(
   ParameterIndex: Integer; const Value: ZWideString);
 begin
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value);
@@ -5899,7 +5969,7 @@ end;
   @param x the parameter value
 }
 {$IFNDEF NO_UTF8STRING}
-procedure TZUCS2PreparedStatement.SetUTF8String(ParameterIndex: Integer;
+procedure TZUTF16PreparedStatement.SetUTF8String(ParameterIndex: Integer;
   const Value: UTF8String);
 begin
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
@@ -5936,9 +6006,9 @@ begin
   SetLength(FCachedQueryRaw, 0);
 end;
 
-{ TZUCS2ParamDetectPreparedStatement }
+{ TZUTF16ParamDetectPreparedStatement }
 
-function TZUCS2ParamDetectPreparedStatement.GetUnicodeEncodedSQL(const SQL:
+function TZUTF16ParamDetectPreparedStatement.GetUnicodeEncodedSQL(const SQL:
   {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
 var I: Integer;
 begin
@@ -5961,7 +6031,7 @@ end;
 {**
   unprepares the statement, deallocates all bindings and handles
 }
-procedure TZUCS2ParamDetectPreparedStatement.Unprepare;
+procedure TZUTF16ParamDetectPreparedStatement.Unprepare;
 begin
   inherited UnPrepare;
   SetLength(FCachedQueryUni, 0);
@@ -6177,7 +6247,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.GetBigDecimal(Index: Integer;
-  var Result: TZBCD);
+  var Result: TBCD);
 begin
   RaiseUnsupportedException
 end;

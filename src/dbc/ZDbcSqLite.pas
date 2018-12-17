@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer,
@@ -135,7 +136,9 @@ var
   {** The common driver manager object. }
   SQLiteDriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
   ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode, ZDbcProperties,
@@ -307,9 +310,10 @@ begin
     else SQL := DataBase;
     {$ENDIF}
   {$ENDIF}
-  FPlainDriver.sqlite3_open(Pointer(SQL), FHandle);
-  if FHandle = nil then
-    CheckSQLiteError(FPlainDriver, FHandle, SQLITE_ERROR, lcConnect, LogMessage, ConSettings);
+  //patch by omaga software see https://sourceforge.net/p/zeoslib/tickets/312/
+  TmpInt := FPlainDriver.sqlite3_open(Pointer(SQL), FHandle);
+  if TmpInt <> SQLITE_OK then
+    CheckSQLiteError(FPlainDriver, FHandle, TmpInt, lcConnect, LogMessage, ConSettings);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }
@@ -592,5 +596,6 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(SQLiteDriver);
   SQLiteDriver := nil;
-end.
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
+end.

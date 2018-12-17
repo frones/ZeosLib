@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_OLEDB}
+
 uses ZPlainDriver;
 
 type
@@ -69,7 +71,11 @@ type
     function Clone: IZPlainDriver; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_OLEDB}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_OLEDB}
 
 uses ZCompatibility, Windows;
 
@@ -101,5 +107,7 @@ function TZOleDBPlainDriver.Clone: IZPlainDriver;
 begin
   Result := Self;
 end;
+
+{$ENDIF ZEOS_DISABLE_OLEDB}
 
 end.

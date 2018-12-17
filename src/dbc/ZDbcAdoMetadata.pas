@@ -55,6 +55,11 @@ interface
 
 {$I ZDbc.inc}
 
+{$IF not defined(MSWINDOWS) and not defined(ZEOS_DISABLE_ADO)}
+  {$DEFINE ZEOS_DISABLE_ADO}
+{$IFEND}
+
+{$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
@@ -114,7 +119,9 @@ type
 //    function GetTokenizer: IZTokenizer; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ADO}
 implementation
+{$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
   Variants,
@@ -322,7 +329,8 @@ begin
           Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
         Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertAdoToSqlType(
-          GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+          GetSmallByName('DATA_TYPE'), GetIntByName('NUMERIC_PRECISION'),
+          GetSmallByName('NUMERIC_SCALE'), ConSettings.CPType)));
         Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('NUMERIC_PRECISION'));
         Result.UpdateInt(ProcColLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
@@ -594,7 +602,7 @@ begin
         Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
 
         SQLType := ConvertAdoToSqlType(GetSmallByName('DATA_TYPE'),
-          ConSettings.CPType);
+          GetSmallByName('NUMERIC_PRECISION'), GetIntByName('NUMERIC_SCALE'), ConSettings.CPType);
         Flags := GetIntByName('COLUMN_FLAGS');
 //!!!If the field type is long then this is the only way to know it because it just returns string type
         if ((Flags and DBCOLUMNFLAGS_ISLONG) <> 0 ) and (SQLType in [stBytes, stString, stUnicodeString]) then
@@ -604,23 +612,23 @@ begin
             stUnicodeString: SQLType := stUnicodeStream;
           end;
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
-        Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('NUMERIC_SCALE'));
-        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmallByName('NUMERIC_PRECISION'));
-        if GetBooleanByName('IS_NULLABLE') then
-          Result.UpdateSmall(TableColColumnNullableIndex, 1)
-        else
-          Result.UpdateSmall(TableColColumnNullableIndex, 0);
+        if SQLType in [stCurrency, stBigDecimal] then begin
+          Result.UpdateInt(TableColColumnSizeIndex, GetSmallByName('NUMERIC_PRECISION'));
+          Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('NUMERIC_SCALE'));
+        end else
+          Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
+        //Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
+        if GetBooleanByName('IS_NULLABLE')
+        then Result.UpdateSmall(TableColColumnNullableIndex, 1)
+        else Result.UpdateSmall(TableColColumnNullableIndex, 0);
         Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideCharByName('DESCRIPTION', Len), Len);
         Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideCharByName('COLUMN_DEFAULT', Len), Len);
-        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmallByName('DATETIME_PRECISION'));
+        Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmallByName('DATETIME_PRECISION'));  //EH????
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
-        if UpperCase(GetStringByName('IS_NULLABLE')) = 'FALSE' then
-          Result.UpdateString(TableColColumnIsNullableIndex, 'NO')
-        else
-          Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
+        if UpperCase(GetStringByName('IS_NULLABLE')) = 'FALSE'
+        then Result.UpdateString(TableColColumnIsNullableIndex, 'NO')
+        else Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
 
         //Result.UpdateNullByName(TableColColumnAutoIncIndex);
         Result.UpdateBoolean(TableColColumnSearchableIndex, (Flags and (DBCOLUMNFLAGS_ISLONG) = 0));
@@ -821,7 +829,8 @@ begin
         Result.UpdateSmall(TableColVerScopeIndex, 0);
         Result.UpdatePWideChar(TableColVerColNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
         Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertAdoToSqlType(
-          GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+          GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'),
+          GetIntByName('NUMERIC_SCALE'), ConSettings.CPType)));
         Result.UpdatePWideChar(TableColVerTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
@@ -1227,7 +1236,8 @@ begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertAdoToSqlType(
-          GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+          GetSmallByName('DATA_TYPE'), GetIntByName('FIXED_PREC_SCALE'),
+          GetSmallByName('MAXIMUM_SCALE'), ConSettings.CPType)));
         Result.UpdateInt(TypeInfoPecisionIndex, 0);//GetIntByName('PRECISION'));
         Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideCharByName('LITERAL_PREFIX', Len), Len);
         Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideCharByName('LITERAL_SUFFIX', Len), Len);
@@ -1541,4 +1551,5 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_ADO}
 end.

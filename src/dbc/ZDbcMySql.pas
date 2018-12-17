@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver, ZPlainDriver,
@@ -138,7 +139,9 @@ var
   {** The common driver manager object. }
   MySQLDriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 
 uses
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
@@ -867,5 +870,6 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(MySQLDriver);
   MySQLDriver := nil;
-end.
 
+  {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
+end.

@@ -56,6 +56,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcMetadata, ZCompatibility, ZDbcPostgreSqlUtils,
@@ -87,17 +88,12 @@ type
   // technobot 2008-06-27 - methods moved as is from TZPostgreSQLDatabaseMetadata:
   {** Implements PostgreSQL Database Information. }
   TZPostgreSQLDatabaseInfo = class(TZAbstractDatabaseInfo, IZPostgreSQLDatabaseInfo)
-  private
-    fSupportsDMLBatches: Boolean;
   protected
     function GetMaxIndexKeys: Integer;
     function GetMaxNameLength: Integer;
 //    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
-
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
@@ -257,7 +253,7 @@ type
 
     // (technobot) should any of these be moved to TZPostgreSQLDatabaseInfo?:
     function GetPostgreSQLType(Oid: OID): string;
-    function GetSQLTypeByOid(Oid: OID): TZSQLType;
+    function GetSQLTypeByOid(Oid: OID; AttTypMod: Integer): TZSQLType;
     function GetSQLTypeByName(const TypeName: string): TZSQLType;
     function TableTypeSQLExpression(const TableType: string; UseSchemas: Boolean):
       string;
@@ -306,33 +302,15 @@ type
     procedure ClearCache; override;
  end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses
   //Math,
   ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSql;
 
 { TZPostgreSQLDatabaseInfo }
-
-{**
-  Constructs this object.
-  @param Metadata the interface of the correpsonding database metadata object
-}
-constructor TZPostgreSQLDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
-var PlainDriver: TZPostgreSQLPlainDriver;
-begin
-  inherited Create(Metadata);
-  PlainDriver := TZPostgreSQLPlainDriver(Metadata.GetConnection.GetIZPlainDriver.GetInstance);
-  fSupportsDMLBatches := Assigned(PlainDriver.PQexecParams) and Assigned(PlainDriver.PQexecPrepared);
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZPostgreSQLDatabaseInfo.Destroy;
-begin
-  inherited;
-end;
 
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
@@ -761,7 +739,7 @@ end;
 }
 function TZPostgreSQLDatabaseInfo.SupportsArrayBindings: Boolean;
 begin
-  Result := fSupportsDMLBatches;
+  Result := HasMinimumServerVersion(9, 2);
 end;
 
 function TZPostgreSQLDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
@@ -1671,7 +1649,7 @@ begin
 
           InsertProcedureColumnRow(Result, GetStringByName('nspname'),
             GetStringByName('proname'), ColumnName, ColumnType,
-            Ord(GetSQLTypeByOid(ArgOid)), GetPostgreSQLType(ArgOid),
+            Ord(GetSQLTypeByOid(ArgOid, -1)), GetPostgreSQLType(ArgOid),
             Ord(ntNullableUnknown));
         end;
 
@@ -1688,14 +1666,14 @@ begin
             ColumnTypeOid := ColumnsRS.GetUIntByName('atttypid');
             InsertProcedureColumnRow(Result, GetStringByName('nspname'),
               GetStringByName('proname'), ColumnsRS.GetStringByName('attname'),
-              Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid)),
+              Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid, -1)),
               GetPostgreSQLType(ColumnTypeOid), Ord(ntNullableUnknown));
           end;
           ColumnsRS.Close;
         end else if (ReturnTypeType <> 'p') then // Single non-pseudotype return value
           InsertProcedureColumnRow(Result, GetStringByName('nspname'),
             GetStringByName('proname'), 'returnValue', Ord(pctReturn),
-            Ord(GetSQLTypeByOid(ReturnType)), GetPostgreSQLType(ReturnType),
+            Ord(GetSQLTypeByOid(ReturnType, -1)), GetPostgreSQLType(ReturnType),
             Ord(ntNullableUnknown));
       end;
       Close;
@@ -3256,13 +3234,14 @@ begin
   Result := (GetConnection as IZPostgreSQLConnection).GetTypeNameByOid(Oid);
 end;
 
-function TZPostgreSQLDatabaseMetadata.GetSQLTypeByOid(Oid: OID): TZSQLType;
+function TZPostgreSQLDatabaseMetadata.GetSQLTypeByOid(Oid: OID; AttTypMod: Integer): TZSQLType;
 var
   PostgreSQLConnection: IZPostgreSQLConnection;
 begin
   PostgreSQLConnection := GetConnection as IZPostgreSQLConnection;
-  Result := PostgreSQLToSQLType(PostgreSQLConnection,
-    PostgreSQLConnection.GetTypeNameByOid(Oid));
+  Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, OID, AttTypMod);
+  if Result = stUnknown then
+    Result := PostgreSQLToSQLType(PostgreSQLConnection, PostgreSQLConnection.GetTypeNameByOid(Oid));
 end;
 
 function TZPostgreSQLDatabaseMetadata.InternalUncachedGetColumns(const Catalog,
@@ -3375,7 +3354,7 @@ begin
         Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(nspname_index, Len), Len);
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(relname_index, Len), Len);
       Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(attname_index, Len), Len);
-      SQLType := GetSQLTypeByOid(TypeOid);
+      SQLType := GetSQLTypeByOid(TypeOid, AttTypMod);
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
       Result.UpdateString(TableColColumnTypeNameIndex, PgType);
 
@@ -3394,49 +3373,35 @@ FillSizes:
             Result.UpdateInt(TableColColumnBufLengthIndex, (Precision+1) shl 1);
             Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision shl 1);
           end;
-        end else
-          if (PgType = 'varchar') then
-            if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then
-            begin
-              Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(25))); //Assume text-lob instead
-              Result.UpdateInt(TableColColumnSizeIndex, 0); // need no size for streams
-            end
-            else begin //keep the string type but with user defined count of chars
-              Precision := (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
-              goto FillSizes;
-            end
-          else
-            Result.UpdateInt(TableColColumnSizeIndex, 0);
-      end
-      else if (PgType = 'uuid') then
-      begin
+        end else if (PgType = 'varchar') then
+          if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then begin
+            Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(25, -1))); //Assume text-lob instead
+            Result.UpdateInt(TableColColumnSizeIndex, 0); // need no size for streams
+          end else begin //keep the string type but with user defined count of chars
+            Precision := (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
+            goto FillSizes;
+          end
+        else
+          Result.UpdateInt(TableColColumnSizeIndex, 0);
+      end else if (PgType = 'uuid') then begin
         // I set break point and see code reaching here. Below assignments, I have no idea what I am doing.
-        Result.UpdateInt(TableColColumnBufLengthIndex, 16); // MSSQL returns 16 here - which makes sense since a GUID is 16 bytes long.
-        // TableColColumnCharOctetLengthIndex is removed - PG returns 0 and in the dblib driver 0 is also used, although MSSQL returns null...
-      end
-      else if (PgType = 'numeric') or (PgType = 'decimal') then
-      begin
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, 16); // MSSQL returns 16 here - which makes sense since a GUID is 16 bytes long.
+        Result.UpdateInt(TableColColumnSizeIndex, 38); //maximum visible characters
+      end else if (PgType = 'numeric') or (PgType = 'decimal') then begin
         Result.UpdateInt(TableColColumnSizeIndex, ((AttTypMod - 4) div 65536)); //precision
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, ((AttTypMod -4) mod 65536)); //scale
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10); //base? ten as default
-      end
-      else if (PgType = 'bit') or (PgType = 'varbit') then
-      begin
+      end else if (PgType = 'bit') or (PgType = 'varbit') then begin
         Result.UpdateInt(TableColColumnSizeIndex, AttTypMod);
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 2);
-      end
-      else
-      begin
+      end else begin
         Result.UpdateInt(TableColColumnSizeIndex, GetInt(attlen_index));
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 2);
       end;
-      if GetBoolean(attnotnull_index) then
-      begin
+      if GetBoolean(attnotnull_index) then begin
         Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
         Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
-      end
-      else
-      begin
+      end else begin
         Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
         Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
       end;
@@ -3460,9 +3425,10 @@ end;
 
 function TZPostgreSQLDatabaseMetadata.GetSQLTypeByName(
   const TypeName: string): TZSQLType;
+var PGConn: IZPostgreSQLConnection;
 begin
-  Result := PostgreSQLToSQLType(
-    GetConnection as IZPostgreSQLConnection, TypeName);
+  PGConn := GetConnection as IZPostgreSQLConnection;
+  Result := PostgreSQLToSQLType(PGConn, TypeName);
 end;
 
 function TZPostgreSQLDatabaseMetadata.TableTypeSQLExpression(
@@ -3729,4 +3695,5 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.

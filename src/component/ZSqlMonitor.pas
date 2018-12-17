@@ -56,7 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, Contnrs, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  SysUtils, Classes, {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF}
+  {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZClasses, ZCompatibility, ZDbcIntfs, ZDbcLogging;
 
 type
@@ -252,7 +253,7 @@ begin
   try
     for I := 0 to FTraceList.Count - 1 do
     begin
-      Temp := AnsiString(TZLoggingEvent(FTraceList[I]).AsString + LineEnding);
+      Temp := RawByteString(TZLoggingEvent(FTraceList[I]).AsString + LineEnding);
       Stream.Write(PAnsiChar(Temp)^, Length(Temp));
     end;
   finally

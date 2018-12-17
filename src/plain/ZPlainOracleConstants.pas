@@ -55,6 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 {$J+}
 
 uses
@@ -7043,6 +7044,8 @@ type
   { argument types are unknown }
   { return type might be wrong }
   TOCI_TYPEPARAM_IS_REQUIRED = function (param_flag : longint) : longint;
+
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 implementation
 

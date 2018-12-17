@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_ODBC}
+
 uses
   ZCompatibility, ZPlainDriver;
 
@@ -222,9 +224,9 @@ type
       SQL_IS_DAY_TO_SECOND: (day_second: SQL_DAY_SECOND_STRUCT);
   end;
 
+//https://docs.microsoft.com/de-de/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-2017
 const
   SQL_MAX_NUMERIC_LEN = 16;
-
 type
   SQL_NUMERIC_STRUCT = packed record
     precision:  SQLCHAR;
@@ -2303,7 +2305,11 @@ type
     constructor Create(const DriverName: String = '_a');
   end;
 
+{$ENDIF ZEOS_DISABLE_ODBC}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ODBC}
 
 uses ZPlainLoader;
 
@@ -2486,5 +2492,7 @@ procedure TODBC3RawPlainDriver.LoadCodePages;
 begin
   AddCodePage('CP_ACP', 0, ceAnsi, ZOSCodePage, '', 1, True);
 end;
+
+{$ENDIF ZEOS_DISABLE_ODBC}
 
 end.

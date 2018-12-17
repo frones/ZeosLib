@@ -46,6 +46,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
+
 uses Classes, ZCompatibility, ZPlainDriver, ZPlainASAConstants;
 
 {***************** Plain API Constants definition ****************}
@@ -239,8 +241,11 @@ type
     function GetDescription: string; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses SysUtils, ZPlainLoader, ZEncoding;
 
@@ -364,6 +369,8 @@ begin
   FLoader.AddLocation({$IFNDEF LINUX}ASA9_WINDOWS_DLL_LOCATION{$ELSE}ASA9_LINUX_DLL_LOCATION{$ENDIF});
   LoadCodePages;
 end;
+
+{$ENDIF ZEOS_DISABLE_ASA}
 
 end.
 

@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
@@ -117,7 +118,9 @@ type
   end;
 
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
@@ -573,5 +576,6 @@ begin
   inherited Create(Connection, '', Info, Handle);
 end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 end.
 

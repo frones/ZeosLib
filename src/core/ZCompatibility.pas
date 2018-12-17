@@ -901,7 +901,8 @@ begin
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := EmptyRaw;
-        SetLength(Dest, Len);
+        SetLength(Dest, Len{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}(PByte(Dest)+Len)^ := Ord(#0);{$ENDIF}
         if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
@@ -974,7 +975,7 @@ begin
     end;
 end;
 
-{$IFDEF ZReturnAddress} 
+{$IFDEF ZReturnAddress}
 function ReturnAddress: Pointer;
 {$IFDEF PUREPASCAL}
   begin

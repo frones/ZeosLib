@@ -520,35 +520,91 @@ function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
 function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
   const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
 
-{**
-  Converts DateTime value to a rawbyteString
+{** EH:
+  Converts DateTime value into a raw encoded string with format pattern
   @param Value a TDateTime value.
-  @param DateFormat the result format.
-  @param DateFromatLen the length of the format pattern
-  @return a formated RawByteString with DateFormat pattern.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return a formated RawByteString with Date-Format pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
-procedure DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
-
-{**
-  Converts DateTime value to a WideString/UnicodeString
+{** EH:
+  Converts DateTime value into a raw buffer with format pattern
   @param Value a TDateTime value.
-  @param DateFormat the result format.
-  @param DateFromatLen the length of the format pattern
-  @return a formated RawByteString with DateFormat pattern.
+  @param Buf the raw buffer to write in.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word; overload;
+
+{** EH:
+  Converts date values into a buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Buf a raw buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLDate(Year, Month, Day: Word; Buf: PAnsichar;
+  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+
+{** EH:
+  Converts date value into a WideString/UnicodeString with format pattern
+  @param Value a TDateTime value.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return a formated WideString/UnicodeString with Date-Format pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
 
-procedure DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
+{** EH:
+  Converts date value into a UCS2 buffer with format pattern
+  @param Value a TDateTime value.
+  @param Buf the UCS2 buffer to write in.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return the length in code-points of written value.
+}
+function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''); overload;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): Word; overload;
+
+{** EH:
+  Converts date values into a buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Buf a UCS2 buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in code-points of written value.
+}
+function DateTimeToUnicodeSQLDate(Year, Month, Day: Word; Buf: PWideChar;
+  const Format: String; Quoted, Negative: Boolean): Byte; overload;
 
 {**
   Converts DateTime value to native string
@@ -557,33 +613,90 @@ function DateTimeToSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: string = ''): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
-{**
-  Converts DateTime value into a RawByteString with format pattern
+{** EH:
+  Converts time value into a raw encoded string with format pattern
   @param Value a TDateTime value.
-  @param TimeFormat the result format.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
   @return a formated RawByteString with Time-Format pattern.
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
+  Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
-procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
-
-{**
-  Converts DateTime value into a WideString/UnicodeString with format pattern
+{** EH:
+  Converts a time value into a raw buffer with format pattern
   @param Value a TDateTime value.
-  @param TimeFormat the result format.
+  @param Buf the raw buffer to write in.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
+  const ConFormatSettings: TZFormatSettings;
+  Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word; overload;
+
+{** EH:
+  Converts a time values into a raw buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the raw buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLTime(Hour, Minute, Second, MSec: Word;
+  Buf: PAnsichar; const Format: String; Quoted: Boolean): Byte; overload;
+
+{** EH:
+  Converts a time value into a WideString/UnicodeString with format pattern
+  @param Value a TDateTime value.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
 
-procedure DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
+{** EH:
+  Converts a time value into a UCS2 buffer with format pattern
+  @param Value a TDateTime value.
+  @param Buf then UCS2 buffer to write in.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
+  @return the length in codepoints of written value.
+}
+function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''); overload;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): Word; overload;
+
+{** EH:
+  Converts a time values into a UCS2 buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the unicode buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @return the length in codepoints of written value.
+}
+function DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec: Word;
+  Buf: PWideChar; const Format: String; Quoted: Boolean): Byte; overload;
+
 {**
   Converts DateTime value to native string
 }
@@ -591,33 +704,99 @@ function DateTimeToSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: string = ''): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
-{**
-  Converts DateTime value to a RawByteString
+{** EH:
+  Converts datetime value into a raw encoded string with format pattern
   @param Value a TDateTime value.
-  @param TimeStampFormat the result format.
-  @return a formated RawByteString in TimeStamp-Format pattern.
+  @param ConFormatSettings then DateTimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return a formated RawByteString with DateTime-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
-procedure DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
-
-{**
-  Converts DateTime value to a WideString/UnicodeString
+{** EH:
+  Converts datetime value into a raw encoded buffer with format pattern
   @param Value a TDateTime value.
-  @param TimeStampFormat the result format.
-  @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
+  @param Buf the raw buffer we write in.
+  @param ConFormatSettings then DateTimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return a formated RawByteString with DateTime-Format pattern.
+}
+function DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
+  const ConFormatSettings: TZFormatSettings; Quoted: Boolean;
+  const Suffix: RawByteString = EmptyRaw): Word; overload;
+
+{** EH:
+  Converts a datetime values into a raw buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the raw buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
+  Buf: PAnsiChar; const Format: String; Quoted, Negative: Boolean): Byte; overload;
+
+{** EH:
+  Converts datetime value into a Unicode/Widestring with format pattern
+  @param Value a TDateTime value.
+  @param ConFormatSettings then DateTimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return a formated UCS2-String with DateTime-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
 
-procedure DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
+{** EH:
+  Converts a datetime value into a UCS2 buffer with format pattern
+  @param Value a TDateTime value.
+  @param Buf then UCS2 buffer to write in.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return the length in codepoints of written value.
+}
+function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''); overload;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): Word; overload;
+
+{** EH:
+  Converts date and time values into a UCS2 buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the unicode buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in bytes of written value.
+}
+function DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
+  Buf: PWideChar; const Format: String; Quoted, Negative: Boolean): Byte; overload;
 
 {**
   Converts DateTime value to native string
@@ -2973,133 +3152,301 @@ begin
 end;
 
 {**
-  Converts DateTime value to a rawbyteString
+  Converts DateTime value into a raw encoded string with format pattern
   @param Value a TDateTime value.
-  @param DateFormat the result format.
-  @return a formated RawByteString with DateFormat pattern.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return a formated RawByteString with Date-Format pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
+var L, L2, Year, Month, Day: Word;
+  Buffer: array[0..11] of AnsiChar;
+  P: PAnsiChar;
 begin
-  ZSetString(nil, ConFormatSettings.DateFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
-  DateTimeToRawSQLDate(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+  DecodeDate(Value, Year, Month, Day);
+  L := DateTimeToRawSQLDate(Year, Month, Day, @Buffer[0],
+    ConFormatSettings.DateFormat, Quoted, False);
+  l2 := Length(Suffix);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  ZSetString(nil, l+l2, Result);
+  {$ELSE}
+  System.SetString(Result, nil , L+L2);
+  {$ENDIF}
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2);
 end;
 
-procedure DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw);
-var
-  AYear, AMonth, ADay: Word;
-  I: Integer;
-  DateFormat: PChar;
-  YearSet: Boolean;
-begin
-  DecodeDate(Value, AYear, AMonth, ADay);
-  YearSet := False;
-  if Quoted then begin
-    PByte(Buf)^ := Ord(#39);
-    Inc(Buf, Ord(Quoted));
-  end;
-
-  I := ConFormatSettings.DateFormatLen-1;
-  DateFormat := Pointer(ConFormatSettings.DateFormat);
-  while I > 0 do
-    case (DateFormat+i)^ of
-      'Y', 'y': begin
-          if YearSet then  //Year has either two or four digits
-            (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AYear div 100]
-          else begin
-            (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AYear mod 100];
-            YearSet := True;
-          end;
-          Dec(i,2);
-        end;
-      'M', 'm': begin
-          (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AMonth];
-          Dec(I, 2);
-        end;
-      'D', 'd': begin
-          (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[ADay];
-          Dec(I, 2);
-        end;
-      else begin
-        PByte(Buf+i)^ := Ord((DateFormat+i)^);
-        Dec(i);
-      end;
-  end;
-  if Quoted then
-    PByte(Buf+ConFormatSettings.DateFormatLen)^ := Ord(#39);
-  if Suffix <> EmptyRaw then //move suffix after leading quote
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
-      (Buf+ConFormatSettings.DateFormatLen+Ord(Quoted))^, Length(Suffix));
-end;
-
-procedure DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = '');
-var
-  AYear, AMonth, ADay: Word;
-  I: Integer;
-  DateFormat: PChar;
-  YearSet: Boolean;
-begin
-  DecodeDate(Value, AYear, AMonth, ADay);
-  YearSet := False;
-  if Quoted then begin
-    PWord(Buf)^ := Ord(#39);
-    Inc(Buf);
-  end;
-
-  I := ConFormatSettings.DateFormatLen-1;
-  DateFormat := Pointer(ConFormatSettings.DateFormat);
-  while I > 0 do
-    case (DateFormat+i)^ of
-      'Y', 'y':
-        begin
-          if YearSet then //Year has either two or four digits
-            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
-          else begin
-            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
-            YearSet := True;
-          end;
-          Dec(i,2);
-        end;
-      'M', 'm':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMonth];
-          Dec(I, 2);
-        end;
-      'D', 'd':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ADay];
-          Dec(I, 2);
-        end;
-      else
-      begin
-        PWord(Buf+i)^ := Ord((DateFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
-        Dec(i);
-      end;
-  end;
-  if Quoted then
-    PWord(Buf+ConFormatSettings.DateFormatLen)^ := Ord(#39);
-  if Suffix <> '' then //move suffix after leading quote
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
-      (Buf+ConFormatSettings.DateFormatLen+Ord(Quoted))^, Length(Suffix) shl 1);
-end;
-
-{**
-  Converts DateTime value to a UnicodeString
+{** EH:
+  Converts DateTime value into a raw buffer with format pattern
   @param Value a TDateTime value.
-  @param DateFormat the result format.
-  @return a formated RawByteString with DateFormat pattern.
+  @param Buf the raw buffer to write in.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word;
+var L, Year, Month, Day: Word;
+begin
+  DecodeDate(Value, Year, Month, Day);
+  Result := DateTimeToRawSQLDate(Year, Month, Day, Buf,
+    ConFormatSettings.DateFormat, Quoted, False);
+  L := Length(Suffix);
+  if L > 0 then begin
+    Move(Pointer(Suffix)^, (Buf+Result)^, L);
+    Result := Result+L;
+  end;
+end;
+
+{** EH:
+  Converts date values into a buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Buf a raw buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLDate(Year, Month, Day: Word; Buf: PAnsichar;
+  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+var PStart: PAnsiChar;
+  PFormat, PEnd: PChar;
+  C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+  EQ2, EQ3, EQ4: Boolean; //equals to C1?
+label inc_dbl; //keep code tiny
+begin
+  PFormat := Pointer(Format);
+  if PFormat = nil then begin
+    Result := 0;
+    Exit;
+  end;
+  PStart := Buf;
+  Inc(Buf, Ord(Quoted)+Ord(Negative));
+  if Negative then
+    PByte(Buf-1)^ := Ord('-');
+  PEnd := PFormat + Length(Format);
+  while PEnd > PFormat do begin
+    C1 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^ or $20;
+    EQ2 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+1)^ or $20 = C1; //possibly read #0
+    case C1 of
+      Ord('y'): begin
+                  { don't read over buffer }
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
+                  if EQ4 or (Year >= 1000) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PWord(Buf)^   := TwoDigitLookupW[Result];
+                    PWord(Buf+2)^ := TwoDigitLookupW[Year-(Result*100)];
+                    {$ELSE}
+                    PWord(Buf)^   := TwoDigitLookupW[Year div 100];
+                    PWord(Buf+2)^ := TwoDigitLookupW[Year mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 4);
+                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
+                    Continue;
+                  end else if EQ3 or (Year >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PByte(Buf)^   := Ord('0')+Result;
+                    PWord(Buf+1)^ := TwoDigitLookupW[Year-(Result*100)];
+                    {$ELSE}
+                    PByte(Buf)^   := Ord('0')+Year div 100;
+                    PWord(Buf+1)^ := TwoDigitLookupW[Year mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 3);
+                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
+                    Continue;
+                  end else if EQ2 or (Year >= 10) then begin
+                    PWord(Buf)^ := TwoDigitLookupW[Year];
+Inc_dbl:            Inc(Buf, 2);
+                    Inc(PFormat, 1+Ord(EQ2));
+                    Continue;
+                  end else
+                    PByte(Buf)^ := Ord('0') + Year;
+                end;
+      Ord('m'): if EQ2 or (Month >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Month];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Month;
+      Ord('d'): if EQ2 or (Day >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Day];
+                  goto inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Day;
+      else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
+    end;
+    Inc(Buf);
+    Inc(PFormat);
+  end;
+  if Quoted then begin
+    PByte(PStart)^:= Ord(#39);
+    PByte(Buf)^   := Ord(#39);
+    Result := Buf-PStart+1;
+  end else
+    Result := Buf-PStart;
+end;
+
+{** EH:
+  Converts date value into a UCS2 buffer with format pattern
+  @param Value a TDateTime value.
+  @param Buf the UCS2 buffer to write in.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return the length in code-points of written value.
+}
+function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): word;
+var L, Year, Month, Day: Word;
+begin
+  DecodeDate(Value, Year, Month, Day);
+  Result := DateTimeToUnicodeSQLDate(Year, Month, Day, Buf,
+    ConFormatSettings.DateFormat, Quoted, False);
+  L := Length(Suffix);
+  if L > 0 then begin
+    Move(Pointer(Suffix)^, (Buf+Result)^, L shl 1);
+    Result := Result+L;
+  end;
+end;
+
+{** EH:
+  Converts date values into a buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Buf a UCS2 buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in code-points of written value.
+}
+function DateTimeToUnicodeSQLDate(Year, Month, Day: Word; Buf: PWideChar;
+  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+var PStart: PWideChar;
+  PFormat, PEnd: PChar;
+  C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+  EQ2, EQ3, EQ4: Boolean; //equals to C1?
+label inc_dbl; //keep code tiny
+begin
+  PFormat := Pointer(Format);
+  if PFormat = nil then begin
+    Result := 0;
+    Exit;
+  end;
+  PStart := Buf;
+  Inc(Buf, Ord(Quoted)+Ord(Negative));
+  if Negative then
+    PWord(Buf-1)^ := Ord('-');
+  PEnd := PFormat + Length(Format);
+  while PEnd > PFormat do begin
+    C1 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^ or $20;
+    EQ2 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+1)^ or $20 = C1; //possibly read #0
+    case C1 of
+      Ord('y'): begin
+                  { don't read over buffer }
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
+                  if EQ4 or (Year >= 1000) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PLongWord(Buf)^   := TwoDigitLookupLW[Result];
+                    PLongWord(Buf+2)^ := TwoDigitLookupLW[Year-(Result*100)];
+                    {$ELSE}
+                    PLongWord(Buf)^   := TwoDigitLookupLW[Year div 100];
+                    PLongWord(Buf+2)^ := TwoDigitLookupLW[Year mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 4); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
+                    continue;
+                  end else if EQ3 or (Year >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PWord(Buf)^   := Ord('0')+Result;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[Year-(Result*100)];
+                    {$ELSE}
+                    PWord(Buf)^   := Ord('0')+Year div 100;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[Year mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 3); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
+                    continue;
+                  end else if (Year >= 10) or EQ2 then begin
+                    PLongWord(Buf)^ := TwoDigitLookupLW[Year];
+Inc_dbl:            Inc(Buf, 2);
+                    Inc(PFormat, 1+Ord(EQ2));
+                    continue;
+                  end else
+                    PWord(Buf)^ := Ord('0') + Year;
+                end;
+      Ord('m'): if EQ2 or (Month >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Month];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Month;
+      Ord('d'): if EQ2 or (Day >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Day];
+                  goto Inc_Dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Day;
+      else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
+    end;
+    Inc(Buf);
+    Inc(PFormat);
+  end;
+  if Quoted then begin
+    PWord(PStart)^:= Ord(#39);
+    PWord(Buf)^   := Ord(#39);
+    Result := Buf-PStart+1;
+  end else
+    Result := Buf-PStart;
+end;
+
+{** EH:
+  Converts date value into a WideString/UnicodeString with format pattern
+  @param Value a TDateTime value.
+  @param ConFormatSettings then DateFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::date.
+  @return a formated WideString/UnicodeString with Date-Format pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
+var L, L2, Year, Month, Day: Word;
+  Buffer: array[0..11] of WideChar;
+  P: PWideChar;
 begin
-  SetLength(Result, ConFormatSettings.DateFormatLen+(2*Ord(Quoted))+Length(Suffix));
-  DateTimeToUnicodeSQLDate(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+  DecodeDate(Value, Year, Month, Day);
+  L := DateTimeToUnicodeSQLDate(Year, Month, Day, @Buffer[0],
+    ConFormatSettings.DateFormat, Quoted, False);
+  l2 := Length(Suffix);
+  System.SetString(Result, nil , L+L2);
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L shl 1);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2 shl 1);
 end;
 
 {**
@@ -3112,148 +3459,268 @@ begin
   Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLDate {$ELSE} DateTimeToRawSQLDate {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
 end;
 
-{**
-  Converts DateTime value into a RawByteString with format pattern
+{** EH:
+  Converts time value into a raw encoded string with format pattern
   @param Value a TDateTime value.
-  @param TimeFormat the result format.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
   @return a formated RawByteString with Time-Format pattern.
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
+  Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
+var l, l2, Hour, Minute, Second, MSec: Word;
+  Buffer: array[0..15] of AnsiChar;
+  P: PAnsiChar;
 begin
-  ZSetString(nil, ConFormatSettings.TimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
-  DateTimeToRawSQLTime(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+  DecodeTime(Value, Hour, Minute, Second, MSec);
+  L := DateTimeToRawSQLTime(Hour, Minute, Second, MSec, @Buffer[0],
+    ConFormatSettings.TimeFormat, Quoted);
+  l2 := Length(Suffix);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  ZSetString(nil, l+l2, Result);
+  {$ELSE}
+  System.SetString(Result, nil , L+L2);
+  {$ENDIF}
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2);
 end;
 
-procedure DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw); overload;
-var
-  AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Integer;
-  TimeFormat: PChar;
-  ZSet: Boolean;
-begin
-  {need fixed size to read from back to front}
-  DecodeTime(Value, AHour, AMinute, ASecond, AMilliSecond);
-  ZSet := False;
-  if Quoted then begin
-    PByte(Buffer)^ := Ord(#39);
-    Inc(Buffer, Ord(Quoted));
-  end;
-
-  I := ConFormatSettings.TimeFormatLen-1;
-  TimeFormat := Pointer(ConFormatSettings.TimeFormat);
-  while I > 0 do
-    case (TimeFormat+i)^ of
-      'H', 'h': begin
-          (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[AHour];
-          Dec(I, 2);
-        end;
-      'N', 'n': begin
-          (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[AMinute];
-          Dec(I, 2);
-        end;
-      'S', 's': begin
-          (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[ASecond];
-          Dec(I, 2);
-        end;
-      'Z', 'z': begin
-          Dec(I);
-          if ZSet then
-            Continue
-          else begin
-            (PWord(@PByteArray(Buffer)[i]))^ := TwoDigitLookupW[AMilliSecond mod 100];
-            (PWord(@PByteArray(Buffer)[i-1]))^ := TwoDigitLookupW[AMilliSecond div 10];
-            ZSet := True;
-          end;
-        end;
-      else begin
-        PByte(Buffer+i)^ := Ord((TimeFormat+i)^);
-        Dec(i);
-      end;
-    end;
-  if Quoted then
-    PByte(Buffer+ConFormatSettings.TimeFormatLen)^ := Ord(#39);
-  if Suffix <> EmptyRaw then //move suffix after leading quote
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
-      (Buffer+ConFormatSettings.TimeFormatLen+Ord(Quoted))^, Length(Suffix));
-end;
-
-{**
-  Converts DateTime value into a WideString/UnicodeString with format pattern
+{** EH:
+  Converts a time value into a raw buffer with format pattern
   @param Value a TDateTime value.
-  @param TimeFormat the result format.
+  @param Buf the raw buffer to write in.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
+  const ConFormatSettings: TZFormatSettings;
+  Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word;
+var l, Hour, Minute, Second, MSec: Word;
+begin
+  DecodeTime(Value, Hour, Minute, Second, MSec);
+  Result := DateTimeToRawSQLTime(Hour, Minute, Second, MSec, Buffer,
+    ConFormatSettings.TimeFormat, Quoted);
+  L := Length(Suffix);
+  if L > 0 then begin
+    Move(Pointer(Suffix)^, (Buffer+Result)^, L);
+    Result := Result+L;
+  end;
+end;
+
+{** EH:
+  Converts a time values into a raw buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the raw buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLTime(Hour, Minute, Second, MSec: Word;
+  Buf: PAnsichar; const Format: String; Quoted: Boolean): Byte;
+var PStart: PAnsiChar;
+  PFormat, PEnd: PChar;
+  C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+  EQ2, EQ3: Boolean;
+label inc_dbl; //keep code tiny
+begin
+  PStart := Buf;
+  Inc(Buf, Ord(Quoted));
+  PFormat := Pointer(Format);
+  PEnd := PFormat + Length(Format);
+  while PEnd > PFormat do begin
+    C1 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^ or $20;
+    EQ2 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+1)^ or $20 = C1;
+    case C1 of
+      Ord('h'): if EQ2 or (Hour >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Hour];
+Inc_dbl:          Inc(Buf, 2);
+                  Inc(PFormat, 1+Ord(EQ2));
+                  Continue;
+                end else
+                  PByte(Buf)^ := Ord('0') + Hour;
+      Ord('n'): if EQ2 or (Minute >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Minute];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Minute;
+      Ord('s'): if EQ2 or (Second >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Second];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Second;
+      Ord('z'): begin
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  if EQ3 or (MSec >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := MSec div 100;
+                    PByte(Buf)^   := Ord('0')+Result;
+                    PWord(Buf+1)^ := TwoDigitLookupW[MSec-(Result*100)];
+                    {$ELSE}
+                    PByte(Buf)^   := Ord('0')+MSec div 100;
+                    PWord(Buf+1)^ := TwoDigitLookupW[MSec mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 3); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
+                    continue;
+                  end else if EQ2 or (MSec > 9) then begin
+                    PWord(Buf)^ := TwoDigitLookupW[MSec];
+                    goto Inc_dbl;
+                  end else
+                    PByte(Buf)^ := Ord('0') + MSec;
+                end;
+      else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
+    end;
+    Inc(Buf);
+    Inc(PFormat);
+  end;
+  if Quoted then begin
+    PByte(PStart)^:= Ord(#39);
+    PByte(Buf)^   := Ord(#39);
+    Result := Buf-PStart+1;
+  end else
+    Result := Buf-PStart;
+end;
+
+{** EH:
+  Converts a time value into a WideString/UnicodeString with format pattern
+  @param Value a TDateTime value.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
+var l, l2, Hour, Minute, Second, MSec: Word;
+  Buffer: array[0..15] of WideChar;
+  P: PWideChar;
 begin
-  ZSetString(nil, ConFormatSettings.TimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
-  DateTimeToUnicodeSQLTime(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+  DecodeTime(Value, Hour, Minute, Second, MSec);
+  L := DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec, @Buffer[0],
+    ConFormatSettings.TimeFormat, Quoted);
+  l2 := Length(Suffix);
+  System.SetString(Result, nil , L+L2);
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L shl 1);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2 shl 1);
 end;
 
-procedure DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
+{** EH:
+  Converts a time value into a UCS2 buffer with format pattern
+  @param Value a TDateTime value.
+  @param Buf then UCS2 buffer to write in.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::time.
+  @return the length in codepoints of written value.
+}
+function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = '');
-var
-  AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Integer;
-  TimeFormat: PChar;
-  ZSet: Boolean;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): Word;
+var l, Hour, Minute, Second, MSec: Word;
 begin
-  {need fixed size to read from back to front}
-  DecodeTime(Value, AHour, AMinute, ASecond, AMilliSecond);
-  ZSet := False;
-  if Quoted then begin
-    PWord(Buf)^ := Ord(#39);
-    Inc(Buf);
+  DecodeTime(Value, Hour, Minute, Second, MSec);
+  Result := DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec, Buf,
+    ConFormatSettings.TimeFormat, Quoted);
+  L := Length(Suffix);
+  if L > 0 then begin
+    Move(Pointer(Suffix)^, (Buf+Result)^, L shl 1);
+    Result := Result+L;
   end;
+end;
 
-  I := ConFormatSettings.TimeFormatLen-1;
-  TimeFormat := Pointer(ConFormatSettings.TimeFormat);
-  while I > 0 do
-    case (TimeFormat+i)^ of
-      'H', 'h':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AHour];
-          Dec(I, 2);
-        end;
-      'N', 'n':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMinute];
-          Dec(I, 2);
-        end;
-      'S', 's':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ASecond];
-          Dec(I, 2);
-        end;
-      'Z', 'z':
-        begin
-          Dec(I);
-          if ZSet then
-            Continue
-          else
-          begin
-            (PLongWord(@PWordArray(Buf)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
-            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
-            ZSet := True;
-          end;
-        end;
-      else
-      begin
-        PWord(Buf+i)^ := Ord((TimeFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
-        Dec(i);
-      end;
+{** EH:
+  Converts a time values into a UCS2 buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the unicode buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @return the length in codepoints of written value.
+}
+function DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec: Word;
+  Buf: PWideChar; const Format: String; Quoted: Boolean): Byte;
+var PStart: PWideChar;
+  PFormat, PEnd: PChar;
+  C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+  EQ2, EQ3: Boolean;
+label inc_dbl; //keep code tiny
+begin
+  PStart := Buf;
+  Inc(Buf, Ord(Quoted));
+  PFormat := Pointer(Format);
+  PEnd := PFormat + Length(Format);
+  while PEnd > PFormat do begin
+    C1 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^ or $20;
+    EQ2 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+1)^ or $20 = C1;
+    case C1 of
+      Ord('h'): if EQ2 or (Hour >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Hour];
+Inc_dbl:          Inc(Buf, 2);
+                  Inc(PFormat, 1+Ord(EQ2));
+                  continue;
+                end else
+                  PWord(Buf)^ := Ord('0') + Hour;
+      Ord('n'): if EQ2 or (Minute >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Minute];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Minute;
+      Ord('s'): if EQ2 or (Second >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Second];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Second;
+      Ord('z'): begin
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  if EQ3 or (MSec >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := MSec div 100;
+                    PWord(Buf)^       := Ord('0')+Result;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[MSec-(Result*100)];
+                    {$ELSE}
+                    PWord(Buf)^       := Ord('0')+MSec div 100;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[MSec mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 3); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
+                    continue;
+                  end else if EQ2 or (MSec > 9) then begin
+                    PLongWord(Buf)^ := TwoDigitLookupLW[MSec];
+                    goto Inc_dbl
+                  end else
+                    PWord(Buf)^ := Ord('0') + MSec;
+                end
+      else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
-  if Quoted then
-    PWord(Buf+ConFormatSettings.TimeFormatLen)^ := Ord(#39);
-  if Suffix <> EmptyRaw then //move suffix after leading quote
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
-      (Buf+ConFormatSettings.TimeFormatLen+Ord(Quoted))^, Length(Suffix) shl 1);
+    Inc(Buf);
+    Inc(PFormat)
+  end;
+  if Quoted then begin
+    PWord(PStart)^:= Ord(#39);
+    PWord(Buf)^   := Ord(#39);
+    Result := Buf-PStart+1;
+  end else
+    Result := Buf-PStart;
 end;
 
 {**
@@ -3266,199 +3733,380 @@ begin
   Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLTime {$ELSE} DateTimeToRawSQLTime {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
 end;
 
-{**
-  Converts DateTime value to a RawByteString
+{** EH:
+  Converts datetime value into a raw encoded string with format pattern
   @param Value a TDateTime value.
-  @param TimeStampFormat the result format.
-  @return a formated RawByteString in TimeStamp-Format pattern.
+  @param ConFormatSettings then DateTimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return a formated RawByteString with DateTime-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
+var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
+  Buffer: array[0..31] of AnsiChar;
+  P: PAnsiChar;
 begin
-  ZSetString(nil, ConFormatSettings.DateTimeFormatLen+Byte((Ord(Quoted) shl 1))+Cardinal(Length(Suffix)), Result);
-  DateTimeToRawSQLTimeStamp(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+  DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
+  L := DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec,
+    @Buffer[0], ConFormatSettings.DateTimeFormat, Quoted, False);
+  l2 := Length(Suffix);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  ZSetString(nil, l+l2, Result);
+  {$ELSE}
+  System.SetString(Result, nil, L+L2);
+  {$ENDIF}
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2);
 end;
 
-procedure DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw);
-var
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Integer;
-  TimeStampFormat: PChar;
-  ZSet, YearSet: Boolean;
-begin
-  {need fixed size to read from back to front}
-  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  ZSet := False;
-  YearSet := False;
-
-  if Quoted then begin
-    PByte(Buf)^ := Ord(#39);
-    Inc(Buf, Ord(Quoted));
-  end;
-
-  I := ConFormatSettings.DateTimeFormatLen-1;
-  TimeStampFormat := Pointer(ConFormatSettings.DateTimeFormat);
-  while I > 0 do
-    case (TimeStampFormat+i)^ of
-      'Y', 'y':
-        begin
-          if YearSet then  //Year has either two or four digits
-            (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AYear div 100]
-          else
-          begin
-            (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AYear mod 100];
-            YearSet := True;
-          end;
-          Dec(i,2);
-        end;
-      'M', 'm':
-        begin
-          (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AMonth];
-          Dec(i, 2);
-        end;
-      'D', 'd':
-        begin
-          (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[ADay];
-          Dec(i, 2);
-        end;
-      'H', 'h':
-        begin
-          (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AHour];
-          Dec(i, 2);
-        end;
-      'N', 'n':
-        begin
-          (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AMinute];
-          Dec(i, 2);
-        end;
-      'S', 's':
-        begin
-          (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[ASecond];
-          Dec(i, 2);
-        end;
-      'Z', 'z':
-        begin
-          Dec(I);
-          if ZSet then
-            Continue
-          else
-          begin
-            (PWord(@PByteArray(Buf)[i]))^ := TwoDigitLookupW[AMilliSecond mod 100];
-            (PWord(@PByteArray(Buf)[i-1]))^ := TwoDigitLookupW[AMilliSecond div 10];
-            ZSet := True;
-          end;
-        end;
-      else
-      begin
-        PByte(Buf+i)^ := Ord((TimeStampFormat+i)^);
-        Dec(i);
-      end;
-    end;
-  if Quoted then
-    PByte(Buf+ConFormatSettings.DateTimeFormatLen)^ := Ord(#39);
-  if Suffix <> EmptyRaw then //move suffix after leading quote
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
-      (Buf+ConFormatSettings.DateTimeFormatLen+Ord(Quoted))^, Length(Suffix));
-end;
-
-procedure DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = '');
-var
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Integer;
-  TimeStampFormat: PChar;
-  ZSet, YearSet: Boolean;
-begin
-  {need fixed size to read from back to front}
-  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  ZSet := False;
-  YearSet := False;
-  if Quoted then begin
-    PWord(Buf)^ := Ord(#39);
-    Inc(Buf);
-  end;
-
-  I := ConFormatSettings.DateTimeFormatLen-1;
-  TimeStampFormat := Pointer(ConFormatSettings.DateTimeFormat);
-  while I > 0 do
-    case (TimeStampFormat+i)^ of
-      'Y', 'y':
-        begin
-          if YearSet then  //Year has either two or four digits
-            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
-          else
-          begin
-            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
-            YearSet := True;
-          end;
-          Dec(i,2);
-        end;
-      'M', 'm':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMonth];
-          Dec(i, 2);
-        end;
-      'D', 'd':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ADay];
-          Dec(i, 2);
-        end;
-      'H', 'h':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AHour];
-          Dec(i, 2);
-        end;
-      'N', 'n':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMinute];
-          Dec(i, 2);
-        end;
-      'S', 's':
-        begin
-          (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[ASecond];
-          Dec(i, 2);
-        end;
-      'Z', 'z':
-        begin
-          Dec(I);
-          if ZSet then
-            Continue
-          else
-          begin
-            (PLongWord(@PWordArray(Buf)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
-            (PLongWord(@PWordArray(Buf)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
-            ZSet := True;
-          end;
-        end;
-      else
-      begin
-        PWord(Buf+i)^ := Ord((TimeStampFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
-        Dec(i);
-      end;
-    end;
-  if Quoted then
-    PWord(Buf+ConFormatSettings.DateTimeFormatLen)^ := Ord(#39);
-  if Suffix <> '' then //move suffix after leading quote
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Suffix)^,
-      (Buf+ConFormatSettings.DateTimeFormatLen+Ord(Quoted))^, Length(Suffix) shl 1);
-end;
-
-{**
-  Converts DateTime value to a WideString/UnicodeString
+{** EH:
+  Converts datetime value into a raw encoded buffer with format pattern
   @param Value a TDateTime value.
-  @param TimeStampFormat the result format.
-  @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
+  @param Buf the raw buffer we write in.
+  @param ConFormatSettings then DateTimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return a formated RawByteString with DateTime-Format pattern.
+}
+function DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
+  const ConFormatSettings: TZFormatSettings; Quoted: Boolean;
+  const Suffix: RawByteString = EmptyRaw): Word;
+var l, Year, Month, Day, Hour, Minute, Second, MSec: Word;
+begin
+  DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
+  Result := DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second,
+    MSec, Buf, ConFormatSettings.DateTimeFormat, Quoted, False);
+  L := Length(Suffix);
+  if L > 0 then begin
+    Move(Pointer(Suffix)^, (Buf+Result)^, L);
+    Result := Result+L;
+  end;
+end;
+
+{** EH:
+  Converts date and time values into a raw buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the raw buffer we write in.
+  @param Format the result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in bytes of written value.
+}
+function DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
+  Buf: PAnsiChar; const Format: String; Quoted, Negative: Boolean): Byte; overload;
+var PStart: PAnsiChar;
+  PFormat, PEnd: PChar;
+  C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+  EQ2, EQ3, EQ4: Boolean; //equals to C1?
+label inc_dbl, inc_trpl; //keep code tiny
+begin
+  PFormat := Pointer(Format);
+  if PFormat = nil then begin
+    Result := 0;
+    Exit;
+  end;
+  PStart := Buf;
+  Inc(Buf, Ord(Quoted)+Ord(Negative));
+  if Negative then
+    PByte(Buf-1)^ := Ord('-');
+  PEnd := PFormat + Length(Format);
+  while PEnd > PFormat do begin
+    C1 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^ or $20;
+    EQ2 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+1)^ or $20 = C1; //possibly read #0
+    case C1 of
+      Ord('y'): begin
+                  { don't read over buffer }
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
+                  if EQ4 or (Year >= 1000) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PWord(Buf)^   := TwoDigitLookupW[Result];
+                    PWord(Buf+2)^ := TwoDigitLookupW[Year-(Result*100)];
+                    {$ELSE}
+                    PWord(Buf)^   := TwoDigitLookupW[Year div 100];
+                    PWord(Buf+2)^ := TwoDigitLookupW[Year mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 4);
+                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
+                    Continue;
+                  end else if EQ3 or (Year >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PByte(Buf)^   := Ord('0')+Result;
+                    PWord(Buf+1)^ := TwoDigitLookupW[Year-(Result*100)];
+                    {$ELSE}
+                    PByte(Buf)^   := Ord('0')+Year div 100;
+                    PWord(Buf+1)^ := TwoDigitLookupW[Year mod 100];
+                    {$ENDIF}
+inc_trpl:           Inc(Buf, 3);
+                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
+                    Continue;
+                  end else if EQ2 or (Year >= 10) then begin
+                    PWord(Buf)^ := TwoDigitLookupW[Year];
+Inc_dbl:            Inc(Buf, 2);
+                    Inc(PFormat, 1+Ord(EQ2));
+                    Continue;
+                  end else
+                    PByte(Buf)^ := Ord('0') + Year;
+                end;
+      Ord('m'): if EQ2 or (Month >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Month];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Month;
+      Ord('d'): if EQ2 or (Day >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Day];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Day;
+      Ord('h'): if EQ2 or (Hour >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Hour];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Hour;
+      Ord('n'): if EQ2 or (Minute >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Minute];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Minute;
+      Ord('s'): if EQ2 or (Second >= 10) then begin
+                  PWord(Buf)^ := TwoDigitLookupW[Second];
+                  goto Inc_dbl;
+                end else
+                  PByte(Buf)^ := Ord('0') + Second;
+      Ord('z'): begin
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  if EQ3 or (MSec >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := MSec div 100;
+                    PByte(Buf)^   := Ord('0')+Result;
+                    PWord(Buf+1)^ := TwoDigitLookupW[MSec-(Result*100)];
+                    {$ELSE}
+                    PByte(Buf)^   := Ord('0')+MSec div 100;
+                    PWord(Buf+1)^ := TwoDigitLookupW[MSec mod 100];
+                    {$ENDIF}
+                    goto inc_trpl;
+                  end else if EQ2 or (MSec > 9) then begin
+                    PWord(Buf)^ := TwoDigitLookupW[MSec];
+                    goto Inc_dbl;
+                  end else
+                    PByte(Buf)^ := Ord('0') + MSec;
+                end;
+      else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
+    end;
+    Inc(Buf);
+    Inc(PFormat);
+  end;
+  if Quoted then begin
+    PByte(PStart)^:= Ord(#39);
+    PByte(Buf)^   := Ord(#39);
+    Result := Buf-PStart+1;
+  end else
+    Result := Buf-PStart;
+end;
+
+{** EH:
+  Converts a datetime value into a UCS2 buffer with format pattern
+  @param Value a TDateTime value.
+  @param Buf then UCS2 buffer to write in.
+  @param ConFormatSettings then TimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return the length in codepoints of written value.
+}
+function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
+  const ConFormatSettings: TZFormatSettings;
+  const Quoted: Boolean; const Suffix: ZWideString = ''): Word;
+var l, Year, Month, Day, Hour, Minute, Second, MSec: Word;
+begin
+  DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
+  Result := DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute, Second,
+    MSec, Buf, ConFormatSettings.DateTimeFormat, Quoted, False);
+  L := Length(Suffix);
+  if L > 0 then begin
+    Move(Pointer(Suffix)^, (Buf+Result)^, L shl 1);
+    Result := Result+L;
+  end;
+end;
+
+{** EH:
+  Converts date and time values into a UCS2 buffer with format pattern
+  We don't take care for the ranges of the Values. That's users turn to do!
+  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
+  @param Year a Year value with range of 0..9999.
+  @param Month a Month value with range of 0..12.
+  @param Day a Day value with range of 0..31.
+  @param Hour a hour value with range of 0..23.
+  @param Minute a minute value with range of 0..59.
+  @param Second a second value with range of 0..59.
+  @param MSec a millisecond value with range of 0..999.
+  @param Buf the unicode buffer we write in.
+  @param Format the !valid! result format.
+  @param Quoted if the result should be quoted.
+  @param Negative if the date is negative (i.e. bc).
+  @return the length in bytes of written value.
+}
+function DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
+  Buf: PWideChar; const Format: String; Quoted, Negative: Boolean): Byte;
+var PStart: PWideChar;
+  PFormat, PEnd: PChar;
+  C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+  EQ2, EQ3, EQ4: Boolean; //equals to C1?
+label inc_dbl, inc_trpl; //keep code tiny
+begin
+  PFormat := Pointer(Format);
+  if PFormat = nil then begin
+    Result := 0;
+    Exit;
+  end;
+  PStart := Buf;
+  Inc(Buf, Ord(Quoted)+Ord(Negative));
+  if Negative then
+    PWord(Buf-1)^ := Ord('-');
+  PEnd := PFormat + Length(Format);
+  while PEnd > PFormat do begin
+    C1 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^ or $20;
+    EQ2 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+1)^ or $20 = C1; //possibly read #0
+    case C1 of
+      Ord('y'): begin
+                  { don't read over buffer }
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
+                  if EQ4 or (Year >= 1000) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PLongWord(Buf)^   := TwoDigitLookupLW[Result];
+                    PLongWord(Buf+2)^ := TwoDigitLookupLW[Year-(Result*100)];
+                    {$ELSE}
+                    PLongWord(Buf)^   := TwoDigitLookupLW[Year div 100];
+                    PLongWord(Buf+2)^ := TwoDigitLookupLW[Year mod 100];
+                    {$ENDIF}
+                    Inc(Buf, 4);
+                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
+                    Continue;
+                  end else if EQ3 or (Year >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := Year div 100;
+                    PWord(Buf)^   := Ord('0')+Result;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[Year-(Result*100)];
+                    {$ELSE}
+                    PWord(Buf)^   := Ord('0')+Year div 100;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[Year mod 100];
+                    {$ENDIF}
+inc_trpl:           Inc(Buf, 3);
+                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
+                    Continue;
+                  end else if EQ2 or (Year >= 10) then begin
+                    PLongWord(Buf)^ := TwoDigitLookupLW[Year];
+Inc_dbl:            Inc(Buf, 2);
+                    Inc(PFormat, 1+Ord(EQ2));
+                    Continue;
+                  end else
+                    PWord(Buf)^ := Ord('0') + Year;
+                end;
+      Ord('m'): if EQ2 or (Month >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Month];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Month;
+      Ord('d'): if EQ2 or (Day >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Day];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Day;
+      Ord('h'): if EQ2 or (Hour >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Hour];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Hour;
+      Ord('n'): if EQ2 or (Minute >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Minute];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Minute;
+      Ord('s'): if EQ2 or (Second >= 10) then begin
+                  PLongWord(Buf)^ := TwoDigitLookupLW[Second];
+                  goto Inc_dbl;
+                end else
+                  PWord(Buf)^ := Ord('0') + Second;
+      Ord('z'): begin
+                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
+                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
+                  if EQ3 or (MSec >= 100) then begin
+                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                    Result := MSec div 100;
+                    PWord(Buf)^   := Ord('0')+Result;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[MSec-(Result*100)];
+                    {$ELSE}
+                    PWord(Buf)^   := Ord('0')+MSec div 100;
+                    PLongWord(Buf+1)^ := TwoDigitLookupLW[MSec mod 100];
+                    {$ENDIF}
+                    goto inc_trpl;
+                  end else if EQ2 or (MSec > 9) then begin
+                    PLongWord(Buf)^ := TwoDigitLookupLW[MSec];
+                    goto Inc_dbl;
+                  end else
+                    PWord(Buf)^ := Ord('0') + MSec;
+                end;
+      else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
+    end;
+    Inc(Buf);
+    Inc(PFormat);
+  end;
+  if Quoted then begin
+    PWord(PStart)^:= Ord(#39);
+    PWord(Buf)^   := Ord(#39);
+    Result := Buf-PStart+1;
+  end else
+    Result := Buf-PStart;
+end;
+
+{** EH:
+  Converts datetime value into a Unicode/Widestring with format pattern
+  @param Value a TDateTime value.
+  @param ConFormatSettings then DateTimeFormat settings of the result.
+  @param Quoted if the result should be quoted.
+  @param Suffix a suffix string which can be appendened to the result String
+    i.e. Postgres ::timestamp.
+  @return a formated UCS2-String with DateTime-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
+  Buffer: array[0..31] of WideChar;
+  P: PWideChar;
 begin
-  SetLength(Result, ConFormatSettings.DateTimeFormatLen+(2*Ord(Quoted))+Length(Suffix));
-  DateTimeToUnicodeSQLTimeStamp(Value, Pointer(Result), ConFormatSettings, Quoted, Suffix);
+  DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
+  L := DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute,
+    Second, MSec, @Buffer[0], ConFormatSettings.DateTimeFormat, Quoted, False);
+  l2 := Length(Suffix);
+  System.SetString(Result, nil, L+L2);
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L shl 1);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2 shl 1);
 end;
 
 {**

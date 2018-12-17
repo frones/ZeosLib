@@ -55,6 +55,12 @@ interface
 
 {$I ZPlain.inc}
 
+{$IF not defined(MSWINDOWS)}
+  {$DEFINE ZEOS_DISABLE_ADO}
+{$IFEND}
+
+{$IFNDEF ZEOS_DISABLE_ADO}
+
 uses {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZPlainDriver;
 
 type
@@ -71,7 +77,11 @@ type
     function Clone: IZPlainDriver; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ADO}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ADO}
 
 uses ZCompatibility, ZEncoding, Windows;
 
@@ -108,5 +118,7 @@ function TZAdoPlainDriver.Clone: IZPlainDriver;
 begin
   Result := Self;
 end;
+
+{$ENDIF ZEOS_DISABLE_ADO}
 
 end.

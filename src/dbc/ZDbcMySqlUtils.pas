@@ -56,6 +56,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging,
@@ -162,7 +163,9 @@ procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
   OldCount, NewCount: Integer; Iterations: ULong);
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   Math, TypInfo,
@@ -1016,4 +1019,5 @@ initialization
     max_length      := NativeUInt(@(PMYSQL_FIELD32(nil).max_length));
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.

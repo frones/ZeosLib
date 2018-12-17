@@ -32,58 +32,24 @@ requires
   vcl;
 
 contains
-
-{$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
-{$IFDEF ENABLE_ODBC}
-  ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_DBLIB}
-  ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
+  ZOleDB in '..\..\src\plain\ZOleDB.pas',
+  ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
+  ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
+  ZPlainASAConstants in '..\..\src\plain\ZPlainASAConstants.pas',
+  ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
   ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_INTERBASE}
+  ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
+  ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
   ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
   ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_MYSQL}
-  ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
+  ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas',
   ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_POSTGRESQL}
-  ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
-{$ENDIF}
-
-{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
-  ZOleDB in '..\..\src\plain\ZOleDB.pas',
-{$IFEND}
-
-{$IFDEF ENABLE_OLEDB}
+  ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
+  ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
   ZPlainOleDBDriver in '..\..\src\plain\ZPlainOleDBDriver.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_ADO}
-  ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
-  ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_ORACLE}
-  ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
   ZPlainOracleConstants in '..\..\src\plain\ZPlainOracleConstants.pas',
-{$ENDIF}
+  ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
+  ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
+  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas';
 
-{$IFDEF ENABLE_SQLITE}
-  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_ASA}
-  ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
-  ZPlainASAConstants in '..\..\src\plain\ZPlainASAConstants.pas',
-{$ENDIF}
-
-  ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
-  ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas';
 end.

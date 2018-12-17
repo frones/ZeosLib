@@ -57,6 +57,7 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_OLEDB}
 uses
   ZODBCToken;
 
@@ -64,6 +65,7 @@ type
   {** Implements a default tokenizer object. }
   TZOleDBTokenizer = TZODBCTokenizer;
 
+{$ENDIF ZEOS_DISABLE_OLEDB}
 implementation
 
 end.

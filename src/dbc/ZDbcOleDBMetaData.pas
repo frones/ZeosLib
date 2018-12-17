@@ -55,6 +55,11 @@ interface
 
 {$I ZDbc.inc}
 
+{$IF not defined(MSWINDOWS) or (defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ADO))}
+  {$DEFINE DISABLE_OLE_METADATA}
+{$IFEND}
+
+{$IFNDEF DISABLE_OLE_METADATA} //if set we have an empty unit
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcMetadata,
@@ -243,7 +248,8 @@ type
     //Ole related
     procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
   end;
-  {$IFDEF ENABLE_OLEDB}
+
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
   {** Implements Ado Metadata. }
   TOleDBDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
@@ -299,9 +305,11 @@ type
   public
     constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
   end;
-  {$ENDIF ENABLE_OLEDB}
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
+{$ENDIF DISABLE_OLE_METADATA} //if set we have an empty unit
 implementation
+{$IFNDEF DISABLE_OLE_METADATA} //if set we have an empty unit
 
 uses
   Variants, ZGenericSqlToken, ZFastCode,
@@ -1487,7 +1495,7 @@ begin
   Result := True;
 end;
 
-{$IFDEF ENABLE_OLEDB}
+{$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 { TOleDBDatabaseMetadata }
 
 {**
@@ -1952,9 +1960,8 @@ begin
         fTableColColumnMap.ColIndices[TableColColumnTypeIndex] := FindColumn('DATA_TYPE');
         fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex] := fTableColColumnMap.ColIndices[TableColColumnTypeIndex];
         fTableColColumnMap.ColIndices[TableColColumnSizeIndex] := FindColumn('CHARACTER_MAXIMUM_LENGTH');
-        fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex] := FindColumn('CHARACTER_OCTET_LENGTH');
         fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex] := FindColumn('NUMERIC_SCALE');
-        fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex] := FindColumn('NUMERIC_PRECISION');;
+        fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex] := FindColumn('NUMERIC_PRECISION');;
         fTableColColumnMap.ColIndices[TableColColumnNullableIndex] := FindColumn('IS_NULLABLE');
         fTableColColumnMap.ColIndices[TableColColumnRemarksIndex] := FindColumn('DESCRIPTION');
         fTableColColumnMap.ColIndices[TableColColumnColDefIndex] := FindColumn('COLUMN_DEFAULT');
@@ -1977,10 +1984,12 @@ begin
         SQLType := ConvertOleDBTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           ((FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0), ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
+        if SQLType in [stCurrency, stBigDecimal]
+        then Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]))
+        else Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
         Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
-        Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
+        //Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
         Result.UpdateSmall(TableColColumnNullableIndex, Ord(GetBoolean(fTableColColumnMap.ColIndices[TableColColumnNullableIndex])));
         Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnRemarksIndex], Len), Len);
         Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), Len);
@@ -2875,7 +2884,6 @@ begin
       Break;
     end;
 end;
-
-{$ENDIF ENABLE_OLEDB}
-
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
+{$ENDIF DISABLE_OLE_METADATA} //if set we have an empty unit
 end.

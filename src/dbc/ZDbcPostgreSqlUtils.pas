@@ -56,8 +56,9 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, fmtBCD,
   ZDbcIntfs, ZPlainPostgreSqlDriver, ZDbcPostgreSql, ZDbcLogging,
   ZCompatibility, ZVariant;
 
@@ -78,8 +79,8 @@ function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
    @param TypeOid is PostgreSQL type OID
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(const ConSettings: PZConSettings;
-  const OIDAsBlob: Boolean; const TypeOid: Integer): TZSQLType; overload;
+function PostgreSQLToSQLType(ConSettings: PZConSettings;
+  OIDAsBlob: Boolean; TypeOid: OID; TypeModifier: Integer): TZSQLType; overload;
 
 {**
    Return PostgreSQL type name from ZSQLType
@@ -162,7 +163,7 @@ function PG2Time(Value: Int64): TDateTime; overload;
 
 function PG2Date(Value: Integer): TDateTime;
 
-function PG2SmallInt(P: Pointer): SmallInt; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -177,8 +178,11 @@ procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline
 function PG2Int64(P: Pointer): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Currency(P: Pointer): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Currency2PG(const Value: Currency; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PGNumeric2Currency(P: Pointer): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PGCash2Currency(P: Pointer): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Single(P: Pointer): Single; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -200,12 +204,16 @@ function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
 function ARR_OVERHEAD_WITHNULLS(ndims, nitems: Integer): Integer;
 function ARR_DATA_OFFSET(a: PArrayType): Int32;
 function ARR_DATA_PTR(a: PArrayType): Pointer;
-function MAXALIGN(nbytes: Integer): Integer;
 
+const MinPGNumSize = (1{ndigits}+1{weight}+1{sign}+1{dscale})*SizeOf(Word);
+const MaxCurr2NumSize = MinPGNumSize+(5{max 5 NBASE ndigits}*SizeOf(Word));
+const MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 5 NBASE ndigits}*SizeOf(Word));
+
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
-uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses
-  {$IFDEF TSYSCHARSET_IS_DEPRECATED}, ZDbcUtils{$ENDIF};
+uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses, ZDbcUtils;
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -298,8 +306,9 @@ end;
    @param TypeOid is PostgreSQL type OID
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(const ConSettings: PZConSettings;
-  const OIDAsBlob: Boolean; const TypeOid: Integer): TZSQLType; overload;
+function PostgreSQLToSQLType(ConSettings: PZConSettings;
+  OIDAsBlob: Boolean; TypeOid: OID; TypeModifier: Integer): TZSQLType; overload;
+var Scale: Integer;
 begin
   case TypeOid of
     INTERVALOID, CHAROID, BPCHAROID, VARCHAROID:  { interval/char/bpchar/varchar }
@@ -323,7 +332,19 @@ begin
     INETOID: Result := stString; { inet }
     MACADDROID: Result := stString; { macaddr }
     FLOAT4OID: Result := stFloat; { float4 }
-    FLOAT8OID, NUMERICOID: Result := stDouble; { float8/numeric. no 'decimal' any more }
+    FLOAT8OID: Result := stDouble; { float8/numeric. no 'decimal' any more }
+    NUMERICOID: begin
+      Result := stBigDecimal;
+      //see: https://www.postgresql.org/message-id/slrnd6hnhn.27a.andrew%2Bnonews%40trinity.supernews.net
+      //macro:
+      //numeric: this is ugly, the typmod is ((prec << 16) | scale) + VARHDRSZ,
+      //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
+        if TypeModifier <> -1 then begin
+          Scale := (TypeModifier - VARHDRSZ) and $FFFF;
+          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF <= sAlignCurrencyScale2Precision[Scale]) then
+            Result := stCurrency
+        end;
+      end;
     CASHOID: Result := stCurrency; { money }
     BOOLOID: Result := stBoolean; { bool }
     DATEOID: Result := stDate; { date }
@@ -333,12 +354,9 @@ begin
     REGPROCOID: Result := stString; { regproc }
     1034: Result := stAsciiStream; {aclitem[]}
     BYTEAOID: { bytea }
-      begin
-        if OidAsBlob then
-          Result := stBytes
-        else
-          Result := stBinaryStream;
-      end;
+        if OidAsBlob
+        then Result := stBytes
+        else Result := stBinaryStream;
     UUIDOID: Result := stGUID; {uuid}
     INT2VECTOROID, OIDVECTOROID: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
     143,629,651,719,791,1000..OIDARRAYOID,1040,1041,1115,1182,1183,1185,1187,1231,1263,
@@ -358,7 +376,9 @@ begin
   case SQLType of
     stBoolean: Result := 'bool';
     stByte, stSmall, stInteger, stLong: Result := 'int';
-    stFloat, stDouble, stBigDecimal: Result := 'numeric';
+    stFloat: Result := 'float4';
+    stDouble: Result := 'float8';
+    stCurrency, stBigDecimal: Result := 'numeric';
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: Result := 'text';
     stDate: Result := 'date';
     stTime: Result := 'time';
@@ -381,8 +401,8 @@ begin
     stWord, stInteger: aOID := INT4OID;
     stLongWord, stLong, stULong: aOID := INT8OID;
     stFloat: aOID := FLOAT4OID;
-    stDouble, stBigDecimal: aOID := FLOAT8OID;
-    stCurrency: aOID := FLOAT8OID;//CASHOID;  the pg money has a scale of 2 while we've a scale of 4
+    stDouble{$IFNDEF BCD_TEST},stBigDecimal{$ENDIF}: aOID := FLOAT8OID;
+    {$IFDEF BCD_TEST}stBigDecimal, {$ENDIF}stCurrency: aOID := NUMERICOID;//CASHOID;  the pg money has a scale of 2 while we've a scale of 4
     stString, stUnicodeString,//: aOID := VARCHAROID;
     stAsciiStream, stUnicodeStream: aOID := TEXTOID;
     stDate: aOID := DATEOID;
@@ -1082,16 +1102,80 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
 end;
 
-function PG2Currency(P: Pointer): Currency;
+function PGNumeric2Currency(P: Pointer): Currency;
+var
+  Numeric_External: PPGNumeric_External absolute P;
+  {Scale, }Sign: Word;
+  NBASEDigits, Weight, I: SmallInt;
+begin
+  Result := 0;
+  Sign := PG2Word(@Numeric_External.sign);
+  NBASEDigits := PG2Word(@Numeric_External.NBASEDigits);
+  if (NBASEDigits = 0) or (Sign = NUMERIC_NAN) or (Sign = NUMERIC_NULL) then
+    Exit;
+//  Scale := PG2Word(@Numeric_External.dscale);
+  Weight := PG2SmallInt(@Numeric_External.weight);
+  for I := 0 to NBASEDigits -1 do
+    Result := Result + PG2SmallInt(@Numeric_External.digits[i]) * IntPower(NBASE, Weight-i);
+  if Sign = NUMERIC_NEG then
+    Result := -Result;
+end;
+
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
+var
+  U64, U64b: UInt64;
+  NBASEDigits, I, NBASEDigit: SmallInt;
+  Numeric_External: PPGNumeric_External absolute Buf;
+begin
+  //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html#a3ae98a87bbc2d0dfc9cbe3d5845e0035
+  if Value < 0 then begin
+    U64 := -PInt64(@Value)^;
+    Word2PG(NUMERIC_NEG, @Numeric_External.sign);
+  end else begin
+    U64 := PInt64(@Value)^;
+    if Value <> 0 then
+      Numeric_External.sign := NUMERIC_POS
+    else begin
+      PInt64(Buf)^ := 0; //clear all four 2 byte vales once
+      Size := 8;
+      Exit;
+    end;
+  end;
+  NBASEDigits := (GetOrdinalDigits(U64) shr 2)+1;
+  Word2PG(Word(NBASEDigits), @Numeric_External.NBASEDigits); //write len
+  SmallInt2PG(NBASEDigits-2, @Numeric_External.weight); //weight
+  U64b := U64 div NBASE; //get the scale digit
+  NBASEDigit := SmallInt(u64-(U64b * NBASE)); //dividend mod 10000
+  u64 := U64b; //next dividend
+  if NBASEDigit = 0 then begin
+    Numeric_External.dscale := 0;
+    Numeric_External.digits[(NBASEDigits-1)] := 0;
+  end else begin
+    Word2PG(GetOrdinalDigits(Word(NBASEDigit)), @Numeric_External.dscale);
+    SmallInt2PG(NBASEDigit, @Numeric_External.digits[(NBASEDigits-1)]); //set last scale digit
+  end;
+  for I := NBASEDigits-2 downto 1{keep space for 1 base 10000 digit} do begin
+    U64b := U64 div NBASE;
+    NBASEDigit := u64-(U64b * NBASE); //dividend mod 10000
+    u64 := U64b; //next dividend
+    SmallInt2PG(NBASEDigit, @Numeric_External.digits[I]);
+  end;
+  SmallInt2PG(SmallInt(Int64Rec(u64).Lo), @Numeric_External.digits[0]); //set first digit
+  Size := (4+NBASEDigits) * SizeOf(Word);
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
+function PGCash2Currency(P: Pointer): Currency;
 begin
   PInt64(@Result)^ := PInt64(P)^; //move first
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result);{$ENDIF}
-  Result {%H-}:= PInt64(@Result)^/100;
+  Result {%H-}:= PInt64(@Result)^ div 100;
 end;
 
-procedure Currency2PG(const Value: Currency; Buf: Pointer);
+procedure Currency2PGCash(const Value: Currency; Buf: Pointer);
 begin
-  PInt64(Buf)^ := Trunc(Value*100);
+  PInt64(Buf)^ := PInt64(@Value)^*100; //PGmoney as a scale of two but we've a scale of 4
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
 end;
 
@@ -1163,15 +1247,9 @@ begin
   else Result := ARR_OVERHEAD_NONULLS(PG2Integer(ARR_NDIM(a)));
 end;
 
-function MaxAlign(nbytes: Integer): Integer;
-begin
- // Result := (((nbytes-1) shr 2)+1) shl 2;//4 byte (int32) aligned //nope this only makes the server
- Result := nbytes;
-end;
-
 function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
 begin
-  Result := MAXALIGN(sizeof(TArrayType) + 2 * sizeof(integer) * (ndims))
+  Result := sizeof(TArrayType) + 2 * sizeof(integer) * (ndims)
 end;
 
 (**
@@ -1180,7 +1258,7 @@ end;
 *)
 function ARR_OVERHEAD_WITHNULLS(ndims, nitems: Integer): Integer;
 begin
-  Result := MAXALIGN(sizeof(TArrayType) + 2 * sizeof(integer) * (ndims) + ((nitems + 7) shr 3 {div 8}))
+  Result := sizeof(TArrayType) + 2 * sizeof(integer) * (ndims) + ((nitems + 7) shr 3 {div 8})
 end;
 
 (**
@@ -1191,4 +1269,5 @@ begin
   Result := Pointer(NativeUInt(a)+NativeUInt(ARR_DATA_OFFSET(a)));
 end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.

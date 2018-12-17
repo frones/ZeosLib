@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
+
 {$IFDEF UNIX}
 {$IFDEF INTERBASE_CRYPT}
 {$DEFINE ENABLE_INTERBASE_CRYPT}
@@ -420,7 +422,11 @@ type
 
   function XSQLDA_LENGTH(Value: LongInt): LongInt;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
 
 uses SysUtils, ZEncoding, ZFastCode{$IFDEF UNICODE},ZSysUtils{$ENDIF};
 
@@ -676,5 +682,7 @@ function TZFirebirdPlainDriver.GetProtocol: string;
 begin
   Result := 'firebird';
 end;
+
+{$ENDIF ZEOS_DISABLE_INTERBASE}
 
 end.

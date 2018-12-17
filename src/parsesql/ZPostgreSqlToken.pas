@@ -55,6 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZTokenizer, ZGenericSqlToken, ZMySqlToken;
@@ -100,7 +102,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
 uses ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
@@ -300,6 +306,8 @@ begin
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
 end;
+
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 
 end.
 

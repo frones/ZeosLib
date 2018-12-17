@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
@@ -153,7 +154,10 @@ type
   end;
 
   {** implements a prepared statement for PostgreSQL protocol V3+ }
-  TZPostgreSQLPreparedStatementV3 = class(TZAbstractPostgreSQLPreparedStatementV3, IZPreparedStatement);
+  TZPostgreSQLPreparedStatementV3 = class(TZAbstractPostgreSQLPreparedStatementV3, IZPreparedStatement)
+  public
+    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
+  end;
 
   {** implements a emulated prepared statement for PostgresSQL protocol V2 }
   TZPostgrePreparedStatementV2 = class(TZPostgreSQLPreparedStatementV3)
@@ -182,7 +186,9 @@ type
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
@@ -280,7 +286,7 @@ begin
     stCurrency: begin
                   LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Currency), ParamFormatBin);
                   if FPQParamOIDs[index] = CASHOID
-                  then Currency2PG(Value, FPQparamValues[Index])
+                  then Currency2PGCash(Value, FPQparamValues[Index])
                   else Double2PG(Value, FPQparamValues[Index]);
                 end;
     else BindRawStr(Index, FloatToSqlRaw(Value));
@@ -460,21 +466,18 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.ExecuteDMLBatchWithUnnestVarlenaArrays: TPGresult;
 var
   Stmt: TZPostgreSQLPreparedStatementV3;
+  SQLType: TZSQLType;
 
   procedure AllocArray(Index: Cardinal; TotalSize: Integer;
     out A: PArrayType; out Buf: PAnsiChar);
   var
     aOID: OID;
-    ArrOverhead, BuffSize: Integer;
-    Varlena: TBytes;
+    BuffSize: Integer;
   begin
-    ArrOverhead := ARR_OVERHEAD_NONULLS(1);
-    BuffSize := ArrOverhead+TotalSize;
+    BuffSize := ARR_OVERHEAD_NONULLS(1)+TotalSize;
     //alloc mem for the varlena array struct ->
-    SetLength(Varlena, BuffSize);
-    Stmt.BindList.Put(Index, stBytes, Varlena);
-    A := Pointer(Varlena);
-    SQLTypeToPostgreSQL(TZSQLType(PZArray(BindList[Index].Value).VArrayType), FOidAsBlob, aOID);
+    A := Stmt.BindList.AquireCustomValue(Index, SQLType, BuffSize);
+    SQLTypeToPostgreSQL(SQLType, FOidAsBlob, aOID);
     //write dimension(s)
     Integer2PG(1, ARR_NDIM(A));
     //indicate nullable items
@@ -498,13 +501,14 @@ var
   A: PArrayType;
   CP: word;
   aOID: OID;
+  X: Integer;
   fRawTemp: RawByteString;
   N: Integer; //the ParameterIndex
-  SQLType: TZSQLType;
   TempBlob: IZBlob;
   WriteTempBlob: IZPostgreSQLOidBlob;
   FTempRaws: TRawByteStringDynArray;
   PGresult: TPGresult;
+  Arr: PZArray;
 label FromRaw;
 begin
   Result := nil;
@@ -587,13 +591,13 @@ $$ LANGUAGE plpgsql;}
 // and there is the final chunk of x params for the unprepared stmt
 (*
 insert into public.SampleRecord (ID,FirstName,LastName,Amount,BirthDate,LastChange,CreatedAt) values (
-unnest(array[$1..$100]::int8[])
-,unnest(array[$101..$200]::text[])
-,unnest(array[$201..$300]::text[])
-,unnest(array[$301..$400]::float8[])
-,unnest(array[$401..$500]::timestamp[])
-,unnest(array[$501..$600]::int8[])
-,unnest(array[$601..$700]::int8[]))
+unnest(array[$1]::int8[])
+,unnest(array[$2]::text[])
+,unnest(array[3]::text[])
+,unnest(array[$4]::numeric[])
+,unnest(array[$5]::timestamp[])
+,unnest(array[$6]::int8[])
+,unnest(array[$7]::int8[]))
 *)
 //my final and fastest approch bind binary arrays and pass data once per param and one prepared stmt:
   if FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Intf = nil then begin
@@ -649,14 +653,17 @@ unnest(array[$1..$100]::int8[])
     Stmt := FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Obj;
   N := -1;
   for i := 0 to bindList.Count -1 do begin
-    SQLType := TZSQLType(PZArray(BindList[I].Value).VArrayType);
-    D := BindList.Arrays[I].VArray;
+    if BindList[I].BindType <> zbtArray then
+      Continue;
+    Arr := BindList[I].Value; //localize -> next steps will free the memory
+    SQLType := TZSQLType(Arr.VArrayType);
+    D := Arr.VArray;
     P := nil;
     case SQLType of
       stBoolean:    begin
                       AllocArray(I, SizeOf(Byte)*ArrayCount+SizeOf(Int32)*ArrayCount, A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i]);
@@ -669,7 +676,7 @@ unnest(array[$1..$100]::int8[])
       stByte:       begin
                       AllocArray(I, SizeOf(SmallInt)*ArrayCount+SizeOf(Int32)*ArrayCount, A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
@@ -682,7 +689,7 @@ unnest(array[$1..$100]::int8[])
       stShort:      begin
                       AllocArray(I, SizeOf(SmallInt)*ArrayCount+SizeOf(Int32)*ArrayCount, A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
@@ -695,7 +702,7 @@ unnest(array[$1..$100]::int8[])
       stWord:       begin
                       AllocArray(I, SizeOf(Integer)*ArrayCount+SizeOf(Int32)*ArrayCount, A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
@@ -708,7 +715,7 @@ unnest(array[$1..$100]::int8[])
       stSmall:      begin
                       AllocArray(I, SizeOf(SmallInt)*ArrayCount+SizeOf(Int32)*ArrayCount, A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
@@ -721,7 +728,7 @@ unnest(array[$1..$100]::int8[])
       stInteger:    begin
                       AllocArray(I, SizeOf(Integer)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
@@ -734,7 +741,7 @@ unnest(array[$1..$100]::int8[])
       stLongWord:   if (stmt.FPQParamOIDs[N] = OIDOID) then begin
                       AllocArray(I, SizeOf(OID)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(OID));
@@ -746,7 +753,7 @@ unnest(array[$1..$100]::int8[])
                     end else begin
                       AllocArray(I, SizeOf(Int64)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
@@ -759,7 +766,7 @@ unnest(array[$1..$100]::int8[])
       stLong:       begin
                       AllocArray(I, SizeOf(Int64)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
@@ -772,7 +779,7 @@ unnest(array[$1..$100]::int8[])
       stULong:      begin
                       AllocArray(I, SizeOf(UInt64)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
@@ -785,7 +792,7 @@ unnest(array[$1..$100]::int8[])
       stFloat:      begin
                       AllocArray(I, SizeOf(Single)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Single));
@@ -798,7 +805,7 @@ unnest(array[$1..$100]::int8[])
       stDouble:     begin
                       AllocArray(I, SizeOf(Double)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
@@ -808,25 +815,37 @@ unnest(array[$1..$100]::int8[])
                           Inc(P,SizeOf(int32)+SizeOf(Double));
                         end;
                     end;
-      stCurrency:   begin
+      stCurrency:   if (stmt.FPQParamOIDs[i] = CASHOID) then begin
                       AllocArray(I, 8*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], 8);
                         end else begin
                           Integer2PG(8, P);
-                          if (stmt.FPQParamOIDs[i] = CASHOID)
-                          then Currency2PG(TCurrencyDynArray(D)[j],P+SizeOf(int32))
-                          else Double2PG(TCurrencyDynArray(D)[j],P+SizeOf(int32));
+                          Currency2PGCash(TCurrencyDynArray(D)[j],P+SizeOf(int32));
                           Inc(P,SizeOf(int32)+8);
+                        end;
+                    end else begin
+                      AllocArray(I, MaxCurr2NumSize*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
+                      for j := 0 to ArrayCount -1 do
+                        if IsNullFromArray(Arr, j) then begin
+                          Integer2PG(-1, P);
+                          X := SizeOf(int32);
+                          Inc(P,SizeOf(int32));
+                          Dec(Stmt.FPQparamLengths[i], MaxCurr2NumSize);
+                        end else begin
+                          Currency2PGNumeric(TCurrencyDynArray(D)[j], P+SizeOf(int32), x);
+                          Integer2PG(X, P);
+                          Inc(P,SizeOf(int32)+X);
+                          Dec(Stmt.FPQparamLengths[i], MaxCurr2NumSize-X);
                         end
                     end;
       stBigDecimal: begin
                       AllocArray(I, SizeOf(Double)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Double));
@@ -839,7 +858,7 @@ unnest(array[$1..$100]::int8[])
       stDate:       begin
                       AllocArray(I, SizeOf(Integer)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
@@ -852,7 +871,7 @@ unnest(array[$1..$100]::int8[])
       stTime:       begin
                       AllocArray(I, 8*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], 8);
@@ -867,7 +886,7 @@ unnest(array[$1..$100]::int8[])
       stTimeStamp:  begin
                       AllocArray(I, 8*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], 8);
@@ -882,7 +901,7 @@ unnest(array[$1..$100]::int8[])
       stGUID:       begin
                       AllocArray(I, SizeOf(TGUID)*ArrayCount+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) then begin
+                        if IsNullFromArray(Arr, j) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                           Dec(Stmt.FPQparamLengths[i], SizeOf(TGUID));
@@ -896,11 +915,11 @@ unnest(array[$1..$100]::int8[])
       stBytes:      begin
                       N := 0;
                       for J := 0 to ArrayCount -1 do
-                        if not (IsNullFromArray(BindList.Arrays[I], j) or (Pointer(TBytesDynArray(D)[j]) = nil)) then
+                        if not (IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil)) then
                           Inc(N, Length(TBytesDynArray(D)[j]));
                       AllocArray(I, N+(ArrayCount*SizeOf(int32)), A, P);
                       for j := 0 to ArrayCount -1 do
-                        if IsNullFromArray(BindList.Arrays[I], j) or (Pointer(TBytesDynArray(D)[j]) = nil) then begin
+                        if IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil) then begin
                           Integer2PG(-1, P);
                           Inc(P,SizeOf(int32));
                         end else begin
@@ -912,7 +931,7 @@ unnest(array[$1..$100]::int8[])
                         end
                     end;
       stString, stUnicodeString: begin
-          case BindList.Arrays[I].VArrayVariantType of
+          case Arr.VArrayVariantType of
             {$IFNDEF UNICODE}
             vtString:   begin
                           if not (not ConSettings^.AutoEncode and ZCompatibleCodePages(CP, ConSettings^.CTRL_CP)) then begin
@@ -949,11 +968,11 @@ unnest(array[$1..$100]::int8[])
             vtRawByteString:begin
 FromRaw:                    N := 0;
                             for j := 0 to ArrayCount -1 do
-                              if not IsNullFromArray(BindList.Arrays[I], j) then
+                              if not IsNullFromArray(Arr, j) then
                                 Inc(N, Length(TRawByteStringDynArray(D)[j]));
                             AllocArray(I, N+(ArrayCount*SizeOf(int32)), A, P);
                             for j := 0 to ArrayCount -1 do
-                              if IsNullFromArray(BindList.Arrays[I], j) then begin
+                              if IsNullFromArray(Arr, j) then begin
                                 Integer2PG(-1, P);
                                 Inc(P,SizeOf(int32));
                               end else begin
@@ -977,8 +996,8 @@ FromRaw:                    N := 0;
                           N := 0;
                           OffSet := ArrayCount;
                           for J := 0 to ArrayCount -1 do begin
-                            Dec(OffSet, Ord(not ((ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) and (TZCharRecDynArray(D)[j].Len > 0) and not IsNullFromArray(BindList.Arrays[I], j)))));
-                            Inc(N, TZCharRecDynArray(D)[j].Len*Byte(Ord(not IsNullFromArray(BindList.Arrays[I], j))));
+                            Dec(OffSet, Ord(not ((ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) and (TZCharRecDynArray(D)[j].Len > 0) and not IsNullFromArray(Arr, j)))));
+                            Inc(N, TZCharRecDynArray(D)[j].Len*Byte(Ord(not IsNullFromArray(Arr, j))));
                           end;
                           if OffSet <> Cardinal(ArrayCount) then begin
                             SetLength(FTempRaws, ArrayCount); //EH: localize all ... shit!!!
@@ -996,7 +1015,7 @@ FromRaw:                    N := 0;
                           end else begin
                             AllocArray(I, N+(ArrayCount*SizeOf(int32)), A, P);
                             for J := 0 to ArrayCount -1 do
-                              if IsNullFromArray(BindList.Arrays[I], j) then begin
+                              if IsNullFromArray(Arr, j) then begin
                                 Integer2PG(-1, P);
                                 Inc(P,SizeOf(int32));
                               end else begin
@@ -1110,16 +1129,17 @@ begin
               if Assigned(FPlainDriver.PQresultErrorField)
               then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
               else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
-              if (PError <> nil) and (PError^ <> #0) then
+              if (PError <> nil) and (PError^ <> #0) then begin
                 { check for indermine datatype error}
                 if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) = 0) then begin
                   FPlainDriver.PQclear(Result);
                   Findeterminate_datatype := True;
                   goto retryExecute;
-                end else begin
-                  Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
-                  CheckPrepareSwitchMode;
                 end;
+              end else begin
+                Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+                CheckPrepareSwitchMode;
+              end;
             end else begin
   retryExecute:
               TmpSQL := '';
@@ -1515,18 +1535,23 @@ begin
   case FPQParamOIDs[Index] of
     INVALIDOID: begin
       SQLTypeToPostgreSQL(SQLType, FOIdAsBLob, FPQParamOIDs[Index]);
+      if (Ord(SQLType) > Ord(stBoolean)) and (Ord(SQLType) < Ord(stLongWord)) and not Odd(Ord(SQLType)) then
+        SQLType := TZSQLType(Ord(SQLType)+3);
       Result := SQLType;
     end;
     { these types are binary supported by now }
-    BOOLOID:  Result := stBoolean;
-    BYTEAOID: Result := stBytes;
-    INT8OID:  Result := stLong;
-    INT2OID:  Result := stSmall;
-    INT4OID:  Result := stInteger;
-    OIDOID:   Result := stLongWord;
-    FLOAT4OID:Result := stFloat;
-    FLOAT8OID:Result := stDouble;
-    CASHOID:  Result := stCurrency;
+    BOOLOID:    Result := stBoolean;
+    BYTEAOID:   Result := stBytes;
+    INT8OID:    Result := stLong;
+    INT2OID:    Result := stSmall;
+    INT4OID:    Result := stInteger;
+    OIDOID:     Result := stLongWord;
+    FLOAT4OID:  Result := stFloat;
+    FLOAT8OID:  Result := stDouble;
+    CASHOID:    Result := stCurrency;
+    NUMERICOID: if SQLType in [stCurrency, stBigDecimal]
+                then Result := SQLType
+                else Result := stCurrency;
     DATEOID:  Result := stDate;
     TIMEOID:  Result := stTime;
     TIMESTAMPOID: Result := stTimeStamp;
@@ -1571,7 +1596,7 @@ procedure TZAbstractPostgreSQLPreparedStatementV3.PrepareInParameters;
 var
   res: TPGresult;
   I: Integer;
-  aOID: OID;
+  pgOID, zOID: OID;
 begin
   if (fRawPlanName <> '') and not (Findeterminate_datatype) and (BindList.Capacity > 0) then begin
     if Assigned(FPlainDriver.PQdescribePrepared) then begin
@@ -1579,10 +1604,11 @@ begin
       try
         BindList.SetCount(FplainDriver.PQnparams(res)+FOutParamCount);
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
-          aOID := FplainDriver.PQparamtype(res, i);
-          if (aOID <> FPQParamOIDs[i]) then begin
+          pgOID := FplainDriver.PQparamtype(res, i);
+          if (pgOID <> FPQParamOIDs[i]) then begin
+            zOID := FPQParamOIDs[i];
             //bind bin again or switch to string format if we do not support the PG Types -> else Error
-            FPQParamOIDs[i] := aOID;
+            FPQParamOIDs[i] := pgOID;
             if (FPQparamValues[I] <> nil) then
               case BindList.SQLTypes[i] of
                 stBoolean:  BindBoolean(i, Boolean(PByte(FPQparamValues[i])^));
@@ -1590,9 +1616,12 @@ begin
                 stInteger:  BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Integer(FPQparamValues[i]));
                 stLongWord: BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Cardinal(FPQparamValues[i]));
                 stLong:     BindSignedOrdinal(i, BindList.SQLTypes[i], PG2Int64(FPQparamValues[i]));
-                stCurrency: BindDouble(i, BindList.SQLTypes[i], PG2Currency(FPQparamValues[i]));
+                stCurrency: if zOID  = CASHOID
+                            then SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGCash2Currency(FPQparamValues[i]))
+                            else SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGNumeric2Currency(FPQparamValues[i]));
                 stFloat:    BindDouble(i, BindList.SQLTypes[i], PG2Single(FPQparamValues[i]));
                 stDouble:   BindDouble(i, BindList.SQLTypes[i], PG2Double(FPQparamValues[i]));
+                stBigDecimal:BindDouble(i, BindList.SQLTypes[i], PG2Double(FPQparamValues[i]));
                 stTime:     if Finteger_datetimes
                             then BindDateTime(i, BindList.SQLTypes[i], PG2Time(PInt64(FPQparamValues[i])^))
                             else BindDateTime(i, BindList.SQLTypes[i], PG2Time(PDouble(FPQparamValues[i])^));
@@ -1757,6 +1786,63 @@ begin
   TZPostgreSQLPreparedStatementV3(Result)._AddRef;
 end;
 
+{ TZPostgreSQLPreparedStatementV3 }
+
+procedure TZPostgreSQLPreparedStatementV3.SetCurrency(Index: Integer;
+  const Value: Currency);
+var X: Integer;
+  SQLType: TZSQLType;
+  P: Pointer;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  SQLType := OIDToSQLType(Index, stCurrency);
+  if (FPQParamOIDs[index] <> CASHOID) and (SQLType in [stCurrency, stBigDecimal]) then begin
+    P := BindList.AquireCustomValue(Index, SQLType, MaxCurr2NumSize);
+    Currency2PGNumeric(Value, P, X);
+    LinkParam2PG(Index, P, X, ParamFormatBin)
+  end else begin
+    BindList.Put(Index, stCurrency, P8Bytes(@Value));
+    case SQLType of
+      stBoolean:  begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Byte), ParamFormatBin);
+                    PByte(FPQparamValues[Index])^ := Ord(Value <> 0);
+                  end;
+      stSmall:    begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(SmallInt), ParamFormatBin);
+                    SmallInt2PG(SmallInt(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
+                  end;
+      stInteger:  begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Integer), ParamFormatBin);
+                    Integer2PG(Integer(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
+                  end;
+      stLongWord: begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Cardinal), ParamFormatBin);
+                    Cardinal2PG(Cardinal(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
+                  end;
+      stLong:     begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Int64), ParamFormatBin);
+                    Int642PG(PInt64(@Value)^ div 10000, FPQparamValues[Index]);
+                  end;
+      stFloat:    begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Single), ParamFormatBin);
+                    Single2PG(Value, FPQparamValues[Index]);
+                  end;
+      stDouble:   begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Double), ParamFormatBin);
+                    Double2PG(Value, FPQparamValues[Index]);
+                  end;
+      stCurrency: begin
+                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Currency), ParamFormatBin);
+                    Currency2PGCash(Value, FPQparamValues[Index]);
+                  end;
+      else BindRawStr(Index, CurrToRaw(Value));
+    end;
+  end;
+end;
+
 initialization
 
 { RealPrepared stmts:
@@ -1768,5 +1854,6 @@ PGPreparableTokens[Ord(dmlUpdate)].MatchingGroup := 'UPDATE';
 PGPreparableTokens[Ord(dmlDelete)].MatchingGroup := 'DELETE';
 PGPreparableTokens[4].MatchingGroup := 'VALUES';
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.
 

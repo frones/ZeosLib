@@ -4,12 +4,13 @@
 
 unit zcore;
 
+{$warn 5023 off : no warning about unused units}
 interface
 
 uses
   ZClasses, ZCollections, ZCompatibility, ZExpression, ZExprParser, 
   ZExprToken, ZFunctions, ZMatchPattern, ZMessages, ZSysUtils, ZTokenizer, 
-  ZVariables, ZVariant, ZURL, ZEncoding, ZFastCode;
+  ZVariables, ZVariant, ZURL, ZEncoding, ZFastCode, ZConnProperties;
 
 implementation
 

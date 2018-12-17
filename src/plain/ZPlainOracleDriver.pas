@@ -55,6 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 {$J+}
 
 uses
@@ -262,7 +263,11 @@ type
 
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses ZEncoding;
 
@@ -458,5 +463,7 @@ function TZOraclePlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for Oracle';
 end;
+
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.

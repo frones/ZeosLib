@@ -321,7 +321,13 @@ type
   end;
 
   TZAbstractReadOnlyResultSet = class(TZAbstractResultSet)
-  public
+  protected
+    FTinyBuffer: Array[Byte] of Byte;
+  public //getter
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
+    function GetString(ColumnIndex: Integer): String;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString;
+  public //setter
     procedure UpdateNull(ColumnIndex: Integer);
     procedure UpdateBoolean(ColumnIndex: Integer; Value: Boolean);
     procedure UpdateByte(ColumnIndex: Integer; Value: Byte);
@@ -360,12 +366,7 @@ type
   end;
 
   TZAbstractReadOnlyResultSet_A = class(TZAbstractReadOnlyResultSet)
-  protected
-    FTinyBuffer: Array[Byte] of Byte;
   public
-    function GetString(ColumnIndex: Integer): String;
-    function GetRawByteString(ColumnIndex: Integer): RawByteString;
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     {$ENDIF}
@@ -991,7 +992,7 @@ begin
     FClosed := True;
     RefCountAdded := False;
     if (FStatement <> nil) then begin
-      if FRefCount = 1 then begin
+      if (RefCount = 1) then begin
         _AddRef;
         RefCountAdded := True;
       end;
@@ -999,8 +1000,11 @@ begin
       FStatement := nil;
     end;
     AfterClose;
-    if RefCountAdded then
-       _Release;
+    if RefCountAdded then begin
+      if (RefCount = 1) then
+        DriverManager.AddGarbage(Self);
+      _Release;
+    end;
   end;
 end;
 
@@ -4332,6 +4336,90 @@ end;
 { TZAbstractReadOnlyResultSet }
 
 {**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>RawByteString</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractReadOnlyResultSet.GetRawByteString(
+  ColumnIndex: Integer): RawByteString;
+var P: PAnsiChar;
+  L: NativeUInt;
+begin
+  P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+  if (P <> nil) and (L > 0) then
+    if P = Pointer(FRawTemp)
+    then Result := FRawTemp
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    else ZSetString(P, L, Result)
+    {$ELSE}
+    else System.SetString(Result, P, L)
+    {$ENDIF}
+  else Result := EmptyRaw;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractReadOnlyResultSet.GetString(ColumnIndex: Integer): String;
+var P: {$IFDEF UNICODE}PWidechar{$ELSE}PAnsiChar{$ENDIF};
+  L: NativeUInt;
+begin
+  {$IFDEF UNICODE}
+  P := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L);
+  if (P <> nil) and (L > 0) then
+    if P = Pointer(FUniTemp)
+    then Result := FUniTemp
+    else System.SetString(Result, P, L)
+  else Result := '';
+  {$ELSE}
+  if ConSettings.AutoEncode then
+    if ConSettings.CPType = cCP_UTF8
+    then Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8String(ColumnIndex)
+    else Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiString(ColumnIndex)
+  else begin
+    P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+    if (P <> nil) and (L > 0) then
+      if P = Pointer(FRawTemp)
+      then Result := FRawTemp
+      else System.SetString(Result, P, L)
+    else Result := '';
+  end;
+  {$ENDIF}
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UnicodeString</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractReadOnlyResultSet.GetUnicodeString(
+  ColumnIndex: Integer): ZWideString;
+var P: PWideChar;
+  L: NativeUInt;
+begin
+  P := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L);
+  if LastWasNull or (L = 0) then
+    Result := ''
+  else if P = Pointer(FUniTemp)
+    then Result := FUniTemp
+    else System.SetString(Result, P, L);
+end;
+
+{**
   Updates the designated column with a <code>AnsiString</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -4934,6 +5022,7 @@ begin
   P := GetPAnsiChar(ColumnIndex, Len);
   Result := ConSettings^.ConvFuncs.ZPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.CP);
 end;
+{$ENDIF}
 
 {**
   Indicates if the value of the designated column in the current row
@@ -4957,7 +5046,6 @@ function TZSimpleResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
   Result := True;
 end;
-{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -5278,80 +5366,6 @@ begin
   end else Result := '';
 end;
 {$ENDIF}
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>RawByteString</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractReadOnlyResultSet_A.GetRawByteString(
-  ColumnIndex: Integer): RawByteString;
-var P: PAnsiChar;
-  L: NativeUInt;
-begin
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
-  if P = Pointer(FRawTemp)
-  then Result := FRawTemp
-  else ZSetString(P, L, Result);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractReadOnlyResultSet_A.GetString(ColumnIndex: Integer): String;
-var P: {$IFDEF UNICODE}PWidechar{$ELSE}PAnsiChar; CI: PZColumnInfo{$ENDIF};
-  L: NativeUInt;
-begin
-  {$IFDEF UNICODE}
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L);
-  if P <> nil then
-    if P = Pointer(FUniTemp)
-    then Result := FUniTemp
-    else System.SetString(Result, P, L)
-  else Result := '';
-  {$ELSE}
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
-  if P <> nil then begin
-    CI := @ColumnsInfo.List{$IFNDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-    if ConSettings.AutoEncode and
-       (CI.ColumnType in [stString,stUnicodeString,stAsciiStream,stUnicodeStream]) and
-       (CI.ColumnCodePage <> ConSettings^.CTRL_CP) then begin
-      FUniTemp := PRawToUnicode(P, L, CI.ColumnCodePage);
-      Result := ZUnicodeToRaw(FUniTemp, ConSettings^.CTRL_CP);
-    end else System.SetString(Result, P, L)
-  end else Result := '';
-  {$ENDIF}
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>RawByteString</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractReadOnlyResultSet_A.GetUnicodeString(
-  ColumnIndex: Integer): ZWideString;
-var P: PWideChar;
-  L: NativeUInt;
-begin
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L);
-  if P = Pointer(FUniTemp)
-  then Result := FUniTemp
-  else System.SetString(Result, P, L);
-end;
 
 {**
   Gets the value of the designated column in the current row

@@ -4,12 +4,26 @@
 
 unit zdbc;
 
+{$warn 5023 off : no warning about unused units}
 interface
 
 uses
-  ZDbcDbLib, ZDbcInterbase6, ZDbcIntfs, ZDbcMetadata, ZDbcMySql, ZDbcOracle, 
-  ZDbcPostgreSql, ZDbcSqLite, ZDbcASA, ZDbcPooled, ZDbcAdo, ZDbcOleDB, 
-  ZDbcODBCCon;
+  ZDbcAdo, ZDbcAdoMetadata, ZDbcAdoResultSet, ZDbcAdoStatement, ZDbcAdoUtils, 
+  ZDbcASA, ZDbcASAMetadata, ZDbcASAResultSet, ZDbcASAStatement, ZDbcASAUtils, 
+  ZDbcCache, ZDbcCachedResultSet, ZDbcConnection, ZDbcDbLib, 
+  ZDbcDbLibMetadata, ZDbcDbLibResultSet, ZDbcDbLibStatement, ZDbcDbLibUtils, 
+  ZDbcGenericResolver, ZDbcInterbase6, ZDbcInterbase6Metadata, 
+  ZDbcInterbase6ResultSet, ZDbcInterbase6Statement, ZDbcInterbase6Utils, 
+  ZDbcIntfs, ZDbcLogging, ZDbcMetadata, ZDbcMySql, ZDbcMySqlMetadata, 
+  ZDbcMySqlResultSet, ZDbcMySqlStatement, ZDbcMySqlUtils, ZDbcODBCCon, 
+  ZDbcODBCMetadata, ZDbcODBCResultSet, ZDbcODBCStatement, ZDbcODBCUtils, 
+  ZDbcOleDB, ZDbcOleDBMetaData, ZDbcOleDBResultSet, ZDbcOleDBStatement, 
+  ZDbcOleDBUtils, ZDbcOracle, ZDbcOracleMetadata, ZDbcOracleResultSet, 
+  ZDbcOracleStatement, ZDbcOracleUtils, ZDbcPooled, ZDbcPostgreSql, 
+  ZDbcPostgreSqlMetadata, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlStatement, 
+  ZDbcPostgreSqlUtils, ZDbcProperties, ZDbcResultSet, ZDbcResultSetMetadata, 
+  ZDbcSqLite, ZDbcSqLiteMetadata, ZDbcSqLiteResultSet, ZDbcSqLiteStatement, 
+  ZDbcSqLiteUtils, ZDbcStatement, ZDbcUtils;
 
 implementation
 

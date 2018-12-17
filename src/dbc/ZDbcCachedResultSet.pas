@@ -2206,12 +2206,8 @@ begin
         continue
       else case TZColumnInfo(ColumnsInfo[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
         stBoolean: RowAccessor.SetBoolean(I, ResultSet.GetBoolean(I));
-        stByte: RowAccessor.SetByte(I, ResultSet.GetByte(I));
-        stShort: RowAccessor.SetShort(I, ResultSet.GetShort(I));
-        stWord: RowAccessor.SetWord(I, ResultSet.GetWord(I));
-        stSmall: RowAccessor.SetSmall(I, ResultSet.GetSmall(I));
-        stLongWord: RowAccessor.SetUInt(I, ResultSet.GetUInt(I));
-        stInteger: RowAccessor.SetInt(I, ResultSet.GetInt(I));
+        stByte, stWord, stLongWord: RowAccessor.SetUInt(I, ResultSet.GetUInt(I));
+        stShort, stSmall, stInteger: RowAccessor.SetInt(I, ResultSet.GetInt(I));
         stULong: RowAccessor.SetULong(I, ResultSet.GetULong(I));
         stLong: RowAccessor.SetLong(I, ResultSet.GetLong(I));
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));

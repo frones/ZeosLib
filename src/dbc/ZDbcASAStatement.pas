@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils, ZPlainASADriver,
   ZCompatibility, ZDbcLogging, ZVariant;
@@ -122,7 +123,9 @@ type
     function ExecutePrepared: Boolean; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZPlainASAConstants, ZDbcASAResultSet,
   ZEncoding, ZDbcProperties, ZFastCode;
@@ -696,6 +699,7 @@ begin
   Result := 'call ' + ConSettings^.ConvFuncs.ZStringToRaw(SQL,
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP) + InParams;
 end;
+{$ENDIF ZEOS_DISABLE_ASA}
 
 end.
 

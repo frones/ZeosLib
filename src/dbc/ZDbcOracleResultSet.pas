@@ -84,7 +84,6 @@ type
     FCurrentRowBufIndex: Cardinal; //The current row in buffer! NOT the current row of RS
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
-    FTinyBuffer: array[Byte] of Byte; //huge because of possible OCINumbers
     FTempLob: IZBlob;
     FClientCP: Word;
     Fbufsize: UB4; //a temporary variable uses for Number2Text
@@ -1827,12 +1826,12 @@ begin
     ColumnInfo.Scale := CurrentVar^.Scale;
     if (ColumnInfo.ColumnType in [stString, stUnicodeString]) then begin
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @ColumnInfo.ColumnDisplaySize, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+        @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
       if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
         ColumnInfo.ColumnDisplaySize := ColumnInfo.ColumnDisplaySize shr 1; //shr 1 = div 2 but faster
-      ColumnInfo.Precision := ColumnInfo.ColumnDisplaySize;
+      //ColumnInfo.Precision := ColumnInfo.ColumnDisplaySize;
       ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
       if ColumnInfo.ColumnType = stString then begin
         ColumnInfo.CharOctedLength := ColumnInfo.Precision * ConSettings^.ClientCodePage^.CharWidth;

@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
@@ -142,7 +143,9 @@ var
   {** The common driver manager object. }
   DBLibDriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZConnProperties, ZDbcProperties,
@@ -874,4 +877,5 @@ finalization
     DriverManager.DeregisterDriver(DBLibDriver);
   DBLibDriver := nil;
   FreeAndNil(DBLIBCriticalSection);
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.

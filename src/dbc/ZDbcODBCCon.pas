@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZTokenizer, ZGenericSqlAnalyser,
@@ -152,7 +153,9 @@ type
   TIZBlobDynArray = array of IZBlob;
   TIZBlobsDynArray = array of TIZBlobDynArray;
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
@@ -856,4 +859,5 @@ finalization
     DriverManager.DeregisterDriver(ODBCDriver);
   ODBCDriver := nil;
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.

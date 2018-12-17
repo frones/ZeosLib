@@ -43,14 +43,14 @@
 unit ZPlainAdo;
 
 // ************************************************************************ //
-// WARNING                                                                    
-// -------                                                                    
+// WARNING
+// -------
 // The types declared in this file were generated from data read from a
-// Type Library. If this type library is explicitly or indirectly (via        
-// another type library referring to this type library) re-imported, or the   
-// 'Refresh' command of the Type Library Editor activated while editing the   
-// Type Library, the contents of this file will be regenerated and all        
-// manual modifications will be lost.                                         
+// Type Library. If this type library is explicitly or indirectly (via
+// another type library referring to this type library) re-imported, or the
+// 'Refresh' command of the Type Library Editor activated while editing the
+// Type Library, the contents of this file will be regenerated and all
+// manual modifications will be lost.
 // ************************************************************************ //
 
 // PASTLWTR : $Revision: 1.9 $
@@ -61,7 +61,7 @@ unit ZPlainAdo;
 // LIBID: {EF53050B-882E-4776-B643-EDA472E8E3F2}
 // LCID: 0
 // Helpfile: C:\WINDOWS\HELP\ado270.chm
-// DepndLst: 
+// DepndLst:
 //   (1) v2.0 stdole, (C:\WINDOWS\System32\stdole2.tlb)
 //   (2) v4.0 StdVCL, (C:\WINDOWS\System32\stdvcl40.dll)
 // Errors:
@@ -77,12 +77,13 @@ unit ZPlainAdo;
 //   Hint: Member 'Type' of '_Stream' changed to 'Type_'
 //   Hint: Member 'Type' of 'Field15' changed to 'Type_'
 // ************************************************************************ //
-{$TYPEDADDRESS OFF} // Unit must be compiled without type-checked pointers. 
+{$TYPEDADDRESS OFF} // Unit must be compiled without type-checked pointers.
 {$WRITEABLECONST ON}
 //{$HPPEMIT '#undef EOF'}
 interface
 
 {$I ZPlain.inc}
+{$IFNDEF ZEOS_DISABLE_ADO}
 
 uses Windows, Classes, ActiveX, {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF};
 
@@ -1684,11 +1685,11 @@ type
   end;
 
 // *********************************************************************//
-// The Class CoRecordset provides a Create and CreateRemote method to          
-// create instances of the default interface Recordset15 exposed by              
-// the CoClass Recordset. The functions are intended to be used by             
-// clients wishing to automate the CoClass objects exposed by the         
-// server of this typelibrary.                                            
+// The Class CoRecordset provides a Create and CreateRemote method to
+// create instances of the default interface Recordset15 exposed by
+// the CoClass Recordset. The functions are intended to be used by
+// clients wishing to automate the CoClass objects exposed by the
+// server of this typelibrary.
 // *********************************************************************//
   CoRecordset = class
     class function Create: Recordset15;
@@ -1696,18 +1697,22 @@ type
   end;
 
 // *********************************************************************//
-// The Class CoParameter provides a Create and CreateRemote method to          
-// create instances of the default interface _Parameter exposed by              
-// the CoClass Parameter. The functions are intended to be used by             
-// clients wishing to automate the CoClass objects exposed by the         
-// server of this typelibrary.                                            
+// The Class CoParameter provides a Create and CreateRemote method to
+// create instances of the default interface _Parameter exposed by
+// the CoClass Parameter. The functions are intended to be used by
+// clients wishing to automate the CoClass objects exposed by the
+// server of this typelibrary.
 // *********************************************************************//
   CoParameter = class
     class function Create: _Parameter;
     class function CreateRemote(const MachineName: WideString): _Parameter;
   end;
 
+{$ENDIF ZEOS_DISABLE_ADO}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ADO}
 
 class function CoConnection.Create: Connection15;
 begin
@@ -1768,5 +1773,6 @@ class function CoParameter.CreateRemote(const MachineName: WideString): _Paramet
 begin
   Result := CreateRemoteComObject(MachineName, CLASS_Parameter) as _Parameter;
 end;
+{$ENDIF ZEOS_DISABLE_ADO}
 
 end.

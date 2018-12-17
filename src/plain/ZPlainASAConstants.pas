@@ -45,6 +45,9 @@ unit ZPlainASAConstants;
 interface
 
 {$I ZPlain.inc}
+
+{$IFNDEF ZEOS_DISABLE_ASA}
+
 {$IFDEF NO_ANSICHAR}
 uses ZCompatibility;
 {$ENDIF}
@@ -826,6 +829,8 @@ type
     );
 
   TZASASQLCallback = procedure() {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+{$ENDIF ZEOS_DISABLE_ASA}
 
 implementation
 

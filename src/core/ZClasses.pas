@@ -56,7 +56,8 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, Classes
+  SysUtils, Classes, SyncObjs
+  {$IF defined(MSWINDOWS) and not defined(FPC)}, Windows{$IFEND} //some old comp. -> INFINITE
   {$IFDEF NO_UNIT_CONTNRS},System.Generics.Collections{$ENDIF};
 
 const
@@ -252,6 +253,32 @@ type
   TObjectList = class(TObjectList<TObject>);
   {$ENDIF}
 
+  {** EH:
+    implements a threaded timer which does not belong to the
+    windows message queue nor VCL/FMX}
+  TZThreadTimer = class(TObject)
+  private
+    FEnabled: Boolean;
+    FInterval: Cardinal;
+    FOnTimer: TThreadMethod;
+    FThread: TThread;
+    FSignal: TEvent;
+    procedure SetEnabled(const Value: Boolean);
+    procedure SetInterval(const Value: Cardinal);
+    procedure SetOnTimer(Value: TThreadMethod);
+  public
+    constructor Create; overload;
+    constructor Create(OnTimer: TThreadMethod;
+      Interval: Cardinal; Enabled: Boolean); overload;
+    destructor Destroy; override;
+    procedure Reset;
+  public
+    property Enabled: Boolean read FEnabled write SetEnabled default False;
+    property Interval: Cardinal read FInterval write SetInterval default 1000;
+    property OnTimer: TThreadMethod read FOnTimer write SetOnTimer;
+  end;
+
+
 implementation
 
 uses ZMessages, ZCompatibility;
@@ -423,6 +450,115 @@ destructor EZSQLThrowable.Destroy;
 begin
   FreeAndNil(FSpecificData);
   inherited;
+end;
+
+type
+  TZIntervalThread = class(TThread)
+  private
+    FSignal: TEvent;
+    FInterval: Cardinal;
+    FOnTimer: TThreadMethod;
+    FActive: Boolean;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(Signal: TEvent);
+  end;
+
+{ TZThreadTimer }
+
+constructor TZThreadTimer.Create;
+begin
+  inherited Create;
+  FSignal := TSimpleEvent.Create;
+end;
+
+constructor TZThreadTimer.Create(OnTimer: TThreadMethod;
+  Interval: Cardinal; Enabled: Boolean);
+begin
+  Create;
+  FInterval := Interval;
+  FOnTimer := OnTimer;
+  FEnabled := Enabled;
+  FThread := TZIntervalThread.Create(FSignal);
+  TZIntervalThread(FThread).FOnTimer := FOnTimer;
+  TZIntervalThread(FThread).FInterval := FInterval;
+  TZIntervalThread(FThread).Suspended := False; //start thread
+  Reset;
+end;
+
+destructor TZThreadTimer.Destroy;
+begin
+  FThread.Terminate;
+  FSignal.SetEvent; //signal to break the waittime
+  FThread.WaitFor;
+  FreeAndNil(FThread);
+  FreeAndNil(FSignal);
+  inherited;
+end;
+
+procedure TZThreadTimer.Reset;
+  procedure SignalThread;
+  begin
+    if FThread <> nil then begin
+      FSignal.SetEvent; //signal thread should Start now
+      while FSignal.WaitFor(1) = wrSignaled do; //wait until thread confirms event
+    end;
+  end;
+begin
+  SignalThread; //change active state
+  TZIntervalThread(FThread).FOnTimer := FOnTimer;
+  if FEnabled and Assigned(FOnTimer) and (FInterval > 0)
+  then TZIntervalThread(FThread).FInterval := FInterval
+  else TZIntervalThread(FThread).FInterval := INFINITE;
+  SignalThread; //change active state
+end;
+
+procedure TZThreadTimer.SetEnabled(const Value: Boolean);
+begin
+  if FEnabled <> Value then begin
+    FEnabled := Value;
+    Reset;
+  end;
+end;
+
+procedure TZThreadTimer.SetInterval(const Value: Cardinal);
+begin
+  if FInterval <> Value then begin
+    FInterval := Value;
+    Reset;
+  end;
+end;
+
+procedure TZThreadTimer.SetOnTimer(Value: TThreadMethod);
+begin
+  if @FOnTimer <> @Value then begin
+    FOnTimer := Value;
+    Reset;
+  end;
+end;
+
+{ TZIntervalThread }
+
+constructor TZIntervalThread.Create(Signal: TEvent);
+begin
+  inherited Create(True); //suspended
+  FActive := True;
+  FSignal := Signal;
+end;
+
+procedure TZIntervalThread.Execute;
+begin
+  while not Terminated do
+    case FSignal.WaitFor(FInterval) of
+      wrTimeout:  if FActive and Assigned(FOnTimer) and (FInterval <> INFINITE) then
+                    FOnTimer;
+      wrSignaled: begin
+                    FActive := not FActive;
+                    FSignal.ResetEvent;
+                  end;
+      else        Break;
+    end;
 end;
 
 end.

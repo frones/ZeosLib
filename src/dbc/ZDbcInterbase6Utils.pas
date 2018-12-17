@@ -54,6 +54,7 @@ unit ZDbcInterbase6Utils;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
@@ -467,7 +468,9 @@ procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideCh
 
 procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
   ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils, ZEncoding
@@ -2171,6 +2174,7 @@ var century: integer;
 begin
   nday := nday + IB_BaseDateToDay0Diff;
   century := (4 * nday - 1) div DaysOf400YearsCycle;
+
   nday := 4 * nday - 1 - DaysOf400YearsCycle * century;
   day := nday div 4;
 
@@ -2256,27 +2260,6 @@ begin
     else PShortInt(Dest)^ := i64;
   end;
 end;
-(*
-procedure X;
-var BCD1, BCD2: TBCD;
-  i64a, i64b: Int64;
-  Ca: Currency absolute i64a;
-  Cb: Currency absolute i64b;
-  i: Integer;
-begin
-  i64a := -99;
-  for I := 1 to 16 do begin
-    i64a := i64a * 10 -9;
-    ScaledOrdinal2BCD(i64a, 4, BCD1);
-    BCD2ScaledOrdinal(BCD1, @i64b, 8, 4);
-    Assert(i64a = i64b);
-    //Assert(BcdCompare(BCD1, BCD2)  = 0);
-  end;
 
-
-end;
-
-initialization
-x;
-  *)
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

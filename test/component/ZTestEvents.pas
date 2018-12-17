@@ -77,7 +77,7 @@ type
     procedure ZIBEventAlerterEventAlert(Sender: TObject; EventName: string;
       EventCount: Integer; var CancelAlerts: Boolean);
   published
-    procedure Test;
+    procedure TestIBAllerter;
   end;
 {$ENDIF}
 
@@ -104,7 +104,7 @@ begin
   Events[High(Events)].EventCount := EventCount;
 end;
 
-procedure TZTestInterbaseEventAlert.Test;
+procedure TZTestInterbaseEventAlert.TestIBAllerter;
 
   procedure PostEvents(const EventsToSend: array of string);
   var

@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses SysUtils,
   ZCompatibility, ZDbcIntfs, ZPlainODBCDriver, ZDbcODBCCon, ZFastCode;
 
@@ -95,7 +96,9 @@ const
   SQL_SS_TIME2ScaleFactor: array[0..7] of word = (1,1,1,10,10,10,100,10);
   SQL_SS_TIME2ScaleDevisor: array[0..7] of word = (10,10,10,1,1,1,1,1);
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZURL, ZClasses
  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -581,4 +584,5 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.
