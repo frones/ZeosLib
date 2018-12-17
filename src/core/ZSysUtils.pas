@@ -3547,7 +3547,7 @@ Inc_dbl:          Inc(Buf, 2);
                   end else
                     PWord(Buf)^ := Ord('0') + MSec;
                 end
-      else      PWord(Buf)^ := C1;
+      else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
     Inc(PFormat)
