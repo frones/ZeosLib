@@ -31,6 +31,7 @@ package ZComponent;
 {$IMPLICITBUILD OFF}
 
 requires
+  dbrtl,
   ZDbc;
 
 contains

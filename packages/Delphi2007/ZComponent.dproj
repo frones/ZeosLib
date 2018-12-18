@@ -51,6 +51,7 @@
     <DelphiCompile Include="ZComponent.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
+      <DCCReference Include="dbrtl.dcp"/>
       <DCCReference Include="rtl.dcp"/>
       <DCCReference Include="ZDbc.dcp"/>
       <DCCReference Include="..\..\src\component\ZAbstractConnection.pas"/>

@@ -28,7 +28,7 @@ package ZComponent;
 
 requires
   ZDbc,
-  vcl;
+  dbrtl;
 
 contains
   ZAbstractConnection in '..\..\src\component\ZAbstractConnection.pas',

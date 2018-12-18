@@ -104,6 +104,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+	<DCCReference Include="dbrtl.dcp"/>
         <DCCReference Include="ZDbc.dcp"/>
         <DCCReference Include="..\..\src\component\ZAbstractConnection.pas"/>
         <DCCReference Include="..\..\src\component\ZAbstractDataset.pas"/>
