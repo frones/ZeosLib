@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses Classes, SysUtils,
   ZVariant, ZDbcIntfs, ZPlainDBLibDriver, ZCompatibility, ZPlainDbLibConstants;
 
@@ -111,7 +112,9 @@ function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
   const ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
   NChar: Boolean = False): RawByteString;
 
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -400,5 +403,5 @@ begin
       Result := 'NULL';
   end;
 end;
-
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.

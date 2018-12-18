@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   Types, Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcInterbase6;
@@ -278,7 +279,9 @@ type
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
   ZFastCode, ZSelectSchema;
@@ -1566,8 +1569,6 @@ begin
 
       if Length(Types) = 0 then begin
         Result.MoveToInsertRow;
-        Result.UpdateNull(CatalogNameIndex);
-        Result.UpdateNull(SchemaNameIndex);
         Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index)); //RDB$RELATION_NAME
         Result.UpdateString(TableColumnsSQLType, TableType);
         Result.UpdateString(TableColumnsRemarks, Copy(GetString(DESCRIPTION_Index),1,255)); //RDB$DESCRIPTION
@@ -1576,8 +1577,6 @@ begin
       for I := Low(Types) to High(Types) do
         if Types[I] = TableType then begin
           Result.MoveToInsertRow;
-          Result.UpdateNull(CatalogNameIndex);
-          Result.UpdateNull(SchemaNameIndex);
           Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index)); //RDB$RELATION_NAME
           Result.UpdateString(TableColumnsSQLType, TableType);
           Result.UpdateString(TableColumnsRemarks, Copy(GetString(DESCRIPTION_Index),1,255)); //RDB$DESCRIPTION
@@ -1684,7 +1683,7 @@ const
   FIELD_TYPE_Index            = FirstDbcIndex + 8;
   FIELD_SUB_TYPE_Index        = FirstDbcIndex + 9;
   DESCRIPTION_Index           = FirstDbcIndex + 10;
-//CHARACTER_LENGTH_Index      = FirstDbcIndex + 11; - not used
+  CHARACTER_LENGTH_Index      = FirstDbcIndex + 11;
   FIELD_PRECISION_Index       = FirstDbcIndex + 12;
   DEFAULT_SOURCE_Index        = FirstDbcIndex + 13;
   DEFAULT_SOURCE_DOMAIN_Index = FirstDbcIndex + 14;
@@ -1692,9 +1691,10 @@ const
   CHARACTER_SET_ID_Index      = FirstDbcIndex + 16;
 var
   SQL, ColumnName, DefaultValue: String;
-  TypeName, SubTypeName, FieldScale, FieldLength: Integer;
+  TypeName, SubTypeName, FieldScale, FieldLength, Precision: Integer;
   LTableNamePattern, LColumnNamePattern: string;
   SQLType: TZSQLType;
+label GUID_Size, Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1730,10 +1730,8 @@ begin
       + ' WHERE 1=1 ' +  AppendCondition(LTableNamePattern) + AppendCondition(LColumnNamePattern)
       + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$FIELD_POSITION';
 
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do begin
+    while Next do begin
       TypeName := GetInt(FIELD_TYPE_Index);
       // For text fields subtype = 0, we get codepage number instead
       if TypeName in [blr_text, blr_text2, blr_varying, blr_varying2, blr_cstring, blr_cstring2] then
@@ -1742,8 +1740,8 @@ begin
         SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
       FieldScale := GetInt(FIELD_SCALE_Index);
       ColumnName := GetString(FIELD_NAME_Index);
-
       FieldLength := GetInt(FIELD_LENGTH_Index);
+      Precision   := GetInt(FIELD_PRECISION_Index);
 
       if (GetString(COMPUTED_SOURCE_Index) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
       begin //Computed by Source  & Sub Selects  //AVZ
@@ -1762,12 +1760,11 @@ begin
           blr_sql_date:  DefaultValue := 'CURRENT_DATE';
           blr_sql_time:  DefaultValue := 'CURRENT_TIME';
           blr_timestamp: DefaultValue := 'CURRENT_TIMESTAMP';
-          else begin end;
         end;
 
       Result.MoveToInsertRow;
-      Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
-      Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
+      //Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
+      //Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
       Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index));    //TABLE_NAME
       Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
 
@@ -1777,53 +1774,40 @@ begin
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
       // TYPE_NAME
       case TypeName of
-        blr_short:
-          case SubTypeName of
-            RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-            RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
-            else Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
+        blr_short, blr_long, blr_int64: begin
+            case SubTypeName of
+              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              else case TypeName of
+                  blr_short:  Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
+                  blr_long:   Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
+                  blr_int64:  Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
+                end;
+            end;
+            Result.UpdateInt(TableColColumnDecimalDigitsIndex, -FieldScale);
+            Result.UpdateInt(TableColColumnSizeIndex, Precision);
+        end;
+        blr_varying: begin
+            Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
+            goto Str_Size;
           end;
-        blr_long:
-          case SubTypeName of
-            RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-            RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
-            else Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
+        blr_text: begin
+            Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
+Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength*GetInt(CHARACTER_LENGTH_Index));   //CHAR_OCTET_LENGTH
+            Result.UpdateInt(TableColColumnSizeIndex, FieldLength);
           end;
-        blr_int64:
-          case SubTypeName of
-            RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-            RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
-            else Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
-          end;
-        blr_varying: Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
         else
           Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
       end;
-      // COLUMN_SIZE.
-      case TypeName of
-        blr_short, blr_long, blr_int64: Result.UpdateInt(TableColColumnSizeIndex, GetInt(FIELD_PRECISION_Index));
-        blr_varying, blr_varying2: Result.UpdateNull(TableColColumnSizeIndex);  //the defaults of the resultsets will be used if null
-      else
-        Result.UpdateInt(TableColColumnSizeIndex, FieldLength);
-      end;
-
-      Result.UpdateNull(TableColColumnBufLengthIndex);    //BUFFER_LENGTH
-
-      if FieldScale < 0 then
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, -FieldScale)    //DECIMAL_DIGITS
-      else
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, 0); //DECIMAL_DIGITS
-
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10);   //NUM_PREC_RADIX
 
-      if GetInt(NULL_FLAG_Index) <> 0 then
-        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls))   //NULLABLE
-      else
-        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
+      if GetInt(NULL_FLAG_Index) <> 0
+      then Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls))   //NULLABLE
+      else Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
 
       Result.UpdateString(TableColColumnRemarksIndex, Copy(GetString(DESCRIPTION_Index),1,255));   //REMARKS
       Result.UpdateString(TableColColumnColDefIndex, DefaultValue);   //COLUMN_DEF
-      //Result.UpdateNull(TableColColumnSQLDataTypeIndex);   //SQL_DATA_TYPE
+      Result.UpdateInt(TableColColumnSQLDataTypeIndex, TypeName);   //SQL_DATA_TYPE
       //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);   //SQL_DATETIME_SUB
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(FIELD_SCALE_Index));   //CHAR_OCTET_LENGTH
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(FIELD_POSITION_Index)+ 1);   //ORDINAL_POSITION
@@ -1833,18 +1817,15 @@ begin
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(ColumnName)); //CASE_SENSITIVE
 
       Result.UpdateBoolean(TableColColumnSearchableIndex, True); //SEARCHABLE
-      if isNull(COMPUTED_SOURCE_Index) then
-        begin
-          Result.UpdateBoolean(TableColColumnWritableIndex, True); //WRITABLE
-          Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True); //DEFINITELYWRITABLE
-          Result.UpdateBoolean(TableColColumnReadonlyIndex, False); //READONLY
-        end
-      else
-        begin
-          Result.UpdateBoolean(TableColColumnWritableIndex, False); //WRITABLE
-          Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, False); //DEFINITELYWRITABLE
-          Result.UpdateBoolean(TableColColumnReadonlyIndex, True); //READONLY
-        end;
+      if isNull(COMPUTED_SOURCE_Index) and (ColumnName <> 'RDB$DB_KEY') then begin
+        Result.UpdateBoolean(TableColColumnWritableIndex, True); //WRITABLE
+        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True); //DEFINITELYWRITABLE
+        Result.UpdateBoolean(TableColColumnReadonlyIndex, False); //READONLY
+      end else begin
+        Result.UpdateBoolean(TableColColumnWritableIndex, False); //WRITABLE
+        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, False); //DEFINITELYWRITABLE
+        Result.UpdateBoolean(TableColColumnReadonlyIndex, True); //READONLY
+      end;
       Result.InsertRow;
     end;
     Close;
@@ -2911,5 +2892,5 @@ begin
     GetConnection.CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(CharacterSetsColumnsDynArray));
 end;
-
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

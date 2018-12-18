@@ -52,8 +52,7 @@ interface
 
 {$I ZDbc.inc}
 
-implementation
-
+{$IFNDEF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} DateUtils, SysUtils,
@@ -208,6 +207,9 @@ type
     destructor Destroy; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_POOLED} //if set we have an empty unit
+implementation
+{$IFNDEF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 { TConnectionPool }
 
 constructor TConnectionPool.Create(const URL: string; const ConnectionTimeout: Integer = 0; const MaxConnections: Integer = 0; const Wait: Boolean = True);
@@ -908,5 +910,6 @@ initialization
 finalization
   DriverManager.DeregisterDriver(_Driver);
 
+{$ENDIF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 end.
 

@@ -55,6 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 {$J+}
 
 uses
@@ -1262,7 +1263,11 @@ type
       u_v_length: Pub4; version: Pub2): sword;  *)
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses ZEncoding;
 
@@ -4978,6 +4983,7 @@ begin
     type_name, t_n_length, user_version, u_v_length, version);
 end;
 *)
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.
 
 

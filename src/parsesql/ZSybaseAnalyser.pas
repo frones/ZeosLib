@@ -55,6 +55,7 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB}
 uses Classes, ZGenericSqlAnalyser;
 
 type
@@ -63,6 +64,7 @@ type
   TZSybaseStatementAnalyser = class (TZGenericStatementAnalyser)
   end;
 
+{$ENDIF ZEOS_DISABLE_DBLIB}
 implementation
 
 end.

@@ -55,6 +55,7 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 uses
   Classes, ZTokenizer, ZGenericSqlToken;
 
@@ -90,7 +91,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 { TZOracleSymbolState }
 
@@ -158,6 +163,8 @@ begin
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
 end;
+
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.
 

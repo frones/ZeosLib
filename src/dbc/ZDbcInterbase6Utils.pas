@@ -54,6 +54,7 @@ unit ZDbcInterbase6Utils;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
@@ -452,7 +453,9 @@ const
     (Name: 'isc_tpb_lock_timeout';     ValueType: pvtNum;     Number: isc_tpb_lock_timeout)
   );
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
   ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils, ZEncoding
@@ -861,21 +864,22 @@ var
   ErrorMessage, ErrorSqlMessage: RawByteString;
   ErrorCode: LongInt;
   aSQL: RawByteString;
+  Buf: TRawBuff;
 begin
   Result := 0;
-  if not StatusSucceeded(StatusVector) then 
-  begin
+  if not StatusSucceeded(StatusVector) then begin
+    Buf.Pos := 0;
     ErrorMessage := '';
     PStatusVector := @StatusVector;
-    while PlainDriver.isc_interprete(Msg, @PStatusVector) > 0 do
-      ErrorMessage := ErrorMessage + ' ' + Msg;
+    while PlainDriver.isc_interprete(@Msg[0], @PStatusVector) > 0 do
+      ToBuff(PAnsiChar(@Msg[0]), ZFastcode.StrLen(@Msg[0]), Buf, ErrorMessage);
+    FlushBuff(Buf, ErrorMessage);
 
     ErrorCode := PlainDriver.isc_sqlcode(@StatusVector);
-    PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
-    ErrorSqlMessage := Msg;
+    PlainDriver.isc_sql_interprete(ErrorCode, @Msg[0], 1024);
+    ZSetString(@Msg[0], StrLen(@Msg[0]), ErrorSqlMessage);
 
-    if ErrorMessage <> '' then
-    begin
+    if ErrorMessage <> '' then begin
       if SQL <> ''
       then aSQL := ' The SQL: '+SQL+'; '
       else aSQL := '';
@@ -1271,7 +1275,9 @@ begin
             begin
               case InParamValues[i].VArray.VIsNullArrayVariantType of
                 vtString: IsNull := StrToBoolEx(TStringDynArray(ZData)[j]);
+                {$IFNDEF NO_ANSISTRING}
                 vtAnsiString: IsNull := StrToBoolEx(TAnsiStringDynArray(ZData)[j]);
+                {$ENDIF}
                 vtUTF8String: IsNull := StrToBoolEx(TUTF8StringDynArray(ZData)[j]);
                 vtRawByteString: IsNull := StrToBoolEx(TRawByteStringDynArray(ZData)[j]);
                 vtUnicodeString: IsNull := StrToBoolEx(TUnicodeStringDynArray(ZData)[j]);
@@ -2867,10 +2873,10 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   InitialStatementType: TZIbSqlStatementType;
   const XSQLDAMaxSize: LongWord): RawByteString;
 const
-  EBStart = AnsiString('EXECUTE BLOCK(');
-  EBBegin =  AnsiString(')AS BEGIN'+LineEnding);
-  EBSuspend =  AnsiString('SUSPEND;'+LineEnding); //required for RETURNING syntax
-  EBEnd = AnsiString('end');
+  EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
+  EBBegin =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}(')AS BEGIN'+LineEnding);
+  EBSuspend =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('SUSPEND;'+LineEnding); //required for RETURNING syntax
+  EBEnd = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('end');
   LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
 var
   IndexName, ArrayName: RawByteString;
@@ -3063,4 +3069,5 @@ begin
   Inc(PreparedRowsOfArray);
 end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

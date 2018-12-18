@@ -93,7 +93,6 @@ type
     procedure SetLastResultSet(const ResultSet: IZResultSet);
   protected
     FCursorName: RawByteString;
-    FRefCountAdded: Boolean; //while closing / unpreparing we need to indicate if closing LastResultSet will detroy this object
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
@@ -796,9 +795,12 @@ begin
     AfterClose;
     finally
     FClosed := True;
-    if RefCountAdded then
+    if RefCountAdded then begin
+      if (RefCount = 1) then
+        DriverManager.AddGarbage(Self);
       _Release;
     end;
+  end;
 end;
 
 {**
@@ -944,8 +946,7 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if ConSettings^.AutoEncode then
-  begin
+  if ConSettings^.AutoEncode then begin
     Result := EmptyRaw; //init for FPC
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
@@ -2339,7 +2340,7 @@ begin
           AssertLength;
         stString:
           case VariantType of
-            vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
+            vtString, {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}vtUTF8String, vtRawByteString, vtCharRec:
               AssertLength
             else
               raise Exception.Create('Invalid Variant-Type for String-Array binding!');
@@ -2922,10 +2923,12 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
+{$IFNDEF NO_ANSISTRING}
 function TZAbstractCallableStatement.GetAnsiString(ParameterIndex: Integer): AnsiString;
 begin
   Result := ClientVarManager.GetAsAnsiString(GetOutParam(ParameterIndex));
 end;
+{$ENDIF NO_ANSISTRING}
 
 {**
   Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,

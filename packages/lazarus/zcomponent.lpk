@@ -27,8 +27,7 @@
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
-    <Description Value="Zeos Database Components
-"/>
+    <Description Value="Zeos Database Components"/>
     <Version Major="7" Minor="2" Release="5"/>
     <Files Count="8">
       <Item1>
@@ -65,33 +64,18 @@
         <UnitName Value="ZIBEventAlerter"/>
       </Item8>
     </Files>
-    <RequiredPkgs Count="7">
+    <RequiredPkgs Count="3">
       <Item1>
-        <PackageName Value="zplain"/>
+        <PackageName Value="zdbc"/>
         <MinVersion Major="7" Minor="2" Valid="True"/>
       </Item1>
       <Item2>
-        <PackageName Value="zparsesql"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
+        <PackageName Value="IDEIntf"/>
       </Item2>
       <Item3>
-        <PackageName Value="zdbc"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
-      </Item3>
-      <Item4>
-        <PackageName Value="zcore"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
-      </Item4>
-      <Item5>
-        <PackageName Value="LCL"/>
-      </Item5>
-      <Item6>
-        <PackageName Value="IDEIntf"/>
-      </Item6>
-      <Item7>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item7>
+      </Item3>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

@@ -23,7 +23,7 @@
 			<LinkPackageImports>rtl.bpi</LinkPackageImports>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
 			<IncludePath>..\..\src\dbc;$(IncludePath)</IncludePath>
-			<PackageImports>ZPlain.bpi;ZParseSql.bpi;ZCore.bpi;rtl.bpi;dbrtl.bpi</PackageImports>
+			<PackageImports>ZPlain.bpi;ZParseSql.bpi;ZCore.bpi;rtl.bpi</PackageImports>
 			<BRCC_Defines>NO_STRICT;USEPACKAGES;$(BRCC_Defines)</BRCC_Defines>
 			<DCC_ObjOutput>build\</DCC_ObjOutput>
 			<ILINK_FullDebugInfo>true</ILINK_FullDebugInfo>

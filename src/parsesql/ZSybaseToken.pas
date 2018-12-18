@@ -55,6 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_DBLIB}
+
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZTokenizer, ZGenericSqlToken;
@@ -95,7 +97,9 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_DBLIB}
 implementation
+{$IFNDEF ZEOS_DISABLE_DBLIB}
 
 uses ZCompatibility
 {$IFDEF FAST_MOVE},ZFastCode{$ENDIF};
@@ -249,6 +253,5 @@ begin
   SetCharacterState('-', '-', CommentState);
 end;
 
+{$ENDIF ZEOS_DISABLE_DBLIB}
 end.
-
-

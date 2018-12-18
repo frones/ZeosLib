@@ -55,6 +55,12 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IF not defined(MSWINDOWS)}
+  {$DEFINE ZEOS_DISABLE_ADO}
+{$IFEND}
+
+{$IFNDEF ZEOS_DISABLE_ADO}
+
 uses
   Classes, SysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
 
@@ -75,7 +81,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ADO}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_ADO}
 
 {$IFDEF FAST_MOVE}
 uses ZFastCode;
@@ -194,5 +204,6 @@ begin
 
   SetCharacterState('/', '/', CommentState);
 end;
+{$ENDIF ZEOS_DISABLE_ADO}
 
 end.

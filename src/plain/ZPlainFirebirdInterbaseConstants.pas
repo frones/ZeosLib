@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
+
 uses
    ZCompatibility; 
 
@@ -2449,7 +2451,7 @@ TZFirebird_API = record
   isc_get_client_major_version: Tisc_get_client_major_version;
   isc_get_client_minor_version: Tisc_get_client_minor_version;
 end;
-
+{$ENDIF ZEOS_DISABLE_INTERBASE}
 implementation
 
 end.

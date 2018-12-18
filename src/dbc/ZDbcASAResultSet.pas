@@ -54,6 +54,7 @@ unit ZDbcASAResultSet;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs,{$ENDIF}
@@ -190,7 +191,9 @@ type
       Const ConSettings: PZConSettings);
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses
 {$IFNDEF FPC}
@@ -1793,4 +1796,5 @@ begin
   FBlobSize := Len+1;
 end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 end.

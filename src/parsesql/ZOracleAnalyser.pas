@@ -55,6 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
+
 uses Classes, ZGenericSqlAnalyser;
 
 type
@@ -65,7 +67,9 @@ type
     constructor Create;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 const
   {** The generic constants.}
@@ -97,5 +101,6 @@ begin
   FromClauses := ArrayToStrings(OracleFromClauses);
 end;
 
-end.
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
+end.

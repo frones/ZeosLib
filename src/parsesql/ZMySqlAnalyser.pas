@@ -55,6 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
+
 uses Classes, ZGenericSqlAnalyser;
 
 type
@@ -65,7 +67,11 @@ type
     constructor Create;
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 
 const
   {** The generic constants.}
@@ -99,6 +105,8 @@ begin
   FromJoins := ArrayToStrings(MySQLFromJoins);
   FromClauses := ArrayToStrings(MySQLFromClauses);
 end;
+
+{$ENDIF ZEOS_DISABLE_MYSQL}
 
 end.
 

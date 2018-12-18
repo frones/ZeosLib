@@ -54,7 +54,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Forms, Dialogs,
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {Forms, Dialogs,}
   ZDbcIntfs,ZCompatibility;
 
 const

@@ -55,6 +55,10 @@ interface
 
 {$I ZDbc.inc}
 
+{$IF not defined(MSWINDOWS) and not defined(ZEOS_DISABLE_ADO)}
+  {$DEFINE ZEOS_DISABLE_ADO}
+{$IFEND}
+{$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils,
@@ -134,7 +138,9 @@ type
     procedure Unprepare; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ADO}
 implementation
+{$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
   Variants,
@@ -921,5 +927,5 @@ SetNull:
       RaiseUnsupportedParameterTypeException(InParamTypes[ParamIndex]);
   end;
 end;
-
+{$ENDIF ZEOS_DISABLE_ADO}
 end.

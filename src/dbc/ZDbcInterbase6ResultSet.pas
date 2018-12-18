@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -156,7 +157,9 @@ type
     function IsAutoIncrement({%H-}ColumnIndex: Integer): Boolean; override;
   End;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
 {$IFNDEF FPC}
@@ -1676,10 +1679,19 @@ begin
                   Precision := DataLen;
                 stShort, stSmall, stInteger, stLong:
                   Signed := True;
+                stCurrency, stBigDecimal: begin
+                  Signed  := True;
+                  Scale   := -FIZSQLDA.GetFieldScale(I);
+                  //first digit does not count because of overflow (FB does not allow this)
+                  case FIZSQLDA.GetIbSqlType(I) of
+                    SQL_SHORT:  Precision := 4;
+                    SQL_LONG:   Precision := 9;
+                    SQL_INT64:  Precision := 18;
+                  end;
+                end;
               end;
             end;
         end;
-
         ReadOnly := (TableName = '') or (ColumnName = '') or
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
@@ -1862,5 +1874,5 @@ begin
   Loaded := True;
   {$ENDIF}
 end;
-
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

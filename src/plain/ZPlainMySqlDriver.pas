@@ -60,6 +60,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
+
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZPlainDriver, ZCompatibility, ZPlainMySqlConstants;
 
@@ -1510,7 +1512,7 @@ function TZMariaDB10PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for MariaDB-10';
 end;
-
+{$ENDIF ZEOS_DISABLE_MYSQL}
 end.
 
 

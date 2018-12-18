@@ -55,6 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE}
+
 uses Classes, ZGenericSqlAnalyser;
 
 type
@@ -65,7 +67,11 @@ type
     constructor Create;
   end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 
 const
   {** The generic constants.}
@@ -97,5 +103,6 @@ begin
   FromClauses := ArrayToStrings(SQLiteFromClauses);
 end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE}
 end.
 

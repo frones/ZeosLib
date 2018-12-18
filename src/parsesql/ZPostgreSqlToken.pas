@@ -55,6 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZTokenizer, ZGenericSqlToken, ZMySqlToken;
@@ -120,7 +122,11 @@ type
     procedure SetStandardConformingStrings(const Value: Boolean);
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
 uses ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
@@ -417,6 +423,6 @@ begin
     end;
   end;
 end;
-
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.
 

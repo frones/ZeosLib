@@ -141,6 +141,7 @@
           {$DEFINE WITH_WIDESTRUTILS}                 //WideStrUtils unit introduced.
           {$DEFINE SUPPORTS_UINT64_CONSTS}            //compiler supports integer constants with 20 didgits
           {$DEFINE WITH_WIDESTRINGS_GETFIELDNAMES}    //overload of GetFieldNames(List: TWideStrings) does exists;
+          {$DEFINE WITH_WIDEDATASET}                  //TWidedataset exists
           {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}       //Able to pass pwidechar to a widestring parameter
           {$DEFINE WITH_IPROVIDERWIDE}                //IProvider -W widestring using interface
           {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM}  //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
@@ -199,6 +200,9 @@
                   {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
 
                   {$IF CompilerVersion >= 23} //Delphi XE2+
+                    {$IFNDEF MSWINDOWS}
+                      {$DEFINE HAVE_GetProcAddressW} //GetProcAddress uses a PWideChar 
+                    {$ENDIF}
                     {$IFNDEF WIN32}
                       {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
                       {$IFNDEF PUREPASCAL}
@@ -216,12 +220,14 @@
                     {$DEFINE WITH_FASTCODE_INTTOSTR}      //Since XE2 the full purepascal IntToStr func is included
                     {$DEFINE WITH_PUREPASCAL_INTPOWER}    //Since XE2 a buggy pure pascal version of Math.IntPower was introduced
                     {$IF CompilerVersion >= 24} //Delphi XE3+
+                      {$UNDEF WITH_WIDEDATASET}               //TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
                       {$DEFINE WITH_TVALUEBUFFER}             //SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
                       {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
                       {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
                       {$DEFINE WITH_GENERIC_TLISTTFIELD}      //GetFieldList() uses the generic TList<TField>
 
                       {$IFDEF NEXTGEN}
+                        {$UNDEF WITH_UNIT_WIDESTRINGS}
                         {$UNDEF WITH_ASANSISTRING}
                         {$UNDEF WITH_UNITANSISTRINGS}
                         {$UNDEF WITH_WIDESTRUTILS}
@@ -246,8 +252,6 @@
                           {$UNDEF WITH_RAWBYTESTRING}
                           {$DEFINE WITH_TBYTES_AS_RAWBYTESTRING} //this compiler is buggy: _RawByteString is declared but skope is in System.pas only (UTF8Encode returns a unusable value f.e.)
                         {$IFEND}
-                      {$ELSE}
-                        {$DEFINE WITH_VCL_PREFIX}
                       {$ENDIF}
                       {$IF CompilerVersion >= 25} //Delphi XE4+
                         {$DEFINE WITH_VAR_TVALUEBUFFER}	        //GetFieldata overloads using !var! Buffer: TValueBuffer
@@ -404,8 +408,12 @@
 {$ENDIF}
 
 // Enables ADO support in TZConnection/TZDataset
-{$IF not defined(ZEOS_DISABLE_ADO) and defined(MSWINDOWS)}
+{$IF defined(MSWINDOWS)}
+  {$IF not defined(ZEOS_DISABLE_ADO)}
   {$DEFINE ENABLE_ADO}
+  {$IFEND}
+{$ELSE}
+  {$DEFINE ZEOS_DISABLE_ADO}
 {$IFEND}
 
 // Enables Interbase/Firebird support in TZConnection/TZDataset

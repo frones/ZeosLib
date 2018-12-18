@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
@@ -229,7 +230,9 @@ type
       StmtHandle: PMySql_Stmt; ColumnIndex: Cardinal);
   End;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
@@ -2181,7 +2184,7 @@ begin
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColBind^.length > 0 ) and
            (FColBind^.length < 30{Max Extended Length = 28 ??} ) then
-          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, '.', 0, Result)
+          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, AnsiChar('.'), 0, Result)
         else //avoid senceless processing
           Result := 0;
       else
@@ -2324,7 +2327,7 @@ begin
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColBind^.length > 0 ) and
            (FColBind^.length < 29{Max Extended Length = 28 ??+#0} ) then
-          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, '.', 0, Result)
+          RawToFloatDef(GetBlob(ColumnIndex).GetBuffer, AnsiChar('.'), 0, Result)
         else //avoid senceless processing
           Result := 0;
       else
@@ -3041,4 +3044,5 @@ begin
   FQueryHandle := nil;
 end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.

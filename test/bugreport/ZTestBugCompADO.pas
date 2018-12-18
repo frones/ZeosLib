@@ -103,7 +103,11 @@ begin
     CheckEquals(ord(ftDateTime), ord(Query.Fields[4].DataType));
     CheckEquals(ord(ftBlob), ord(Query.Fields[5].DataType));
     CheckMemoFieldType(Query.Fields[6].DataType, Connection.DbcConnection.GetConSettings);
+    {$IFDEF WITH_FTBYTE}
+    CheckEquals(ord(ftByte), ord(Query.Fields[7].DataType));
+    {$ELSE}
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[7].DataType));
+    {$ENDIF}
     CheckEquals('Vasia Pupkin', Query.Fields[2].AsString);
 
     Query.Append;
@@ -143,7 +147,11 @@ begin
     CheckEquals(ord(ftDateTime), ord(Query.Fields[4].DataType));
     CheckEquals(ord(ftBlob), ord(Query.Fields[5].DataType));
     CheckMemoFieldType(Query.Fields[6].DataType, Connection.DbcConnection.GetConSettings);
+    {$IFDEF WITH_FTBYTE}
+    CheckEquals(ord(ftByte), ord(Query.Fields[7].DataType));
+    {$ELSE}
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[7].DataType));
+    {$ENDIF}
     CheckEquals('Vasia Pupkin', Query.Fields[2].AsString);
 
     Query.Append;

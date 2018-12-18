@@ -55,6 +55,7 @@ interface
 
 {$I ZParseSql.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
 uses
   Classes, ZTokenizer, ZGenericSqlToken;
 
@@ -90,7 +91,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_INTERBASE}
 
 { TZInterbaseSymbolState }
 
@@ -152,6 +157,8 @@ begin
 
   SetCharacterState('/', '/', CommentState);
 end;
+
+{$ENDIF ZEOS_DISABLE_INTERBASE}
 
 end.
 

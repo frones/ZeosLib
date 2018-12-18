@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}SysUtils,
@@ -121,7 +122,9 @@ var
   {** The common driver manager object. }
   ASADriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses
   ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
@@ -440,9 +443,6 @@ begin
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
 
     if (FClientCodePage <> '' ) then
-      if ( GetPlainDriver.db_change_char_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) or
-         ( GetPlainDriver.db_change_nchar_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) then
-        CheckASAError( GetPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
       {$IFDEF UNICODE}
       RawTemp := ZUnicodeToRaw(FClientCodePage, ZOSCodePage);
       if (GetPlainDriver.db_change_char_charset(FHandle, Pointer(RawTemp)) = 0 ) or
@@ -601,4 +601,5 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(ASADriver);
   ASADriver := nil;
+{$ENDIF ZEOS_DISABLE_ASA}
 end.

@@ -56,6 +56,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZPlainPostgreSqlDriver, ZDbcPostgreSql, ZDbcLogging,
@@ -121,7 +122,7 @@ function PGEscapeString(SrcBuffer: PAnsiChar; SrcLength: Integer;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(const Value: AnsiString): AnsiString;
+function DecodeString(const Value: RawByteString): RawByteString;
 
 {**
   Checks for possible sql errors.
@@ -154,7 +155,9 @@ function PGPrepareAnsiSQLParam(const Value: TZVariant; const ClientVarManager: I
   const Connection: IZPostgreSQLConnection; ChunkSize: Cardinal; InParamType: TZSQLType;
   oidasblob, DateTimePrefix, QuotedNumbers: Boolean; ConSettings: PZConSettings): RawByteString;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils,ZClasses;
 
@@ -588,7 +591,7 @@ end;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(const Value: AnsiString): AnsiString;
+function DecodeString(const Value: RawByteString): RawByteString;
 var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
@@ -604,23 +607,18 @@ begin
     if SrcBuffer^ = '\' then
     begin
       Inc(SrcBuffer);
-      if CharInSet(SrcBuffer^, ['\', '''']) then
-      begin
+      if PByte(SrcBuffer)^ in [Ord('\'), Ord('''')] then begin
         DestBuffer^ := SrcBuffer^;
         Inc(SrcBuffer);
         Dec(SrcLength, 2);
-      end
-      else
-      begin
-        DestBuffer^ := AnsiChar(((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
+      end else begin
+        PByte(DestBuffer)^ := ((Byte(SrcBuffer[0]) - Ord('0')) shl 6)
           or ((Byte(SrcBuffer[1]) - Ord('0')) shl 3)
-          or ((Byte(SrcBuffer[2]) - Ord('0'))));
+          or ((Byte(SrcBuffer[2]) - Ord('0')));
         Inc(SrcBuffer, 3);
         Dec(SrcLength, 4);
       end;
-    end
-    else
-    begin
+    end else begin
       DestBuffer^ := SrcBuffer^;
       Inc(SrcBuffer);
       Dec(SrcLength);
@@ -813,6 +811,8 @@ begin
       RaiseUnsupportedParameterTypeException(InParamType);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.

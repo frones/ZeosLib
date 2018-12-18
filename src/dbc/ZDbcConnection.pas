@@ -1497,7 +1497,7 @@ begin
   P := Pointer(Value);
   if (P <> nil) and (Length(Value)>1) and (AnsiChar(P^)=AnsiChar(#39)) and (AnsiChar((P+Length(Value)-1)^)=AnsiChar(#39))
   then Result := Value
-  else Result := SQLQuotedStr(Value, #39);
+  else Result := SQLQuotedStr(Value, AnsiChar(#39));
 end;
 
 {**

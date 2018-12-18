@@ -46,6 +46,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
+
 uses Classes, ZCompatibility, ZPlainDriver, ZPlainASAConstants;
 
 {***************** Plain API Constants definition ****************}
@@ -432,7 +434,9 @@ type
     function GetDescription: string; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses SysUtils, ZPlainLoader, ZEncoding;
 
@@ -907,6 +911,6 @@ function TZASA12PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for ASA 9.0 DBLib';
 end;
-
+{$ENDIF ZEOS_DISABLE_ASA}
 end.
 

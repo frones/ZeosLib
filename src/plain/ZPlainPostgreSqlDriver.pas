@@ -55,6 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+
 uses {$IFDEF OLDFPC}ZClasses, {$ENDIF}ZCompatibility, ZPlainDriver;
 
 const
@@ -1113,8 +1115,9 @@ type
     function GetDescription: string; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 implementation
-
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 uses SysUtils, ZPlainLoader, Classes, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -1998,7 +2001,5 @@ function TZPostgreSQL9PlainDriver.GetStandardConformingStrings: Boolean;
 begin
   Result := True;
 end;
-
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.
-
-

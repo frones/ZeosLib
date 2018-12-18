@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZCompatibility,
@@ -133,7 +134,9 @@ type
     function ExecutePrepared: Boolean; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZSysUtils, ZDbcUtils, ZFastCode, ZPlainFirebirdDriver,
   ZDbcInterbase6ResultSet, ZClasses;
@@ -758,5 +761,5 @@ begin
     Result := 'EXECUTE PROCEDURE ' + ASQL + InParams;
 end;
 
+{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.
-
