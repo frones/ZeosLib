@@ -796,11 +796,14 @@ begin
 
   Result := 0;
   if Data <> nil then
-    if DT = tdsInt8 then //sybase only
-      Result := PInt64(Data)^
-    else
-      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsInt8),
+    case DT of
+      tdsInt1: Result := PByte(Data)^;
+      tdsInt2: Result := PSmallInt(Data)^;
+      tdsInt4: Result := PInteger(Data)^;
+      tdsInt8: Result := PInt64(Data)^;
+      else FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsInt8),
         @Result, SizeOf(Int64));
+    end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETLONG');
 end;
 
