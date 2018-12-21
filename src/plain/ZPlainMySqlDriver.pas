@@ -1076,7 +1076,9 @@ end;
 
 function TZMySQLPlainDriver.RetrieveNextRowset(mysql: PMYSQL): Integer;
 begin
-  Result := mysql_next_result (mysql);
+  if Assigned(mysql_next_result)
+  then Result := mysql_next_result (mysql)
+  else Result := -1;
 end;
 
 function TZMySQLPlainDriver.Rollback (mysql: PMYSQL): Boolean;
