@@ -354,9 +354,9 @@ begin
       BracketCount := 0;
       repeat
         Elements.Add(Tokens[TokenIndex]^);
-        if Tokens.AsString(TokenIndex) = '(' then
+        if (Tokens[i].P^ = '(') and (Tokens[i].L = 1) then
           Inc(BracketCount)
-        else if Tokens.AsString(TokenIndex) = ')' then
+        else if (Tokens[i].P^ = ')') and (Tokens[i].L = 1) then
           Dec(BracketCount);
         Inc(TokenIndex);
       until (BracketCount <= 0) or (TokenIndex >= Tokens.Count);
