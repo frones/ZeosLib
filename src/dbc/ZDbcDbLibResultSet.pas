@@ -372,7 +372,7 @@ label AssignGeneric;
     Result := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
     {$ELSE}
     ZSetString(P, ZFastCode.StrLen(P), Result);
-    Result := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.ActualName,
+    Result := ConSettings^.ConvFuncs.ZRawToString(Result,
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     {$ENDIF}
   end;
