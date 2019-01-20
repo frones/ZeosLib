@@ -354,10 +354,11 @@ begin
       BracketCount := 0;
       repeat
         Elements.Add(Tokens[TokenIndex]^);
-        if (Tokens[i].P^ = '(') and (Tokens[i].L = 1) then
-          Inc(BracketCount)
-        else if (Tokens[i].P^ = ')') and (Tokens[i].L = 1) then
-          Dec(BracketCount);
+        if (Tokens[TokenIndex].L = 1) then
+          if (Tokens[TokenIndex].P^ = '(') then
+            Inc(BracketCount)
+          else if (Tokens[TokenIndex].P^ = ')') then
+            Dec(BracketCount);
         Inc(TokenIndex);
       until (BracketCount <= 0) or (TokenIndex >= Tokens.Count);
     end;
