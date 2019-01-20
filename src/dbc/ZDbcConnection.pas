@@ -169,7 +169,6 @@ type
     property URL: TZURL read FURL;
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write FTransactIsolationLevel;
-    property Closed: Boolean read FClosed write FClosed;
   public
     constructor Create(const {%H-}Driver: IZDriver; const Url: string;
       const {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
@@ -246,7 +245,9 @@ type
     function GetTestMode : Byte;
     procedure SetTestMode(Mode: Byte);
     {$ENDIF}
-end;
+  protected
+    property Closed: Boolean read IsClosed write FClosed;
+  end;
 
   {** Implements Abstract Database notification. }
   TZAbstractNotification = class(TInterfacedObject, IZNotification)
@@ -1259,6 +1260,7 @@ end;
 function TZAbstractConnection.IsClosed: Boolean;
 begin
   Result := FClosed;
+  DriverManager.ClearGarbageCollector;
 end;
 
 {**

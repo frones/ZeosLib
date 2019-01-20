@@ -179,6 +179,7 @@ type
       out Password: string; ResultInfo: TStrings = nil); overload;
     procedure ResolveDatabaseUrl(const Url: string; out Database: string); overload;
     procedure AddGarbage(const Value: IZInterface);
+    procedure ClearGarbageCollector;
   end;
 
   {** Database Driver interface. }
@@ -1075,10 +1076,8 @@ type
     FDrivers: IZCollection;
     FLoggingListeners: IZCollection;
     FGarbageCollector: IZCollection;
-    FTimer: TZThreadTimer;
     FHasLoggingListener: Boolean;
     procedure LogEvent(const Event: TZLoggingEvent);
-    procedure ClearGarbageCollector;
   public
     constructor Create;
     destructor Destroy; override;
@@ -1114,6 +1113,7 @@ type
       out Password: string; ResultInfo: TStrings = nil); overload;
     procedure ResolveDatabaseUrl(const Url: string; out Database: string); overload;
     procedure AddGarbage(const Value: IZInterface);
+    procedure ClearGarbageCollector;
   end;
 
 { TZDriverManager }
@@ -1129,7 +1129,6 @@ begin
   FLoggingListeners := TZCollection.Create;
   FGarbageCollector := TZCollection.Create;
   FHasLoggingListener := False;
-  FTimer := TZThreadTimer.Create(ClearGarbageCollector, 1000, True);
 end;
 
 {**
@@ -1139,7 +1138,6 @@ destructor TZDriverManager.Destroy;
 begin
   FDrivers := nil;
   FLoggingListeners := nil;
-  FreeAndNil(FTimer);
   FreeAndNil(FDriversCS);
   FreeAndNil(FLogCS);
   inherited Destroy;
@@ -1281,7 +1279,6 @@ end;
 
 procedure TZDriverManager.AddGarbage(const Value: IZInterface);
 begin
-  FTimer.Reset; //take care the garbe will be cleared a little bit later
   FDriversCS.Enter;
   try
     FGarbageCollector.Add(Value);
@@ -1414,12 +1411,12 @@ end;
 
 procedure TZDriverManager.ClearGarbageCollector;
 begin
-  FDriversCS.Enter;
-  try
-    FGarbageCollector.Clear;
-  finally
-    FDriversCS.Leave;
-  end;
+  if (FGarbageCollector.Count > 0) and FDriversCS.TryEnter then
+    try
+      FGarbageCollector.Clear;
+    finally
+      FDriversCS.Leave;
+    end;
 end;
 
 {**
