@@ -169,7 +169,6 @@ type
     property URL: TZURL read FURL;
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write FTransactIsolationLevel;
-    property Closed: Boolean read FClosed write FClosed;
   public
     constructor Create(const {%H-}Driver: IZDriver; const Url: string;
       const {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
@@ -255,6 +254,8 @@ type
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
     function GetServerProvider: TZServerProvider; virtual;
+  protected
+    property Closed: Boolean read IsClosed write FClosed;
   end;
 
   {** Implements Abstract Database notification. }
@@ -1337,6 +1338,7 @@ end;
 function TZAbstractDbcConnection.IsClosed: Boolean;
 begin
   Result := FClosed;
+  DriverManager.ClearGarbageCollector;
 end;
 
 {**
