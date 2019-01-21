@@ -1543,7 +1543,7 @@ begin
   {$ENDIF}
   {$R-}
   Bind := @FOraVariables[ParameterIndex];
-  for i := 0 to ArrayCount -1 do
+  for i := 0 to Bind.curelen -1 do
     Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(BindList[ParameterIndex].Value, i));
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
