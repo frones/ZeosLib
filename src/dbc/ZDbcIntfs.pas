@@ -1462,12 +1462,16 @@ end;
 
 procedure TZDriverManager.ClearGarbageCollector;
 begin
-  if (FGarbageCollector.Count > 0) and FDriversCS.TryEnter then
+  if (FGarbageCollector.Count > 0) {$IFDEF HAVE_CS_TRYENTER}and FDriversCS.TryEnter{$ENDIF} then begin
+  {$IFNDEF HAVE_CS_TRYENTER}
+    FDriversCS.Enter;
+  {$ENDIF}
     try
       FGarbageCollector.Clear;
     finally
       FDriversCS.Leave;
     end;
+  end;
 end;
 
 {**
