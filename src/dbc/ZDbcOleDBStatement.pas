@@ -63,6 +63,9 @@ interface
 {$ENDIF}
 {$MINENUMSIZE 4}
 
+//EH: no Idea why but with current code D7 permanently have a internal Error of RangeChecks are enabled
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$UNDEF RangeCheckEnabled}{$IFEND}
+
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging,
@@ -1739,10 +1742,10 @@ begin
             Data := PPointer(Data)^;
           Negative := Value < 0;
           if Negative then begin
-            u64 := Cardinal(-Value);
+            u64 := -Value;
             PByte(Data)^ := Ord('-');
           end else
-            u64 := Cardinal(Value);
+            u64 := Value;
           L := GetOrdinalDigits(u64);
           if (Bind.cbMaxLen <= L +Byte(Ord(Negative))) then
             RaiseExceeded(Index);
@@ -1754,10 +1757,10 @@ begin
             Data := PPointer(Data)^;
           Negative := Value < 0;
           if Negative then begin
-            u64 := Cardinal(-Value);
+            u64 := -Value;
             PWord(PPointer(Data)^)^ := Ord('-');
           end else
-            u64 := Cardinal(Value);
+            u64 := Value;
           L := GetOrdinalDigits(u64);
           if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
