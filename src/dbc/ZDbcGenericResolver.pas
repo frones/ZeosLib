@@ -976,6 +976,8 @@ begin
                 RowAccessor.SetULong(Current.ColumnIndex, ResultSet.GetULong(I));
               stFloat:
                 RowAccessor.SetFloat(Current.ColumnIndex, ResultSet.GetFloat(I));
+              stCurrency:
+                RowAccessor.SetCurrency(Current.ColumnIndex, ResultSet.GetCurrency(I));
               stDouble:
                 RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
               stBigDecimal:
