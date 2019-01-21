@@ -94,6 +94,7 @@ type
     FLength: DBLENGTH;
     procedure ReleaseFetchedRows;
     procedure CreateAccessors;
+    procedure CheckError(Status: HResult); {$IFDEF WITH_INLINE}inline;{$ENDIF}
   protected
     procedure Open; override;
   public
@@ -391,6 +392,12 @@ begin
 end;
 {$ENDIF USE_SYNCOMMONS}
 
+procedure TZOleDBResultSet.CheckError(Status: HResult);
+begin
+  if Status <> S_OK then
+    OleDBCheck(Status, Statement.GetSQL, Self, FDBBINDSTATUSArray);
+end;
+
 {**
   Creates this object and assignes the main properties.
   @param Statement an SQL statement object.
@@ -420,16 +427,14 @@ end;
 procedure TZOleDBResultSet.CreateAccessors;
 var I: Integer;
 begin
-  OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED, 8Byte alignments do NOT work with fixed width fields},
+  CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED, 8Byte alignments do NOT work with fixed width fields},
     fpcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
-    Pointer(FDBBINDSTATUSArray)), FDBBINDSTATUSArray);
-
+    Pointer(FDBBINDSTATUSArray)));
   SetLength(FLobAccessors, Length(FLobColsIndex));
-  for i := 0 to high(FLobColsIndex) do
-  begin
+  for i := 0 to high(FLobColsIndex) do begin
     LobDBBinding.iOrdinal := FDBBindingArray[FLobColsIndex[i]].iOrdinal;
-    OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA, 1,
-      @LobDBBinding, 0, @FLobAccessors[i], nil), nil);
+    CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA, 1,
+      @LobDBBinding, 0, @FLobAccessors[i], nil));
   end;
 end;
 
@@ -442,7 +447,7 @@ begin
       for i := 0 to high(FLobColsIndex) do
         for J := 0 to FRowsObtained -1 do
           (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(Pointer(@FColBuffer[FDBBindingArray[FLobColsIndex[i]].obValue+NativeUInt(FRowSize*J)]));
-    OleDBCheck(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates)), FRowStates);
+    CheckError(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates)));
     (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(FHROWS);
     FHROWS := nil;
     FRowsObtained := 0;
@@ -490,7 +495,8 @@ begin
       else
         ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
-        prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0, ConSettings.CPType);
+        prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
+        prgInfo.bScale, prgInfo.bPrecision, ConSettings.CPType);
 
       if prgInfo^.ulColumnSize > Cardinal(MaxInt) then
         FieldSize := 0
@@ -527,10 +533,10 @@ begin
       ReleaseFetchedRows;
       {first release Accessor rows}
       for i := Length(FLobAccessors)-1 downto 0 do
-        OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FLobAccessors[i], @FAccessorRefCount));
+        CheckError((fRowSet As IAccessor).ReleaseAccessor(FLobAccessors[i], @FAccessorRefCount));
       SetLength(FLobAccessors, 0);
       if FAccessor > 0 then
-        OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
+        CheckError((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
     finally
       FRowSet := nil;
       FAccessor := 0;
@@ -573,9 +579,8 @@ begin
   if (RowNo = 0) then //fetch Iteration count of rows
   begin
     CreateAccessors;
-    OleDBCheck(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
-    if FRowsObtained > 0 then
-    begin
+    CheckError(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
+    if FRowsObtained > 0 then begin
       if DBROWCOUNT(FRowsObtained) < FRowCount then
       begin //reserve required mem only
         SetLength(FColBuffer, NativeInt(FRowsObtained) * FRowSize);
@@ -586,7 +591,7 @@ begin
       SetLength(FRowStates, FRowsObtained);
       {fetch data into the buffer}
       for i := 0 to FRowsObtained -1 do
-        OleDBCheck(fRowSet.GetData(FHROWS^[i], FAccessor, @FColBuffer[I*FRowSize]));
+        CheckError(fRowSet.GetData(FHROWS^[i], FAccessor, @FColBuffer[I*FRowSize]));
       goto success;
     end
     else //we do NOT need a buffer here!
@@ -602,7 +607,7 @@ begin
     begin
       {release old rows}
       ReleaseFetchedRows;
-      OleDBCheck(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
+      CheckError(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
       if DBROWCOUNT(FRowsObtained) < FCurrentBufRowNo then
         MaxRows := RowNo+Integer(FRowsObtained);  //this makes Exit out in first check on next fetch
       FCurrentBufRowNo := 0; //reset Buffer offsett
@@ -610,7 +615,7 @@ begin
       begin
         {fetch data into the buffer}
         for i := 0 to FRowsObtained -1 do
-          OleDBCheck(fRowSet.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize]));
+          CheckError((fRowSet.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize])));
         goto Success;
       end else goto NoSuccess;
     end;
@@ -1645,19 +1650,6 @@ begin
           else
             Result := Frac(PDateTime(FData)^);
         end;
-(*      DBTYPE_BSTR:
-        Result := PUnicodeToRaw(PWideChar(FData),
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
-      DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(FData),
-          FLength);
-      DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(FData)^,
-          FLength);*)
       DBTYPE_WSTR:
         Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_WSTR or DBTYPE_BYREF:
@@ -1714,18 +1706,6 @@ begin
             PDBTime2(FData)^.second,PDBTime2(FData)^.fraction div 1000000);
       DBTYPE_DATE:
         Result := PDateTime(FData)^;
-(*      :
-        Result := PUnicodeToRaw(PWideChar(FData),
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
-      DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(FData),
-          FLength);
-      DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(FData)^,
-          FLength);*)
       DBTYPE_BSTR,
       DBTYPE_WSTR:
         Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
@@ -1861,7 +1841,7 @@ begin
     FCurrentCodePage := ConSettings^.ClientCodePage^.CP
   else
     FCurrentCodePage := zCP_UTF16;
-  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream));
+  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream), '', nil);
   try
     GetMem(FBlobData, ChunkSize);
     FBlobSize := ChunkSize;
@@ -1890,7 +1870,7 @@ var
   pcbRead: LongInt;
 begin
   inherited Create;
-  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream));
+  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream), '', nil);
   try
     GetMem(FBlobData, ChunkSize);
     FBlobSize := ChunkSize;

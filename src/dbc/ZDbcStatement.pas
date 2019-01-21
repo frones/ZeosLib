@@ -210,8 +210,8 @@ type
 
   TZBindType = (zbtNull, zbt8Byte, zbt4Byte,
     zbtRawString, zbtUTF8String, {$IFNDEF NEXTGEN}zbtAnsiString,{$ENDIF}
-    zbtUniString, zbtCharByRef, zbtBinByRef, zbtGUID, zbtBytes, zbtArray,
-    zbtLob, zbtPointer, zbtBCD, zbtTimeStamp, zbtCustom);
+    zbtUniString, zbtCharByRef, zbtBinByRef, zbtGUID, zbtBytes,
+    zbtArray, zbtRefArray, zbtLob, zbtPointer, zbtBCD, zbtTimeStamp, zbtCustom);
 
   PZBindValue = ^TZBindValue;
   TZBindValue = record
@@ -234,8 +234,8 @@ type
 const
   TZBindTypeSize: array[TZBindType] of Integer = (0,{$IFNDEF CPU64}8{$ELSE}0{$ENDIF}, 0,
     0, 0, {$IFNDEF NEXTGEN}0,{$ENDIF}
-    0, SizeOf(TZCharRec), SizeOf(TZBufRec), SizeOf(TGUID), 0, SizeOf(TZArray),
-    0, 0, SizeOf(TBCD), SizeOf(TZTimeStamp), 0);
+    0, SizeOf(TZCharRec), SizeOf(TZBufRec), SizeOf(TGUID), 0,
+    SizeOf(TZArray), SizeOf(TZArray), 0, 0, SizeOf(TBCD), SizeOf(TZTimeStamp), 0);
 type
   P8Bytes = PInt64;
   P4Bytes = PCardinal;
@@ -257,7 +257,7 @@ type
     {$IFNDEF DISABLE_CHECKING}
     class procedure Error(const Msg: string; Data: Integer);
     {$ENDIF}
-    function AquireBuffer(Index: Integer; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function AquireBuffer(Index: Integer; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure SetCapacity(NewCapacity: Integer);
     function Get(Index: Integer): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetBindType(Index: Integer): TZBindType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -271,8 +271,9 @@ type
     destructor Destroy; override;
   public
     procedure Clear;
-    procedure ClearValue(Index: Integer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    procedure ClearValue(Index: Integer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure Delete(Index: Integer);
+    procedure ClearValues;
 
     procedure Put(Index: Integer; Value: Boolean); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes); overload;
@@ -284,7 +285,7 @@ type
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: RawByteString; CP: Word); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; CP: Word); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: ZWideString); overload;
-    procedure Put(Index: Integer; const Value: TZArray); overload;
+    procedure Put(Index: Integer; const Value: TZArray; AddArrayRef: Boolean); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: IZBLob); overload;
     procedure Put(Index: Integer; Value: PZBindValue); overload;
     procedure Put(Index: Integer; const Value: TGUID); overload;
@@ -3912,7 +3913,7 @@ var BindValue: PZBindValue;
 begin
   BindValue := Get(Index);
   if BindValue.Value <> nil then begin
-    if TZBindTypeSize[BindValue.BindType] = 0 then
+    if (TZBindTypeSize[BindValue.BindType] = 0) then
       case BindValue.BindType of
         zbtRawString,
         zbtUTF8String
@@ -3928,10 +3929,26 @@ begin
         else          BindValue.Value := nil;
       end
     else begin
+      if BindValue.BindType = zbtRefArray then begin
+        if PZArray(BindValue.Value).vArray <> nil then
+          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value).vArray,
+            TZSQLType(PZArray(BindValue.Value).VArrayType), PZArray(BindValue.Value).VArrayVariantType);
+        if PZArray(BindValue.Value).VIsNullArray <> nil then
+          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value)^.VIsNullArray,
+            TZSQLType(PZArray(BindValue.Value).VIsNullArrayType), PZArray(BindValue.Value).VIsNullArrayVariantType);
+      end;
       FreeMem(BindValue.Value, TZBindTypeSize[BindValue.BindType]);
       BindValue.Value := nil;
     end;
   end;
+  BindValue.BindType := zbtNull;
+end;
+
+procedure TZBindList.ClearValues;
+var I: Integer;
+begin
+  for I := 0 to FCount -1 do
+    ClearValue(I);
 end;
 
 constructor TZBindList.Create(ConSettings: PZConSettings);
@@ -4163,13 +4180,33 @@ begin
   ZWideString(AquireBuffer(Index, SQLType, zbtUniString).Value) := Value;
 end;
 
-procedure TZBindList.Put(Index: Integer; const Value: TZArray);
+procedure TZBindList.Put(Index: Integer; const Value: TZArray; AddArrayRef: Boolean);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, stArray, zbtArray);
-  if BindValue.Value = nil then
+  if AddArrayRef then begin
+    BindValue := AquireBuffer(Index, stArray, zbtRefArray);
+    if (BindValue.Value <> nil) then begin
+      if (Value.VArray <> nil) and (PZArray(BindValue.Value)^.VArray <> nil) then
+        DeReferenceArray(PZArray(BindValue.Value)^.VArray, TZSQLType(PZArray(BindValue.Value)^.VArrayType), PZArray(BindValue.Value)^.VArrayVariantType);
+      if (Value.VIsNullArray <> nil) and (PZArray(BindValue.Value)^.VIsNullArray <> nil) then
+        DeReferenceArray(PZArray(BindValue.Value)^.VIsNullArray, TZSQLType(PZArray(BindValue.Value)^.VIsNullArrayType), PZArray(BindValue.Value)^.VIsNullArrayVariantType);
+    end;
+  end else
+    BindValue := AquireBuffer(Index, stArray, zbtArray);
+  if BindValue.Value = nil then begin
     GetMem(BindValue.Value, SizeOf(TZArray));
+    PZArray(BindValue.Value)^.VArray := nil;
+    PZArray(BindValue.Value)^.VIsNullArray := nil;
+  end;
   PZArray(BindValue.Value)^ := Value;
+  if AddArrayRef then begin
+    if Value.vArray <> nil then
+      ZDbcUtils.ReferenceArray(Value.VArray, PZArray(BindValue.Value)^.vArray,
+        TZSQLType(Value.VArrayType), Value.VArrayVariantType);
+    if Value.VIsNullArray <> nil then
+      ZDbcUtils.ReferenceArray(Value.VIsNullArray, PZArray(BindValue.Value)^.VIsNullArray,
+        TZSQLType(Value.VIsNullArrayType), Value.VIsNullArrayVariantType);
+  end;
 end;
 
 procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
@@ -4276,7 +4313,8 @@ begin
     zbtBinByRef:  Put(Index, Value.SQLType, PZBufRec(Value.Value).Buf, PZBufRec(Value.Value).Len);
     zbtGUID:      Put(Index, stGUID, Value.Value, SizeOf(TGUID));
     zbtBytes:     Put(Index, Value.SQLType, TBytes(Value.Value));
-    zbtArray:     Put(Index, PZArray(Value.Value)^);
+    zbtArray:     Put(Index, PZArray(Value.Value)^, False);
+    zbtRefArray:  Put(Index, PZArray(Value.Value)^, True);
     zbtLob:       Put(Index, Value.SQLType, IZBLob(Value.Value));
     zbtPointer:   AquireBuffer(Index, Value.SQLType, Value.BindType).Value := Value.Value;
     zbtBCD:       Put(Index, PBCD(Value.Value)^);
@@ -4384,7 +4422,7 @@ procedure TZAbstractPreparedStatement2.BindArray(Index: Integer;
   const Value: TZArray);
 begin
   CheckParameterIndex(Index);
-  FBindList.Put(Index, Value);
+  FBindList.Put(Index, Value, False);
 end;
 
 {**
@@ -4497,6 +4535,7 @@ end;
 procedure TZAbstractPreparedStatement2.ClearParameters;
 begin
   FInitialArrayCount := 0;
+  FBindList.ClearValues;
 end;
 
 {**
@@ -5311,7 +5350,13 @@ begin
     if BindValue.SQLType <> stArray then
       raise Exception.Create('No Array bound before!');
     ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex);
-    PZArray(BindValue.Value).VIsNullArray := Pointer(Value);
+    if BindValue.BindType = zbtRefArray then begin
+      if PZArray(BindValue.Value).VIsNullArray <> nil then
+        DeReferenceArray(PZArray(BindValue.Value).VIsNullArray, TZSQLType(PZArray(BindValue.Value).VIsNullArrayType),
+          PZArray(BindValue.Value).VIsNullArrayVariantType);
+      ReferenceArray(Pointer(Value), PZArray(BindValue.Value).VIsNullArray, SQLType, VariantType);
+    end else
+      PZArray(BindValue.Value).VIsNullArray := Pointer(Value);
     PZArray(BindValue.Value).VIsNullArrayType := Ord(SQLType);
     PZArray(BindValue.Value).VIsNullArrayVariantType := VariantType;
   end else

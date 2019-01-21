@@ -1393,7 +1393,7 @@ begin
           end else if MySQLType in [stBytes, stAsciiStream, stUnicodeStream, stBinaryStream] then
             Result.UpdateInt(TableColColumnBufLengthIndex, ColumnSize)
           else
-            Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize(MySQLType));
+            Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize[MySQLType]);
           //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
           //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
           Result.UpdateInt(TableColColumnOrdPosIndex, OrdPosition);

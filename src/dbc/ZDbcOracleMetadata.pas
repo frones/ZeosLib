@@ -1728,7 +1728,7 @@ begin
         Result.UpdateInt(TableColColumnSizeIndex, FieldSize);
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize);
       end else begin
-        Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize(SQLType));
+        Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize[SQLType]);
         Result.UpdateInt(TableColColumnSizeIndex, Precision);
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(DATA_SCALE_Index));
       end;

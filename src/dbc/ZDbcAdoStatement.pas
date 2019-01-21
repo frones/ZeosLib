@@ -257,14 +257,14 @@ begin
         IID_ICommandPrepare, FOlePrepareCommand) and
        Supports(FOleParamCommand, IID_IAccessor, FParameterAccessor) then
     begin
-      OleDBCheck(FOlePrepareCommand.Prepare(0)); //0 indicates a non known count of execution
+      OleDBCheck(FOlePrepareCommand.Prepare(0), SQL, nil); //0 indicates a non known count of execution
       {check out the Parameter informations}
       FNamesBuffer := nil; FParamInfoArray := nil;
       try
-        OleDBCheck(FOleParamCommand.GetParameterInfo(FDBUPARAMS, PDBPARAMINFO(FParamInfoArray), FNamesBuffer));
+        OleDBCheck(FOleParamCommand.GetParameterInfo(FDBUPARAMS, PDBPARAMINFO(FParamInfoArray), FNamesBuffer), '', nil);
         Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
         SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
-        FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
+        FRowSize := ZDbcAdoUtils.PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
           InParamTypes, FParamInfoArray, FTempLobs);
         CalcParamSetsAndBufferSize;
       finally
@@ -417,7 +417,7 @@ begin
     begin
       LastUpdateCount := FRowCount; //store tempory possible array bound update-counts
       OleDBCheck(((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand).Execute(
-        nil, DB_NULLGUID,FDBParams,@FRowCount,nil));
+        nil, DB_NULLGUID,FDBParams,@FRowCount,nil), '', nil);
       LastUpdateCount := LastUpdateCount + FrowCount;
     end
     else
