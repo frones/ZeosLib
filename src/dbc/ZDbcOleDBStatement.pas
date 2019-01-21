@@ -239,7 +239,7 @@ begin
   if DriverManager.HasLoggingListener and
      ((LoggingCategory = lcExecute) or (Ord(LoggingCategory) > ord(lcOther))) then
     DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ASQL);
-  if Status <> S_OK then
+  if Failed(Status) then
     OleDBCheck(Status, SQL, Self, DBBINDSTATUSArray);
 end;
 
@@ -538,10 +538,11 @@ var
   TempLob: IZBlob;
   TmpStream: TStream;
   WType: Word;
+  Native: Boolean;
 label W_Len, WStr;
 begin
   {$R-}
-  MaxL := 0; CPL := 0; W1 := 0;//satisfy the compiler
+  MaxL := 0; CPL := 0; W1 := 0; Native := False;//satisfy the compiler
   //http://technet.microsoft.com/de-de/library/ms174522%28v=sql.110%29.aspx
   for i := 0 to BindList.Count -1 do begin
     if not (BindList[I].BindType in [zbtRefArray, zbtArray]) then
@@ -566,7 +567,8 @@ begin
         vtRawByteString: W1 := FClientCP;
       end;
     end else if (wType = DBTYPE_BYTES) or (wType = DBTYPE_STR) then
-      MaxL := fDBBindingArray[i].cbMaxLen - Byte(Ord(wType = DBTYPE_STR));
+      MaxL := fDBBindingArray[i].cbMaxLen - Byte(Ord(wType = DBTYPE_STR))
+    else Native := (SQLType2OleDBTypeEnum[SQLType] = wType) and (ZArray.VArrayVariantType = vtNull);
     for J := 0 to fDBParams.cParamSets-1 do begin
       if IsNullFromArray(ZArray, J) {or (wType = DBTYPE_NULL)} then begin
         PDBSTATUS(NativeUInt(fDBParams.pData)+(fDBBindingArray[i].obStatus + BuffOffSet))^ := DBSTATUS_S_ISNULL;
@@ -578,20 +580,44 @@ begin
       //note PLen is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
       PLen := PDBLENGTH(NativeUInt(fDBParams.pData)+(fDBBindingArray[i].obLength + BuffOffSet));
       case wType of
-        DBTYPE_I1:    PShortInt(Data)^  := ArrayValueToInteger(ZArray, j);
-        DBTYPE_UI1:   PByte(Data)^      := ArrayValueToCardinal(ZArray, j);
-        DBTYPE_I2:    PSmallInt(Data)^  := ArrayValueToInteger(ZArray, j);
-        DBTYPE_UI2:   PSmallInt(Data)^  := ArrayValueToCardinal(ZArray, j);
-        DBTYPE_I4:    PInteger(Data)^   := ArrayValueToInteger(ZArray, j);
-        DBTYPE_UI4:   PInteger(Data)^   := ArrayValueToCardinal(ZArray, j);
-        DBTYPE_I8:    PInt64(Data)^     := ArrayValueToInt64(ZArray, j);
+        DBTYPE_I1:    if Native
+                      then PShortInt(Data)^   := TShortIntDynArray(ZData)[j]
+                      else PShortInt(Data)^   := ArrayValueToInteger(ZArray, j);
+        DBTYPE_UI1:   if Native
+                      then PByte(Data)^       := TByteDynArray(ZData)[j]
+                      else PByte(Data)^       := ArrayValueToCardinal(ZArray, j);
+        DBTYPE_I2:    if Native
+                      then PSmallInt(Data)^   := TSmallIntDynArray(ZData)[j]
+                      else PSmallInt(Data)^   := ArrayValueToInteger(ZArray, j);
+        DBTYPE_UI2:   if Native
+                      then PWord(Data)^       := TWordDynArray(ZData)[j]
+                      else PWord(Data)^       := ArrayValueToCardinal(ZArray, j);
+        DBTYPE_I4:    if Native
+                      then PInteger(Data)^    := TIntegerDynArray(ZData)[j]
+                      else PInteger(Data)^    := ArrayValueToInteger(ZArray, j);
+        DBTYPE_UI4:   if Native
+                      then PCardinal(Data)^   := TCardinalDynArray(ZData)[j]
+                      else PCardinal(Data)^   := ArrayValueToCardinal(ZArray, j);
+        DBTYPE_I8:    if Native
+                      then PInt64(Data)^      := TInt64DynArray(ZData)[j]
+                      else PInt64(Data)^      := ArrayValueToInt64(ZArray, j);
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-        DBTYPE_UI8:   PUInt(Data)^      := ArrayValueToUInt64(ZArray, j);
+        DBTYPE_UI8:   if Native
+                      then PUInt64(Data)^     := TUInt64DynArray(ZData)[j]
+                      else PUInt(Data)^       := ArrayValueToUInt64(ZArray, j);
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-        DBTYPE_R4:    PSingle(Data)^    := ArrayValueToDouble(ZArray, j);
-        DBTYPE_R8:    PDouble(Data)^    := ArrayValueToDouble(ZArray, j);
-        DBTYPE_CY:    PCurrency(Data)^  := ArrayValueToCurrency(ZArray, j);
-        DBType_BOOL:  PWordBool(Data)^  := ArrayValueToBoolean(ZArray, j);
+        DBTYPE_R4:    if Native
+                      then PSingle(Data)^     := TSingleDynArray(ZData)[j]
+                      else PSingle(Data)^     := ArrayValueToDouble(ZArray, j);
+        DBTYPE_R8:    if Native
+                      then PDouble(Data)^     := TDoubleDynArray(ZData)[j]
+                      else PDouble(Data)^     := ArrayValueToDouble(ZArray, j);
+        DBTYPE_CY:    if Native
+                      then PCurrency(Data)^   := TCurrencyDynArray(ZData)[j]
+                      else PCurrency(Data)^   := ArrayValueToCurrency(ZArray, j);
+        DBType_BOOL:  if Native
+                      then PWordBool(Data)^   := TBooleanDynArray(ZData)[j]
+                      else PWordBool(Data)^   := ArrayValueToBoolean(ZArray, j);
         DBTYPE_DATE, DBTYPE_DBDATE, DBTYPE_DBTIME, DBTYPE_DBTIME2, DBTYPE_DBTIMESTAMP:  begin
             case SQLType of
               stTime:       DateTimeTemp := ArrayValueToTime(ZArray, j, ConSettings.WriteFormatSettings);
@@ -779,19 +805,20 @@ end;
 
 procedure TZOleDBPreparedStatement.BindRaw(Index: Integer;
   const Value: RawByteString; CP: Word);
-var
-  L: Cardinal;
+var L: Cardinal;
   PLen: PDBLENGTH;
+  Bind: PDBBINDING;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
   if fBindImmediat and (FDBBindingArray[Index].wType = DBTYPE_WSTR) then begin
-    PLen := PDBLENGTH(PAnsiChar(fDBParams.pData)+FDBBindingArray[Index].obLength);
-    L := FDBBindingArray[Index].cbMaxLen-2;
-    PDBSTATUS(PAnsiChar(FDBParams.pData)+FDBBindingArray[Index].obStatus)^ := DBSTATUS_S_OK;
-    PLen^ := PRaw2PUnicode(Pointer(Value), Pointer(NativeUInt(fDBParams.pData)+FDBBindingArray[Index].obValue), CP, LengthInt(Length(Value)), LengthInt(L shr 1)) shl 1;
+    Bind := @FDBBindingArray[Index];
+    PLen := PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength);
+    L := Bind.cbMaxLen-2;
+    PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
+    PLen^ := PRaw2PUnicode(Pointer(Value), Pointer(NativeUInt(fDBParams.pData)+Bind.obValue), CP, LengthInt(Length(Value)), LengthInt(L shr 1)) shl 1;
     if PLen^ > L then
       RaiseExceeded(Index)
   end else begin
@@ -977,7 +1004,7 @@ begin
     if Status = DB_E_PARAMUNAVAILABLE then begin
       fDEFERPREPARE := false;
       Exit;
-    end else if Status <> s_ok then
+    end else if Failed(Status) then
       CheckError(Status, lcOther, FDBBINDSTATUSArray);
     try
       SetParamCount(FDBUPARAMS);
@@ -1436,6 +1463,8 @@ begin
     PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
     Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
     case Bind.wType of
+      DBTYPE_I1, DBTYPE_I2, DBTYPE_I4, DBTYPE_UI1, DBTYPE_UI2, DBTYPE_UI4,
+      DBTYPE_I8, DBTYPE_UI8: SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
       DBTYPE_DATE:      PDateTime(Data)^ := Value;
       DBTYPE_DBDATE: begin
           DecodeDate(Value, W, PDBDate(Data)^.month, PDBDate(Data)^.day);
@@ -1841,8 +1870,7 @@ begin
 
     SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(0, fStmtTimeOut)); //Set command time_out static!
     SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
-    if (Provider = spMSSQL) then
-    begin
+    if (Provider = spMSSQL) then begin
       //turn off deferred prepare -> raise exception on Prepare if command can't be executed!
       //http://msdn.microsoft.com/de-de/library/ms130779.aspx
       if fDEFERPREPARE
@@ -1869,7 +1897,7 @@ begin
     end;
     try
       Status := FCmdProps.SetProperties(2,@rgPropertySets[0]);
-      if Status <> S_OK then
+      if Failed(Status) then
         OleDBCheck(Status, SQL, Self, nil);
     finally
       FCmdProps := nil;
@@ -2156,6 +2184,8 @@ begin
     PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
     Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
     case Bind.wType of
+      DBTYPE_I1, DBTYPE_I2, DBTYPE_I4, DBTYPE_UI1, DBTYPE_UI2, DBTYPE_UI4,
+      DBTYPE_I8, DBTYPE_UI8: SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
       DBTYPE_DATE:        PDateTime(Data)^ := Value;
       DBTYPE_DBDATE:      FillChar(Data^, SizeOf(TDBDate), #0);
       DBTYPE_DBTIME:      DecodeTime(Value, PDBTIME(Data)^.hour,
@@ -2227,14 +2257,13 @@ begin
     PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
     Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
     case Bind.wType of
+      DBTYPE_I1, DBTYPE_I2, DBTYPE_I4, DBTYPE_UI1, DBTYPE_UI2, DBTYPE_UI4,
+      DBTYPE_I8, DBTYPE_UI8: SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
       DBTYPE_NULL:      PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
       DBTYPE_R4, DBTYPE_R8, DBTYPE_CY, DBTYPE_NUMERIC, DBTYPE_VARNUMERIC:
         SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       DBTYPE_BOOL:      PWordBool(Data)^ := Value <> 0;
       DBTYPE_VARIANT:   POleVariant(Data)^ := Value;
-      DBTYPE_UI1, DBTYPE_I2, DBTYPE_I4, DBTYPE_I1, DBTYPE_UI2, DBTYPE_UI4,
-      DBTYPE_I8, DBTYPE_UI8:
-        SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
       DBTYPE_DATE:        PDateTime(Data)^ := Value;
       DBTYPE_DBDATE:      begin
                             DecodeDate(Value, Y, PDBDate(Data).month, PDBDate(Data).day);

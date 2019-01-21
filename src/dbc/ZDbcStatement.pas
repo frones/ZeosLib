@@ -1417,10 +1417,9 @@ end;
 function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
   const Msg: RawByteString = EmptyRaw): TZLoggingEvent;
 begin
-  if msg <> EmptyRaw then
-    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, EmptyRaw)
-  else
-    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, EmptyRaw);
+  if msg <> EmptyRaw
+  then result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, EmptyRaw)
+  else result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, EmptyRaw);
 end;
 
 function TZAbstractStatement.CreateLogEvent(

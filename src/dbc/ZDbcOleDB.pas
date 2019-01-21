@@ -98,7 +98,6 @@ type
     procedure SetProviderProps(DBinit: Boolean);
     procedure CheckError(Status: HResult; Action: TOleCheckAction; DoLog: Boolean);
   protected
-    procedure StartTransaction;
     procedure InternalCreate; override;
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
@@ -117,11 +116,14 @@ type
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
+    procedure StartTransaction;
     procedure Commit; override;
     procedure Rollback; override;
 
     procedure Open; override;
     procedure InternalClose; override;
+
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
 
     {procedure SetReadOnly(ReadOnly: Boolean); override; }
 
@@ -409,8 +411,7 @@ begin
         CheckError(SessionProperties.SetProperties(1, @prgPropertySets), ocaOther, False);
       end;
     end else if not Assigned(fTransaction) and
-      Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then
-    begin
+       Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then begin
       Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
       if not Succeeded(Res) then begin
         Dec(FpulTransactionLevel);
@@ -624,6 +625,17 @@ begin
   end;
 end;
 
+procedure TZOleDBConnection.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable);
+begin
+  FpulTransactionLevel := 0;
+  fTransaction := nil;
+  FMalloc := nil;
+  FDBInitialize := nil;
+  FDBCreateCommand := nil;
+  inherited ReleaseImmediat(Sender);
+end;
+
 {**
   Drops all changes made since the previous
   commit/rollback and releases any database locks currently held
@@ -725,6 +737,16 @@ begin
       //SetProviderProps(False); //provider properties -> don't work??
     inherited Open;
     (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
+    if (GetServerProvider = spMSSQL) and ((Info.Values[ConnProps_DateWriteFormat] = '') or (Info.Values[ConnProps_DateTimeWriteFormat] = '')) then begin
+      if (Info.Values[ConnProps_DateWriteFormat] = '') then begin
+        ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';  //ISO format which always is accepted by SQLServer
+        ConSettings^.WriteFormatSettings.DateFormatLen := 8;
+      end;
+      if (Info.Values[ConnProps_DateTimeWriteFormat] = '') then begin
+        ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS'; //ISO format which always is accepted by SQLServer
+        ConSettings^.WriteFormatSettings.DateTimeFormatLen := 19;
+      end;
+    end;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
     StartTransaction;

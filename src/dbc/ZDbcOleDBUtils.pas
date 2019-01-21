@@ -441,8 +441,7 @@ var
     DBBindingArray[Index].iOrdinal := ParamInfoArray^[Index].iOrdinal;
     DBBindingArray[Index].obLength := DBBindingArray[Index].obStatus + SizeOf(DBSTATUS);
     DBBindingArray[Index].wType := MapOleTypesToZeos(ParamInfoArray^[Index].wType);
-    if (ParamInfoArray^[Index].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //lob's
-    begin
+    if (ParamInfoArray^[Index].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then begin//lob's
       { cbMaxLen returns max allowed bytes for Lob's which depends to server settings.
        So rowsize could have a overflow. In all cases we need to use references
        OR introduce DBTYPE_IUNKNOWN by using a IPersistStream/ISequentialStream/IStream see:
