@@ -176,6 +176,7 @@ function PRawToUnicode(Source: PAnsiChar; const SourceBytes: LengthInt; CP: Word
 procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; SourceBytes, BufCodePoints: LengthInt; CP: Word); overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer; SourceBytes: LengthInt; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, BufCodePoints: LengthInt; var Dest: Pointer; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, BufCodePoints: LengthInt): LengthInt; overload; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PUnicodeToRaw(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, MaxDestBytes: LengthInt; CP: Word): LengthInt; overload;
@@ -305,13 +306,13 @@ function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} Raw
 
 
 {SBCS codepages $00..FF}
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
+procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: ZWideString; SBCS_MAP: PSBCS_MAP); overload;
-procedure AnsiSBCSToUCS2(Source: PByteArray; Dest: PWordArray;
+procedure AnsiSBCSToUTF16(Source: PByteArray; Dest: PWordArray;
   SBCS_MAP: PSBCS_MAP; SourceBytes: LengthInt); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
+procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TSBCSMapProc; var Dest: ZWideString); overload;
-procedure MapByteToUCS2(Source: PByteArray; SourceBytes: LengthInt;
+procedure MapByteToUTF16(Source: PByteArray; SourceBytes: LengthInt;
   Dest: PWordArray); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {MBCS codepages }
@@ -1226,7 +1227,7 @@ end;
   my fast Byte to Word shift without a lookup table
   eg. USACII7/LATIN 1 cp's
 }
-procedure MapByteToUCS2(Source: PByteArray; SourceBytes: LengthInt; Dest: PWordArray);
+procedure MapByteToUTF16(Source: PByteArray; SourceBytes: LengthInt; Dest: PWordArray);
 var
   PEnd: PAnsiChar;
 begin
@@ -1259,7 +1260,7 @@ end;
   my fast Byte to Word shift with a lookup table
   eg. all single byte encodings
 }
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
+procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: ZWideString; SBCS_MAP: PSBCS_MAP);
 begin
   {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
@@ -1273,7 +1274,7 @@ begin
     Dest := '';
     System.SetLength(Dest, SourceBytes);
   end;
-  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), SBCS_MAP, SourceBytes);
+  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), SBCS_MAP, SourceBytes);
 end;
 
 {**
@@ -1281,7 +1282,7 @@ end;
   my fast Byte to Word shift with a lookup table
   eg. all single byte encodings
 }
-procedure AnsiSBCSToUCS2(Source: PByteArray; Dest: PWordArray;
+procedure AnsiSBCSToUTF16(Source: PByteArray; Dest: PWordArray;
   SBCS_MAP: PSBCS_MAP; SourceBytes: LengthInt);
 var
   PEnd: PAnsiChar;
@@ -1312,7 +1313,7 @@ begin
   Dest[0] := Ord(#0);
 end;
 
-procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
+procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TSBCSMapProc; var Dest: ZWideString);
 begin
   {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
@@ -1645,55 +1646,55 @@ begin
   else
 A2U:
     case CP of
-      zCP_DOS437:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP437ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS708:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP708ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS720:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP720ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS737:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP737ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS775:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP775ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS850:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP850ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS852:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP852ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS855:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP855ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS857:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP857ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS858:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP858ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS860:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP860ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS861:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP861ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS862:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP862ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS863:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP863ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS864:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP864ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS865:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP865ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS866:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS869:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP869ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN874:         AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP874ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1250:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1250ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1251:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1251ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1252:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1252ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1253:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1253ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1254:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1254ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1255:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1255ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1256ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1257:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1257ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1258:        AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP1258ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_macintosh:      AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP10000ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_x_mac_ce:       AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP10029ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_x_IA5_Swedish:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP20107ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_KOI8R:          AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP20866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_us_ascii:       AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP20127ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_KOI8U:          AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP21866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L1_ISO_8859_1:  MapByteToUCS2(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
-      zCP_L2_ISO_8859_2:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28592ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L3_ISO_8859_3:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28593ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L4_ISO_8859_4:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28594ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L5_ISO_8859_5:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28595ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L6_ISO_8859_6:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28596ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L7_ISO_8859_7:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28597ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L8_ISO_8859_8:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28598ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L5_ISO_8859_9:  AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28599ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L7_ISO_8859_13: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28603ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L9_ISO_8859_15: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28605ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS437:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP437ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS708:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP708ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS720:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP720ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS737:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP737ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS775:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP775ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS850:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP850ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS852:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP852ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS855:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP855ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS857:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP857ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS858:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP858ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS860:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP860ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS861:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP861ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS862:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP862ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS863:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP863ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS864:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP864ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS865:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP865ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS866:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS869:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP869ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN874:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP874ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1250:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1250ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1251:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1251ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1252:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1252ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1253:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1253ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1254:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1254ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1255:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1255ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1256:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1256ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1257:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1257ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_WIN1258:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1258ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_macintosh:      AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP10000ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_x_mac_ce:       AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP10029ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_x_IA5_Swedish:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20107ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_KOI8R:          AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_us_ascii:       AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20127ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_KOI8U:          AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP21866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L1_ISO_8859_1:  MapByteToUTF16(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
+      zCP_L2_ISO_8859_2:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28592ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L3_ISO_8859_3:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28593ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L4_ISO_8859_4:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28594ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L5_ISO_8859_5:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28595ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L6_ISO_8859_6:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28596ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L7_ISO_8859_7:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28597ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L8_ISO_8859_8:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28598ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L5_ISO_8859_9:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28599ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L7_ISO_8859_13: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28603ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L9_ISO_8859_15: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28605ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       {not supported codepages by Windows MultiByteToWideChar}
-      zCP_L6_ISO_8859_10: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28600ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L8_ISO_8859_14: AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28604ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L10_ISO_8859_16:AnsiSBCSToUCS2(Pointer(Source), Pointer(Dest), @CP28606ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L6_ISO_8859_10: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28600ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L8_ISO_8859_14: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28604ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L10_ISO_8859_16:AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28606ToUnicodeMap, Min(SourceBytes, BufCodePoints));
       (* remaing fast conversion for MBCS encodings
       zCP_MSWIN921 = 921;
       zCP_MSWIN923 = 923;
@@ -1748,7 +1749,7 @@ A2U:
                     end;
             else
               if ZCompatibleCodePages(ZOSCodePage,zCP_UTF8) then begin //random success, we don't know ANY proper CP here
-                MapByteToUCS2(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
+                MapByteToUTF16(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
                 Exit;
               end else begin
                 CP := ZOSCodePage; //still a random success here!
@@ -1806,55 +1807,55 @@ begin
     PWord(Dest)^ := Ord(#0)
   else
     case CP of
-      zCP_DOS437:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP437ToUnicodeMap, SourceBytes);
-      zCP_DOS708:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP708ToUnicodeMap, SourceBytes);
-      zCP_DOS720:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP720ToUnicodeMap, SourceBytes);
-      zCP_DOS737:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP737ToUnicodeMap, SourceBytes);
-      zCP_DOS775:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP775ToUnicodeMap, SourceBytes);
-      zCP_DOS850:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP850ToUnicodeMap, SourceBytes);
-      zCP_DOS852:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP852ToUnicodeMap, SourceBytes);
-      zCP_DOS855:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP855ToUnicodeMap, SourceBytes);
-      zCP_DOS857:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP857ToUnicodeMap, SourceBytes);
-      zCP_DOS858:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP858ToUnicodeMap, SourceBytes);
-      zCP_DOS860:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP860ToUnicodeMap, SourceBytes);
-      zCP_DOS861:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP861ToUnicodeMap, SourceBytes);
-      zCP_DOS862:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP862ToUnicodeMap, SourceBytes);
-      zCP_DOS863:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP863ToUnicodeMap, SourceBytes);
-      zCP_DOS864:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP864ToUnicodeMap, SourceBytes);
-      zCP_DOS865:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP865ToUnicodeMap, SourceBytes);
-      zCP_DOS866:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP866ToUnicodeMap, SourceBytes);
-      zCP_DOS869:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP869ToUnicodeMap, SourceBytes);
-      zCP_WIN874:         AnsiSBCSToUCS2(Pointer(Source), Dest, @CP874ToUnicodeMap, SourceBytes);
-      zCP_WIN1250:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1250ToUnicodeMap, SourceBytes);
-      zCP_WIN1251:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1251ToUnicodeMap, SourceBytes);
-      zCP_WIN1252:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1252ToUnicodeMap, SourceBytes);
-      zCP_WIN1253:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1253ToUnicodeMap, SourceBytes);
-      zCP_WIN1254:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1254ToUnicodeMap, SourceBytes);
-      zCP_WIN1255:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1255ToUnicodeMap, SourceBytes);
-      zCP_WIN1256:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1256ToUnicodeMap, SourceBytes);
-      zCP_WIN1257:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1257ToUnicodeMap, SourceBytes);
-      zCP_WIN1258:        AnsiSBCSToUCS2(Pointer(Source), Dest, @CP1258ToUnicodeMap, SourceBytes);
-      zCP_macintosh:      AnsiSBCSToUCS2(Pointer(Source), Dest, @CP10000ToUnicodeMap, SourceBytes);
-      zCP_x_mac_ce:       AnsiSBCSToUCS2(Pointer(Source), Dest, @CP10029ToUnicodeMap, SourceBytes);
-      zCP_x_IA5_Swedish:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP20107ToUnicodeMap, SourceBytes);
-      zCP_KOI8R:          AnsiSBCSToUCS2(Pointer(Source), Dest, @CP20866ToUnicodeMap, SourceBytes);
-      zCP_us_ascii:       AnsiSBCSToUCS2(Pointer(Source), Dest, @CP20127ToUnicodeMap, SourceBytes);
-      zCP_KOI8U:          AnsiSBCSToUCS2(Pointer(Source), Dest, @CP21866ToUnicodeMap, SourceBytes);
-      zCP_L1_ISO_8859_1:  MapByteToUCS2(Pointer(Source), SourceBytes, Dest);
-      zCP_L2_ISO_8859_2:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28592ToUnicodeMap, SourceBytes);
-      zCP_L3_ISO_8859_3:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28593ToUnicodeMap, SourceBytes);
-      zCP_L4_ISO_8859_4:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28594ToUnicodeMap, SourceBytes);
-      zCP_L5_ISO_8859_5:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28595ToUnicodeMap, SourceBytes);
-      zCP_L6_ISO_8859_6:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28596ToUnicodeMap, SourceBytes);
-      zCP_L7_ISO_8859_7:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28597ToUnicodeMap, SourceBytes);
-      zCP_L8_ISO_8859_8:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28598ToUnicodeMap, SourceBytes);
-      zCP_L5_ISO_8859_9:  AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28599ToUnicodeMap, SourceBytes);
-      zCP_L7_ISO_8859_13: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28603ToUnicodeMap, SourceBytes);
-      zCP_L9_ISO_8859_15: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28605ToUnicodeMap, SourceBytes);
+      zCP_DOS437:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP437ToUnicodeMap, SourceBytes);
+      zCP_DOS708:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP708ToUnicodeMap, SourceBytes);
+      zCP_DOS720:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP720ToUnicodeMap, SourceBytes);
+      zCP_DOS737:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP737ToUnicodeMap, SourceBytes);
+      zCP_DOS775:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP775ToUnicodeMap, SourceBytes);
+      zCP_DOS850:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP850ToUnicodeMap, SourceBytes);
+      zCP_DOS852:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP852ToUnicodeMap, SourceBytes);
+      zCP_DOS855:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP855ToUnicodeMap, SourceBytes);
+      zCP_DOS857:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP857ToUnicodeMap, SourceBytes);
+      zCP_DOS858:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP858ToUnicodeMap, SourceBytes);
+      zCP_DOS860:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP860ToUnicodeMap, SourceBytes);
+      zCP_DOS861:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP861ToUnicodeMap, SourceBytes);
+      zCP_DOS862:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP862ToUnicodeMap, SourceBytes);
+      zCP_DOS863:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP863ToUnicodeMap, SourceBytes);
+      zCP_DOS864:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP864ToUnicodeMap, SourceBytes);
+      zCP_DOS865:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP865ToUnicodeMap, SourceBytes);
+      zCP_DOS866:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP866ToUnicodeMap, SourceBytes);
+      zCP_DOS869:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP869ToUnicodeMap, SourceBytes);
+      zCP_WIN874:         AnsiSBCSToUTF16(Pointer(Source), Dest, @CP874ToUnicodeMap, SourceBytes);
+      zCP_WIN1250:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1250ToUnicodeMap, SourceBytes);
+      zCP_WIN1251:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1251ToUnicodeMap, SourceBytes);
+      zCP_WIN1252:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1252ToUnicodeMap, SourceBytes);
+      zCP_WIN1253:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1253ToUnicodeMap, SourceBytes);
+      zCP_WIN1254:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1254ToUnicodeMap, SourceBytes);
+      zCP_WIN1255:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1255ToUnicodeMap, SourceBytes);
+      zCP_WIN1256:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1256ToUnicodeMap, SourceBytes);
+      zCP_WIN1257:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1257ToUnicodeMap, SourceBytes);
+      zCP_WIN1258:        AnsiSBCSToUTF16(Pointer(Source), Dest, @CP1258ToUnicodeMap, SourceBytes);
+      zCP_macintosh:      AnsiSBCSToUTF16(Pointer(Source), Dest, @CP10000ToUnicodeMap, SourceBytes);
+      zCP_x_mac_ce:       AnsiSBCSToUTF16(Pointer(Source), Dest, @CP10029ToUnicodeMap, SourceBytes);
+      zCP_x_IA5_Swedish:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP20107ToUnicodeMap, SourceBytes);
+      zCP_KOI8R:          AnsiSBCSToUTF16(Pointer(Source), Dest, @CP20866ToUnicodeMap, SourceBytes);
+      zCP_us_ascii:       AnsiSBCSToUTF16(Pointer(Source), Dest, @CP20127ToUnicodeMap, SourceBytes);
+      zCP_KOI8U:          AnsiSBCSToUTF16(Pointer(Source), Dest, @CP21866ToUnicodeMap, SourceBytes);
+      zCP_L1_ISO_8859_1:  MapByteToUTF16(Pointer(Source), SourceBytes, Dest);
+      zCP_L2_ISO_8859_2:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28592ToUnicodeMap, SourceBytes);
+      zCP_L3_ISO_8859_3:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28593ToUnicodeMap, SourceBytes);
+      zCP_L4_ISO_8859_4:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28594ToUnicodeMap, SourceBytes);
+      zCP_L5_ISO_8859_5:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28595ToUnicodeMap, SourceBytes);
+      zCP_L6_ISO_8859_6:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28596ToUnicodeMap, SourceBytes);
+      zCP_L7_ISO_8859_7:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28597ToUnicodeMap, SourceBytes);
+      zCP_L8_ISO_8859_8:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28598ToUnicodeMap, SourceBytes);
+      zCP_L5_ISO_8859_9:  AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28599ToUnicodeMap, SourceBytes);
+      zCP_L7_ISO_8859_13: AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28603ToUnicodeMap, SourceBytes);
+      zCP_L9_ISO_8859_15: AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28605ToUnicodeMap, SourceBytes);
       {not supported codepages by Windows MultiByteToWideChar}
-      zCP_L6_ISO_8859_10: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28600ToUnicodeMap, SourceBytes);
-      zCP_L8_ISO_8859_14: AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28604ToUnicodeMap, SourceBytes);
-      zCP_L10_ISO_8859_16:AnsiSBCSToUCS2(Pointer(Source), Dest, @CP28606ToUnicodeMap, SourceBytes);
+      zCP_L6_ISO_8859_10: AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28600ToUnicodeMap, SourceBytes);
+      zCP_L8_ISO_8859_14: AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28604ToUnicodeMap, SourceBytes);
+      zCP_L10_ISO_8859_16:AnsiSBCSToUTF16(Pointer(Source), Dest, @CP28606ToUnicodeMap, SourceBytes);
       (* remaing fast conversion for MBCS encodings
       zCP_MSWIN921 = 921;
       zCP_MSWIN923 = 923;
@@ -1902,7 +1903,7 @@ begin
                       end;
               else
                 if ZCompatibleCodePages(ZOSCodePage,zCP_UTF8) then begin //random success, we don't know ANY proper CP here
-                  MapByteToUCS2(Pointer(Source), wlen, Dest);
+                  MapByteToUTF16(Pointer(Source), wlen, Dest);
                   Exit;
                 end else
                   CP := ZOSCodePage; //still a random success here!
@@ -1988,6 +1989,23 @@ begin
     Result := PRaw2PUnicodeBuf(Source, Dest, SourceBytes, CP);
     if Result <> BufCodePoints then
       ReallocMem(Dest, (Result+1) shl 1);
+  end;
+end;
+
+function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, BufCodePoints: LengthInt): LengthInt;
+var Buf: Pointer;
+  sBuf: Array[0..dsMaxWStringSize] of WideChar; //avoid mem allocs -> stack
+begin
+  if BufCodePoints <= SourceBytes then //no buffer overrun possible
+    Result := PRaw2PUnicodeBuf(Source, Dest, SourceBytes, CP)
+  else begin
+    if SourceBytes <= dsMaxWStringSize 
+    then Buf := @sBuf[0]
+    else Buf := AllocMem((SourceBytes+1) shl 1);
+    Result := PRaw2PUnicodeBuf(Source, Buf, SourceBytes, CP);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Dest^, (Min(Result, BufCodePoints)+1) shl 1);
+    if Buf <> @sBuf[0] then
+      FreeMem(Buf, (SourceBytes+1) shl 1);
   end;
 end;
 
