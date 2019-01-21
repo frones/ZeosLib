@@ -1189,10 +1189,10 @@ begin
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
     SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    P := Pointer(Result);
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     PByte(P+LRes)^ := Ord(#0);
     {$ENDIF}
-    P := Pointer(Result);
     Inc(P, LRes-Buf.Pos-L);
     if Buf.Pos > 0 then begin
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
@@ -1218,10 +1218,10 @@ begin
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
     SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    P := Pointer(Result);
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     PByte(P+LRes)^ := Ord(#0);
     {$ENDIF}
-    P := Pointer(Result);
     Inc(P, LRes-Buf.Pos-L);
     if Buf.Pos > 0 then begin
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
