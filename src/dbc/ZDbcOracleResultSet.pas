@@ -1910,6 +1910,7 @@ begin
       end
     else
       Inc(P, CurrentVar^.value_sz*Cardinal(FIteration));
+    defn_or_bindpp := nil;
     FStatus := FPlainDriver.OCIDefineByPos(FStmtHandle, defn_or_bindpp,
       FErrorHandle, I, CurrentVar^.valuep, CurrentVar^.value_sz, CurrentVar^.dty,
       CurrentVar^.indp, CurrentVar^.alenp, nil, OCI_DEFAULT);
