@@ -1497,7 +1497,7 @@ end;
 }
 function TZOleDBDatabaseInfo.SupportsArrayBindings: Boolean;
 begin
-  Result := fDBPROP_MULTIPLEPARAMSETS {$IFDEF USE_SYNCOMMONS}and not Metadata.GetConnection.GetAutoCommit{$ENDIF}; //EH: in autocommit the multiple paramsets are slow
+  Result := fDBPROP_MULTIPLEPARAMSETS //{$IFDEF USE_SYNCOMMONS}and not Metadata.GetConnection.GetAutoCommit{$ENDIF}; //EH: in autocommit the multiple paramsets are slow
 end;
 
 function TZOleDBDatabaseInfo.SupportsByRefAccessors: Boolean;
