@@ -63,9 +63,6 @@ interface
 {$ENDIF}
 {$MINENUMSIZE 4}
 
-//EH: no Idea why but with current code D7 permanently have a internal Error of RangeChecks are enabled
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$UNDEF RangeCheckEnabled}{$IFEND}
-
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging,
@@ -140,7 +137,7 @@ type
     procedure SetPAnsiChar(Index: Word; Value: PAnsiChar; Len: Cardinal);
     procedure BindBatchDMLArrays;
     procedure BindRaw(Index: Integer; const Value: RawByteString; CP: Word);
-    procedure Dyn_W_Convert(Index, Len: Integer; const Arr: PZArray);
+    procedure Dyn_W_Convert(Index, Len: Integer; var Arr: PZArray);
     procedure SetOleCommandProperties;
     procedure InitVaryBind(Index: Integer; Len: Cardinal; _Type: DBTYPE);
     procedure InitFixedBind(Index: Integer; Size: Cardinal; _Type: DBTYPE);
@@ -707,7 +704,6 @@ begin
                         goto W_Len;
                       end else begin
                         Dyn_W_Convert(I, Length(TRawByteStringDynArray(ZData)), ZArray);
-                        ZArray := PZArray(BindList[i].Value);
                         ZData := ZArray.VArray;
                         goto WStr;
                       end;
@@ -734,7 +730,6 @@ WStr:                 PLen^ := Length(TUnicodeStringDynArray(ZData)[J]) shl 1;
                         then PLen^ := PRaw2PUnicode(PAnsiChar(TZCharRecDynArray(ZData)[J].P), PWideChar(Data), TZCharRecDynArray(ZData)[J].CP, LengthInt(TZCharRecDynArray(ZData)[J].Len), LengthInt(MaxL))
                         else begin
                           Dyn_W_Convert(I, Length(TZCharRecDynArray(ZData)), ZArray);
-                          ZArray := PZArray(BindList[i].Value);
                           ZData := ZArray.VArray;
                           goto WStr;
                         end;
@@ -783,24 +778,18 @@ procedure TZOleDBPreparedStatement.BindInParameters;
 begin
   if BindList.Count = 0 then
     Exit;
-  if not fBindImmediat then
+  if not fBindImmediat or (ArrayCount > 0) then
     try
       fBindImmediat := True;
       if fBindAgain or (FDBParams.hAccessor = 0) then
         PrepareInParameters;
-      if ArrayCount = 0 then
-        BindList.BindValuesToStatement(Self, False);
+      if ArrayCount = 0
+      then BindList.BindValuesToStatement(Self, False)
+      else BindBatchDMLArrays;
       fBindAgain := False;
     finally
-      fBindImmediat := False;
+      fBindImmediat := fDEFERPREPARE;
     end;
-  if ArrayCount > 0 then begin
-    FRowsAffected := 0; //init
-    LastUpdateCount := 0;
-    FDBParams.cParamSets := ArrayCount;
-    BindBatchDMLArrays;
-    FRowsAffected := LastUpdateCount; //restore for final execution!
-  end;
 end;
 
 procedure TZOleDBPreparedStatement.BindRaw(Index: Integer;
@@ -867,7 +856,7 @@ begin
   FClientCP := ConSettings^.ClientCodePage.CP;
 end;
 
-procedure TZOleDBPreparedStatement.Dyn_W_Convert(Index, Len: Integer; const Arr: PZArray);
+procedure TZOleDBPreparedStatement.Dyn_W_Convert(Index, Len: Integer; var Arr: PZArray);
 var
   W_Dyn: TUnicodeStringDynArray;
   CP: Word;
@@ -902,6 +891,7 @@ SetUniArray:
   NewArr.VArrayVariantType := vtUnicodeString;
   NewArr.VArray := Pointer(W_Dyn);
   BindList.Put(Index, NewArr, True);
+  Arr := BindList[Index].Value;
 end;
 
 procedure TZOleDBPreparedStatement.InitFixedBind(Index: Integer; Size: Cardinal;
@@ -1176,6 +1166,7 @@ end;
 procedure TZOleDBPreparedStatement.SetBoolean(Index: Integer; Value: Boolean);
 var Bind: PDBBINDING;
   Data: PAnsichar;
+label {set_a_len, }set_w_len;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1202,21 +1193,27 @@ begin
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       DBTYPE_UI8:       PUInt64(Data)^ := Ord(Value);
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-      DBTYPE_STR:       if Bind.cbMaxLen >= 6
-                        then Move(Pointer(BoolStrsUpRaw[Value])^, Data, Length(BoolStrsUpRaw[Value])+1)
-                        else RaiseExceeded(Index);
+(*      DBTYPE_STR:       begin
+                          if Bind.cbMaxLen >= 6
+                          then Move(Pointer(BoolStrsUpRaw[Value])^, Data, Length(BoolStrsUpRaw[Value])+1)
+                          else RaiseExceeded(Index);
+                          goto set_a_len;
+                        end;
       (DBTYPE_STR or DBTYPE_BYREF): begin
                                       PPointer(Data)^ := Pointer(BoolStrsUpRaw[Value]);
-                                      if Value
+set_a_len:                            if Value
                                       then PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 4
                                       else PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 5;
-                                    end;
-      DBTYPE_WSTR:      if Bind.cbMaxLen >= 12
-                        then Move(Pointer(BoolStrsUpW[Value])^, Data, (Length(BoolStrsUpW[Value])+1) shl 1)
-                        else RaiseExceeded(Index);
+                                    end;*)
+      DBTYPE_WSTR:      begin
+                          if Bind.cbMaxLen >= 12
+                          then Move(Pointer(BoolStrsUpW[Value])^, Data, (5+Ord(not Value)) shl 1)
+                          else RaiseExceeded(Index);
+                          goto set_w_len;
+                        end;
       DBTYPE_WSTR or DBTYPE_BYREF: begin
                                       PPointer(Data)^ := Pointer(BoolStrsUpW[Value]);
-                                      if Value
+set_w_len:                            if Value
                                       then PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 8
                                       else PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 10;
                                     end;
@@ -1337,43 +1334,36 @@ begin
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       DBTYPE_UI8:       PUInt64(Data)^ := PInt64(@Value)^ div 10000;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-      DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
-                  if Bind.cbMaxLen < 22 then begin //(19digits+dot+neg sign) -> test final length
+      (*DBTYPE_STR: if Bind.cbMaxLen < 22 then begin //(19digits+dot+neg sign) -> test final length
                     CurrToRaw(Value, @fABuffer[0], @PEnd);
-                    if NativeUInt(PAnsiChar(PEnd) - PAnsiChar(@fABuffer[0])) >= Bind.cbMaxLen then
-                      RaiseExceeded(Index)
-                    else begin
-                      PByte(PEnd)^ := Ord(#0);
-                      goto MoveBuf;
-                    end;
-                  end;
-                  if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then
-                    Data  := PPAnsiChar(Data)^;
-                  CurrToRaw(Value, Data, @PEnd);
-                  PByte(PEnd)^ := Ord(#0);
-                  goto SetLen;
-                end;
-      DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF):
-                  if Bind.cbMaxLen < 44 then begin //(19digits+dot+neg sign) -> test final length
-                    CurrToUnicode(Value, @fWBuffer[0], @PEnd);
-                    if NativeUInt(PEnd - PAnsiChar(@fWBuffer[0])) >= Bind.cbMaxLen then
-                      RaiseExceeded(Index)
-                    else begin
-                      PWord(PEnd)^ := Ord(#0);
-MoveBuf:              index := PEnd - PAnsiChar(@fABuffer[0]);
-                      PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := Index;
-                      Move(fABuffer[0], Data^, Index+1+Ord(Bind.wType = DBTYPE_WSTR));
-                    end;
+                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-@fABuffer[0];
+                    if PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ < Bind.cbMaxLen
+                    then Move(fABuffer[0], Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
+                    else RaiseExceeded(Index);
                   end else begin
-                    if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then
-                      Data  := PPointer(Data)^;
                     CurrToRaw(Value, Data, @PEnd);
-                    PByte(PEnd)^ := Ord(#0);
-                    Data := PPointer(Data)^;
-                    CurrToUnicode(Value, PWideChar(Data), @PEnd);
-                    PWord(PEnd)^ := Ord(#0);
-SetLen:             PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-Data;
+                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-Data;
                   end;
+      (DBTYPE_STR or DBTYPE_BYREF): begin
+                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24); //8Byte align
+                   CurrToRaw(Value, PPointer(Data)^, @PEnd);
+                   PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PPAnsiChar(Data)^;
+                 end; *)
+      DBTYPE_WSTR: if Bind.cbMaxLen < 44 then begin //(19digits+dot+neg sign) -> test final length
+                    CurrToUnicode(Value, @fWBuffer[0], @PEnd);
+                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-@fWBuffer[0];
+                    if PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ < Bind.cbMaxLen
+                    then Move(fWBuffer[0], Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
+                    else RaiseExceeded(Index);
+                  end else begin
+                    CurrToUnicode(Value, PWideChar(Data), @PEnd);
+                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-Data;
+                  end;
+      (DBTYPE_WSTR or DBTYPE_BYREF): begin
+                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+                   CurrToUnicode(Value, ZPPWideChar(Data)^, @PEnd);
+                   PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PPAnsiChar(Data)^;
+                 end;
       //DBTYPE_NUMERIC:;
       //DBTYPE_VARNUMERIC:;
      else RaiseUnsupportedParamType(Index, Bind.wType, stCurrency);
@@ -1484,7 +1474,7 @@ begin
       DBTYPE_BOOL:      PWordBool(Data)^ := Value <> 0;
       DBTYPE_VARIANT:   POleVariant(Data)^ := Value;
       (DBTYPE_STR or DBTYPE_BYREF): begin
-          PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 11);
+          PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 12);
           Data := PPointer(Data)^;
           goto RConv;
         end;
@@ -1493,7 +1483,7 @@ RConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                       DateTimeToRawSQLDate(Value, PAnsiChar(Data), ConSettings.WriteFormatSettings, False)
                   else RaiseExceeded(Index);
       DBTYPE_WSTR or DBTYPE_BYREF: begin
-          PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 22);
+          PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
           Data := PPointer(Data)^;
           goto WConv;
         end;
@@ -1515,6 +1505,7 @@ procedure TZOleDBPreparedStatement.SetDouble(Index: Integer;
   const Value: Double);
 var Bind: PDBBINDING;
   Data: PAnsichar;
+  L: Cardinal;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1531,32 +1522,39 @@ begin
       DBTYPE_CY:        PCurrency(Data)^ := Value;
       DBTYPE_BOOL:      PWordBool(Data)^ := Value <> 0;
       DBTYPE_VARIANT:   POleVariant(Data)^ := Value;
-      DBTYPE_I1,
-      DBTYPE_I2,
-      DBTYPE_I4,
-      DBTYPE_UI1,
-      DBTYPE_UI2,
-      DBTYPE_UI4,
-      DBTYPE_I8,
-      DBTYPE_UI8:       SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
+      DBTYPE_I1, DBTYPE_I2, DBTYPE_I4, DBTYPE_I8,
+      DBTYPE_UI1, DBTYPE_UI2, DBTYPE_UI4, DBTYPE_UI8:
+                        SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
       DBTYPE_DATE:      PDateTime(Data)^ := Value;
       DBTYPE_DBDATE,
       DBTYPE_DBTIME,
       DBTYPE_DBTIME2,
       DBTYPE_DBTIMESTAMP: SetTimeStamp(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-      DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
-          if Bind.cbMaxLen < 21 then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 21);
-            Bind.cbMaxLen := 21;
-          end;
-          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToRaw(Value, PPAnsiChar(Data)^);
-        end;
+      (*DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
+          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 64);
+            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToRaw(Value, PPansiChar(Data)^);
+          end else if Bind.cbMaxLen < 64 then begin
+            L := FloatToRaw(Value, @fABuffer[0]);
+            if L < Bind.cbMaxLen
+            then Move(fABuffer[0], Data^, L)
+            else RaiseExceeded(Index);
+            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L;
+          end else
+            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToRaw(Value, Data);
+        end;*)
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
-          if Bind.cbMaxLen < 42 then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 42);
-            Bind.cbMaxLen := 42;
-          end;
-          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToRaw(Value, PPAnsiChar(Data)^) shl 1;
+          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 128);
+            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, ZPPWideChar(Data)^) shl 1;
+          end else if Bind.cbMaxLen < 128 then begin
+            L := FloatToUnicode(Value, @fWBuffer[0]) shl 1;
+            if L < Bind.cbMaxLen
+            then Move(fWBuffer[0], Data^, L)
+            else RaiseExceeded(Index);
+            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L;
+          end else
+            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, PWideChar(Data)) shl 1;
         end;
       //DBTYPE_NUMERIC:;
       //DBTYPE_VARNUMERIC:;
@@ -1642,8 +1640,7 @@ set_uni_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 72;
       else RaiseUnsupportedParamType(Index, Bind.wType, stGUID);
     end;
   end else begin
-    fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] <> zptUnknown) and (FDBBindingArray[Index].wType <> DBTYPE_GUID));
-    if fBindagain then FDBBindingArray[Index].wType := DBTYPE_GUID;
+    InitFixedBind(Index, SizeOf(TGUID), DBTYPE_GUID);
     BindList.Put(Index, Value);
   end;
 end;
@@ -1686,37 +1683,31 @@ begin
       DBTYPE_I8:        PInt64(Data)^ := Value;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       DBTYPE_UI8:       PUInt64(Data)^ := Value;
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-      DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then
+      (*DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
+          L := GetOrdinalDigits(Value, C, Negative);
+          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 12);
             Data := PPointer(Data)^;
-          Negative := Value < 0;
-          if Negative then begin
-            C := Cardinal(-Value);
-            PByte(Data)^ := Ord('-');
-          end else
-            C := Cardinal(Value);
-          L := GetOrdinalDigits(C);
-          if (Bind.cbMaxLen <= L +Byte(Ord(Negative))) then
+          end else if (Bind.cbMaxLen <= L +Byte(Ord(Negative))) then
             RaiseExceeded(Index);
+          if Negative then
+            PByte(Data)^ := Ord('-');
           IntToRaw(C, PAnsiChar(Data)+Ord(Negative), L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L+Byte(Ord(Negative));
-        end;
+        end;*)
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then
+          L := GetOrdinalDigits(Value, C, Negative);
+          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
             Data := PPointer(Data)^;
-          Negative := Value < 0;
-          if Negative then begin
-            C := Cardinal(-Value);
-            PWord(Data)^ := Ord('-');
-          end else
-            C := Cardinal(Value);
-          L := GetOrdinalDigits(C);
-          if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
+          end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
+          if Negative then
+            PWord(Data)^ := Ord('-');
           IntToUnicode(C, PWideChar(Data)+Ord(Negative), L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1 + Byte(Ord(Negative));
         end;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       //DBTYPE_NUMERIC:;
       //DBTYPE_VARNUMERIC:;
      else RaiseUnsupportedParamType(Index, Bind.wType, stInteger);
@@ -1766,33 +1757,28 @@ begin
       DBTYPE_I8:        PInt64(Data)^ := Value;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       DBTYPE_UI8:       PUInt64(Data)^ := Value;
-      DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then
-            Data := PPointer(Data)^;
-          Negative := Value < 0;
-          if Negative then begin
-            u64 := -Value;
-            PByte(Data)^ := Ord('-');
-          end else
-            u64 := Value;
-          L := GetOrdinalDigits(u64);
-          if (Bind.cbMaxLen <= L +Byte(Ord(Negative))) then
+      (*DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
+          L := GetOrdinalDigits(Value, u64, Negative);
+          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24); //8Byte align
+            Data := PPointer(Data)^; //-9.223.372.036.854.775.808
+          end else if (Bind.cbMaxLen <= L +Byte(Ord(Negative))) then
             RaiseExceeded(Index);
+          if Negative then
+            PByte(Data)^ := Ord('-');
           IntToRaw(u64, PAnsiChar(Data)+Ord(Negative), L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L+Byte(Ord(Negative));
-        end;
+        end;*)
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then
-            Data := PPointer(Data)^;
-          Negative := Value < 0;
-          if Negative then begin
-            u64 := -Value;
-            PWord(PPointer(Data)^)^ := Ord('-');
-          end else
-            u64 := Value;
-          L := GetOrdinalDigits(u64);
-          if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
+          L := GetOrdinalDigits(Value, u64, Negative);
+          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24); //8Byte align
+            Data := PPointer(Data)^; //-9.223.372.036.854.775.808
+          end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
+          Negative := Value < 0;
+          if Negative then
+            PWord(PPointer(Data)^)^ := Ord('-');
           IntToUnicode(u64, PWideChar(Data)+Ord(Negative), L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1 + Byte(Ord(Negative));
         end;
@@ -1829,7 +1815,8 @@ begin
     if Ord(SQLType) < Ord(stString) then
       InitFixedBind(Index, ZSQLTypeToBuffSize[SQLType], SQLType2OleDBTypeEnum[SQLType])
     else if Ord(SQLType) < Ord(stAsciiStream) then
-      InitFixedBind(Index, 512, SQLType2OleDBTypeEnum[SQLType]);
+      InitFixedBind(Index, 512, SQLType2OleDBTypeEnum[SQLType])
+    else InitLongBind(Index, SQLType2OleDBTypeEnum[SQLType])
   end;
 end;
 
@@ -2122,6 +2109,7 @@ end;
 procedure TZOleDBPreparedStatement.SetShort(Index: Integer; Value: ShortInt);
 begin
   SetInt(Index, Value);
+  if not fBindImmediat then BindList[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType := stShort;
 end;
 
 {**
@@ -2135,6 +2123,7 @@ end;
 procedure TZOleDBPreparedStatement.SetSmall(Index: Integer; Value: SmallInt);
 begin
   SetInt(Index, Value);
+  if not fBindImmediat then BindList[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType := stSmall;
 end;
 
 {**
@@ -2345,27 +2334,29 @@ begin
       DBTYPE_I8:        PInt64(Data)^ := Value;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       DBTYPE_UI8:       PUInt64(Data)^ := Value;
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-      DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then
-            Data := PPointer(Data)^;
+      (*DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
-          if (L >= Bind.cbMaxLen) then
+          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 12);
+            Data := PPointer(Data)^;
+          end else if (L >= Bind.cbMaxLen) then
             RaiseExceeded(Index);
           PByte(Data+L)^ := Ord(#0);
           IntToRaw(Value, Data, L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L;
-        end;
+        end;*)
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then
-            Data := PPointer(Data)^;
           L := GetOrdinalDigits(Value);
-          if (L shl 1 >= Bind.cbMaxLen) then
+          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
+            Data := PPointer(Data)^;
+          end else if (L shl 1 >= Bind.cbMaxLen) then
             RaiseExceeded(Index);
           PWord(PWideChar(Data)+ L)^ := Ord(#0);
           IntToUnicode(Value, PWideChar(Data), L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1;
         end;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       //DBTYPE_NUMERIC:;
       //DBTYPE_VARNUMERIC:;
       else RaiseUnsupportedParamType(Index, Bind.wType, stLongWord);
@@ -2414,20 +2405,22 @@ begin
       DBTYPE_UI4:       PCardinal(Data)^ := Value;
       DBTYPE_I8:        PInt64(Data)^ := Value;
       DBTYPE_UI8:       PUInt64(Data)^ := Value;
-      DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then
-            Data := PPointer(Data)^;
+      (*DBTYPE_STR, (DBTYPE_STR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
-          if (Bind.cbMaxLen <= L) then
+          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24); //8Byte align
+            Data := PPointer(Data)^; //18.446.744.073.709.551.615
+          end else if (Bind.cbMaxLen <= L) then
             RaiseExceeded(Index);
           IntToRaw(Value, PAnsiChar(Data), L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L;
-        end;
+        end; *)
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then
-            Data := PPointer(Data)^;
           L := GetOrdinalDigits(Value);
-          if (Bind.cbMaxLen <= L shl 1) then
+          if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+            Data := PPointer(Data)^; //18.446.744.073.709.551.615
+          end else if (Bind.cbMaxLen <= L shl 1) then
             RaiseExceeded(Index);
           IntToUnicode(Value, PWideChar(Data), L);
           PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1;
@@ -2499,6 +2492,7 @@ end;
 procedure TZOleDBPreparedStatement.SetWord(Index: Integer; Value: Word);
 begin
   SetUInt(Index, Value);
+  if not fBindImmediat then BindList[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType := stWord;
 end;
 
 {**

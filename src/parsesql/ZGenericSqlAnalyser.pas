@@ -485,8 +485,7 @@ var
     Result := False;
     I := 1;
     //Check to right side to avoid wrong alias detection
-    while SelectTokens.Count > TokenIndex +i do
-    begin
+    while SelectTokens.Count > TokenIndex +i do begin
       CurrentValue := SelectTokens.AsString(TokenIndex+i);
       CurrentType  := SelectTokens[TokenIndex+i]^.TokenType;
       if CurrentType in [ttWhiteSpace, ttSymbol] then begin

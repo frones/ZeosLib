@@ -623,7 +623,7 @@ begin
 and this version writes from right to left*)
 var I64, IDiv100, IMul100: UInt64;
   x{$IFNDEF CPUX64}, c32, cDiv100, cMul100{$ENDIF}: Cardinal;
-  Positive: Boolean;
+  Negative: Boolean;
   i, Digits, l: Byte;
 begin
   {$R-} {$Q-}
@@ -632,11 +632,7 @@ begin
     num[1] := $80;
     Exit;
   end;
-  Positive := Value > 0;
-  if Positive
-  then I64 :=  PInt64(@Value)^
-  else I64 := -PInt64(@Value)^;
-  Digits := GetOrdinalDigits(i64);
+  Digits := GetOrdinalDigits(PInt64(@Value)^, i64, Negative);
   Digits := (Digits+Ord(Odd(Digits))) div 2;
   I := Digits+1;
   L := I;
@@ -647,9 +643,9 @@ begin
     I64 := IDiv100; {next dividend }
     if (X = 0) and (I=L) then
       Dec(L)
-    else if Positive
-      then num[I] := X + 1
-      else num[I] := 101 - X;
+    else if Negative
+      then num[I] := 101 - X
+      else num[I] := X + 1;
     Dec(I);
   end;
   {$IFNDEF CPUX64}
@@ -661,21 +657,21 @@ begin
     C32 := cDiv100; {next dividend }
     if (x = 0) and (I=L) then
       Dec(L)
-    else if Positive
-      then num[I] := x + 1
-      else num[I] := 101 - X;
+    else if Negative
+      then num[I] := 101 - X
+      else num[I] := x + 1;
     Dec(I);
   end;
   {$ENDIF}
-  if Positive then begin
-    num[1] := (64+NVU_CurrencyExponents[Digits]) or $80;
-    num[I] := Byte({$IFNDEF CPUX64}C32{$ELSE}I64{$ENDIF}) + 1;
-    num[0] := L;
-  end else begin
+  if Negative then begin
     num[1] := not(64+NVU_CurrencyExponents[Digits]) and $7f;
     num[I] := 101 - Byte({$IFNDEF CPUX64}C32{$ELSE}I64{$ENDIF});
     num[L+1] := 102; //"Negative numbers have a byte containing 102 appended to the data bytes."
     num[0] := L+1;
+  end else begin
+    num[1] := (64+NVU_CurrencyExponents[Digits]) or $80;
+    num[I] := Byte({$IFNDEF CPUX64}C32{$ELSE}I64{$ENDIF}) + 1;
+    num[0] := L;
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
