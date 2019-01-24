@@ -203,6 +203,11 @@ type
     constructor Create(const Connection: IZConnection; const Info: TStrings);
   end;
 
+  TZOleDBCallableStatement = class(TZAbstractCallableStatement2)
+  protected
+    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2;
+  end;
+
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -521,6 +526,7 @@ end;
 
 { TZOleDBPreparedStatement }
 
+const OleDbNotNullTable: array[Boolean] of DBSTATUS = (DBSTATUS_S_ISNULL, DBSTATUS_S_OK);
 procedure TZOleDBPreparedStatement.BindBatchDMLArrays;
 var
   ZData, Data, P: Pointer;
@@ -537,6 +543,19 @@ var
   WType: Word;
   Native: Boolean;
 label W_Len, WStr;
+
+  (*function IsNotNull(I, j: Cardinal): Boolean;
+  var OffSet: NativeUInt;
+  begin
+    OffSet := (j*fRowSize);
+    Result := not IsNullFromArray(ZArray, J);
+    PDBSTATUS(NativeUInt(fDBParams.pData)+(fDBBindingArray[i].obStatus + OffSet))^ := OleDbNotNullTable[Result];
+    if Result then begin
+      Data := Pointer(NativeUInt(fDBParams.pData)+(fDBBindingArray[i].obValue + OffSet));
+      //note PLen is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
+      PLen := PDBLENGTH(NativeUInt(fDBParams.pData)+(fDBBindingArray[i].obLength + OffSet));
+    end;
+  end; *)
 begin
   {$R-}
   MaxL := 0; CPL := 0; W1 := 0; Native := False;//satisfy the compiler
@@ -566,6 +585,172 @@ begin
     end else if (wType = DBTYPE_BYTES) or (wType = DBTYPE_STR) then
       MaxL := fDBBindingArray[i].cbMaxLen - Byte(Ord(wType = DBTYPE_STR))
     else Native := (SQLType2OleDBTypeEnum[SQLType] = wType) and (ZArray.VArrayVariantType = vtNull);
+     (* case wType of
+        DBTYPE_I1:    for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PShortInt(Data)^  := ArrayValueToInteger(ZArray, j);
+        DBTYPE_UI1:   for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PByte(Data)^      := ArrayValueToCardinal(ZArray, j);
+        DBTYPE_I2:    for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PSmallInt(Data)^  := ArrayValueToInteger(ZArray, j);
+        DBTYPE_UI2:   for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PWord(Data)^      := ArrayValueToCardinal(ZArray, j);
+        DBTYPE_I4:    for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PInteger(Data)^   := ArrayValueToInteger(ZArray, j);
+        DBTYPE_UI4:   for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PCardinal(Data)^  := ArrayValueToCardinal(ZArray, j);
+        DBTYPE_I8:    for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PInt64(Data)^     := ArrayValueToInt64(ZArray, j);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+        DBTYPE_UI8:   for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PUInt(Data)^       := ArrayValueToUInt64(ZArray, j);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+        DBTYPE_R4:    for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PSingle(Data)^     := ArrayValueToDouble(ZArray, j);
+        DBTYPE_R8:    for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PDouble(Data)^     := ArrayValueToDouble(ZArray, j);
+        DBTYPE_CY:    for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PCurrency(Data)^   := ArrayValueToCurrency(ZArray, j);
+        DBType_BOOL:  for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PWordBool(Data)^   := ArrayValueToBoolean(ZArray, j);
+        DBTYPE_DATE, DBTYPE_DBDATE, DBTYPE_DBTIME, DBTYPE_DBTIME2, DBTYPE_DBTIMESTAMP:  for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then begin
+            case SQLType of
+              stTime:       DateTimeTemp := ArrayValueToTime(ZArray, j, ConSettings.WriteFormatSettings);
+              stDate:       DateTimeTemp := ArrayValueToDate(ZArray, j, ConSettings.WriteFormatSettings);
+              else          DateTimeTemp := ArrayValueToDateTime(ZArray, j, ConSettings.WriteFormatSettings);
+            end;
+            case wType of
+              DBTYPE_DATE: PDateTime(Data)^ := DateTimeTemp;
+              DBTYPE_DBDATE: begin
+                  DecodeDate(DateTimeTemp, W1, PDBDate(Data)^.month, PDBDate(Data)^.day);
+                  PDBDate(Data)^.year := W1;
+                end;
+              DBTYPE_DBTIME: DecodeTime(DateTimeTemp, PDBTime(Data)^.hour, PDBTime(Data)^.minute, PDBTime(Data)^.second, MS);
+              DBTYPE_DBTIME2: begin
+                  DecodeTime(DateTimeTemp,
+                    PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute, PDBTIME2(Data)^.second, MS);
+                    PDBTIME2(Data)^.fraction := MS * 1000000;
+                end;
+              DBTYPE_DBTIMESTAMP: begin
+                  DecodeDate(DateTimeTemp, W1, PDBTimeStamp(Data)^.month, PDBTimeStamp(Data)^.day);
+                  PDBTimeStamp(Data)^.year := W1;
+                  if SQLType <> stDate then begin
+                    DecodeTime(DateTimeTemp, PDBTimeStamp(Data)^.hour, PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second, MS);
+                    {if fSupportsMilliseconds
+                    then} PDBTimeStamp(Data)^.fraction := MS * 1000*1000
+                    {else PDBTimeStamp(Data)^.fraction := 0};
+                  end else begin
+                    PDBTimeStamp(Data)^.hour := 0; PDBTimeStamp(Data)^.minute := 0;
+                    PDBTimeStamp(Data)^.second := 0; PDBTimeStamp(Data)^.fraction := 0;
+                  end;
+                end;
+            end;
+          end;
+        { next types are automatically prepared on binding the arrays }
+        DBTYPE_GUID: for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then ArrayValueToGUID(ZArray, j, PGUID(Data));
+        DBTYPE_GUID or DBTYPE_BYREF: for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then PPointer(Data)^ := @TGUIDDynArray(ZData)[J].D1;
+        DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF: begin
+            case SQLType of
+              stBinaryStream: for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then begin
+                        TempLob := TInterfaceDynArray(ZData)[J] as IZBLob;
+                        PLen^ := TempLob.Length;
+                        P := TempLob.GetBuffer;
+                        TempLob := nil;
+                      end;
+              stBytes: for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then begin
+                        PLen^ := Length(TBytesDynArray(ZData)[J]);
+                        P := Pointer(TBytesDynArray(ZData)[J]);
+                      end;
+              stGUID: for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then begin
+                        PLen^ := SizeOf(TGUID);
+                        P := @TGUIDDynArray(ZData)[J].D1;
+                      end;
+              else
+                raise Exception.Create('Unsupported Byte-Array Variant');
+            end;
+            if wType = DBTYPE_BYTES then
+              if (PLen^ > 0) and (PLen^ <= MaxL)
+              then Move(P^, Pointer(Data)^, {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(MaxL, PLen^))
+              else RaiseExceeded(I)
+            else PPointer(Data)^:= P;
+          end;
+        DBTYPE_WSTR, DBTYPE_WSTR or DBTYPE_BYREF: begin
+            case SQLType of
+             { stBoolean:      FUniTemp := BoolToUnicodeEx(TBooleanDynArray(ZData)[J]);
+              stByte:         FUniTemp := IntToUnicode(TByteDynArray(ZData)[J]);
+              stShort:        FUniTemp := IntToUnicode(TShortIntDynArray(ZData)[J]);
+              stWord:         FUniTemp := IntToUnicode(TWordDynArray(ZData)[J]);
+              stSmall:        FUniTemp := IntToUnicode(TSmallIntDynArray(ZData)[J]);
+              stLongWord:     FUniTemp := IntToUnicode(TCardinalDynArray(ZData)[J]);
+              stInteger:      FUniTemp := IntToUnicode(TIntegerDynArray(ZData)[J]);
+              stULong:        FUniTemp := IntToUnicode(TUInt64DynArray(ZData)[J]);
+              stLong:         FUniTemp := IntToUnicode(TInt64DynArray(ZData)[J]);
+              stFloat:        FUniTemp := FloatToUnicode(TSingleDynArray(ZData)[J]);
+              stDouble:       FUniTemp := FloatToUnicode(TDoubleDynArray(ZData)[J]);
+              stCurrency:     FUniTemp := FloatToUnicode(TCurrencyDynArray(ZData)[J]);
+              stBigDecimal:   FUniTemp := FloatToUnicode(TExtendedDynArray(ZData)[J]);
+              stTime:         FUniTemp := DateTimeToUnicodeSQLTime(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
+              stDate:         FUniTemp := DateTimeToUnicodeSQLDate(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
+              stTimeStamp:    FUniTemp := DateTimeToUnicodeSQLTimeStamp(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}
+              stString, stUnicodeString: begin
+                case ZArray.VArrayVariantType of
+                  {$IFNDEF UNICODE}vtString, {$ENDIF}
+                  vtAnsiString,vtUTF8String,vtRawByteString: for j := 0 to fDBParams.cParamSets-1 do if IsNotNull(I, J) then begin
+                      if wType = DBTYPE_WSTR then begin
+                        P := Pointer(TRawByteStringDynArray(ZData)[J]);
+                        PLen^ := PRaw2PUnicode(PAnsiChar(P), PWideChar(Data), W1, LengthInt(Length(TRawByteStringDynArray(ZData)[J])), LengthInt(CPL)) shl 1;
+                        if PLen^ > MaxL then
+                          RaiseExceeded(I);
+                      end else begin
+                        Dyn_W_Convert(I, Length(TRawByteStringDynArray(ZData)), ZArray);
+                        ZData := ZArray.VArray;
+                        goto WStr;
+                      end;
+                  end;
+                  {$IFDEF UNICODE}vtString,{$ENDIF} vtUnicodeString: begin
+WStr:                 PLen^ := Length(TUnicodeStringDynArray(ZData)[J]) shl 1;
+                      if PLen^ > 0 then
+                        if wType = DBTYPE_WSTR then begin
+                          Move(Pointer(TUnicodeStringDynArray(ZData)[J])^, PWideChar(Data)^, ({$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(PLen^, MaxL)+2));
+                          goto W_Len
+                        end else
+                          PPointer(Data)^ := Pointer(TUnicodeStringDynArray(ZData)[J])
+                      else if wType = DBTYPE_WSTR
+                        then PWord(Data)^ := 0
+                        else PPointer(Data)^ := PEmptyUnicodeString;
+                    end;
+                  vtCharRec: begin
+                      if TZCharRecDynArray(ZData)[J].CP = zCP_UTF16 then begin
+                        PLen^ := TZCharRecDynArray(ZData)[J].Len shl 1;
+                        if wType = DBTYPE_WSTR
+                        then Move(PWideChar(TZCharRecDynArray(ZData)[J].P)^, PWideChar(Data)^, ({$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(PLen^, MaxL)+2))
+                        else PPointer(Data)^ := TZCharRecDynArray(ZData)[J].P;
+                      end else begin
+                        if wType = DBTYPE_WSTR
+                        then PLen^ := PRaw2PUnicode(PAnsiChar(TZCharRecDynArray(ZData)[J].P), PWideChar(Data), TZCharRecDynArray(ZData)[J].CP, LengthInt(TZCharRecDynArray(ZData)[J].Len), LengthInt(MaxL))
+                        else begin
+                          Dyn_W_Convert(I, Length(TZCharRecDynArray(ZData)), ZArray);
+                          ZData := ZArray.VArray;
+                          goto WStr;
+                        end;
+                      end;
+W_Len:                if PLen^ > MaxL then
+                        RaiseExceeded(I);
+                    end;
+                  else
+                    raise Exception.Create('Unsupported String Variant');
+                end;
+              end;
+              stAsciiStream, stUnicodeStream:
+                begin
+                  TempLob := TInterfaceDynArray(ZData)[J] as IZBLob;
+                  if TempLob.IsClob then
+                    TempLob.GetPWideChar //make internal conversion first
+                  else begin
+                    TmpStream := GetValidatedUnicodeStream(TempLob.GetBuffer, TempLob.Length, ConSettings, False);
+                    TempLob := TZAbstractClob.CreateWithStream(TmpStream, zCP_UTF16, ConSettings);
+                    TInterfaceDynArray(ZData)[J] := TempLob; //keep mem alive!
+                    TmpStream.Free;
+                  end;
+                end;
+              else
+                raise Exception.Create('Unsupported AnsiString-Array Variant');
+            end;
+          end;
+        else RaiseUnsupportedParamType(I, WType, SQLType);
+        //DBTYPE_UDT: ;
+        //DBTYPE_HCHAPTER:;
+        //DBTYPE_PROPVARIANT:;
+        //DBTYPE_VARNUMERIC:;
+      end;*)
+
     for J := 0 to fDBParams.cParamSets-1 do begin
       if IsNullFromArray(ZArray, J) {or (wType = DBTYPE_NULL)} then begin
         PDBSTATUS(NativeUInt(fDBParams.pData)+(fDBBindingArray[i].obStatus + BuffOffSet))^ := DBSTATUS_S_ISNULL;
@@ -678,7 +863,7 @@ begin
           end;
         DBTYPE_WSTR, DBTYPE_WSTR or DBTYPE_BYREF: begin
             case SQLType of
-             (* stBoolean:      FUniTemp := BoolToUnicodeEx(TBooleanDynArray(ZData)[J]);
+             { stBoolean:      FUniTemp := BoolToUnicodeEx(TBooleanDynArray(ZData)[J]);
               stByte:         FUniTemp := IntToUnicode(TByteDynArray(ZData)[J]);
               stShort:        FUniTemp := IntToUnicode(TShortIntDynArray(ZData)[J]);
               stWord:         FUniTemp := IntToUnicode(TWordDynArray(ZData)[J]);
@@ -693,7 +878,7 @@ begin
               stBigDecimal:   FUniTemp := FloatToUnicode(TExtendedDynArray(ZData)[J]);
               stTime:         FUniTemp := DateTimeToUnicodeSQLTime(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
               stDate:         FUniTemp := DateTimeToUnicodeSQLDate(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
-              stTimeStamp:    FUniTemp := DateTimeToUnicodeSQLTimeStamp(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);*)
+              stTimeStamp:    FUniTemp := DateTimeToUnicodeSQLTimeStamp(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}
               stString, stUnicodeString: begin
                 case ZArray.VArrayVariantType of
                   {$IFNDEF UNICODE}vtString, {$ENDIF}
@@ -752,11 +937,6 @@ W_Len:                if PLen^ > MaxL then
                     TInterfaceDynArray(ZData)[J] := TempLob; //keep mem alive!
                     TmpStream.Free;
                   end;
-                  (*ProcessUnicode(Data, PLen, (fDBBindingArray[i].eParamIO and DBPARAMIO_OUTPUT = 0),
-                    TempLob.GetPWideChar,
-                    {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min((fDBBindingArray[I].cbMaxLen shr 1) -1, TempLob.Length shr 1));
-                  Continue;
-                  --*)
                 end;
               else
                 raise Exception.Create('Unsupported AnsiString-Array Variant');
@@ -1236,8 +1416,19 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetByte(Index: Integer; Value: Byte);
+var C: Cardinal;
 begin
-  SetUInt(Index, Value);
+  if fBindImmediat then
+    SetUInt(Index, Value)
+  else begin
+    {$IFNDEF GENERIC_INDEX}
+    Index := Index -1;
+    {$ENDIF}
+    CheckParameterIndex(Index);
+    InitFixedBind(Index, DBTYPE_UI1, SizeOf(Byte));
+    C := Value;
+    BindList.Put(Index, stByte, P4Bytes(@C));
+  end;
 end;
 
 {**
@@ -1543,11 +1734,7 @@ begin
           end else
             PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToRaw(Value, Data);
         end;*)
-      DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
-          if Bind.wType = (DBTYPE_STR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 128);
-            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, ZPPWideChar(Data)^) shl 1;
-          end else if Bind.cbMaxLen < 128 then begin
+      DBTYPE_WSTR: if Bind.cbMaxLen < 128 then begin
             L := FloatToUnicode(Value, @fWBuffer[0]) shl 1;
             if L < Bind.cbMaxLen
             then Move(fWBuffer[0], Data^, L)
@@ -1555,7 +1742,10 @@ begin
             PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L;
           end else
             PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, PWideChar(Data)) shl 1;
-        end;
+      (DBTYPE_WSTR or DBTYPE_BYREF): begin
+            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 128);
+            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, ZPPWideChar(Data)^) shl 1;
+          end;
       //DBTYPE_NUMERIC:;
       //DBTYPE_VARNUMERIC:;
       else RaiseUnsupportedParamType(Index, Bind.wType, stDouble);
@@ -1615,7 +1805,7 @@ begin
                         PPointer(Data)^ := BindList[Index].Value;
 set_uid_len:            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=  SizeOf(TGUID);
                       end;
-      DBTYPE_STR: if Bind.cbMaxLen < 37 then
+(*      DBTYPE_STR: if Bind.cbMaxLen < 37 then
                     RaiseExceeded(Index)
                   else begin
                     GUIDToBuffer(@Value.D1, PAnsiChar(Data), [guidSet0Term]);
@@ -1625,7 +1815,7 @@ set_uid_len:            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 
                     PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 37);
                     GUIDToBuffer(@Value.D1, PPAnsiChar(Data)^, [guidSet0Term]);
 set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
-                  end;
+                  end; *)
       DBTYPE_WSTR:if Bind.cbMaxLen < 74 then
                     RaiseExceeded(Index)
                   else begin
@@ -2107,9 +2297,19 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetShort(Index: Integer; Value: ShortInt);
+var I: Integer;
 begin
-  SetInt(Index, Value);
-  if not fBindImmediat then BindList[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType := stShort;
+  if fBindImmediat then
+    SetUInt(Index, Value)
+  else begin
+    {$IFNDEF GENERIC_INDEX}
+    Index := Index -1;
+    {$ENDIF}
+    CheckParameterIndex(Index);
+    InitFixedBind(Index, DBTYPE_I1, SizeOf(ShortInt));
+    I := Value;
+    BindList.Put(Index, stShort, P4Bytes(@I));
+  end;
 end;
 
 {**
@@ -2121,9 +2321,19 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetSmall(Index: Integer; Value: SmallInt);
+var I: Integer;
 begin
-  SetInt(Index, Value);
-  if not fBindImmediat then BindList[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType := stSmall;
+  if fBindImmediat then
+    SetUInt(Index, Value)
+  else begin
+    {$IFNDEF GENERIC_INDEX}
+    Index := Index -1;
+    {$ENDIF}
+    CheckParameterIndex(Index);
+    InitFixedBind(Index, DBTYPE_I2, SizeOf(SmallInt));
+    I := Value;
+    BindList.Put(Index, stSmall, P4Bytes(@I));
+  end;
 end;
 
 {**
@@ -2490,9 +2700,19 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetWord(Index: Integer; Value: Word);
+var C: Cardinal;
 begin
-  SetUInt(Index, Value);
-  if not fBindImmediat then BindList[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType := stWord;
+  if fBindImmediat then
+    SetUInt(Index, Value)
+  else begin
+    {$IFNDEF GENERIC_INDEX}
+    Index := Index -1;
+    {$ENDIF}
+    CheckParameterIndex(Index);
+    InitFixedBind(Index, DBTYPE_UI2, SizeOf(Word));
+    C := Value;
+    BindList.Put(Index, stWord, P4Bytes(@C));
+  end;
 end;
 
 {**
@@ -2519,4 +2739,32 @@ begin
 end;
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
+{ TZOleDBCallableStatement }
+
+function TZOleDBCallableStatement.CreateExecutionStatement(Mode: TZCallExecKind;
+  const StoredProcName: String): TZAbstractPreparedStatement2;
+var  I: Integer;
+  P: PChar;
+  SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+begin
+  SQL := '';
+  ToBuff('EXEC ', SQL);
+  ToBuff(StoredProcName, SQL);
+  ToBuff('(', SQL);
+  for i := 0 to BindList.Count-1 do
+    if BindList.ParamTypes[i] <> zptResult then
+      ToBuff('?,', SQL);
+  FlushBuff(SQL);
+  P := Pointer(SQL);
+  if (P+Length(SQL)-1)^ = ','
+  then (P+Length(SQL)-1)^ := ')' //cancel last comma
+  else (P+Length(SQL)-1)^ := ' ';
+  if IsFunction then
+    SQL := SQL +' as ReturnValue';
+  Result := TZOleDBPreparedStatement.Create(Connection, SQL, Info);
+  TZOleDBPreparedStatement(Result).Prepare;
+  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
+  TZOleDBPreparedStatement(Result)._AddRef;
+end;
+
 end.
