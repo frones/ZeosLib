@@ -869,8 +869,7 @@ begin
           if SQL = '' then Exit;
           TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
           Statement := FStatements.Get(TempKey) as IZPreparedStatement;
-          If Statement = nil then
-          begin
+          If Statement = nil then begin
             Statement := CreateResolverStatement(SQL);
             FStatements.Put(TempKey, Statement);
           end;

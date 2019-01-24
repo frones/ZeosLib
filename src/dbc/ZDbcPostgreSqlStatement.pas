@@ -421,13 +421,14 @@ begin
     the pgBouncer does not support the RealPrepareds.... }
   FUseEmulatedStmtsOnly := not Assigned(FplainDriver.PQexecParams) or not Assigned(FplainDriver.PQexecPrepared) or
     StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
+  Findeterminate_datatype := FUseEmulatedStmtsOnly;
   Finteger_datetimes := Connection.integer_datetimes;
   FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
-  if FUseEmulatedStmtsOnly then
-    FMinExecCount2Prepare := -1;
   //JDBC prepares after 4th execution
-  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
+  if not FUseEmulatedStmtsOnly
+  then FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2)
+  else FMinExecCount2Prepare := -1;
   fAsyncQueries := False;(* not ready yet! StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_ExexAsync, 'FALSE'))
     and Assigned(FplainDriver.PQsendQuery) and Assigned(FplainDriver.PQsendQueryParams) and
     Assigned(FplainDriver.PQsendQueryPrepared);*)
@@ -1720,8 +1721,7 @@ begin
   Result := (Metadata.GetTableName(ColumnIndex) <> '')
     and (Metadata.GetColumnName(ColumnIndex) <> '')
     and Metadata.IsSearchable(ColumnIndex)
-    and not (Metadata.GetColumnType(ColumnIndex)
-    in [stUnknown, stBinaryStream, stUnicodeStream]);
+    and not (Metadata.GetColumnType(ColumnIndex) in [stUnknown, stBinaryStream]);
 end;
 
 { TZPostgreSQLStatement }
