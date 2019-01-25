@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
-  ZVariant, Types;
+  ZVariant, Types, ZDbcGenericResolver;
 
 type
   {** Implements CAPI Prepared SQL Statement. }
@@ -116,7 +116,6 @@ type
     constructor Create(const Connection: IZConnection; const Info: TStrings;
       const Handle: Psqlite); overload;
   end;
-
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
@@ -577,5 +576,6 @@ begin
 end;
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
+
 end.
 

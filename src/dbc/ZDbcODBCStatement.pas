@@ -84,6 +84,8 @@ type
     SQLType: TZSQLType;
     DescBindBuffer: TByteDynArray;
   end;
+  PZODBCParamInfoArray = ^TZODBCParamInfoArray;
+  TZODBCParamInfoArray = array[Byte] of TZODBCParamInfo;
 
   TZAbstractODBCStatement = class(TZAbstractPreparedStatement, IZODBCStatement)
   private

@@ -91,6 +91,7 @@ type
     fMoreResultsIndicator: TZMoreResultsIndicator;
     FDBBINDSTATUSArray: TDBBINDSTATUSDynArray;
     FSupportsMultipleResultSets: Boolean;
+    FHasOutParams: Boolean;
     procedure CheckError(Status: HResult; LoggingCategory: TZLoggingCategory;
        const DBBINDSTATUSArray: TDBBINDSTATUSDynArray = nil);
     procedure PrepareOpenedResultSetsForReusing;
@@ -115,6 +116,7 @@ type
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
   protected //interface based!
+    function CreateResultSet(const RowSet: IRowSet): IZResultSet; virtual;
     function GetInternalBufferSize: Integer;
     function GetMoreResultsIndicator: TZMoreResultsIndicator;
     procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
@@ -124,6 +126,7 @@ type
   TZOleDBPreparedStatement = class(TZAbstractOleDBStatement, IZPreparedStatement)
   private
     FDBBindingArray: TDBBindingDynArray;
+    FParamNamesArray: TStringDynArray;
     FDBUPARAMS: DB_UPARAMS;
     fDEFERPREPARE, //ole: if set the stmt will be prepared immediatelly and we'll try to decribe params
     fBindImmediat, //the param describe did fail! we'll try to bind the params with describe emulation
@@ -141,9 +144,12 @@ type
     procedure SetOleCommandProperties;
     procedure InitVaryBind(Index: Integer; Len: Cardinal; _Type: DBTYPE);
     procedure InitFixedBind(Index: Integer; Size: Cardinal; _Type: DBTYPE);
+    procedure InitDateBind(Index: Integer; SQLType: TZSQLType);
     procedure InitLongBind(Index: Integer; _Type: DBTYPE);
     procedure SetBindOffsets;
   protected
+    function SupportsBidirectionalParms: Boolean; override;
+
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -151,6 +157,7 @@ type
     procedure SetParamCount(NewParamCount: Integer); override;
     procedure RaiseUnsupportedParamType(Index: Integer; WType: Word; SQLType: TZSQLType);
     procedure RaiseExceeded(Index: Integer);
+    function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -197,15 +204,33 @@ type
 
     procedure SetDataArray(ParameterIndex: Integer; const Value;
       const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
+
+    procedure RegisterParameter(Index: Integer; SQLType: TZSQLType;
+      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      Scale: LengthInt = 0); override;
   end;
 
   TZOleDBStatement = class(TZAbstractOleDBStatement, IZStatement)
     constructor Create(const Connection: IZConnection; const Info: TStrings);
   end;
 
-  TZOleDBCallableStatement = class(TZAbstractCallableStatement2)
+  TZOleDBCallableStatementMSSQL = class(TZAbstractCallableStatement2,
+    IZCallableStatement)
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2;
+    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function SupportsBidirectionalParms: Boolean; override;
+  public
+    function GetString(ParameterIndex: Integer): String;
+    {$IFNDEF NO_ANSISTRING}
+    function GetAnsiString(ParameterIndex: Integer): AnsiString;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    function GetUTF8String(ParameterIndex: Integer): UTF8String;
+    {$ENDIF}
+    function GetRawByteString(ParameterIndex: Integer): RawByteString;
+    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
+
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -217,7 +242,8 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, TypInfo,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} DateUtils,
   ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcOleDBMetadata,
-  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZClasses, ZDbcResultSet;
+  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZClasses, ZDbcResultSet,
+  ZDbcCachedResultSet, ZDbcGenericResolver;
 
 { TZAbstractOleDBStatement }
 
@@ -254,6 +280,29 @@ begin
   fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_StatementTimeOut, ''), 60); //execution timeout in seconds by default 1 min
   FSupportsMultipleResultSets := Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets;
   FMultipleResults := nil;
+end;
+
+function TZAbstractOleDBStatement.CreateResultSet(const RowSet: IRowSet): IZResultSet;
+var
+  CachedResolver: IZCachedResolver;
+  NativeResultSet: TZOleDBResultSet;
+  CachedResultSet: TZCachedResultSet;
+begin
+  Result := nil;
+  if Assigned(RowSet) then begin
+    NativeResultSet := TZOleDBResultSet.Create(Self, SQL, RowSet,
+      FZBufferSize, ChunkSize, FInMemoryDataLobs);
+    if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
+      if (Connection.GetServerProvider = spMSSQL) and (Self.GetResultSetConcurrency = rcUpdatable)
+      then CachedResolver := TZOleDBMSSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData)
+      else CachedResolver := TZGenericCachedResolver.Create(Self, NativeResultSet.GetMetaData);
+      CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
+      CachedResultSet.SetConcurrency(ResultSetConcurrency);
+      Result := CachedResultSet;
+    end else
+      Result := NativeResultSet;
+  end;
+  FOpenResultSet := Pointer(Result);
 end;
 
 destructor TZAbstractOleDBStatement.Destroy;
@@ -355,8 +404,7 @@ begin
       end else
         CheckError(FCommand.Execute(nil, IID_IRowset,
           FDBParams,@FRowsAffected,@FRowSet), lcExecute, fDBBINDSTATUSArray);
-      Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-        ChunkSize, FInMemoryDataLobs, FOpenResultSet);
+      Result := CreateResultSet(FRowSet);
       LastUpdateCount := FRowsAffected;
       if not Assigned(Result) then
         while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
@@ -385,6 +433,8 @@ begin
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil), lcExecute, FDBBINDSTATUSArray);
+  if FHasOutParams then
+    LastResultSet := CreateResultSet(nil);
   LastUpdateCount := FRowsAffected;
   Result := LastUpdateCount;
 end;
@@ -419,8 +469,7 @@ begin
     end else
       CheckError(FCommand.Execute(nil, IID_IRowset,
         FDBParams,@FRowsAffected,@FRowSet), lcExecute, FDBBINDSTATUSArray);
-    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      ChunkSize, FInMemoryDataLobs, FOpenResultSet);
+    LastResultSet := CreateResultSet(FRowSet);
     LastUpdateCount := LastUpdateCount + FRowsAffected;
     Result := Assigned(LastResultSet);
   finally
@@ -456,8 +505,7 @@ begin
   begin
     FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
       IID_IRowset, @FRowsAffected, @FRowSet);
-    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      ChunkSize, FInMemoryDataLobs, FOpenResultSet);
+    LastResultSet := CreateResultSet(FRowSet);
     Result := Assigned(LastResultSet);
     LastUpdateCount := FRowsAffected;
   end;
@@ -471,8 +519,7 @@ begin
   begin
     FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
       IID_IRowset, @FRowsAffected, @FRowSet);
-    RS := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      ChunkSize, FInMemoryDataLobs, FOpenResultSet);
+    RS := CreateResultSet(FRowSet);
     Result := Assigned(RS);
     LastUpdateCount := FRowsAffected;
   end
@@ -964,7 +1011,7 @@ begin
       if fBindAgain or (FDBParams.hAccessor = 0) then
         PrepareInParameters;
       if ArrayCount = 0
-      then BindList.BindValuesToStatement(Self, False)
+      then BindList.BindValuesToStatement(Self, SupportsBidirectionalParms)
       else BindBatchDMLArrays;
       fBindAgain := False;
     finally
@@ -1036,6 +1083,16 @@ begin
   FClientCP := ConSettings^.ClientCodePage.CP;
 end;
 
+function TZOleDBPreparedStatement.CreateResultSet(
+  const RowSet: IRowSet): IZResultSet;
+begin
+  if (RowSet = nil) and FHasOutParams then begin
+    Result := TZOleDBParamResultSet.Create(Self, FParamsBuffer, FDBBindingArray,
+      FParamNamesArray);
+    FOpenResultSet := Pointer(Result);
+  end else Result := inherited CreateResultSet(RowSet)
+end;
+
 procedure TZOleDBPreparedStatement.Dyn_W_Convert(Index, Len: Integer; var Arr: PZArray);
 var
   W_Dyn: TUnicodeStringDynArray;
@@ -1074,12 +1131,30 @@ SetUniArray:
   Arr := BindList[Index].Value;
 end;
 
+procedure TZOleDBPreparedStatement.InitDateBind(Index: Integer;
+  SQLType: TZSQLType);
+var Bind: PDBBINDING;
+begin
+  Bind := @FDBBindingArray[Index];
+  fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] = pctUnknown) and (Bind.wType <> SQLType2OleDBTypeEnum[SQLType]));
+  if fBindagain then begin
+    Bind.wType := SQLType2OleDBTypeEnum[SQLType];
+    Bind.dwFlags := FDBBindingArray[Index].dwFlags and not DBPARAMFLAGS_ISLONG;
+    case SQLType of
+      stDate: Bind.cbMaxLen := SizeOf(TDBDate);
+      stTime: Bind.cbMaxLen := SizeOf(TDBTime2);
+      else    Bind.cbMaxLen := SizeOf(Double);
+    end;
+    Bind.dwPart := DBPART_VALUE or DBPART_STATUS;
+  end;
+end;
+
 procedure TZOleDBPreparedStatement.InitFixedBind(Index: Integer; Size: Cardinal;
   _Type: DBTYPE);
 var Bind: PDBBINDING;
 begin
   Bind := @FDBBindingArray[Index];
-  fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] = zptUnknown) and ((Bind.wType <> _Type) or (Bind.cbMaxLen < Size)));
+  fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] = pctUnknown) and ((Bind.wType <> _Type) or (Bind.cbMaxLen <> Size)));
   if fBindagain then begin
     Bind.wType := _Type;
     Bind.dwFlags := FDBBindingArray[Index].dwFlags and not DBPARAMFLAGS_ISLONG;
@@ -1092,7 +1167,7 @@ procedure TZOleDBPreparedStatement.InitLongBind(Index: Integer; _Type: DBTYPE);
 var Bind: PDBBINDING;
 begin
   Bind := @FDBBindingArray[Index];
-  fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] = zptUnknown) and (Bind.wType <> _Type or DBTYPE_BYREF));
+  fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] = pctUnknown) and (Bind.wType <> _Type or DBTYPE_BYREF));
   if fBindagain then begin
     Bind.wType := _Type or DBTYPE_BYREF;
     Bind.dwFlags := FDBBindingArray[Index].dwFlags and DBPARAMFLAGS_ISLONG;
@@ -1106,7 +1181,7 @@ procedure TZOleDBPreparedStatement.InitVaryBind(Index: Integer; Len: Cardinal;
 var Bind: PDBBINDING;
 begin
   Bind := @FDBBindingArray[Index];
-  fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] = zptUnknown) and ((Bind.wType <> _Type) or (Bind.cbMaxLen < Len)));
+  fBindAgain := fBindAgain or ((BindList.ParamTypes[Index] = pctUnknown) and ((Bind.wType <> _Type) or (Bind.cbMaxLen < Len)));
   if fBindagain then begin
     Bind.wType := _Type;
     Bind.dwFlags := FDBBindingArray[Index].dwFlags and not DBPARAMFLAGS_ISLONG;
@@ -1220,6 +1295,42 @@ begin
     LineEnding+SUnsupportedParameterType+LineEnding+ 'Stmt: '+GetSQL);
 end;
 
+procedure TZOleDBPreparedStatement.RegisterParameter(Index: Integer;
+  SQLType: TZSQLType; ParamType: TZProcedureColumnType; const Name: String;
+  PrecisionOrSize, Scale: LengthInt);
+var Bind: PDBBINDING;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if (Name <> '') and (High(FParamNamesArray) < Index) then begin
+    SetLength(FParamNamesArray, Index+1);
+    FParamNamesArray[Index] := Name;
+  end;
+  FHasOutParams := FHasOutParams or (Ord(ParamType) >= Ord(pctInOut));
+  Bind := @FDBBindingArray[Index];
+  if fDEFERPREPARE then begin
+    case ParamType of
+      pctReturn, pctOut: if Bind.dwFlags and DBPARAMFLAGS_ISINPUT <> 0 then
+                           Bind.dwFlags := (Bind.dwFlags and not DBPARAMFLAGS_ISINPUT) or DBPARAMFLAGS_ISOUTPUT;
+      pctIn, pctInOut: if Bind.dwFlags and DBPARAMFLAGS_ISINPUT = 0 then
+                           Bind.dwFlags := Bind.dwFlags or DBPARAMFLAGS_ISINPUT;
+    end;
+  end else begin
+    Bind.wType := SQLType2OleDBTypeEnum[SQLType];
+    if (Ord(SQLType) < Ord(stBigDecimal)) or (SQLtype = stGUID) then
+      InitFixedBind(Index, ZSQLTypeToBuffSize[SQLType], SQLType2OleDBTypeEnum[SQLType])
+    else if Ord(SQLType) <= Ord(stTimestamp) then
+       InitDateBind(Index, SQLType)
+    else if Ord(SQLType) < Ord(stAsciiStream) then
+      InitVaryBind(Index, Max(512, PrecisionOrSize), SQLType2OleDBTypeEnum[SQLType])
+    else InitLongBind(Index, SQLType2OleDBTypeEnum[SQLType]);
+  end;
+  Bind.eParamIO :=  ParamType2OleIO[ParamType];
+  inherited RegisterParameter(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType, ParamType, Name, PrecisionOrSize, Scale);
+end;
+
 procedure TZOleDBPreparedStatement.ReleaseImmediat(
   const Sender: IImmediatelyReleasable);
 begin
@@ -1259,17 +1370,26 @@ var I: Integer;
   Bind: PDBBINDING;
 begin
   FRowSize := 0;
+  FHasOutParams := False;
   for I := 0 to BindList.Count -1 do begin
     Bind := @FDBBindingArray[I];
     Bind.iOrdinal := I +1;
     Bind.obStatus := FRowSize;
     Inc(FRowSize, SizeOf(DBSTATUS));
     Bind.obLength := FRowSize;
-    Inc(FRowSize, Ord(Bind.dwPart and DBPART_LENGTH <> 0)*SizeOf(DBLENGTH));
+    if Bind.dwPart and DBPART_LENGTH <> 0 then
+      Inc(FRowSize, SizeOf(DBLENGTH));
     Bind.obValue := FRowSize;
     Inc(FRowSize, Bind.cbMaxLen);
     Bind.eParamIO := ParamType2OleIO[BindList.ParamTypes[I]];
-    Bind.dwFlags := Bind.dwFlags or DBPARAMFLAGS_ISINPUT;
+    if Ord(BindList.ParamTypes[I]) >= Ord(pctInOut) then begin
+      FHasOutParams := True;
+      if BindList.ParamTypes[I] = pctInOut then
+        Bind.dwFlags := Bind.dwFlags or DBPARAMFLAGS_ISINPUT or DBPARAMFLAGS_ISOUTPUT
+      else
+        Bind.dwFlags := Bind.dwFlags or DBPARAMFLAGS_ISOUTPUT;
+    end else
+      Bind.dwFlags := Bind.dwFlags or DBPARAMFLAGS_ISINPUT;
   end;
 end;
 
@@ -1687,7 +1807,7 @@ WConv:          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
       else RaiseUnsupportedParamType(Index, Bind.wType, stDate);
     end;
   end else begin//Late binding
-    InitFixedBind(Index, SizeOf(TDBDate), DBTYPE_DBDATE);
+    InitDateBind(Index, stDate);
     BindList.Put(Index, stDate, P8Bytes(@Value));
   end;
 end;
@@ -2324,7 +2444,7 @@ procedure TZOleDBPreparedStatement.SetSmall(Index: Integer; Value: SmallInt);
 var I: Integer;
 begin
   if fBindImmediat then
-    SetUInt(Index, Value)
+    SetInt(Index, Value)
   else begin
     {$IFNDEF GENERIC_INDEX}
     Index := Index -1;
@@ -2427,7 +2547,7 @@ WConv:          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
      else RaiseUnsupportedParamType(Index, Bind.wType, stTime);
     end;
   end else begin//Late binding
-    InitFixedBind(Index, SizeOf(TDBTIME2), DBTYPE_DBTIME2);
+    InitDateBind(Index, stTime);
     BindList.Put(Index, stTime, P8Bytes(@Value));
   end;
 end;
@@ -2502,7 +2622,7 @@ WConv:          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
       else RaiseUnsupportedParamType(Index, Bind.wType, stTimeStamp);
     end;
   end else begin//Late binding
-    InitFixedBind(Index, SizeOf(Double), DBTYPE_DATE);
+    InitDateBind(Index, stTimeStamp);
     BindList.Put(Index, stTimeStamp, P8Bytes(@Value));
   end;
 end;
@@ -2715,6 +2835,11 @@ begin
   end;
 end;
 
+function TZOleDBPreparedStatement.SupportsBidirectionalParms: Boolean;
+begin
+  Result := True;
+end;
+
 {**
   Removes eventual structures for binding input parameters.
 }
@@ -2738,33 +2863,76 @@ begin
   inherited Create(Connection, '', Info);
 end;
 
-{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
-{ TZOleDBCallableStatement }
+{ TZOleDBCallableStatementMSSQL }
 
-function TZOleDBCallableStatement.CreateExecutionStatement(Mode: TZCallExecKind;
+function TZOleDBCallableStatementMSSQL.CreateExecutionStatement(Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var  I: Integer;
   P: PChar;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
 begin
+  //https://docs.microsoft.com/en-us/sql/relational-databases/native-client-ole-db-how-to/results/execute-stored-procedure-with-rpc-and-process-output?view=sql-server-2017
   SQL := '';
-  ToBuff('EXEC ', SQL);
+  if Mode = zcekParams
+  then ToBuff('{? = CALL ', SQL)
+  else ToBuff('? = Exec ', SQL);
   ToBuff(StoredProcName, SQL);
   ToBuff('(', SQL);
-  for i := 0 to BindList.Count-1 do
-    if BindList.ParamTypes[i] <> zptResult then
-      ToBuff('?,', SQL);
+  for i := 1 to BindList.Count-1 do
+    ToBuff('?,', SQL);
   FlushBuff(SQL);
   P := Pointer(SQL);
   if (P+Length(SQL)-1)^ = ','
   then (P+Length(SQL)-1)^ := ')' //cancel last comma
   else (P+Length(SQL)-1)^ := ' ';
-  if IsFunction then
-    SQL := SQL +' as ReturnValue';
-  Result := TZOleDBPreparedStatement.Create(Connection, SQL, Info);
+  //ToBuff('}"', SQL); *)
+  FlushBuff(SQL);
+  Result := TZOleDBPreparedStatement.Create(Connection, SQL+'}', Info);
+//  TZOleDBPreparedStatement(Result).Info.Values[DSProps_PreferPrepared] := 'False';
   TZOleDBPreparedStatement(Result).Prepare;
   FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
   TZOleDBPreparedStatement(Result)._AddRef;
 end;
 
+function TZOleDBCallableStatementMSSQL.GetAnsiString(
+  ParameterIndex: Integer): AnsiString;
+begin
+
+end;
+
+function TZOleDBCallableStatementMSSQL.GetRawByteString(
+  ParameterIndex: Integer): RawByteString;
+begin
+
+end;
+
+function TZOleDBCallableStatementMSSQL.GetString(ParameterIndex: Integer): String;
+begin
+
+end;
+
+function TZOleDBCallableStatementMSSQL.GetUnicodeString(
+  ParameterIndex: Integer): ZWideString;
+begin
+
+end;
+
+function TZOleDBCallableStatementMSSQL.GetUTF8String(
+  ParameterIndex: Integer): UTF8String;
+begin
+
+end;
+
+procedure TZOleDBCallableStatementMSSQL.SetUnicodeString(ParameterIndex: Integer;
+  const Value: ZWideString);
+begin
+  BindList.Put(ParameterIndex -1, stUnicodeString, Value);
+end;
+
+function TZOleDBCallableStatementMSSQL.SupportsBidirectionalParms: Boolean;
+begin
+  Result := True;
+end;
+
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 end.

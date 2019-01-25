@@ -1672,6 +1672,7 @@ function TOleDBDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: strin
 var
   RS: IZResultSet;
   Len: NativeUInt;
+  SQLType: TZSQLType;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -1699,15 +1700,21 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), Len);
-        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), Len);
-        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[CatalogNameIndex]) then
+          Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[SchemaNameIndex]) then
+          Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex]) then
+          Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex]) then
+          Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), Len);
         Result.UpdateSmall(ProcColColumnTypeIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex]));
-        Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS)));
+        SQLType := ConvertOleDBTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS);
+        Result.UpdateSmall(ProcColDataTypeIndex, Ord(SQLType));
         Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), Len);
-        Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
+        if SQLType in [stString, stUnicodeString]
+        then Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]))
+        else Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
         Result.UpdateInt(ProcColLengthIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]));
         Result.UpdateSmall(ProcColScaleIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]));
   //      Result.UpdateSmall(ProcColRadixIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColRadixIndex]));

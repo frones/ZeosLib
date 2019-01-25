@@ -164,7 +164,7 @@ function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TString
 
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
-  const PAramTypes: TZParamTypeDynArray);
+  const PAramTypes: TZProcedureColumnTypeDynArray);
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -809,7 +809,7 @@ end;
 
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
-  const ParamTypes: TZParamTypeDynArray);
+  const ParamTypes: TZProcedureColumnTypeDynArray);
 var
   ParamIndex, I: Integer;
   HasRows: Boolean;
@@ -824,7 +824,7 @@ begin
   Meta := ResultSet.GetMetadata;
   for ParamIndex := 0 to OutParamCount - 1 do
   begin
-    if not (ParamTypes[ParamIndex] in [zptOutput, zptInputOutput, zptResult]) then
+    if not (ParamTypes[ParamIndex] in [pctInOut, pctOut, pctReturn]) then
       Continue;
     if I > Meta.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
       Break;

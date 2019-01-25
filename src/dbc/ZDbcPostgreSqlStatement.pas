@@ -133,7 +133,7 @@ type
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
   public
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = '';
+      ParamType: TZProcedureColumnType; const Name: String = '';
       {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0); override;
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -1570,7 +1570,7 @@ var I: Integer;
 begin
   Result := inherited AlignParamterIndex2ResultSetIndex(Value);
   for i := Value downto 0 do
-    if BindList.ParamTypes[i] in [zptUnknown, zptInput] then
+    if BindList.ParamTypes[i] in [pctUnknown, pctIn] then
       Dec(Result);
 end;
 
@@ -1643,17 +1643,17 @@ begin
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.RegisterParameter(
-  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZParamType;
+  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
   const Name: String; PrecisionOrSize, Scale: LengthInt);
 var I: Integer;
 begin
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
-  if ParamType in [zptOutput, zptResult] then begin
+  if ParamType in [pctOut, pctReturn] then begin
     FOutParamCount := 0;
     for i := 0 to BindList.Count -1 do
-      Inc(FOutParamCount, Ord(BindList.ParamTypes[i] in [zptOutput, zptResult]));
+      Inc(FOutParamCount, Ord(BindList.ParamTypes[i] in [pctOut, pctReturn]));
   end else
-    FHasInOutParams := FHasInOutParams or (ParamType = zptInputOutput);
+    FHasInOutParams := FHasInOutParams or (ParamType = pctInOut);
   if (Name = '') then
     exit;
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
@@ -1770,7 +1770,7 @@ begin
   ToBuff('(', SQL);
   J := 1;
   for I := 0 to BindList.Capacity -1 do
-    if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then begin
+    if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then begin
       ToBuff('$', SQL);
       ToBuff(ZFastCode.IntToStr(J), SQL);
       ToBuff(',', SQL);

@@ -69,6 +69,10 @@ type
   PDirectionTypes = ^TDirectionTypes;
   TDirectionTypes = array of TOleEnum;
 
+const ZProcedureColumnType2AdoType: array[TZProcedureColumnType] of  TOleEnum =
+  (adParamUnknown{pctUnknown}, adParamInput{pctIn}, adParamInputOutput{pctInOut},
+    adParamOutput{pctOut}, adParamReturnValue{pctReturn}, adParamReturnValue{pctResultSet});
+
 {**
   Converts an ADO native types into string related.
   @param FieldType dblibc native field type.

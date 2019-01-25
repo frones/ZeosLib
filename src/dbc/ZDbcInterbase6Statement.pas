@@ -2069,7 +2069,7 @@ begin
   ToBuff(StoredProcName, SQL);
   ToBuff('(', SQL);
   for I := 0 to BindList.Capacity -1 do
-    if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then
+    if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then
       ToBuff('?,', SQL);
   FlushBuff(SQL);
   P := Pointer(SQL);

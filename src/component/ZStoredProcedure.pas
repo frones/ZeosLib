@@ -322,6 +322,10 @@ begin
   Result := Trim(SQL.Text);
 end;
 
+const ProcColDbcToDatasetType: array[TZProcedureColumnType] of TParamType =
+  (ptUnknown{pctUnknown}, ptInput{pctIn}, ptInputOutput{pctInOut},
+   ptOutPut{pctOut}, ptResult{pctReturn}, ptResult{pctResultSet});
+
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
   OldParams: TParams;
@@ -353,7 +357,7 @@ begin
             if ColumnType >= 0 then //-1 is result column
               Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetInt(ProcColDataTypeIndex))),
                 FMetaResultSet.GetString(ProcColColumnNameIndex),
-                GetParamType(TZProcedureColumnType(ColumnType)));
+                ProcColDbcToDatasetType[TZProcedureColumnType(ColumnType)]);
           end;
           Params.AssignValues(OldParams);
         finally
