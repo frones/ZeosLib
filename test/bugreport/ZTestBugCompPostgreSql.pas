@@ -110,6 +110,7 @@ type
     procedure TestSF224;
     procedure TestSF266;
     procedure TestSF274;
+    procedure TestSF321;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -445,21 +446,18 @@ end;
   Invalid variant type conversion when using TDBLookupComboBox
 }
 procedure TZTestCompPostgreSQLBugReport.Test766053;
+var CP: Word;
 {$IFNDEF LINUX}
-var
   Query1, Query2: TZQuery;
   DSQuery1, DSQuery2: TDataSource;
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
   Connection.Connect;
-  if SkipForReason(srClosedBug) or
-     //eh the russion abrakadabra can no be mapped to other charsets then:
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_UTF8) or
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_WIN1251) or
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zcp_DOS855) or
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_KOI8R)
-      {add some more if you run into same issue !!} then begin
+  CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  //eh the russion abrakadabra can no be mapped to other charsets then:
+  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    {add some more if you run into same issue !!} then begin
     BlankCheck;
     Exit;
   end;
@@ -1295,6 +1293,47 @@ procedure TZTestCompPostgreSQLBugReport.TestSF274_OnNotify(Sender: TObject; Even
         ProcessID: Integer; Payload: string);
 begin
   TestSF274_GotNotified := true;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF321;
+var Query: TZQuery;
+  procedure TestInternal(const sVer, MemoText: String);
+  //var SL: TStringList;
+  begin
+    If Query.IsEmpty Then
+    Begin
+      Query.Append;
+    end Else Query.Edit;
+    Query.FieldByName('ParNr').AsInteger := 1;
+    Query.FieldByName('ParName').AsString := 'DB-Version';
+    Query.FieldByName('ValText').AsString := sVer; // Format: 'V0.0.10918'
+    Query.FieldByName('AendDatum').AsDateTime := Now;
+    (*If T(UpdateLogIndex >= 0) And Assigned(Query.FindField('ValMemo')) Then // Update-Log in Memo mit speichern
+    Begin
+      sl := TStringList.Create;
+      sl.Text := Query.FieldByName('ValMemo').AsString;
+      While (UpdateLogIndex < Form1.Memo1.Lines.Count) Do
+      Begin
+        sl.Add(FormatDateTime('yy.mm.dd', Date) + ' ' + Form1.Memo1.Lines[UpdateLogIndex]);
+        Inc(UpdateLogIndex);
+      end;
+      While (Length(sl.Text) > 60000) And (sl.Count > 0) Do
+        sl.Delete(0);*)
+      Query.FieldByName('ValMemo').AsString := memotext;//sl.Text;
+    (*  sl.Free;
+    end;*)
+    Query.Post;
+    Query.Close;
+  end;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from Ticket321';
+    Query.Open;
+    TestInternal('V3.1.18101', 'AAAA'+LineEnding+'BBBB'+LineEnding+'CCCC'+LineEnding+'DDDD'+LineEnding+'EEEEE'+LineEnding);
+  finally
+    Query.Free;
+  end;
 end;
 
 initialization
