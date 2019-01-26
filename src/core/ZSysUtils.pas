@@ -2694,7 +2694,7 @@ var
           Inc(Value);
           if i+1 = ValLen then Break;
         end;
-        Failed := TryEncodeTime(Hour, Minute, Sec, MSec, Result);
+        Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
       end;
     end;
   end;

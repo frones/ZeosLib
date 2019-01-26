@@ -975,7 +975,7 @@ begin
   CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
     #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
   CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 99), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 990))+#39'::');
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 99))+#39'::');
 end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLTime;
