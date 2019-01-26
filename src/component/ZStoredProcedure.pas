@@ -71,7 +71,7 @@ type
     procedure RetrieveParamValues;
     function GetStoredProcName: string;
     procedure SetStoredProcName(const Value: string);
-    function GetParamType(const Value: TZProcedureColumnType): TParamType;
+    //function GetParamType(const Value: TZProcedureColumnType): TParamType;
   protected
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
@@ -477,7 +477,7 @@ end;
   @param Value a initial procedure column type.
   @return a corresponding param type.
 }
-function TZStoredProc.GetParamType(const Value: TZProcedureColumnType): TParamType;
+{function TZStoredProc.GetParamType(const Value: TZProcedureColumnType): TParamType;
 begin
   case Value of
     pctIn:
@@ -493,7 +493,7 @@ begin
   else
     Result := ptUnknown;
   end;
-end;
+end;}
 
 {$IFDEF WITH_IPROVIDER}
 {**

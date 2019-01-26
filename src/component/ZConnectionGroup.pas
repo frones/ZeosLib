@@ -80,7 +80,7 @@ type
   TZConnectionGroup = class(TComponent)
   private
     FOnChange: TNotifyEvent;
-    procedure DoChange(Sender: TObject);
+    //procedure DoChange(Sender: TObject);
     procedure Change;
   protected
     FClients: tList;
@@ -161,10 +161,10 @@ begin
   inherited Destroy;
 end;
 
-procedure TZConnectionGroup.DoChange(Sender: TObject);
+{procedure TZConnectionGroup.DoChange(Sender: TObject);
 begin
   Change;
-end;
+end;}
 
 procedure TZConnectionGroup.Change;
   var i:Integer;
