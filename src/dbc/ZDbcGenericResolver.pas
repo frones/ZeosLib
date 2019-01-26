@@ -869,8 +869,7 @@ begin
           if SQL = '' then Exit;
           TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
           Statement := FStatements.Get(TempKey) as IZPreparedStatement;
-          If Statement = nil then
-          begin
+          If Statement = nil then begin
             Statement := CreateResolverStatement(SQL);
             FStatements.Put(TempKey, Statement);
           end;
@@ -976,6 +975,8 @@ begin
                 RowAccessor.SetULong(Current.ColumnIndex, ResultSet.GetULong(I));
               stFloat:
                 RowAccessor.SetFloat(Current.ColumnIndex, ResultSet.GetFloat(I));
+              stCurrency:
+                RowAccessor.SetCurrency(Current.ColumnIndex, ResultSet.GetCurrency(I));
               stDouble:
                 RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
               stBigDecimal:

@@ -133,7 +133,7 @@ type
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
   public
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = '';
+      ParamType: TZProcedureColumnType; const Name: String = '';
       {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0); override;
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -421,13 +421,14 @@ begin
     the pgBouncer does not support the RealPrepareds.... }
   FUseEmulatedStmtsOnly := not Assigned(FplainDriver.PQexecParams) or not Assigned(FplainDriver.PQexecPrepared) or
     StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
+  Findeterminate_datatype := FUseEmulatedStmtsOnly;
   Finteger_datetimes := Connection.integer_datetimes;
   FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
-  if FUseEmulatedStmtsOnly then
-    FMinExecCount2Prepare := -1;
   //JDBC prepares after 4th execution
-  FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
+  if not FUseEmulatedStmtsOnly
+  then FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2)
+  else FMinExecCount2Prepare := -1;
   fAsyncQueries := False;(* not ready yet! StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_ExexAsync, 'FALSE'))
     and Assigned(FplainDriver.PQsendQuery) and Assigned(FplainDriver.PQsendQueryParams) and
     Assigned(FplainDriver.PQsendQueryPrepared);*)
@@ -1569,7 +1570,7 @@ var I: Integer;
 begin
   Result := inherited AlignParamterIndex2ResultSetIndex(Value);
   for i := Value downto 0 do
-    if BindList.ParamTypes[i] in [zptUnknown, zptInput] then
+    if BindList.ParamTypes[i] in [pctUnknown, pctIn] then
       Dec(Result);
 end;
 
@@ -1642,17 +1643,17 @@ begin
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.RegisterParameter(
-  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZParamType;
+  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
   const Name: String; PrecisionOrSize, Scale: LengthInt);
 var I: Integer;
 begin
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
-  if ParamType in [zptOutput, zptResult] then begin
+  if ParamType in [pctOut, pctReturn] then begin
     FOutParamCount := 0;
     for i := 0 to BindList.Count -1 do
-      Inc(FOutParamCount, Ord(BindList.ParamTypes[i] in [zptOutput, zptResult]));
+      Inc(FOutParamCount, Ord(BindList.ParamTypes[i] in [pctOut, pctReturn]));
   end else
-    FHasInOutParams := FHasInOutParams or (ParamType = zptInputOutput);
+    FHasInOutParams := FHasInOutParams or (ParamType = pctInOut);
   if (Name = '') then
     exit;
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
@@ -1720,8 +1721,7 @@ begin
   Result := (Metadata.GetTableName(ColumnIndex) <> '')
     and (Metadata.GetColumnName(ColumnIndex) <> '')
     and Metadata.IsSearchable(ColumnIndex)
-    and not (Metadata.GetColumnType(ColumnIndex)
-    in [stUnknown, stBinaryStream, stUnicodeStream]);
+    and not (Metadata.GetColumnType(ColumnIndex) in [stUnknown, stBinaryStream]);
 end;
 
 { TZPostgreSQLStatement }
@@ -1770,7 +1770,7 @@ begin
   ToBuff('(', SQL);
   J := 1;
   for I := 0 to BindList.Capacity -1 do
-    if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then begin
+    if Ord(BindList.ParamTypes[I]) < Ord(pctOut) then begin
       ToBuff('$', SQL);
       ToBuff(ZFastCode.IntToStr(J), SQL);
       ToBuff(',', SQL);

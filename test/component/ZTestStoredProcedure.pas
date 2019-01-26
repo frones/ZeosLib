@@ -150,7 +150,7 @@ type
 implementation
 
 uses Classes, ZSysUtils, ZDbcIntfs,
-  ZCompatibility, ZVariant;
+  ZCompatibility, ZVariant, ZEncoding;
 
 
 { TZTestStoredProcedure }
@@ -582,7 +582,17 @@ const Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431
 var
   SQLTime: TDateTime;
   TempBytes: TBytes;
+  CP: Word;
 begin
+  Connection.Connect;
+  CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  //eh the russion abrakadabra can no be mapped to other charsets then:
+  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    {add some more if you run into same issue !!} then begin
+    BlankCheck;
+    Exit;
+  end;
+
   StoredProc.StoredProcName := 'TEST_All_TYPES';
   CheckEquals(28, StoredProc.Params.Count);
 
@@ -1064,7 +1074,7 @@ end;
 { TZTestADOStoredProcedure }
 function TZTestADOStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'ado';
+  Result := 'ado,OleDB';
 end;
 
 procedure TZTestADOStoredProcedure.Test_abtest;

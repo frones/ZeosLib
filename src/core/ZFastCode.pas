@@ -410,13 +410,13 @@ function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
 function Pos(const SubStr, Str: ZWideString): Integer; overload;
 
 function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function GetOrdinalDigits(const Value: Int64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(const Value: Int64; out U: UInt64; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: Cardinal): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function GetOrdinalDigits(Value: Integer): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: Integer; out C: Cardinal; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: Word): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function GetOrdinalDigits(Value: SmallInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: SmallInt; out W: Word; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: Byte): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function GetOrdinalDigits(Value: ShortInt): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function GetOrdinalDigits(Value: ShortInt; out B: Byte; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 implementation
 
@@ -2900,11 +2900,7 @@ var C: Cardinal;
   Negative: Boolean;
   P: PAnsiChar;
 begin
-  Negative := Value < 0;
-  if Negative
-  then C := Cardinal(-Value)
-  else C := Cardinal(Value);
-  Digits := GetOrdinalDigits(C);
+  Digits := GetOrdinalDigits(Value, C, Negative);
   ZSetString(nil, Digits+Ord(Negative), Result);
   P := Pointer(Result);
   if Negative then
@@ -2918,11 +2914,7 @@ var U: UInt64;
   Negative: Boolean;
   P: PAnsiChar;
 begin
-  Negative := Value < 0;
-  if Negative
-  then U := UInt64(-Value)
-  else U := UInt64(Value);
-  Digits := GetOrdinalDigits(U);
+  Digits := GetOrdinalDigits(Value, U, Negative);
   ZSetString(nil, Digits+Ord(Negative), Result);
   P := Pointer(Result);
   if Negative then
@@ -3364,11 +3356,7 @@ var C: Cardinal;
   Negative: Boolean;
   P: PWideChar;
 begin
-  Negative := Value < 0;
-  if Negative
-  then C := Cardinal(-Value)
-  else C := Cardinal(Value);
-  Digits := GetOrdinalDigits(C);
+  Digits := GetOrdinalDigits(Value, C, Negative);
   System.SetString(Result, nil, Digits+Ord(Negative));
   P := Pointer(Result);
   if Negative then
@@ -3382,11 +3370,7 @@ var U: UInt64;
   Negative: Boolean;
   P: PWideChar;
 begin
-  Negative := Value < 0;
-  if Negative
-  then U := UInt64(-Value)
-  else U := UInt64(Value);
-  Digits := GetOrdinalDigits(U);
+  Digits := GetOrdinalDigits(Value, U, Negative);
   System.SetString(Result, nil, Digits+Ord(Negative));
   P := Pointer(Result);
   if Negative then
@@ -6573,12 +6557,14 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-function GetOrdinalDigits(const Value: Int64): Byte;
+function GetOrdinalDigits(const Value: Int64; out U: UInt64; out Negative: Boolean): Byte;
 begin
   {$R-} {$Q-}
-  if Value < 0
-  then Result := GetOrdinalDigits(UInt64(-Value))
-  else Result := GetOrdinalDigits(UInt64(Value))
+  Negative := Value < 0;
+  if Negative
+  then U := -Value
+  else U := Value;
+  Result := GetOrdinalDigits(U)
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
@@ -6600,12 +6586,14 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-function GetOrdinalDigits(Value: Integer): Byte;
+function GetOrdinalDigits(Value: Integer; out C: Cardinal; out Negative: Boolean): Byte;
 begin
   {$R-} {$Q-}
-  if Value < 0
-  then Result := GetOrdinalDigits(Cardinal(-Value))
-  else Result := GetOrdinalDigits(Cardinal(Value));
+  Negative := Value < 0;
+  if Negative
+  then C := -Value
+  else C := Value;
+  Result := GetOrdinalDigits(C)
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
@@ -6623,12 +6611,14 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-function GetOrdinalDigits(Value: SmallInt): Byte;
+function GetOrdinalDigits(Value: SmallInt; out W: Word; out Negative: Boolean): Byte;
 begin
   {$R-} {$Q-}
-  if Value < 0
-  then Result := GetOrdinalDigits(Word(-Value))
-  else Result := GetOrdinalDigits(Word(Value));
+  Negative := Value < 0;
+  if Negative
+  then W := -Value
+  else W := Value;
+  Result := GetOrdinalDigits(W)
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
@@ -6643,12 +6633,14 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-function GetOrdinalDigits(Value: ShortInt): Byte;
+function GetOrdinalDigits(Value: ShortInt; out B: Byte; out Negative: Boolean): Byte;
 begin
   {$R-} {$Q-}
-  if Value < 0
-  then Result := GetOrdinalDigits(Byte(-Value))
-  else Result := GetOrdinalDigits(Byte(Value));
+  Negative := Value < 0;
+  if Negative
+  then B := -Value
+  else B := Value;
+  Result := GetOrdinalDigits(B)
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;

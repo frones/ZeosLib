@@ -1046,17 +1046,17 @@ begin
     SQL_LONG      : if XSQLVAR.sqlscale = -4 then  //scale fits!
                       PISC_INT64(XSQLVAR.sqldata)^ := I64
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
-                      PISC_INT64(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[4+XSQLVAR.sqlscale] //dec scale digits
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale] //dec scale digits
                     else
-                      PISC_INT64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[-4+XSQLVAR.sqlscale]; //inc scale digits
     SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = -4 then  //scale fits!
                       PISC_SHORT(XSQLVAR.sqldata)^ := I64
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
-                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[4+XSQLVAR.sqlscale] //dec scale digits
+                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale] //dec scale digits
                     else
-                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
+                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[-4+XSQLVAR.sqlscale]; //inc scale digits
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = -4 then //scale fits!
                       PISC_INT64(XSQLVAR.sqldata)^ := I64
@@ -2069,7 +2069,7 @@ begin
   ToBuff(StoredProcName, SQL);
   ToBuff('(', SQL);
   for I := 0 to BindList.Capacity -1 do
-    if not (BindList.ParamTypes[I] in [zptOutput,zptResult]) then
+    if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then
       ToBuff('?,', SQL);
   FlushBuff(SQL);
   P := Pointer(SQL);

@@ -75,6 +75,7 @@ type
     ['{FCAE90AA-B0B6-49A2-AB74-33E604FF8804}']
     procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
     function SupportsMultipleStorageObjects: Boolean;
+    function SupportsByRefAccessors: Boolean;
   end;
   {** Implements OleDB Database Information. }
   TZOleDBDatabaseInfo = class(TZAbstractDatabaseInfo, IZOleDBDatabaseInfo)
@@ -105,6 +106,7 @@ type
     fDBPROP_ORDERBYCOLUMNSINSELECT: Boolean;
     fDBPROP_PREPAREABORTBEHAVIOR: Integer;
     fDBPROP_PREPARECOMMITBEHAVIOR: Integer;
+    fDBPROP_BYREFACCESSORS: Boolean;
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     // database/driver/server info:
@@ -137,6 +139,7 @@ type
 //    function SupportsLikeEscapeClause: Boolean; override; -> Not implemented
     function SupportsMultipleResultSets: Boolean; override;
     function SupportsMultipleStorageObjects: Boolean;
+    function SupportsByRefAccessors: Boolean;
 //    function SupportsMultipleTransactions: Boolean; override; -> Not implemented
 //    function SupportsNonNullableColumns: Boolean; override; -> Not implemented
     function SupportsMinimumSQLGrammar: Boolean; override;
@@ -177,7 +180,7 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
     function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(const {%H-}Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const Level: TZTransactIsolationLevel):
       Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
@@ -567,7 +570,7 @@ end;
 procedure TZOleDBDatabaseInfo.InitilizePropertiesFromDBInfo(
   const DBInitialize: IDBInitialize; const Malloc: IMalloc);
 const
-  PropCount = 26;
+  PropCount = 27;
   rgPropertyIDs: array[0..PropCount-1] of DBPROPID =
     ( DBPROP_PROVIDERFRIENDLYNAME,
       DBPROP_PROVIDERVER,
@@ -594,7 +597,8 @@ const
       DBPROP_ORDERBYCOLUMNSINSELECT,
       DBPROP_PREPAREABORTBEHAVIOR,
       DBPROP_PREPARECOMMITBEHAVIOR,
-      DBPROP_MULTIPLEPARAMSETS);
+      DBPROP_MULTIPLEPARAMSETS,
+      DBPROP_BYREFACCESSORS);
 var
   DBProperties: IDBProperties;
   PropIDSet: array[0..PropCount-1] of TDBPROPIDSET;
@@ -657,6 +661,7 @@ begin
         DBPROP_PREPAREABORTBEHAVIOR:    fDBPROP_PREPAREABORTBEHAVIOR := PropSet.rgProperties^[i].vValue;
         DBPROP_PREPARECOMMITBEHAVIOR:   fDBPROP_PREPARECOMMITBEHAVIOR := PropSet.rgProperties^[i].vValue;
         DBPROP_MULTIPLEPARAMSETS:       fDBPROP_MULTIPLEPARAMSETS := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
+        DBPROP_BYREFACCESSORS:          fDBPROP_BYREFACCESSORS := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
       end;
       VariantClear(PropSet.rgProperties^[i].vValue);
     end;
@@ -1492,7 +1497,12 @@ end;
 }
 function TZOleDBDatabaseInfo.SupportsArrayBindings: Boolean;
 begin
-  Result := True;
+  Result := fDBPROP_MULTIPLEPARAMSETS //{$IFDEF USE_SYNCOMMONS}and not Metadata.GetConnection.GetAutoCommit{$ENDIF}; //EH: in autocommit the multiple paramsets are slow
+end;
+
+function TZOleDBDatabaseInfo.SupportsByRefAccessors: Boolean;
+begin
+  Result := fDBPROP_BYREFACCESSORS;
 end;
 
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -1662,6 +1672,7 @@ function TOleDBDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: strin
 var
   RS: IZResultSet;
   Len: NativeUInt;
+  SQLType: TZSQLType;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -1689,15 +1700,21 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), Len);
-        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), Len);
-        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[CatalogNameIndex]) then
+          Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[SchemaNameIndex]) then
+          Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex]) then
+          Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), Len);
+        if not IsNull(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex]) then
+          Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), Len);
         Result.UpdateSmall(ProcColColumnTypeIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex]));
-        Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS)));
+        SQLType := ConvertOleDBTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS);
+        Result.UpdateSmall(ProcColDataTypeIndex, Ord(SQLType));
         Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), Len);
-        Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
+        if SQLType in [stString, stUnicodeString]
+        then Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]))
+        else Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
         Result.UpdateInt(ProcColLengthIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]));
         Result.UpdateSmall(ProcColScaleIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]));
   //      Result.UpdateSmall(ProcColRadixIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColRadixIndex]));
@@ -1982,14 +1999,16 @@ begin
         Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(ColumnNameIndex, Len), Len);
         Flags := GetInt(fTableColColumnMap.ColIndices[FlagColumn]);
         SQLType := ConvertOleDBTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
-          ((FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0), ConSettings.CPType);
+          ((FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0),
+          GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
+          GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]), ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
         if SQLType in [stCurrency, stBigDecimal]
         then Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]))
         else Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
         Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
-        //Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
+        // does not exist Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
         Result.UpdateSmall(TableColColumnNullableIndex, Ord(GetBoolean(fTableColColumnMap.ColIndices[TableColColumnNullableIndex])));
         Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnRemarksIndex], Len), Len);
         Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), Len);
@@ -2202,7 +2221,7 @@ begin
         Result.UpdateSmall(TableColVerScopeIndex, 0);
         Result.UpdatePWideChar(TableColVerColNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
         Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmallByName('DATA_TYPE'), Flags and DBCOLUMNFLAGS_ISLONG <> 0, ConSettings.CPType)));
+          GetSmallByName('DATA_TYPE'), Flags and DBCOLUMNFLAGS_ISLONG <> 0, 0, 0, ConSettings.CPType)));
         Result.UpdatePWideChar(TableColVerTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
@@ -2621,7 +2640,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideChar(TypeInfoTypeNameIndex, Len), Len);
         Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmall(TypeInfoDataTypeIndex), GetBoolean(iIS_LONG), ConSettings.CPType)));
+          GetSmall(TypeInfoDataTypeIndex), GetBoolean(iIS_LONG), 0, 0, ConSettings.CPType)));
         Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
         Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideChar(TypeInfoLiteralPrefixIndex, Len), Len);
         Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideChar(TypeInfoLiteralSuffixIndex, Len), Len);
@@ -2822,7 +2841,7 @@ begin
           OleArgs[I] := Args[I]
         else
           OleArgs[I] := UnAssigned;
-    OleDBCheck(FSchemaRS.GetRowset(nil, Schema, Length(Args), OleArgs, IID_IRowset, 0, nil, IInterface(RowSet)));
+    OleDBCheck(FSchemaRS.GetRowset(nil, Schema, Length(Args), OleArgs, IID_IRowset, 0, nil, IInterface(RowSet)), '', nil);
     if Assigned(RowSet) then
     begin
       Stmt := GetStatement;
@@ -2847,7 +2866,7 @@ var
 begin
   if Length(FSupportedSchemas) = 0 then
   begin
-    OleDBCheck((GetConnection as IZOleDBConnection).GetSession.QueryInterface(IID_IDBSchemaRowset, SchemaRS));
+    OleDBCheck((GetConnection as IZOleDBConnection).GetSession.QueryInterface(IID_IDBSchemaRowset, SchemaRS), '', nil);
     if Assigned(SchemaRS) then
     begin
       SchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, IA);

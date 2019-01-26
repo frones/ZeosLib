@@ -163,6 +163,7 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
     function FormCalculateStatement(Columns: TObjectList): string; override;
+    function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
 
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
@@ -1240,6 +1241,19 @@ begin
 end;
 
 { TZSQLiteCachedResolver }
+
+{**
+  Checks is the specified column can be used in where clause.
+  @param ColumnIndex an index of the column.
+  @returns <code>true</code> if column can be included into where clause.
+}
+function TZSQLiteCachedResolver.CheckKeyColumn(ColumnIndex: Integer): Boolean;
+begin
+  Result := (Metadata.GetTableName(ColumnIndex) <> '')
+    and (Metadata.GetColumnName(ColumnIndex) <> '')
+    and Metadata.IsSearchable(ColumnIndex)
+    and not (Metadata.GetColumnType(ColumnIndex) in [stUnknown, stBinaryStream]);
+end;
 
 {**
   Creates a SQLite specific cached resolver object.

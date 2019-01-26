@@ -2194,7 +2194,7 @@ begin
   if Result then
     PWord(Buffer)^ := Ord(#0)
   else //instead of WStrLCopy
-    PRaw2PUnicode(P, Buffer, L, Max(dsMaxStringSize shr 1, FieldSize), RowAccessor.ConSettings^.ClientCodePage^.CP);
+    PRaw2PUnicode(P, Buffer, LengthInt(L), LengthInt(Max(dsMaxStringSize shr 1, FieldSize)), RowAccessor.ConSettings^.ClientCodePage^.CP);
 end;
 
 function TZAbstractRODataset.WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer;

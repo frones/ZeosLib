@@ -84,6 +84,8 @@ type
     SQLType: TZSQLType;
     DescBindBuffer: TByteDynArray;
   end;
+  PZODBCParamInfoArray = ^TZODBCParamInfoArray;
+  TZODBCParamInfoArray = array[Byte] of TZODBCParamInfo;
 
   TZAbstractODBCStatement = class(TZAbstractPreparedStatement, IZODBCStatement)
   private
@@ -811,7 +813,7 @@ begin
             end;
             Param.CurrParamDataPtr := ParameterDataPtr;
             { EH note : the following code make 2 case(ODBC expected and Zeos given) checks and the array loop follows
-              this is up to a half second faster for 5000 rows with 5 field bug ugly to read  ... is it?
+              this is up to a half second faster for 5000 rows with 5 field but ugly to read  ... is it?
               optimized code ... however }
             ZData := Value.VArray.VArray;
             case Param.SQLType of

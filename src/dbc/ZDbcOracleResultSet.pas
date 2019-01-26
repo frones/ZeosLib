@@ -2031,7 +2031,7 @@ var I, N: Integer;
 begin
   N := 0;
   for I := 0 to BindList.Count -1 do
-    if Ord(BindList[i].ParamType) > ord(zptInput) then
+    if Ord(BindList[i].ParamType) > ord(pctIn) then
       Inc(N);
   AllocateOracleSQLVars(FColumns, N);
   SetLength(FFieldNames, N);
@@ -2040,7 +2040,7 @@ begin
   for I := 0 to BindList.Count -1 do begin
     {$R-}
     BindValue := BindList[i];
-    if Ord(BindValue.ParamType) <= ord(zptInput) then
+    if Ord(BindValue.ParamType) <= ord(pctIn) then
       Continue;
     ParamValue := @OraVariables[i];
     CurrentVar := @FColumns.Variables[N];

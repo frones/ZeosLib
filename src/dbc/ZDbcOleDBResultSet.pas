@@ -64,11 +64,12 @@ uses
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZOleDB, ZDbcOleDBUtils,
-  ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
+  ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata,
+  ZCompatibility, ZDbcStatement;
 
 type
   {** Implements Ado ResultSet. }
-  TZOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
+  TZAbstractOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
     FInMemoryDataLobs: Boolean;
     FChunkSize: Integer;
@@ -94,15 +95,8 @@ type
     FLength: DBLENGTH;
     procedure ReleaseFetchedRows;
     procedure CreateAccessors;
-  protected
-    procedure Open; override;
+    procedure CheckError(Status: HResult); {$IFDEF WITH_INLINE}inline;{$ENDIF}
   public
-    constructor Create(const Statement: IZStatement; const SQL: string;
-      const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
-      const {%H-}EnhancedColInfo: Boolean = True);
-    procedure ResetCursor; override;
-    function Next: Boolean; reintroduce;
-
     //reintroduce is a performance thing (self tested and confirmed for OLE the access is pushed x2!):
     //direct dispatched methods for the interfaces makes each call as fast as using a native object!
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
@@ -131,6 +125,24 @@ type
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF USE_SYNCOMMONS}
+  end;
+
+  TZOleDBResultSet = class(TZAbstractOleDBResultSet, IZResultSet)
+  protected
+    procedure Open; override;
+  public
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
+      const {%H-}EnhancedColInfo: Boolean = True);
+    procedure ResetCursor; override;
+    function Next: Boolean; override;
+  end;
+
+  TZOleDBParamResultSet = class(TZAbstractOleDBResultSet, IZResultSet)
+  public
+    constructor Create(const Statement: IZStatement; const ParamBuffer: TByteDynArray;
+      const ParamBindings: TDBBindingDynArray; const ParamNameArray: TStringDynArray);
+    function Next: Boolean; override;
   end;
 
   TZOleDBMSSQLResultSetMetadata = class(TZAbstractResultSetMetadata)
@@ -174,19 +186,15 @@ type
 
   TZOleDBCachedResultSet = class(TZCachedResultSet)
   private
-    FResultSet: TZOleDBResultSet;
+    FResultSet: TZAbstractOleDBResultSet;
   protected
     function Fetch: Boolean; override;
   public
-    constructor Create(ResultSet: TZOleDBResultSet; const SQL: string;
+    constructor Create(ResultSet: TZAbstractOleDBResultSet; const SQL: string;
       const Resolver: IZCachedResolver; ConSettings: PZConSettings);
   end;
 
-function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement;
-  Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
-    InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
-
-{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
+  {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
@@ -202,7 +210,7 @@ var
   LobDBBinding: TDBBinding;
 
 {$IFDEF USE_SYNCOMMONS}
-procedure TZOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZAbstractOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var I, C, L, H: Integer;
     P: PAnsiChar;
@@ -391,49 +399,27 @@ begin
 end;
 {$ENDIF USE_SYNCOMMONS}
 
-{**
-  Creates this object and assignes the main properties.
-  @param Statement an SQL statement object.
-  @param SQL an SQL query string.
-  @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
-}
-constructor TZOleDBResultSet.Create(const Statement: IZStatement; const SQL: string;
-  const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
-  const EnhancedColInfo: Boolean);
+procedure TZAbstractOleDBResultSet.CheckError(Status: HResult);
 begin
-  {if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
-  then inherited Create(Statement, SQL, TZOleDBMSSQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self), Statement.GetConnection.GetConSettings)
-  else}
-  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
-  FRowSet := RowSet;
-  FZBufferSize := ZBufferSize;
-  FAccessor := 0;
-  FCurrentBufRowNo := 0;
-  FRowsObtained := 0;
-  FHROWS := nil;
-  FInMemoryDataLobs := InMemoryDataLobs;
-  FChunkSize := ChunkSize;
-  Open;
+  if Status <> S_OK then
+    OleDBCheck(Status, Statement.GetSQL, Self, FDBBINDSTATUSArray);
 end;
 
-procedure TZOleDBResultSet.CreateAccessors;
+procedure TZAbstractOleDBResultSet.CreateAccessors;
 var I: Integer;
 begin
-  OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED, 8Byte alignments do NOT work with fixed width fields},
+  CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED, 8Byte alignments do NOT work with fixed width fields},
     fpcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
-    Pointer(FDBBINDSTATUSArray)), FDBBINDSTATUSArray);
-
+    Pointer(FDBBINDSTATUSArray)));
   SetLength(FLobAccessors, Length(FLobColsIndex));
-  for i := 0 to high(FLobColsIndex) do
-  begin
+  for i := 0 to high(FLobColsIndex) do begin
     LobDBBinding.iOrdinal := FDBBindingArray[FLobColsIndex[i]].iOrdinal;
-    OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA, 1,
-      @LobDBBinding, 0, @FLobAccessors[i], nil), nil);
+    CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA, 1,
+      @LobDBBinding, 0, @FLobAccessors[i], nil));
   end;
 end;
 
-procedure TZOleDBResultSet.ReleaseFetchedRows;
+procedure TZAbstractOleDBResultSet.ReleaseFetchedRows;
 var I,j: Integer;
 begin
   if (FRowsObtained > 0) then
@@ -442,188 +428,11 @@ begin
       for i := 0 to high(FLobColsIndex) do
         for J := 0 to FRowsObtained -1 do
           (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(Pointer(@FColBuffer[FDBBindingArray[FLobColsIndex[i]].obValue+NativeUInt(FRowSize*J)]));
-    OleDBCheck(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates)), FRowStates);
+    CheckError(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates)));
     (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(FHROWS);
     FHROWS := nil;
     FRowsObtained := 0;
   end;
-end;
-{**
-  Opens this recordset and initializes the Column information.
-}
-procedure TZOleDBResultSet.Open;
-var
-  OleDBColumnsInfo: IColumnsInfo;
-  prgInfo, OriginalprgInfo: PDBColumnInfo;
-  ppStringsBuffer: PWideChar;
-  I: Integer;
-  FieldSize: Integer;
-  ColumnInfo: TZColumnInfo;
-begin
-  if not Assigned(FRowSet) or
-     Failed(FRowSet.QueryInterface(IID_IColumnsInfo, OleDBColumnsInfo)) then
-    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-
-  OleDBColumnsInfo.GetColumnInfo(fpcColumns{%H-}, prgInfo, ppStringsBuffer);
-  OriginalprgInfo := prgInfo; //save pointer for Malloc.Free
-  try
-    { Fills the column info }
-    ColumnsInfo.Clear;
-    if Assigned(prgInfo) then
-      if prgInfo.iOrdinal = 0 then // skip possible bookmark column
-      begin
-        Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));
-        Dec(fpcColumns);
-      end;
-    SetLength(FDBBINDSTATUSArray, fpcColumns);
-    FRowSize := PrepareOleColumnDBBindings(fpcColumns, FInMemoryDataLobs,
-      FDBBindingArray, prgInfo, FLobColsIndex);
-    FRowCount := Max(1, FZBufferSize div NativeInt(FRowSize));
-    if (MaxRows > 0) and (FRowCount > MaxRows) then
-      FRowCount := MaxRows; //fetch only wanted count of rows
-
-    for I := prgInfo.iOrdinal-1 to fpcColumns-1 do
-    begin
-      ColumnInfo := TZColumnInfo.Create;
-      if (prgInfo^.pwszName=nil) or (prgInfo^.pwszName^=#0) then
-        ColumnInfo.ColumnLabel := 'col_'+ZFastCode.IntToStr(i)
-      else
-        ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
-      ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
-        prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0, ConSettings.CPType);
-
-      if prgInfo^.ulColumnSize > Cardinal(MaxInt) then
-        FieldSize := 0
-      else
-        FieldSize := prgInfo^.ulColumnSize;
-      if ColumnInfo.ColumnType = stGUID then
-        ColumnInfo.ColumnDisplaySize := 38
-      else
-        ColumnInfo.ColumnDisplaySize := FieldSize;
-      ColumnInfo.Precision := FieldSize;
-      ColumnInfo.Currency := ColumnInfo.ColumnType = stCurrency;
-      ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
-      ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stBigDecimal];
-      ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0);
-      ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0);
-      ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;
-      ColumnsInfo.Add(ColumnInfo);
-      Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));  //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
-    end;
-  finally
-    if Assigned(ppStringsBuffer) then (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(ppStringsBuffer);
-    if Assigned(OriginalprgInfo) then (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(OriginalprgInfo);
-  end;
-  inherited Open;
-end;
-
-procedure TZOleDBResultSet.ResetCursor;
-var
-  FAccessorRefCount: DBREFCOUNT;
-  i: Integer;
-begin
-  if not Closed then begin
-    try
-      ReleaseFetchedRows;
-      {first release Accessor rows}
-      for i := Length(FLobAccessors)-1 downto 0 do
-        OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FLobAccessors[i], @FAccessorRefCount));
-      SetLength(FLobAccessors, 0);
-      if FAccessor > 0 then
-        OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
-    finally
-      FRowSet := nil;
-      FAccessor := 0;
-      RowNo := 0;
-      FCurrentBufRowNo := 0;
-      FRowsObtained := 0;
-    end;
-    FRowSet := nil;//handle 'Object is in use Exception'
-    inherited ResetCursor;
-  end;
-end;
-
-{**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
-
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
-function TZOleDBResultSet.Next: Boolean;
-var
-  I: NativeInt;
-  stmt: IZOleDBPreparedStatement;
-label Success, NoSuccess;  //ugly but faster and no double code
-begin
-  { Checks for maximum row. }
-  Result := False;
-  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or
-    Closed or ((not Closed) and (FRowSet = nil) and (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet)))) then
-    goto NoSuccess;
-
-  if (RowNo = 0) then //fetch Iteration count of rows
-  begin
-    CreateAccessors;
-    OleDBCheck(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
-    if FRowsObtained > 0 then
-    begin
-      if DBROWCOUNT(FRowsObtained) < FRowCount then
-      begin //reserve required mem only
-        SetLength(FColBuffer, NativeInt(FRowsObtained) * FRowSize);
-        MaxRows := FRowsObtained;
-      end
-      else //reserve full allowed mem
-        SetLength(FColBuffer, (FRowCount * FRowSize));
-      SetLength(FRowStates, FRowsObtained);
-      {fetch data into the buffer}
-      for i := 0 to FRowsObtained -1 do
-        OleDBCheck(fRowSet.GetData(FHROWS^[i], FAccessor, @FColBuffer[I*FRowSize]));
-      goto success;
-    end
-    else //we do NOT need a buffer here!
-      goto NoSuccess;
-  end
-  else
-    if FCurrentBufRowNo < DBROWCOUNT(FRowsObtained)-1 then
-    begin
-      Inc(FCurrentBufRowNo);
-      goto Success;
-    end
-    else
-    begin
-      {release old rows}
-      ReleaseFetchedRows;
-      OleDBCheck(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
-      if DBROWCOUNT(FRowsObtained) < FCurrentBufRowNo then
-        MaxRows := RowNo+Integer(FRowsObtained);  //this makes Exit out in first check on next fetch
-      FCurrentBufRowNo := 0; //reset Buffer offsett
-      if FRowsObtained > 0 then
-      begin
-        {fetch data into the buffer}
-        for i := 0 to FRowsObtained -1 do
-          OleDBCheck(fRowSet.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize]));
-        goto Success;
-      end else goto NoSuccess;
-    end;
-
-Success:
-    RowNo := RowNo + 1;
-    if LastRowNo < RowNo then
-      LastRowNo := RowNo;
-    Result := True;
-    Exit;
-NoSuccess:
-    if RowNo <= LastRowNo then
-      RowNo := LastRowNo + 1;
 end;
 
 {**
@@ -634,7 +443,7 @@ end;
   @return if the value is SQL <code>NULL</code>, the
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
-function TZOleDBResultSet.IsNull(ColumnIndex: Integer): Boolean;
+function TZAbstractOleDBResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
@@ -666,7 +475,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
+function TZAbstractOleDBResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var P: Pointer;
   L: NativeUInt;
 begin
@@ -693,7 +502,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+function TZAbstractOleDBResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: Pointer;
   L: NativeUInt;
 begin
@@ -721,7 +530,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
+function TZAbstractOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
 label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref;
 begin
@@ -885,7 +694,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
+function TZAbstractOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
 label set_from_tmp, set_from_buf, set_from_clob;
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
@@ -1059,7 +868,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZOleDBResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
+function TZAbstractOleDBResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 begin
   Result := False;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1114,7 +923,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOleDBResultSet.GetInt(ColumnIndex: Integer): Integer;
+function TZAbstractOleDBResultSet.GetInt(ColumnIndex: Integer): Integer;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1174,7 +983,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOleDBResultSet.GetLong(ColumnIndex: Integer): Int64;
+function TZAbstractOleDBResultSet.GetLong(ColumnIndex: Integer): Int64;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1233,7 +1042,7 @@ end;
     value returned is <code>0</code>
 }
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-function TZOleDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
+function TZAbstractOleDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1283,7 +1092,7 @@ begin
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 
-function TZOleDBResultSet.GetULong(ColumnIndex: Integer): UInt64;
+function TZAbstractOleDBResultSet.GetULong(ColumnIndex: Integer): UInt64;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1341,7 +1150,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOleDBResultSet.GetFloat(ColumnIndex: Integer): Single;
+function TZAbstractOleDBResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1394,7 +1203,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOleDBResultSet.GetDouble(ColumnIndex: Integer): Double;
+function TZAbstractOleDBResultSet.GetDouble(ColumnIndex: Integer): Double;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1447,7 +1256,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+function TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1500,7 +1309,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetBytes(ColumnIndex: Integer): TBytes;
+function TZAbstractOleDBResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 begin
   Result := nil;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1536,7 +1345,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOleDBResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+function TZAbstractOleDBResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
@@ -1588,7 +1397,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+function TZAbstractOleDBResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var Failed: Boolean;
 begin
   Result := 0;
@@ -1632,7 +1441,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOleDBResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+function TZAbstractOleDBResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var Failed: Boolean;
 begin
   Result := 0;
@@ -1645,19 +1454,6 @@ begin
           else
             Result := Frac(PDateTime(FData)^);
         end;
-(*      DBTYPE_BSTR:
-        Result := PUnicodeToRaw(PWideChar(FData),
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
-      DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(FData),
-          FLength);
-      DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(FData)^,
-          FLength);*)
       DBTYPE_WSTR:
         Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
       DBTYPE_WSTR or DBTYPE_BYREF:
@@ -1687,7 +1483,7 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZOleDBResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+function TZAbstractOleDBResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var Failed: Boolean;
   DT: TDateTime;
 begin
@@ -1714,18 +1510,6 @@ begin
             PDBTime2(FData)^.second,PDBTime2(FData)^.fraction div 1000000);
       DBTYPE_DATE:
         Result := PDateTime(FData)^;
-(*      :
-        Result := PUnicodeToRaw(PWideChar(FData),
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
-          FLength shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
-      DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(FData),
-          FLength);
-      DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(FData)^,
-          FLength);*)
       DBTYPE_BSTR,
       DBTYPE_WSTR:
         Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
@@ -1749,7 +1533,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZOleDBResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZAbstractOleDBResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 begin
   Result := nil;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1861,7 +1645,7 @@ begin
     FCurrentCodePage := ConSettings^.ClientCodePage^.CP
   else
     FCurrentCodePage := zCP_UTF16;
-  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream));
+  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream), '', nil);
   try
     GetMem(FBlobData, ChunkSize);
     FBlobSize := ChunkSize;
@@ -1890,7 +1674,7 @@ var
   pcbRead: LongInt;
 begin
   inherited Create;
-  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream));
+  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream), '', nil);
   try
     GetMem(FBlobData, ChunkSize);
     FBlobSize := ChunkSize;
@@ -1907,39 +1691,9 @@ begin
   end;
 end;
 
-function GetCurrentResultSet(const RowSet: IRowSet; const Statement: IZStatement;
-  Const SQL: String; ConSettings: PZConSettings; BuffSize, ChunkSize: Integer;
-  InMemoryDataLobs: Boolean; var PCurrRS: Pointer): IZResultSet;
-var
-  CachedResolver: IZCachedResolver;
-  NativeResultSet: TZOleDBResultSet;
-  CachedResultSet: TZCachedResultSet;
-begin
-  Result := nil;
-  if Assigned(RowSet) then
-  begin
-    NativeResultSet := TZOleDBResultSet.Create(Statement, SQL, RowSet,
-      BuffSize, ChunkSize, InMemoryDataLobs);
-    if (Statement.GetResultSetConcurrency = rcUpdatable) or
-       (Statement.GetResultSetType <> rtForwardOnly) then
-    begin
-      if (Statement.GetConnection.GetServerProvider = spMSSQL) and (Statement.GetResultSetConcurrency = rcUpdatable) then
-        CachedResolver := TZOleDBMSSQLCachedResolver.Create(Statement, NativeResultSet.GetMetaData)
-      else
-        CachedResolver := TZGenericCachedResolver.Create(Statement, NativeResultSet.GetMetaData);
-      CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
-      CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
-      Result := CachedResultSet;
-    end
-    else
-      Result := NativeResultSet;
-  end;
-  PCurrRS := Pointer(Result);
-end;
-
 { TZOleDBCachedResultSet }
 
-constructor TZOleDBCachedResultSet.Create(ResultSet: TZOleDBResultSet;
+constructor TZOleDBCachedResultSet.Create(ResultSet: TZAbstractOleDBResultSet;
   const SQL: string; const Resolver: IZCachedResolver; ConSettings: PZConSettings);
 begin
   inherited Create(ResultSet, SQL, Resolver, ConSettings);
@@ -1955,10 +1709,9 @@ var
   FLength: PDBLENGTH;
   Len: NativeUInt;
 begin
-  if Assigned(FResultSet) then
-    Result := FResultSet.Next
-  else
-    Result := False;
+  if Assigned(FResultSet)
+  then Result := FResultSet.Next
+  else Result := False;
   if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then
     Exit;
 
@@ -2166,6 +1919,283 @@ begin
   {$ENDIF}
 end;
 
+{ TZOleDBParamResultSet }
+
+{**
+  Creates this object and assignes the main properties.
+  @param Statement an SQL statement object.
+  @param SQL an SQL query string.
+  @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
+}
+constructor TZOleDBParamResultSet.Create(const Statement: IZStatement;
+  const ParamBuffer: TByteDynArray; const ParamBindings: TDBBindingDynArray;
+  const ParamNameArray: TStringDynArray);
+var
+  i, j: Integer;
+  ColumnInfo: TZColumnInfo;
+begin
+  inherited Create(Statement, Statement.GetSQL, nil, Statement.GetConnection.GetConSettings);
+  FColBuffer := ParamBuffer;
+  J := 0;
+  for I := Low(ParamBindings) to High(ParamBindings) do
+    if ParamBindings[i].eParamIO <> DBPARAMIO_INPUT then
+      Inc(J);
+  FDBBindingArray := ParamBindings;
+  FRowSize := Length(ParamBuffer);
+  SetLength(FDBBindingArray,J);
+  SetLength(FDBBINDSTATUSArray, J);
+  FRowSize := Length(ParamBuffer);
+  J := 0;
+  for I := Low(ParamBindings) to High(ParamBindings) do
+    if ParamBindings[i].eParamIO <> DBPARAMIO_INPUT then begin
+      Move(ParamBindings[i], FDBBindingArray[j], SizeOf(TDBBinding)); //copy all offsets
+      ColumnInfo := TZColumnInfo.Create;
+      if I<=High(ParamNameArray) then
+        ColumnInfo.ColumnLabel := ParamNameArray[i];
+      ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(
+        ParamBindings[i].wType and not DBTYPE_BYREF,
+        ParamBindings[i].wType and DBCOLUMNFLAGS_ISLONG <> 0 ,
+        ParamBindings[i].bPrecision, ParamBindings[i].bScale,
+        ConSettings.CPType);
+      ColumnInfo.Scale := ParamBindings[i].bScale;
+      ColumnInfo.Precision := ParamBindings[i].bPrecision;
+      ColumnInfo.CharOctedLength := ParamBindings[i].cbMaxLen;
+      Inc(J);
+    end;
+end;
+
+{**
+  Moves the cursor down one row from its current position.
+  A <code>ResultSet</code> cursor is initially positioned
+  before the first row; the first call to the method
+  <code>next</code> makes the first row the current row; the
+  second call makes the second row the current row, and so on.
+
+  <P>If an input stream is open for the current row, a call
+  to the method <code>next</code> will
+  implicitly close it. A <code>ResultSet</code> object's
+  warning chain is cleared when a new row is read.
+
+  @return <code>true</code> if the new current row is valid;
+    <code>false</code> if there are no more rows
+}
+function TZOleDBParamResultSet.Next: Boolean;
+begin
+  { Checks for maximum row. }
+  Result := False;
+  if (RowNo = 1) then
+    Exit;
+  RowNo := 1;
+  Result := True;
+  FCurrentBufRowNo := 0;
+end;
+
+{ TZOleDBResultSet }
+
+{**
+  Creates this object and assignes the main properties.
+  @param Statement an SQL statement object.
+  @param SQL an SQL query string.
+  @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
+}
+constructor TZOleDBResultSet.Create(const Statement: IZStatement;
+  const SQL: string; const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer;
+  InMemoryDataLobs: Boolean; const EnhancedColInfo: Boolean);
+begin
+  {if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
+  then inherited Create(Statement, SQL, TZOleDBMSSQLResultSetMetadata.Create(
+    Statement.GetConnection.GetMetadata, SQL, Self), Statement.GetConnection.GetConSettings)
+  else}
+  inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
+  FRowSet := RowSet;
+  FZBufferSize := ZBufferSize;
+  FAccessor := 0;
+  FCurrentBufRowNo := 0;
+  FRowsObtained := 0;
+  FHROWS := nil;
+  FInMemoryDataLobs := InMemoryDataLobs;
+  FChunkSize := ChunkSize;
+  Open;
+end;
+
+{**
+  Moves the cursor down one row from its current position.
+  A <code>ResultSet</code> cursor is initially positioned
+  before the first row; the first call to the method
+  <code>next</code> makes the first row the current row; the
+  second call makes the second row the current row, and so on.
+
+  <P>If an input stream is open for the current row, a call
+  to the method <code>next</code> will
+  implicitly close it. A <code>ResultSet</code> object's
+  warning chain is cleared when a new row is read.
+
+  @return <code>true</code> if the new current row is valid;
+    <code>false</code> if there are no more rows
+}
+function TZOleDBResultSet.Next: Boolean;
+var
+  I: NativeInt;
+  stmt: IZOleDBPreparedStatement;
+label Success, NoSuccess;  //ugly but faster and no double code
+begin
+  { Checks for maximum row. }
+  Result := False;
+  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or
+    Closed or ((not Closed) and (FRowSet = nil) and (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet)))) then
+    goto NoSuccess;
+
+  if (RowNo = 0) then //fetch Iteration count of rows
+  begin
+    CreateAccessors;
+    CheckError(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
+    if FRowsObtained > 0 then begin
+      if DBROWCOUNT(FRowsObtained) < FRowCount then
+      begin //reserve required mem only
+        SetLength(FColBuffer, NativeInt(FRowsObtained) * FRowSize);
+        MaxRows := FRowsObtained;
+      end
+      else //reserve full allowed mem
+        SetLength(FColBuffer, (FRowCount * FRowSize));
+      SetLength(FRowStates, FRowsObtained);
+      {fetch data into the buffer}
+      for i := 0 to FRowsObtained -1 do
+        CheckError(fRowSet.GetData(FHROWS^[i], FAccessor, @FColBuffer[I*FRowSize]));
+      goto success;
+    end
+    else //we do NOT need a buffer here!
+      goto NoSuccess;
+  end
+  else
+    if FCurrentBufRowNo < DBROWCOUNT(FRowsObtained)-1 then
+    begin
+      Inc(FCurrentBufRowNo);
+      goto Success;
+    end
+    else
+    begin
+      {release old rows}
+      ReleaseFetchedRows;
+      CheckError(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
+      if DBROWCOUNT(FRowsObtained) < FCurrentBufRowNo then
+        MaxRows := RowNo+Integer(FRowsObtained);  //this makes Exit out in first check on next fetch
+      FCurrentBufRowNo := 0; //reset Buffer offsett
+      if FRowsObtained > 0 then
+      begin
+        {fetch data into the buffer}
+        for i := 0 to FRowsObtained -1 do
+          CheckError((fRowSet.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize])));
+        goto Success;
+      end else goto NoSuccess;
+    end;
+
+Success:
+    RowNo := RowNo + 1;
+    if LastRowNo < RowNo then
+      LastRowNo := RowNo;
+    Result := True;
+    Exit;
+NoSuccess:
+    if RowNo <= LastRowNo then
+      RowNo := LastRowNo + 1;
+end;
+
+{**
+  Opens this recordset and initializes the Column information.
+}
+procedure TZOleDBResultSet.Open;
+var
+  OleDBColumnsInfo: IColumnsInfo;
+  prgInfo, OriginalprgInfo: PDBColumnInfo;
+  ppStringsBuffer: PWideChar;
+  I: Integer;
+  FieldSize: Integer;
+  ColumnInfo: TZColumnInfo;
+begin
+  if not Assigned(FRowSet) or
+     Failed(FRowSet.QueryInterface(IID_IColumnsInfo, OleDBColumnsInfo)) then
+    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+
+  OleDBColumnsInfo.GetColumnInfo(fpcColumns{%H-}, prgInfo, ppStringsBuffer);
+  OriginalprgInfo := prgInfo; //save pointer for Malloc.Free
+  try
+    { Fills the column info }
+    ColumnsInfo.Clear;
+    if Assigned(prgInfo) then
+      if prgInfo.iOrdinal = 0 then // skip possible bookmark column
+      begin
+        Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));
+        Dec(fpcColumns);
+      end;
+    SetLength(FDBBINDSTATUSArray, fpcColumns);
+    FRowSize := PrepareOleColumnDBBindings(fpcColumns, FInMemoryDataLobs,
+      FDBBindingArray, prgInfo, FLobColsIndex);
+    FRowCount := Max(1, FZBufferSize div NativeInt(FRowSize));
+    if (MaxRows > 0) and (FRowCount > MaxRows) then
+      FRowCount := MaxRows; //fetch only wanted count of rows
+
+    for I := prgInfo.iOrdinal-1 to fpcColumns-1 do
+    begin
+      ColumnInfo := TZColumnInfo.Create;
+      if (prgInfo^.pwszName=nil) or (prgInfo^.pwszName^=#0) then
+        ColumnInfo.ColumnLabel := 'col_'+ZFastCode.IntToStr(i)
+      else
+        ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
+      ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
+        prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
+        prgInfo.bScale, prgInfo.bPrecision, ConSettings.CPType);
+
+      if prgInfo^.ulColumnSize > Cardinal(MaxInt) then
+        FieldSize := 0
+      else
+        FieldSize := prgInfo^.ulColumnSize;
+      if ColumnInfo.ColumnType = stGUID then
+        ColumnInfo.ColumnDisplaySize := 38
+      else
+        ColumnInfo.ColumnDisplaySize := FieldSize;
+      ColumnInfo.Precision := FieldSize;
+      ColumnInfo.Currency := ColumnInfo.ColumnType = stCurrency;
+      ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
+      ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stBigDecimal];
+      ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0);
+      ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0);
+      ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;
+      ColumnsInfo.Add(ColumnInfo);
+      Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));  //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
+    end;
+  finally
+    if Assigned(ppStringsBuffer) then (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(ppStringsBuffer);
+    if Assigned(OriginalprgInfo) then (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(OriginalprgInfo);
+  end;
+  inherited Open;
+end;
+
+procedure TZOleDBResultSet.ResetCursor;
+var
+  FAccessorRefCount: DBREFCOUNT;
+  i: Integer;
+begin
+  if not Closed then begin
+    try
+      ReleaseFetchedRows;
+      {first release Accessor rows}
+      for i := Length(FLobAccessors)-1 downto 0 do
+        CheckError((fRowSet As IAccessor).ReleaseAccessor(FLobAccessors[i], @FAccessorRefCount));
+      SetLength(FLobAccessors, 0);
+      if FAccessor > 0 then
+        CheckError((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
+    finally
+      FRowSet := nil;
+      FAccessor := 0;
+      RowNo := 0;
+      FCurrentBufRowNo := 0;
+      FRowsObtained := 0;
+    end;
+    FRowSet := nil;//handle 'Object is in use Exception'
+    inherited ResetCursor;
+  end;
+end;
+
 initialization
   {init some reusable records (: }
   LobReadObj.dwFlags := STGM_READ;
@@ -2183,5 +2213,6 @@ initialization
   LobDBBinding.wType := DBTYPE_IUNKNOWN;
   LobDBBinding.bPrecision := 0;
   LobDBBinding.bScale := 0;
+
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 end.

@@ -1393,7 +1393,7 @@ begin
           end else if MySQLType in [stBytes, stAsciiStream, stUnicodeStream, stBinaryStream] then
             Result.UpdateInt(TableColColumnBufLengthIndex, ColumnSize)
           else
-            Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize(MySQLType));
+            Result.UpdateInt(TableColColumnBufLengthIndex, ZSQLTypeToBuffSize[MySQLType]);
           //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
           //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
           Result.UpdateInt(TableColColumnOrdPosIndex, OrdPosition);
@@ -2881,7 +2881,7 @@ begin
        + '  SPECIFIC_SCHEMA as PROCEDURE_SCHEM, '
        + '  SPECIFIC_NAME as PROCEDURE_NAME, '
        + '  PARAMETER_NAME as COLUMN_NAME, '
-       + '  case when PARAMETER_MODE = ''IN'' then 1 when PARAMETER_MODE = ''INOUT'' then 2 when PARAMETER_MODE = ''OUT'' then 3 when PARAMETER_MODE is null then 4 else 0 end as COLUMN_TYPE, '
+       + '  case when PARAMETER_MODE = ''IN'' then '+IntToStr(Ord(pctIn))+' when PARAMETER_MODE = ''INOUT'' then '+IntToStr(Ord(pctInOut))+' when PARAMETER_MODE = ''OUT'' then '+IntToStr(Ord(pctOut))+' when PARAMETER_MODE is null then '+IntToStr(Ord(pctReturn))+' else '+IntToStr(Ord(pctUnknown))+' end as COLUMN_TYPE, '
        // don''t forget the DATA_TYPE column
        + '  DATA_TYPE as TYPE_NAME, '
        // don''t forget the PRECISION column -> mix of CHARACTER_MAXIMUM_LENGTH and NUMERIC_PRECISION

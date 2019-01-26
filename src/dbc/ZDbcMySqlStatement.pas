@@ -130,7 +130,7 @@ type
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
+      ParamType: TZProcedureColumnType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
       {%H-}Scale: LengthInt = 0); override;
 
     procedure Prepare; override;
@@ -567,14 +567,14 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedStatement.RegisterParameter(
-  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZParamType;
+  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
   const Name: String; PrecisionOrSize, Scale: LengthInt);
 var
   OldCount: Integer;
 begin
   OldCount := BindList.Count;
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
-  FIsFunction := FIsFunction or (ParamType = zptResult);
+  FIsFunction := FIsFunction or (ParamType = pctReturn);
   if not FEmulatedParams then begin
     if OldCount <> BindList.Count then
       ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
@@ -950,7 +950,7 @@ var I: Integer;
 begin
   Result := inherited AlignParamterIndex2ResultSetIndex(Value);
   for i := Value downto 0 do
-    if BindList.ParamTypes[i] in [zptUnknown, zptInput] then
+    if BindList.ParamTypes[i] in [pctUnknown, pctIn] then
       Dec(Result);
 end;
 
@@ -1719,7 +1719,7 @@ function TZMySQLCallableStatement.GetCallSQL: RawByteString;
     begin
       if I > 0 then
         Result := Result + ', ';
-      if FDBParamTypes[i] in [zptInput..zptResult] then
+      if FDBParamTypes[i] in [pctIn..pctReturn] then
         Result := Result + '@'+FParamNames[i];
     end;
   end;
@@ -1743,10 +1743,10 @@ function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
     Result := '';
     I := 0;
     while True do
-      if ( I = Length(FDBParamTypes)) or (FDBParamTypes[i] = zptUnknown) then
+      if ( I = Length(FDBParamTypes)) or (FDBParamTypes[i] = pctUnknown) then
         break
       else begin
-        if FDBParamTypes[i] in [zptOutput..zptResult] then begin
+        if FDBParamTypes[i] in [pctInOut..pctReturn] then begin
           if Result <> '' then
             Result := Result + ',';
           if FParamTypeNames[i] = '' then
@@ -1826,7 +1826,7 @@ begin
       break
     else
     begin
-      if FDBParamTypes[i] in [zptInput, zptInputOutput] then
+      if FDBParamTypes[i] in [pctIn, pctInOut] then
         if ExecQuery = '' then
           ExecQuery := 'SET @'+FParamNames[i]+' = '+PrepareAnsiSQLParam(I)
         else
@@ -2268,7 +2268,7 @@ begin
   ToBuff(StoredProcName, SQL);
   ToBuff('(', SQL);
   for i := 0 to BindList.Count-1 do
-    if BindList.ParamTypes[i] <> zptResult then
+    if BindList.ParamTypes[i] <> pctReturn then
       ToBuff('?,', SQL);
   FlushBuff(SQL);
   P := Pointer(SQL);

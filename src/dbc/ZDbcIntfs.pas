@@ -116,6 +116,9 @@ type
   TZProcedureColumnType = (pctUnknown, pctIn, pctInOut, pctOut, pctReturn,
     pctResultSet);
 
+  {** Defines a dynamic array of column types for the procedures. }
+  TZProcedureColumnTypeDynArray = array of TZProcedureColumnType;
+
   {** Defines a best row identifier. }
   TZBestRowIdentifier = (brUnknown, brNotPseudo, brPseudo);
 
@@ -638,16 +641,6 @@ type
     procedure ClearParameters;
   end;
 
-  { TZBCD }
-  TZBcd  = packed record
-    Precision: Byte;                        { 1..64 }
-    SignSpecialPlaces: Byte;                { Sign:1, Special:1, Places:6 }
-    Fraction: packed array [0..31] of Byte; { BCD Nibbles, 00..99 per Byte, high Nibble 1st }
-  end;
-
-  TZParamType = (zptUnknown, zptInput, zptOutput, zptInputOutput, zptResult);
-  TZParamTypeDynArray = array of TZParamType;
-
   {** Callable SQL statement interface. }
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
@@ -665,7 +658,7 @@ type
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); //deprecated;
 
 (*    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       {%H-}Scale: LengthInt = 0);
 *)
     function IsNull(ParameterIndex: Integer): Boolean;

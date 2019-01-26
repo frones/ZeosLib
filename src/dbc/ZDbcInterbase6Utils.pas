@@ -1966,7 +1966,8 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const XSQLDAMaxSize: LongWord): RawByteString;
 var
   IndexName, ArrayName: RawByteString;
-  I, j, BindCount, ParamIndex, ParamNameLen, SingleStmtLength, LastStmLen,
+  ParamIndex, J: Cardinal;
+  I, BindCount, ParamNameLen, SingleStmtLength, LastStmLen,
   HeaderLen, FullHeaderLen, StmtLength:  Integer;
   CodePageInfo: PZCodePage;
   PStmts, PResult, P: PAnsiChar;
@@ -2079,7 +2080,9 @@ begin
     HeaderLen := 0;
     for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
       if IsParamIndexArray[i] then begin //calc Parameters size
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
         ParamNameLen := {P}1+GetOrdinalDigits(ParamIndex)+1{_}+GetOrdinalDigits(j);
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
         {inc header}
         Inc(HeaderLen, ParamNameLen+ {%H-}PLengthInt(NativeUInt(TypeTokens[ParamIndex]) - StringLenOffSet)^+Ord(not ((ParamIndex = 0) and (J=0))){,});
         {inc stmt}

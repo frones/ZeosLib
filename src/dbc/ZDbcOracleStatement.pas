@@ -102,7 +102,7 @@ type
 
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZParamType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       Scale: LengthInt = 0); override;
 
     procedure Prepare; override;
@@ -175,7 +175,7 @@ var I: Integer;
 begin
   Result := inherited AlignParamterIndex2ResultSetIndex(Value);
   for i := Value downto 0 do
-    if BindList.ParamTypes[i] in [zptUnknown, zptInput] then
+    if BindList.ParamTypes[i] in [pctUnknown, pctIn] then
       Dec(Result);
 end;
 
@@ -849,7 +849,7 @@ begin
 
   OldSize := OCIBind.value_sz;
   {check if the parameter type was registered before -> they should be valid only }
-  if (BindList[Index].ParamType <> zptUnknown) and (SQLType <> BindList[Index].SQLType) then
+  if (BindList[Index].ParamType <> pctUnknown) and (SQLType <> BindList[Index].SQLType) then
     raise EZSQLException.Create(SUnKnownParamDataType);
   if (SQLType in [stLong, stULong]) and not FCanBindInt64 then begin
     OCIBind.dty := SQLT_VNU;
@@ -954,7 +954,7 @@ begin
 end;
 
 procedure TZAbstractOraclePreparedStatement_A.RegisterParameter(
-  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZParamType;
+  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
   const Name: String; PrecisionOrSize, Scale: LengthInt);
 var
   Bind: PZOCIParamBind;
@@ -970,7 +970,7 @@ begin
   Bind.Precision := PrecisionOrSize;
   Bind.Scale := Scale;
   Bind.ParamName := Name;
-  if ParamType in [zptOutput..zptResult] then begin
+  if ParamType in [pctOut..pctReturn] then begin
     if (Scale > 0) and (SQLType in [stBoolean..stBigDecimal]) then
       SQLType := stBigDecimal;
     if (BindList[ParameterIndex].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then begin
@@ -1133,8 +1133,8 @@ begin
   TZOraclePreparedStatement_A(Result)._AddRef;
 end;
 
-const OCIParamTypeMatrix: array[boolean] of array[OCI_TYPEPARAM_IN..OCI_TYPEPARAM_INOUT] of TZParamType =
-  ((zptInput, zptOutput, zptInputOutput),(zptResult,zptResult,zptResult));
+const OCIParamTypeMatrix: array[boolean] of array[OCI_TYPEPARAM_IN..OCI_TYPEPARAM_INOUT] of TZProcedureColumnType =
+  ((pctIn, pctOut, pctInOut),(pctReturn,pctReturn,pctReturn));
 procedure TZOracleCallableStatement_A.PrepareInParameters;
 var Idx: Integer;
   procedure RegisterFromDescriptor(ParentDescriptor: TZOraProcDescriptor_A;
@@ -1536,6 +1536,7 @@ procedure TZOraclePreparedStatement_A.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
 var I: Cardinal;
   Bind: PZOCIParamBind;
+  P: PZArray;
 begin
   inherited SetNullArray(ParameterIndex, SQLType, Value, VariantType);
   {$IFNDEF GENERIC_INDEX}
@@ -1543,8 +1544,9 @@ begin
   {$ENDIF}
   {$R-}
   Bind := @FOraVariables[ParameterIndex];
-  for i := 0 to Bind.curelen -1 do
-    Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(BindList[ParameterIndex].Value, i));
+  P := BindList[ParameterIndex].Value;
+  for i := 0 to {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFNDEF FPC}-1{$ENDIF} do
+    Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
