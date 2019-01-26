@@ -1746,7 +1746,7 @@ function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
       if ( I = Length(FDBParamTypes)) or (FDBParamTypes[i] = pctUnknown) then
         break
       else begin
-        if FDBParamTypes[i] in [pctOut..pctReturn] then begin
+        if FDBParamTypes[i] in [pctInOut..pctReturn] then begin
           if Result <> '' then
             Result := Result + ',';
           if FParamTypeNames[i] = '' then

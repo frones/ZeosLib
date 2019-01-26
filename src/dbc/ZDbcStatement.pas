@@ -4389,7 +4389,7 @@ function TZAbstractPreparedStatement2.AlignParamterIndex2ResultSetIndex(
 begin
   Result := Value;
   CheckParameterIndex(Value);
-  if (FOpenResultSet = nil) or not (BindList.ParamTypes[Value] in [pctOut..pctReturn])
+  if (FOpenResultSet = nil) or not (BindList.ParamTypes[Value] in [pctInOut..pctReturn])
   then raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   if IZResultSet(FOpenResultSet).IsBeforeFirst then
     IZResultSet(FOpenResultSet).Next;

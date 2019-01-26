@@ -1770,7 +1770,7 @@ begin
   ToBuff('(', SQL);
   J := 1;
   for I := 0 to BindList.Capacity -1 do
-    if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then begin
+    if Ord(BindList.ParamTypes[I]) < Ord(pctOut) then begin
       ToBuff('$', SQL);
       ToBuff(ZFastCode.IntToStr(J), SQL);
       ToBuff(',', SQL);

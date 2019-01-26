@@ -154,7 +154,7 @@ begin
 
   for I := 0 to Params.Count - 1 do
   begin
-    CallableStatement.RegisterParamType( I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ord(Params[I].ParamType));
+    CallableStatement.RegisterParamType( I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ord(DatasetTypeToProcColDbc[Params[I].ParamType]));
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
       CallableStatement.RegisterOutParameter(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
@@ -322,15 +322,11 @@ begin
   Result := Trim(SQL.Text);
 end;
 
-const ProcColDbcToDatasetType: array[TZProcedureColumnType] of TParamType =
-  (ptUnknown{pctUnknown}, ptInput{pctIn}, ptInputOutput{pctInOut},
-   ptOutPut{pctOut}, ptResult{pctReturn}, ptResult{pctResultSet});
-
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
   OldParams: TParams;
   Catalog, Schema, ObjectName: string;
-  ColumnType: Integer;
+  ColumnType: TZProcedureColumnType;
 begin
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin
@@ -353,11 +349,11 @@ begin
           Params.Clear;
           while FMetaResultSet.Next do
           begin
-            ColumnType := FMetaResultSet.GetInt(ProcColColumnTypeIndex);
-            if ColumnType >= 0 then //-1 is result column
+            ColumnType := TZProcedureColumnType(FMetaResultSet.GetInt(ProcColColumnTypeIndex));
+            //if ColumnType >= 0 then //-1 is result column
               Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetInt(ProcColDataTypeIndex))),
                 FMetaResultSet.GetString(ProcColColumnNameIndex),
-                ProcColDbcToDatasetType[TZProcedureColumnType(ColumnType)]);
+                ProcColDbcToDatasetType[ColumnType]);
           end;
           Params.AssignValues(OldParams);
         finally

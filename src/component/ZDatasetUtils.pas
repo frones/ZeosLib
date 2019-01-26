@@ -287,6 +287,13 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
 procedure SetStatementParam(Index: Integer;
   const Statement: IZPreparedStatement; Param: TParam);
 
+const ProcColDbcToDatasetType: array[TZProcedureColumnType] of TParamType =
+  (ptUnknown{pctUnknown}, ptInput{pctIn}, ptInputOutput{pctInOut},
+   ptOutPut{pctOut}, ptResult{pctReturn}, ptResult{pctResultSet});
+const DatasetTypeToProcColDbc: array[TParamType] of TZProcedureColumnType =
+  (pctUnknown{ptUnknown}, pctIn{ptInput}, pctOut{ptOutPut},
+    pctInOut{ptInputOutput}, pctReturn{ptResult});
+
 {** Common variables. }
 var
   CommonTokenizer: IZTokenizer;
