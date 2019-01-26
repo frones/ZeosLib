@@ -2875,7 +2875,7 @@ begin
   SQL := '';
   if Mode = zcekParams
   then ToBuff('{? = CALL ', SQL)
-  else ToBuff('? = Exec ', SQL);
+  else ToBuff('{? = Exec ', SQL);
   ToBuff(StoredProcName, SQL);
   ToBuff('(', SQL);
   for i := 1 to BindList.Count-1 do
@@ -2914,7 +2914,6 @@ end;
 function TZOleDBCallableStatementMSSQL.GetUnicodeString(
   ParameterIndex: Integer): ZWideString;
 begin
-
 end;
 
 function TZOleDBCallableStatementMSSQL.GetUTF8String(

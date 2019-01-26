@@ -1936,19 +1936,19 @@ var
 begin
   inherited Create(Statement, Statement.GetSQL, nil, Statement.GetConnection.GetConSettings);
   FColBuffer := ParamBuffer;
-  {J := 0;
+  J := 0;
   for I := Low(ParamBindings) to High(ParamBindings) do
     if ParamBindings[i].eParamIO <> DBPARAMIO_INPUT then
-      Inc(J);}
+      Inc(J);
   FDBBindingArray := ParamBindings;
   FRowSize := Length(ParamBuffer);
-  (*SetLength(FDBBindingArray,J);
+  SetLength(FDBBindingArray,J);
   SetLength(FDBBINDSTATUSArray, J);
   FRowSize := Length(ParamBuffer);
-  J := 0;*)
+  J := 0;
   for I := Low(ParamBindings) to High(ParamBindings) do
-    {if ParamBindings[i].eParamIO <> DBPARAMIO_INPUT then} begin
-      //Move(ParamBindings[i], FDBBindingArray[j], SizeOf(TDBBinding)); //copy all offsets
+    if ParamBindings[i].eParamIO <> DBPARAMIO_INPUT then begin
+      Move(ParamBindings[i], FDBBindingArray[j], SizeOf(TDBBinding)); //copy all offsets
       ColumnInfo := TZColumnInfo.Create;
       if I<=High(ParamNameArray) then
         ColumnInfo.ColumnLabel := ParamNameArray[i];
@@ -1960,8 +1960,8 @@ begin
       ColumnInfo.Scale := ParamBindings[i].bScale;
       ColumnInfo.Precision := ParamBindings[i].bPrecision;
       ColumnInfo.CharOctedLength := ParamBindings[i].cbMaxLen;
-      //Inc(J);
-    end;//*)
+      Inc(J);
+    end;
 end;
 
 {**

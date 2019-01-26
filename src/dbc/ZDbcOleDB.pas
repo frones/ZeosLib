@@ -110,8 +110,8 @@ type
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
-    {function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;}
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
+      IZCallableStatement; override;
 
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -568,6 +568,14 @@ end;
 {**
   Returs the Ole-ICommandText interface of current connection
 }
+function TZOleDBConnection.CreateCallableStatement(const SQL: string;
+  Info: TStrings): IZCallableStatement;
+begin
+  (*if (GetServerProvider = spMSSQL)
+  then Result := TZOleDBCallableStatementMSSQL.Create(Self, SQL, Info)
+  else*) Result := inherited CreateCallableStatement(SQL, Info);
+end;
+
 function TZOleDBConnection.CreateCommand: ICommandText;
 begin
   Result := nil;
