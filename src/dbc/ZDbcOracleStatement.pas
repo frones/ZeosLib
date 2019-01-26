@@ -1536,6 +1536,7 @@ procedure TZOraclePreparedStatement_A.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
 var I: Cardinal;
   Bind: PZOCIParamBind;
+  P: PZArray;
 begin
   inherited SetNullArray(ParameterIndex, SQLType, Value, VariantType);
   {$IFNDEF GENERIC_INDEX}
@@ -1543,8 +1544,9 @@ begin
   {$ENDIF}
   {$R-}
   Bind := @FOraVariables[ParameterIndex];
-  for i := 0 to Bind.curelen -1 do
-    Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(BindList[ParameterIndex].Value, i));
+  P := BindList[ParameterIndex].Value;
+  for i := 0 to {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFNDEF FPC}-1{$ENDIF} do
+    Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
