@@ -1078,7 +1078,7 @@ begin
 
   for I := 0 to High(InParamTypes) do
   begin
-    if (Self.FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
+    if (Self.FDBParamTypes[i] in [pctOut, pctReturn]) then
       Continue;
     ParamTypes[ParamCount] := InParamTypes[I];
     ParamValues[ParamCount] := InParamValues[I];

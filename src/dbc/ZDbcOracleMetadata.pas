@@ -1314,8 +1314,8 @@ var
     ProcName := Source.GetString(ColumnIndexes[9]);
 
     Result.MoveToInsertRow;
-    Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
-    Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
+    //Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
+    //Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
     Result.UpdateString(ProcColProcedureNameIndex, Source.GetString(ColumnIndexes[1]));
     ColName := Source.GetString(ColumnIndexes[2]);
 

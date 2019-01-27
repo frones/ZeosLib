@@ -512,10 +512,9 @@ begin
     SetLength(FOracleParams, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
   if ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} > FOracleParamsCount then
     FOracleParamsCount := ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF};
-  FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pType := ParamType;
+  FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pType := TZProcedureColumnType(ParamType);
   FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pParamIndex := ParameterIndex;
-  if ParamType in [2,3,4] then //ptInOut, ptOut, ptResult
-  begin
+  if ParamType >= Ord(pctInOut) then  begin
     FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pOutIndex := FOutParamCount;
     Inc(FOutParamCount);
   end;
@@ -646,7 +645,7 @@ begin
   if FParams^.AllocNum > 0 then
     {$R-}
     for I := 0 to FParams^.AllocNum - 1 do
-      if (FOracleParams[i].pType in [1,3]) then
+      if (FOracleParams[i].pType in [pctIn, pctInOut]) then
         LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
           InParamValues[FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}],
             ChunkSize, Max(1, Min(FIteration, ArrayCount)))
@@ -675,22 +674,16 @@ begin
   NewProcIndex := -1;
   StartProcIndex := 0;
   if IsFunction then
-    for i := 0 to high(FOracleParams) do
-    begin
-      if not ( FOracleParams[i].pProcIndex = NewProcIndex ) then
-      begin
+    for i := 0 to high(FOracleParams) do begin
+      if not ( FOracleParams[i].pProcIndex = NewProcIndex ) then begin
         NewProcIndex := FOracleParams[i].pProcIndex;
         StartProcIndex := I;
       end;
-      if ( FOracleParams[i].pType = 4 ) then //Result value
-      begin
-        if not (i = StartProcIndex) then
-        begin
-          TempOraVar := FOracleParams[I];
-          for J := I downto StartProcIndex+1 do
-            FOracleParams[j] := FOracleParams[j-1];
-          FOracleParams[StartProcIndex] := TempOraVar;
-        end;
+      if ( FOracleParams[i].pType = pctReturn) and not (i = StartProcIndex) then begin
+        TempOraVar := FOracleParams[I];
+        for J := I downto StartProcIndex+1 do
+          FOracleParams[j] := FOracleParams[j-1];
+        FOracleParams[StartProcIndex] := TempOraVar;
       end;
     end;
 end;
@@ -760,7 +753,7 @@ var
 begin
   {$R-}
   for I := 0 to FOracleParamsCount -1 do
-    if FOracleParams[i].pType in [2,3,4] then
+    if Ord(FOracleParams[i].pType) >= Ord(pctInOut) then
       SetOutParam(@FParams^.Variables[I], FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -779,7 +772,7 @@ var
     Result := '';
     for I := 0 to Count - 1 do
     begin
-      if ( FDBParamTypes[I] = 4 ) then //ptResult
+      if ( FDBParamTypes[I] = pctReturn ) then
       begin
         sFunc := ' :'+FOracleParams[0].pName+' := ';
         continue;
@@ -811,16 +804,12 @@ begin
         if IncludeCount = FOracleParams[i].pProcIndex then
         begin
           sName := RemoveChar('.', FOracleParams[I].pName);
-          if ( FOracleParams[I].pType = 4 ) then //ptResult
+          if ( FOracleParams[I].pType = pctReturn ) then
             sFunc := ' :'+sName+' := '
-          else
-            if InParams <> '' then
-              InParams := InParams +', :'+sName
-            else
-              InParams := InParams +':'+sName
-        end
-        else
-        begin
+          else if InParams <> ''
+            then InParams := InParams +', :'+sName
+            else InParams := InParams +':'+sName
+        end else begin
           LastIndex := I;
           break;
         end;

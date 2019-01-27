@@ -596,20 +596,7 @@ begin
   inherited RegisterParamType(ParameterIndex, ParamType);
   if Length(FDirectionTypes) < ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} then
     SetLength(FDirectionTypes, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
-
-  case Self.FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
-    1: //ptInput
-      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamInput;
-    2: //ptOut
-      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamOutput;
-    3: //ptInputOutput
-      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamInputOutput;
-    4: //ptResult
-      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamReturnValue;
-    else
-      //ptUnknown
-      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamUnknown;
-  end;
+  FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ZProcedureColumnType2AdoType[TZProcedureColumnType(ParamType)];
 end;
 
 function TZAdoCallableStatement.GetMoreResults: Boolean;
@@ -706,10 +693,10 @@ begin
       for i := 0 to high(FDBParamTypes) do begin
         FDirectionTypes[i] := FAdoCommand.Parameters[i].Direction;
         case FDirectionTypes[i] of
-          adParamInput: FDBParamTypes[i] := 1;
-          adParamOutput: FDBParamTypes[i] := 2;
-          adParamInputOutput: FDBParamTypes[i] := 3;
-          adParamReturnValue: FDBParamTypes[i] := 4;
+          adParamInput: FDBParamTypes[i] := pctIn;
+          adParamOutput: FDBParamTypes[i] := pctOut;
+          adParamInputOutput: FDBParamTypes[i] := pctInOut;
+          adParamReturnValue: FDBParamTypes[i] := pctReturn;
         end;
       end;
     end;
@@ -725,7 +712,7 @@ begin
     Exit
   else
     for i := 0 to InParamCount-1 do
-      if FDBParamTypes[i] in [1,3] then //ptInput, ptInputOutput
+      if FDBParamTypes[i] in [pctIn,pctInOut] then
         if ClientVarManager.IsNull(InParamValues[i]) then
           if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
             StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then

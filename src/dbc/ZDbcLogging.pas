@@ -121,6 +121,12 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 
 var DefaultLoggingFormatter: TZLoggingFormatter;
 
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+procedure ToBuff(const Value: String; var Buf: TRawBuff; var Result: RawByteString); overload;
+begin
+  ZDbcUtils.ToBuff(UnicodeStringToAscii7(Value), Buf, Result);
+end;
+{$ENDIF}
 { TZLoggingFormatter }
 
 function TZLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): RawByteString;
@@ -155,14 +161,6 @@ begin
   end;
   FlushBuff(Buf, Result);
 end;
-
-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-procedure TZLoggingFormatter.ToBuff(const Value: String;
-  var Result: RawByteString);
-begin
-  ToBuff(UnicodeStringToAscii7(Value), Result);
-end;
-{$ENDIF}
 
 { TZLoggingEvent }
 

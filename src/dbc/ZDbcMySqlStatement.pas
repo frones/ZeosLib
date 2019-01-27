@@ -1108,7 +1108,7 @@ function TZMySQLCallableStatement.GetCallSQL: RawByteString;
     begin
       if I > 0 then
         Result := Result + ', ';
-      if FDBParamTypes[i] in [1, 2, 3, 4] then
+      if FDBParamTypes[i] in [pctIn..pctReturn] then
         Result := Result + '@'+FParamNames[i];
     end;
   end;
@@ -1132,10 +1132,10 @@ function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
     Result := '';
     I := 0;
     while True do
-      if ( I = Length(FDBParamTypes)) or (FDBParamTypes[i] = 0) then
+      if ( I = Length(FDBParamTypes)) or (FDBParamTypes[i] = pctUnknown) then
         break
       else begin
-        if FDBParamTypes[i] in [2, 3, 4] then begin
+        if FDBParamTypes[i] in [pctInOut..pctReturn] then begin
           if Result <> '' then
             Result := Result + ',';
           if FParamTypeNames[i] = '' then
@@ -1215,7 +1215,7 @@ begin
       break
     else
     begin
-      if FDBParamTypes[i] in [1, 3] then //ptInputOutput
+      if FDBParamTypes[i] in [pctIn, pctInOut] then
         if ExecQuery = '' then
           ExecQuery := 'SET @'+FParamNames[i]+' = '+PrepareAnsiSQLParam(I)
         else

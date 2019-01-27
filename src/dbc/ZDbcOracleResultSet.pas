@@ -1632,7 +1632,7 @@ var
 begin
   J := 0;
   for i := 0 to High(OracleParams) do
-    if OracleParams[I].pType in [2,3,4] then
+    if Ord(OracleParams[I].pType) >= Ord(pctInOut) then
       Inc(J);
 
   Result := nil;
@@ -1642,8 +1642,7 @@ begin
   for I := 0 to High(OracleParams) do
   begin
     J := OracleParams[I].pOutIndex;
-    if OracleParams[I].pType in [2,3,4] then //ptInOut, ptOut, ptResult
-    begin
+    if Ord(OracleParams[I].pType) >= Ord(pctInOut) then begin
       {$R-}
       Result.Variables[J].ColType := Params.Variables[I].ColType;
       Result.Variables[J].TypeCode := Params.Variables[I].TypeCode;

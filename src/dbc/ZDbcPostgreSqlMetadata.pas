@@ -1646,20 +1646,13 @@ begin
             ColumnName := '$' + ZFastCode.IntToStr(I + 1);
 
           // column type
-          if IsInParam then
-          begin
-            if IsOutParam then
-              ColumnType := Ord(pctInOut)
-            else
-              ColumnType := Ord(pctIn);
-          end
-          else
-          begin
-           if IsOutParam then
-             ColumnType := Ord(pctOut)
-           else
-             ColumnType := Ord(pctUnknown);
-          end;
+          if IsInParam then begin
+            if IsOutParam
+            then ColumnType := Ord(pctInOut)
+            else ColumnType := Ord(pctIn);
+          end else if IsOutParam
+           then ColumnType := Ord(pctOut)
+           else ColumnType := Ord(pctUnknown);
 
           InsertProcedureColumnRow(Result, GetStringByName('nspname'),
             GetStringByName('proname'), ColumnName, ColumnType,

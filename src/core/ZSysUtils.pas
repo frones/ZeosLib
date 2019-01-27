@@ -2480,6 +2480,7 @@ begin
   Result := RawSQLDateToDateTime(Pointer(UnicodeStringToASCII7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
 end;
+const MSecMulTable: array[1..3] of Word = (100,10,1);
 
 {**
   Converts Ansi SQL Time (TimeFormat)
@@ -2507,8 +2508,7 @@ var
       Failed := ( ZFormatSettings.TimeFormatLen = 0 ) and not (ValLen <= Byte(ZFormatSettings.TimeFormatLen-4));
       if not Failed then
       begin
-        for i := 0 to ZFormatSettings.TimeFormatLen-1 do
-        begin
+        for i := 0 to ZFormatSettings.TimeFormatLen-1 do begin
           case TimeFormat^ of
             'H', 'h':
               begin
@@ -2528,6 +2528,10 @@ var
             'Z', 'z':
               begin
                 MSec := MSec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
+                if not Failed and ((TimeFormat+1)^ = TimeFormat^) and not (Ord((Value+1)^) in [Ord('0')..Ord('9')]) then begin
+                  Inc(TimeFormat,Ord((TimeFormat+2)^ = TimeFormat^));
+                  Msec := Msec * MSecMulTable[GetOrdinalDigits(Msec)];
+                end;
                 if Failed then Exit;
               end;
           end;
@@ -2535,11 +2539,7 @@ var
           Inc(Value);
           if i+1 = ValLen then Break;
         end;
-        try
-          Result := EncodeTime(Hour, Minute, Sec, MSec);
-        except
-          Failed := True;
-        end;
+        Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
       end;
     end;
   end;
@@ -2763,6 +2763,9 @@ var
                     Msec := Msec div 10; //align result again
                     Break;
                   end;
+                end else if ((TimeStampFormat+1)^ = TimeStampFormat^) and not (Ord((Value+1)^) in [Ord('0')..Ord('9')]) then begin
+                  Inc(TimeStampFormat,Ord((TimeStampFormat+2)^ = TimeStampFormat^));
+                  Msec := Msec * MSecMulTable[GetOrdinalDigits(Msec)];
                 end;
               end;
             '.':

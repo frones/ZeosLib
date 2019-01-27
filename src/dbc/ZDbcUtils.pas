@@ -175,7 +175,7 @@ function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTE
 
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
-  const PAramTypes: array of ShortInt);
+  const PAramTypes: TZProcedureColumnTypeDynArray);
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -758,7 +758,7 @@ end;
 
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
-  const ParamTypes: array of ShortInt);
+  const ParamTypes: TZProcedureColumnTypeDynArray);
 var
   ParamIndex, I: Integer;
   HasRows: Boolean;
@@ -773,7 +773,7 @@ begin
   Meta := ResultSet.GetMetadata;
   for ParamIndex := 0 to OutParamCount - 1 do
   begin
-    if not (ParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
+    if not (ParamTypes[ParamIndex] in [pctOut, pctInOut, pctReturn]) then
       Continue;
     if I > Meta.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
       Break;
@@ -1047,10 +1047,10 @@ begin
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
     SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    P := Pointer(Result);
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     PByte(P+LRes)^ := Ord(#0);
     {$ENDIF}
-    P := Pointer(Result);
     Inc(P, LRes-Buf.Pos-L);
     if Buf.Pos > 0 then begin
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
@@ -1076,10 +1076,10 @@ begin
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
     SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+    P := Pointer(Result);
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     PByte(P+LRes)^ := Ord(#0);
     {$ENDIF}
-    P := Pointer(Result);
     Inc(P, LRes-Buf.Pos-L);
     if Buf.Pos > 0 then begin
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);

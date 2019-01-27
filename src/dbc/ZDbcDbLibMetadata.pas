@@ -1855,7 +1855,6 @@ begin
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
       Result.UpdateString(TableColColumnIsNullableIndex, tmp);
-      Result.UpdateSmall(TableColColumnCharOctetLengthIndex, GetSmallByName('CHAR_OCTET_LENGTH'));
       if (GetConnection as IZDBLibConnection).GetProvider = dpMsSQL then
         Result.UpdateBoolean(TableColColumnSearchableIndex,
           not (GetSmallByName('SS_DATA_TYPE') in [34, 35]));

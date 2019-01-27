@@ -106,6 +106,9 @@ type
   TZProcedureColumnType = (pctUnknown, pctIn, pctInOut, pctOut, pctReturn,
     pctResultSet);
 
+  {** Defines a dynamic array of column types for the procedures. }
+  TZProcedureColumnTypeDynArray = array of TZProcedureColumnType;
+
   {** Defines a best row identifier. }
   TZBestRowIdentifier = (brUnknown, brNotPseudo, brPseudo);
 

@@ -135,7 +135,7 @@ type
     pName: string;
     pSQLType: Integer;
     pTypeName: String;
-    pType: ShortInt;
+    pType: TZProcedureColumnType;
     pProcIndex: Integer;
     pParamIndex: Integer; //Current ZeosParameter index
     pOutIndex: Integer;

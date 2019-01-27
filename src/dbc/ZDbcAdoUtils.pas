@@ -63,6 +63,9 @@ interface
 uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant;
 
+const ZProcedureColumnType2AdoType: array[TZProcedureColumnType] of  TOleEnum =
+  (adParamUnknown{pctUnknown}, adParamInput{pctIn}, adParamInputOutput{pctInOut},
+    adParamOutput{pctOut}, adParamReturnValue{pctReturn}, adParamReturnValue{pctResultSet});
 type
   PDirectionTypes = ^TDirectionTypes;
   TDirectionTypes = array of TOleEnum;

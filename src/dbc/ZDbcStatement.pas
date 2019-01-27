@@ -340,7 +340,7 @@ type
   protected
     FResultSets: IZCollection;
     FActiveResultset: Integer;
-    FDBParamTypes: array of ShortInt;
+    FDBParamTypes: TZProcedureColumnTypeDynArray;
     procedure ClearResultSets; virtual;
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
@@ -2613,7 +2613,7 @@ begin
   begin
     if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
       Continue;
-    if (FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
+    if Ord(FDBParamTypes[i]) > Ord(pctInOut) then //[ptResult, ptOutput]
       continue; //EgonHugeist: Ignore known OutParams! else StatmentInparamCount <> expect ProcedureParamCount
     ParamTypes[ParamCount] := InParamTypes[I];
     ParamValues[ParamCount] := InParamValues[I];
@@ -2809,9 +2809,9 @@ begin
   if ({$IFDEF GENERIC_INDEX}High{$ELSE}Length{$ENDIF}(FDBParamTypes) < ParameterIndex) then
     SetLength(FDBParamTypes, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
-  FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ParamType;
-  if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
-  if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput
+  FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZProcedureColumnType(ParamType);
+  if not FIsFunction then FIsFunction := ParamType = Ord(pctReturn);
+  if not FHasOutParameter then FHasOutParameter := TZProcedureColumnType(ParamType) in [pctOut,pctInOut]; //ptOutput, ptInputOutput
 end;
 
 {**
