@@ -1106,7 +1106,7 @@ begin
     and (Metadata.GetColumnName(ColumnIndex) <> '')
     and Metadata.IsSearchable(ColumnIndex)
     and not (Metadata.GetColumnType(ColumnIndex)
-    in [stUnknown, stBinaryStream, stUnicodeStream]);
+    in [stUnknown, stBinaryStream]);
 end;
 
 initialization

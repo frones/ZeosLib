@@ -133,6 +133,8 @@ type
     FHandle: Psqlite;
     FPlainDriver: IZSQLitePlainDriver;
     FAutoColumnIndex: Integer;
+  protected
+    function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
   public
     constructor Create(const PlainDriver: IZSQLitePlainDriver; Handle: Psqlite;
       const Statement: IZStatement; const Metadata: IZResultSetMetadata);
@@ -1005,6 +1007,20 @@ ResetHndl:
 end;
 
 { TZSQLiteCachedResolver }
+
+{**
+  Checks is the specified column can be used in where clause.
+  @param ColumnIndex an index of the column.
+  @returns <code>true</code> if column can be included into where clause.
+}
+function TZSQLiteCachedResolver.CheckKeyColumn(ColumnIndex: Integer): Boolean;
+begin
+  Result := (Metadata.GetTableName(ColumnIndex) <> '')
+    and (Metadata.GetColumnName(ColumnIndex) <> '')
+    and Metadata.IsSearchable(ColumnIndex)
+    and not (Metadata.GetColumnType(ColumnIndex)
+    in [stUnknown, stBinaryStream]);
+end;
 
 {**
   Creates a SQLite specific cached resolver object.
