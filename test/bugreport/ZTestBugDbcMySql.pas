@@ -321,7 +321,7 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   try
-    DriverManager.GetConnection('zdbc:mysql://xxx:12345/db');
+    DriverManager.GetConnection('zdbc:mysql://xxx:12345/db').Open;
     Fail('Incorrect processing of wrong connection URL.');
   except on E: Exception do
     CheckNotTestFailure(E);

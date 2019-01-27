@@ -445,21 +445,18 @@ end;
   Invalid variant type conversion when using TDBLookupComboBox
 }
 procedure TZTestCompPostgreSQLBugReport.Test766053;
+var CP: Word;
 {$IFNDEF LINUX}
-var
   Query1, Query2: TZQuery;
   DSQuery1, DSQuery2: TDataSource;
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
   Connection.Connect;
-  if SkipForReason(srClosedBug) or
-     //eh the russion abrakadabra can no be mapped to other charsets then:
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_UTF8) or
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_WIN1251) or
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zcp_DOS855) or
-    (connection.DbcConnection.GetConSettings.ClientCodePage.CP <> zCP_KOI8R)
-      {add some more if you run into same issue !!} then begin
+  CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  //eh the russion abrakadabra can no be mapped to other charsets then:
+  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    {add some more if you run into same issue !!} then begin
     BlankCheck;
     Exit;
   end;
