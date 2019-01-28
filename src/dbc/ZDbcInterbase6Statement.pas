@@ -678,8 +678,8 @@ begin
       GetMem(XSQLVAR.sqldata, FOrgParamInfos[Index].AllocatedMem);
     end;
     PISC_VARYING(XSQLVAR.sqldata).strlen := Len;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(XSQLVAR.sqldata).str, Len);
-    XSQLVAR.sqllen := Len+SizeOf(Short);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(XSQLVAR.sqldata).str[0], Len);
+    //XSQLVAR.sqllen := Len+SizeOf(Short);
   end;
 end;
 
@@ -1044,11 +1044,11 @@ begin
     SQL_D_FLOAT,
     SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
     SQL_LONG      : if XSQLVAR.sqlscale = -4 then  //scale fits!
-                      PISC_INT64(XSQLVAR.sqldata)^ := I64
+                      PISC_LONG(XSQLVAR.sqldata)^ := I64
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
-                      PISC_INT64(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale] //dec scale digits
+                      PISC_LONG(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale] //dec scale digits
                     else
-                      PISC_INT64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[-4+XSQLVAR.sqlscale]; //inc scale digits
+                      PISC_LONG(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
     SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
     SQL_SHORT     : if XSQLVAR.sqlscale = -4 then  //scale fits!
@@ -1056,14 +1056,14 @@ begin
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
                       PISC_SHORT(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale] //dec scale digits
                     else
-                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[-4+XSQLVAR.sqlscale]; //inc scale digits
+                      PISC_SHORT(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
     SQL_INT64,
     SQL_QUAD      : if XSQLVAR.sqlscale = -4 then //scale fits!
                       PISC_INT64(XSQLVAR.sqldata)^ := I64
                     else if XSQLVAR.sqlscale > -4 then //EH: check the modulo?
                       PISC_INT64(XSQLVAR.sqldata)^ := I64 div IBScaleDivisor[-4-XSQLVAR.sqlscale]//dec scale digits
                     else
-                      PISC_INT64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[-4+XSQLVAR.sqlscale]; //inc scale digits
+                      PISC_INT64(XSQLVAR.sqldata)^ := I64 * IBScaleDivisor[4+XSQLVAR.sqlscale]; //inc scale digits
     SQL_TEXT,
     SQL_VARYING   : begin
                       CurrToRaw(Value, @fABuffer[0], @P);
