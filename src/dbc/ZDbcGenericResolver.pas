@@ -242,6 +242,14 @@ end;
   Destroys this object and cleanups the memory.
 }
 destructor TZGenericCachedResolver.Destroy;
+procedure FlustStmt(var Stmt: IZPreparedStatement);
+begin
+  if Stmt <> nil then begin
+    Stmt.Close;
+    Stmt := nil
+  end;
+end;
+
 begin
   FMetadata := nil;
   FDatabaseMetadata := nil;
@@ -255,6 +263,9 @@ begin
   FreeAndNil(FDeleteParams);
 
   FreeAndNil(FStatements);
+  FlustStmt(InsertStatement);
+  FlustStmt(UpdateStatement);
+  FlustStmt(DeleteStatement);
   inherited Destroy;
 end;
 
