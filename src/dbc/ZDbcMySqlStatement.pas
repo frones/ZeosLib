@@ -325,8 +325,8 @@ end;
 
 function TZAbstractMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
 begin
-  Result := ((not FInitial_emulate_prepare) or (ArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
-     ((ArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare));
+  Result := ((not FInitial_emulate_prepare) or (BatchDMLArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
+     ((BatchDMLArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare));
   if Result then begin
     FEmulatedParams := False;
     if (BindList.Count > 0) then
@@ -339,7 +339,7 @@ var
   array_size: UInt;
   I: Integer;
 begin
-  if ArrayCount > 0 then begin
+  if BatchDMLArrayCount > 0 then begin
     array_size := 0;
     for i := 0 to BindList.Count -1 do begin
       {$R-}
@@ -635,10 +635,10 @@ begin
   ClientCP := ConSettings^.ClientCodePage.CP;
   ClientStrings := nil;
   FBindAgain := True;
-  ReAllocMem(Bind^.indicators, ArrayCount);
+  ReAllocMem(Bind^.indicators, BatchDMLArrayCount);
   Bind^.indicator_address^ := Pointer(Bind^.indicators);
-  FillChar(Pointer(Bind^.indicators)^, ArrayCount, Char(STMT_INDICATOR_NONE));
-  Bind^.Iterations := ArrayCount;
+  FillChar(Pointer(Bind^.indicators)^, BatchDMLArrayCount, Char(STMT_INDICATOR_NONE));
+  Bind^.Iterations := BatchDMLArrayCount;
   BufferSize := 0;
   case SQLType of
     stBoolean:
@@ -646,13 +646,13 @@ begin
         Bind^.buffer_type_address^ := FIELD_TYPE_TINY;
         Bind^.buffer_address^ := Pointer(Value); //no move
       end else begin
-        ReAllocMem(Bind^.length, ArrayCount*SizeOf(ULong));
+        ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
         Bind^.length_address^ := Bind^.length;
-        ReAllocMem(Bind^.buffer, SizeOf(Pointer)*ArrayCount + (ArrayCount shl 1));
+        ReAllocMem(Bind^.buffer, SizeOf(Pointer)*BatchDMLArrayCount + (BatchDMLArrayCount shl 1));
         Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
-        for i := 0 to ArrayCount -1 do begin
-          PWord(PAnsiChar(Bind^.buffer)+ArrayCount*SizeOf(Pointer)+(i shl 1))^ := PWord(EnumBool[TBooleanDynArray(Value)[i]])^; //write data
-          PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := PAnsiChar(Bind^.buffer)+ArrayCount*SizeOf(Pointer)+(i shl 1); //write address
+        for i := 0 to BatchDMLArrayCount -1 do begin
+          PWord(PAnsiChar(Bind^.buffer)+BatchDMLArrayCount*SizeOf(Pointer)+(i shl 1))^ := PWord(EnumBool[TBooleanDynArray(Value)[i]])^; //write data
+          PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := PAnsiChar(Bind^.buffer)+BatchDMLArrayCount*SizeOf(Pointer)+(i shl 1); //write address
           Bind^.length[i] := 1;
         end;
       end;
@@ -685,24 +685,24 @@ begin
         Bind^.buffer_address^ := Pointer(Value); //no move
       end;
     stBigDecimal, stCurrency: begin
-        ReAllocMem(Bind^.buffer, SizeOf(Double) *ArrayCount);
+        ReAllocMem(Bind^.buffer, SizeOf(Double) *BatchDMLArrayCount);
         Bind^.buffer_address^:= Pointer(Bind^.buffer);
         Bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
         if SQLType = stBigDecimal then
-          for i := 0 to ArrayCount -1 do
+          for i := 0 to BatchDMLArrayCount -1 do
             PDouble(PAnsiChar(Bind^.buffer)+(I*SizeOf(Double)))^ := TExtendedDynArray(Value)[i]
         else
-          for i := 0 to ArrayCount -1 do
+          for i := 0 to BatchDMLArrayCount -1 do
             PDouble(PAnsiChar(Bind^.buffer)+(I*SizeOf(Double)))^ := TCurrencyDynArray(Value)[i];
       end;
     stDate, stTime, stTimeStamp: begin
-        ReAllocMem(Bind^.buffer, (SizeOf(TMYSQL_TIME)+SizeOf(Pointer))*ArrayCount);
+        ReAllocMem(Bind^.buffer, (SizeOf(TMYSQL_TIME)+SizeOf(Pointer))*BatchDMLArrayCount);
         Bind^.buffer_address^ := Pointer(Bind^.buffer);
-        P := PAnsiChar(Bind^.buffer)+(ArrayCount*SizeOf(Pointer));
-        FillChar(P^, ArrayCount*SizeOf(TMYSQL_TIME), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+        P := PAnsiChar(Bind^.buffer)+(BatchDMLArrayCount*SizeOf(Pointer));
+        FillChar(P^, BatchDMLArrayCount*SizeOf(TMYSQL_TIME), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
         if SQLType = stDate then begin
           Bind^.buffer_type_address^ := FIELD_TYPE_DATE;
-          for i := 0 to ArrayCount -1 do begin
+          for i := 0 to BatchDMLArrayCount -1 do begin
             MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
             DecodeDate(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.year)^, PWord(@MySQLTime^.month)^, PWord(@MySQLTime^.day)^);
             PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
@@ -710,7 +710,7 @@ begin
           end
         end else if SQLType = stTime then begin
           Bind^.buffer_type_address^ := FIELD_TYPE_TIME;
-          for i := 0 to ArrayCount -1 do begin
+          for i := 0 to BatchDMLArrayCount -1 do begin
             MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
             DecodeTime(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.hour)^, PWord(@MySQLTime^.minute)^, PWord(@MySQLTime^.second)^, PWord(@MySQLTime^.second_part)^);
             MySQLTime.time_type := MYSQL_TIMESTAMP_TIME;
@@ -718,7 +718,7 @@ begin
           end
         end else begin
           Bind^.buffer_type_address^ := FIELD_TYPE_DATETIME;
-          for i := 0 to ArrayCount -1 do begin
+          for i := 0 to BatchDMLArrayCount -1 do begin
             MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
             DecodeDateTime(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.year)^, PWord(@MySQLTime^.month)^, PWord(@MySQLTime^.day)^,
               PWord(@MySQLTime^.hour)^, PWord(@MySQLTime^.minute)^, PWord(@MySQLTime^.second)^, PWord(@MySQLTime^.second_part)^);
@@ -728,11 +728,11 @@ begin
         end;
       end;
     stBytes: begin
-        ReAllocMem(Bind^.buffer, SizeOf(Pointer)*ArrayCount);
+        ReAllocMem(Bind^.buffer, SizeOf(Pointer)*BatchDMLArrayCount);
         Bind^.buffer_type_address^ := FIELD_TYPE_TINY_BLOB;
-        ReAllocMem(Bind^.length, ArrayCount*SizeOf(ULong));
+        ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
         Bind^.length_address^ := Bind^.length;
-        for i := 0 to ArrayCount -1 do begin
+        for i := 0 to BatchDMLArrayCount -1 do begin
           Bind^.length[i] := Length(TBytesDynArray(Value)[i]);
           if Bind^.length[i] > 0
           then PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := Pointer(TBytesDynArray(Value)[i]) //write address
@@ -741,22 +741,22 @@ begin
         Bind^.buffer_address^ := Pointer(Bind^.buffer);
       end;
     stGUID: begin
-        ReAllocMem(Bind^.length, ArrayCount*SizeOf(ULong));
+        ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
         Bind^.length_address^ := Bind^.length;
         if FGUIDAsString then begin
-          ReAllocMem(Bind^.buffer, SizeOf(Pointer)*ArrayCount + (37*ArrayCount));
+          ReAllocMem(Bind^.buffer, SizeOf(Pointer)*BatchDMLArrayCount + (37*BatchDMLArrayCount));
           Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
-          P := PAnsiChar(Bind^.buffer)+ SizeOf(Pointer)*ArrayCount;
-          for i := 0 to ArrayCount -1 do begin
+          P := PAnsiChar(Bind^.buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
+          for i := 0 to BatchDMLArrayCount -1 do begin
             Bind^.length[i] := 36;
             GUIDToBuffer(@TGUIDDynArray(Value)[i].D1, P, False, True);
             PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := P; //write address
             Inc(P, 37);
           end;
         end else begin
-          ReAllocMem(Bind^.buffer, SizeOf(Pointer)*ArrayCount);
+          ReAllocMem(Bind^.buffer, SizeOf(Pointer)*BatchDMLArrayCount);
           Bind^.buffer_type_address^ := FIELD_TYPE_TINY_BLOB;
-          for i := 0 to ArrayCount -1 do begin
+          for i := 0 to BatchDMLArrayCount -1 do begin
             PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := @TGUIDDynArray(Value)[i].D1; //write address
             Bind^.length[i] := SizeOf(TGUID);
           end;
@@ -765,7 +765,7 @@ begin
       end;
     stString, stUnicodeString: begin
         Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
-        ReAllocMem(Bind^.length, ArrayCount*SizeOf(Ulong));
+        ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(Ulong));
         Bind^.length_address^ := Bind^.length;
         case VariantType of
           {$IFNDEF UNICODE}
@@ -773,8 +773,8 @@ begin
             if not ConSettings.AutoEncode and ZCompatibleCodePages(ConSettings^.CTRL_CP, ClientCP)
             then goto set_raw
             else begin
-              SetLength(ClientStrings, ArrayCount);
-              for I := 0 to ArrayCount -1 do begin
+              SetLength(ClientStrings, BatchDMLArrayCount);
+              for I := 0 to BatchDMLArrayCount -1 do begin
                 ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[i], ConSettings^.CTRL_CP, ClientCP);
                 BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
               end;
@@ -786,8 +786,8 @@ begin
             if ZCompatibleCodePages(ZOSCodePage, ClientCP)
             then goto set_raw
             else begin
-              SetLength(ClientStrings, ArrayCount);
-              for I := 0 to ArrayCount -1 do begin
+              SetLength(ClientStrings, BatchDMLArrayCount);
+              for I := 0 to BatchDMLArrayCount -1 do begin
                 ClientStrings[i] := ConSettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(Value)[i], ClientCP);
                 BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
               end;
@@ -799,8 +799,8 @@ begin
             if ZCompatibleCodePages(zCP_UTF8, ClientCP)
             then goto set_raw
             else begin
-              SetLength(ClientStrings, ArrayCount);
-              for I := 0 to ArrayCount -1 do begin
+              SetLength(ClientStrings, BatchDMLArrayCount);
+              for I := 0 to BatchDMLArrayCount -1 do begin
                 ClientStrings[i] := ConSettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(Value)[i], ClientCP);
                 BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
               end;
@@ -809,8 +809,8 @@ begin
           {$ENDIF}
           vtRawByteString:begin
 set_raw:      //MySQL uses array of PAnsichar so we are using our buffer as pointer array
-              ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*ArrayCount);
-              for I := 0 to ArrayCount -1 do begin
+              ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
+              for I := 0 to BatchDMLArrayCount -1 do begin
                 Bind^.length[i] := Length(TRawByteStringDynArray(Value)[i]);
                 if Bind^.length[i] > 0
                 then PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Pointer(TRawByteStringDynArray(Value)[i]) //write address
@@ -822,15 +822,15 @@ set_raw:      //MySQL uses array of PAnsichar so we are using our buffer as poin
           {$IFDEF UNICODE}
           ,vtString
           {$ENDIF}:       begin
-              SetLength(ClientStrings, ArrayCount);
-              for I := 0 to ArrayCount -1 do begin
+              SetLength(ClientStrings, BatchDMLArrayCount);
+              for I := 0 to BatchDMLArrayCount -1 do begin
                 ClientStrings[i] := ZUnicodeToRaw(TUnicodeStringDynArray(Value)[i], ClientCP);
                 BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
               end;
 move_from_temp:
-              ReAllocMem(Bind^.Buffer, Cardinal(SizeOf(Pointer)*ArrayCount)+BufferSize);
-              P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*ArrayCount;
-              for I := 0 to ArrayCount -1 do begin
+              ReAllocMem(Bind^.Buffer, Cardinal(SizeOf(Pointer)*BatchDMLArrayCount)+BufferSize);
+              P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
+              for I := 0 to BatchDMLArrayCount -1 do begin
                 Bind^.length[i] := Length(ClientStrings[i]);
                 if Bind^.length[i] > 0
                 then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]+1)  //write buffer
@@ -841,9 +841,9 @@ move_from_temp:
               Bind^.buffer_address^ := Pointer(Bind^.buffer);
             end;
           vtCharRec:      begin
-              SetLength(ClientStrings, ArrayCount);
-              ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*ArrayCount); //minumum size
-              for I := 0 to ArrayCount -1 do
+              SetLength(ClientStrings, BatchDMLArrayCount);
+              ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount); //minumum size
+              for I := 0 to BatchDMLArrayCount -1 do
                 if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, ClientCP) or (TZCharRecDynArray(Value)[i].Len = 0) then begin
                   Bind^.length[i] := TZCharRecDynArray(Value)[i].Len;
                   PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := TZCharRecDynArray(Value)[i].P; //wite address
@@ -858,9 +858,9 @@ move_from_temp:
                   Bind^.length[i] := Length(ClientStrings[i]);
                 end;
               if BufferSize > 0 then begin
-                ReAllocMem(Bind^.buffer, Cardinal(ArrayCount*SizeOf(Pointer))+BufferSize);
-                P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*ArrayCount;
-                for I := 0 to ArrayCount -1 do
+                ReAllocMem(Bind^.buffer, Cardinal(BatchDMLArrayCount*SizeOf(Pointer))+BufferSize);
+                P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
+                for I := 0 to BatchDMLArrayCount -1 do
                   if Pointer(ClientStrings[i]) <> nil then begin
                     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]); //write buffer
                     PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
@@ -874,11 +874,11 @@ move_from_temp:
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream: {in current state (mariadb 10.3) send_long_data isn't supported for batch array bindings }
       begin
-        ReAllocMem(Bind^.length, ArrayCount*SizeOf(ULong));
+        ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
         Bind^.length_address^ := Bind^.length;
         Bind^.buffer_type_address^ := FIELD_TYPE_BLOB;
-        ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*ArrayCount);
-        for I := 0 to ArrayCount -1 do begin
+        ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
+        for I := 0 to BatchDMLArrayCount -1 do begin
           if (TInterfaceDynArray(Value)[i] = nil) or not Supports(TInterfaceDynArray(Value)[i], IZBlob, Lob) or Lob.IsEmpty then
             Bind^.indicators[i] := Ord(STMT_INDICATOR_NULL)
           else if (Lob.Length = 0) then begin
@@ -900,7 +900,7 @@ move_from_temp:
         Bind^.buffer_address^ := Pointer(Bind^.Buffer);
       end;
   end;
-  Bind^.Iterations := ArrayCount;
+  Bind^.Iterations := BatchDMLArrayCount;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.SetDefaultValue(ParameterIndex: Integer;
@@ -931,16 +931,16 @@ begin
     InternalRealPrepare;
   if (FMYSQL_STMT = nil) then
     raise EZSQLException.Create(SFailedtoPrepareStmt);
-  if Bind^.Iterations <> Cardinal(ArrayCount) then begin
-    ReAllocMem(Bind^.indicators, ArrayCount);
+  if Bind^.Iterations <> Cardinal(BatchDMLArrayCount) then begin
+    ReAllocMem(Bind^.indicators, BatchDMLArrayCount);
     Bind^.indicator_address^ := Pointer(Bind^.indicators);
     FBindAgain := True;
-    Bind^.Iterations := ArrayCount;
+    Bind^.Iterations := BatchDMLArrayCount;
   end;
   aArray := BindList[ParameterIndex].Value;
   if Pointer(Value) = nil
-  then FillChar(Bind^.indicators^, ArrayCount, Char(MySQLNullIndicatorMatrix[False, FUseDefaults]))
-  else for i := 0 to ArrayCount -1 do
+  then FillChar(Bind^.indicators^, BatchDMLArrayCount, Char(MySQLNullIndicatorMatrix[False, FUseDefaults]))
+  else for i := 0 to BatchDMLArrayCount -1 do
     Bind^.indicators[I] :=  MySQLNullIndicatorMatrix[IsNullFromArray(aArray, I), FUseDefaults];
 end;
 
@@ -998,9 +998,9 @@ var
   array_size: UInt;
 begin
   if not FEmulatedParams and FBindAgain and (BindList.Count > 0) and (FMYSQL_STMT <> nil) then begin
-    if (ArrayCount > 0) then begin
+    if (BatchDMLArrayCount > 0) then begin
       //set array_size first: https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
-      array_size := ArrayCount;
+      array_size := BatchDMLArrayCount;
       if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
         checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
           ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,

@@ -1005,12 +1005,12 @@ procedure TZOleDBPreparedStatement.BindInParameters;
 begin
   if BindList.Count = 0 then
     Exit;
-  if not fBindImmediat or (ArrayCount > 0) then
+  if not fBindImmediat or (BatchDMLArrayCount > 0) then
     try
       fBindImmediat := True;
       if fBindAgain or (FDBParams.hAccessor = 0) then
         PrepareInParameters;
-      if ArrayCount = 0
+      if BatchDMLArrayCount = 0
       then BindList.BindValuesToStatement(Self, SupportsBidirectionalParms)
       else BindBatchDMLArrays;
       fBindAgain := False;
@@ -1053,7 +1053,7 @@ procedure TZOleDBPreparedStatement.CalcParamSetsAndBufferSize;
 var
   FAccessorRefCount: DBREFCOUNT;
 begin
-  FDBParams.cParamSets := Max(1, ArrayCount); //indicate rows for single executions
+  FDBParams.cParamSets := Max(1, BatchDMLArrayCount); //indicate rows for single executions
   if (FDBParams.hAccessor <> 0) and fBindAgain then begin
     FParameterAccessor.ReleaseAccessor(FDBParams.hAccessor, @FAccessorRefCount);
     FDBParams.hAccessor := 0;
@@ -1221,9 +1221,9 @@ begin
     inherited Prepare;
   end else begin
     FMultipleResults := nil; //release this interface! else we can't free the command in some tests
-    if Assigned(FParameterAccessor) and ((ArrayCount > 0) and
+    if Assigned(FParameterAccessor) and ((BatchDMLArrayCount > 0) and
        (FDBParams.cParamSets = 0)) or //new arrays have been set
-       ((ArrayCount = 0) and (FDBParams.cParamSets > 1)) then //or single exec follows
+       ((BatchDMLArrayCount = 0) and (FDBParams.cParamSets > 1)) then //or single exec follows
       CalcParamSetsAndBufferSize;
   end;
 end;

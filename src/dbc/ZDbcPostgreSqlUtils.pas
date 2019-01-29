@@ -190,6 +190,12 @@ procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$E
 function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+{$IFNDEF ENDIAN_BIG}
+procedure Reverse2Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$ENDIF}
+
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
 
@@ -1066,15 +1072,15 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
 end;
 
-function PG2Integer(P: Pointer): LongInt;
+function PG2Integer(P: Pointer): Integer;
 begin
-  Result := PLongInt(P)^;
+  Result := PInteger(P)^;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
 end;
 
 procedure Integer2PG(Value: LongInt; Buf: Pointer);
 begin
-  PLongInt(Buf)^ := Value;
+  PInteger(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
 end;
 

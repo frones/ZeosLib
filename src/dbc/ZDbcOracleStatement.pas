@@ -554,7 +554,7 @@ begin
   end else begin
     { Executes the statement and gets a result. }
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
-        FOCIStmt, FOCIError, Max(1, ArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
+        FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, ASQL, ConSettings);
     Status := FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil,
@@ -588,7 +588,7 @@ begin
   { Executes the statement and gets a resultset. }
   if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutParams) then begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
-        FOCIStmt, FOCIError, Max(1, ArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
+        FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, ASQL, ConSettings);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
@@ -645,7 +645,7 @@ begin
   end else begin
     { Executes the statement and gets a result. }
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
-        FOCIStmt, FOCIError, Max(1, ArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
+        FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, ASQL, ConSettings);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
@@ -1250,7 +1250,7 @@ begin
     stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stFloat, stDouble: begin
 bind_direct:
         InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen);
-        if ArrayCount > 1 then begin
+        if BatchDMLArrayCount > 1 then begin
           Status := FPlainDriver.OCIBindByPos(FOCIStmt, Bind.bindpp, FOCIError, ParameterIndex + 1,
             Pointer(Value), Bind.value_sz, Bind.dty, Bind.indp, nil, nil, 0, nil, OCI_DEFAULT);
           if Status <> OCI_SUCCESS then
