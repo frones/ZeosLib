@@ -136,15 +136,15 @@ type
     procedure simplefunc(prefix:string ='');
     procedure MYPACKAGE(prefix:string ='');
   published
-    procedure Test_abtest;
-    procedure Test_myfuncInOutReturn;
-    procedure Test_simple_func;
-    procedure Test_simplefunc;
-    procedure Test_packaged;
-    procedure Test_Owner_packaged;
-    procedure Test_MYPACKAGE;
-    procedure Test_Owner_MYPACKAGE;
-    procedure Test_IS_ACCOUNT_SERVE;
+    procedure ORA_Test_abtest;
+    procedure ORA_Test_myfuncInOutReturn;
+    procedure ORA_Test_simple_func;
+    procedure ORA_Test_simplefunc;
+    procedure ORA_Test_packaged;
+    procedure ORA_Test_Owner_packaged;
+    procedure ORA_Test_MYPACKAGE;
+    procedure ORA_Test_Owner_MYPACKAGE;
+    procedure ORA_Test_IS_ACCOUNT_SERVE;
   end;
 
 implementation
@@ -331,7 +331,7 @@ begin
   CheckEquals(5, StoredProc.Params.Count);
 
   StoredProc.Prepare;
-  for i:= 0 to 99 do
+  for i:= 0 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= 100;
@@ -1202,7 +1202,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -1210,8 +1210,7 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
@@ -1367,27 +1366,27 @@ begin
   CheckEquals(2222, StoredProc.FieldByName('SIMPLEFUNC_ReturnValue').AsInteger);
 end;
 
-procedure TZTestOracleStoredProcedure.Test_abtest;
+procedure TZTestOracleStoredProcedure.ORA_Test_abtest;
 begin
   abtest();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
+procedure TZTestOracleStoredProcedure.ORA_Test_myfuncInOutReturn;
 begin
   myfuncInOutReturn();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_simple_func;
+procedure TZTestOracleStoredProcedure.ORA_Test_simple_func;
 begin
   simple_func();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_simplefunc;
+procedure TZTestOracleStoredProcedure.ORA_Test_simplefunc;
 begin
   simplefunc();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_packaged;
+procedure TZTestOracleStoredProcedure.ORA_Test_packaged;
 begin
   abtest('MYPACKAGE.');
   myfuncInOutReturn('MYPACKAGE.');
@@ -1395,7 +1394,7 @@ begin
   simplefunc('MYPACKAGE.');
 end;
 
-procedure TZTestOracleStoredProcedure.Test_Owner_packaged;
+procedure TZTestOracleStoredProcedure.ORA_Test_Owner_packaged;
 begin
   abtest(Connection.user+'.MYPACKAGE.');
   myfuncInOutReturn(Connection.user+'.MYPACKAGE.');
@@ -1403,17 +1402,17 @@ begin
   simplefunc(Connection.user+'.MYPACKAGE.');
 end;
 
-procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
+procedure TZTestOracleStoredProcedure.ORA_Test_MYPACKAGE;
 begin
   MYPACKAGE;
 end;
 
-procedure TZTestOracleStoredProcedure.Test_Owner_MYPACKAGE;
+procedure TZTestOracleStoredProcedure.ORA_Test_Owner_MYPACKAGE;
 begin
   MYPACKAGE(Connection.user+'.');
 end;
 
-procedure TZTestOracleStoredProcedure.Test_IS_ACCOUNT_SERVE;
+procedure TZTestOracleStoredProcedure.ORA_Test_IS_ACCOUNT_SERVE;
 begin
   StoredProc.StoredProcName := 'IS_ACCOUNT_SERVE';
   CheckEquals(3, StoredProc.Params.Count);
