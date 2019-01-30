@@ -4066,15 +4066,15 @@ begin
       PDateTime(Data)^ := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream:
       if (Data^ = nil) then
-        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len, FClientCP, ConSettings)
+        PIZLob(Data)^ := TZAbstractCLob.CreateWithData(Value, Len, FClientCP, ConSettings)
       else if PIZLob(Data^)^.IsClob then
-        PIZLob(Data^)^.SetPAnsiChar(Value, FClientCP, Len)
+        PIZLob(Data)^.SetPAnsiChar(Value, FClientCP, Len)
       else
-        PIZLob(Data^)^.SetBuffer(Value, Len);
+        PIZLob(Data)^.SetBuffer(Value, Len);
     stBinaryStream:
       if (Data^ = nil)
-      then PIZLob(Data^)^ := TZAbstractBLob.CreateWithData(Value, Len)
-      else PIZLob(Data^)^.SetBuffer(Value, Len);
+      then PIZLob(Data)^ := TZAbstractBLob.CreateWithData(Value, Len)
+      else PIZLob(Data)^.SetBuffer(Value, Len);
   end;
 end;
 
@@ -4120,11 +4120,11 @@ begin
       else InternalSetPWideChar(Data, Value, Len);
     stAsciiStream, stUnicodeStream:
       if Data^ = nil then
-        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Value, Len, ConSettings)
+        PIZLob(Data)^ := TZAbstractCLob.CreateWithData(Value, Len, ConSettings)
       else if PIZLob(Data^)^.IsClob then
-        PIZLob(Data^)^.SetPWideChar(Value, Len)
+        PIZLob(Data)^.SetPWideChar(Value, Len)
       else
-        PIZLob(Data^)^.SetBuffer(Value, Len shl 1);
+        PIZLob(Data)^.SetBuffer(Value, Len shl 1);
     stBytes:
       SetBytes(ColumnIndex, StrToBytes(ZWideString(Value)));
     stGUID:
