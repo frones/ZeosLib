@@ -190,6 +190,12 @@ procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$E
 function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+{$IFNDEF ENDIAN_BIG}
+procedure Reverse2Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$ENDIF}
+
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
 
@@ -290,6 +296,8 @@ begin
     Result := stAsciiStream
   else if (TypeNameLo = 'uuid') then
     Result := stGuid
+  else if StartsWith(TypeNameLo,  'json') then
+    Result := stAsciiStream
   else
     Result := stUnknown;
 
@@ -358,6 +366,7 @@ begin
         then Result := stBytes
         else Result := stBinaryStream;
     UUIDOID: Result := stGUID; {uuid}
+    JSONOID, JSONBOID: Result := stAsciiStream;
     INT2VECTOROID, OIDVECTOROID: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
     143,629,651,719,791,1000..OIDARRAYOID,1040,1041,1115,1182,1183,1185,1187,1231,1263,
     1270,1561,1563,2201,2207..2211,2949,2951,3643,3644,3645,3735,3770 : { other array types }
@@ -760,7 +769,11 @@ begin
     end else
       Break;
   PBuf^ := #0;
-  Result := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PWideChar(@Buf[0]), 0);
+  {$IFDEF UNICODE}
+  Result := UnicodeToIntDef(PWideChar(@Buf[0]), 0);
+  {$ELSE}
+  Result := RawToIntDef(PAnsiChar(@Buf[0]), 0);
+  {$ENDIF}
 end;
 
 function date2j(y, m, d: Integer): Integer;
@@ -1066,15 +1079,15 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
 end;
 
-function PG2Integer(P: Pointer): LongInt;
+function PG2Integer(P: Pointer): Integer;
 begin
-  Result := PLongInt(P)^;
+  Result := PInteger(P)^;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
 end;
 
 procedure Integer2PG(Value: LongInt; Buf: Pointer);
 begin
-  PLongInt(Buf)^ := Value;
+  PInteger(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
 end;
 

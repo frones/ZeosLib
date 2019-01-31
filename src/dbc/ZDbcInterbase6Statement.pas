@@ -117,19 +117,17 @@ type
   protected //setters made by me ->
     //need a effective way to flush them again (IZCallableStmt)
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
-    procedure BindBoolean(Index: Integer; Value: Boolean); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindDouble(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Double); override;
     procedure BindLob(Index: Integer; {%H-}SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure BindNull(Index: Integer; {%H-}SQLType: TZSQLType); override;
-    procedure BindSignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Int64); override;
-    procedure BindUnsignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
+
   protected
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
   public //setters
+    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      Scale: LengthInt = 0); override;
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
     procedure SetNull(Index: Integer; {%H-}SQLType: TZSQLType); reintroduce;
@@ -265,14 +263,14 @@ begin
     ArrayOffSet := 0;
     FIBConnection.GetTrHandle; //restart transaction if required
     try
-      if (FBatchStmts[True].Obj <> nil) and (ArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
-        while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= ArrayCount) do begin
+      if (FBatchStmts[True].Obj <> nil) and (BatchDMLArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
+        while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= BatchDMLArrayCount) do begin
           BindSQLDAInParameters(BindList, FBatchStmts[True].Obj,
             ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
           Result := FBatchStmts[True].Obj.ExecuteInternal;
           Inc(ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
         end;
-      if (FBatchStmts[False].Obj <> nil) and (ArrayOffSet < ArrayCount) then begin
+      if (FBatchStmts[False].Obj <> nil) and (ArrayOffSet < BatchDMLArrayCount) then begin
         BindSQLDAInParameters(BindList, FBatchStmts[False].Obj,
           ArrayOffSet, FBatchStmts[False].PreparedRowsOfArray);
         Result := FBatchStmts[False].Obj.ExecuteInternal;
@@ -287,12 +285,12 @@ begin
   finally
     Connection.SetAutoCommit(AC);
   end;
-  LastUpdateCount := ArrayCount;
+  LastUpdateCount := BatchDMLArrayCount;
 end;
 
 function TZAbstractInterbase6PreparedStatement.ExecuteInternal: ISC_STATUS;
 begin
-  if ArrayCount = 0 then
+  if BatchDMLArrayCount = 0 then
     With FIBConnection do begin
       if FStatementType = stExecProc
       then Result := FPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
@@ -443,26 +441,26 @@ begin
     end;
     inherited Prepare; //log action and prepare params
   end;
-  if ArrayCount > 0 then begin
+  if BatchDMLArrayCount > 0 then begin
     if FMaxRowsPerBatch = 0 then begin
       eBlock := GetExecuteBlockString(FParamSQLData,
-        IsParamIndex, BindList.Count, ArrayCount, FCachedQueryRaw,
+        IsParamIndex, BindList.Count, BatchDMLArrayCount, FCachedQueryRaw,
         FPlainDriver, FMemPerRow, PreparedRowsOfArray, FMaxRowsPerBatch,
           FTypeTokens, FStatementType, FIBConnection.GetXSQLDAMaxSize);
     end else
       eBlock := '';
-    if (FMaxRowsPerBatch <= ArrayCount) and (eBlock <> '') then begin
+    if (FMaxRowsPerBatch <= BatchDMLArrayCount) and (eBlock <> '') then begin
       PrepareArrayStmt(FBatchStmts[True]); //max block size per batch
-      if ArrayCount > FMaxRowsPerBatch then //final block count
-        PrepareFinalChunk(ArrayCount mod PreparedRowsOfArray);
+      if BatchDMLArrayCount > FMaxRowsPerBatch then //final block count
+        PrepareFinalChunk(BatchDMLArrayCount mod PreparedRowsOfArray);
     end else if (eBlock = '') then begin
-      if (FMaxRowsPerBatch > ArrayCount) then begin
-        if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
-          PrepareFinalChunk(ArrayCount) //full block of batch
+      if (FMaxRowsPerBatch > BatchDMLArrayCount) then begin
+        if (FBatchStmts[False].PreparedRowsOfArray <> BatchDMLArrayCount) then
+          PrepareFinalChunk(BatchDMLArrayCount) //full block of batch
       end else
-        if (ArrayCount <> FMaxRowsPerBatch) and (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
-          PrepareFinalChunk(ArrayCount mod FMaxRowsPerBatch); //final block of batch
-    end else if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
+        if (BatchDMLArrayCount <> FMaxRowsPerBatch) and (FBatchStmts[False].PreparedRowsOfArray <> (BatchDMLArrayCount mod FMaxRowsPerBatch)) then
+          PrepareFinalChunk(BatchDMLArrayCount mod FMaxRowsPerBatch); //final block of batch
+    end else if (FBatchStmts[False].PreparedRowsOfArray <> BatchDMLArrayCount) then
       PrepareArrayStmt(FBatchStmts[False]); //full block of batch
   end;
 end;
@@ -575,7 +573,7 @@ begin
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   Result := LastUpdateCount;
-  if ArrayCount = 0 then
+  if BatchDMLArrayCount = 0 then
     case FStatementType of
       stCommit, stRollback, stUnknown: Result := -1;
       stSelect: if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
@@ -717,6 +715,15 @@ begin
     FParamSQLData.InitFields(@FOrgParamInfos);
   end;
 
+end;
+
+procedure TZInterbase6PreparedStatement.RegisterParameter(
+  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
+  const Name: String; PrecisionOrSize, Scale: LengthInt);
+begin
+  if ParamType = pctResultSet then
+    RaiseUnsupportedException;
+  inherited;
 end;
 
 {**
@@ -1987,36 +1994,10 @@ begin
   else SetPAnsiChar(Index, Buf, Len);
 end;
 
-procedure TZInterbase6PreparedStatement.BindBoolean(Index: Integer; Value: Boolean);
-begin
-  SetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-end;
-
-procedure TZInterbase6PreparedStatement.BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime);
-begin
-  if SQLType = stTimeStamp then
-    SetTimeStamp(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
-  else if SQLType = stTime then
-    SetTime(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
-  else
-    SetDate(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
-end;
-
-procedure TZInterbase6PreparedStatement.BindDouble(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Double);
-begin
-  SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-end;
-
 procedure TZInterbase6PreparedStatement.BindLob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob);
 begin
   SetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType, Value);
-end;
-
-procedure TZInterbase6PreparedStatement.BindNull(Index: Integer;
-  SQLType: TZSQLType);
-begin
-  SetNull(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType);
 end;
 
 procedure TZInterbase6PreparedStatement.BindRawStr(Index: Integer;
@@ -2030,19 +2011,6 @@ procedure TZInterbase6PreparedStatement.BindRawStr(Index: Integer;
 begin
   SetPAnsiChar(Index, Buf, Len);
 end;
-
-procedure TZInterbase6PreparedStatement.BindSignedOrdinal(
-  Index: Integer; SQLType: TZSQLType; const Value: Int64);
-begin
-  SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-end;
-
-procedure TZInterbase6PreparedStatement.BindUnsignedOrdinal(
-  Index: Integer; SQLType: TZSQLType; const Value: UInt64);
-begin
-  SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-end;
-
 
 { TZInterbase6Statement }
 

@@ -2039,7 +2039,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
   ConSettings: PZConSettings;
-  Str1, Str2, Str3, Str4, Str5, Str6: AnsiString;
+  Str1, Str2, Str3, Str4, Str5, Str6: ZWideString;
+  CP: Word;
 begin
   Str1 := 'This is an ASCII text and should work on any database.';
   // This test requires the database to either use the same codepage as the
@@ -2064,10 +2065,14 @@ begin
   Query.Connection.Connect;
   Check(Query.Connection.Connected);
   try
-    (*if not ((Connection.DbcConnection.GetConSettings.ClientCodePage.Encoding in [ceUTF8, ceUTF16]) or
-       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_WIN1251) or
-       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_KOI8R)) then
-       Exit;*)
+    if (connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+      not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
+      Exit;
+    CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+    //eh the russion abrakadabra can no be mapped to other charsets then:
+    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+      {add some more if you run into same issue !!} then
+      Exit;
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -2121,7 +2126,8 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
-  Str1, Str2, Str3, Str4, Str5, Str6: AnsiString;
+  Str1, Str2, Str3, Str4, Str5, Str6: ZWideString;
+  CP: Word;
 
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
   begin
@@ -2156,11 +2162,14 @@ begin
   Connection.Connect;  //DbcConnection needed
   Check(Connection.Connected);
   try
-    { the russion abrakadabra chars can't work with any other encodings then russion/ut8/utf16 : }
-    (*if not ((Connection.DbcConnection.GetConSettings.ClientCodePage.Encoding in [ceUTF8, ceUTF16]) or
-       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_WIN1251) or
-       (Connection.DbcConnection.GetConSettings.ClientCodePage.CP = zCP_KOI8R)) then
-       Exit;*)
+    if (connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+      not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
+      Exit;
+    CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+    //eh the russion abrakadabra can no be mapped to other charsets then:
+    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+      {add some more if you run into same issue !!} then
+      Exit;
 
 
     RowCounter := 0;
@@ -2216,6 +2225,7 @@ end;
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeChars;
 var
   Query: TZQuery;
+  CP: Word;
 const
   Str6: WideString = #$5317#$4EAC#$0020#$6771#$4EAC; // Beijing + Space + Tokyo
 
@@ -2227,7 +2237,17 @@ const
   end;
 begin
   Query := CreateQuery;
+  Query.Connection.Connect;
+  Check(Query.Connection.Connected);
   try
+    if (connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+      not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
+      Exit;
+    CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+    //eh the russion abrakadabra can no be mapped to other charsets then:
+    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+      {add some more if you run into same issue !!} then
+      Exit;
     try
       Query.SQL.Text := 'insert into string_values (s_id, s_nvarchar) values (:id, :string)';
       InsertValue(1001, Str1);

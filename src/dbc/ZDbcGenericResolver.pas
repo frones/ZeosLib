@@ -231,17 +231,21 @@ begin
     DSProps_Update, 'changed')) = 'ALL';
   FWhereAll := UpperCase(DefineStatementParameter(Statement,
     DSProps_Where, 'keyonly')) = 'ALL';
-
-  InsertStatement := nil;
   FStatements := TZHashMap.Create;
-  DeleteStatement := nil;
-
 end;
 
 {**
   Destroys this object and cleanups the memory.
 }
 destructor TZGenericCachedResolver.Destroy;
+procedure FlustStmt(var Stmt: IZPreparedStatement);
+begin
+  if Stmt <> nil then begin
+    Stmt.Close;
+    Stmt := nil
+  end;
+end;
+
 begin
   FMetadata := nil;
   FDatabaseMetadata := nil;
@@ -255,6 +259,9 @@ begin
   FreeAndNil(FDeleteParams);
 
   FreeAndNil(FStatements);
+  FlustStmt(InsertStatement);
+  FlustStmt(UpdateStatement);
+  FlustStmt(DeleteStatement);
   inherited Destroy;
 end;
 

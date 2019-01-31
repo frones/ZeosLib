@@ -1828,12 +1828,7 @@ begin
           {$IFDEF TPARAM_HAS_ASBYTES}
           Statement.SetBytes(Index, Param.AsBytes);
           {$ELSE}
-            {$IFDEF WITHOUT_VARBYTESASSTRING}
-            TempBytes := VarToBytes(Param.Value);
-            {$ELSE}
-            TempBytes := StrToBytes(Param.AsString);
-            {$ENDIF}
-            Statement.SetBytes(Index, TempBytes);
+          Statement.SetBytes(Index, VarToBytes(Param.Value));
           {$ENDIF}
         end;
       {$IFDEF WITH_FTGUID}

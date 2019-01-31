@@ -177,10 +177,11 @@ begin
       DBTYPE_IDISPATCH:
       DBTYPE_HCHAPTER:    }Result := stUnknown;
   end;
-  if (Result = stString) and (CtrlsCPType = cCP_UTF16) then
-    Result := stUnicodeString;
-  if (Result = stAsciiStream) and (CtrlsCPType = cCP_UTF16) then
-    Result := stUnicodeStream;
+  if (CtrlsCPType = cCP_UTF16) then
+    if (Result = stString) then
+      Result := stUnicodeString
+    else if (Result = stAsciiStream) then
+      Result := stUnicodeStream;
 end;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;

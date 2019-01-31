@@ -599,7 +599,7 @@ begin
     fClientVersion := mysql_get_client_version;
     fIsMariaDB := IsMariaDBDriver;
   end;
-  Result := fIsMariaDB and (fClientVersion >= 100207);
+  Result := fIsMariaDB and (fClientVersion >= 100207) and (Metadata.GetConnection.GetHostVersion >= EncodeSQLVersioning(10,3,0));
 end;
 
 {**

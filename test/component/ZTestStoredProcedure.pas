@@ -120,7 +120,8 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    procedure Test_abtest;
+    procedure ADO_Test_abtest;
+    procedure ADO_Test_procedure1;
   end;
 
   {** Implements a test case for class TZStoredProc. }
@@ -136,15 +137,15 @@ type
     procedure simplefunc(prefix:string ='');
     procedure MYPACKAGE(prefix:string ='');
   published
-    procedure Test_abtest;
-    procedure Test_myfuncInOutReturn;
-    procedure Test_simple_func;
-    procedure Test_simplefunc;
-    procedure Test_packaged;
-    procedure Test_Owner_packaged;
-    procedure Test_MYPACKAGE;
-    procedure Test_Owner_MYPACKAGE;
-    procedure Test_IS_ACCOUNT_SERVE;
+    procedure ORA_Test_abtest;
+    procedure ORA_Test_myfuncInOutReturn;
+    procedure ORA_Test_simple_func;
+    procedure ORA_Test_simplefunc;
+    procedure ORA_Test_packaged;
+    procedure ORA_Test_Owner_packaged;
+    procedure ORA_Test_MYPACKAGE;
+    procedure ORA_Test_Owner_MYPACKAGE;
+    procedure ORA_Test_IS_ACCOUNT_SERVE;
   end;
 
 implementation
@@ -331,7 +332,7 @@ begin
   CheckEquals(5, StoredProc.Params.Count);
 
   StoredProc.Prepare;
-  for i:= 0 to 99 do
+  for i:= 0 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= 100;
@@ -1072,12 +1073,29 @@ begin
 end;
 
 { TZTestADOStoredProcedure }
+procedure TZTestADOStoredProcedure.ADO_Test_procedure1;
+begin
+  StoredProc.StoredProcName := 'procedure1';
+
+  CheckEquals(3, StoredProc.Params.Count);
+  CheckEquals('@RETURN_VALUE', StoredProc.Params[0].Name);
+  CheckEquals('@p1', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('@r1', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+
+  StoredProc.Params[1].AsInteger := 12345;
+  StoredProc.ExecProc;
+  CheckEquals(12346, StoredProc.Params[2].AsInteger);
+  CheckEquals(3, StoredProc.Params.Count);
+end;
+
 function TZTestADOStoredProcedure.GetSupportedProtocols: string;
 begin
   Result := 'ado,OleDB';
 end;
 
-procedure TZTestADOStoredProcedure.Test_abtest;
+procedure TZTestADOStoredProcedure.ADO_Test_abtest;
 var
   i, P2: integer;
   S: String;
@@ -1124,7 +1142,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[1].AsInteger:= i;
     StoredProc.Params[2].AsInteger:= P2;
@@ -1132,8 +1150,7 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('@p5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('@p4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
@@ -1148,8 +1165,13 @@ begin
 
   CheckEquals(3, ord(StoredProc.Fields.Count));
   CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
-  CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[1].DataType));
+  CheckEquals('@RETURN_VALUE', StoredProc.Fields[0].FieldName);
+  if Protocol = 'ado'
+  then CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[1].DataType))
+  else CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType)); //oledb correctly describes the params
+  CheckEquals('@p4', StoredProc.Fields[1].FieldName);
   CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals('@p5', StoredProc.Fields[2].FieldName);
 end;
 
 { TZTestOracleStoredProcedure }
@@ -1202,7 +1224,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -1210,8 +1232,7 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
@@ -1367,27 +1388,27 @@ begin
   CheckEquals(2222, StoredProc.FieldByName('SIMPLEFUNC_ReturnValue').AsInteger);
 end;
 
-procedure TZTestOracleStoredProcedure.Test_abtest;
+procedure TZTestOracleStoredProcedure.ORA_Test_abtest;
 begin
   abtest();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
+procedure TZTestOracleStoredProcedure.ORA_Test_myfuncInOutReturn;
 begin
   myfuncInOutReturn();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_simple_func;
+procedure TZTestOracleStoredProcedure.ORA_Test_simple_func;
 begin
   simple_func();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_simplefunc;
+procedure TZTestOracleStoredProcedure.ORA_Test_simplefunc;
 begin
   simplefunc();
 end;
 
-procedure TZTestOracleStoredProcedure.Test_packaged;
+procedure TZTestOracleStoredProcedure.ORA_Test_packaged;
 begin
   abtest('MYPACKAGE.');
   myfuncInOutReturn('MYPACKAGE.');
@@ -1395,7 +1416,7 @@ begin
   simplefunc('MYPACKAGE.');
 end;
 
-procedure TZTestOracleStoredProcedure.Test_Owner_packaged;
+procedure TZTestOracleStoredProcedure.ORA_Test_Owner_packaged;
 begin
   abtest(Connection.user+'.MYPACKAGE.');
   myfuncInOutReturn(Connection.user+'.MYPACKAGE.');
@@ -1403,17 +1424,17 @@ begin
   simplefunc(Connection.user+'.MYPACKAGE.');
 end;
 
-procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
+procedure TZTestOracleStoredProcedure.ORA_Test_MYPACKAGE;
 begin
   MYPACKAGE;
 end;
 
-procedure TZTestOracleStoredProcedure.Test_Owner_MYPACKAGE;
+procedure TZTestOracleStoredProcedure.ORA_Test_Owner_MYPACKAGE;
 begin
   MYPACKAGE(Connection.user+'.');
 end;
 
-procedure TZTestOracleStoredProcedure.Test_IS_ACCOUNT_SERVE;
+procedure TZTestOracleStoredProcedure.ORA_Test_IS_ACCOUNT_SERVE;
 begin
   StoredProc.StoredProcName := 'IS_ACCOUNT_SERVE';
   CheckEquals(3, StoredProc.Params.Count);

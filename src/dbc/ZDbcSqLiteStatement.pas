@@ -85,9 +85,7 @@ type
     procedure BindInParameters; override;
     function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   protected
-    procedure BindNull(Index: Integer; SQLType: TZSQLType); override;
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
-    procedure BindBoolean(Index: Integer; Value: Boolean); override;
     procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
     procedure BindDouble(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Double); override;
     procedure BindUnsignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: UInt64); override;
@@ -109,7 +107,11 @@ type
     function ExecutePrepared: Boolean; override;
   end;
 
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZPreparedStatement);
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZPreparedStatement)
+  public
+    procedure SetBoolean(Index: Integer; Value: Boolean);
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+  end;
 
   TZSQLiteStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZStatement)
   public
@@ -218,14 +220,6 @@ begin
       CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
   end else
     FLateBound := True;
-end;
-
-procedure TZAbstractSQLiteCAPIPreparedStatement.BindBoolean(Index: Integer;
-  Value: Boolean);
-begin
-  if fBindOrdinalBoolValues
-  then BindSignedOrdinal(Index, stLong, Ord(Value))
-  else BindRawStr(Index, DeprecatedBoolRaw[Value]);
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindDateTime(Index: Integer;
@@ -379,19 +373,6 @@ begin
       CheckSQLiteError(FPlainDriver, FHandle, ErrorCode,
         lcUnprepStmt, 'sqlite3_finalize', ConSettings);
   end;
-end;
-
-procedure TZAbstractSQLiteCAPIPreparedStatement.BindNull(Index: Integer;
-  SQLType: TZSQLType);
-var ErrorCode: Integer;
-begin
-  inherited;
-  if not FBindLater then begin
-    ErrorCode := FPlainDriver.sqlite3_bind_null(FStmtHandle, Index +1);
-    if ErrorCode <> SQLITE_OK then
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
-  end else
-    FLateBound := True;
 end;
 
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindRawStr(Index: Integer;
@@ -576,6 +557,47 @@ begin
 end;
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
+
+{ TZSQLiteCAPIPreparedStatement }
+
+{**
+  Sets the designated parameter to a Java <code>boolean</code> value.
+  The driver converts this
+  to an SQL <code>BIT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetBoolean(Index: Integer;
+  Value: Boolean);
+begin
+  if fBindOrdinalBoolValues
+  then BindSignedOrdinal(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Ord(Value))
+  else BindRawStr(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DeprecatedBoolRaw[Value]);
+end;
+
+{**
+  Sets the designated parameter to SQL <code>NULL</code>.
+  <P><B>Note:</B> You must specify the parameter's SQL type.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param sqlType the SQL type code defined in <code>java.sql.Types</code>
+}
+procedure TZSQLiteCAPIPreparedStatement.SetNull(ParameterIndex: Integer;
+  SQLType: TZSQLType);
+var ErrorCode: Integer;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex -1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  if FBindLater or FHasLoggingListener
+  then BindList.SetNull(ParameterIndex, SQLType);
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_null(FStmtHandle, ParameterIndex +1);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
+end;
 
 end.
 
