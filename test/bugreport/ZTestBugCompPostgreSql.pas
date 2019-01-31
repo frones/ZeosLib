@@ -453,7 +453,9 @@ var CP: Word;
 {$ENDIF}
 begin
   Connection.Connect;
-  CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  if connection.DbcConnection.GetConSettings.CPType = cGET_ACP {no unicode strings or utf8 allowed}
+  then CP := ZOSCodePage
+  else CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
   //eh the russion abrakadabra can no be mapped to other charsets then:
   if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
     {add some more if you run into same issue !!} then begin

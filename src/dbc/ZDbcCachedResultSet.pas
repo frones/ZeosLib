@@ -367,11 +367,11 @@ end;
 }
 destructor TZAbstractCachedResultSet.Destroy;
 begin
+  inherited Destroy;
   FResolver := nil;
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   FNativeResolver := nil;
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
-  inherited Destroy;
 end;
 
 {**

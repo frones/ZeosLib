@@ -163,9 +163,9 @@ end;
 
 procedure TZTestDbcPostgreSQLCase.TestBlobs;
 const
-  b_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  b_text_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  b_image_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  b_id_index = FirstDbcIndex;
+  b_text_index = FirstDbcIndex+1;
+  b_image_index = FirstDbcIndex+2;
 var
   Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
