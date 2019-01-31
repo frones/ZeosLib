@@ -147,7 +147,8 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZMessages;
+  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZMessages,
+  ZEncoding;
 
 { ZTestCompCoreBugReport }
 
