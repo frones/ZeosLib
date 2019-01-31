@@ -1747,14 +1747,14 @@ begin
                                         else begin
                                           Len := FLength^ shr 1;
                                           if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
-                                            while (PWideChar(FData^)+Len-1)^ = ' ' do Dec(Len);
+                                            Len := GetAbsorbedTrailingSpacesLen(PWideChar(FData^), Len);
                                           RowAccessor.SetPWideChar(I, FData^, Len);
                                         end;
           DBTYPE_BSTR or DBTYPE_BYREF,
           DBTYPE_WSTR or DBTYPE_BYREF : begin
                                           Len := FLength^ shr 1;
                                           if DBBINDING.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
-                                            while (ZPPWideChar(FData^)^+Len-1)^ = ' ' do Dec(Len);
+                                            Len := GetAbsorbedTrailingSpacesLen(ZPPWideChar(FData^)^, Len);
                                           RowAccessor.SetPWideChar(I, ZPPWideChar(FData^)^, Len);
                                         end;
           //DBTYPE_IDISPATCH = 9;
@@ -1954,14 +1954,16 @@ begin
         ColumnInfo.ColumnLabel := ParamNameArray[i];
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(
         ParamBindings[i].wType and not DBTYPE_BYREF,
-        ParamBindings[i].wType and DBCOLUMNFLAGS_ISLONG <> 0 ,
+        ParamBindings[i].dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
         ParamBindings[i].bPrecision, ParamBindings[i].bScale,
         ConSettings.CPType);
       ColumnInfo.Scale := ParamBindings[i].bScale;
       ColumnInfo.Precision := ParamBindings[i].bPrecision;
       ColumnInfo.CharOctedLength := ParamBindings[i].cbMaxLen;
+      ColumnsInfo.Add(ColumnInfo);
       Inc(J);
     end;
+  Open;
 end;
 
 {**

@@ -231,11 +231,7 @@ begin
     DSProps_Update, 'changed')) = 'ALL';
   FWhereAll := UpperCase(DefineStatementParameter(Statement,
     DSProps_Where, 'keyonly')) = 'ALL';
-
-  InsertStatement := nil;
   FStatements := TZHashMap.Create;
-  DeleteStatement := nil;
-
 end;
 
 {**

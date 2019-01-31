@@ -571,9 +571,9 @@ end;
 function TZOleDBConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
-  (*if (GetServerProvider = spMSSQL)
+  if (GetServerProvider = spMSSQL)
   then Result := TZOleDBCallableStatementMSSQL.Create(Self, SQL, Info)
-  else*) Result := inherited CreateCallableStatement(SQL, Info);
+  else Result := inherited CreateCallableStatement(SQL, Info);
 end;
 
 function TZOleDBConnection.CreateCommand: ICommandText;

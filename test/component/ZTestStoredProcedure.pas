@@ -120,7 +120,8 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    procedure Test_abtest;
+    procedure ADO_Test_abtest;
+    procedure ADO_Test_procedure1;
   end;
 
   {** Implements a test case for class TZStoredProc. }
@@ -1072,12 +1073,29 @@ begin
 end;
 
 { TZTestADOStoredProcedure }
+procedure TZTestADOStoredProcedure.ADO_Test_procedure1;
+begin
+  StoredProc.StoredProcName := 'procedure1';
+
+  CheckEquals(3, StoredProc.Params.Count);
+  CheckEquals('@RETURN_VALUE', StoredProc.Params[0].Name);
+  CheckEquals('@p1', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('@r1', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+
+  StoredProc.Params[1].AsInteger := 12345;
+  StoredProc.ExecProc;
+  CheckEquals(12346, StoredProc.Params[2].AsInteger);
+  CheckEquals(3, StoredProc.Params.Count);
+end;
+
 function TZTestADOStoredProcedure.GetSupportedProtocols: string;
 begin
   Result := 'ado,OleDB';
 end;
 
-procedure TZTestADOStoredProcedure.Test_abtest;
+procedure TZTestADOStoredProcedure.ADO_Test_abtest;
 var
   i, P2: integer;
   S: String;
@@ -1124,7 +1142,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[1].AsInteger:= i;
     StoredProc.Params[2].AsInteger:= P2;
@@ -1132,8 +1150,7 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('@p5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('@p4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
@@ -1148,8 +1165,13 @@ begin
 
   CheckEquals(3, ord(StoredProc.Fields.Count));
   CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
-  CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[1].DataType));
+  CheckEquals('@RETURN_VALUE', StoredProc.Fields[0].FieldName);
+  if Protocol = 'ado'
+  then CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[1].DataType))
+  else CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType)); //oledb correctly describes the params
+  CheckEquals('@p4', StoredProc.Fields[1].FieldName);
   CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals('@p5', StoredProc.Fields[2].FieldName);
 end;
 
 { TZTestOracleStoredProcedure }
