@@ -274,6 +274,10 @@ begin
       {$R-}
       FreeMem(FMYSQL_aligned_BINDs^[i].indicators);
       FMYSQL_aligned_BINDs^[i].indicators := nil;
+      if TZSqlType(PZArray(BindList[i].Value).VArrayType) in [stAsciiStream..stBinaryStream] then begin
+        FreeMem(FMYSQL_aligned_BINDs^[i].buffer);
+        FMYSQL_aligned_BINDs^[i].buffer := nil;
+      end;
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
@@ -1074,11 +1078,12 @@ begin
         BindList.BindValuesToStatement(Self, True);
         //releas duplicate data now
         for i := 0 to BindList.Count -1 do
-          if BindList[i].BindType <> zbtLob then
-            BindList.SetNull(I, stUnknown)
-          {$R-}
-          else InitBuffer(BindList[i].SQLType, i, @FMYSQL_aligned_BINDs[I]);
-          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+          if not (BindList[i].BindType in [zbtArray, zbtRefArray]) then
+            if BindList[i].BindType <> zbtLob then
+              BindList.ClearValue(I)
+            {$R-}
+            else InitBuffer(BindList[i].SQLType, i, @FMYSQL_aligned_BINDs[I]);
+            {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       end;
     end;
 end;
@@ -1956,8 +1961,10 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  if (FMYSQL_STMT = nil) then
+  if (FMYSQL_STMT = nil) then begin
     InternalRealPrepare;
+    Exit;
+  end;
   if (FMYSQL_STMT = nil) then
     raise EZSQLException.Create(SFailedtoPrepareStmt);
   {$R-}

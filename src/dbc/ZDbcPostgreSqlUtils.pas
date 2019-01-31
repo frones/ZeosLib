@@ -769,7 +769,11 @@ begin
     end else
       Break;
   PBuf^ := #0;
-  Result := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PWideChar(@Buf[0]), 0);
+  {$IFDEF UNICODE}
+  Result := UnicodeToIntDef(PWideChar(@Buf[0]), 0);
+  {$ELSE}
+  Result := RawToIntDef(PAnsiChar(@Buf[0]), 0);
+  {$ENDIF}
 end;
 
 function date2j(y, m, d: Integer): Integer;
