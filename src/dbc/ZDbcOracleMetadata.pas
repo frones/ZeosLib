@@ -249,7 +249,7 @@ type
 implementation
 
 uses
-  ZFastCode, ZDbcUtils, ZSelectSchema, ZPlainOracleDriver, ZDbcOracle,
+  ZFastCode, ZDbcUtils, ZSelectSchema,
   ZPlainOracleConstants{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF};
 
 { TZOracleDatabaseInfo }

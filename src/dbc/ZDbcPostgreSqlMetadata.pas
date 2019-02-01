@@ -1538,7 +1538,7 @@ var
   Ver73Up, Ver80Up: Boolean;
   ResultSet: IZResultSet;
   ColumnsRS: IZResultSet;
-  ArgMode: Char;
+  ArgMode: PChar;
   OutParamCount: Integer;
   ColumnName: string;
   ColumnType: Integer;
@@ -1614,11 +1614,10 @@ begin
         begin
           IsInParam := True;
           IsOutParam := False;
-          if ArgModes.Count > I then
-          begin
-            ArgMode := ArgModes[I][1];
-            IsInParam := CharInSet(ArgMode, ['i', 'b', 'v']);
-            IsOutParam := CharInSet(ArgMode, ['o', 'b', 't']);
+          if ArgModes.Count > I then begin
+            ArgMode := Pointer(ArgModes);
+            IsInParam := Ord(ArgMode^) in [Ord('i'), Ord('b'), ORd('v')];
+            IsOutParam := Ord(ArgMode^) in [Ord('o'), Ord('b'), Ord('t')];
           end;
 
           if IsOutParam then

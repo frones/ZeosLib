@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
-  ZVariant, Types, ZDbcGenericResolver;
+  ZVariant, Types;
 
 type
   {** Implements CAPI Prepared SQL Statement. }

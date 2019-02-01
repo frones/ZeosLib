@@ -426,11 +426,11 @@ begin
 
     {$IFDEF UNICODE}
     RawTemp := ZUnicodeToRaw(ConnectionString, ZOSCodePage);
-    FPlainDriver.db_string_connect(FHandle, Pointer(RawTemp));
+    if FPlainDriver.db_string_connect(FHandle, Pointer(RawTemp)) <> 0 then
     {$ELSE}
-    FPlainDriver.db_string_connect(FHandle, PAnsiChar(ConnectionString));
+    if FPlainDriver.db_string_connect(FHandle, Pointer(ConnectionString)) <> 0 then
     {$ENDIF}
-    CheckASAError(FPlainDriver, FHandle, lcConnect, ConSettings);
+      CheckASAError(FPlainDriver, FHandle, lcConnect, ConSettings);
 
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
