@@ -66,13 +66,15 @@ uses
   ZDbcResultSetMetadata, ZCompatibility;
 
 type
+  PZPGColumnInfo = ^TZPGColumnInfo;
   TZPGColumnInfo = class(TZColumnInfo)
   protected
-    fTableOID: OID;
+    fTableOID, FColOID: OID;
     fTableColNo: Integer;
   public
     property TableOID: OID read fTableOID write fTableOID;
     property TableColNo: Integer read fTableColNo write fTableColNo;
+    property ColumnOID: OID read FColOID write FColOID;
   end;
 
   {** Implements Postgres ResultSet Metadata. }
@@ -85,7 +87,7 @@ type
   {** Implements PostgreSQL ResultSet. }
   TZAbstractPostgreSQLStringResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
   private
-    FUUIDOIDOutBuff: TBytes; //hust play with the refcounts
+    FUUIDOIDOutBuff: TBytes; //just play with the refcounts
     FconnAddress: PPGconn;
     Fres: TPGresult;
     FresAddress: PPGresult;
@@ -94,8 +96,6 @@ type
     FIs_bytea_output_hex: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
-    FpgOIDTypes: TIntegerDynArray;
-    //FTempLob: IZBlob;
     FClientCP: Word;
     procedure ClearPGResult;
   protected
@@ -276,7 +276,6 @@ var
   C, L: Cardinal;
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
-  Blob: IZBlob;
 label ProcBts;
 begin
   RNo := RowNo - 1;
@@ -301,13 +300,13 @@ begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[i]);
       P := FPlainDriver.PQgetvalue(Fres, RNo, C);
-      case TZColumnInfo(ColumnsInfo[c]).ColumnType of
+      case TZPGColumnInfo(ColumnsInfo[C]).ColumnType of
         stUnknown     : JSONWriter.AddShort('null');
-        stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, (FpgOIDTypes[C] = 18) { char } or (FpgOIDTypes[C] = 1042)  { char/bpchar })]);
+        stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = CHAROID) or (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = BPCHAROID))]);
         stByte..stDouble, stBigDecimal  : JSONWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
         stCurrency    : JSONWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
         stBytes,
-        stBinaryStream: if FpgOIDTypes[C] = 17{bytea} then begin
+        stBinaryStream: if TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = BYTEAOID then begin
                           pgBuff := nil;
                           if FIs_bytea_output_hex then begin
                             {skip trailing /x}
@@ -329,8 +328,10 @@ begin
                           else
                             JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
                         end else begin
-                          Blob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, RawToIntDef(P, 0), FChunk_Size);
-                          JSONWriter.WrBase64(Blob.GetBuffer, Blob.Length, True);
+                          PPointer(@fTinyBuffer[0])^ := nil; //init avoid gpf
+                          PIZlob(@fTinyBuffer[0])^ := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, RawToIntDef(P, 0), FChunk_Size);
+                          JSONWriter.WrBase64(PIZlob(@fTinyBuffer[0])^.GetBuffer, PIZlob(@fTinyBuffer[0])^.Length, True);
+                          PIZlob(@fTinyBuffer[0])^ := nil;
                         end;
         stGUID        : begin
                           JSONWriter.Add('"');
@@ -382,18 +383,17 @@ begin
         stString,
         stUnicodeString:begin
                           JSONWriter.Add('"');
-                          if (FpgOIDTypes[C] = 18) { char } or (FpgOIDTypes[C] = 1042)  { char/bpchar } then begin
-                            L := ZFastCode.StrLen(P);
-                            if (L > 0) then while (P+L-1)^ = ' ' do dec(L);
-                            JSONWriter.AddJSONEscape(P, L);
-                          end else
-                            JSONWriter.AddJSONEscape(P);
+                          if (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = CHAROID) or (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = BPCHAROID)
+                          then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
+                          else JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
                           JSONWriter.Add('"');
                         end;
         stAsciiStream,
-        stUnicodeStream:begin
+        stUnicodeStream:if (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = JSONOID) or (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = JSONBOID) then
+                          JSONWriter.AddNoJSONEscape(P, SynCommons.StrLen(P))
+                        else begin
                           JSONWriter.Add('"');
-                          JSONWriter.AddJSONEscape(P);
+                          JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
                           JSONWriter.Add('"');
                         end;
         //stArray, stDataSet,
@@ -521,7 +521,6 @@ begin
   { Fills the column info. }
   ColumnsInfo.Clear;
   FieldCount := FPlainDriver.PQnfields(Fres);
-  SetLength(FpgOIDTypes, FieldCount);
   for I := 0 to FieldCount - 1 do
   begin
     ColumnInfo := TZPGColumnInfo.Create;
@@ -561,7 +560,7 @@ begin
 
       FieldType := FPlainDriver.PQftype(Fres, I);
 
-      FpgOIDTypes[i] := FieldType;
+      ColumnOID := FieldType;
       FieldMode := FPlainDriver.PQfmod(Fres, I);
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType, FieldMode);
       if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]
@@ -638,6 +637,7 @@ end;
 }
 function TZAbstractPostgreSQLStringResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var L: LongWord;
+  ColOID: OID;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -648,7 +648,8 @@ begin
     Len := 0;
   end else begin
     Result := FPlainDriver.PQgetvalue(Fres, PGRowNo, ColumnIndex);
-    case FpgOIDTypes[ColumnIndex] of
+    ColOID := TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID;
+    case ColOID of
       BYTEAOID: if FIs_bytea_output_hex then begin
                   {skip trailing /x}
                   SetLength(FRawTemp, (ZFastCode.StrLen(Result)-2) shr 1);
@@ -679,8 +680,7 @@ begin
                    For binary format this is essential information.
                    Note that one should not rely on PQfsize to obtain the actual data length.}
                   Len := ZFastCode.StrLen(Result);
-                  if (FpgOIDTypes[ColumnIndex] = CHAROID) { char } or
-                     (FpgOIDTypes[ColumnIndex] = BPCHAROID)  { char/bpchar } then
+                  if (ColOID = CHAROID) or (ColOID = BPCHAROID) then
                     Len := GetAbsorbedTrailingSpacesLen(Result, Len);
                 end;
     end;
@@ -728,7 +728,8 @@ begin
     Result := False
   else
     Result := StrToBoolEx(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), True,
-      (FpgOIDTypes[ColumnIndex] = CHAROID) { char } or (FpgOIDTypes[ColumnIndex] = BPCHAROID)  { char/bpchar });
+      (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = CHAROID) or
+      (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BPCHAROID)  { char/bpchar });
 end;
 
 {**
@@ -906,7 +907,7 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if not LastWasNull then begin
     Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    if FpgOIDTypes[ColumnIndex] = BYTEAOID {bytea} then begin
+    if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BYTEAOID {bytea} then begin
       if FIs_bytea_output_hex then begin
         {skip trailing /x}
         SetLength(Result, (ZFastCode.StrLen(Buffer)-2) shr 1);
@@ -921,11 +922,11 @@ begin
         SetLength(Result, Len);
         SetLength(Result, DecodeCString(Len, Buffer, Pointer(Result)));
       end;
-    end else if FpgOIDTypes[ColumnIndex] = UUIDOID { uuid } then begin
+    end else if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = UUIDOID { uuid } then begin
       SetLength(FUUIDOIDOutBuff, 16); //take care we've a unique dyn-array if so then this alloc happens once
       Result := FUUIDOIDOutBuff;
       ValidGUIDToBinary(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), Pointer(Result));
-    end else if FpgOIDTypes[ColumnIndex] = OIDOID { oid } then begin
+    end else if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = OIDOID { oid } then begin
       TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
         RawToIntDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0), FChunk_Size);
       Result := TempLob.GetBytes
@@ -1072,14 +1073,14 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   Result := nil;
 
-  if (FpgOIDTypes[ColumnIndex] = OIDOID) { oid } and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+  if (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = OIDOID) { oid } and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
     if LastWasNull then
       Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, 0, FChunk_Size)
     else
       Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
         RawToIntDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0), FChunk_Size)
   else if not LastWasNull then
-    if FpgOIDTypes[ColumnIndex] = BYTEAOID{bytea} then begin
+    if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BYTEAOID{bytea} then begin
       Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
       if FIs_bytea_output_hex then
         Result := TZPostgreSQLByteaHexBlob.Create(Buffer)
@@ -1091,8 +1092,8 @@ begin
     end else begin
       Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
       Len := ZFastCode.StrLen(Buffer);
-      if (FpgOIDTypes[ColumnIndex] = CHAROID) { char } or
-         (FpgOIDTypes[ColumnIndex] = BPCHAROID)  { bpchar } then
+      if (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = CHAROID) or
+         (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BPCHAROID)  then
         Len := GetAbsorbedTrailingSpacesLen(Buffer, Len);
       Result := TZAbstractCLob.CreateWithData(Buffer, Len, FClientCP, ConSettings);
     end;
