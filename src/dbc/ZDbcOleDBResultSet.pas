@@ -62,10 +62,8 @@ uses
   {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
-  ZOleDB, ZDbcOleDBUtils,
-  ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata,
-  ZCompatibility, ZDbcStatement;
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZOleDB, ZDbcOleDBUtils, ZDbcCache,
+  ZDbcCachedResultSet, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
 
 type
   {** Implements Ado ResultSet. }

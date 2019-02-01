@@ -65,8 +65,8 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging,
-  ZDbcOleDBUtils, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties;
+  ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement,
+  ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties;
 
 type
   IZOleDBPreparedStatement = Interface(IZStatement)
@@ -952,8 +952,7 @@ begin
         vtAnsiString: CP := ZOSCodePage;
         vtRawByteString: CP := FClientCP;
         vtCharRec: begin
-                    i := 0;
-                    W_Dyn := CharRecArray2UnicodeStrArray(TZCharRecDynArray(Arr.VArray), I);
+                    W_Dyn := CharRecArray2UnicodeStrArray(TZCharRecDynArray(Arr.VArray));
                     goto SetUniArray;
                    end;
       end;

@@ -227,7 +227,8 @@ function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings:
 function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
 procedure ArrayValueToGUID(ZArray: PZArray; Index: Integer; GUID: PGUID);
 
-function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray; var MaxLen: LengthInt): TUnicodeStringDynArray;
+function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray; var MaxLen: LengthInt): TUnicodeStringDynArray; overload;
+function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeStringDynArray; overload;
 
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
@@ -1516,6 +1517,16 @@ begin
       Result[i] := PRawToUnicode(Value[i].P, Value[i].Len, Value[i].CP);
       MaxLen := Max(MaxLen, Length(Result[i]));
     end;
+end;
+
+function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeStringDynArray;
+var i: Integer;
+begin
+  SetLength(Result, Length(Value));
+  for I := 0 to High(Value) do
+    if Value[i].CP = zCP_UTF16
+    then SetString(Result[i], PWideChar(Value[i].P), Value[i].Len)
+    else Result[i] := PRawToUnicode(Value[i].P, Value[i].Len, Value[i].CP);
 end;
 
 function ArrayValueToInteger(ZArray: PZArray; Index: Integer): Integer;
