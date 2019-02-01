@@ -64,9 +64,8 @@ type
   TZTestDbcMySQLBugReport = class(TZAbstractDbcSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
-    // disabled test:
-    procedure Test924861;
   published
+    procedure Test924861;
     procedure Test702352;
     procedure Test739448;
     procedure Test739444;
@@ -128,9 +127,9 @@ end;
 }
 procedure TZTestDbcMySQLBugReport.Test739444;
 const
-  items_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  total_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  average_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  items_Index = FirstDbcIndex;
+  total_Index = FirstDbcIndex+1;
+  average_Index = FirstDbcIndex+2;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -205,8 +204,7 @@ end;
 }
 procedure TZTestDbcMySQLBugReport.Test768163;
 const
-  fld1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  //fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  fld1_Index = FirstDbcIndex;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -247,10 +245,10 @@ end;
 }
 procedure TZTestDbcMySQLBugReport.Test816925;
 const
-  fld1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  fld3_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  fld4_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  fld1_Index = FirstDbcIndex;
+  fld2_Index = FirstDbcIndex+1;
+  fld3_Index = FirstDbcIndex+2;
+  fld4_Index = FirstDbcIndex+3;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -282,9 +280,9 @@ end;
 }
 procedure TZTestDbcMySQLBugReport.Test881634;
 const
-  idt2_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  ft2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  ft1_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  idt2_Index = FirstDbcIndex;
+  ft2_Index = FirstDbcIndex+1;
+  ft1_Index = FirstDbcIndex+2;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -321,7 +319,7 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   try
-    DriverManager.GetConnection('zdbc:mysql://xxx:12345/db').Open;
+    DriverManager.GetConnection('zdbc:mysql://xxx:1234557/db').Open;
     Fail('Incorrect processing of wrong connection URL.');
   except on E: Exception do
     CheckNotTestFailure(E);

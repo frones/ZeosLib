@@ -1266,7 +1266,7 @@ begin
           Exit;
         end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
-      FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
+        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY, MYSQL_TYPE_JSON:
         begin
           FTempBlob := GetBlob(ColumnIndex);
           Len := FTempBlob.Length;
@@ -1384,7 +1384,7 @@ begin
         Result := IntToRaw(PByte(FColBind^.buffer)^);
       FIELD_TYPE_ENUM, FIELD_TYPE_SET, FIELD_TYPE_TINY_BLOB,
       FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB,
-      FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY:
+      FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY,MYSQL_TYPE_JSON:
         ZSetString(PAnsiChar(FColBind^.buffer),
           FColBind^.length, Result);
       else
@@ -1457,7 +1457,7 @@ begin
           end;
           //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
-      FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
+        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY, MYSQL_TYPE_JSON:
         if ( FColBind^.length > 0 ) and
            (FColBind^.length < 12{Max Int32 Length = 11} ) then
         begin
@@ -2681,7 +2681,8 @@ begin
       FIELD_TYPE_BLOB,
       FIELD_TYPE_TINY_BLOB,
       FIELD_TYPE_MEDIUM_BLOB,
-      FIELD_TYPE_LONG_BLOB:
+      FIELD_TYPE_LONG_BLOB,
+      MYSQL_TYPE_JSON:
         if FColBind^.binary then
           Result := TZMySQLPreparedBlob.Create(FplainDriver,
             FColBind, FPrepStmt, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF})
