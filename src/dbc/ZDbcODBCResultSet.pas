@@ -63,7 +63,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs,
-  ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata, ZDbcStatement,
+  ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
   ZPlainODBCDriver, ZDbcODBCCon;
 
 type

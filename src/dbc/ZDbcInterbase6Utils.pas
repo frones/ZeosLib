@@ -58,7 +58,7 @@ interface
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZDbcIntfs, ZDbcStatement, ZPlainFirebirdDriver, ZCompatibility,
+  ZDbcIntfs, ZPlainFirebirdDriver, ZCompatibility,
   ZPlainFirebirdInterbaseConstants, ZDbcCachedResultSet, ZDbcLogging, ZMessages,
   ZVariant, ZClasses, FmtBCD;
 

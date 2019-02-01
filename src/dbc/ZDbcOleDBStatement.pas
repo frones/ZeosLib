@@ -578,7 +578,7 @@ end;
 
 { TZOleDBPreparedStatement }
 
-const OleDbNotNullTable: array[Boolean] of DBSTATUS = (DBSTATUS_S_ISNULL, DBSTATUS_S_OK);
+//const OleDbNotNullTable: array[Boolean] of DBSTATUS = (DBSTATUS_S_ISNULL, DBSTATUS_S_OK);
 procedure TZOleDBPreparedStatement.BindBatchDMLArrays;
 var
   ZData, Data, P: Pointer;
@@ -1456,7 +1456,6 @@ procedure TZOleDBPreparedStatement.SetCurrency(Index: Integer;
   const Value: Currency);
 var Bind: PDBBINDING;
   Data, PEnd: PAnsiChar;
-  label SetLen, MoveBuf;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1736,7 +1735,7 @@ end;
 procedure TZOleDBPreparedStatement.SetGUID(Index: Integer; const Value: TGUID);
 var Bind: PDBBINDING;
   Data: Pointer;
-label set_raw_len, set_uni_len, set_uid_len;
+label set_uni_len, set_uid_len;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
