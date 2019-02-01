@@ -1168,13 +1168,15 @@ begin
     Word2PG(GetOrdinalDigits(Word(NBASEDigit)), @Numeric_External.dscale);
     SmallInt2PG(NBASEDigit, @Numeric_External.digits[(NBASEDigits-1)]); //set last scale digit
   end;
-  for I := NBASEDigits-2 downto 1{keep space for 1 base 10000 digit} do begin
-    U64b := U64 div NBASE;
-    NBASEDigit := u64-(U64b * NBASE); //dividend mod 10000
-    u64 := U64b; //next dividend
-    SmallInt2PG(NBASEDigit, @Numeric_External.digits[I]);
+  if NBASEDigits > 1 then begin
+    for I := NBASEDigits-2 downto 1{keep space for 1 base 10000 digit} do begin
+      U64b := U64 div NBASE;
+      NBASEDigit := u64-(U64b * NBASE); //dividend mod 10000
+      u64 := U64b; //next dividend
+      SmallInt2PG(NBASEDigit, @Numeric_External.digits[I]);
+    end;
+    SmallInt2PG(SmallInt(Int64Rec(u64).Lo), @Numeric_External.digits[0]); //set first digit
   end;
-  SmallInt2PG(SmallInt(Int64Rec(u64).Lo), @Numeric_External.digits[0]); //set first digit
   Size := (4+NBASEDigits) * SizeOf(Word);
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
