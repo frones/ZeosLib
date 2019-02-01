@@ -2436,8 +2436,8 @@ begin
         SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
         SQL_QUAD   : PInt64(sqldata)^    := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
-        SQL_DOUBLE : PDouble(sqldata)^   := Value;
         SQL_D_FLOAT,
+        SQL_DOUBLE : PDouble(sqldata)^   := Value;
         SQL_FLOAT  : PSingle(sqldata)^   := Value;
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
