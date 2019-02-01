@@ -299,7 +299,7 @@ type
   PZMySQLRowOffset = Pointer;
   PZMysqlBindArray = Pointer;
 
-{ Enum Field Types }
+{ Enum Field Types from binary_log_types.h }
   PMysqlFieldType = ^TMysqlFieldType;
   TMysqlFieldType = (
     FIELD_TYPE_DECIMAL   = 0,
@@ -319,6 +319,7 @@ type
     FIELD_TYPE_NEWDATE   = 14,
     FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
     FIELD_TYPE_BIT       = 16, //<--ADDED by fduenas 20-06-2006
+    MYSQL_TYPE_JSON      = 245,
     FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
     FIELD_TYPE_ENUM      = 247,
     FIELD_TYPE_SET       = 248,

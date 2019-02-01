@@ -1666,7 +1666,7 @@ var
       stAsciiStreamArray[i].Len := Length(stStringArray[i]);
       stAsciiStreamArray[i].P := Pointer(stStringArray[i]);
       stAsciiStreamArray[i].CP := Connection.GetConSettings^.ClientCodePage^.CP; {safe we're passing ASCII7 only to the raws}
-      stUnicodeStreamArray[i] := RandomStr(MaxPerformanceLobSize);
+      stUnicodeStreamArray[i] := {$IFDEF UNICODE}UTF8String{$ENDIF}(RandomStr(MaxPerformanceLobSize));
       stBinaryStreamArray[i] := TZAbstractBlob.Create;
       (stBinaryStreamArray[i] as IZBlob).SetBytes(RandomBts(MaxPerformanceLobSize));
     end;
@@ -1848,7 +1848,7 @@ end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 const
-  LastFieldIndices: array[0..2] of Integer = (stBigDecimal_Index, stAsciiStream_Index, stBinaryStream_Index);
+  LastFieldIndices: array[0..2] of Integer = (stTimeStamp_Index, stAsciiStream_Index, stBinaryStream_Index);
   HighLoadFields: array[hl_id_Index..stBinaryStream_Index] of String = (
     'hl_id', 'stBoolean', 'stByte', 'stShort', 'stInteger', 'stLong', ''+
       'stFloat', 'stDouble', 'stBigDecimal', 'stString', 'stUnicodeString', 'stBytes',

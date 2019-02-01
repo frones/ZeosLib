@@ -3002,7 +3002,7 @@ begin
         ftBytes:
           begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, bLen);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, bLen);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, Min(bLen, RowAccessor.GetColumnDataSize(ColumnIndex)));
             FillChar((PAnsiChar(Buffer)+bLen)^, RowAccessor.GetColumnDataSize(ColumnIndex)-blen, #0);
           end;
         { Processes blob fields. }

@@ -450,6 +450,21 @@ begin
           FIELD_TYPE_BIT        : if Bind^.Length[0] = 1
                                   then JSONWriter.AddShort(JSONBool[PByte(Bind^.Buffer)^ <> 0])
                                   else JSONWriter.WrBase64(Pointer(Bind^.Buffer), Bind^.Length[0], True);
+          MYSQL_TYPE_JSON: if (Bind^.Buffer <> nil) then
+                            JSONWriter.AddNoJSONEscape(Pointer(Bind^.Buffer), Bind^.Length[0])
+                        else if Bind^.Length[0] < SizeOf(FTinyBuffer) then begin
+                          Bind^.buffer_address^ := @FTinyBuffer[0];
+                          Bind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
+                          FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, Bind^.mysql_bind, C, 0);
+                          Bind^.buffer_address^ := nil;
+                          Bind^.buffer_Length_address^ := 0;
+                          JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], Bind^.Length[0]);
+                        end else begin
+                          FTempBlob := TZMySQLPreparedClob.Create(FplainDriver,
+                            Bind, FPMYSQL^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Self);
+                          P := FTempBlob.GetPAnsiChar(zCP_UTF8);
+                          JSONWriter.AddNoJSONEscape(P, FTempBlob.Length);
+                        end;
           FIELD_TYPE_ENUM,
           FIELD_TYPE_SET,
           FIELD_TYPE_VARCHAR,
@@ -565,6 +580,7 @@ begin
                                     JSONWriter.AddJSONEscape(P, FLengthArray^[C]);
                                     JSONWriter.Add('"');
                                   end;
+          MYSQL_TYPE_JSON:        JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
           FIELD_TYPE_VARCHAR,
           FIELD_TYPE_TINY_BLOB,
           FIELD_TYPE_MEDIUM_BLOB,
@@ -968,7 +984,7 @@ set_Results:Len := Result - PAnsiChar(@FTinyBuffer);
             Exit;
           end;
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
-        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
+        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY, MYSQL_TYPE_JSON:
             if ColBind.buffer <> nil then begin
               Result := ColBind^.buffer;
               Len := ColBind^.length[0];
@@ -1106,7 +1122,7 @@ set_Results:Len := Result - PWideChar(@FTinyBuffer);
         FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         FIELD_TYPE_ENUM, FIELD_TYPE_SET, FIELD_TYPE_STRING,
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
-        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
+        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY, MYSQL_TYPE_JSON:
             if ColBind.buffer <> nil then begin
               if ColBind^.binary
               then FUniTemp := Ascii7ToUnicodeString(ColBind^.buffer, ColBind^.length[0])
@@ -1156,7 +1172,7 @@ set_Results:Len := Result - PWideChar(@FTinyBuffer);
       LastWasNull := False;
       if (ColBind^.buffer_type_address^ in [ FIELD_TYPE_ENUM, FIELD_TYPE_SET,
           FIELD_TYPE_STRING, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
-          FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB]) and not ColBind^.binary
+          FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, MYSQL_TYPE_JSON]) and not ColBind^.binary
       then FUniTemp := PRawToUnicode(PMYSQL_ROW(FRowHandle)[ColumnIndex], FLengthArray^[ColumnIndex], FClientCP)
       else FUniTemp := Ascii7ToUnicodeString(PMYSQL_ROW(FRowHandle)[ColumnIndex], FLengthArray^[ColumnIndex]);
 set_from_tmp:
@@ -1207,6 +1223,7 @@ begin
         end;
         bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
       end;
+    MYSQL_TYPE_JSON,
     FIELD_TYPE_BLOB,
     FIELD_TYPE_TINY_BLOB,
     FIELD_TYPE_MEDIUM_BLOB,
