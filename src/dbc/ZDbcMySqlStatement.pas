@@ -1690,6 +1690,7 @@ begin
                             bind^.Length := 8;
                             bind^.buffer_type := FIELD_TYPE_DOUBLE;
                           end;
+    MYSQL_TYPE_JSON,
     FIELD_TYPE_BLOB,
     FIELD_TYPE_TINY_BLOB,
     FIELD_TYPE_MEDIUM_BLOB,
@@ -1750,7 +1751,7 @@ begin
 
   //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
   Bind^.length := field_length+Ord(buffertype in
-    [FIELD_TYPE_ENUM, FIELD_TYPE_DECIMAL, FIELD_TYPE_MEDIUM_BLOB,
+    [FIELD_TYPE_ENUM, FIELD_TYPE_DECIMAL, FIELD_TYPE_MEDIUM_BLOB, MYSQL_TYPE_JSON,
      FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING]);
   SetLength(Bind^.buffer, Bind^.length);
 
