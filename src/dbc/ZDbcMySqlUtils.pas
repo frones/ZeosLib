@@ -242,6 +242,9 @@ begin
       Result := stTime;
     FIELD_TYPE_DATETIME, FIELD_TYPE_TIMESTAMP:
       Result := stTimestamp;
+    MYSQL_TYPE_JSON: If ( CtrlsCPType = cCP_UTF16)
+                      then Result := stUnicodeStream
+                      else Result := stAsciiStream;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if ((FieldOffsets.charsetnr > 0) and ((PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary}) or (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))) or
@@ -674,7 +677,7 @@ SetLobSize:
       17..32: goto lLong;
       else goto lLongLong;
     end;
-  end else if TypeName = 'json' then
+  end else if TypeName = 'json' then  { test it ..}
     FieldType := stAsciiStream
   else
     for pC := 0 to High(GeoTypes) do
