@@ -1615,7 +1615,7 @@ begin
           IsInParam := True;
           IsOutParam := False;
           if ArgModes.Count > I then begin
-            ArgMode := Pointer(ArgModes);
+            ArgMode := Pointer(ArgModes[i]);
             IsInParam := Ord(ArgMode^) in [Ord('i'), Ord('b'), ORd('v')];
             IsOutParam := Ord(ArgMode^) in [Ord('o'), Ord('b'), Ord('t')];
           end;
