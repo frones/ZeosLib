@@ -291,6 +291,7 @@ type
     procedure Put(Index: Integer; Value: PZBindValue); overload;
     procedure Put(Index: Integer; const Value: TGUID); overload;
     function AquireCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
+    function AquireMinCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
 
     procedure SetCount(NewCount: Integer);
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
@@ -3845,8 +3846,26 @@ function TZBindList.AquireCustomValue(Index: Integer; SQLType: TZSQLType;
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, SQLType, zbtCustom);
-  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ <> Len) then
-    ClearValue(Index);
+  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ <> Len) then begin
+    FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
+    BindValue.Value := nil;
+  end;
+  if BindValue.Value = nil then begin
+    GetMem(BindValue.Value, SizeOf(LengthInt)+Len);
+    PLengthInt(BindValue.Value)^ := Len;
+  end;
+  Result := PAnsiChar(BindValue.Value)+SizeOf(LengthInt);
+end;
+
+function TZBindList.AquireMinCustomValue(Index: Integer; SQLType: TZSQLType;
+  Len: LengthInt): Pointer;
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, SQLType, zbtCustom);
+  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ < Len) then begin
+    FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
+    BindValue.Value := nil;
+  end;
   if BindValue.Value = nil then begin
     GetMem(BindValue.Value, SizeOf(LengthInt)+Len);
     PLengthInt(BindValue.Value)^ := Len;
@@ -3872,6 +3891,7 @@ begin
       case BindValue.BindType of
         zbtNull: IStmt.SetNull(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType);
         zbt4Byte: case BindValue.SQLType of
+                    stBoolean:  IStmt.SetBoolean(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^ <> 0);
                     stByte:     IStmt.SetByte(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
                     stShort:    IStmt.SetShort(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInteger(@BindValue.Value)^);
                     stWord:     IStmt.SetWord(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
@@ -3882,6 +3902,7 @@ begin
                     //else RaiseUnsupportedException
                   end;
         zbt8Byte: case BindValue.SQLType of
+                    stBoolean:  IStmt.SetBoolean(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^ <> 0);
                     stByte:     IStmt.SetByte(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
                     stShort:    IStmt.SetShort(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
                     stWord:     IStmt.SetWord(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
