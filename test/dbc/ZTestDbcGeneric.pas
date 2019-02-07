@@ -578,7 +578,6 @@ begin
         SetNull(Insert_p_redundant_Index, stSmall)
       else
         SetNull(Insert_p_redundant_Index, stString);
-      SetNull(Insert_p_redundant_Index, stString);
       CheckEquals(False, ExecutePrepared);
       CheckEquals(1, GetUpdateCount);
     end;
