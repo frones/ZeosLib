@@ -2147,14 +2147,11 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if Result then
-    Buffer^ := #0
-  else
-  begin //instead of StrPLCopy
-    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, Max(dsMaxStringSize, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+  if not Result then begin //instead of StrPLCopy
+    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, NativeUInt(Max(dsMaxStringSize, FieldSize-1))); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buffer^, L);
-    (Buffer+L)^ := #0;
   end;
+  PByte(Buffer+L)^ := Ord(#0);
 end;
 
 function TZAbstractRODataset.StringFieldGetterFromUnicode(ColumnIndex, FieldSize: Integer;
@@ -2164,10 +2161,9 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
-  if Result then
-    Buffer^ := #0
-  else //instead of StrPLCopy
-    PUnicode2PRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize), RowAccessor.ConSettings^.CTRL_CP);
+  if not Result then //instead of StrPLCopy
+    L := PUnicode2PRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize-1), RowAccessor.ConSettings^.CTRL_CP);
+  PByte(Buffer+L)^ := Ord(#0);
 end;
 
 function TZAbstractRODataset.StringFieldGetterRaw2RawConvert(ColumnIndex,
@@ -2177,11 +2173,10 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if Result then
-    PWord(Buffer)^ := Ord(#0)
-  else //instead of WStrLCopy
-    PRawToPRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize),
+  if not Result then //instead of WStrLCopy
+    L := PRawToPRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize-1),
       RowAccessor.ConSettings^.ClientCodePage^.CP, RowAccessor.ConSettings^.CTRL_CP);
+  PByte(Buffer+L)^ := Ord(#0)
 end;
 
 function TZAbstractRODataset.WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer;
@@ -2194,7 +2189,7 @@ begin
   if Result then
     PWord(Buffer)^ := Ord(#0)
   else //instead of WStrLCopy
-    PRaw2PUnicode(P, Buffer, LengthInt(L), LengthInt(Max(dsMaxStringSize shr 1, FieldSize)), RowAccessor.ConSettings^.ClientCodePage^.CP);
+    PRaw2PUnicode(P, Buffer, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1, RowAccessor.ConSettings^.ClientCodePage^.CP);
 end;
 
 function TZAbstractRODataset.WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer;
@@ -2204,13 +2199,11 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
-  if not Result then
-  begin //instead of StrPLCopy
-    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, Max(dsMaxStringSize shr 1, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+  if not Result then begin //instead of WStrCopy
+    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, NativeUInt(Max(dsMaxStringSize, FieldSize -2) shr 1)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, L shl 1);
-    Inc(Buffer, L);
   end;
-  PWord(Buffer)^ := Ord(#0);
+  PWord(Buffer+L)^ := Ord(#0);
 end;
 
 {**
