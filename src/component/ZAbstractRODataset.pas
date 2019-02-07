@@ -3305,18 +3305,16 @@ begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
         if (FieldType = ftCurrency) and not ResultSet.GetMetadata.IsCurrency(I) then
            FieldType := ftBCD;
-        if FieldType in [ftBytes, ftString, ftWidestring] then
-          if (FieldType = ftWideString) then
-              //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
-              //users are warned: http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=51427#p51427
-              Size := GetPrecision(I) shl Ord((ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in fOptions))
-          else if (ConSettings^.CPType = cCP_UTF8) or
-            ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
-            ((ConSettings^.CPType = cGET_ACP) and (ZOSCodePage = zCP_UTF8)) then
-            Size := GetPrecision(I) shl 2
-          else
-            Size := GetPrecision(I)
-        else
+        if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
+          Size := GetPrecision(I);
+          if (FieldType = ftString) then
+            if (ConSettings^.CPType = cCP_UTF8) or (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+               ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
+               ((ConSettings^.CPType = cGET_ACP) and (ZOSCodePage = zCP_UTF8)) then
+              Size := Size * 4
+            else
+              Size := Size * ConSettings^.ClientCodePage^.CharWidth;
+        end else
           {$IFDEF WITH_FTGUID}
           if FieldType = ftGUID then
             Size := 38
@@ -3337,24 +3335,25 @@ begin
         end;
 
         if FUseZFields then
-          with TZFieldDef.Create(FieldDefs, FName, GetColumnType(I),
-            Size, False, I) do
-          begin
-            {$IFNDEF OLDFPC}
-            Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
-            {$ENDIF}
-            if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+          with TZFieldDef.Create(FieldDefs, FName, GetColumnType(I), Size, False, I) do begin
+            if not (ReadOnly or IsUniDirectional) then begin
+              {$IFNDEF OLDFPC}
+              Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
+              {$ENDIF}
+              if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+            end else
+              Attributes := Attributes + [faReadonly];
             Precision := GetPrecision(I);
             DisplayName := FName;
           end
-        else
-          with TFieldDef.Create(FieldDefs, FName, FieldType,
-            Size, False, I) do
-          begin
+        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I) do begin
+          if not (ReadOnly or IsUniDirectional) then begin
             {$IFNDEF OLDFPC}
             Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
             {$ENDIF}
             if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+          end else
+            Attributes := Attributes + [faReadonly];
             Precision := GetPrecision(I);
             DisplayName := FName;
           end;
@@ -3488,19 +3487,11 @@ begin
       CreateFields;
       if not (doNoAlignDisplayWidth in FOptions) then
         for i := 0 to Fields.Count -1 do
-          if Fields[i].DataType in [ftString, ftWideString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}] then
-            {$IFDEF WITH_FTGUID}
-            if Fields[i].DataType = ftGUID then
-              Fields[i].DisplayWidth := 40 //to get a full view of the GUID values
-            else
-            {$ENDIF}
-              if not (ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) = 0) then
-              begin
-                {$IFNDEF FPC}
-                //Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                {$ENDIF}
-                Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-              end;
+          if Fields[i].DataType = ftString then
+            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+          {$IFDEF WITH_FTGUID}
+          else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
+          {$ENDIF};
     end;
     BindFields(True);
 
