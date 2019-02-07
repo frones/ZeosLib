@@ -2693,10 +2693,8 @@ begin
      Exit;
 
   { Check the record by filter expression. }
-  if FilterEnabled and (FilterExpression.Expression <> '') then
-  begin
-    if not InitFilterFields then
-    begin
+  if FilterEnabled and (FilterExpression.Expression <> '') then begin
+    if not InitFilterFields then begin
       FilterFieldRefs := DefineFilterFields(Self, FilterExpression);
       InitFilterFields := True;
     end;
