@@ -2145,14 +2145,23 @@ begin
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
         prgInfo.bScale, prgInfo.bPrecision, ConSettings.CPType);
 
-      if prgInfo^.ulColumnSize > Cardinal(MaxInt) then
+      if prgInfo^.ulColumnSize >= Cardinal(MaxInt) then
         FieldSize := 0
       else
         FieldSize := prgInfo^.ulColumnSize;
-      if ColumnInfo.ColumnType = stGUID then
-        ColumnInfo.ColumnDisplaySize := 38
-      else
+      if ColumnInfo.ColumnType = stGUID then begin
+        ColumnInfo.ColumnDisplaySize := 38;
+        ColumnInfo.Precision := 38;
+      end else if ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] then begin
         ColumnInfo.ColumnDisplaySize := FieldSize;
+        ColumnInfo.Precision := FieldSize;
+      end else begin
+        ColumnInfo.Precision := prgInfo.bPrecision;
+        if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) then
+          if (prgInfo^.wType = DBTYPE_CY)
+          then ColumnInfo.Scale := 4
+          else ColumnInfo.Scale := prgInfo.bScale;
+      end;
       ColumnInfo.Precision := FieldSize;
       ColumnInfo.Currency := ColumnInfo.ColumnType = stCurrency;
       ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
