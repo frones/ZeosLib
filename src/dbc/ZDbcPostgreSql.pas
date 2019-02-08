@@ -595,16 +595,16 @@ begin
   if not Closed then
     Exit;
 
-  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
   { Connect to PostgreSQL database. }
-  Fconn := FPlainDriver.PQconnectdb(PAnsiChar(BuildConnectStr));
+  LogMessage := BuildConnectStr;
+  Fconn := FPlainDriver.PQconnectdb(Pointer(LogMessage));
+  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
   try
     if FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD then
       HandlePostgreSQLError(Self, GetPlainDriver, Fconn, lcConnect, LogMessage,nil)
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-        'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
     { Set the notice processor (default = nil)}
     FPlainDriver.PQsetNoticeProcessor(Fconn,FNoticeProcessor,nil);
@@ -621,6 +621,10 @@ begin
     SetTransactionIsolation(GetTransactionIsolation);
     if not GetAutoCommit then
       DoStartTransaction;
+    if ReadOnly then begin
+      inherited SetReadOnly(False);
+      SetReadOnly(True);
+    end;
 
     { Gets the current codepage if it wasn't set..}
     if ( FClientCodePage = '') then
@@ -1232,25 +1236,26 @@ var
   SQL: RawByteString;
   QueryHandle: TPGresult;
 begin
-  if (GetServerMajorVersion > 7) or ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 4)) then begin
-    if Value <> isReadOnly then begin
-      SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ');
-      case Value of
-        true:
-          SQL := SQL + RawByteString('READ ONLY');
-        false:
-          SQL := SQL + RawByteString('READ WRITE');
+  if Value <> isReadOnly then begin
+    if not Closed and (GetServerMajorVersion > 7) or ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 4)) then begin
+      if Value <> isReadOnly then begin
+        SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ');
+        case Value of
+          true:
+            SQL := SQL + RawByteString('READ ONLY');
+          false:
+            SQL := SQL + RawByteString('READ WRITE');
+        end;
+        QueryHandle := FPlainDriver.PQExec(Fconn, Pointer(SQL));
+        if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
+          FPlainDriver.PQclear(QueryHandle);
+          DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+        end else
+          HandlePostgreSQLError(self, GetPlainDriver, Fconn, lcExecute, SQL ,QueryHandle);
       end;
-      QueryHandle := FPlainDriver.PQExec(Fconn, Pointer(SQL));
-      if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
-        FPlainDriver.PQclear(QueryHandle);
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-      end else
-        HandlePostgreSQLError(self, GetPlainDriver, Fconn, lcExecute, SQL ,QueryHandle);
     end;
+    inherited SetReadOnly(Value);
   end;
-
-  inherited SetReadOnly(Value);
 end;
 
 function TZPostgreSQLConnection.EscapeString(const Value: RawByteString): RawByteString;
