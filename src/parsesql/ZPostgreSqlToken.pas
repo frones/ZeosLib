@@ -211,7 +211,7 @@ end;
 function TZPostgreSQLSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 var
-  NumToken: TZToken;
+  WordToken: TZToken;
   DollarCount, BodyTagLen: Integer;
   TempTag: PChar;
 begin
@@ -220,11 +220,11 @@ begin
   if (Result.P^ = '$') and (SPos < NTerm) then begin
     if ((Ord((SPos+1)^) >= Ord('0')) and (Ord((SPos+1)^) <= Ord('9'))) then begin
       Inc(SPos);
-      if Tokenizer.NumberState <> nil then
-      NumToken := Tokenizer.NumberState.NextToken(SPos, NTerm, Tokenizer);
-      if (NumToken.TokenType = ttInteger) and ((SPos+1)^ <> '$') then begin
+      if Tokenizer.WordState <> nil then
+      WordToken := Tokenizer.NumberState.NextToken(SPos, NTerm, Tokenizer);
+      if (WordToken.TokenType = ttWord) and ((SPos+1)^ <> '$') then begin
         Result.TokenType := ttWord;
-        Result.L := Result.L+NumToken.L;
+        Result.L := Result.L+WordToken.L;
         Exit;
       end;
     end;
