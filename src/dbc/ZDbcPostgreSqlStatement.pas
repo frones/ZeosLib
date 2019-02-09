@@ -342,13 +342,13 @@ var
       end else begin
         N := Length(TRawByteStringDynArray(D)[j]);
         Integer2PG(N, P);
-        Move(Pointer(TRawByteStringDynArray(D)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
+        Move(Pointer(TRawByteStringDynArray(D)[j])^, (P+SizeOf(int32))^, N);
         Inc(P,SizeOf(int32)+N);
       end;
   end;
   procedure BindUniStrings;
   var J: Cardinal;
-    N, charWidth: Integer;
+    N, charWidth, RawLen, MaxBytes: Integer;
   begin
     N := 0;
     charWidth := ConSettings^.ClientCodePage.CharWidth;
@@ -362,9 +362,11 @@ var
         Inc(P,SizeOf(int32));
       end else begin
         N := Length(TUnicodeStringDynArray(D)[j]);
-        N := ZEncoding.PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(D)[j]), PAnsiChar(NativeUInt(P)+SizeOf(int32)), N, N*CharWidth, CP);
-        Integer2PG(N, P);
-        Inc(P,SizeOf(int32)+N);
+        MaxBytes := N*CharWidth;
+        RawLen := ZEncoding.PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(D)[j]), (P+SizeOf(int32)), N, MaxBytes, CP);
+        Integer2PG(RawLen, P);
+        Inc(P,SizeOf(int32)+RawLen);
+        Dec(Stmt.FPQparamLengths[Index], (MaxBytes-RawLen));
       end;
   end;
   procedure BindConvertedStrings;
