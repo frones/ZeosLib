@@ -1755,7 +1755,7 @@ begin
       end else
         LinkBinParam2PG(Index, BindList.AquireCustomValue(Index, PGSQLType,
           ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
-    case OIDToSQLType(Index, SQLType) of
+    case PGSQLType of
       stBoolean:  PByte(FPQparamValues[Index])^ := Ord(Value);
       stSmall:    SmallInt2PG(Value, FPQparamValues[Index]);
       stInteger,

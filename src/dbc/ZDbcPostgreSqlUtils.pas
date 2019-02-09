@@ -134,6 +134,7 @@ function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inli
 }
 function GetMinorVersion(const Value: string): Word;
 
+type PInt64Rec = ^Int64Rec;
 //https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
 
 //macros from datetime.c
@@ -1143,7 +1144,6 @@ begin
   PInt64(Buf)^ := Value;
 {$ELSE !ENDIAN_BIG}
 {$IFNDEF CPU64}
-type PInt64Rec = ^Int64Rec;
 var
   S64: Int64Rec absolute Value;
   D64: PInt64Rec absolute Buf;
