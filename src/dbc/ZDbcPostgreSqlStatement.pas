@@ -1325,6 +1325,7 @@ begin
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.SetBindCapacity(Capacity: Integer);
+var i: Integer;
 begin
   inherited SetBindCapacity(Capacity);
   if (Length(FPQparamValues) <> BindList.Capacity) then begin
@@ -1333,6 +1334,10 @@ begin
     SetLength(FPQparamFormats, BindList.Capacity);
     SetLength(FPQParamOIDs, BindList.Capacity);
     SetLength(FInParamDefaultValues, BindList.Capacity);
+    { rebind since the realloc did change the addresses of the hooked values}
+    for i := 0 to Capacity -1 do
+      if BindList.BindTypes[i] {$IFDEF CPU64}in [zbt4Byte, zbt8Byte]{$ELSE}= zbt4Byte{$ENDIF} then
+        FPQparamValues[I] := @BindList[I].Value;
   end;
 end;
 

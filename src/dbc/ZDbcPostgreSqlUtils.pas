@@ -1108,12 +1108,16 @@ end;
 
 procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$IFNDEF ENDIAN_BIG}
+(* EH: my endian swaps kill some Compilers such as d2009
 var C: Cardinal absolute Value;
 begin
   PCardinal(Buf)^ :=((c and $000000FF) shl 24) or
                     ((c and $0000FF00) shl 8) or
                     ((c and $00FF0000) shr 8 ) or
-                    ((c and $FF000000) shr 24);
+                    ((c and $FF000000) shr 24);*)
+begin
+  PInteger(Buf)^ := Value;
+  Reverse4Bytes(Buf)
 {$ELSE}
 begin
   PInteger(Buf)^ := Value;
@@ -1139,6 +1143,7 @@ begin
 end;
 
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
 {$IFDEF ENDIAN_BIG}
 begin
   PInt64(Buf)^ := Value;
@@ -1148,6 +1153,7 @@ var
   S64: Int64Rec absolute Value;
   D64: PInt64Rec absolute Buf;
 begin
+(* EH: my endian swaps kill some Compilers such as d2009
   if S64.Hi <> 0 then
     D64.Lo := ((S64.Hi and $000000FF) shl 24) or
               ((S64.Hi and $0000FF00) shl 8) or
@@ -1159,7 +1165,13 @@ begin
               ((S64.Lo and $0000FF00) shl 8) or
               ((S64.Lo and $00FF0000) shr 8 ) or
               ((S64.Lo and $FF000000) shr 24)
-  else D64.Hi := 0;
+  else D64.Hi := 0;*)
+  D64.Lo := S64.Hi;
+  if S64.Hi <> 0 then
+    Reverse4Bytes(@D64.Lo);
+  D64.Hi := S64.Lo;
+  if S64.Lo <> 0 then
+    Reverse4Bytes(@D64.Hi);
 {$ELSE !CPU64}
 var u64: Uint64 absolute Value;
 begin
