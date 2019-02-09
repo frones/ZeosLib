@@ -170,7 +170,7 @@ function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Word2PG(Value: Word; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Integer2PG(Value: LongInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Cardinal(P: Pointer): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -214,6 +214,14 @@ function ARR_DATA_PTR(a: PArrayType): Pointer;
 const MinPGNumSize = (1{ndigits}+1{weight}+1{sign}+1{dscale})*SizeOf(Word);
 const MaxCurr2NumSize = MinPGNumSize+(5{max 5 NBASE ndigits}*SizeOf(Word));
 const MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 5 NBASE ndigits}*SizeOf(Word));
+
+const ZSQLType2PGBindSizes: array[stUnknown..stGUID] of Integer = (-1,
+    SizeOf(Byte){stBoolean},
+    SizeOf(SmallInt){stByte}, SizeOf(SmallInt){stShort}, SizeOf(Integer){stWord},
+    SizeOf(SmallInt){stSmall}, SizeOf(Cardinal){stLongWord}, SizeOf(Integer){stInteger}, SizeOf(Int64){stULong}, SizeOf(Int64){stLong},  //ordinals
+    SizeOf(Single){stFloat}, SizeOf(Double){stDouble}, MaxCurr2NumSize{stCurrency}, -1{stBigDecimal}, //floats
+    SizeOf(Integer){stDate}, 8{stTime}, 8{stTimestamp},
+    SizeOf(TGUID){stGUID});
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
@@ -869,7 +877,7 @@ begin
   Result := ((Hour * MINS_PER_HOUR + Min) * SECS_PER_MINUTE + Sec) * MSecsPerSec + MSec;
   Result := (Date * MSecsPerDay + Result) * MSecsPerSec;
   {$IFNDEF ENDIAN_BIG}
-  Reverse8Bytes(@Result);
+  Int642PG(Result, @Result);
   {$ENDIF}
 end;
 
@@ -1061,10 +1069,17 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
 end;
 
-procedure SmallInt2PG(Value: SmallInt; Buf: Pointer);
+procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$IFNDEF ENDIAN_BIG}
+var W: Word absolute Value;
+begin
+  if Value = 0
+  then PWord(Buf)^ := 0
+  else PWord(Buf)^ := ((W and $00FF) shl 8) or ((W and $FF00) shr 8);
+{$ELSE}
 begin
   PSmallInt(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
+{$ENDIF}
 end;
 
 function PG2Word(P: Pointer): Word;
@@ -1075,8 +1090,13 @@ end;
 
 procedure Word2PG(Value: Word; Buf: Pointer);
 begin
+{$IFNDEF ENDIAN_BIG}
+  if Value = 0
+  then PWord(Buf)^ := 0
+  else PWord(Buf)^ := ((Value and $00FF) shl 8) or ((Value and $FF00) shr 8);
+{$ELSE}
   PWord(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(Buf){$ENDIF}
+{$ENDIF}
 end;
 
 function PG2Integer(P: Pointer): Integer;
@@ -1085,10 +1105,18 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
 end;
 
-procedure Integer2PG(Value: LongInt; Buf: Pointer);
+procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$IFNDEF ENDIAN_BIG}
+var C: Cardinal absolute Value;
+begin
+  PCardinal(Buf)^ :=((c and $000000FF) shl 24) or
+                    ((c and $0000FF00) shl 8) or
+                    ((c and $00FF0000) shr 8 ) or
+                    ((c and $FF000000) shr 24);
+{$ELSE}
 begin
   PInteger(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+{$ENDIF}
 end;
 
 function PG2Cardinal(P: Pointer): Cardinal;
@@ -1109,10 +1137,44 @@ begin
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result){$ENDIF}
 end;
 
-procedure Int642PG(const Value: Int64; Buf: Pointer);
+procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$IFDEF ENDIAN_BIG}
 begin
   PInt64(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+{$ELSE !ENDIAN_BIG}
+{$IFNDEF CPU64}
+type PInt64Rec = ^Int64Rec;
+var
+  S64: Int64Rec absolute Value;
+  D64: PInt64Rec absolute Buf;
+begin
+  if S64.Hi <> 0 then
+    D64.Lo := ((S64.Hi and $000000FF) shl 24) or
+              ((S64.Hi and $0000FF00) shl 8) or
+              ((S64.Hi and $00FF0000) shr 8 ) or
+              ((S64.Hi and $FF000000) shr 24)
+  else D64.Lo := 0;
+  if S64.Lo <> 0 then
+    D64.Hi := ((S64.Lo and $000000FF) shl 24) or
+              ((S64.Lo and $0000FF00) shl 8) or
+              ((S64.Lo and $00FF0000) shr 8 ) or
+              ((S64.Lo and $FF000000) shr 24)
+  else D64.Hi := 0;
+{$ELSE !CPU64}
+var u64: Uint64 absolute Value;
+begin
+  if Value = 0
+  then PUInt64(Buf)^ := 0
+  else PUInt64(Buf)^ := ((u64 and $00000000000000FF) shl 56) or
+                        ((u64 and $000000000000FF00) shl 40) or
+                        ((u64 and $0000000000FF0000) shl 24) or
+                        ((u64 and $00000000FF000000) shl 8 ) or
+                        ((u64 and $000000FF00000000) shr 8 ) or
+                        ((u64 and $0000FF0000000000) shr 24) or
+                        ((u64 and $00FF000000000000) shr 40) or
+                        ((u64 and $FF00000000000000) shr 56);
+{$ENDIF !CPU64}
+{$ENDIF !ENDIAN_BIG}
 end;
 
 function PGNumeric2Currency(P: Pointer): Currency;
@@ -1126,11 +1188,10 @@ begin
   NBASEDigits := PG2Word(@Numeric_External.NBASEDigits);
   if (NBASEDigits = 0) or (Sign = NUMERIC_NAN) or (Sign = NUMERIC_NULL) then
     Exit;
-//  Scale := PG2Word(@Numeric_External.dscale);
   Weight := PG2SmallInt(@Numeric_External.weight);
   for I := 0 to NBASEDigits -1 do
     Result := Result + PG2SmallInt(@Numeric_External.digits[i]) * IntPower(NBASE, Weight-i);
-  if Sign = NUMERIC_NEG then
+  if Sign <> NUMERIC_POS then
     Result := -Result;
 end;
 
@@ -1145,15 +1206,13 @@ begin
   if Value < 0 then begin
     U64 := -PInt64(@Value)^;
     Word2PG(NUMERIC_NEG, @Numeric_External.sign);
-  end else begin
+  end else if Value > 0 then begin
     U64 := PInt64(@Value)^;
-    if Value <> 0 then
-      Numeric_External.sign := NUMERIC_POS
-    else begin
-      PInt64(Buf)^ := 0; //clear all four 2 byte vales once
-      Size := 8;
-      Exit;
-    end;
+    Numeric_External.sign := NUMERIC_POS
+  end else begin
+    PInt64(Buf)^ := 0; //clear all four 2 byte vales once
+    Size := 8;
+    Exit;
   end;
   NBASEDigits := (GetOrdinalDigits(U64) shr 2)+1;
   Word2PG(Word(NBASEDigits), @Numeric_External.NBASEDigits); //write len
@@ -1183,8 +1242,7 @@ end;
 
 function PGCash2Currency(P: Pointer): Currency;
 begin
-  PInt64(@Result)^ := PInt64(P)^; //move first
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result);{$ENDIF}
+  Int642PG(PInt64(P)^, @Result);
   Result {%H-}:= PInt64(@Result)^ div 100;
 end;
 

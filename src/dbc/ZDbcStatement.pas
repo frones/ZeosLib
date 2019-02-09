@@ -347,7 +347,7 @@ type
     function SupportsBidirectionalParams: Boolean; virtual;
     function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; virtual;
   protected //Properties
-    property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount;
+    property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount write FBatchDMLArrayCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
     property BindList: TZBindList read FBindList;
   protected //the sql conversions
