@@ -176,50 +176,56 @@ var
   TempStream: TStream;
   Url: TZURL;
 begin
+  TextStream := nil;
+  ImageStream := nil;
+  TempStream := nil;
   Url := GetConnectionUrl(DSProps_OidAsBlob + '=' + StrTrue);
-  Connection := DriverManager.GetConnection(Url.URL);
-  Url.Free;
-  //Connection := DriverManager.GetConnectionWithLogin(
-    //GetConnectionUrl + '?oidasblob=true', UserName, Password);
-  Connection.SetTransactionIsolation(tiReadCommitted);
-  Connection.SetAutoCommit(False);
-  Statement := Connection.CreateStatement;
-  CheckNotNull(Statement);
-  Statement.SetResultSetType(rtScrollInsensitive);
-  Statement.SetResultSetConcurrency(rcReadOnly);
+  try
+    Connection := DriverManager.GetConnection(Url.URL);
+    //Connection := DriverManager.GetConnectionWithLogin(
+      //GetConnectionUrl + '?oidasblob=true', UserName, Password);
+    Connection.SetTransactionIsolation(tiReadCommitted);
+    Connection.SetAutoCommit(False);
+    Statement := Connection.CreateStatement;
+    CheckNotNull(Statement);
+    Statement.SetResultSetType(rtScrollInsensitive);
+    Statement.SetResultSetConcurrency(rcReadOnly);
 
-  Statement.ExecuteUpdate('DELETE FROM blob_values WHERE b_id='
-    + IntToStr(TEST_ROW_ID));
+    Statement.ExecuteUpdate('DELETE FROM blob_values WHERE b_id='
+      + IntToStr(TEST_ROW_ID));
 
-  TextStream := TStringStream.Create('ABCDEFG');
-  ImageStream := TMemoryStream.Create;
-  ImageStream.LoadFromFile(TestFilePath('images/zapotec.bmp'));
+    TextStream := TStringStream.Create('ABCDEFG');
+    ImageStream := TMemoryStream.Create;
+    ImageStream.LoadFromFile(TestFilePath('images/zapotec.bmp'));
 
-  PreparedStatement := Connection.PrepareStatement(
-    'INSERT INTO blob_values (b_id,b_text,b_image) VALUES($1,$2,$3)');
-  PreparedStatement.SetInt(b_id_index, TEST_ROW_ID);
-  PreparedStatement.SetAsciiStream(b_text_index, TextStream);
-  PreparedStatement.SetBinaryStream(b_image_index, ImageStream);
-  CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+    PreparedStatement := Connection.PrepareStatement(
+      'INSERT INTO blob_values (b_id,b_text,b_image) VALUES($1,$2,$3)');
+    PreparedStatement.SetInt(b_id_index, TEST_ROW_ID);
+    PreparedStatement.SetAsciiStream(b_text_index, TextStream);
+    PreparedStatement.SetBinaryStream(b_image_index, ImageStream);
+    CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared, 'UpateCount');
 
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM blob_values'
-    + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
-  CheckNotNull(ResultSet);
-  Check(ResultSet.Next);
-  CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('b_id'));
-  TempStream := ResultSet.GetAsciiStreamByName('b_text');
-  CheckEquals(TextStream, TempStream);
-  TempStream.Free;
-  TempStream := ResultSet.GetBinaryStreamByName('b_image');
-  CheckEquals(ImageStream, TempStream);
-  TempStream.Free;
-  ResultSet.Close;
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM blob_values'
+      + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next, 'ResultSet.Next');
+    CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('b_id'));
+    TempStream := ResultSet.GetAsciiStreamByName('b_text');
+    CheckEquals(TextStream, TempStream);
+    TempStream.Free;
+    TempStream := ResultSet.GetBinaryStreamByName('b_image');
+    CheckEquals(ImageStream, TempStream);
+    ResultSet.Close;
 
-  TextStream.Free;
-  ImageStream.Free;
+    Statement.Close;
+    Connection.Close;
 
-  Statement.Close;
-  Connection.Close;
+  finally
+    FreeAndNil(URL);
+    FreeAndNil(TextStream);
+    FreeAndNil(ImageStream);
+    FreeAndNil(TempStream);
+  end;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestCaseSensitive;

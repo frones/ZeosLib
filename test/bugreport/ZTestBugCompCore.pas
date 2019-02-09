@@ -2063,7 +2063,7 @@ begin
   SL := TStringList.Create;
   Query := CreateQuery;
   Query.Connection.Connect;
-  Check(Query.Connection.Connected);
+  Check(Query.Connection.Connected, 'Connected');
   try
     if (connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
       not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then

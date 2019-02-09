@@ -722,7 +722,7 @@ end;
 procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
 const
   id_index = FirstDbcIndex;
-  fld_index = FirstDbcIndex;
+  fld_index = FirstDbcIndex+1;
   Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430 {'Абракадабра'}; // Abrakadabra in Cyrillic letters
   Str2: ZWideString = '\'#$041f#$043e#$0431#$0435#$0434#$0430'\' {'\Победа\'}; // victory / success in russian (according to leo.org)
 var
@@ -731,7 +731,7 @@ var
   Statement: IZStatement;
 begin
   Connection.Open;
-  Check(not Connection.IsClosed); //for FPC which marks tests as failed if not executed
+  Check(not Connection.IsClosed, 'Connected'); //for FPC which marks tests as failed if not executed
   if (Connection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
     not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
     Exit;
