@@ -243,7 +243,8 @@ implementation
 uses
   Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZDbcProperties,
   ZSysUtils, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcResultSet
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND};
 
 var
   MySQL41PreparableTokens: TPreparablePrefixTokens;

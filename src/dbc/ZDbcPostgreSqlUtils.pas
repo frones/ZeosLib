@@ -1165,10 +1165,10 @@ var
   S64: Int64Rec absolute Value;
   D64: PInt64Rec absolute Buf;
 begin
-  {$IFDEF WITH_C5242_INTERNAL_ERROR} //EH: my endian swaps kill some Compilers such as d2009
+  {$IFDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //EH: my endian swaps kill some Compilers such as d2009
   PInt64(Buf)^ := Value;
   if Value <> 0 then Reverse8Bytes(Buf);
-  {$ELSE !WITH_C5242_INTERNAL_ERROR}
+  {$ELSE !WITH_C5242_OR_C4963_INTERNAL_ERROR}
   if S64.Hi <> 0 then
     D64.Lo := ((S64.Hi and $000000FF) shl 24) or
               ((S64.Hi and $0000FF00) shl 8) or
@@ -1181,7 +1181,7 @@ begin
               ((S64.Lo and $00FF0000) shr 8 ) or
               ((S64.Lo and $FF000000) shr 24)
   else D64.Hi := 0;
-  {$ENDIF !WITH_C5242_INTERNAL_ERROR}
+  {$ENDIF !WITH_C5242_OR_C4963_INTERNAL_ERROR}
 {$ELSE !CPU64}
 var u64: Uint64 absolute Value;
 begin

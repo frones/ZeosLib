@@ -311,7 +311,9 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses
-  ZGenericSqlToken, ZDbcODBCUtils, ZDbcODBCResultSet, ZEncoding, ZSysUtils, ZFastCode;
+  ZGenericSqlToken, ZDbcODBCUtils, ZDbcODBCResultSet, ZEncoding, ZSysUtils, ZFastCode
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZAbstractODBCDatabaseInfo }
 

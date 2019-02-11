@@ -924,7 +924,9 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding, ZDbcProperties{$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  ZEncoding, ZDbcProperties
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 var
 {**
