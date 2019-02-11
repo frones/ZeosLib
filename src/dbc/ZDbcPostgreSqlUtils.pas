@@ -206,9 +206,7 @@ function ARR_HASNULL(a: PArrayType): Boolean;
 function ARR_ELEMTYPE(a: PArrayType): POID;
 function ARR_DIMS(a: PArrayType): PInteger;
 function ARR_LBOUND(a: PArrayType): PInteger;
-function ARR_NULLBITMAP(a: PArrayType): PByte;
 function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
-function ARR_OVERHEAD_WITHNULLS(ndims, nitems: Integer): Integer;
 function ARR_DATA_OFFSET(a: PArrayType): Int32;
 function ARR_DATA_PTR(a: PArrayType): Pointer;
 
@@ -224,7 +222,23 @@ const ZSQLType2PGBindSizes: array[stUnknown..stGUID] of Integer = (-1,
     SizeOf(Integer){stDate}, 8{stTime}, 8{stTimestamp},
     SizeOf(TGUID){stGUID});
 
-{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
+const ZSQLType2OID: array[Boolean, stUnknown..stBinaryStream] of OID = (
+  (INVALIDOID, BOOLOID,
+    INT2OID, INT2OID, INT4OID, INT2OID, INT8OID, INT4OID, INT8OID, INT8OID,  //ordinals
+    FLOAT4OID, FLOAT8OID, NUMERICOID, NUMERICOID, //floats
+    DATEOID, TIMEOID, TIMESTAMPOID, UUIDOID,
+    //now varying size types in equal order
+    VARCHAROID, VARCHAROID, BYTEAOID,
+    TEXTOID, TEXTOID, BYTEAOID),
+  (INVALIDOID, BOOLOID,
+    INT2OID, INT2OID, INT4OID, INT2OID, OIDOID, INT4OID, INT8OID, INT8OID,  //ordinals
+    FLOAT4OID, FLOAT8OID, CASHOID, NUMERICOID, //floats
+    DATEOID, TIMEOID, TIMESTAMPOID, UUIDOID,
+    //now varying size types in equal order
+    VARCHAROID, VARCHAROID, BYTEAOID,
+    TEXTOID, TEXTOID, OIDOID));
+
+  {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
@@ -1108,16 +1122,14 @@ end;
 
 procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$IFNDEF ENDIAN_BIG}
-(* EH: my endian swaps kill some Compilers such as d2009
 var C: Cardinal absolute Value;
 begin
-  PCardinal(Buf)^ :=((c and $000000FF) shl 24) or
+  if Value <> 0 then
+    PCardinal(Buf)^ :=((c and $000000FF) shl 24) or
                     ((c and $0000FF00) shl 8) or
                     ((c and $00FF0000) shr 8 ) or
-                    ((c and $FF000000) shr 24);*)
-begin
-  PInteger(Buf)^ := Value;
-  Reverse4Bytes(Buf)
+                    ((c and $FF000000) shr 24)
+  else PInteger(Buf)^ := 0;
 {$ELSE}
 begin
   PInteger(Buf)^ := Value;
@@ -1153,7 +1165,10 @@ var
   S64: Int64Rec absolute Value;
   D64: PInt64Rec absolute Buf;
 begin
-(* EH: my endian swaps kill some Compilers such as d2009
+  {$IFDEF WITH_C5242_INTERNAL_ERROR} //EH: my endian swaps kill some Compilers such as d2009
+  PInt64(Buf)^ := Value;
+  if Value <> 0 then Reverse8Bytes(Buf);
+  {$ELSE !WITH_C5242_INTERNAL_ERROR}
   if S64.Hi <> 0 then
     D64.Lo := ((S64.Hi and $000000FF) shl 24) or
               ((S64.Hi and $0000FF00) shl 8) or
@@ -1165,13 +1180,8 @@ begin
               ((S64.Lo and $0000FF00) shl 8) or
               ((S64.Lo and $00FF0000) shr 8 ) or
               ((S64.Lo and $FF000000) shr 24)
-  else D64.Hi := 0;*)
-  D64.Lo := S64.Hi;
-  if S64.Hi <> 0 then
-    Reverse4Bytes(@D64.Lo);
-  D64.Hi := S64.Lo;
-  if S64.Lo <> 0 then
-    Reverse4Bytes(@D64.Hi);
+  else D64.Hi := 0;
+  {$ENDIF !WITH_C5242_INTERNAL_ERROR}
 {$ELSE !CPU64}
 var u64: Uint64 absolute Value;
 begin
@@ -1211,8 +1221,14 @@ end;
 procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
 var
   U64, U64b: UInt64;
-  NBASEDigits, I, NBASEDigit: SmallInt;
+  NBASEDigits, NBASEDigit: Word;
   Numeric_External: PPGNumeric_External absolute Buf;
+  {$IFDEF CPU64}
+  I: SmallInt;
+  {$ELSE}
+  C: Cardinal;
+label R4BDigit, R3BDigit, R2BDigit, R1BDigit;  {EH: small jump table for unrolled 32 bit opt }
+  {$ENDIF}
 begin
   //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html#a3ae98a87bbc2d0dfc9cbe3d5845e0035
   if Value < 0 then begin
@@ -1228,27 +1244,63 @@ begin
   end;
   NBASEDigits := (GetOrdinalDigits(U64) shr 2)+1;
   Word2PG(Word(NBASEDigits), @Numeric_External.NBASEDigits); //write len
-  SmallInt2PG(NBASEDigits-2, @Numeric_External.weight); //weight
-  U64b := U64 div NBASE; //get the scale digit
-  NBASEDigit := SmallInt(u64-(U64b * NBASE)); //dividend mod 10000
-  u64 := U64b; //next dividend
-  if NBASEDigit = 0 then begin
-    Numeric_External.dscale := 0;
-    Numeric_External.digits[(NBASEDigits-1)] := 0;
+  Size := (4+NBASEDigits) * SizeOf(Word); //give size out
+  SmallInt2PG(NBASEDigits-2, @Numeric_External.weight); //write weight
+
+  {$IFNDEF CPU64}
+  if Int64Rec(u64).Hi = 0 then begin
+    C := Int64Rec(u64).Lo div NBASE;
+    NBASEDigit := Word(Int64Rec(u64).Lo-(C* NBASE)); //dividend mod 10000
+    u64 := C; //next dividend
   end else begin
-    Word2PG(GetOrdinalDigits(Word(NBASEDigit)), @Numeric_External.dscale);
-    SmallInt2PG(NBASEDigit, @Numeric_External.digits[(NBASEDigits-1)]); //set last scale digit
+  {$ENDIF}
+    U64b := U64 div NBASE; //get the scale digit
+    NBASEDigit := Word(u64-(U64b * NBASE)); //dividend mod 10000
+    u64 := U64b; //next dividend
+  {$IFNDEF CPU64}
   end;
+  {$ENDIF}
+  if NBASEDigit = 0
+  then Numeric_External.dscale := 0
+  else Word2PG(GetOrdinalDigits(Word(NBASEDigit)), @Numeric_External.dscale);
+  Word2PG(NBASEDigit, @Numeric_External.digits[(NBASEDigits-1)]); //set last scale digit
+  {$IFDEF CPU64}
   if NBASEDigits > 1 then begin
     for I := NBASEDigits-2 downto 1{keep space for 1 base 10000 digit} do begin
       U64b := U64 div NBASE;
-      NBASEDigit := u64-(U64b * NBASE); //dividend mod 10000
+      NBASEDigit := Word(u64-(U64b * NBASE)); //dividend mod 10000
       u64 := U64b; //next dividend
-      SmallInt2PG(NBASEDigit, @Numeric_External.digits[I]);
+      Word2PG(NBASEDigit, @Numeric_External.digits[I]);
     end;
-    SmallInt2PG(SmallInt(Int64Rec(u64).Lo), @Numeric_External.digits[0]); //set first digit
+    Word2PG(Word(Int64Rec(u64).Lo), @Numeric_External.digits[0]); //set first digit
   end;
-  Size := (4+NBASEDigits) * SizeOf(Word);
+  {$ELSE}
+  case NBASEDigits-1 of
+    4:  begin
+          U64b := U64 div NBASE;
+          NBASEDigit := Word(u64-(U64b * NBASE)); //dividend mod 10000
+          u64 := U64b; //next dividend
+          Word2PG(NBASEDigit, @Numeric_External.digits[3]);
+          goto R3BDigit;
+        end;
+    3:  begin
+R3BDigit: U64b := U64 div NBASE;
+          NBASEDigit := Word(u64-(U64b * NBASE)); //dividend mod 10000
+          u64 := U64b; //next dividend
+          Word2PG(NBASEDigit, @Numeric_External.digits[2]);
+          goto R2BDigit;
+        end;
+    2:  begin
+R2BDigit: C := Int64Rec(u64).Lo div NBASE;
+          NBASEDigit := Word(Int64Rec(u64).Lo-(C* NBASE)); //dividend mod 10000
+          u64 := C; //next dividend
+          Word2PG(NBASEDigit, @Numeric_External.digits[1]);
+          goto R1BDigit;
+        end;
+    1:
+R1BDigit: Word2PG(Word(Int64Rec(u64).Words[0]), @Numeric_External.digits[0]);
+  end;
+  {$ENDIF CPU64}
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
@@ -1313,15 +1365,6 @@ begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(SizeOf(Integer)*Cardinal(PG2Integer(ARR_NDIM(a)))));
 end;
 
-function  ARR_NULLBITMAP(a: PArrayType): PByte;
-begin
-  if ARR_HASNULL(a) then
-    Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+
-      (2*(SizeOf(Integer)*Cardinal(PG2Integer(ARR_NDIM(a))))))
-  else
-    Result := nil;
-end;
-
 (**
   Returns the actual array data offset.
 *)
@@ -1335,15 +1378,6 @@ end;
 function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
 begin
   Result := sizeof(TArrayType) + 2 * sizeof(integer) * (ndims)
-end;
-
-(**
-  The total array header size (in bytes) for an array with the specified
-  number of dimensions and total number of items.
-*)
-function ARR_OVERHEAD_WITHNULLS(ndims, nitems: Integer): Integer;
-begin
-  Result := sizeof(TArrayType) + 2 * sizeof(integer) * (ndims) + ((nitems + 7) shr 3 {div 8})
 end;
 
 (**
