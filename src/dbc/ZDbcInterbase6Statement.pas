@@ -57,6 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
   ZDbcLogging, ZVariant, ZMessages;
