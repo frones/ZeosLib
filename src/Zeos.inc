@@ -320,6 +320,7 @@
               {$ELSE !CompilerVersion >= 21} //Delphi 2009
                 {$DEFINE WITH_INLINE_ANSISTRLCOMP} //AnsiStrLComp is inlined in D2009 only
                 {$DEFINE WITH_URW1135_ISSUE} //D2009 can't compile for some strange reasons with inlined code.
+                {$DEFINE WITH_C5242_INTERNAL_ERROR} //D2009  Has an internal error with some inlined endian swap code.
               {$IFEND CompilerVersion >= 21}
             {$IFEND CompilerVersion >= 20} //Delphi 2007
           {$IFEND CompilerVersion >= 18.5} //Delphi 2006

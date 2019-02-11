@@ -1204,13 +1204,15 @@ begin
     zbtRawString, zbtUTF8String {$IFNDEF NEXTGEN}, zbtAnsiString{$ENDIF}: Connection.GetEscapeString(PAnsiChar(BindValue.Value), Length(RawByteString(BindValue.Value)), Result);
     zbtCharByRef: Connection.GetEscapeString(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, Result);
     zbtBinByRef: Connection.GetBinaryEscapeString(PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len, Result);
-    zbtGUID:     Result := #39+GUIDToRaw(BindValue.Value, SizeOf(TGUID), True)+#39;
+    zbtGUID:     GUIDToRaw(BindValue.Value, [guidWithBrackets, guidQuoted], Result);
     zbtBytes: Connection.GetBinaryEscapeString(BindValue.Value, Length(TBytes(BindValue.Value)), Result);
     zbtLob: if BindValue.SQLType = stBinaryStream
             then Connection.GetBinaryEscapeString(IZBlob(BindValue.Value).GetBuffer, IZBlob(BindValue.Value).Length, Result)
             else Connection.GetEscapeString(IZBlob(BindValue.Value).GetBuffer, IZBlob(BindValue.Value).Length, Result);
     zbtPointer: Result := BoolStrIntsRaw[BindValue.Value <> nil];
-    zbtCustom: Result := CurrToRaw(PGNumeric2Currency(PAnsiChar(BindValue.Value)+SizeOf(LengthInt)));
+    zbtCustom: if BindValue.SQLType = stArray
+                then Result := '(Array)'
+                else Result := CurrToRaw(PGNumeric2Currency(PAnsiChar(BindValue.Value)+SizeOf(LengthInt)));
     //zbtBCD: Result := '';
     else Result := '';
   end;
@@ -1363,8 +1365,8 @@ function TZAbstractPostgreSQLPreparedStatementV3.OIDToSQLType(Index: Integer;
   SQLType: TZSQLType): TZSQLType;
 begin
   CheckParameterIndex(Index);
-  if (FRawPlanname = '') or Findeterminate_datatype or (FPQParamOIDs[Index] = INVALIDOID) then begin
-    SQLTypeToPostgreSQL(SQLType, FOIdAsBLob, FPQParamOIDs[Index]);
+  if (FPQParamOIDs[Index] = INVALIDOID) or (FRawPlanname = '') or Findeterminate_datatype then begin
+    FPQParamOIDs[Index] := ZSQLType2OID[FOidAsBlob][SQLType];
     if (Ord(SQLType) > Ord(stBoolean)) and (Ord(SQLType) < Ord(stLongWord)) and not Odd(Ord(SQLType))
     then Result := TZSQLType(Ord(SQLType)+3)
     else Result := SQLType
@@ -1386,7 +1388,7 @@ begin
     TIMEOID:  Result := stTime;
     TIMESTAMPOID: Result := stTimeStamp;
     UUIDOID:  Result := stGUID;
-    else if SQLType in [stString, stUnicodeString, stAsciistream, stUnicodeStream, stBinaryStream] then
+    else if SQLType in [stBytes, stString, stUnicodeString, stAsciistream, stUnicodeStream, stBinaryStream] then
       Result := SQLType
     else
       Result := stUnknown; //indicate unsupport the types as Fallback to String format
@@ -1467,15 +1469,19 @@ begin
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.PGExecuteUnPrepare;
-var SQL: RawByteString;
+var
   PError: PAnsiChar;
   Res: TPGresult;
+  procedure DoOnFail;
+  begin
+    FPostgreSQLConnection.RegisterTrashPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName))
+  end;
 begin
-  SQL := 'DEALLOCATE "'+FRawPlanName+'"';
+  fRawTemp := 'DEALLOCATE "'+FRawPlanName+'"';
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcUnprepStmt,Self);
-  Res := FPlainDriver.PQExec(FconnAddress^, Pointer(SQL));
+  Res := FPlainDriver.PQExec(FconnAddress^, Pointer(fRawTemp));
   if Assigned(FPlainDriver.PQresultErrorField)
   then PError := FPlainDriver.PQresultErrorField(Res,Ord(PG_DIAG_SQLSTATE))
   else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
@@ -1484,7 +1490,7 @@ begin
     if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) <> 0) then
       HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcUnprepStmt, ASQL, Res)
     else
-      FPostgreSQLConnection.RegisterTrashPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName))
+      DoOnFail
   else if Res <> nil then
     FPlainDriver.PQclear(Res);
 end;
@@ -1705,7 +1711,7 @@ var PGSQLType: TZSQLType;
   { move the string conversions into a own proc -> no (U/L)StrClear}
   procedure SetAsRaw;
   begin
-    case PGSQLType of
+    case SQLType of
       stBoolean:    fRawTemp := BoolStrIntsRaw[Value <> 0];
       stSmall,
       stInteger,
@@ -1890,7 +1896,6 @@ begin
   Index := Index -1;
   {$ENDIF}
   SQLType := OIDToSQLType(Index, stCurrency);
-
   if (FPQParamOIDs[index] = NUMERICOID) then begin
     if (FPQparamValues[Index] = nil) or (BindList.SQLTypes[Index] <> SQLType) then begin
       FPQparamValues[Index] := BindList.AquireCustomValue(Index, SQLType, MaxCurr2NumSize);
@@ -1987,15 +1992,14 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetLong(Index: Integer;
   const Value: Int64);
-{ move the string conversions into a own proc -> no (U/L)StrClear}
-{$IFNDEF CPU64}
-var PGSQLType: TZSQLType;
-procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value)); end;
-{$ENDIF}
-begin
 {$IFDEF CPU64}
+begin
   InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
 {$ELSE}
+{ move the string conversions into a own proc -> no (U/L)StrClear}
+var PGSQLType: TZSQLType;
+procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value)); end;
+begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   PGSQLType := OIDToSQLType(Index, stLong);
   if (Ord(PGSQLType) < Ord(stGUID)) then begin
