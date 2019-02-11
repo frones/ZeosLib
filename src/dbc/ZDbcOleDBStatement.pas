@@ -65,6 +65,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement,
   ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties;
 
@@ -822,7 +823,7 @@ W_Len:                if PLen^ > MaxL then
         //DBTYPE_VARNUMERIC:;
       end;
       Inc(BuffOffSet, fRowSize);
-    end;
+  end;
   end;
   {$IF defined (RangeCheckEnabled)}{$R+}{$IFEND}
 end;
