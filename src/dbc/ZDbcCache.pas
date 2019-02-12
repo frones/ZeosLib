@@ -150,6 +150,8 @@ type
 
     function CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
       const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+    function CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
+      ColumnIndex: Integer; CompareFunc: TCompareFunc): Integer;
     function GetCompareFunc(ColumnIndex: Integer; const CompareKind: TComparisonKind): TCompareFunc;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
       const CompareKinds: TComparisonKindArray): TCompareFuncs;
@@ -1465,26 +1467,29 @@ end;
   @param ColumnIndices column indices to compare.
   @param ColumnDirs compare direction for each columns.
 }
+function TZRowAccessor.CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
+  ColumnIndex: Integer; CompareFunc: TCompareFunc): Integer;
+var ValuePtr1, ValuePtr2: Pointer;
+begin
+  {$IFNDEF GENERIC_INDEX}ColumnIndex := ColumnIndex-1{$ENDIF};
+  { Compares column values. }
+  ValuePtr1 := @Buffer1.Columns[FColumnOffsets[ColumnIndex] + 1];
+  ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1];
+  if @CompareFunc = @CompareNothing
+  then Result := -1
+  else Result := CompareFunc(
+    (Buffer1.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
+    (Buffer2.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
+      ValuePtr1, ValuePtr2);
+end;
+
 function TZRowAccessor.CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
   const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
-var
-  I: Integer;
-  ColumnIndex: Integer;
-  ValuePtr1, ValuePtr2: Pointer;
+var I: Integer;
 begin
   Result := 0; //satisfy compiler
-  for I := Low(ColumnIndices) to High(ColumnIndices) do
-  begin
-    ColumnIndex := ColumnIndices[I]{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
-    { Compares column values. }
-    ValuePtr1 := @Buffer1.Columns[FColumnOffsets[ColumnIndex] + 1];
-    ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1];
-    if @CompareFuncs[i] = @CompareNothing
-    then Result := -1
-    else Result := CompareFuncs[i](
-      (Buffer1.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
-      (Buffer2.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
-        ValuePtr1, ValuePtr2);
+  for I := Low(ColumnIndices) to High(ColumnIndices) do begin
+    Result := CompareBuffer(Buffer1, Buffer2, ColumnIndices[I], CompareFuncs[i]);
     if Result <> 0 then
       Break;
   end;
@@ -3954,7 +3959,7 @@ begin
       {$ENDIF}
     stBytes: InternalSetBytes(Data, StrToBytes(Value));
     stGUID:
-      if Length(Value) in [0, 36, 38]
+      if Byte(Length(Value)) in [36, 38]
         then ValidGUIDToBinary(PAnsiChar(Pointer(Value)), PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate:
@@ -4047,7 +4052,7 @@ begin
       end;
     stBytes: InternalSetBytes(Data, Value, len);
     stGUID:
-      if (Value <> nil) and (Len in [36, 38])
+      if (Value <> nil) and ((Len = 36) or (Len = 38))
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate:
@@ -4128,7 +4133,7 @@ begin
     stBytes:
       SetBytes(ColumnIndex, StrToBytes(ZWideString(Value)));
     stGUID:
-      if (Value <> nil) and (Len in [36, 38])
+      if (Value <> nil) and ((Len = 36) or (Len = 38))
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate:
@@ -4239,7 +4244,7 @@ begin
       end;
     stBytes: InternalSetBytes(Data, Pointer(Value), Length(Value));
     stGUID:
-      if Length(Value) in [0, 36, 38]
+      if Byte(Length(Value)) in [36, 38]
         then ValidGUIDToBinary(PAnsichar(Pointer(Value)), PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate:
@@ -4331,7 +4336,7 @@ begin
     stBytes:
       InternalSetBytes(Data, StrToBytes(Value));
     stGUID:
-      if Length(Value) in [0, 36, 38]
+      if Byte(Length(Value)) in [36, 38]
         then ValidGUIDToBinary(PWideChar(Pointer(Value)), PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate:

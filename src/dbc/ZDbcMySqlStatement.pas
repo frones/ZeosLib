@@ -135,18 +135,36 @@ type
   end;
 
   TZMySQLPreparedStatement = class(TZAbstractMySQLPreparedStatement, IZPreparedStatement)
+  private
+    procedure BindInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}); overload;
+    procedure BindInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF}); overload;
+    procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
   public
+    //a performance thing: direct dispatched methods for the interfaces :
+    //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
     procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); reintroduce;
+    procedure SetByte(ParameterIndex: Integer; Value: Byte); reintroduce;
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt); reintroduce;
+    procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
+    procedure SetInt(ParameterIndex: Integer; Value: Integer); reintroduce;
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); reintroduce;
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64); reintroduce;
+
+    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
+    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+
+    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
@@ -225,7 +243,8 @@ implementation
 uses
   Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZDbcProperties,
   ZSysUtils, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcResultSet
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND};
 
 var
   MySQL41PreparableTokens: TPreparablePrefixTokens;
@@ -267,18 +286,29 @@ procedure TZAbstractMySQLPreparedStatement.ClearParameters;
 var
   array_size: UInt;
   I: Integer;
+  Bind: PMYSQL_aligned_BIND;
 begin
   if BatchDMLArrayCount > 0 then begin
     array_size := 0;
     for i := 0 to BindList.Count -1 do begin
       {$R-}
-      FreeMem(FMYSQL_aligned_BINDs^[i].indicators);
-      FMYSQL_aligned_BINDs^[i].indicators := nil;
-      if TZSqlType(PZArray(BindList[i].Value).VArrayType) in [stAsciiStream..stBinaryStream] then begin
-        FreeMem(FMYSQL_aligned_BINDs^[i].buffer);
-        FMYSQL_aligned_BINDs^[i].buffer := nil;
-      end;
+      Bind := @FMYSQL_aligned_BINDs^[i];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      FreeMem(Bind.indicators, BatchDMLArrayCount);
+      Bind.indicators := nil;
+      Bind.indicator_address^ := nil;
+      if (Bind^.buffer_address^ = Bind.buffer) and (Bind.buffer <> nil) then begin
+        FreeMem(Bind.buffer);
+        Bind.buffer := nil;
+        if (PZArray(BindList[i].Value).VArrayType >= Byte(stGUID)) or
+          ((TZSqlType(PZArray(BindList[i].Value).VArrayType) = stBoolean) and not FMySQL_FieldType_Bit_1_IsBoolean) then begin
+          FreeMem(Bind^.length, SizeOf(ULong)*BatchDMLArrayCount);
+          GetMem(Bind^.length, SizeOf(ULong));
+          Bind.length_address^ := Bind^.length;
+          Bind.buffer_length_address^ := 0;
+        end;
+      end;
+      Bind^.buffer_address^ := Bind.buffer;
     end;
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
       checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
@@ -1718,66 +1748,85 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindDateTime(Index: Integer;
-  SQLType: TZSQLType; const Value: TDateTime);
+procedure TZMySQLPreparedStatement.BindInteger(Index: Integer; SQLType: TZSQLType;
+  Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF});
 var
   Bind: PMYSQL_aligned_BIND;
-  P: PMYSQL_TIME;
+  { move the string conversions into a own proc -> no (U/L)StrClear}
+  procedure EmulatedAsRaw; begin FEmulatedValues[Index] := IntToRaw(Value) end;
 begin
+  CheckParameterIndex(Index);
   if FEmulatedParams then begin
-    if FTokenMatchIndex <> -1 then
-      inherited BindDateTime(Index, SQLType, Value);
-    case SQLType of
-      stDate: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLDate(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      stTime: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.TimeFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLTime(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      stTimestamp: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateTimeFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLTimeStamp(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-    end;
+    BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
+    EmulatedAsRaw;
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil)  then
+    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil) then
       InitBuffer(SQLType, Index, Bind);
-    P := Pointer(bind^.buffer);
-    P^.neg := Ord(Value < 0);
-    if P^.time_type = MYSQL_TIMESTAMP_DATE then
-      DecodeDate(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^)
-    else begin
-      P^.second_part := 0;
-      if P^.time_type = MYSQL_TIMESTAMP_TIME
-      then DecodeTime(Value, PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^)
-      else DecodeDateTime(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^,
-        PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^);
-      P^.second_part := P^.second_part*1000;
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
+                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
+                            else PByte(Bind^.buffer)^ := Byte(Value);
+      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
+                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
+                            else PWord(Bind^.buffer)^ := Word(Value);
+      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
+                            then PInteger(Bind^.buffer)^ := Integer(Value)
+                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
+      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
+                            then PInt64(Bind^.buffer)^ := Value
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+                            else PUInt64(Bind^.buffer)^ := Value;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
+                            Bind^.Length[0] := 1;
+                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
+                          end;
     end;
     Bind^.is_null_address^ := 0;
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double);
+procedure TZMySQLPreparedStatement.BindInteger(Index: Integer; SQLType: TZSQLType;
+  Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
 var
   Bind: PMYSQL_aligned_BIND;
+  { move the string conversions into a own proc -> no (U/L)StrClear}
+  procedure EmulatedAsRaw; begin FEmulatedValues[Index] := IntToRaw(Value) end;
 begin
+  CheckParameterIndex(Index);
   if FEmulatedParams then begin
-    if FTokenMatchIndex <> -1
-    then inherited BindDouble(Index, SQLType, Value)
-    else CheckParameterIndex(Index);
-    FEmulatedValues[Index] := FloatToSQLRaw(Value);
+    BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
+    EmulatedAsRaw;
   end else begin
     CheckParameterIndex(Index);
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil)  then
+    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil) then
       InitBuffer(SQLType, Index, Bind);
-    PDouble(bind^.buffer)^ := Value;
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
+                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
+                            else PByte(Bind^.buffer)^ := Byte(Value);
+      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
+                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
+                            else PWord(Bind^.buffer)^ := Word(Value);
+      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
+                            then PInteger(Bind^.buffer)^ := Integer(Value)
+                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
+      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
+                            then PInt64(Bind^.buffer)^ := Value
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+                            else PUInt64(Bind^.buffer)^ := Value;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
+                            Bind^.Length[0] := 1;
+                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
+                          end;
+    end;
     Bind^.is_null_address^ := 0;
   end;
 end;
@@ -1821,6 +1870,58 @@ begin
   end;
 end;
 
+procedure TZMySQLPreparedStatement.InternalBindDouble(Index: Integer;
+  SQLType: TZSQLType; const Value: Double);
+var
+  Bind: PMYSQL_aligned_BIND;
+  P: PMYSQL_TIME;
+  { move the string conversions into a own proc -> no (U/L)StrClear}
+  procedure BindEmulated;
+  begin
+    case SQLType of
+      stDate: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateFormatLen
+              then FEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True)
+              else DateTimeToRawSQLDate(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
+      stTime: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.TimeFormatLen
+              then FEmulatedValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True)
+              else DateTimeToRawSQLTime(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
+      stTimestamp: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateTimeFormatLen
+              then FEmulatedValues[Index] := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True)
+              else DateTimeToRawSQLTimeStamp(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
+      else FEmulatedValues[Index] := FloatToSQLRaw(Value);
+    end;
+  end;
+begin
+  if FEmulatedParams then begin
+    BindList.Put(Index, SQLType, P8Bytes(@Value));
+    BindEmulated;
+  end else begin
+    CheckParameterIndex(Index);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil)  then
+      InitBuffer(SQLType, Index, Bind);
+    if Bind^.buffer_type_address^ = FIELD_TYPE_DOUBLE then
+      PDouble(bind^.buffer)^ := Value
+    else begin
+      P := Pointer(bind^.buffer);
+      P^.neg := Ord(Value < 0);
+      if P^.time_type = MYSQL_TIMESTAMP_DATE then
+        DecodeDate(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^)
+      else begin
+        P^.second_part := 0;
+        if P^.time_type = MYSQL_TIMESTAMP_TIME
+        then DecodeTime(Value, PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^)
+        else DecodeDateTime(Value, PWord(@P^.Year)^, PWord(@P^.Month)^, PWord(@P^.Day)^,
+          PWord(@P^.hour)^, PWord(@P^.minute)^, PWord(@P^.second)^, PWord(@P^.second_part)^);
+        P^.second_part := P^.second_part*1000;
+      end;
+    end;
+    Bind^.is_null_address^ := 0;
+  end;
+end;
+
 procedure TZMySQLPreparedStatement.BindRawStr(Index: Integer; Buf: PAnsiChar;
   Len: LengthInt);
 var
@@ -1844,88 +1945,19 @@ begin
   end;
 end;
 
-procedure TZMySQLPreparedStatement.BindSignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: Int64);
-var
-  Bind: PMYSQL_aligned_BIND;
-begin
-  if FEmulatedParams then begin
-    if FTokenMatchIndex <> -1
-    then inherited BindSignedOrdinal(Index, SQLType, Value)
-    else CheckParameterIndex(Index);
-    FEmulatedValues[Index] := IntToRaw(Value);
-  end else begin
-    CheckParameterIndex(Index);
-    {$R-}
-    Bind := @FMYSQL_aligned_BINDs[Index];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil) then
-      InitBuffer(SQLType, Index, Bind);
-    case Bind^.buffer_type_address^ of
-      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
-                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
-                            else PByte(Bind^.buffer)^ := Byte(Value);
-      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
-                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
-                            else PWord(Bind^.buffer)^ := Word(Value);
-      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
-                            then PInteger(Bind^.buffer)^ := Integer(Value)
-                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
-      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
-                            then PInt64(Bind^.buffer)^ := Value
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-                      else PUInt64(Bind^.buffer)^ := Value;
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
-                            Bind^.Length[0] := 1;
-                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
-                          end;
-    end;
-    Bind^.is_null_address^ := 0;
-  end;
-end;
+{**
+  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
 
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-procedure TZMySQLPreparedStatement.BindUnsignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: UInt64);
-var
-  Bind: PMYSQL_aligned_BIND;
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetBigDecimal(Index: Integer;
+  const Value: Extended);
 begin
-  if FEmulatedParams then begin
-    if FTokenMatchIndex <> -1
-    then inherited BindSignedOrdinal(Index, SQLType, Value)
-    else CheckParameterIndex(Index);
-    FEmulatedValues[Index] := IntToRaw(Value);
-  end else begin
-    CheckParameterIndex(Index);
-    {$R-}
-    Bind := @FMYSQL_aligned_BINDs[Index];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if (BindList.SQLTypes[Index] <> SQLType) or (Bind^.buffer = nil) then
-      InitBuffer(SQLType, Index, Bind);
-    case Bind^.buffer_type_address^ of
-      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
-                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
-                            else PByte(Bind^.buffer)^ := Byte(Value);
-      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
-                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
-                            else PWord(Bind^.buffer)^ := Word(Value);
-      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
-                            then PInteger(Bind^.buffer)^ := Integer(Value)
-                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
-      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
-                            then PInt64(Bind^.buffer)^ := Value
-                            else PUInt64(Bind^.buffer)^ := Value;
-      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
-                            Bind^.Length[0] := 1;
-                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
-                          end;
-    end;
-    Bind^.is_null_address^ := 0;
-    //BindList.SetNull(Index, SQLType);
-  end;
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, Value);
 end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Sets the designated parameter to a Java <code>boolean</code> value.
@@ -1939,23 +1971,183 @@ procedure TZMySQLPreparedStatement.SetBoolean(Index: Integer;
   Value: Boolean);
 begin
   if FMySQL_FieldType_Bit_1_IsBoolean
-  then BindSignedOrdinal(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean, Ord(Value))
-  else BindRawStr(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, EnumBool[Value]);
+  then BindInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean, {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF}(Value))
+  else SetRawByteString(Index, EnumBool[Value]);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
+  The driver converts this
+  to an SQL <code>BYTE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetByte(ParameterIndex: Integer;
+  Value: Byte);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte,
+    {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF}(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>currency</code> value.
+  The driver converts this
+  to an SQL <code>CURRENCY</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetCurrency(Index: Integer;
+  const Value: Currency);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stCurrency, Value);
 end;
 
 procedure TZMySQLPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
-var BufferSize: ULong;
-  ClientStrings: TRawByteStringDynArray;
+var
   Bind: PMYSQL_aligned_BIND;
   I: Integer;
   ClientCP: Word;
-  UniTemp: ZWideString;
-  RawTemp: RawByteString;
-  Lob: IZBLob;
   MySQLTime: PMYSQL_TIME;
   P: PAnsiChar;
-label set_raw, move_from_temp;
+  procedure BindLobs;
+  var Lob: IZBLob;
+    RawTemp: RawByteString;
+    I: Integer;
+  begin
+    ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
+    Bind^.length_address^ := Bind^.length;
+    Bind^.buffer_type_address^ := FIELD_TYPE_BLOB;
+    ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
+    for I := 0 to BatchDMLArrayCount -1 do begin
+      if (TInterfaceDynArray(Value)[i] = nil) or not Supports(TInterfaceDynArray(Value)[i], IZBlob, Lob) or Lob.IsEmpty then
+        {$R-}Bind^.indicators[i] := Ord(STMT_INDICATOR_NULL){$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      else if (Lob.Length = 0) then begin
+        {$R-}Bind^.length[i] := 0;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := PEmptyAnsiString;
+      end else begin
+        if SQLType <> stBinaryStream then begin
+          if not Lob.IsClob then begin
+            RawTemp := GetValidatedAnsiStringFromBuffer(Lob.GetBuffer, Lob.Length, ConSettings);
+            Lob := TZAbstractCLob.CreateWithData(Pointer(RawTemp), Length(RawTemp), ClientCP, ConSettings);
+            TInterfaceDynArray(Value)[i] := Lob;
+          end;
+          Lob.GetPAnsiChar(ClientCP);
+        end;
+        PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Lob.GetBuffer;
+        {$R-}Bind^.length[i] := Lob.Length;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      end;
+    end;
+    Bind^.buffer_address^ := Pointer(Bind^.Buffer);
+  end;
+  procedure BindRaw;
+  var I: Integer;
+  begin
+    ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
+    for I := 0 to BatchDMLArrayCount -1 do begin
+      {$R-}
+      Bind^.length[i] := Length(TRawByteStringDynArray(Value)[i]);
+      if Bind^.length[i] > 0
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      then PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Pointer(TRawByteStringDynArray(Value)[i]) //write address
+      else PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := PEmptyAnsiString;
+    end;
+    Bind^.buffer_address^ := Pointer(Bind^.buffer);
+  end;
+  procedure BindRawFromConvertion;
+  var I: Integer;
+    ClientStrings: TRawByteStringDynArray;
+    UniTemp: ZWideString;
+    BufferSize: ULong;
+  label move_from_temp;
+  begin
+    BufferSize := 0;
+    SetLength(ClientStrings, BatchDMLArrayCount);
+    case VariantType of
+      {$IFNDEF UNICODE}
+      vtString: begin
+          for I := 0 to BatchDMLArrayCount -1 do begin
+            ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[i], ConSettings^.CTRL_CP, ClientCP);
+            BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
+          end;
+          goto move_from_temp;
+        end;
+      {$ENDIF}
+      {$IFNDEF NO_ANSISTRING}
+      vtAnsiString: begin
+          for I := 0 to BatchDMLArrayCount -1 do begin
+            ClientStrings[i] := ConSettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(Value)[i], ClientCP);
+            BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
+          end;
+          goto move_from_temp;
+        end;
+      {$ENDIF}
+      {$IFNDEF NO_UTF8STRING}
+      vtUTF8String: begin
+          for I := 0 to BatchDMLArrayCount -1 do begin
+            ClientStrings[i] := ConSettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(Value)[i], ClientCP);
+            BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
+          end;
+          goto move_from_temp;
+        end;
+      {$ENDIF}
+      vtUnicodeString
+      {$IFDEF UNICODE}
+      ,vtString
+      {$ENDIF}:       begin
+          for I := 0 to BatchDMLArrayCount -1 do begin
+            ClientStrings[i] := ZUnicodeToRaw(TUnicodeStringDynArray(Value)[i], ClientCP);
+            BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
+          end;
+move_from_temp:
+          ReAllocMem(Bind^.Buffer, Cardinal(SizeOf(Pointer)*BatchDMLArrayCount)+BufferSize);
+          P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
+          for I := 0 to BatchDMLArrayCount -1 do begin
+            {$R-}Bind^.length[i] := Length(ClientStrings[i]);
+            if Bind^.length[i] > 0
+            then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]+1)  //write buffer
+            else Byte(P^) := Ord(#0);
+            PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
+            Inc(P, Bind^.length[i]+1);
+            {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+          end;
+          Bind^.buffer_address^ := Pointer(Bind^.buffer);
+        end;
+      vtCharRec:      begin
+          ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount); //minumum size
+          for I := 0 to BatchDMLArrayCount -1 do
+            if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, ClientCP) or (TZCharRecDynArray(Value)[i].Len = 0) then begin
+              {$R-}Bind^.length[i] := TZCharRecDynArray(Value)[i].Len;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+              PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := TZCharRecDynArray(Value)[i].P; //wite address
+            end else if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, zCP_UTF16) then begin
+              ClientStrings[i] := PUnicodeToRaw(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, ClientCP);
+              BufferSize := BufferSize + Cardinal(Length(ClientStrings[i])) +1;
+              {$R-}Bind^.length[i] := Length(ClientStrings[i]);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+            end else begin
+              UniTemp := PRawToUnicode(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, TZCharRecDynArray(Value)[i].CP);
+              ClientStrings[i] := ZUnicodeToRaw(UniTemp, ClientCP);
+              BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
+              {$R-}Bind^.length[i] := Length(ClientStrings[i]);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+            end;
+          if BufferSize > 0 then begin
+            ReAllocMem(Bind^.buffer, Cardinal(BatchDMLArrayCount*SizeOf(Pointer))+BufferSize);
+            P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
+            for I := 0 to BatchDMLArrayCount -1 do
+              if Pointer(ClientStrings[i]) <> nil then begin
+                {$R-}
+                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]); //write buffer
+                PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
+                Inc(P, Bind^.length[i]+1);
+                {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+              end;
+            end;
+          Bind^.buffer_address^ := Pointer(Bind^.buffer);
+        end;
+    end;
+    SetLength(ClientStrings, 0);
+  end;
 begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
   {$IFNDEF GENERIC_INDEX}
@@ -1971,13 +2163,11 @@ begin
   Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   ClientCP := ConSettings^.ClientCodePage.CP;
-  ClientStrings := nil;
   FBindAgain := True;
   ReAllocMem(Bind^.indicators, BatchDMLArrayCount);
   Bind^.indicator_address^ := Pointer(Bind^.indicators);
   FillChar(Pointer(Bind^.indicators)^, BatchDMLArrayCount, Char(STMT_INDICATOR_NONE));
   Bind^.Iterations := BatchDMLArrayCount;
-  BufferSize := 0;
   case SQLType of
     stBoolean:
       if FMySQL_FieldType_Bit_1_IsBoolean then begin
@@ -1991,7 +2181,9 @@ begin
         for i := 0 to BatchDMLArrayCount -1 do begin
           PWord(PAnsiChar(Bind^.buffer)+BatchDMLArrayCount*SizeOf(Pointer)+(i shl 1))^ := PWord(EnumBool[TBooleanDynArray(Value)[i]])^; //write data
           PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := PAnsiChar(Bind^.buffer)+BatchDMLArrayCount*SizeOf(Pointer)+(i shl 1); //write address
+          {$R-}
           Bind^.length[i] := 1;
+          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
         end;
       end;
     stByte, stShort: begin
@@ -2071,8 +2263,10 @@ begin
         ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
         Bind^.length_address^ := Bind^.length;
         for i := 0 to BatchDMLArrayCount -1 do begin
+          {$R-}
           Bind^.length[i] := Length(TBytesDynArray(Value)[i]);
           if Bind^.length[i] > 0
+          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
           then PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := Pointer(TBytesDynArray(Value)[i]) //write address
           else PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := PEmptyAnsiString;
         end;
@@ -2086,7 +2280,7 @@ begin
           Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
           P := PAnsiChar(Bind^.buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
           for i := 0 to BatchDMLArrayCount -1 do begin
-            Bind^.length[i] := 36;
+            {$R-}Bind^.length[i] := 36; {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
             GUIDToBuffer(@TGUIDDynArray(Value)[i].D1, P, False, True);
             PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := P; //write address
             Inc(P, 37);
@@ -2096,7 +2290,7 @@ begin
           Bind^.buffer_type_address^ := FIELD_TYPE_TINY_BLOB;
           for i := 0 to BatchDMLArrayCount -1 do begin
             PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := @TGUIDDynArray(Value)[i].D1; //write address
-            Bind^.length[i] := SizeOf(TGUID);
+            {$R-}Bind^.length[i] := SizeOf(TGUID);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
           end;
         end;
         Bind^.buffer_address^ := Pointer(Bind^.buffer);
@@ -2107,138 +2301,46 @@ begin
         Bind^.length_address^ := Bind^.length;
         case VariantType of
           {$IFNDEF UNICODE}
-          vtString:
-            if not ConSettings.AutoEncode and ZCompatibleCodePages(ConSettings^.CTRL_CP, ClientCP)
-            then goto set_raw
-            else begin
-              SetLength(ClientStrings, BatchDMLArrayCount);
-              for I := 0 to BatchDMLArrayCount -1 do begin
-                ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[i], ConSettings^.CTRL_CP, ClientCP);
-                BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
-              end;
-              goto move_from_temp;
-            end;
+          vtString: if not ConSettings.AutoEncode and ZCompatibleCodePages(ConSettings^.CTRL_CP, ClientCP)
+            then BindRaw
+            else BindRawFromConvertion;
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}
-          vtAnsiString:
-            if ZCompatibleCodePages(ZOSCodePage, ClientCP)
-            then goto set_raw
-            else begin
-              SetLength(ClientStrings, BatchDMLArrayCount);
-              for I := 0 to BatchDMLArrayCount -1 do begin
-                ClientStrings[i] := ConSettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(Value)[i], ClientCP);
-                BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
-              end;
-              goto move_from_temp;
-            end;
+          vtAnsiString: if ZCompatibleCodePages(ZOSCodePage, ClientCP)
+            then BindRaw
+            else BindRawFromConvertion;
           {$ENDIF}
           {$IFNDEF NO_UTF8STRING}
-          vtUTF8String:
-            if ZCompatibleCodePages(zCP_UTF8, ClientCP)
-            then goto set_raw
-            else begin
-              SetLength(ClientStrings, BatchDMLArrayCount);
-              for I := 0 to BatchDMLArrayCount -1 do begin
-                ClientStrings[i] := ConSettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(Value)[i], ClientCP);
-                BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
-              end;
-              goto move_from_temp;
-            end;
+          vtUTF8String: if ZCompatibleCodePages(zCP_UTF8, ClientCP)
+            then BindRaw
+            else BindRawFromConvertion;
           {$ENDIF}
-          vtRawByteString:begin
-set_raw:      //MySQL uses array of PAnsichar so we are using our buffer as pointer array
-              ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
-              for I := 0 to BatchDMLArrayCount -1 do begin
-                Bind^.length[i] := Length(TRawByteStringDynArray(Value)[i]);
-                if Bind^.length[i] > 0
-                then PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Pointer(TRawByteStringDynArray(Value)[i]) //write address
-                else PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := PEmptyAnsiString;
-              end;
-              Bind^.buffer_address^ := Pointer(Bind^.buffer);
-            end;
+          vtRawByteString: BindRaw;
           vtUnicodeString
           {$IFDEF UNICODE}
           ,vtString
-          {$ENDIF}:       begin
-              SetLength(ClientStrings, BatchDMLArrayCount);
-              for I := 0 to BatchDMLArrayCount -1 do begin
-                ClientStrings[i] := ZUnicodeToRaw(TUnicodeStringDynArray(Value)[i], ClientCP);
-                BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
-              end;
-move_from_temp:
-              ReAllocMem(Bind^.Buffer, Cardinal(SizeOf(Pointer)*BatchDMLArrayCount)+BufferSize);
-              P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
-              for I := 0 to BatchDMLArrayCount -1 do begin
-                Bind^.length[i] := Length(ClientStrings[i]);
-                if Bind^.length[i] > 0
-                then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]+1)  //write buffer
-                else Byte(P^) := Ord(#0);
-                PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
-                Inc(P, Bind^.length[i]+1);
-              end;
-              Bind^.buffer_address^ := Pointer(Bind^.buffer);
-            end;
-          vtCharRec:      begin
-              SetLength(ClientStrings, BatchDMLArrayCount);
-              ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount); //minumum size
-              for I := 0 to BatchDMLArrayCount -1 do
-                if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, ClientCP) or (TZCharRecDynArray(Value)[i].Len = 0) then begin
-                  Bind^.length[i] := TZCharRecDynArray(Value)[i].Len;
-                  PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := TZCharRecDynArray(Value)[i].P; //wite address
-                end else if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, zCP_UTF16) then begin
-                  ClientStrings[i] := PUnicodeToRaw(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, ClientCP);
-                  BufferSize := BufferSize + Cardinal(Length(ClientStrings[i])) +1;
-                  Bind^.length[i] := Length(ClientStrings[i]);
-                end else begin
-                  UniTemp := PRawToUnicode(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, TZCharRecDynArray(Value)[i].CP);
-                  ClientStrings[i] := ZUnicodeToRaw(UniTemp, ClientCP);
-                  BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
-                  Bind^.length[i] := Length(ClientStrings[i]);
-                end;
-              if BufferSize > 0 then begin
-                ReAllocMem(Bind^.buffer, Cardinal(BatchDMLArrayCount*SizeOf(Pointer))+BufferSize);
-                P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
-                for I := 0 to BatchDMLArrayCount -1 do
-                  if Pointer(ClientStrings[i]) <> nil then begin
-                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]); //write buffer
-                    PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
-                    Inc(P, Bind^.length[i]+1);
-                  end;
-                end;
-              Bind^.buffer_address^ := Pointer(Bind^.buffer);
-            end;
+          {$ENDIF}: BindRawFromConvertion;
+          vtCharRec: BindRawFromConvertion;
           else raise EZSQLException.Create(SUnsupportedParameterType);
         end;
       end;
-    stAsciiStream, stUnicodeStream, stBinaryStream: {in current state (mariadb 10.3) send_long_data isn't supported for batch array bindings }
-      begin
-        ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
-        Bind^.length_address^ := Bind^.length;
-        Bind^.buffer_type_address^ := FIELD_TYPE_BLOB;
-        ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
-        for I := 0 to BatchDMLArrayCount -1 do begin
-          if (TInterfaceDynArray(Value)[i] = nil) or not Supports(TInterfaceDynArray(Value)[i], IZBlob, Lob) or Lob.IsEmpty then
-            Bind^.indicators[i] := Ord(STMT_INDICATOR_NULL)
-          else if (Lob.Length = 0) then begin
-            Bind^.length[i] := 0;
-            PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := PEmptyAnsiString;
-          end else begin
-            if SQLType <> stBinaryStream then begin
-              if not Lob.IsClob then begin
-                RawTemp := GetValidatedAnsiStringFromBuffer(Lob.GetBuffer, Lob.Length, ConSettings);
-                Lob := TZAbstractCLob.CreateWithData(Pointer(RawTemp), Length(RawTemp), ClientCP, ConSettings);
-                TInterfaceDynArray(Value)[i] := Lob;
-              end;
-              Lob.GetPAnsiChar(ClientCP);
-            end;
-            PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Lob.GetBuffer;
-            Bind^.length[i] := Lob.Length;
-          end;
-        end;
-        Bind^.buffer_address^ := Pointer(Bind^.Buffer);
-      end;
+    stAsciiStream, stUnicodeStream, stBinaryStream: BindLobs;
   end;
   Bind^.Iterations := BatchDMLArrayCount;
+end;
+
+{**
+  Sets the designated parameter to a <code<java.sql.Date</code> value.
+  The driver converts this to an SQL <code>DATE</code>
+  value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetDate(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
 end;
 
 {**
@@ -2256,6 +2358,90 @@ begin
   if (P = nil) or FEmulatedParams or not ((P^ = #39) and ((P+Length(Value)-1)^ = #39))
   then inherited SetDefaultValue(ParameterIndex, Value)
   else inherited SetDefaultValue(ParameterIndex, Copy(Value, 2, Length(Value)-2));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetDouble(Index: Integer;
+  const Value: Double);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetInt(ParameterIndex, Value: Integer);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger,
+    {$IFDEF CPU64}Int64{$ENDIF}(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetLong(ParameterIndex: Integer;
+  const Value: Int64);
+{$IFDEF CPU64}
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+{$ELSE}
+var
+  Bind: PMYSQL_aligned_BIND;
+  { move the string conversions into a own proc -> no (U/L)StrClear}
+  procedure EmulatedAsRaw; begin FEmulatedValues[ParameterIndex] := IntToRaw(Value) end;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex -1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  if FEmulatedParams then begin
+    BindList.Put(ParameterIndex, stLong, P8Bytes(@Value));
+    EmulatedAsRaw;
+  end else begin
+    CheckParameterIndex(ParameterIndex);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[ParameterIndex] <> stLong) or (Bind^.buffer = nil) then
+      InitBuffer(stLong, ParameterIndex, Bind);
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
+                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
+                            else PByte(Bind^.buffer)^ := Byte(Value);
+      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
+                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
+                            else PWord(Bind^.buffer)^ := Word(Value);
+      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
+                            then PInteger(Bind^.buffer)^ := Integer(Value)
+                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
+      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
+                            then PInt64(Bind^.buffer)^ := Value
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+                            else PUInt64(Bind^.buffer)^ := Value;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
+                            Bind^.Length[0] := 1;
+                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
+                          end;
+    end;
+    Bind^.is_null_address^ := 0;
+  end;
+{$ENDIF}
 end;
 
 {**
@@ -2312,17 +2498,163 @@ begin
     InternalRealPrepare;
   if (FMYSQL_STMT = nil) then
     raise EZSQLException.Create(SFailedtoPrepareStmt);
-  if Bind^.Iterations <> Cardinal(BatchDMLArrayCount) then begin
+  {if Bind^.Iterations <> Cardinal(BatchDMLArrayCount) then begin
     ReAllocMem(Bind^.indicators, BatchDMLArrayCount);
     Bind^.indicator_address^ := Pointer(Bind^.indicators);
     FBindAgain := True;
     Bind^.Iterations := BatchDMLArrayCount;
-  end;
+  end;}
   aArray := BindList[ParameterIndex].Value;
   if Pointer(Value) = nil
   then FillChar(Bind^.indicators^, BatchDMLArrayCount, Char(MySQLNullIndicatorMatrix[False, FUseDefaults]))
   else for i := 0 to BatchDMLArrayCount -1 do
+    {$R-}
     Bind^.indicators[I] :=  MySQLNullIndicatorMatrix[IsNullFromArray(aArray, I), FUseDefaults];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+end;
+
+{**
+  Sets the designated parameter to a Java <code>ShortInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetShort(ParameterIndex: Integer;
+  Value: ShortInt);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stShort,
+    {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  The driver converts this
+  to an SQL <code>SMALLINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetSmall(ParameterIndex: Integer;
+  Value: SmallInt);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall,
+    {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}(Value));
+end;
+
+{**
+  Sets the designated parameter to a <code>java.sql.Time</code> value.
+  The driver converts this to an SQL <code>TIME</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetTime(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+end;
+
+{**
+  Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
+  The driver converts this to an SQL <code>TIMESTAMP</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetTimestamp(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetUInt(ParameterIndex: Integer;
+  Value: Cardinal);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord,
+    {$IFDEF CPU64}UInt64{$ENDIF}(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetULong(ParameterIndex: Integer;
+  const Value: UInt64);
+{$IFDEF CPU64}
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value);
+{$ELSE}
+var
+  Bind: PMYSQL_aligned_BIND;
+  { move the string conversions into a own proc -> no (U/L)StrClear}
+  procedure EmulatedAsRaw; begin FEmulatedValues[ParameterIndex] := IntToRaw(Value) end;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex -1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  if FEmulatedParams then begin
+    BindList.Put(ParameterIndex, stULong, P8Bytes(@Value));
+    EmulatedAsRaw;
+  end else begin
+    CheckParameterIndex(ParameterIndex);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[ParameterIndex] <> stULong) or (Bind^.buffer = nil) then
+      InitBuffer(stULong, ParameterIndex, Bind);
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:      if Bind^.is_unsigned_address^ = 0
+                            then PShortInt(Bind^.buffer)^ := ShortInt(Value)
+                            else PByte(Bind^.buffer)^ := Byte(Value);
+      FIELD_TYPE_SHORT:     if Bind^.is_unsigned_address^ = 0
+                            then PSmallInt(Bind^.buffer)^ := SmallInt(Value)
+                            else PWord(Bind^.buffer)^ := Word(Value);
+      FIELD_TYPE_LONG:      if Bind^.is_unsigned_address^ = 0
+                            then PInteger(Bind^.buffer)^ := Integer(Value)
+                            else PCardinal(Bind^.buffer)^ := Cardinal(Value);
+      FIELD_TYPE_LONGLONG:  if Bind^.is_unsigned_address^ = 0
+                            then PInt64(Bind^.buffer)^ := Value
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+                            else PUInt64(Bind^.buffer)^ := Value;
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      FIELD_TYPE_STRING:  begin //can happen only if stBoolean and not MySQL_FieldType_Bit_1_IsBoolean
+                            Bind^.Length[0] := 1;
+                            PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
+                          end;
+    end;
+    Bind^.is_null_address^ := 0;
+  end;
+{$ENDIF}
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
+  The driver converts this
+  to an SQL <code>WORD</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZMySQLPreparedStatement.SetWord(ParameterIndex: Integer;
+  Value: Word);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord,
+    {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF}(Value));
 end;
 
 initialization

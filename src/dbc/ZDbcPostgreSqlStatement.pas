@@ -64,7 +64,6 @@ uses
   ZDbcPostgreSql, ZDbcUtils;
 
 type
-  TPQV3ExecCatagory = (pqExecute, pqExecPrepared, pqPrepare, pqUnPrepare);
   TArrayDMLType = (dmlInsert = 1, dmlUpdate, dmlDelete);
 
   TZPostgreSQLPreparedStatementV3 = class; //forward
@@ -107,7 +106,9 @@ type
     procedure InternalRealPrepare;
     function OIDToSQLType(Index: Integer; SQLType: TZSQLType): TZSQLType;
     function ExecuteDMLBatchWithUnnestVarlenaArrays: TPGresult;
-    procedure LinkParam2PG(Index: Integer; Buf: Pointer; Len: LengthInt; ParamFormat: Integer);
+    procedure LinkBinParam2PG(Index: Integer; Buf: Pointer; Len: LengthInt);
+    procedure LinkTxtParam2PG(Index: Integer; Buf: Pointer; Len: LengthInt);
+    procedure BindArray(Index: Cardinal; Stmt: TZPostgreSQLPreparedStatementV3); reintroduce;
   protected
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure CheckParameterIndex(Value: Integer); override;
@@ -115,8 +116,10 @@ type
   protected
     procedure FlushPendingResults;
     function CreateResultSet({%H-}ServerCursor: Boolean): IZResultSet;
-    function ExecuteInternal(const SQL: RawByteString;
-      Category: TPQV3ExecCatagory): TPGresult; virtual;
+    function PGExecute: TPGresult; virtual;
+    procedure PGExecutePrepare;
+    function PGExecutePrepared: TPGresult;
+    procedure PGExecuteUnPrepare;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
   public
@@ -146,10 +149,15 @@ type
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
+
+    procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
+    procedure InternalBindInt(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
   protected
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
   public
+    procedure ClearParameters; reintroduce;
+
     procedure SetNull(Index: Integer; SQLType: TZSQLType); reintroduce;
     procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
     procedure SetByte(Index: Integer; Value: Byte); reintroduce;
@@ -200,6 +208,13 @@ type
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
   end;
 
+const ZSQLType2PGBindTypes: array[stUnknown..stGUID] of TZBindType = (zbtNull,
+    zbt4Byte{stBoolean},
+    zbt4Byte{stByte}, zbt4Byte{stShort}, zbt4Byte{stWord},
+    zbt4Byte{stSmall}, zbt4Byte{stLongWord}, zbt4Byte{stInteger}, zbt8Byte{stULong}, zbt8Byte{stLong},  //ordinals
+    zbt4Byte{stFloat}, zbt8Byte{stDouble}, zbtCustom{stCurrency}, zbtCustom{stBigDecimal}, //floats
+    zbt4Byte{stDate}, zbt8Byte{stTime}, zbt8Byte{stTimestamp},
+    zbtGUID{stGUID});
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
@@ -207,7 +222,9 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding, ZDbcProperties, ZTokenizer, Types, ZDbcResultSet, ZClasses;
+  ZEncoding, ZDbcProperties, ZTokenizer, Types, ZDbcResultSet, ZClasses
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 
 var
@@ -217,6 +234,511 @@ const
   ParamFormatStr = 0;
 
 { TZAbstractPostgreSQLPreparedStatementV3 }
+
+procedure TZAbstractPostgreSQLPreparedStatementV3.BindArray(Index: Cardinal;
+  Stmt: TZPostgreSQLPreparedStatementV3);
+var
+  SQLType: TZSQLType;
+
+  procedure AllocArray(Index: Cardinal; TotalSize: Integer;
+    out A: PArrayType; out Buf: PAnsiChar);
+  var
+    aOID: OID;
+    BuffSize: Integer;
+  begin
+    BuffSize := ARR_OVERHEAD_NONULLS(1)+TotalSize;
+    //alloc mem for the varlena array struct ->
+    A := Stmt.BindList.AquireMinCustomValue(Index, SQLType, BuffSize);
+    SQLTypeToPostgreSQL(SQLType, FOidAsBlob, aOID);
+    //write dimension(s)
+    Integer2PG(1, ARR_NDIM(A));
+    //indicate nullable items
+    Integer2PG(0, @A.flags);
+    //Write the OID
+    Cardinal2PG(aOID, ARR_ELEMTYPE(A));
+    //write item count
+    Integer2PG(BatchDMLArrayCount, ARR_DIMS(A));
+    //write lower bounds
+    Integer2PG(1, ARR_LBOUND(A));
+    Buf := ARR_DATA_PTR(A);
+    Stmt.FPQparamValues[Index] := a;
+    Stmt.FPQparamFormats[Index] := ParamFormatBin;
+    Stmt.FPQparamLengths[Index] := BuffSize;
+  end;
+var
+  OffSet, J: Cardinal;
+  D: Pointer;
+  P: PAnsiChar;
+  A: PArrayType;
+  CP: word;
+  X, N, DynArrayLen: Integer;
+  Arr: PZArray;
+  Native: Boolean;
+
+  procedure BindLobs;
+  var J: Cardinal;
+    N: Integer;
+    TempBlob: IZBlob;
+    WriteTempBlob: IZPostgreSQLOidBlob;
+  begin
+    CP := ConSettings^.ClientCodePage.CP;
+    N := 0;
+    for J := 0 to DynArrayLen -1 do
+      if (TInterfaceDynArray(D)[j] <> nil) and Supports(TInterfaceDynArray(D)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty then
+        if BindList.SQLTypes[Index] in [stUnicodeStream, stAsciiStream] then begin
+          if TempBlob.IsClob then
+            TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP)
+          else begin
+            fRawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+            TempBlob := TZAbstractClob.CreateWithData(Pointer(fRawTemp), Length(fRawTemp), Cp, ConSettings);
+            TInterfaceDynArray(D)[j] := TempBlob;
+          end;
+          Inc(N,TempBlob.Length);
+        end else if FOidAsBlob then begin
+          WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
+            FconnAddress^, 0, ChunkSize);
+          WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
+          TInterfaceDynArray(D)[j] := WriteTempBlob;
+          Inc(N, SizeOf(OID));
+        end else
+          Inc(N, TempBlob.Length);
+    AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
+    if (BindList.SQLtypes[Index] = stBinaryStream) and FOidAsBlob then begin
+      for j := 0 to DynArrayLen -1 do
+        if TInterfaceDynArray(D)[j] = nil then begin
+          Integer2PG(-1, P);
+          Inc(P,SizeOf(int32));
+        end else begin
+          Integer2PG(SizeOf(OID), P);
+          WriteTempBlob := TInterfaceDynArray(D)[j] as IZPostgreSQLOidBlob;
+          Cardinal2PG(WriteTempBlob.GetBlobOid,P+SizeOf(int32));
+          Inc(P,SizeOf(int32)+SizeOf(OID));
+        end;
+    end else begin
+      AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
+      for J := 0 to DynArrayLen -1 do
+        if not ((TInterfaceDynArray(D)[j] <> nil) and Supports(TInterfaceDynArray(D)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty) then begin
+          Integer2PG(-1, P);
+          Inc(P,SizeOf(int32));
+        end else begin
+          N := TempBlob.Length;
+          Integer2PG(N, P);
+          Move(TempBlob.GetBuffer^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
+          Inc(P,SizeOf(int32)+N);
+        end;
+    end;
+  end;
+  procedure BindRawStrings;
+  var J: Cardinal;
+    N: Integer;
+  begin
+    N := 0;
+    for j := 0 to DynArrayLen -1 do
+      if not IsNullFromArray(Arr, j) then
+        Inc(N, Length(TRawByteStringDynArray(D)[j]));
+    AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
+    for j := 0 to DynArrayLen -1 do
+      if IsNullFromArray(Arr, j) then begin
+        Integer2PG(-1, P);
+        Inc(P,SizeOf(int32));
+      end else begin
+        N := Length(TRawByteStringDynArray(D)[j]);
+        Integer2PG(N, P);
+        Move(Pointer(TRawByteStringDynArray(D)[j])^, (P+SizeOf(int32))^, N);
+        Inc(P,SizeOf(int32)+N);
+      end;
+  end;
+  procedure BindUniStrings;
+  var J: Cardinal;
+    N, charWidth, RawLen, MaxBytes: Integer;
+  begin
+    N := 0;
+    charWidth := ConSettings^.ClientCodePage.CharWidth;
+    for j := 0 to DynArrayLen -1 do
+      if not IsNullFromArray(Arr, j) then
+        Inc(N, Length(TUnicodeStringDynArray(D)[j]));
+    AllocArray(Index, (N*CharWidth)+(DynArrayLen*SizeOf(int32)), A, P);
+    for j := 0 to DynArrayLen -1 do
+      if IsNullFromArray(Arr, j) then begin
+        Integer2PG(-1, P);
+        Inc(P,SizeOf(int32));
+      end else begin
+        N := Length(TUnicodeStringDynArray(D)[j]);
+        MaxBytes := N*CharWidth;
+        RawLen := ZEncoding.PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(D)[j]), (P+SizeOf(int32)), N, MaxBytes, CP);
+        Integer2PG(RawLen, P);
+        Inc(P,SizeOf(int32)+RawLen);
+        Dec(Stmt.FPQparamLengths[Index], (MaxBytes-RawLen));
+      end;
+  end;
+  procedure BindConvertedStrings;
+  var FTempRaws: TRawByteStringDynArray;
+    J: Cardinal;
+  begin
+    SetLength(FTempRaws, DynArrayLen);
+    case Arr.VArrayVariantType of
+      {$IFNDEF UNICODE}
+      vtString:   for J := 0 to DynArrayLen -1 do
+                    FTempRaws[j] := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(D)[j], ConSettings.CTRL_CP, CP);
+      {$ENDIF}
+      {$IFNDEF NO_ANSISTRING}
+      vtAnsiString: for J := 0 to DynArrayLen -1 do
+                      FTempRaws[j] := Consettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(D)[j], CP);
+      {$ENDIF}
+      {$IFNDEF NO_UTF8STRING}
+      vtUTF8String: for J := 0 to DynArrayLen -1 do
+                      FTempRaws[j] := Consettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(D)[j], CP);
+      {$ENDIF}
+      {$IFDEF UNICODE}
+      vtString,
+      {$ENDIF}
+      vtUnicodeString: for J := 0 to DynArrayLen -1 do
+                          FTempRaws[j] := ZUnicodeToRaw(TUnicodeStringDynArray(D)[j], CP);
+      vtCharRec:  for J := 0 to DynArrayLen -1 do
+                    if ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) or (TZCharRecDynArray(D)[j].Len = 0) then
+                      ZSetString(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, FTempRaws[j])
+                    else if ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, zCP_UTF16) then
+                      FTempRaws[j] := PUnicodeToRaw(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, CP)
+                    else begin
+                      fUniTemp := PRawToUnicode(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, TZCharRecDynArray(D)[j].CP);
+                      FTempRaws[j] := ZUnicodeToRaw(fUniTemp, CP)
+                    end;
+    end;
+    D := FTempRaws;
+    BindRawStrings;
+  end;
+begin
+  Arr := BindList[Index].Value; //localize -> next steps will free the memory
+  SQLType := TZSQLType(Arr.VArrayType);
+  D := Arr.VArray;
+  P := nil;
+  Native := (Arr.VArrayVariantType = vtNull);
+  DynArrayLen := Length(TByteDynArray(D));
+  case SQLType of
+    stBoolean:    begin
+                    AllocArray(Index, SizeOf(Byte)*DynArrayLen+SizeOf(Int32)*DynArrayLen, A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index]);
+                      end else begin
+                        Integer2PG(SizeOf(Byte), P);
+                        if Native then
+                        PByte(P+SizeOf(int32))^ := Ord(TBooleanDynArray(D)[j]);
+                        Inc(P,SizeOf(int32)+SizeOf(Byte));
+                      end;
+                  end;
+    stByte:       begin
+                    AllocArray(Index, SizeOf(SmallInt)*DynArrayLen+SizeOf(Int32)*DynArrayLen, A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(SmallInt));
+                      end else begin
+                        Integer2PG(SizeOf(SmallInt), P);
+                        SmallInt2PG(TByteDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(SmallInt));
+                      end;
+                  end;
+    stShort:      begin
+                    AllocArray(Index, SizeOf(SmallInt)*DynArrayLen+SizeOf(Int32)*DynArrayLen, A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(SmallInt));
+                      end else begin
+                        Integer2PG(SizeOf(SmallInt), P);
+                        SmallInt2PG(TShortIntDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(SmallInt));
+                      end;
+                  end;
+    stWord:       begin
+                    AllocArray(Index, SizeOf(Integer)*DynArrayLen+SizeOf(Int32)*DynArrayLen, A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Integer));
+                      end else begin
+                        Integer2PG(SizeOf(Integer), P);
+                        SmallInt2PG(TWordDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(Integer));
+                      end;
+                  end;
+    stSmall:      begin
+                    AllocArray(Index, SizeOf(SmallInt)*DynArrayLen+SizeOf(Int32)*DynArrayLen, A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(SmallInt));
+                      end else begin
+                        Integer2PG(SizeOf(SmallInt), P);
+                        SmallInt2PG(TSmallIntDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(SmallInt));
+                      end;
+                  end;
+    stInteger:    begin
+                    AllocArray(Index, SizeOf(Integer)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Integer));
+                      end else begin
+                        Integer2PG(SizeOf(Integer), P);
+                        Integer2PG(TIntegerDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(Integer));
+                      end;
+                  end;
+    stLongWord:   if (stmt.FPQParamOIDs[Index] = OIDOID) then begin
+                    AllocArray(Index, SizeOf(OID)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(OID));
+                      end else begin
+                        Integer2PG(SizeOf(OID), P);
+                        Cardinal2PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(OID));
+                      end;
+                  end else begin
+                    AllocArray(Index, SizeOf(Int64)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
+                      end else begin
+                        Integer2PG(SizeOf(LongWord), P);
+                        Int642PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(Int64));
+                      end;
+                  end;
+    stLong:       begin
+                    AllocArray(Index, SizeOf(Int64)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
+                      end else begin
+                        Integer2PG(SizeOf(Int64), P);
+                        Int642PG(TInt64DynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(Int64));
+                      end;
+                  end;
+    stULong:      begin
+                    AllocArray(Index, SizeOf(UInt64)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
+                      end else begin
+                        Integer2PG(SizeOf(Int64), P);
+                        Int642PG(Int64(TUInt64DynArray(D)[j]),P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(UInt64));
+                      end;
+                  end;
+    stFloat:      begin
+                    AllocArray(Index, SizeOf(Single)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Single));
+                      end else begin
+                        Integer2PG(SizeOf(Single), P);
+                        Single2PG(TSingleDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(Single));
+                      end;
+                  end;
+    stDouble:     begin
+                    AllocArray(Index, SizeOf(Double)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
+                      end else begin
+                        Integer2PG(SizeOf(Double), P);
+                        Double2PG(TDoubleDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(Double));
+                      end;
+                  end;
+    stCurrency:   if (stmt.FPQParamOIDs[Index] = CASHOID) then begin
+                    AllocArray(Index, 8*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], 8);
+                      end else begin
+                        Integer2PG(8, P);
+                        Currency2PGCash(TCurrencyDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+8);
+                      end;
+                  end else begin
+                    AllocArray(Index, MaxCurr2NumSize*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        X := SizeOf(int32);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], MaxCurr2NumSize);
+                      end else begin
+                        Currency2PGNumeric(TCurrencyDynArray(D)[j], P+SizeOf(int32), x);
+                        Integer2PG(X, P);
+                        Inc(P,SizeOf(int32)+X);
+                        Dec(Stmt.FPQparamLengths[Index], MaxCurr2NumSize-X);
+                      end
+                  end;
+    stBigDecimal: begin
+                    AllocArray(Index, SizeOf(Double)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Double));
+                      end else begin
+                        Integer2PG(SizeOf(Double), P);
+                        Double2PG(TExtendedDynArray(D)[j],P+SizeOf(int32));
+                        Inc(P,SizeOf(int32)+SizeOf(Double));
+                      end;
+                  end;
+    stDate:       begin
+                    AllocArray(Index, SizeOf(Integer)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Integer));
+                      end else begin
+                        Integer2PG(SizeOf(Integer), P);
+                        Date2PG(TDateTimeDynArray(D)[j], PInteger(NativeUInt(P)+SizeOf(int32))^);
+                        Inc(P,SizeOf(int32)+SizeOf(Integer));
+                      end;
+                  end;
+    stTime:       begin
+                    AllocArray(Index, 8*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], 8);
+                      end else begin
+                        Integer2PG(8, P);
+                        if Finteger_datetimes
+                        then Time2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
+                        else Time2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
+                        Inc(P,SizeOf(int32)+8);
+                      end
+                  end;
+    stTimeStamp:  begin
+                    AllocArray(Index, 8*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], 8);
+                      end else begin
+                        Integer2PG(8, P);
+                        if Finteger_datetimes
+                        then DateTime2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
+                        else DateTime2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
+                        Inc(P,SizeOf(int32)+8);
+                      end
+                  end;
+    stGUID:       begin
+                    AllocArray(Index, SizeOf(TGUID)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                        Dec(Stmt.FPQparamLengths[Index], SizeOf(TGUID));
+                      end else begin
+                        Integer2PG(SizeOf(TGUID), P);
+                        //eh: Network byteOrder?
+                        PGUID(NativeUInt(P)+SizeOf(int32))^ := TGUIDDynArray(D)[j];
+                        Inc(P,SizeOf(int32)+SizeOf(TGUID));
+                      end
+                  end;
+    stBytes:      begin
+                    N := 0;
+                    for J := 0 to DynArrayLen -1 do
+                      if not (IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil)) then
+                        Inc(N, Length(TBytesDynArray(D)[j]));
+                    AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
+                    for j := 0 to DynArrayLen -1 do
+                      if IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil) then begin
+                        Integer2PG(-1, P);
+                        Inc(P,SizeOf(int32));
+                      end else begin
+                        N := Length(TBytesDynArray(D)[j]);
+                        Integer2PG(N, P);
+                        //eh: Network byteOrder?
+                        Move(Pointer(TBytesDynArray(D)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
+                        Inc(P,SizeOf(int32)+N);
+                      end
+                  end;
+    stString, stUnicodeString: begin
+        CP := ConSettings^.ClientCodePage.CP;
+        case Arr.VArrayVariantType of
+          {$IFNDEF UNICODE}
+          vtString:       if (not ConSettings^.AutoEncode and ZCompatibleCodePages(CP, ConSettings^.CTRL_CP))
+                          then BindRawStrings
+                          else BindConvertedStrings;
+          {$ENDIF}
+          {$IFNDEF NO_ANSISTRING}
+          vtAnsiString:   if ZCompatibleCodePages(CP, ZOSCodePage)
+                          then BindRawStrings
+                          else BindConvertedStrings;
+          {$ENDIF}
+          {$IFNDEF NO_UTF8STRING}
+          vtUTF8String:   if ZCompatibleCodePages(CP, zCP_UTF8)
+                          then BindRawStrings
+                          else BindConvertedStrings;
+          {$ENDIF}
+          vtRawByteString:BindRawStrings;
+          {$IFDEF UNICODE}
+          vtString,
+          {$ENDIF}
+          vtUnicodeString: BindUniStrings;
+          vtCharRec:  begin
+                        N := 0;
+                        OffSet := DynArrayLen;
+                        for J := 0 to DynArrayLen -1 do begin
+                          Dec(OffSet, Ord(not ((ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) and (TZCharRecDynArray(D)[j].Len > 0) and not IsNullFromArray(Arr, j)))));
+                          Inc(N, TZCharRecDynArray(D)[j].Len*Byte(Ord(not IsNullFromArray(Arr, j))));
+                        end;
+                        if OffSet <> Cardinal(DynArrayLen) then
+                          BindConvertedStrings
+                        else begin
+                          AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
+                          for J := 0 to DynArrayLen -1 do
+                            if IsNullFromArray(Arr, j) then begin
+                              Integer2PG(-1, P);
+                              Inc(P,SizeOf(int32));
+                            end else begin
+                              N := TZCharRecDynArray(D)[j].Len;
+                              Integer2PG(N, P);
+                              Move(TZCharRecDynArray(D)[j].P^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
+                              Inc(P,SizeOf(int32)+N);
+                            end;
+                        end;
+                      end;
+          else
+            raise Exception.Create('Unsupported String Variant');
+        end;
+      end;
+    stAsciiStream, stUnicodeStream, stBinaryStream: BindLobs;
+  end;
+end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.CheckParameterIndex(Value: Integer);
 begin
@@ -230,8 +752,8 @@ end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.CheckPrepareSwitchMode: Boolean;
 begin
-  Result := not Findeterminate_datatype and ((not FUseEmulatedStmtsOnly) or (BatchDMLArrayCount > 0 )) and
-    (FRawPlanName = '') and (TokenMatchIndex <> -1) and ((BatchDMLArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare));
+  Result := (FRawPlanName = '') and not Findeterminate_datatype and ((not FUseEmulatedStmtsOnly) or (BatchDMLArrayCount > 0 )) and
+    (TokenMatchIndex <> -1) and ((BatchDMLArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare));
 end;
 
 {**
@@ -301,55 +823,16 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.ExecuteDMLBatchWithUnnestVarlenaArrays: TPGresult;
 var
   Stmt: TZPostgreSQLPreparedStatementV3;
-  SQLType: TZSQLType;
-
-  procedure AllocArray(Index: Cardinal; TotalSize: Integer;
-    out A: PArrayType; out Buf: PAnsiChar);
-  var
-    aOID: OID;
-    BuffSize: Integer;
-  begin
-    BuffSize := ARR_OVERHEAD_NONULLS(1)+TotalSize;
-    //alloc mem for the varlena array struct ->
-    A := Stmt.BindList.AquireCustomValue(Index, SQLType, BuffSize);
-    SQLTypeToPostgreSQL(SQLType, FOidAsBlob, aOID);
-    //write dimension(s)
-    Integer2PG(1, ARR_NDIM(A));
-    //indicate nullable items
-    Integer2PG(0, @A.flags);
-    //Write the OID
-    Cardinal2PG(aOID, ARR_ELEMTYPE(A));
-    //write item count
-    Integer2PG(BatchDMLArrayCount, ARR_DIMS(A));
-    //write lower bounds
-    Integer2PG(1, ARR_LBOUND(A));
-    Buf := ARR_DATA_PTR(A);
-    Stmt.FPQparamValues[Index] := a;
-    Stmt.FPQparamFormats[Index] := ParamFormatBin;
-    Stmt.FPQparamLengths[Index] := BuffSize;
-  end;
-var
-  OffSet, J, I: Cardinal;
-  UniTemp: ZWideString;
-  D: Pointer;
-  P: PAnsiChar;
-  A: PArrayType;
-  CP: word;
-  aOID: OID;
-  X: Integer;
-  fRawTemp: RawByteString;
-  N: Integer; //the ParameterIndex
-  TempBlob: IZBlob;
-  WriteTempBlob: IZPostgreSQLOidBlob;
-  FTempRaws: TRawByteStringDynArray;
+  I: Cardinal;
   PGresult: TPGresult;
-  Arr: PZArray;
-label FromRaw;
-begin
-  Result := nil;
-  CP := ConSettings^.ClientCodePage.CP;
-
-//introduction
+  function CreateBatchDMLStmt: TZPostgreSQLPreparedStatementV3;
+  var I, OffSet: Cardinal;
+    aOID: OID;
+    N: Integer; //the ParameterIndex
+    SQL: RawByteString;
+    Buf: TRawBuff;
+  begin
+//EgonHugeist: introduction
 // the posgres server support bulk ops since 8.4
 // but the free version of libpq/server simply misses this API:
 // https://www.enterprisedb.com/docs/en/9.4/eeguide/Postgres_Plus_Enterprise_Edition_Guide.1.088.html
@@ -435,28 +918,32 @@ unnest(array[$1]::int8[])
 ,unnest(array[$7]::int8[]))
 *)
 //my final and fastest approch bind binary arrays and pass data once per param and one prepared stmt:
-  if FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Intf = nil then begin
-    fRawTemp := '';
+    SQL := '';
     N := 1;
+    Buf.Pos := 0;
     OffSet := 0;
     //first build up a new string with unnest($n)::xyz[] surrounded params
     for I := 0 to high(FCachedQueryRaw) do
       if IsParamIndex[i] then begin
-        ToBuff('unnest(', fRawTemp);
-        ToBuff('$',fRawTemp);
-        ToBuff(IntToRaw(N), fRawTemp);
-        ToBuff(',', fRawTemp);
+        if BindList[OffSet].BindType in [zbtArray, zbtRefArray] then begin
+          ZDbcUtils.ToBuff('unnest($', buf, SQL);
+          fRawTemp := IntToRaw(N);
+          ZDbcUtils.ToBuff(fRawTemp, buf, SQL);
+          ZDbcUtils.ToBuff('::', buf, SQL);
+          SQLTypeToPostgreSQL(TZSQLType(BindList.Arrays[Offset].VArrayType), FOidAsBlob, aOID);
+          ZDbcUtils.ToBuff({$IFDEF UNICODE}ZSysUtils.UnicodeStringToASCII7{$ENDIF}(FPostgreSQLConnection.GetTypeNameByOid(aOID)), buf, SQL);
+          ZDbcUtils.ToBuff('[])', buf, SQL);
+          Inc(OffSet);
+        end else begin
+          ZDbcUtils.ToBuff('$', buf, SQL);
+          fRawTemp := IntToRaw(N);
+          ZDbcUtils.ToBuff(fRawTemp, buf, SQL);
+          ZDbcUtils.ToBuff(',', buf, SQL);
+        end;
         Inc(N);
-        FlushBuff(fRawTemp);
-        (PAnsiChar(Pointer(fRawTemp))+Length(fRawTemp)-1)^ := ':'; //cancel last comma
-        ToBuff(':', fRawTemp);
-        SQLTypeToPostgreSQL(TZSQLType(BindList.Arrays[Offset].VArrayType), FOidAsBlob, aOID);
-        ToBuff({$IFDEF UNICODE}ZSysUtils.UnicodeStringToASCII7{$ENDIF}(FPostgreSQLConnection.GetTypeNameByOid(aOID)),fRawTemp);
-        ToBuff('[])', fRawTemp);
-        Inc(OffSet);
       end else
-        ToBuff(FCachedQueryRaw[i], fRawTemp);
-    FlushBuff(fRawTemp);
+        ZDbcUtils.ToBuff(FCachedQueryRaw[i], buf, SQL);
+    ZDbcUtils.FlushBuff(buf, SQL);
   (* gives such a string:
   insert into public.SampleRecord (ID,FirstName,LastName,Amount,BirthDate,LastChange,CreatedAt) values (
   unnest($1::int8[])
@@ -467,8 +954,6 @@ unnest(array[$1]::int8[])
   ,unnest($6::int8[])
   ,unnest($7::int8[]))
 
-  EgonHugeist:
-
   This approach took me ages. No description somewhere, just two (not working) example on
   Stack overflow... The Array.h ported Macros -> Trash !
   Postgres makes differences between external and internal format.
@@ -478,595 +963,98 @@ unnest(array[$1]::int8[])
   However all findings happen on debugging the postgres server -> thanks to Jan for helping me.
 
   *)
-    Stmt := TZPostgreSQLPreparedStatementV3.Create(FPostgreSQLConnection, '', Info);
-    Stmt.FaSQL := fRawTemp;
-    Stmt.SetParamCount(BindList.Count);
-    Stmt.InternalRealPrepare; //force describe the params to get the array oids
+    Result := TZPostgreSQLPreparedStatementV3.Create(FPostgreSQLConnection, '', Info);
+    Result.FaSQL := SQL;
+    Result.SetParamCount(BindList.Count);
+    Result.InternalRealPrepare; //force describe the params to get the array oids
+  end;
+begin
+  Result := nil;
+  if FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Intf = nil then begin
+    Stmt := CreateBatchDMLStmt;
     FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Obj := Stmt;
     FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Intf := Stmt;
   end else
     Stmt := FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Obj;
-  N := -1;
-  for i := 0 to bindList.Count -1 do begin
-    if BindList[I].BindType <> zbtArray then
-      Continue;
-    Arr := BindList[I].Value; //localize -> next steps will free the memory
-    SQLType := TZSQLType(Arr.VArrayType);
-    D := Arr.VArray;
-    P := nil;
-    case SQLType of
-      stBoolean:    begin
-                      AllocArray(I, SizeOf(Byte)*BatchDMLArrayCount+SizeOf(Int32)*BatchDMLArrayCount, A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i]);
-                        end else begin
-                          Integer2PG(SizeOf(Byte), P);
-                          PByte(P+SizeOf(int32))^ := Ord(TBooleanDynArray(D)[j]);
-                          Inc(P,SizeOf(int32)+SizeOf(Byte));
-                        end;
-                    end;
-      stByte:       begin
-                      AllocArray(I, SizeOf(SmallInt)*BatchDMLArrayCount+SizeOf(Int32)*BatchDMLArrayCount, A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
-                        end else begin
-                          Integer2PG(SizeOf(SmallInt), P);
-                          SmallInt2PG(TByteDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(SmallInt));
-                        end;
-                    end;
-      stShort:      begin
-                      AllocArray(I, SizeOf(SmallInt)*BatchDMLArrayCount+SizeOf(Int32)*BatchDMLArrayCount, A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
-                        end else begin
-                          Integer2PG(SizeOf(SmallInt), P);
-                          SmallInt2PG(TShortIntDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(SmallInt));
-                        end;
-                    end;
-      stWord:       begin
-                      AllocArray(I, SizeOf(Integer)*BatchDMLArrayCount+SizeOf(Int32)*BatchDMLArrayCount, A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
-                        end else begin
-                          Integer2PG(SizeOf(Integer), P);
-                          SmallInt2PG(TWordDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(Integer));
-                        end;
-                    end;
-      stSmall:      begin
-                      AllocArray(I, SizeOf(SmallInt)*BatchDMLArrayCount+SizeOf(Int32)*BatchDMLArrayCount, A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(SmallInt));
-                        end else begin
-                          Integer2PG(SizeOf(SmallInt), P);
-                          SmallInt2PG(TSmallIntDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(SmallInt));
-                        end;
-                    end;
-      stInteger:    begin
-                      AllocArray(I, SizeOf(Integer)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
-                        end else begin
-                          Integer2PG(SizeOf(Integer), P);
-                          Integer2PG(TIntegerDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(Integer));
-                        end;
-                    end;
-      stLongWord:   if (stmt.FPQParamOIDs[N] = OIDOID) then begin
-                      AllocArray(I, SizeOf(OID)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(OID));
-                        end else begin
-                          Integer2PG(SizeOf(OID), P);
-                          Cardinal2PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(OID));
-                        end;
-                    end else begin
-                      AllocArray(I, SizeOf(Int64)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
-                        end else begin
-                          Integer2PG(SizeOf(LongWord), P);
-                          Int642PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(Int64));
-                        end;
-                    end;
-      stLong:       begin
-                      AllocArray(I, SizeOf(Int64)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
-                        end else begin
-                          Integer2PG(SizeOf(Int64), P);
-                          Int642PG(TInt64DynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(Int64));
-                        end;
-                    end;
-      stULong:      begin
-                      AllocArray(I, SizeOf(UInt64)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
-                        end else begin
-                          Integer2PG(SizeOf(Int64), P);
-                          Int642PG(Int64(TUInt64DynArray(D)[j]),P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(UInt64));
-                        end;
-                    end;
-      stFloat:      begin
-                      AllocArray(I, SizeOf(Single)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Single));
-                        end else begin
-                          Integer2PG(SizeOf(Single), P);
-                          Single2PG(TSingleDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(Single));
-                        end;
-                    end;
-      stDouble:     begin
-                      AllocArray(I, SizeOf(Double)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Int64));
-                        end else begin
-                          Integer2PG(SizeOf(Double), P);
-                          Double2PG(TDoubleDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(Double));
-                        end;
-                    end;
-      stCurrency:   if (stmt.FPQParamOIDs[i] = CASHOID) then begin
-                      AllocArray(I, 8*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], 8);
-                        end else begin
-                          Integer2PG(8, P);
-                          Currency2PGCash(TCurrencyDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+8);
-                        end;
-                    end else begin
-                      AllocArray(I, MaxCurr2NumSize*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          X := SizeOf(int32);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], MaxCurr2NumSize);
-                        end else begin
-                          Currency2PGNumeric(TCurrencyDynArray(D)[j], P+SizeOf(int32), x);
-                          Integer2PG(X, P);
-                          Inc(P,SizeOf(int32)+X);
-                          Dec(Stmt.FPQparamLengths[i], MaxCurr2NumSize-X);
-                        end
-                    end;
-      stBigDecimal: begin
-                      AllocArray(I, SizeOf(Double)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Double));
-                        end else begin
-                          Integer2PG(SizeOf(Double), P);
-                          Double2PG(TExtendedDynArray(D)[j],P+SizeOf(int32));
-                          Inc(P,SizeOf(int32)+SizeOf(Double));
-                        end;
-                    end;
-      stDate:       begin
-                      AllocArray(I, SizeOf(Integer)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(Integer));
-                        end else begin
-                          Integer2PG(SizeOf(Integer), P);
-                          Date2PG(TDateTimeDynArray(D)[j], PInteger(NativeUInt(P)+SizeOf(int32))^);
-                          Inc(P,SizeOf(int32)+SizeOf(Integer));
-                        end;
-                    end;
-      stTime:       begin
-                      AllocArray(I, 8*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], 8);
-                        end else begin
-                          Integer2PG(8, P);
-                          if Finteger_datetimes
-                          then Time2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
-                          else Time2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
-                          Inc(P,SizeOf(int32)+8);
-                        end
-                    end;
-      stTimeStamp:  begin
-                      AllocArray(I, 8*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], 8);
-                        end else begin
-                          Integer2PG(8, P);
-                          if Finteger_datetimes
-                          then DateTime2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
-                          else DateTime2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
-                          Inc(P,SizeOf(int32)+8);
-                        end
-                    end;
-      stGUID:       begin
-                      AllocArray(I, SizeOf(TGUID)*BatchDMLArrayCount+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                          Dec(Stmt.FPQparamLengths[i], SizeOf(TGUID));
-                        end else begin
-                          Integer2PG(SizeOf(TGUID), P);
-                          //eh: Network byteOrder?
-                          PGUID(NativeUInt(P)+SizeOf(int32))^ := TGUIDDynArray(D)[j];
-                          Inc(P,SizeOf(int32)+SizeOf(TGUID));
-                        end
-                    end;
-      stBytes:      begin
-                      N := 0;
-                      for J := 0 to BatchDMLArrayCount -1 do
-                        if not (IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil)) then
-                          Inc(N, Length(TBytesDynArray(D)[j]));
-                      AllocArray(I, N+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                      for j := 0 to BatchDMLArrayCount -1 do
-                        if IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil) then begin
-                          Integer2PG(-1, P);
-                          Inc(P,SizeOf(int32));
-                        end else begin
-                          N := Length(TBytesDynArray(D)[j]);
-                          Integer2PG(N, P);
-                          //eh: Network byteOrder?
-                          Move(Pointer(TBytesDynArray(D)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                          Inc(P,SizeOf(int32)+N);
-                        end
-                    end;
-      stString, stUnicodeString: begin
-          case Arr.VArrayVariantType of
-            {$IFNDEF UNICODE}
-            vtString:   begin
-                          if not (not ConSettings^.AutoEncode and ZCompatibleCodePages(CP, ConSettings^.CTRL_CP)) then begin
-                            SetLength(FTempRaws, BatchDMLArrayCount);
-                            for J := 0 to BatchDMLArrayCount -1 do
-                              FTempRaws[j] := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(D)[j], ConSettings.CTRL_CP, CP);
-                            D := Pointer(FTempRaws);
-                          end;
-                          goto FromRaw;
-                        end;
-            {$ENDIF}
-            {$IFNDEF NO_ANSISTRING}
-            vtAnsiString: begin
-                            if not ZCompatibleCodePages(CP, ZOSCodePage) then begin
-                              SetLength(FTempRaws, BatchDMLArrayCount);
-                              for J := 0 to BatchDMLArrayCount -1 do
-                                FTempRaws[j] := Consettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(D)[j], CP);
-                              D := Pointer(FTempRaws);
-                            end;
-                            goto FromRaw;
-                          end;
-            {$ENDIF}
-            {$IFNDEF NO_UTF8STRING}
-            vtUTF8String: begin
-                            if not ZCompatibleCodePages(CP, zCP_UTF8) then begin
-                              SetLength(FTempRaws, BatchDMLArrayCount);
-                              for J := 0 to BatchDMLArrayCount -1 do
-                                FTempRaws[j] := Consettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(D)[j], CP);
-                              D := Pointer(FTempRaws);
-                            end;
-                            goto FromRaw;
-                          end;
-            {$ENDIF}
-            vtRawByteString:begin
-FromRaw:                    N := 0;
-                            for j := 0 to BatchDMLArrayCount -1 do
-                              if not IsNullFromArray(Arr, j) then
-                                Inc(N, Length(TRawByteStringDynArray(D)[j]));
-                            AllocArray(I, N+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                            for j := 0 to BatchDMLArrayCount -1 do
-                              if IsNullFromArray(Arr, j) then begin
-                                Integer2PG(-1, P);
-                                Inc(P,SizeOf(int32));
-                              end else begin
-                                N := Length(TRawByteStringDynArray(D)[j]);
-                                Integer2PG(N, P);
-                                Move(Pointer(TRawByteStringDynArray(D)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                                Inc(P,SizeOf(int32)+N);
-                              end;
-                            end;
-            {$IFDEF UNICODE}
-            vtString,
-            {$ENDIF}
-            vtUnicodeString: begin
-                              SetLength(FTempRaws, BatchDMLArrayCount);
-                              for J := 0 to BatchDMLArrayCount -1 do
-                                FTempRaws[j] := ZUnicodeToRaw(TUnicodeStringDynArray(D)[j], CP);
-                              D := Pointer(FTempRaws);
-                              goto FromRaw;
-                            end;
-            vtCharRec:  begin
-                          N := 0;
-                          OffSet := BatchDMLArrayCount;
-                          for J := 0 to BatchDMLArrayCount -1 do begin
-                            Dec(OffSet, Ord(not ((ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) and (TZCharRecDynArray(D)[j].Len > 0) and not IsNullFromArray(Arr, j)))));
-                            Inc(N, TZCharRecDynArray(D)[j].Len*Byte(Ord(not IsNullFromArray(Arr, j))));
-                          end;
-                          if OffSet <> Cardinal(BatchDMLArrayCount) then begin
-                            SetLength(FTempRaws, BatchDMLArrayCount); //EH: localize all ... shit!!!
-                            for J := 0 to BatchDMLArrayCount -1 do
-                              if ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) or (TZCharRecDynArray(D)[j].Len = 0) then
-                                ZSetString(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, FTempRaws[j])
-                              else if ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, zCP_UTF16) then
-                                FTempRaws[j] := PUnicodeToRaw(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, CP)
-                              else begin
-                                UniTemp := PRawToUnicode(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, TZCharRecDynArray(D)[j].CP);
-                                FTempRaws[j] := ZUnicodeToRaw(UniTemp, CP)
-                              end;
-                            D := Pointer(FTempRaws);
-                            goto FromRaw;
-                          end else begin
-                            AllocArray(I, N+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-                            for J := 0 to BatchDMLArrayCount -1 do
-                              if IsNullFromArray(Arr, j) then begin
-                                Integer2PG(-1, P);
-                                Inc(P,SizeOf(int32));
-                              end else begin
-                                N := TZCharRecDynArray(D)[j].Len;
-                                Integer2PG(N, P);
-                                Move(TZCharRecDynArray(D)[j].P^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                                Inc(P,SizeOf(int32)+N);
-                              end;
-                          end;
-                        end;
-            else
-              raise Exception.Create('Unsupported String Variant');
-          end;
-        end;
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        begin
-          N := 0;
-          for J := 0 to BatchDMLArrayCount -1 do
-            if (TInterfaceDynArray(D)[j] <> nil) and Supports(TInterfaceDynArray(D)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty then
-              if BindList.SQLTypes[I] in [stUnicodeStream, stAsciiStream] then begin
-                if TempBlob.IsClob then
-                  TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP)
-                else begin
-                  fRawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
-                  TempBlob := TZAbstractClob.CreateWithData(Pointer(fRawTemp), Length(fRawTemp), Cp, ConSettings);
-                  TInterfaceDynArray(D)[j] := TempBlob;
-                end;
-                Inc(N,TempBlob.Length);
-              end else if FOidAsBlob then begin
-                WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
-                  FconnAddress^, 0, ChunkSize);
-                WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
-                TInterfaceDynArray(D)[j] := WriteTempBlob;
-                Inc(N, SizeOf(OID));
-              end else
-                Inc(N, TempBlob.Length);
-          AllocArray(I, N+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-          if (BindList.SQLtypes[i] = stBinaryStream) and FOidAsBlob then begin
-            for j := 0 to BatchDMLArrayCount -1 do
-              if TInterfaceDynArray(D)[j] = nil then begin
-                Integer2PG(-1, P);
-                Inc(P,SizeOf(int32));
-              end else begin
-                Integer2PG(SizeOf(OID), P);
-                WriteTempBlob := TInterfaceDynArray(D)[j] as IZPostgreSQLOidBlob;
-                Cardinal2PG(WriteTempBlob.GetBlobOid,P+SizeOf(int32));
-                Inc(P,SizeOf(int32)+SizeOf(OID));
-              end;
-          end else begin
-            AllocArray(I, N+(BatchDMLArrayCount*SizeOf(int32)), A, P);
-            for J := 0 to BatchDMLArrayCount -1 do
-              if not ((TInterfaceDynArray(D)[j] <> nil) and Supports(TInterfaceDynArray(D)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty) then begin
-                Integer2PG(-1, P);
-                Inc(P,SizeOf(int32));
-              end else begin
-                N := TempBlob.Length;
-                Integer2PG(N, P);
-                Move(TempBlob.GetBuffer^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
-                Inc(P,SizeOf(int32)+N);
-              end;
-          end;
-        end;
-    end;
-  end;
-  PGresult := Stmt.ExecuteInternal(Stmt.FASQL, pqExecPrepared);
+  for i := 0 to bindList.Count -1 do
+    if BindList[I].BindType in [zbtArray, zbtRefArray] then
+      BindArray(i, stmt);
+  PGresult := Stmt.PGExecutePrepared;
   try
     if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
       HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
         lcExecute, ASQL, Result);
   finally
     FPlainDriver.PQclear(PGresult); //free postgres mem
-    Stmt.BindList.FlushAll; //free allocated mem
+    Stmt.BindList.ClearValues; //free allocated mem
   end;
 end;
 
-function TZAbstractPostgreSQLPreparedStatementV3.ExecuteInternal(
-  const SQL: RawByteString; Category: TPQV3ExecCatagory): TPGresult;
+function TZAbstractPostgreSQLPreparedStatementV3.PGExecute: TPGresult;
 var
   PError: PAnsiChar;
-  I, N: Integer;
-  TmpSQL: RawByteString;
-label retryExecute;
+  function ExecEmulated: TPGresult;
+  var TmpSQL: RawByteString;
+    I, N: Integer;
+  begin
+    TmpSQL := '';
+    N := 0;
+    for I := 0 to High(FCachedQueryRaw) do
+      if FIsParamIndex[i] then begin
+        ToBuff(GetInParamLogValue(n), TmpSQL);
+        Inc(N);
+      end else
+        ToBuff(FCachedQueryRaw[i], TmpSQL);
+      FlushBuff(TmpSQL);
+    Result := FPlainDriver.PQExec(FconnAddress^, Pointer(TmpSQL));
+  end;
 begin
   Result := nil;
   if not Assigned(FconnAddress^) then
     Exit;
-  case Category of
-    pqExecute: begin
-        { Logging Execution }
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(lcExecute,Self);
-        if fAsyncQueries then begin
-          if (BindList.Capacity > 0) then begin
-            if FplainDriver.PQsendQueryParams(FconnAddress^,
-               Pointer(FASQL), BindList.Count-FOutParamCount, Pointer(FPQParamOIDs), Pointer(FPQparamValues),
-               Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
-              HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcExecute, ASQL, Result)
-          end else begin
-            if FplainDriver.PQsendQuery(FconnAddress^, Pointer(FASQL)) <> Ord(PGRES_COMMAND_OK) then
-              HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcExecute, ASQL, Result)
-          end;
-          if FServerCursor then
-            FPlainDriver.PQsetSingleRowMode(FconnAddress^);
-          Result := FPlainDriver.PQgetResult(FconnAddress^); //obtain the first result
-        end else begin
-          if (BindList.Capacity > 0) then begin
-            if not Findeterminate_datatype then begin
-              Result := FPlainDriver.PQexecParams(FconnAddress^, Pointer(FASQL),
-                BindList.Count-FOutParamCount, Pointer(FPQParamOIDs), Pointer(FPQparamValues),
-                Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
-              if Assigned(FPlainDriver.PQresultErrorField)
-              then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
-              else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
-              if (PError <> nil) and (PError^ <> #0) then begin
-                { check for indermine datatype error}
-                if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) = 0) then begin
-                  FPlainDriver.PQclear(Result);
-                  Findeterminate_datatype := True;
-                  goto retryExecute;
-                end;
-              end else begin
-                Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
-                CheckPrepareSwitchMode;
-              end;
-            end else begin
-  retryExecute:
-              TmpSQL := '';
-              N := 0;
-              for I := 0 to High(FCachedQueryRaw) do
-                if FIsParamIndex[i] then begin
-                  ToBuff(GetInParamLogValue(n), TmpSQL);
-                  Inc(N);
-                end else
-                  ToBuff(FCachedQueryRaw[i], TmpSQL);
-                FlushBuff(TmpSQL);
-              Result := FPlainDriver.PQExec(FconnAddress^, Pointer(TmpSQL));
-            end;
-          end else
-            Result := FPlainDriver.PQExec(FconnAddress^, Pointer(FASQL));
-          if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
-            HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-              lcExecute, ASQL, Result);
-        end;
-      end;
-    pqPrepare: begin
-        { Logging Execution }
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(lcPrepStmt,Self);
-        if fAsyncQueries then begin
-          if not FPlainDriver.PQsendPrepare(FconnAddress^, Pointer(FRawPlanName),
-             Pointer(FASQL), BindList.Count-FOutParamCount, Pointer(FPQParamOIDs)) = Ord(PGRES_COMMAND_OK) then
-            HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-              lcExecute, ASQL, nil);
-        end else begin
-          Result := FPlainDriver.PQprepare(FconnAddress^, Pointer(FRawPlanName),
-            Pointer(SQL), BindList.Count-FOutParamCount, nil{Pointer(fParamOIDs)});
-          if Assigned(FPlainDriver.PQresultErrorField)
-          then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
-          else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
-          if (PError <> nil) and (PError^ <> #0) then
-            { check for indermine datatype error}
-            if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
-              HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-                lcPrepStmt, ASQL, Result)
-            else begin
-              FPlainDriver.PQclear(Result);
-              Findeterminate_datatype := True
-            end
-          else begin
-            FPlainDriver.PQclear(Result);
-            Result := nil;
-            PrepareInParameters;
-          end;
-        end;
-      end;
-    pqExecPrepared: begin
-        { Logging Execution }
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(lcExecPrepStmt,Self);
-        if fAsyncQueries then begin
-          if FPlainDriver.PQsendQueryPrepared(FconnAddress^,
-             Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
-             Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
-            HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-              lcExecPrepStmt, ASQL, Result)
-          else if FServerCursor then
-            FPlainDriver.PQsetSingleRowMode(FconnAddress^);
-          Result := FPlainDriver.PQgetResult(FconnAddress^); //obtain the first result
-        end else begin
-          Result := FPlainDriver.PQexecPrepared(FconnAddress^,
-            Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
-            Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
-          if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
-            HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-              lcExecPrepStmt, ASQL, Result);
-        end;
-      end;
-    pqUnprepare: begin
-        { Logging Execution }
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(lcUnprepStmt,Self);
-        Result := FPlainDriver.PQExec(FconnAddress^, Pointer(SQL));
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute,Self);
+  if fAsyncQueries then begin
+    if (BindList.Capacity > 0) then begin
+      if FplainDriver.PQsendQueryParams(FconnAddress^,
+         Pointer(FASQL), BindList.Count-FOutParamCount, Pointer(FPQParamOIDs), Pointer(FPQparamValues),
+         Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then
+        HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcExecute, ASQL, Result)
+    end else begin
+      if FplainDriver.PQsendQuery(FconnAddress^, Pointer(FASQL)) <> Ord(PGRES_COMMAND_OK) then
+        HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcExecute, ASQL, Result)
+    end;
+    if FServerCursor then
+      FPlainDriver.PQsetSingleRowMode(FconnAddress^);
+    Result := FPlainDriver.PQgetResult(FconnAddress^); //obtain the first result
+  end else begin
+    if (BindList.Capacity > 0) then begin
+      if not Findeterminate_datatype then begin
+        Result := FPlainDriver.PQexecParams(FconnAddress^, Pointer(FASQL),
+          BindList.Count-FOutParamCount, Pointer(FPQParamOIDs), Pointer(FPQparamValues),
+          Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
         if Assigned(FPlainDriver.PQresultErrorField)
         then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
         else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
-        if (PError <> nil) and (PError^ <> #0) then
-          { check for current transaction is aborted error}
-          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) <> 0) then
-            HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcUnprepStmt, ASQL, Result)
-          else
-            FPostgreSQLConnection.RegisterTrashPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName))
-        else if Result <> nil then begin
-          FPlainDriver.PQclear(Result);
-          Result := nil;
+        if (PError <> nil) and (PError^ <> #0) then begin
+          { check for indermine datatype error}
+          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) = 0) then begin
+            FPlainDriver.PQclear(Result);
+            Findeterminate_datatype := True;
+            Result := ExecEmulated;
+          end;
+        end else begin
+          Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
+          CheckPrepareSwitchMode;
         end;
-      end;
+      end else
+        Result := ExecEmulated;
+    end else
+      Result := FPlainDriver.PQExec(FconnAddress^, Pointer(FASQL));
+    if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
+      HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+        lcExecute, ASQL, Result);
   end;
 end;
 
@@ -1085,8 +1073,8 @@ begin
   if (DriverManager <> nil) and DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   if Findeterminate_datatype or (FRawPlanName = '')
-  then Fres := ExecuteInternal(ASQL, pqExecute)
-  else Fres := ExecuteInternal(ASQL, pqExecPrepared);
+  then Fres := PGExecute
+  else Fres := PGExecutePrepared;
 
   { Process queries with result sets }
   if FPlainDriver.PQresultStatus(Fres) = PGRES_TUPLES_OK then begin
@@ -1117,8 +1105,8 @@ begin
   if (DriverManager <> nil) and DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   if Findeterminate_datatype or (FRawPlanName = '')
-  then Fres := ExecuteInternal(ASQL, pqExecute)
-  else Fres := ExecuteInternal(ASQL, pqExecPrepared);
+  then Fres := PGExecute
+  else Fres := PGExecutePrepared;
   Status := FPlainDriver.PQresultStatus(Fres);
   if (Fres <> nil) and (Status = PGRES_TUPLES_OK) then
     if Assigned(FOpenResultSet)
@@ -1143,24 +1131,22 @@ begin
   PrepareLastResultSetForReuse;
   Result := -1;
   Prepare;
-  if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+  if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
-  if Findeterminate_datatype or (FRawPlanName = '') then
-    Fres := ExecuteInternal(ASQL, pqExecute)
-  else if BatchDMLArrayCount = 0 then
-    Fres := ExecuteInternal(ASQL, pqExecPrepared)
-  else begin
+  if BatchDMLArrayCount > 0 then begin
     ExecuteDMLBatchWithUnnestVarlenaArrays;
     Exit;
   end;
+  if (FRawPlanName = '') or Findeterminate_datatype
+  then Fres := PGExecute
+  else Fres := PGExecutePrepared;
   if Fres <> nil then
     if (FPlainDriver.PQresultStatus(Fres) = PGRES_TUPLES_OK) and (FHasInOutParams or (FOutParamCount > 0)) then begin
       if not Assigned(LastResultSet) then
         LastResultSet := CreateResultSet(fServerCursor);
       LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
     end else begin
-      LastUpdateCount := RawToIntDef(
-        FPlainDriver.PQcmdTuples(Fres), 0);
+      LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
       FPlainDriver.PQclear(Fres);
     end;
   Result := LastUpdateCount;
@@ -1195,6 +1181,7 @@ begin
     zbt4Byte: begin
         P := BindList._4Bytes[ParamIndex];
         case FPQParamOIDs[ParamIndex] of
+          BOOLOID:  Result := BoolStrIntsRaw[BindValue.Value <> nil];
           INT2OID:  Result := IntToRaw(PG2SmallInt(P));
           INT4OID:  Result := IntToRaw(PG2Integer(P));
           OIDOID:   Result := IntToRaw(PG2Cardinal(P));
@@ -1216,16 +1203,18 @@ begin
                     else Result := DateTimeToRawSQLTimeStamp(PG2DateTime(PDouble(P)^), ConSettings^.WriteFormatSettings, True, '::timestamp');
         end;
       end;
-    zbtRawString: Connection.GetEscapeString(PAnsiChar(BindValue.Value), Length(RawByteString(BindValue.Value)), Result);
+    zbtRawString, zbtUTF8String {$IFNDEF NEXTGEN}, zbtAnsiString{$ENDIF}: Connection.GetEscapeString(PAnsiChar(BindValue.Value), Length(RawByteString(BindValue.Value)), Result);
     zbtCharByRef: Connection.GetEscapeString(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, Result);
     zbtBinByRef: Connection.GetBinaryEscapeString(PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len, Result);
-    zbtGUID:     Result := #39+GUIDToRaw(BindValue.Value, SizeOf(TGUID), True)+#39;
+    zbtGUID:     GUIDToRaw(BindValue.Value, [guidWithBrackets, guidQuoted], Result);
     zbtBytes: Connection.GetBinaryEscapeString(BindValue.Value, Length(TBytes(BindValue.Value)), Result);
     zbtLob: if BindValue.SQLType = stBinaryStream
             then Connection.GetBinaryEscapeString(IZBlob(BindValue.Value).GetBuffer, IZBlob(BindValue.Value).Length, Result)
             else Connection.GetEscapeString(IZBlob(BindValue.Value).GetBuffer, IZBlob(BindValue.Value).Length, Result);
     zbtPointer: Result := BoolStrIntsRaw[BindValue.Value <> nil];
-    zbtCustom: Result := CurrToRaw(PGNumeric2Currency(PAnsiChar(BindValue.Value)+SizeOf(LengthInt)));
+    zbtCustom: if BindValue.SQLType = stArray
+                then Result := '(Array)'
+                else Result := CurrToRaw(PGNumeric2Currency(PAnsiChar(BindValue.Value)+SizeOf(LengthInt)));
     //zbtBCD: Result := '';
     else Result := '';
   end;
@@ -1249,16 +1238,6 @@ var
     SetLength(FIsParamIndex, Length(FCachedQueryRaw));
     FIsParamIndex[High(FIsParamIndex)] := Param;
     ToBuff(Value, Result);
-  end;
-  function IsNumeric(P, PEnd: PChar): Boolean;
-  begin
-    Result := P<= PEnd;
-    repeat
-      Result := Result and ((Ord(P^) >= Ord('0')) and (Ord(P^) <= Ord('9')));
-      if not Result
-      then Break
-      else Inc(P);
-    until P > PEnd;
   end;
 begin
   Result := '';
@@ -1303,8 +1282,7 @@ begin
             ComparePrefixTokens := nil; //stop compare sequence
           end;
         if ((Token.P^ = '?') and (Token.L = 1)) or
-           ((Token.TokenType = ttWord) and (Token.P^ = '$') and
-            IsNumeric(Token.P+1, Token.P+Token.L-1)) then begin
+           ((Token.TokenType = ttWord) and (Token.P^ = '$')) then begin
           Inc(ParamsCnt);
           {$IFDEF UNICODE}
           Add(ZUnicodeToRaw(Tokens.AsString(FirstComposePos, I-1), ConSettings^.ClientCodePage^.CP));
@@ -1348,11 +1326,12 @@ end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.InternalRealPrepare;
 begin
-  FRawPlanName := IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FconnAddress^))+IntToRaw(fPrepareCnt);
-  Fres := ExecuteInternal(fASQL, pqPrepare)
+  FRawPlanName := IntToRaw(FStatementId)+'_'+IntToRaw({%H-}NativeUInt(FconnAddress^))+'_'+IntToRaw(fPrepareCnt);
+  PGExecutePrepare;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.SetBindCapacity(Capacity: Integer);
+var i: Integer;
 begin
   inherited SetBindCapacity(Capacity);
   if (Length(FPQparamValues) <> BindList.Capacity) then begin
@@ -1361,28 +1340,39 @@ begin
     SetLength(FPQparamFormats, BindList.Capacity);
     SetLength(FPQParamOIDs, BindList.Capacity);
     SetLength(FInParamDefaultValues, BindList.Capacity);
+    { rebind since the realloc did change the addresses of the hooked values}
+    for i := 0 to Capacity -1 do
+      if BindList.BindTypes[i] {$IFDEF CPU64}in [zbt4Byte, zbt8Byte]{$ELSE}= zbt4Byte{$ENDIF} then
+        FPQparamValues[I] := @BindList[I].Value;
   end;
 end;
 
-procedure TZAbstractPostgreSQLPreparedStatementV3.LinkParam2PG(Index: Integer;
-  Buf: Pointer; Len: LengthInt; ParamFormat: Integer);
+procedure TZAbstractPostgreSQLPreparedStatementV3.LinkBinParam2PG(
+  Index: Integer; Buf: Pointer; Len: LengthInt);
 begin
   FPQparamLengths[Index] := Len;
   FPQparamValues[Index] := Buf;
-  FPQparamFormats[Index] := ParamFormat;
+  FPQparamFormats[Index] := ParamFormatBin;
+end;
+
+procedure TZAbstractPostgreSQLPreparedStatementV3.LinkTxtParam2PG(
+  Index: Integer; Buf: Pointer; Len: LengthInt);
+begin
+  FPQparamLengths[Index] := Len;
+  FPQparamValues[Index] := Buf;
+  FPQparamFormats[Index] := ParamFormatStr;
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.OIDToSQLType(Index: Integer;
   SQLType: TZSQLType): TZSQLType;
 begin
   CheckParameterIndex(Index);
-  case FPQParamOIDs[Index] of
-    INVALIDOID: begin
-      SQLTypeToPostgreSQL(SQLType, FOIdAsBLob, FPQParamOIDs[Index]);
-      if (Ord(SQLType) > Ord(stBoolean)) and (Ord(SQLType) < Ord(stLongWord)) and not Odd(Ord(SQLType)) then
-        SQLType := TZSQLType(Ord(SQLType)+3);
-      Result := SQLType;
-    end;
+  if (FPQParamOIDs[Index] = INVALIDOID) or (FRawPlanname = '') or Findeterminate_datatype then begin
+    FPQParamOIDs[Index] := ZSQLType2OID[FOidAsBlob][SQLType];
+    if (Ord(SQLType) > Ord(stBoolean)) and (Ord(SQLType) < Ord(stLongWord)) and not Odd(Ord(SQLType))
+    then Result := TZSQLType(Ord(SQLType)+3)
+    else Result := SQLType
+  end else case FPQParamOIDs[Index] of
     { these types are binary supported by now }
     BOOLOID:    Result := stBoolean;
     BYTEAOID:   Result := stBytes;
@@ -1400,7 +1390,7 @@ begin
     TIMEOID:  Result := stTime;
     TIMESTAMPOID: Result := stTimeStamp;
     UUIDOID:  Result := stGUID;
-    else if SQLType in [stString, stUnicodeString, stAsciistream, stUnicodeStream, stBinaryStream] then
+    else if SQLType in [stBytes, stString, stUnicodeString, stAsciistream, stUnicodeStream, stBinaryStream] then
       Result := SQLType
     else
       Result := stUnknown; //indicate unsupport the types as Fallback to String format
@@ -1421,6 +1411,92 @@ end;
   prepares the statement on the server if minimum execution
   count have been reached
 }
+procedure TZAbstractPostgreSQLPreparedStatementV3.PGExecutePrepare;
+var PError: PAnsiChar;
+  Res: TPGresult;
+begin
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcPrepStmt,Self);
+  if fAsyncQueries then begin
+    if not FPlainDriver.PQsendPrepare(FconnAddress^, Pointer(FRawPlanName),
+       Pointer(FASQL), BindList.Count-FOutParamCount, Pointer(FPQParamOIDs)) = Ord(PGRES_COMMAND_OK) then begin
+      HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcExecute, ASQL, nil);
+    end;
+  end else begin
+    Res := FPlainDriver.PQprepare(FconnAddress^, Pointer(FRawPlanName),
+      Pointer(ASQL), BindList.Count-FOutParamCount, nil{Pointer(fParamOIDs)});
+    if Assigned(FPlainDriver.PQresultErrorField)
+    then PError := FPlainDriver.PQresultErrorField(Res,Ord(PG_DIAG_SQLSTATE))
+    else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
+    if (PError <> nil) and (PError^ <> #0) then
+      { check for indermine datatype error}
+      if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
+        HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+          lcPrepStmt, ASQL, Res)
+      else begin
+        FPlainDriver.PQclear(Res);
+        Findeterminate_datatype := True
+      end
+    else begin
+      FPlainDriver.PQclear(Res);
+      PrepareInParameters;
+    end;
+  end;
+end;
+
+function TZAbstractPostgreSQLPreparedStatementV3.PGExecutePrepared: TPGresult;
+begin
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
+  if fAsyncQueries then begin
+    if FPlainDriver.PQsendQueryPrepared(FconnAddress^,
+       Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
+       Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat) <> Ord(PGRES_COMMAND_OK) then begin
+      Result := nil; //satisfy compiler
+      HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+        lcExecPrepStmt, ASQL, Result);
+    end else if FServerCursor then
+      FPlainDriver.PQsetSingleRowMode(FconnAddress^);
+    Result := FPlainDriver.PQgetResult(FconnAddress^); //obtain the first result
+  end else begin
+    Result := FPlainDriver.PQexecPrepared(FconnAddress^,
+      Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
+      Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
+    if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
+      HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+        lcExecPrepStmt, ASQL, Result);
+  end;
+end;
+
+procedure TZAbstractPostgreSQLPreparedStatementV3.PGExecuteUnPrepare;
+var
+  PError: PAnsiChar;
+  Res: TPGresult;
+  procedure DoOnFail;
+  begin
+    FPostgreSQLConnection.RegisterTrashPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName))
+  end;
+begin
+  fRawTemp := 'DEALLOCATE "'+FRawPlanName+'"';
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcUnprepStmt,Self);
+  Res := FPlainDriver.PQExec(FconnAddress^, Pointer(fRawTemp));
+  if Assigned(FPlainDriver.PQresultErrorField)
+  then PError := FPlainDriver.PQresultErrorField(Res,Ord(PG_DIAG_SQLSTATE))
+  else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
+  if (PError <> nil) and (PError^ <> #0) then
+    { check for current transaction is aborted error}
+    if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) <> 0) then
+      HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^, lcUnprepStmt, ASQL, Res)
+    else
+      DoOnFail
+  else if Res <> nil then
+    FPlainDriver.PQclear(Res);
+end;
+
 procedure TZAbstractPostgreSQLPreparedStatementV3.Prepare;
 begin
   if fAsyncQueries then
@@ -1479,7 +1555,7 @@ begin
   inherited Unprepare;
   FExecCount := 0;
   if Prepared and Assigned(FconnAddress^) and (FRawPlanName <> '') and not Findeterminate_datatype then
-    ExecuteInternal('DEALLOCATE "'+FRawPlanName+'"', pqUnprepare);
+    PGExecuteUnPrepare;
   Findeterminate_datatype := False;
   FRawPlanName := '';
   FOutParamCount := 0;
@@ -1581,7 +1657,7 @@ procedure TZPostgreSQLPreparedStatementV3.BindBinary(Index: Integer;
   SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
 begin
   inherited BindBinary(Index, SQLType, Buf, Len);
-  LinkParam2PG(Index, Buf, Len, ParamFormatBin);
+  LinkBinParam2PG(Index, Buf, Len);
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindLob(Index: Integer;
@@ -1597,7 +1673,7 @@ begin
       Lob_OID := WriteTempBlob.GetBlobOid;
       FPQParamOIDs[Index] := OIDOID;
       BindList.Put(Index, stBinaryStream, P4Bytes(@Lob_OID));
-      LinkParam2PG(Index, BindList._4Bytes[Index], SizeOf(OID), ParamFormatBin);
+      LinkBinParam2PG(Index, BindList._4Bytes[Index], SizeOf(OID));
       {$IFNDEF ENDIAN_BIG}Reverse4Bytes(FPQparamValues[Index]);{$ENDIF}
       WriteTempBlob := nil;
     end else begin
@@ -1613,16 +1689,99 @@ procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   Buf: PAnsiChar; Len: LengthInt);
 begin
   inherited BindRawStr(Index, Buf, Len);
-  LinkParam2PG(Index, Buf, Len, ParamFormatStr);
+  LinkTxtParam2PG(Index, Buf, Len);
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   const Value: RawByteString);
 begin
   inherited BindRawStr(Index, Value); //localize
-  LinkParam2PG(Index, Pointer(Value), Length(Value), ParamFormatStr);
+  LinkTxtParam2PG(Index, Pointer(Value), Length(Value));
   if Pointer(Value) = nil then
     FPQparamValues[Index] := PEmptyAnsiString;
+end;
+
+procedure TZPostgreSQLPreparedStatementV3.ClearParameters;
+begin
+  //inherited ClearParameters
+  BatchDMLArrayCount := 0;
+end;
+
+procedure TZPostgreSQLPreparedStatementV3.InternalBindDouble(Index: Integer;
+  SQLType: TZSQLType; const Value: Double);
+var PGSQLType: TZSQLType;
+  { move the string conversions into a own proc -> no (U/L)StrClear}
+  procedure SetAsRaw;
+  begin
+    case SQLType of
+      stBoolean:    fRawTemp := BoolStrIntsRaw[Value <> 0];
+      stSmall,
+      stInteger,
+      stLong:       fRawTemp := IntToRaw(Trunc(Value));
+      stDate:       fRawTemp := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False);
+      stTime:       fRawTemp := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False);
+      stTimeStamp:  fRawTemp := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False);
+      else          fRawTemp := FloatToSqlRaw(Value);
+    end;
+    SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fRawTemp)
+  end;
+begin
+  PGSQLType := OIDToSQLType(Index, SQLType);
+  if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
+    BindList.Put(Index, PGSQLType, P4Bytes(@Value));
+    LinkBinParam2PG(Index, BindList._4Bytes[Index], 4);
+  end else begin
+    BindList.Put(Index, PGSQLType, P8Bytes(@Value));
+    LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
+  end;
+  case PGSQLType of
+    stBoolean:    PByte(FPQparamValues[Index])^ := Byte(Ord(Value <> 0));
+    stSmall:      SmallInt2PG(Trunc(Value), FPQparamValues[Index]);
+    stInteger:    Integer2PG(Trunc(Value), FPQparamValues[Index]);
+    stLong:       Int642PG(Trunc(Value), FPQparamValues[Index]);
+    stFloat:      Single2PG(Value, FPQparamValues[Index]);
+    stDouble:     {$IFNDEF ENDIAN_BIG}Reverse8Bytes(FPQparamValues[Index]){$ENDIF};
+    stDate:       Date2PG(Value, PInteger(FPQparamValues[Index])^);
+    stTime:       if Finteger_datetimes
+                  then Time2PG(Value, PInt64(FPQparamValues[Index])^)
+                  else Time2PG(Value, PDouble(FPQparamValues[Index])^);
+    stTimeStamp:  if Finteger_datetimes
+                  then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
+                  else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
+    else        SetAsRaw;
+  end;
+end;
+
+procedure TZPostgreSQLPreparedStatementV3.InternalBindInt(Index: Integer;
+  SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
+var PGSQLType: TZSQLType;
+{ move the string conversions into a own proc -> no (U/L)StrClear}
+procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value)); end;
+begin
+  PGSQLType := OIDToSQLType(Index, SQLType);
+  if (Ord(PGSQLType) < Ord(stGUID)) then begin
+    if (FPQparamValues[Index] = nil) or (BindList[Index].SQLType <> PGSQLType) then
+      if ZSQLType2PGBindSizes[PGSQLType] <= 4 then begin
+        BindList.Put(Index, PGSQLType, P4Bytes(@Value));
+        LinkBinParam2PG(Index, BindList._4Bytes[Index], ZSQLType2PGBindSizes[PGSQLType]);
+      end else if ZSQLType2PGBindSizes[PGSQLType] = 8 then begin
+        BindList.Put(Index, PGSQLType, P8Bytes({$IFNDEF CPU64}@faBuffer[0]{$ELSE}@Value{$ENDIF}));
+        LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
+      end else
+        LinkBinParam2PG(Index, BindList.AquireCustomValue(Index, PGSQLType,
+          ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
+    case PGSQLType of
+      stBoolean:  PByte(FPQparamValues[Index])^ := Ord(Value);
+      stSmall:    SmallInt2PG(Value, FPQparamValues[Index]);
+      stInteger,
+      stDate:     Integer2PG(Value, FPQparamValues[Index]);
+      stFloat:    Single2PG(Value, FPQparamValues[Index]);
+      stLongWord: Cardinal2PG(Value, FPQparamValues[Index]);
+      stLong:     Int642PG(Value, FPQparamValues[Index]);
+      stDouble:   Double2PG(Value, FPQparamValues[Index]);
+      stCurrency: Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+    end;
+  end else SetAsRaw;
 end;
 
 {**
@@ -1677,13 +1836,21 @@ begin
   end;
 end;
 
+{**
+  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZPostgreSQLPreparedStatementV3.SetBigDecimal(Index: Integer;
   const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
   {$IFDEF BCD_TEST}
-  SetDouble(Index, BCDToDouble(Value));
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, BCDToDouble(Value));
   {$ELSE}
-  SetDouble(Index, Value);
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
   {$ENDIF}
 end;
 
@@ -1698,15 +1865,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetBoolean(Index: Integer;
   Value: Boolean);
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  if OIDToSQLType(Index, stBoolean) = stBoolean then begin
-    BindList.Put(Index, Value);
-    LinkParam2PG(Index, @BindList[Index].Value, SizeOf(Byte), ParamFormatBin);
-    PByte(FPQparamValues[Index])^ := Ord(Value);
-  end else
-    SetInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Ord(Value));
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean, Ord(Value));
 end;
 
 {**
@@ -1719,7 +1878,7 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetByte(Index: Integer; Value: Byte);
 begin
-  inherited SetSmall(Index, Value);
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
 end;
 
 {**
@@ -1732,56 +1891,41 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetCurrency(Index: Integer;
   const Value: Currency);
-var X: Integer;
-  SQLType: TZSQLType;
-  P: Pointer;
+var SQLType: TZSQLType;
+procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, CurrToRaw(Value)); end;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
-  CheckParameterIndex(Index);
   SQLType := OIDToSQLType(Index, stCurrency);
-  if (FPQParamOIDs[index] <> CASHOID) and (SQLType in [stCurrency, stBigDecimal]) then begin
-    P := BindList.AquireCustomValue(Index, SQLType, MaxCurr2NumSize);
-    Currency2PGNumeric(Value, P, X);
-    LinkParam2PG(Index, P, X, ParamFormatBin)
-  end else begin
-    BindList.Put(Index, stCurrency, P8Bytes(@Value));
-    case SQLType of
-      stBoolean:  begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Byte), ParamFormatBin);
-                    PByte(FPQparamValues[Index])^ := Ord(Value <> 0);
-                  end;
-      stSmall:    begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(SmallInt), ParamFormatBin);
-                    SmallInt2PG(SmallInt(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
-                  end;
-      stInteger:  begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Integer), ParamFormatBin);
-                    Integer2PG(Integer(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
-                  end;
-      stLongWord: begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Cardinal), ParamFormatBin);
-                    Cardinal2PG(Cardinal(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
-                  end;
-      stLong:     begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Int64), ParamFormatBin);
-                    Int642PG(PInt64(@Value)^ div 10000, FPQparamValues[Index]);
-                  end;
-      stFloat:    begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Single), ParamFormatBin);
-                    Single2PG(Value, FPQparamValues[Index]);
-                  end;
-      stDouble:   begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Double), ParamFormatBin);
-                    Double2PG(Value, FPQparamValues[Index]);
-                  end;
-      stCurrency: begin
-                    LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Currency), ParamFormatBin);
-                    Currency2PGCash(Value, FPQparamValues[Index]);
-                  end;
-      else BindRawStr(Index, CurrToRaw(Value));
+  if (FPQParamOIDs[index] = NUMERICOID) then begin
+    if (FPQparamValues[Index] = nil) or (BindList.SQLTypes[Index] <> SQLType) then begin
+      FPQparamValues[Index] := BindList.AquireCustomValue(Index, SQLType, MaxCurr2NumSize);
+      FPQparamFormats[Index] := ParamFormatBin;
     end;
+    Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+  end else case SQLType of
+    stBoolean:  InternalBindInt(Index, stBoolean, Ord(Value <> 0));
+    stSmall,
+    stInteger:  InternalBindInt(Index, SQLType, PInt64(@Value)^ div 10000);
+    stLongWord: begin
+                  BindList.Put(Index, stLong, P4Bytes(@Value));
+                  LinkBinParam2PG(Index, BindList._4Bytes[Index], SizeOf(Cardinal));
+                  Cardinal2PG(Cardinal(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
+                end;
+    stLong:     begin
+                  BindList.Put(Index, stLong, P8Bytes(@Value));
+                  LinkBinParam2PG(Index, BindList._8Bytes[Index], SizeOf(Int64));
+                  Int642PG(PInt64(@Value)^ div 10000, FPQparamValues[Index]);
+                end;
+    stTime, stDate, stTimeStamp, stFloat,
+    stDouble:   InternalBindDouble(Index, SQLType, Value);
+    stCurrency: begin
+                  BindList.Put(Index, stCurrency, P8Bytes(@Value));
+                  LinkBinParam2PG(Index, BindList._8Bytes[Index], SizeOf(Currency));
+                  Currency2PGCash(Value, FPQparamValues[Index]);
+                end;
+    else SetAsRaw;
   end;
 end;
 
@@ -1795,40 +1939,8 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetDate(Index: Integer;
   const Value: TDateTime);
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stDate) of
-    stTime:     begin
-                  BindList.Put(Index, stTime, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  if Finteger_datetimes
-                  then Time2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else Time2PG(Value, PDouble(FPQparamValues[Index])^);
-                end;
-    stDate:     begin
-                  Date2PG(Value, I);
-                  BindList.Put(Index, stDate, P4Bytes(@I));
-                  LinkParam2PG(Index, BindList._4Bytes[Index], SizeOf(Integer), ParamFormatBin);
-                end;
-    stTimeStamp:begin
-                  BindList.Put(Index, stTimeStamp, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  if Finteger_datetimes
-                  then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
-                end;
-    stFloat:    SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stDouble:   begin
-                  BindList.Put(Index, stDouble, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Double), ParamFormatBin);
-                  Double2PG(Value, FPQparamValues[Index]);
-                end;
-    stSmall, stInteger, stLong, stLongWord: SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
-    else SetRawByteString(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False));
-  end;
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
 end;
 
 {**
@@ -1842,27 +1954,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetDouble(Index: Integer;
   const Value: Double);
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stDouble) of
-    stDouble:   begin
-                  BindList.Put(Index, stDouble, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Double), ParamFormatBin);
-                  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(FPQparamValues[Index]);{$ENDIF}
-                end;
-    stBoolean:  SetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value <> 0);
-    stSmall,
-    stInteger,
-    stLongWord,
-    stLong:     SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
-    stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stFloat:    SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stDate,
-    stTime,
-    stTimeStamp:SetTimeStamp(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    else        SetRawByteString(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FloatToSqlRaw(Value));
-  end;
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
 end;
 
 {**
@@ -1876,24 +1968,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetFloat(Index: Integer;
   Value: Single);
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stFloat) of
-    stBoolean:  SetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value <> 0);
-    stSmall,
-    stInteger,
-    stLongWord,
-    stLong:     SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
-    stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stFloat:    begin
-                  BindList.Put(Index, stFloat, P4Bytes(@Value));
-                  LinkParam2PG(Index, BindList._4Bytes[Index], SizeOf(Single), ParamFormatBin);
-                  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(FPQparamValues[Index]);{$ENDIF}
-                end;
-    stDouble:   SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    else        SetRawByteString(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FloatToSqlRaw(Value));
-  end;
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value);
 end;
 
 {**
@@ -1906,28 +1981,7 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetInt(Index, Value: Integer);
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stInteger) of
-    stBoolean:  SetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value <> 0);
-    stSmall:    begin
-                  BindList.Put(Index, stInteger, P4Bytes(@Value));
-                  LinkParam2PG(Index, BindList._4Bytes[Index], SizeOf(SmallInt), ParamFormatBin);
-                  SmallInt2PG(SmallInt(Value), FPQparamValues[Index]);
-                end;
-    stInteger:  begin
-                  BindList.Put(Index, stInteger, P4Bytes(@Value));
-                  LinkParam2PG(Index, BindList._4Bytes[Index], SizeOf(Integer), ParamFormatBin);
-                  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(FPQparamValues[Index]);{$ENDIF}
-                end;
-    stLongWord,
-    stLong:     SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stFloat:    SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stDouble:   SetDouble(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    else        SetRawByteString(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value));
-  end;
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
 end;
 
 {**
@@ -1940,25 +1994,40 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetLong(Index: Integer;
   const Value: Int64);
+{$IFDEF CPU64}
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stLong) of
-    stBoolean:  SetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value <> 0);
-    stSmall:    SetSmall(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stInteger:  SetInt(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stLongWord,
-    stLong:     begin
-                  BindList.Put(Index, stLong, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Int64), ParamFormatBin);
-                  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(FPQparamValues[Index]);{$ENDIF}
-                end;
-    stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stFloat:    SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stDouble:   SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    else        SetRawByteString(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value));
-  end;
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+{$ELSE}
+{ move the string conversions into a own proc -> no (U/L)StrClear}
+var PGSQLType: TZSQLType;
+procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value)); end;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  PGSQLType := OIDToSQLType(Index, stLong);
+  if (Ord(PGSQLType) < Ord(stGUID)) then begin
+    if (FPQparamValues[Index] = nil) or (BindList[Index].SQLType <> PGSQLType) then
+      if ZSQLType2PGBindSizes[PGSQLType] <= 4 then begin
+        BindList.Put(Index, PGSQLType, P4Bytes(@Value));
+        LinkBinParam2PG(Index, BindList._4Bytes[Index], ZSQLType2PGBindSizes[PGSQLType]);
+      end else if ZSQLType2PGBindSizes[PGSQLType] = 8 then begin
+        BindList.Put(Index, PGSQLType, P8Bytes(@Value));
+        LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
+      end else
+        LinkBinParam2PG(Index, BindList.AquireCustomValue(Index, PGSQLType,
+          ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
+    case PGSQLtype of
+      stLong:     Int642PG(Value, FPQparamValues[Index]);
+      stBoolean:  PByte(FPQparamValues[Index])^ := Ord(Value);
+      stSmall:    SmallInt2PG(Value, FPQparamValues[Index]);
+      stInteger,
+      stDate:     Integer2PG(Value, FPQparamValues[Index]);
+      stLongWord: Cardinal2PG(Value, FPQparamValues[Index]);
+      stFloat:    Single2PG(Value, FPQparamValues[Index]);
+      stDouble:   Double2PG(Value, FPQparamValues[Index]);
+      stCurrency: Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+    end;
+  end else SetAsRaw;
+{$ENDIF}
 end;
 
 {**
@@ -1990,7 +2059,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetShort(Index: Integer;
   Value: ShortInt);
 begin
-  SetSmall(Index, Value);
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
 end;
 
 {**
@@ -2003,27 +2072,8 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetSmall(Index: Integer;
   Value: SmallInt);
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stSmall) of
-    stBoolean:  SetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value <> 0);
-    stSmall:    begin
-                  I := Value;
-                  BindList.Put(Index, stSmall, P4Bytes(@I));
-                  LinkParam2PG(Index, BindList._4Bytes[Index], SizeOf(SmallInt), ParamFormatBin);
-                  SmallInt2PG(Value, FPQparamValues[Index]);
-                end;
-    stInteger:  SetInt(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stLongWord: SetUInt(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stLong:     SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stFloat:    SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stDouble:   SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    else        SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value));
-  end;
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
 end;
 
 {**
@@ -2037,38 +2087,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetTime(Index: Integer;
   const Value: TDateTime);
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stTime) of
-    stTime:     begin
-                  BindList.Put(Index, stTime, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  if Finteger_datetimes
-                  then Time2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else Time2PG(Value, PDouble(FPQparamValues[Index])^);
-                end;
-    stDate:     begin
-                  BindList.Put(Index, stDate, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Integer), ParamFormatBin);
-                  Date2PG(Value, PInteger(FPQparamValues[Index])^);
-                end;
-    stTimeStamp:begin
-                  BindList.Put(Index, stTimeStamp, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  if Finteger_datetimes
-                  then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
-                end;
-    stFloat:    SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stDouble:   begin
-                  BindList.Put(Index, stDouble, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  Double2PG(Value, FPQparamValues[Index]);
-                end;
-    stSmall, stInteger, stLong, stLongWord: SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
-    else SetRawByteString(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False));
-  end;
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
 end;
 
 {**
@@ -2082,38 +2101,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetTimestamp(Index: Integer;
   const Value: TDateTime);
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  case OIDToSQLType(Index, stTimeStamp) of
-    stTimeStamp:begin
-                  BindList.Put(Index, stTimeStamp, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  if Finteger_datetimes
-                  then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
-                end;
-    stTime:     begin
-                  BindList.Put(Index, stTime, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  if Finteger_datetimes
-                  then Time2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else Time2PG(Value, PDouble(FPQparamValues[Index])^);
-                end;
-    stDate:     begin
-                  BindList.Put(Index, stDate, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], SizeOf(Integer), ParamFormatBin);
-                  Date2PG(Value, PInteger(FPQparamValues[Index])^);
-                end;
-    stFloat:    SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    stDouble:   begin
-                  BindList.Put(Index, stDouble, P8Bytes(@Value));
-                  LinkParam2PG(Index, BindList._8Bytes[Index], 8, ParamFormatBin);
-                  Double2PG(Value, FPQparamValues[Index]);
-                end;
-    stSmall, stInteger, stLong, stLongWord: SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
-    else SetRawByteString(Index {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False));
-  end;
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
 end;
 
 {**
@@ -2127,7 +2115,11 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetUInt(Index: Integer;
   Value: Cardinal);
 begin
+  {$IFDEF CPU64}
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+  {$ELSE}
   SetLong(Index, Value);
+  {$ENDIF}
 end;
 
 {**
@@ -2141,7 +2133,11 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetULong(Index: Integer;
   const Value: UInt64);
 begin
+  {$IFDEF CPU64}
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+  {$ELSE}
   SetLong(Index, Value);
+  {$ENDIF}
 end;
 
 {**
@@ -2154,7 +2150,7 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetWord(Index: Integer; Value: Word);
 begin
-  SetInt(Index, Value);
+  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
 end;
 
 {**

@@ -341,7 +341,7 @@ function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64;
 
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
-function UnicodeToIntDef(Buf, PEnd: PWideChar; Default: Integer) : UInt64; overload;
+function UnicodeToIntDef(Buf, PEnd: PWideChar; Default: Integer) : Integer; overload;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Int64) : Int64; overload;
 function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64; overload;
 function UnicodeToInt64Def(Buf, PEnd: PWideChar; Default: Integer) : Int64; overload;
@@ -4218,7 +4218,7 @@ begin
       Result := Default;
 end;
 
-function UnicodeToIntDef(Buf, PEnd: PWideChar; Default: Integer) : UInt64;
+function UnicodeToIntDef(Buf, PEnd: PWideChar; Default: Integer) : Integer;
 var P: PWideChar;
 begin
   P := PEnd;

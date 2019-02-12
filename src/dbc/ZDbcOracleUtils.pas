@@ -1152,7 +1152,7 @@ begin
           Result := stDouble;
           DataType := SQLT_BDOUBLE;
           DataSize := SizeOf(Double);
-        end else if (Scale = 0) and (Precision > 0) and (Precision < 20) then
+        end else if (Scale = 0) and (Precision > 0) and (Precision < 19) then
           //No digits found, but possible signed or not/overrun of converiosn? No way to find this out -> just use a "save" type
           case Precision of
             1..2: begin // 0/-99..(-)99
@@ -1433,7 +1433,10 @@ begin
         ErrorCode, ErrorMessage);
     if not ( ( LogCategory = lcDisconnect ) and ( ErrorCode = 3314 ) ) then //patch for disconnected Server
       //on the other hand we can't close the connction  MantisBT: #0000227
-      raise EZSQLException.CreateWithCode(ErrorCode,
+      if LogMessage <> ''
+      then raise EZSQLException.CreateWithCode(ErrorCode,
+        Format(cSSQLError3, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP), ErrorCode, LogMessage]))
+      else raise EZSQLException.CreateWithCode(ErrorCode,
         Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
   if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then

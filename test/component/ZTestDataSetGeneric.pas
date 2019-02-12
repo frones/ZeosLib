@@ -2407,9 +2407,10 @@ begin
   try
     Query.SQL.Text := 'SELECT * FROM high_load';
     Query.Open;
-
     try
-      for i := 0 to Query.Fields.Count - 1 do
+      I := 0;
+      TestSetValue(TEST_ROW_ID);
+      for i := 1 to Query.Fields.Count - 1 do
         case Query.Fields[i].DataType of
           {$IFDEF WITH_FTSHORTINT}
           ftShortint:

@@ -775,7 +775,7 @@ begin
   if Length(OutParamValues) = 0 then // check if DynArray is initialized for RETURN_VALUE
     SetOutParamCount(1);
   OutParamValues[0] := Temp; //set function RETURN_VALUE
-
+  OutString := '';
   ParamIndex := 1;
   for I := 1 to OutParamCount - 1 do
   begin

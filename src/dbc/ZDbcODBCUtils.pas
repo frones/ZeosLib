@@ -57,6 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses SysUtils,
+  {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZDbcIntfs, ZPlainODBCDriver, ZDbcODBCCon, ZFastCode;
 
 type

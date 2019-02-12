@@ -291,6 +291,7 @@ type
     procedure Put(Index: Integer; Value: PZBindValue); overload;
     procedure Put(Index: Integer; const Value: TGUID); overload;
     function AquireCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
+    function AquireMinCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
 
     procedure SetCount(NewCount: Integer);
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
@@ -346,7 +347,7 @@ type
     function SupportsBidirectionalParams: Boolean; virtual;
     function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; virtual;
   protected //Properties
-    property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount;
+    property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount write FBatchDMLArrayCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
     property BindList: TZBindList read FBindList;
   protected //the sql conversions
@@ -923,7 +924,9 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding, ZDbcProperties{$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  ZEncoding, ZDbcProperties
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 var
 {**
@@ -2147,12 +2150,16 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
+{$IFDEF FPC}
+  {$PUSH} {$WARN 5033 off : Function result does not seem to be set} // base class - result not returned intentionally
+{$ENDIF}
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Executes the SQL INSERT, UPDATE or DELETE statement
@@ -3231,6 +3238,7 @@ begin
   OutParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZSQLType(SQLType);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZAbstractCallableStatement.RegisterParameter(ParameterIndex: Integer;
   SQLType: TZSQLType; ParamType: TZProcedureColumnType; const Name: String;
   PrecisionOrSize: LengthInt; Scale: LengthInt);
@@ -3247,6 +3255,7 @@ begin
   if not FIsFunction then FIsFunction := ParamType = pctReturn;
   if not FHasOutParameter then FHasOutParameter := ParamType in [pctOut, pctInOut];
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
@@ -3845,8 +3854,26 @@ function TZBindList.AquireCustomValue(Index: Integer; SQLType: TZSQLType;
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, SQLType, zbtCustom);
-  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ <> Len) then
-    ClearValue(Index);
+  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ <> Len) then begin
+    FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
+    BindValue.Value := nil;
+  end;
+  if BindValue.Value = nil then begin
+    GetMem(BindValue.Value, SizeOf(LengthInt)+Len);
+    PLengthInt(BindValue.Value)^ := Len;
+  end;
+  Result := PAnsiChar(BindValue.Value)+SizeOf(LengthInt);
+end;
+
+function TZBindList.AquireMinCustomValue(Index: Integer; SQLType: TZSQLType;
+  Len: LengthInt): Pointer;
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, SQLType, zbtCustom);
+  if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ < Len) then begin
+    FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
+    BindValue.Value := nil;
+  end;
   if BindValue.Value = nil then begin
     GetMem(BindValue.Value, SizeOf(LengthInt)+Len);
     PLengthInt(BindValue.Value)^ := Len;
@@ -3872,6 +3899,7 @@ begin
       case BindValue.BindType of
         zbtNull: IStmt.SetNull(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType);
         zbt4Byte: case BindValue.SQLType of
+                    stBoolean:  IStmt.SetBoolean(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^ <> 0);
                     stByte:     IStmt.SetByte(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
                     stShort:    IStmt.SetShort(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInteger(@BindValue.Value)^);
                     stWord:     IStmt.SetWord(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
@@ -3882,6 +3910,7 @@ begin
                     //else RaiseUnsupportedException
                   end;
         zbt8Byte: case BindValue.SQLType of
+                    stBoolean:  IStmt.SetBoolean(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^ <> 0);
                     stByte:     IStmt.SetByte(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
                     stShort:    IStmt.SetShort(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
                     stWord:     IStmt.SetWord(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
@@ -5082,6 +5111,7 @@ end;
   or <code>DECIMAL</code>, the version of
   <code>registerOutParameter</code> that accepts a scale value should be used.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZAbstractPreparedStatement2.RegisterParameter(ParameterIndex: Integer;
   SQLType: TZSQLType; ParamType: TZProcedureColumnType; const Name: String = '';
   PrecisionOrSize: LengthInt = 0; Scale: LengthInt = 0);
@@ -5096,6 +5126,7 @@ begin
   BindValue^.SQLType   := SQLType;
   FHasInOutParams := FHasInOutParams or (ParamType = pctInOut)
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZAbstractPreparedStatement2.ReleaseImmediat(
   const Sender: IImmediatelyReleasable);
@@ -6725,11 +6756,13 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param Value the default value normally defined in the field's DML SQL statement
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZAbstractCallableStatement2.SetDefaultValue(ParameterIndex: Integer;
   const Value: String);
 begin
   //it's a nop
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to SQL <code>NULL</code>.

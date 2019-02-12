@@ -1051,6 +1051,8 @@ procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query:
 const
   QuoteString1 = '\'', 1 --''';
   QuoteString2: ZWideString = #$0422#$0435#$0441#$0442#$0401#$0419'\000'; // Test in Russian + a couple of random Cyrillic letters
+
+var  CP: Word;
 begin
   Query.ParamChar := ':';
   Query.ParamCheck := True;
@@ -1061,6 +1063,14 @@ begin
   CheckEquals(QuoteString1, Query.Fields[0].AsString);
   Query.Close;
 
+  if (connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+    not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
+    Exit;
+  CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  //eh the russion abrakadabra can no be mapped to other charsets then:
+  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    {add some more if you run into same issue !!} then
+    Exit;
   Query.ParamByName('test').AsString := GetDBTestString(QuoteString2, Connection.DbcConnection.GetConSettings);
   Query.Open;
 

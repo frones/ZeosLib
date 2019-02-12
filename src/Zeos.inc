@@ -135,6 +135,8 @@
       {$IF CompilerVersion >= 17} //Delphi 2005+
         {$DEFINE WITH_INLINE}          // compiler supports inline methodes
 
+        {$DEFINE WITH_C5242_OR_C4963_INTERNAL_ERROR} //D2005..2009 Has an internal error with some inlined endian swap code.
+        {$DEFINE NO_INLINE_SIZE_CHECK} //so old compilers need the Math unit for PUnicodeToRaw -> suppress hints
         {$IF CompilerVersion >= 18} //Delphi 2006+
           {$UNDEF WITH_UINT64_C1118_ERROR}            //2006+ has no problems to assign code constants for UInt64
           {$UNDEF WITH_MILLISECONDOFTHEYEAR_BUG}      //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is fixed
@@ -164,6 +166,7 @@
               {$DEFINE HAVE_CS_TRYENTER} //TCriticalSection has method TryEnter
               {$UNDEF WITH_OVERLOAD_BUG}                  //2009+ has no problems with ambiguous overload (byte/word)
               {$UNDEF WITH_DEPRECATED_EXTRACTFIELDNAME} //DB.pas proc ExtractFieldName String overload is no more deprecated -> Unicode}
+              {$UNDEF NO_INLINE_SIZE_CHECK}
               {$UNDEF BCC32_vtDateTime_ERROR}           //resolved by ide
               {$UNDEF USE_FAST_CHARPOS}                 // Since Unicode this function is useless
 
@@ -192,6 +195,7 @@
                 {$WEAKLINKRTTI ON}                    //suppress extended RTTI
                 {.$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI for some unknown reason we've compilation issues. So enable this define manually!
                 {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
+                {$UNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //those inlineing errors are resolved 
                 {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
                 {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
                 {$DEFINE WITH_FTSINGLE}               // ftSingle is supported
@@ -320,7 +324,7 @@
               {$ELSE !CompilerVersion >= 21} //Delphi 2009
                 {$DEFINE WITH_INLINE_ANSISTRLCOMP} //AnsiStrLComp is inlined in D2009 only
                 {$DEFINE WITH_URW1135_ISSUE} //D2009 can't compile for some strange reasons with inlined code.
-              {$IFEND CompilerVersion >= 21}
+              {$IFEND CompilerVersion >= 21} //D2007 Has an internal error with some inlined endian swap code.
             {$IFEND CompilerVersion >= 20} //Delphi 2007
           {$IFEND CompilerVersion >= 18.5} //Delphi 2006
         {$ELSE !CompilerVersion >= 18} //Delphi 2005

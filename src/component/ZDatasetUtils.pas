@@ -420,7 +420,7 @@ begin
       Result := stCurrency;
     ftString:
       Result := stString;
-    ftBytes:
+    ftBytes, ftVarBytes:
       Result := stBytes;
     ftDate:
       Result := stDate;
@@ -552,7 +552,7 @@ begin
           RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), Len)
         else
           RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
-      ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
+      ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
         RowAccessor.SetDate(FieldIndex, ResultSet.GetDate(ColumnIndex));
@@ -651,7 +651,7 @@ begin
         else
           ResultSet.UpdatePWideChar(ColumnIndex,
             RowAccessor.GetPWideChar(FieldIndex, WasNull, Len), Len);
-      ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
+      ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
         ResultSet.UpdateDate(ColumnIndex, RowAccessor.GetDate(FieldIndex, WasNull));
@@ -806,7 +806,7 @@ begin
           ResultValues[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
         ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
           ResultValues[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
-        ftBytes, ftBlob, ftGraphic:
+        ftBytes, ftVarBytes, ftBlob, ftGraphic:
           ResultValues[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
         else
           ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
@@ -857,7 +857,7 @@ begin
         ResultValues[I] := EncodeDateTime(RowAccessor.GetTimestamp(ColumnIndex, WasNull));
       ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
         ResultValues[I] := EncodeUnicodeString(RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
-      ftBytes:
+      ftBytes, ftVarBytes:
         ResultValues[I] := EncodeBytes(RowAccessor.GetBytes(ColumnIndex, WasNull));
       else
         ResultValues[I] := EncodeString(RowAccessor.GetString(ColumnIndex, WasNull));
@@ -877,15 +877,62 @@ procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
   const ResultSet: IZResultSet; const Variables: IZVariablesList);
 var
   I, ColumnIndex: Integer;
-begin
-  for I := 0 to High(Fields) do
+  procedure CopyFromField;
   begin
+    if TField(Fields[I]).IsNull then
+      Variables.Values[I] := NullVariant
+    else case TField(Fields[I]).DataType of
+      ftBoolean:
+        Variables.Values[I] := EncodeBoolean(TField(Fields[I]).AsBoolean);
+      {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
+      ftWord, ftSmallInt, ftInteger, ftAutoInc:
+        Variables.Values[I] := EncodeInteger(TField(Fields[I]).AsInteger);
+      {$IFDEF WITH_FTSINGLE}
+      ftSingle,
+      {$ENDIF}
+      ftCurrency,
+      ftFloat:
+        Variables.Values[I] := EncodeFloat(TField(Fields[I]).AsFloat);
+      {$IFDEF WITH_FTEXTENDED}
+      ftExtended:
+        Variables.Values[I] := EncodeFloat(TField(Fields[I]).AsExtended);
+      {$ENDIF}
+      {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
+        Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
+      ftBCD:
+        Variables.Values[I] := {$IFDEF BCD_TEST}EncodeCurrency{$ELSE}EncodeFloat{$ENDIF}(ResultSet.GetCurrency(ColumnIndex));
+      {$IFDEF BCD_TEST}
+      ftFmtBCD: Variables.Values[I] := EncodeBcd(TField(Fields[I]).AsBCD);
+      {$ENDIF}
+      ftDate, ftTime, ftDateTime:
+        Variables.Values[I] := EncodeDateTime(TField(Fields[I]).AsDateTime);
+      //ftString, ftMemo:
+        //Variables.Values[I] := EncodeString(TField(Fields[I]).AsString);
+    {$IFNDEF UNICODE}
+      {$IFDEF WITH_FTWIDESTRING}
+      ftWidestring{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
+        Variables.Values[I] := EncodeUnicodeString(TField(Fields[I]).AsWideString);
+      {$ENDIF}
+    {$ENDIF}
+      ftBytes, ftVarBytes:
+        {$IFDEF TFIELD_HAS_ASBYTES}
+        Variables.Values[I] := EncodeBytes(TField(Fields[I]).AsBytes);
+        {$ELSE}
+        Variables.Values[I] := EncodeBytes(VarToBytes(TField(Fields[I]).AsVariant));
+        {$ENDIF}
+      ftArray, ftDataSet: raise EZDatabaseError.Create(SDataTypeDoesNotSupported)
+      else Variables.Values[I] := EncodeString(TField(Fields[I]).AsString);
+    end;
+  end;
+begin
+  for I := 0 to High(Fields) do begin
     if Fields[I] = nil then
       Continue;
 
     ColumnIndex := TField(Fields[I]).FieldNo {$IFDEF GENERIC_INDEX}-1{$ENDIF};
-    if not ResultSet.IsNull(ColumnIndex) then
-    begin
+    if ColumnIndex = -1 then
+      CopyFromField
+    else if not ResultSet.IsNull(ColumnIndex) then
       case TField(Fields[I]).DataType of
         ftBoolean:
           Variables.Values[I] := EncodeBoolean(ResultSet.GetBoolean(ColumnIndex));
@@ -900,31 +947,35 @@ begin
           Variables.Values[I] := EncodeFloat(ResultSet.GetDouble(ColumnIndex));
         {$IFDEF WITH_FTEXTENDED}
         ftExtended:
-          Variables.Values[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
+          Variables.Values[I] := EncodeFloat(ResultSet.{$IFDEF BCD_TEST}GetDouble{$ELSE}GetBigDecimal{$ENDIF}(ColumnIndex));
+        {$ENDIF}
+        {$IFDEF BCD_TEST}
+        ftFmtBCD:
+          Variables.Values[I] := EncodeBcd(ResultSet.GetBigDecimal(ColumnIndex));
         {$ENDIF}
         {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
           Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftCurrency, ftBCD:
-          Variables.Values[I] := EncodeFloat(ResultSet.GetCurrency(ColumnIndex));
+          Variables.Values[I] := {$IFDEF BCD_TEST}EncodeCurrency{$ELSE}EncodeFloat{$ENDIF}(ResultSet.GetCurrency(ColumnIndex));
         ftDate:
           Variables.Values[I] := EncodeDateTime(ResultSet.GetDate(ColumnIndex));
         ftTime:
           Variables.Values[I] := EncodeDateTime(ResultSet.GetTime(ColumnIndex));
         ftDateTime:
           Variables.Values[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
-        ftString, ftMemo:
-          Variables.Values[I] := EncodeString(ResultSet.GetString(ColumnIndex));
+        //ftString, ftMemo:
+          //Variables.Values[I] := EncodeString(ResultSet.GetString(ColumnIndex));
+        {$IFNDEF UNICODE}
         ftWidestring{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
           Variables.Values[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
-        ftBytes:
+        {$ENDIF}
+        ftBytes, ftVarBytes:
           Variables.Values[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
-        ftArray: ;
-        ftDataSet:
-          Variables.Values[I] := EncodePointer(Pointer(ResultSet.GetDataSet(ColumnIndex)));
+        ftArray,
+        ftDataSet: raise EZDatabaseError.Create(SDataTypeDoesNotSupported);
         else
           Variables.Values[I] := EncodeString(ResultSet.GetString(ColumnIndex));
-      end;
-    end
+      end
     else
       Variables.Values[I] := NullVariant;
   end;
@@ -1151,7 +1202,9 @@ function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
 var
   I: Integer;
   ColumnIndex: Integer;
+  {$IFNDEF NEXTGEN}
   AValue1, AValue2: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
+  {$ENDIF}
   WValue1, WValue2: ZWideString;
   CurrentType : TZSQLType;
 begin
@@ -1265,7 +1318,7 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     if (Fields[I].FieldKind = fkData)
-      and not (Fields[I].DataType in [ftBlob, ftGraphic, ftMemo, ftBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
+      and not (Fields[I].DataType in [ftBlob, ftGraphic, ftMemo, ftBytes, ftVarBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
       AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName), ',');
   end;
 end;

@@ -88,11 +88,7 @@ type
     function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); override;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
   public
@@ -113,11 +109,31 @@ type
 
   {** Implements Prepared SQL Statement for Oracle }
   TZOraclePreparedStatement_A = class(TZAbstractOraclePreparedStatement_A, IZPreparedStatement)
+  private
+    procedure BindSInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
+    procedure BindUInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF});
+    procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
   public
+    procedure SetNull(Index: Integer; SQLType: TZSQLType); reintroduce;
     procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
+    procedure SetByte(Index: Integer; Value: Byte); reintroduce;
+    procedure SetShort(Index: Integer; Value: ShortInt); reintroduce;
+    procedure SetWord(Index: Integer; Value: Word); reintroduce;
+    procedure SetSmall(Index: Integer; Value: SmallInt); reintroduce;
+    procedure SetUInt(Index: Integer; Value: Cardinal); reintroduce;
+    procedure SetInt(Index: Integer; Value: Integer); reintroduce;
+    procedure SetULong(Index: Integer; const Value: UInt64); reintroduce;
+    procedure SetLong(Index: Integer; const Value: Int64); reintroduce;
+    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
+    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+
+    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); reintroduce;
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); reintroduce;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); reintroduce;
   end;
 
@@ -198,70 +214,6 @@ begin
   Bind.indp[0] := 0;
 end;
 
-procedure TZAbstractOraclePreparedStatement_A.BindDateTime(Index: Integer;
-  SQLType: TZSQLType; const Value: TDateTime);
-var
-  Bind: PZOCIParamBind;
-  TS: TZTimeStamp;
-  Status: sword;
-begin
-  CheckParameterIndex(Index);
-  {$R-}
-  Bind := @FOraVariables[Index];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) then
-    SQLType := BindList[Index].SQLType;
-  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
-    InitBuffer(SQLType, Bind, Index, 1);
-  DecodeDate(Value, TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
-  if SQLType in [stTime, stTimeStamp] then begin
-    DecodeTime(Value, TS.Hour, TS.Minute, TS.Second, PWord(@TS.Fractions)^);
-    TS.Fractions := Word(TS.Fractions) * 1000000;
-  end else begin
-    TS.Hour := 0; TS.Minute := 0; Ts.Second := 0; TS.Fractions := 0;
-  end;
-  if SQLType = stDate then begin
-    POraDate(Bind^.valuep).Cent   := TS.Year div 100 +100;
-    POraDate(Bind^.valuep).Year   := TS.Year mod 100 +100;
-    POraDate(Bind^.valuep).Month  := TS.Month;
-    PInteger(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
-    POraDate(Bind^.valuep).Day    := TS.Day;
-  end else begin //switch to msec precision
-    Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
-      FOCIError, PPOCIDescriptor(Bind.valuep)^, TS.Year, TS.Month, TS.Day,
-        TS.Hour, TS.Minute, TS.Second, TS.Fractions, nil, 0);
-    if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
-  end;
-  Bind.indp[0] := 0;
-end;
-
-procedure TZAbstractOraclePreparedStatement_A.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double);
-var
-  Bind: PZOCIParamBind;
-  status: sword;
-begin
-  CheckParameterIndex(Index);
-  {$R-}
-  Bind := @FOraVariables[Index];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
-     (SQLType <> BindList[Index].SQLType) then
-    SQLType := BindList[Index].SQLType;
-  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
-    InitBuffer(SQLType, Bind, Index, 1);
-  if Bind.dty = SQLT_VNU then begin
-    status := FPlainDriver.OCINumberFromReal(FOracleConnection.GetErrorHandle, @Value, SizeOf(Double), POCINumber(Bind.valuep));
-    if Status <> OCI_SUCCESS then
-      CheckOracleError(FPLainDriver, FOCIError, Status, lcOther, '', ConSettings);
-  end else if Bind.value_sz = sizeOf(Double) then
-    PDouble(Bind.valuep)^ := Value
-  else
-    PSingle(Bind.valuep)^ := Value;
-  Bind.indp[0] := 0;
-end;
-
 procedure TZAbstractOraclePreparedStatement_A.BindLob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob);
 var
@@ -321,97 +273,6 @@ procedure TZAbstractOraclePreparedStatement_A.BindRawStr(Index: Integer;
   const Value: RawByteString);
 begin
   BindRawStr(Index, Pointer(Value), Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
-end;
-
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-procedure TZAbstractOraclePreparedStatement_A.BindSignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: Int64);
-var
-  Bind: PZOCIParamBind;
-  P: PAnsiChar;
-  Status: sword;
-begin
-  CheckParameterIndex(Index);
-  {$R-}
-  Bind := @FOraVariables[Index];
-  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
-     (SQLType <> BindList[Index].SQLType) then //keep registered types alive
-    SQLType := BindList[Index].SQLType;
-  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
-    InitBuffer(SQLType, Bind, Index, 1);
-  if Bind.dty = SQLT_VNU then begin
-    Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(Int64), OCI_NUMBER_SIGNED, POCINumber(Bind.valuep));
-    if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
-  end else if Bind.dty = SQLT_INT then
-    if Bind.value_sz = SizeOf(Int64) then
-      PInt64(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(Integer) then
-      PInteger(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(SmallInt) then
-      PSmallInt(Bind.valuep)^ := Value
-    else
-      PShortInt(Bind.valuep)^ := Value
-  else if Bind.dty = SQLT_UIN then
-    if Bind.value_sz = SizeOf(UInt64) then
-      PUInt64(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(Cardinal) then
-      PCardinal(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(Word) then
-      PWord(Bind.valuep)^ := Value
-    else
-      PByte(Bind.valuep)^ := Value
-  else begin
-    IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
-    POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
-  end;
-  Bind.indp[0] := 0;
-end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-
-procedure TZAbstractOraclePreparedStatement_A.BindUnsignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: UInt64);
-var
-  Bind: PZOCIParamBind;
-  P: PAnsiChar;
-  Status: sword;
-begin
-  CheckParameterIndex(Index);
-  {$R-}
-  Bind := @FOraVariables[Index];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) then
-    SQLType := BindList[Index].SQLType;
-  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
-    InitBuffer(SQLType, Bind, Index, 1);
-  if Bind.dty = SQLT_VNU then begin
-    Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(Int64), OCI_NUMBER_UNSIGNED, POCINumber(Bind.valuep));
-    if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
-  end else if Bind.dty = SQLT_UIN then
-    if Bind.value_sz = SizeOf(UInt64) then
-      PUInt64(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(Cardinal) then
-      PCardinal(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(Word) then
-      PWord(Bind.valuep)^ := Value
-    else
-      PByte(Bind.valuep)^ := Value
-  else if Bind.dty = SQLT_INT then
-    if Bind.value_sz = SizeOf(Int64) then
-      PInt64(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(Integer) then
-      PInteger(Bind.valuep)^ := Value
-    else if Bind.value_sz = SizeOf(SmallInt) then
-      PSmallInt(Bind.valuep)^ := Value
-    else
-      PShortInt(Bind.valuep)^ := Value
-  else begin
-    IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
-    POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
-  end;
-  Bind.indp[0] := 0;
 end;
 
 procedure TZAbstractOraclePreparedStatement_A.CheckParameterIndex(Index: Integer);
@@ -620,10 +481,8 @@ begin
                 Result := IntToRaw(PCardinal(Bind.valuep)^)
               else
                 Result := IntToRaw(PWord(Bind.valuep)^);
-    SQLT_FLT: if Bind.value_sz = SizeOf(Double) then
-                Result := FloatToSqlRaw(PDouble(Bind.valuep)^)
-              else
-                Result := FloatToSqlRaw(PSingle(Bind.valuep)^);
+    SQLT_BFLOAT: Result := FloatToSqlRaw(PSingle(Bind.valuep)^);
+    SQLT_BDOUBLE: Result := FloatToSqlRaw(PDouble(Bind.valuep)^);
     SQLT_DAT: Result := DateTimeToRawSQLDate(EncodeDate((POraDate(Bind.valuep).Cent-100)*100+(POraDate(Bind.valuep).Year-100),
       POraDate(Bind.valuep).Month,POraDate(Bind.valuep).Day), ConSettings.DisplayFormatSettings, True);
     SQLT_TIMESTAMP: begin
@@ -894,6 +753,8 @@ procedure TZAbstractOraclePreparedStatement_A.RegisterParameter(
 var
   Bind: PZOCIParamBind;
 begin
+  if SQLType in [stUnicodeString, stUnicodeStream] then
+    SQLType := TZSQLType(Ord(SQLType)-1);
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name,
     PrecisionOrSize, Scale);
   {$IFNDEF GENERIC_INDEX}
@@ -1117,6 +978,209 @@ end;
 
 { TZOraclePreparedStatement_A }
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZOraclePreparedStatement_A.BindSInteger(Index: Integer;
+  SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
+var
+  Bind: PZOCIParamBind;
+  P: PAnsiChar;
+  Status: sword;
+begin
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (SQLType <> BindList[Index].SQLType) then //keep registered types alive
+    SQLType := BindList[Index].SQLType;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_VNU: begin
+        Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf({$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}), OCI_NUMBER_SIGNED, POCINumber(Bind.valuep));
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+      end;
+    SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
+                PInt64(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Integer) then
+                PInteger(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(SmallInt) then
+                PSmallInt(Bind.valuep)^ := Value
+              else
+                PShortInt(Bind.valuep)^ := Value;
+    SQLT_UIN: if Bind.value_sz = SizeOf(UInt64) then
+                PUInt64(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Cardinal) then
+                PCardinal(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Word) then
+                PWord(Bind.valuep)^ := Value
+              else
+                PByte(Bind.valuep)^ := Value;
+    SQLT_BFLOAT,
+    SQLT_BDOUBLE,
+    SQLT_DAT,
+    SQLT_TIMESTAMP: InternalBindDouble(Index, SQLtype, Value);
+    SQLT_LVC: begin
+                IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
+                POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
+              end
+  end;
+  Bind.indp[0] := 0;
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZOraclePreparedStatement_A.BindUInteger(Index: Integer;
+  SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF});
+var
+  Bind: PZOCIParamBind;
+  P: PAnsiChar;
+  Status: sword;
+begin
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (SQLType <> BindList[Index].SQLType) then //keep registered types alive
+    SQLType := BindList[Index].SQLType;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1);
+  if Bind.dty = SQLT_VNU then begin
+    Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf({$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF}), OCI_NUMBER_UNSIGNED, POCINumber(Bind.valuep));
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+  end else if Bind.dty = SQLT_INT then
+    if Bind.value_sz = SizeOf(Int64) then
+      PInt64(Bind.valuep)^ := Value
+    else if Bind.value_sz = SizeOf(Integer) then
+      PInteger(Bind.valuep)^ := Value
+    else if Bind.value_sz = SizeOf(SmallInt) then
+      PSmallInt(Bind.valuep)^ := Value
+    else
+      PShortInt(Bind.valuep)^ := Value
+  else if Bind.dty = SQLT_UIN then
+    if Bind.value_sz = SizeOf(UInt64) then
+      PUInt64(Bind.valuep)^ := Value
+    else if Bind.value_sz = SizeOf(Cardinal) then
+      PCardinal(Bind.valuep)^ := Value
+    else if Bind.value_sz = SizeOf(Word) then
+      PWord(Bind.valuep)^ := Value
+    else
+      PByte(Bind.valuep)^ := Value
+  else begin
+    IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
+    POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
+  end;
+  Bind.indp[0] := 0;
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
+procedure TZOraclePreparedStatement_A.InternalBindDouble(Index: Integer;
+  SQLType: TZSQLType; const Value: Double);
+var
+  Bind: PZOCIParamBind;
+  status: sword;
+  TS: TZTimeStamp;
+  procedure SetRaw;
+  begin
+    case SQLType of
+      stBoolean:    fRawTemp := BoolStrIntsRaw[Value <> 0];
+      stSmall,
+      stInteger,
+      stLong:       fRawTemp := IntToRaw(Trunc(Value));
+      stDate:       fRawTemp := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False);
+      stTime:       fRawTemp := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False);
+      stTimeStamp:  fRawTemp := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False);
+      else          fRawTemp := FloatToSqlRaw(Value);
+    end;
+    SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fRawTemp)
+  end;
+begin
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (SQLType <> BindList[Index].SQLType) then
+    SQLType := BindList[Index].SQLType;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_VNU:   begin
+                  status := FPlainDriver.OCINumberFromReal(FOracleConnection.GetErrorHandle, @Value, SizeOf(Double), POCINumber(Bind.valuep));
+                  if Status <> OCI_SUCCESS then
+                    CheckOracleError(FPLainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                end;
+    SQLT_BFLOAT:  PSingle(Bind.valuep)^ := Value;
+    SQLT_BDOUBLE: PDouble(Bind.valuep)^ := Value;
+    SQLT_DAT:   begin
+                  DecodeDate(Value, TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
+                  POraDate(Bind^.valuep).Cent   := TS.Year div 100 +100;
+                  POraDate(Bind^.valuep).Year   := TS.Year mod 100 +100;
+                  POraDate(Bind^.valuep).Month  := TS.Month;
+                  PInteger(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
+                  POraDate(Bind^.valuep).Day    := TS.Day;
+                end;
+    SQLT_TIMESTAMP: begin
+                  DecodeDate(Value, TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
+                  DecodeTime(Value, TS.Hour, TS.Minute, TS.Second, PWord(@TS.Fractions)^);
+                  TS.Fractions := Word(TS.Fractions) * 1000000;
+                  Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
+                    FOCIError, PPOCIDescriptor(Bind.valuep)^, TS.Year, TS.Month, TS.Day,
+                      TS.Hour, TS.Minute, TS.Second, TS.Fractions, nil, 0);
+                  if Status <> OCI_SUCCESS then
+                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                end;
+    SQLT_INT,
+    SQLT_UIN:   {$IFDEF CPU64}
+                BindSInteger(Index, SQLType, Trunc(Value));
+                {$ELSE}
+                SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
+                {$ENDIF}
+    else SetRaw;
+  end;
+  Bind.indp[0] := 0;
+end;
+
+procedure TZOraclePreparedStatement_A.SetBigDecimal(Index: Integer;
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+begin
+  {$IFDEF BCD_TEST}
+  xyz
+  {$ELSE}
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, Value);
+  {$ENDIF}
+end;
+
+{**
+  Sets the designated parameter to a Java <code>boolean</code> value.
+  The driver converts this
+  to an SQL <code>BIT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetBoolean(Index: Integer;
+  Value: Boolean);
+begin
+  BindUInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean, Ord(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
+  The driver converts this
+  to an SQL <code>BYTE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetByte(Index: Integer; Value: Byte);
+begin
+  BindUInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte, Cardinal(Value));
+end;
+
 {**
   Sets the designated parameter to a Java <code>currency</code> value.
   The driver converts this
@@ -1125,58 +1189,6 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-procedure TZOraclePreparedStatement_A.SetBoolean(Index: Integer;
-  Value: Boolean);
-var
-  Bind: PZOCIParamBind;
-  P: PAnsiChar;
-  Status: sword;
-  SQLType: TZSQLType;
-begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  CheckParameterIndex(Index);
-  {$R-}
-  Bind := @FOraVariables[Index];
-  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
-     (stBoolean <> BindList[Index].SQLType) //keep registered types alive
-  then SQLType := BindList[Index].SQLType
-  else SQLType := stBoolean;
-  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
-    InitBuffer(SQLType, Bind, Index, 1);
-  if Bind.dty = SQLT_VNU then begin
-    Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(Boolean), OCI_NUMBER_UNSIGNED, POCINumber(Bind.valuep));
-    if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
-  end else if Bind.dty = SQLT_UIN then
-    if Bind.value_sz = SizeOf(Byte) then
-      PByte(Bind.valuep)^ := Ord(Value)
-    else if Bind.value_sz = SizeOf(UInt64) then
-      PUInt64(Bind.valuep)^ := Ord(Value)
-    else if Bind.value_sz = SizeOf(Cardinal) then
-      PCardinal(Bind.valuep)^ := Ord(Value)
-    else
-      PWord(Bind.valuep)^ := Ord(Value)
-  else if Bind.dty = SQLT_INT then
-    if Bind.value_sz = SizeOf(ShortInt) then
-      PShortInt(Bind.valuep)^ := Ord(Value)
-    else if Bind.value_sz = SizeOf(Int64) then
-      PInt64(Bind.valuep)^ := Ord(Value)
-    else if Bind.value_sz = SizeOf(Integer) then
-      PInteger(Bind.valuep)^ := Ord(Value)
-    else
-      PSmallInt(Bind.valuep)^ := Ord(Value)
-  else begin
-    IntToRaw(Cardinal(Value), PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
-    POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
-  end;
-  Bind.indp[0] := 0;
-end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-
 procedure TZOraclePreparedStatement_A.SetCurrency(Index: Integer;
   const Value: Currency);
 var
@@ -1210,28 +1222,150 @@ end;
 procedure TZOraclePreparedStatement_A.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
 var
-  ClientStrings: TRawByteStringDynArray; //conversion buffer
   Bind: PZOCIParamBind; //ora bind variable
-  BufferSize, I: Integer;
+  I, BufferSize: Integer;
   ArrayLen: Cardinal;
   ClientCP: Word;
-  Lob: IZBLob;
   P: PAnsiChar;
   TS: TZTimeStamp;
   Status: sword;
-  WriteTempBlob: IZOracleBlob;
   OraDate: POraDate;
   D: Double;
-label set_raw, from_raw, bind_direct, write_lob;
+label bind_direct;
+  {$R-}
+
+  procedure SetLobs;
+  var I: Integer;
+    Lob: IZBLob;
+    WriteTempBlob: IZOracleBlob;
+  label write_lob;
+  begin
+    if SQLType = stBinaryStream then begin
+      if (Bind.dty <> SQLT_BLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
+        InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
+      for i := 0 to ArrayLen -1 do
+        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
+          if not Supports(Lob, IZOracleBlob, WriteTempBlob) or (WriteTempBlob.IsCLob) then
+            WriteTempBlob := TZOracleBlob.Create(FPlainDriver,
+              nil, 0, FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, ChunkSize, ConSettings);
+write_lob:WriteTempBlob.CreateBlob;
+          { copy the buffer addresses }
+          WriteTempBlob.GetBufferAddress^ := Lob.GetBufferAddress^;
+          WriteTempBlob.GetLengthAddress^ := Lob.GetLengthAddress^;
+          { nil old buffer }
+          Lob.GetBufferAddress^ := nil;
+          Lob.GetLengthAddress^ := -1;
+          Lob := nil; //decref of old interface
+          WriteTempBlob.WriteLobFromBuffer(WriteTempBlob.GetBufferAddress^, WriteTempBlob.GetLengthAddress^);
+          TInterfaceDynArray(Value)[I] := WriteTempBlob; //destroy old interface or replace it
+          WriteTempBlob := nil;
+          Bind.indp[i] := 0;
+        end else
+          Bind.indp[i] := -1;
+    end else begin
+      if (Bind.dty <> SQLT_CLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
+        InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
+      for i := 0 to ArrayLen -1 do
+        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
+          if Lob.IsClob then
+            Lob.GetPAnsiChar(ClientCP)
+          else begin
+            FRawTemp := GetValidatedAnsiStringFromBuffer(Lob.GetBuffer, lob.Length, Connection.GetConSettings);
+            Lob := TZOracleClob.Create(FPlainDriver,
+              nil, 0, FOracleConnection.GetConnectionHandle,
+              FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
+              ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+            Lob.SetPAnsiChar(Pointer(FRawTemp), ClientCP, Length(FRawTemp));
+            FRawTemp := '';
+          end;
+          if not Supports(Lob, IZOracleBlob, WriteTempBlob) or not (WriteTempBlob.IsCLob) then
+            WriteTempBlob := TZOracleClob.Create(FPlainDriver,
+              nil, 0, FOracleConnection.GetConnectionHandle,
+              FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
+              ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+          goto write_lob;
+        end else
+          Bind.indp[i] := -1;
+    end;
+  end;
+  procedure BindRawStrings(const ClientStrings: TRawByteStringDynArray);
+  var BufferSize, I: Integer;
+  begin
+    BufferSize := 0;
+    for i := 0 to ArrayLen -1 do
+      if Pointer(ClientStrings[i]) <> nil then
+        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+        BufferSize := Max(BufferSize, Length(ClientStrings[I]) -1);
+        {$ELSE}
+        BufferSize := Max(BufferSize, PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^);
+        {$ENDIF}
+    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
+      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+    P := Bind.valuep;
+    for i := 0 to ArrayLen -1 do begin
+      if (Pointer(ClientStrings[I]) = nil) then
+        POCILong(P).Len := 0
+      else begin
+        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+        POCILong(P).Len := Length(ClientStrings[I]) -1;
+        {$ELSE}
+        POCILong(P).Len := PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
+        {$ENDIF}
+        Move(Pointer(ClientStrings[i])^,POCILong(P).data[0], POCILong(P).Len);
+      end;
+      Inc(P, Bind.value_sz);
+    end;
+  end;
+  procedure BindConvertedStrings;
+  var ClientStrings: TRawByteStringDynArray;
+    var I: Integer;
+  begin
+    SetLength(ClientStrings, ArrayLen);
+    case VariantType of
+      {$IFNDEF UNICODE}
+      vtString: for i := 0 to ArrayLen -1 do
+            if (Pointer(TStringDynArray(Value)[I]) <> nil) then
+              ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[I], ConSettings^.CTRL_CP, ClientCP);
+      {$ENDIF}
+      {$IFNDEF NO_ANSISTRING}
+      vtAnsiString: for i := 0 to ArrayLen -1 do
+            if (Pointer(TAnsiStringDynArray(Value)[I]) <> nil) then begin
+              FUniTemp := PRawToUnicode(Pointer(TAnsiStringDynArray(Value)[I]), Length(TAnsiStringDynArray(Value)[I]), ZOSCodePage);
+              ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
+            end;
+      {$ENDIF}
+      {$IFNDEF NO_UTF8STRING}
+      vtUTF8String: for i := 0 to ArrayLen -1 do
+            if (Pointer(TUTF8StringDynArray(Value)[I]) <> nil) then begin
+              FUniTemp := PRawToUnicode(Pointer(TUTF8StringDynArray(Value)[I]), Length(TUTF8StringDynArray(Value)[I]), zCP_UTF8);
+              ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
+            end;
+      {$ENDIF}
+      vtCharRec: if ZCompatibleCodePages(TZCharRecDynArray(Value)[0].CP, zCP_UTF16) then begin
+                  for I := 0 to ArrayLen -1 do
+                    ClientStrings[I] := PUnicodeToRaw(TZCharRecDynArray(Value)[I].P, TZCharRecDynArray(Value)[I].Len, ClientCP);
+                end else for I := 0 to ArrayLen -1 do begin
+                  FUniTemp := PRawToUnicode(TZCharRecDynArray(Value)[I].P, TZCharRecDynArray(Value)[I].Len, TZCharRecDynArray(Value)[I].CP);
+                  ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
+                end;
+      {$IFDEF UNICODE}vtString,{$ENDIF}
+      vtUnicodeString: for I := 0 to ArrayLen -1 do
+            ClientStrings[I] := PUnicodeToRaw(Pointer(TUnicodeStringDynArray(Value)[I]), Length(TUnicodeStringDynArray(Value)[I]), ClientCP);
+      else
+        raise Exception.Create('Unsupported String Variant');
+    end;
+    BindRawStrings(ClientStrings);
+  end;
 begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
   {$IFNDEF GENERIC_INDEX}
   ParameterIndex := ParameterIndex - 1;
   {$ENDIF}
-  {$R-}
   Bind := @FOraVariables[ParameterIndex];
   ClientCP := ConSettings^.ClientCodePage.CP;
-  ClientStrings := nil;
   ArrayLen := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
   case SQLType of
     stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stFloat, stDouble: begin
@@ -1253,7 +1387,7 @@ bind_direct:
         if FCanBindInt64 and (VariantType <> vtRawByteString) then
           goto bind_direct
         else begin
-          if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOciNumber)) or (Bind.curelen < ArrayLen) then
+          if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOciNumber)) or (Bind.curelen <> ArrayLen) then
             InitBuffer(stBigDecimal, Bind, ParameterIndex, ArrayLen, 20);
           P := Bind.valuep;
           if (VariantType <> vtRawByteString) then begin
@@ -1274,13 +1408,13 @@ bind_direct:
           end;
         end;
     stCurrency: begin
-        if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen < ArrayLen) then
+        if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen <> ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOCINumber));
         for i := 0 to ArrayLen -1 do
           Curr2vnu(TCurrencyDynArray(Value)[i], POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
       end;
     stBigDecimal: begin
-        if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen < ArrayLen) then
+        if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen <> ArrayLen) then
           //note as long we do not have a Value2OraNumber conversion we'll use the ora double instead!!
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOCINumber));
         for i := 0 to ArrayLen -1 do begin
@@ -1290,7 +1424,7 @@ bind_direct:
         end;
       end;
     stDate: begin
-        if (Bind.dty <> SQLT_DAT) or (Bind.value_sz <> SizeOf(TOraDate)) or (Bind.curelen < ArrayLen) then
+        if (Bind.dty <> SQLT_DAT) or (Bind.value_sz <> SizeOf(TOraDate)) or (Bind.curelen <> ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOraDate));
         FillChar(Bind^.valuep^, ArrayLen*SizeOf(TOraDate), #0);
         for i := 0 to ArrayLen -1 do begin
@@ -1303,7 +1437,7 @@ bind_direct:
         end;
       end;
     stTime, stTimeStamp: begin //msec precision -> need a descriptor
-        if (Bind.dty <> SQLT_TIMESTAMP) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen < ArrayLen) then
+        if (Bind.dty <> SQLT_TIMESTAMP) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(SizeOf(POCIDescriptor)));
         for i := 0 to ArrayLen -1 do begin
           DecodeDate(TDateTimeDynArray(Value)[i], TS.Year, TS.Month, TS.Day); //oracle doesn't accept 0 dates
@@ -1317,7 +1451,7 @@ bind_direct:
         end;
       end;
     stGUID: begin
-        if (Bind.dty <> SQLT_AFC) or (Bind.value_sz <> StrGUIDLen) or (Bind.curelen < ArrayLen) then
+        if (Bind.dty <> SQLT_AFC) or (Bind.value_sz <> StrGUIDLen) or (Bind.curelen <> ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen);
         for i := 0 to ArrayLen -1 do
           GUIDToBuffer(@TGUIDDynArray(Value)[I], (Bind.valuep+I*StrGUIDLen), []);
@@ -1326,7 +1460,7 @@ bind_direct:
         BufferSize := 0;
         for i := 0 to ArrayLen -1 do
           BufferSize := Max(BufferSize, Length(TBytesDynArray(Value)[I]));
-        if (Bind.dty <> SQLT_LVB) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen < ArrayLen) then
+        if (Bind.dty <> SQLT_LVB) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
         for i := 0 to ArrayLen -1 do begin
           BufferSize := Length(TBytesDynArray(Value)[I]);
@@ -1335,94 +1469,32 @@ bind_direct:
             Move(Pointer(TBytesDynArray(Value)[I])^,(Bind.valuep+I*Bind.value_sz+SizeOf(Integer))^, BufferSize);
         end;
     end;
-    stString, stUnicodeString: begin
-      BufferSize := 0;
+    stString, stUnicodeString:
       case VariantType of
-        vtString{$IFDEF UNICODE}, vtUnicodeString{$ENDIF}:
-          {$IFNDEF UNICODE}
-          if not ConSettings.AutoEncode then
-            goto from_raw
-          else {$ENDIF} begin
-            SetLength(ClientStrings, ArrayLen);
-            for i := 0 to ArrayLen -1 do
-              if (Pointer(TStringDynArray(Value)[I]) <> nil) then begin
-                {$IFDEF UNICODE}
-                ClientStrings[i] := ZUnicodeToRaw(TStringDynArray(Value)[I], ClientCP);
-                {$ELSE}
-                ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[I], ConSettings^.CTRL_CP, ClientCP);
-                {$ENDIF}
-                BufferSize := Max(BufferSize, Length(ClientStrings[i]));
-              end else
-                ClientStrings[i] := '';
-            goto set_raw;
-          end;
+        {$IFNDEF UNICODE}
+        vtString:
+          if not ConSettings.AutoEncode
+          then BindRawStrings(TRawByteStringDynArray(Value))
+          else BindConvertedStrings;
+        {$ENDIF}
         {$IFNDEF NO_ANSISTRING}
-        vtAnsiString: begin
-            if ZCompatibleCodePages(ClientCP, ZOSCodePage) then
-              goto from_raw
-            else begin
-              SetLength(ClientStrings, ArrayLen);
-              BufferSize := 0;
-              for i := 0 to ArrayLen -1 do
-                if (Pointer(TAnsiStringDynArray(Value)[I]) <> nil) then begin
-                  FUniTemp := PRawToUnicode(Pointer(TAnsiStringDynArray(Value)[I]), Length(TAnsiStringDynArray(Value)[I]), ZOSCodePage);
-                  ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
-                  BufferSize := Max(BufferSize, Length(ClientStrings[i]));
-                end else
-                  ClientStrings[i] := '';
-            end;
-            goto set_raw;
-          end;
+        vtAnsiString:  if ZCompatibleCodePages(ClientCP, ZOSCodePage)
+            then BindRawStrings(TRawByteStringDynArray(Value))
+            else BindConvertedStrings;
         {$ENDIF}
         {$IFNDEF NO_UTF8STRING}
-        vtUTF8String: begin
-          if ZCompatibleCodePages(ClientCP, zCP_UTF8) then
-            goto from_raw
-          else begin
-            SetLength(ClientStrings, ArrayLen);
-            for i := 0 to ArrayLen -1 do
-              if (Pointer(TUTF8StringDynArray(Value)[I]) <> nil) then begin
-                FUniTemp := PRawToUnicode(Pointer(TUTF8StringDynArray(Value)[I]), Length(TUTF8StringDynArray(Value)[I]), zCP_UTF8);
-                ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
-                BufferSize := Max(BufferSize, Length(ClientStrings[i]));
-              end else
-                ClientStrings[i] := '';
-          end;
-          goto set_raw;
-        end;
+        vtUTF8String: if ZCompatibleCodePages(ClientCP, zCP_UTF8)
+            then BindRawStrings(TRawByteStringDynArray(Value))
+            else BindConvertedStrings;
         {$ENDIF}
-        vtRawByteString: begin
-from_raw:   ClientStrings := TRawByteStringDynArray(Value);
-            for i := 0 to ArrayLen -1 do
-              if Pointer(ClientStrings[i]) <> nil then
-                {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-                BufferSize := Max(BufferSize, Length(ClientStrings[I]) -1);
-                {$ELSE}
-                BufferSize := Max(BufferSize, PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^);
-                {$ENDIF}
-set_raw:    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen < ArrayLen) then
-              InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
-            P := Bind.valuep;
-            for i := 0 to ArrayLen -1 do begin
-              if (Pointer(ClientStrings[I]) = nil) then
-                POCILong(P).Len := 0
-              else begin
-                {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-                POCILong(P).Len := Length(ClientStrings[I]) -1;
-                {$ELSE}
-                POCILong(P).Len := PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
-                {$ENDIF}
-                Move(Pointer(ClientStrings[i])^,POCILong(P).data[0], POCILong(P).Len);
-              end;
-              Inc(P, Bind.value_sz);
-            end;
-          end;
-        vtCharRec: begin
+        vtRawByteString: BindRawStrings(TRawByteStringDynArray(Value));
+        vtCharRec:
             {in array bindings we assume all codepages are equal!}
             if ZCompatibleCodePages(TZCharRecDynArray(Value)[0].CP, ClientCP) then begin
+              BufferSize := 0;
               for i := 0 to ArrayLen -1 do
                 BufferSize := Max(BufferSize, TZCharRecDynArray(Value)[i].Len);
-              if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen < ArrayLen) then
+              if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
                 InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
               P := Bind.valuep;
               for i := 0 to ArrayLen -1 do begin
@@ -1431,93 +1503,118 @@ set_raw:    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Inte
                   Move(TZCharRecDynArray(Value)[i].P^,POCILong(P).data[0], POCILong(P).Len);
                 Inc(P, Bind.value_sz);
               end;
-            end else begin
-              SetLength(ClientStrings, ArrayLen);
-              if ZCompatibleCodePages(TZCharRecDynArray(Value)[0].CP, zCP_UTF16) then
-                for I := 0 to ArrayLen -1 do begin
-                  ClientStrings[I] := PUnicodeToRaw(TZCharRecDynArray(Value)[I].P, TZCharRecDynArray(Value)[I].Len, ClientCP);
-                  BufferSize := Max(BufferSize, Length(ClientStrings[I]));
-                end
-              else
-                for I := 0 to ArrayLen -1 do begin
-                  FUniTemp := PRawToUnicode(TZCharRecDynArray(Value)[I].P, TZCharRecDynArray(Value)[I].Len, TZCharRecDynArray(Value)[I].CP);
-                  ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
-                  BufferSize := Max(BufferSize, Length(ClientStrings[I]));
-                end;
-              goto set_raw;
-            end;
-          end;
-        {$IFNDEF UNICODE}
-        vtUnicodeString: begin
-            SetLength(ClientStrings, ArrayLen);
-            for I := 0 to ArrayLen -1 do begin
-              ClientStrings[I] := PUnicodeToRaw(Pointer(TUnicodeStringDynArray(Value)[I]), Length(TUnicodeStringDynArray(Value)[I]), ClientCP);
-              BufferSize := Max(BufferSize, Length(ClientStrings[I]));
-            end;
-            goto set_raw;
-          end;
-        {$ENDIF}
+            end else BindConvertedStrings;
+        {$IFDEF UNICODE}vtString,{$ENDIF}
+        vtUnicodeString: BindConvertedStrings;
         else
           raise Exception.Create('Unsupported String Variant');
       end;
-    end;
-    stAsciiStream, stUnicodeStream: begin
-        if (Bind.dty <> SQLT_CLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen < ArrayLen) then
-          InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
-        for i := 0 to ArrayLen -1 do
-          if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
-            if Lob.IsClob then
-              Lob.GetPAnsiChar(ClientCP)
-            else begin
-              FRawTemp := GetValidatedAnsiStringFromBuffer(Lob.GetBuffer, lob.Length, Connection.GetConSettings);
-              Lob := TZOracleClob.Create(FPlainDriver,
-                nil, 0, FOracleConnection.GetConnectionHandle,
-                FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-                PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
-                ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-              Lob.SetPAnsiChar(Pointer(FRawTemp), ClientCP, Length(FRawTemp));
-              FRawTemp := '';
-            end;
-            if not Supports(Lob, IZOracleBlob, WriteTempBlob) or not (WriteTempBlob.IsCLob) then
-              WriteTempBlob := TZOracleClob.Create(FPlainDriver,
-                nil, 0, FOracleConnection.GetConnectionHandle,
-                FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-                PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
-                ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-            goto write_lob;
-          end else
-            Bind.indp[i] := -1;
-        Exit;
-      end;
-    stBinaryStream: begin
-        if (Bind.dty <> SQLT_BLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen < ArrayLen) then
-          InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
-        for i := 0 to ArrayLen -1 do
-          if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
-            if not Supports(Lob, IZOracleBlob, WriteTempBlob) or (WriteTempBlob.IsCLob) then
-              WriteTempBlob := TZOracleBlob.Create(FPlainDriver,
-                nil, 0, FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-                PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, ChunkSize, ConSettings);
-write_lob:  WriteTempBlob.CreateBlob;
-            { copy the buffer addresses }
-            WriteTempBlob.GetBufferAddress^ := Lob.GetBufferAddress^;
-            WriteTempBlob.GetLengthAddress^ := Lob.GetLengthAddress^;
-            { nil old buffer }
-            Lob.GetBufferAddress^ := nil;
-            Lob.GetLengthAddress^ := -1;
-            Lob := nil; //decref of old interface
-            WriteTempBlob.WriteLobFromBuffer(WriteTempBlob.GetBufferAddress^, WriteTempBlob.GetLengthAddress^);
-            TInterfaceDynArray(Value)[I] := WriteTempBlob; //destroy old interface or replace it
-            WriteTempBlob := nil;
-            Bind.indp[i] := 0;
-          end else
-            Bind.indp[i] := -1;
+    stAsciiStream, stUnicodeStream, stBinaryStream: begin
+        SetLobs;
         Exit;
       end;
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   FillChar(Bind.indp^, SizeOf(SB2)*ArrayLen, #0);
 end;
+
+procedure TZOraclePreparedStatement_A.SetDate(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
+end;
+
+procedure TZOraclePreparedStatement_A.SetDouble(Index: Integer;
+  const Value: Double);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>float</code> value.
+  The driver converts this
+  to an SQL <code>FLOAT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetFloat(Index: Integer; Value: Single);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetInt(Index, Value: Integer);
+begin
+  BindSInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
+end;
+
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZOraclePreparedStatement_A.SetLong(Index: Integer;
+  const Value: Int64);
+{$IFDEF CPU64}
+begin
+  BindSInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+{$ELSE}
+var
+  Bind: PZOCIParamBind;
+  P: PAnsiChar;
+  Status: sword;
+  SQLType: TZSQLType;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (stLong <> BindList[Index].SQLType) //keep registered types alive
+  then SQLType := BindList[Index].SQLType
+  else SQLType := stLong;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_VNU: begin
+        Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf({$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}), OCI_NUMBER_SIGNED, POCINumber(Bind.valuep));
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+      end;
+    SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
+                PInt64(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Integer) then
+                PInteger(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(SmallInt) then
+                PSmallInt(Bind.valuep)^ := Value
+              else
+                PShortInt(Bind.valuep)^ := Value;
+    SQLT_UIN: if Bind.value_sz = SizeOf(UInt64) then
+                PUInt64(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Cardinal) then
+                PCardinal(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Word) then
+                PWord(Bind.valuep)^ := Value
+              else
+                PByte(Bind.valuep)^ := Value;
+    SQLT_BFLOAT,
+    SQLT_BDOUBLE,
+    SQLT_DAT,
+    SQLT_TIMESTAMP: InternalBindDouble(Index, SQLtype, Value);
+    SQLT_LVC: begin
+                IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
+                POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
+              end
+  end;
+  Bind.indp[0] := 0;
+{$ENDIF}
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Sets the designated parameter to SQL <code>NULL</code>.
@@ -1526,20 +1623,20 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param sqlType the SQL type code defined in <code>java.sql.Types</code>
 }
-procedure TZOraclePreparedStatement_A.SetNull(ParameterIndex: Integer;
+procedure TZOraclePreparedStatement_A.SetNull(Index: Integer;
   SQLType: TZSQLType);
 var
   Bind: PZOCIParamBind;
 begin
-  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex -1;{$ENDIF}
-  CheckParameterIndex(ParameterIndex);
+  {$IFNDEF GENERIC_INDEX}Index := Index -1;{$ENDIF}
+  CheckParameterIndex(Index);
   {$R-}
-  Bind := @FOraVariables[ParameterIndex];
+  Bind := @FOraVariables[Index];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if Boolean(BindList[ParameterIndex].ParamType) and Boolean(BindList[ParameterIndex].SQLType) then
-    SQLType := BindList[ParameterIndex].SQLType;
-  if (BindList[ParameterIndex].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
-    InitBuffer(SQLType, Bind, ParameterIndex, 1);
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) then
+    SQLType := BindList[Index].SQLType;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1);
   Bind.indp[0] := -1;
 end;
 
@@ -1559,6 +1656,153 @@ begin
   for i := 0 to {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFNDEF FPC}-1{$ENDIF} do
     Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+end;
+
+{**
+  Sets the designated parameter to a Java <code>ShortInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetShort(Index: Integer; Value: ShortInt);
+begin
+  BindSInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stShort, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  The driver converts this
+  to an SQL <code>SMALLINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetSmall(Index: Integer; Value: SmallInt);
+begin
+  BindSInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
+end;
+
+{**
+  Sets the designated parameter to a <code>java.sql.Time</code> value.
+  The driver converts this to an SQL <code>TIME</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetTime(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+end;
+
+{**
+  Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
+  The driver converts this to an SQL <code>TIMESTAMP</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetTimestamp(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetUInt(Index: Integer; Value: Cardinal);
+begin
+  BindSInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned long long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZOraclePreparedStatement_A.SetULong(Index: Integer;
+  const Value: UInt64);
+{$IFDEF CPU64}
+begin
+  BindUInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value);
+{$ELSE}
+var
+  Bind: PZOCIParamBind;
+  P: PAnsiChar;
+  Status: sword;
+  SQLType: TZSQLType;
+begin
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (stULong <> BindList[Index].SQLType) //keep registered types alive
+  then SQLType := BindList[Index].SQLType
+  else SQLType := stULong;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_VNU: begin
+        Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf({$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}), OCI_NUMBER_SIGNED, POCINumber(Bind.valuep));
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+      end;
+    SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
+                PInt64(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Integer) then
+                PInteger(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(SmallInt) then
+                PSmallInt(Bind.valuep)^ := Value
+              else
+                PShortInt(Bind.valuep)^ := Value;
+    SQLT_UIN: if Bind.value_sz = SizeOf(UInt64) then
+                PUInt64(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Cardinal) then
+                PCardinal(Bind.valuep)^ := Value
+              else if Bind.value_sz = SizeOf(Word) then
+                PWord(Bind.valuep)^ := Value
+              else
+                PByte(Bind.valuep)^ := Value;
+    SQLT_BFLOAT,
+    SQLT_BDOUBLE,
+    SQLT_DAT,
+    SQLT_TIMESTAMP: InternalBindDouble(Index, SQLtype, Value);
+    SQLT_LVC: begin
+                IntToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
+                POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
+              end
+  end;
+  Bind.indp[0] := 0;
+{$ENDIF}
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
+  The driver converts this
+  to an SQL <code>WORD</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZOraclePreparedStatement_A.SetWord(Index: Integer; Value: Word);
+begin
+  BindUInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Value);
 end;
 
 initialization

@@ -57,6 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
   ZDbcLogging, ZVariant, ZMessages;
@@ -114,6 +115,8 @@ type
     procedure SetPAnsiChar(Index: Word; Value: PAnsiChar; Len: LengthInt);
     procedure SetPWideChar(Index: Word; Value: PWideChar; Len: LengthInt);
     procedure WriteLobBuffer(XSQLVAR: PXSQLVAR; Buffer: Pointer; Len: LengthInt);
+
+    procedure InternalBindDouble(XSQLVAR: PXSQLVAR; const Value: Double);
   protected //setters made by me ->
     //need a effective way to flush them again (IZCallableStmt)
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
@@ -180,7 +183,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
-uses Math,
+uses Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet, ZClasses,
   ZDbcUtils, ZDbcResultSet;
 
@@ -652,14 +655,6 @@ begin
   end;
 end;
 
-{**
-  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
-  The driver converts this to an SQL <code>NUMERIC</code> value when
-  it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZInterbase6PreparedStatement.EncodePData(XSQLVAR: PXSQLVAR;
   Index: Word; Value: PAnsiChar; Len: LengthInt);
 begin
@@ -678,6 +673,46 @@ begin
     PISC_VARYING(XSQLVAR.sqldata).strlen := Len;
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(XSQLVAR.sqldata).str[0], Len);
     //XSQLVAR.sqllen := Len+SizeOf(Short);
+  end;
+end;
+
+procedure TZInterbase6PreparedStatement.InternalBindDouble(XSQLVAR: PXSQLVAR;
+  const Value: Double);
+var TimeStamp: TZTimeStamp;
+begin
+  case (XSQLVAR.sqltype and not(1)) of
+    SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
+    SQL_D_FLOAT,
+    SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
+    SQL_LONG      : if XSQLVAR.sqlscale = 0
+                    then PISC_LONG(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_LONG(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
+    SQL_SHORT     : if XSQLVAR.sqlscale = 0
+                    then PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+    SQL_INT64,
+    SQL_QUAD      : if XSQLVAR.sqlscale = 0
+                    then PISC_INT64(XSQLVAR.sqldata)^ := Round(Value)
+                    else PISC_INT64(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
+    SQL_TYPE_DATE : begin
+                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+                      isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+                    end;
+    SQL_TYPE_TIME : begin
+                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
+                      isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
+                    end;
+    SQL_TIMESTAMP : begin
+                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+                      isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
+                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
+                      isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
+                    end;
+    else raise EZIBConvertError.Create(SUnsupportedDataType);
   end;
 end;
 
@@ -783,14 +818,18 @@ begin
 end;
 {$ENDIF}
 
+{**
+  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZInterbase6PreparedStatement.SetBigDecimal(
   Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 var XSQLVAR: PXSQLVAR;
-  tmp: RawByteString;
 begin
-{$IFDEF BCD_TEST}
-  SetDouble(Index, BCDToDouble(Value));
-{$ELSE}
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
@@ -799,31 +838,20 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
-    SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
-    SQL_D_FLOAT,
-    SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
-    SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_LONG(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
-    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
+    {$IFDEF BCD_TEST}
+    SQL_LONG      : BCD2ScaledOrdinal(Value, XSQLVAR.sqldata, SizeOf(ISC_LONG), -XSQLVAR.sqlscale);
+    SQL_SHORT     : BCD2ScaledOrdinal(Value, XSQLVAR.sqldata, SizeOf(ISC_SHORT), -XSQLVAR.sqlscale);
     SQL_INT64,
-    SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_INT64(XSQLVAR.sqldata)^ := Trunc(RoundTo(Value*IBScaleDivisor[XSQLVAR.sqlscale], 0));
+    SQL_QUAD      : BCD2ScaledOrdinal(Value, XSQLVAR.sqldata, SizeOf(ISC_INT64), -XSQLVAR.sqlscale);
+    else SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCDToDouble(Value));
+    {$ELSE}
     SQL_TEXT,
-    SQL_VARYING   : begin
-                      tmp := FloatToSQLRaw(Value);
-                      EncodePData(XSQLVAR, Index, Pointer(tmp), Length(Tmp));
-                    end;
-    else raise EZIBConvertError.Create(SUnsupportedDataType);
+    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
+    else InternalBindDouble(XSQLVAR, Value);
+    {$ENDIF}
   end;
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
-{$ENDIF}
 end;
 
 procedure TZInterbase6PreparedStatement.SetBlob(Index: Integer;
@@ -1074,7 +1102,7 @@ begin
     SQL_TEXT,
     SQL_VARYING   : begin
                       CurrToRaw(Value, @fABuffer[0], @P);
-                      EncodePData(XSQLVAR, Index, @fABuffer[0], P-@fABuffer[0]);
+                      EncodePData(XSQLVAR, Index, @fABuffer[0], P-PAnsiChar(@fABuffer[0]));
                     end;
     else raise EZIBConvertError.Create(SUnsupportedDataType);
   end;
@@ -1093,7 +1121,6 @@ end;
 procedure TZInterbase6PreparedStatement.SetDate(Index: Integer;
   const Value: TDateTime);
 var XSQLVAR: PXSQLVAR;
-  TimeStamp: TZTimeStamp;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1103,37 +1130,10 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
-    SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
-    SQL_D_FLOAT,
-    SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
-    SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_INT64,
-    SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_TYPE_DATE : begin
-                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                    end;
-    SQL_TYPE_TIME : isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, 0, 0, 0, 0);
-    SQL_TIMESTAMP : begin
-                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, 0, 0, 0, 0);
-                    end;
     SQL_TEXT,
-    SQL_VARYING   : begin
-                      ZSysUtils.DateTimeToRawSQLDate(Value, @fABuffer, ConSettings^.WriteFormatSettings, False);
-                      EncodePData(XSQLVAR, Index, @fABuffer, ConSettings^.WriteFormatSettings.DateFormatLen);
-                    end;
-    else raise EZIBConvertError.Create(SUnsupportedDataType);
+    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer,
+                      DateTimeToRawSQLDate(Value, @fABuffer, ConSettings^.WriteFormatSettings, False));
+    else InternalBindDouble(XSQLVAR, Value);
   end;
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
@@ -1150,8 +1150,6 @@ end;
 procedure TZInterbase6PreparedStatement.SetDouble(Index: Integer;
   const Value: Double);
 var XSQLVAR: PXSQLVAR;
-  tmp: RawByteString;
-  TimeStamp: TZTimeStamp;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1161,43 +1159,9 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
-    SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
-    SQL_D_FLOAT,
-    SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
-    SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PISC_LONG(XSQLVAR.sqldata)^ := Round(Value)
-                    else PISC_LONG(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value)
-                    else PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_INT64,
-    SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PISC_INT64(XSQLVAR.sqldata)^ := Round(Value)
-                    else PISC_INT64(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_TYPE_DATE : begin
-                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                    end;
-    SQL_TYPE_TIME : begin
-                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-                      isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-                    end;
-    SQL_TIMESTAMP : begin
-                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-                      isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-                    end;
     SQL_TEXT,
-    SQL_VARYING   : begin
-                      tmp := FloatToSQLRaw(Value);
-                      EncodePData(XSQLVAR, Index, Pointer(tmp), Length(Tmp));
-                    end;
-    else raise EZIBConvertError.Create(SUnsupportedDataType);
+    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
+    else InternalBindDouble(XSQLVAR, Value);
   end;
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
@@ -1214,7 +1178,6 @@ end;
 procedure TZInterbase6PreparedStatement.SetFloat(Index: Integer;
   Value: Single);
 var XSQLVAR: PXSQLVAR;
-  tmp: RawByteString;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1225,26 +1188,9 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
     SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
-    SQL_D_FLOAT,
-    SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
-    SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PISC_LONG(XSQLVAR.sqldata)^ := Round(Value)
-                    else PISC_LONG(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value)
-                    else PISC_SHORT(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_INT64,
-    SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PISC_INT64(XSQLVAR.sqldata)^ := Round(Value)
-                    else PISC_INT64(XSQLVAR.sqldata)^ := Round(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
     SQL_TEXT,
-    SQL_VARYING   : begin
-                      tmp := FloatToSQLRaw(Value);
-                      EncodePData(XSQLVAR, Index, Pointer(tmp), Length(Tmp));
-                    end;
-    else raise EZIBConvertError.Create(SUnsupportedDataType);
+    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
+    else InternalBindDouble(XSQLVAR, Value);
   end;
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
@@ -1710,7 +1656,6 @@ end;
 procedure TZInterbase6PreparedStatement.SetTime(Index: Integer;
   const Value: TDateTime);
 var XSQLVAR: PXSQLVAR;
-  TimeStamp: TZTimeStamp;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1720,33 +1665,10 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
-    SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
-    SQL_D_FLOAT,
-    SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
-    SQL_LONG      : PISC_LONG(XSQLVAR.sqldata)^ := 0;
-    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_SHORT     : PISC_SHORT(XSQLVAR.sqldata)^ := 0;
-    SQL_INT64,
-    SQL_QUAD      : PISC_INT64(XSQLVAR.sqldata)^ := 0;
-    SQL_TYPE_DATE : isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, 1899, 12, 31);
-    SQL_TYPE_TIME : begin
-                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-                      isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-                    end;
-    SQL_TIMESTAMP : begin
-                      isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, 1899, 12, 31);
-                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-                      isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-                    end;
     SQL_TEXT,
-    SQL_VARYING   : begin
-                      ZSysUtils.DateTimeToRawSQLTime(Value, @fABuffer, ConSettings^.WriteFormatSettings, False);
-                      EncodePData(XSQLVAR, Index, @fABuffer, ConSettings^.WriteFormatSettings.TimeFormatLen);
-                    end;
-    else raise EZIBConvertError.Create(SUnsupportedDataType);
+    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer,
+                      DateTimeToRawSQLTime(Value, @fABuffer, ConSettings^.WriteFormatSettings, False));
+    else InternalBindDouble(XSQLVAR, Value);
   end;
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
@@ -1763,7 +1685,6 @@ end;
 procedure TZInterbase6PreparedStatement.SetTimestamp(
   Index: Integer; const Value: TDateTime);
 var XSQLVAR: PXSQLVAR;
-  TimeStamp: TZTimeStamp;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1773,43 +1694,10 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
-    SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
-    SQL_D_FLOAT,
-    SQL_DOUBLE    : PDouble(XSQLVAR.sqldata)^   := Value;
-    SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_LONG(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_BOOLEAN_FB: PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ := Ord(Value <> 0);
-    SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_SHORT(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_INT64,
-    SQL_QUAD      : if XSQLVAR.sqlscale = 0
-                    then PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value)
-                    else PISC_INT64(XSQLVAR.sqldata)^ := Trunc(Value*IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_TYPE_DATE : begin
-                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                    end;
-    SQL_TYPE_TIME : begin
-                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-                      isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-                    end;
-    SQL_TIMESTAMP : begin
-                      DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-                      DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-                      TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-                      isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-                    end;
     SQL_TEXT,
-    SQL_VARYING   : begin
-                      ZSysUtils.DateTimeToRawSQLTimeStamp(Value, @fABuffer, ConSettings^.WriteFormatSettings, False);
-                      EncodePData(XSQLVAR, Index, @fABuffer, ConSettings^.WriteFormatSettings.DateTimeFormatLen);
-                    end;
-    else raise EZIBConvertError.Create(SUnsupportedDataType);
+    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer,
+                      DateTimeToRawSQLTimeStamp(Value, @fABuffer, ConSettings^.WriteFormatSettings, False));
+    else InternalBindDouble(XSQLVAR, Value);
   end;
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;

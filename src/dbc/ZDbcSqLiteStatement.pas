@@ -87,9 +87,6 @@ type
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
-    procedure BindDouble(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Double); override;
-    procedure BindUnsignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: UInt64); override;
-    procedure BindSignedOrdinal(Index: Integer; {%H-}SQLType: TZSQLType; const Value: Int64); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
@@ -109,8 +106,22 @@ type
 
   TZSQLiteCAPIPreparedStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZPreparedStatement)
   public
-    procedure SetBoolean(Index: Integer; Value: Boolean);
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    //a performance thing: direct dispatched methods for the interfaces :
+    //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
+    procedure SetNull(ParameterIndex: Integer; {%H-}SQLType: TZSQLType); reintroduce;
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); reintroduce;
+    procedure SetByte(ParameterIndex: Integer; Value: Byte); reintroduce;
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt); reintroduce;
+    procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
+    procedure SetInt(ParameterIndex: Integer; Value: Integer); reintroduce;
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); reintroduce;
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64); reintroduce;
+    procedure SetFloat(ParameterIndex: Integer; Value: Single); reintroduce;
+    procedure SetDouble(ParameterIndex: Integer; const Value: Double); reintroduce;
+    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); reintroduce;
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
   end;
 
   TZSQLiteStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZStatement)
@@ -254,21 +265,9 @@ begin
   end;
 end;
 
-procedure TZAbstractSQLiteCAPIPreparedStatement.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double);
-var ErrorCode: Integer;
-begin
-  if FBindLater or FHasLoggingListener
-  then inherited BindDouble(Index, stDouble, Value)
-  else CheckParameterIndex(Index);
-  if not FBindLater then begin
-    ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index +1, Value);
-    if ErrorCode <> SQLITE_OK then
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
-  end else
-    FLateBound := True;
-end;
-
+{**
+  Binds the input parameters
+}
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindInParameters;
 var
   I, Errorcode: Integer;
@@ -283,6 +282,7 @@ begin
         stString:   if BindVal.BindType = zbtRawString
                     then Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, BindVal.Value, Length(RawByteString(BindVal.Value)), nil)
                     else Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, PZCharRec(BindVal.Value).P, PZCharRec(BindVal.Value).Len, nil);
+        stInteger:  Errorcode := FPlainDriver.sqlite3_bind_int(FStmtHandle, I +1, PInteger(BindList._4Bytes[I])^);
         stLong:     Errorcode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, I +1, PInt64(BindList._8Bytes[I])^);
         stDouble:   Errorcode := FPlainDriver.sqlite3_bind_Double(FStmtHandle, I +1, PDouble(BindList._8Bytes[I])^);
         stBytes:    if BindVal.BindType = zbtBytes
@@ -405,27 +405,6 @@ begin
         CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
   end else
     FLateBound := True;
-end;
-
-procedure TZAbstractSQLiteCAPIPreparedStatement.BindSignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: Int64);
-var ErrorCode: Integer;
-begin
-  if FBindLater or FHasLoggingListener
-  then inherited BindSignedOrdinal(Index, stLong, Value)
-  else CheckParameterIndex(Index);
-  if not FBindLater then begin
-    ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, Index +1, Value);
-    if ErrorCode <> SQLITE_OK then
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
-  end else
-    FLateBound := True;
-end;
-
-procedure TZAbstractSQLiteCAPIPreparedStatement.BindUnsignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: UInt64);
-begin
-  BindSignedOrdinal(Index, stLong, Int64(Value));
 end;
 
 {**
@@ -556,9 +535,25 @@ begin
   inherited Create(Connection, '', Info, Handle);
 end;
 
-{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
-
 { TZSQLiteCAPIPreparedStatement }
+
+{**
+  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetBigDecimal(ParameterIndex: Integer;
+  const Value: Extended);
+begin
+  {$IFDEF BCD_TEST}
+  SetDouble(ParameterIndex, BCDToDouble(Value));
+  {$ELSE}
+  SetDouble(ParameterIndex, Value);
+  {$ENDIF}
+end;
 
 {**
   Sets the designated parameter to a Java <code>boolean</code> value.
@@ -568,12 +563,122 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZSQLiteCAPIPreparedStatement.SetBoolean(Index: Integer;
+procedure TZSQLiteCAPIPreparedStatement.SetBoolean(ParameterIndex: Integer;
   Value: Boolean);
 begin
   if fBindOrdinalBoolValues
-  then BindSignedOrdinal(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Ord(Value))
-  else BindRawStr(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DeprecatedBoolRaw[Value]);
+  then SetLong(ParameterIndex, Ord(Value))
+  else BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DeprecatedBoolRaw[Value]);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
+  The driver converts this
+  to an SQL <code>BYTE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetByte(ParameterIndex: Integer;
+  Value: Byte);
+begin
+  SetInt(ParameterIndex, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>currency</code> value.
+  The driver converts this
+  to an SQL <code>CURRENCY</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetCurrency(ParameterIndex: Integer;
+  const Value: Currency);
+begin
+  SetDouble(ParameterIndex, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetDouble(ParameterIndex: Integer;
+  const Value: Double);
+var ErrorCode: Integer;
+begin
+  if FBindLater or FHasLoggingListener
+  then BindList.Put(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, P8Bytes(@Value))
+  else CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
+end;
+
+{**
+  Sets the designated parameter to a Java <code>float</code> value.
+  The driver converts this
+  to an SQL <code>FLOAT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetFloat(ParameterIndex: Integer;
+  Value: Single);
+begin
+  SetDouble(ParameterIndex, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetInt(ParameterIndex, Value: Integer);
+var ErrorCode: Integer;
+begin
+  if FBindLater or FHasLoggingListener
+  then BindList.Put(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, P4Bytes(@Value))
+  else CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_int(FStmtHandle, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
+end;
+
+{**
+  Sets the designated parameter to a Java <code>long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetLong(ParameterIndex: Integer;
+  const Value: Int64);
+var ErrorCode: Integer;
+begin
+  if FBindLater or FHasLoggingListener
+  then BindList.Put(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, P8Bytes(@Value))
+  else CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
 end;
 
 {**
@@ -599,5 +704,78 @@ begin
     FLateBound := True;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>ShortInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetShort(ParameterIndex: Integer;
+  Value: ShortInt);
+begin
+  SetInt(ParameterIndex, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetSmall(ParameterIndex: Integer;
+  Value: SmallInt);
+begin
+  SetInt(ParameterIndex, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetUInt(ParameterIndex: Integer;
+  Value: Cardinal);
+begin
+  SetLong(ParameterIndex, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned long long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZSQLiteCAPIPreparedStatement.SetULong(ParameterIndex: Integer;
+  const Value: UInt64);
+begin
+  SetLong(ParameterIndex, Value);
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
+  The driver converts this
+  to an SQL <code>WORD</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetWord(ParameterIndex: Integer;
+  Value: Word);
+begin
+  SetInt(ParameterIndex, Value);
+end;
+
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 end.
 

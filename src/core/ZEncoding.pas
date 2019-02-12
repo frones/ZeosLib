@@ -179,7 +179,7 @@ function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, BufCodePoints: LengthI
 function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, BufCodePoints: LengthInt): LengthInt; overload; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PUnicodeToRaw(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, MaxDestBytes: LengthInt; CP: Word): LengthInt; overload;
+function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, MaxDestBytes: LengthInt; CP: Word): LengthInt;
 function PUnicodeToString(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): String;
 function ZUnicodeToString(const Source: ZWideString; CP: Word): String;
 
@@ -320,7 +320,7 @@ procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt; overload;
 function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: LengthInt; RawCP: Word): RawByteString;
-procedure PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, DestBytes: LengthInt; SrcCP, DestCP: Word);
+function PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, MaxDestBytes: LengthInt; SrcCP, DestCP: Word): LengthInt;
 
 const
   CP437ToUnicodeMap: TSBCS_MAP = ( {generated with MultiByteToWideChar}
@@ -1570,28 +1570,38 @@ begin
   end;
 end;
 
-procedure PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, DestBytes: LengthInt; SrcCP, DestCP: Word);
+function PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, MaxDestBytes: LengthInt; SrcCP, DestCP: Word): LengthInt;
 var
-  len: LengthInt;
   wBuf: array[0..dsMaxWStringSize] of WideChar;
-  wDynBuf: array of WideChar;
+  P: Pointer;
 begin
-  if Dest = nil then Exit;
-  if (SourceBytes = 0) or (Source = nil) then
-    PByte(Dest)^ := Ord(#0)
-  else if ZCompatibleCodePages(SrcCP, DestCP) then begin
-    len := Min(SourceBytes, DestBytes);
-    if Source <> Dest then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Source^, Dest^, len);
-    PByte(Dest+Len)^ := Ord(#0)
-  end else if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the buffer
-    len := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, SrcCP);
-    PUnicode2PRawBuf(@wBuf[0], Dest, len, DestBytes, DestCP);
-  end else begin //nope Buf to small
-    SetLength(wDynBuf, SourceBytes+1);
-    len := PRaw2PUnicodeBuf(Source, @wDynBuf[0], sourceBytes, SrcCP);
-    PUnicode2PRawBuf(@wDynBuf[0], Dest, len, DestBytes, DestCP);
-  end;
+  Result := 0;
+  if (SourceBytes <> 0) and (Source <> nil) and (Dest <> nil ) then
+    if ZCompatibleCodePages(SrcCP, DestCP) then begin
+      Result := Min(SourceBytes, MaxDestBytes);
+      if Source <> Dest then
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Source^, Dest^, Result);
+    end else begin
+      while (SourceBytes >= 4) and (MaxDestBytes >= 4) and (PCardinal(Source)^ and $80808080 = 0) do begin//ascii quads <= #127
+        PCardinal(Dest)^ := PCardinal(Source)^;
+        Inc(Source, 4); Inc(Dest, 4); Inc(Result, 4);
+        Dec(SourceBytes, 4); Dec(MaxDestBytes, 4);
+      end;
+      while (SourceBytes > 0) and (MaxDestBytes > 0) and (PByte(Source)^ and $80 = 0) do begin//ascii <= #127
+        PByte(Dest)^ := PByte(Source)^;
+        Inc(Source); Inc(Dest); Inc(Result);
+        Dec(SourceBytes); Dec(MaxDestBytes);
+      end;
+      if (Result < MaxDestBytes) and (SourceBytes > 0) then begin
+        if SourceBytes <= dsMaxWStringSize
+        then P := @wBuf[0]
+        else GetMem(P, SourceBytes shl 1);
+        SourceBytes := PRaw2PUnicodeBuf(Source, P, sourceBytes, SrcCP);
+        Result := Result + PUnicode2PRawBuf(PWideChar(P), Dest, SourceBytes, MaxDestBytes, DestCP);
+        if P <> @wBuf[0] then
+          FreeMem(P);
+      end;
+    end;
 end;
 
 function PRawToUnicode(Source: PAnsiChar; const SourceBytes: LengthInt;
@@ -2131,11 +2141,9 @@ var
   s: RawByteString;
 {$IFEND}
 begin
-  if (Dest = nil) or (SrcCodePoints = 0) then begin
-    Result := 0-Ord(Dest = nil);
-    if Dest <> nil then
-      PByte(Dest)^ := Ord(#0);
-  end else begin
+  if (Dest = nil) or (SrcCodePoints = 0) then
+    Result := 0
+  else begin
     if CP = zCP_NONE then
       CP := ZOSCodePage; //random success
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -2144,7 +2152,6 @@ begin
       {$ELSE}
       Result := WideCharToMultiByte(CP, 0, Source, SrcCodePoints, Dest, MaxDestBytes, NIL, NIL);
       {$ENDIF}
-      PByte(Dest+Result)^ := Ord(0);
     {$ELSE} //FPC non Windows
       if ZCompatibleCodePages(CP, zCP_UTF8) then //FPC has a build in function here just for UTF16 to UTF8
         Result := UnicodeToUtf8(Dest, MaxDestBytes, Source, SrcCodePoints)
@@ -2161,7 +2168,6 @@ begin
         {$ENDIF}
         Result := Min(Length(S), MaxDestBytes);
         {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(S), Dest^, Result);
-        (Dest+Result)^ := #0;
       end;
     {$IFEND}
   end;

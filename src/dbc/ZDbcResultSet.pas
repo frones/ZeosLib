@@ -1358,6 +1358,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @return the DefaultExpression value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
 function TZAbstractResultSet.GetDefaultExpression(ColumnIndex: Integer): string;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1365,6 +1366,7 @@ begin
 {$ENDIF}
   Result := '';
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 //======================================================================
 // Methods for accessing results by column name

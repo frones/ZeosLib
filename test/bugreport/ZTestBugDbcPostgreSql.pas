@@ -722,24 +722,24 @@ end;
 procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
 const
   id_index = FirstDbcIndex;
-  fld_index = FirstDbcIndex;
+  fld_index = FirstDbcIndex+1;
   Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430 {'Абракадабра'}; // Abrakadabra in Cyrillic letters
   Str2: ZWideString = '\'#$041f#$043e#$0431#$0435#$0434#$0430'\' {'\Победа\'}; // victory / success in russian (according to leo.org)
 var
+  CP: Word;
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
   Connection.Open;
-  if SkipForReason(srClosedBug) or
-     //eh the russion abrakadabra can no be mapped to other charsets then:
-    (Connection.GetConSettings.ClientCodePage.CP <> zCP_UTF8) or
-    (Connection.GetConSettings.ClientCodePage.CP <> zCP_WIN1251) or
-    (Connection.GetConSettings.ClientCodePage.CP <> zcp_DOS855) or
-    (Connection.GetConSettings.ClientCodePage.CP <> zCP_KOI8R)
-      {add some more if you run into same issue !!} then begin
-    BlankCheck;
+  Check(not Connection.IsClosed, 'Connected'); //for FPC which marks tests as failed if not executed
+  if (Connection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+    not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
     Exit;
-  end;
+  CP := connection.GetConSettings.ClientCodePage.CP;
+  //eh the russion abrakadabra can no be mapped to other charsets then:
+  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    {add some more if you run into same issue !!} then
+    Exit;
 
   Statement := Connection.CreateStatement;
   Statement.ExecuteUpdate('delete from test739514 where id<>1');

@@ -5164,7 +5164,7 @@ begin
   then Result := icLower
   else Result := icNone; //this could happen only if table starts with '_' and possible numbers follow
 
-  if TestKeyWords and not (Result in [icNone, icSpecial]) then begin
+  if TestKeyWords and (Result <> icNone){not (Result in [icNone, icSpecial])} then begin
     { Checks for reserved keywords. }
     if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper) then
       S := UpperCase(Value)
