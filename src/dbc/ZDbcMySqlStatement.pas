@@ -286,18 +286,29 @@ procedure TZAbstractMySQLPreparedStatement.ClearParameters;
 var
   array_size: UInt;
   I: Integer;
+  Bind: PMYSQL_aligned_BIND;
 begin
   if BatchDMLArrayCount > 0 then begin
     array_size := 0;
     for i := 0 to BindList.Count -1 do begin
       {$R-}
-      FreeMem(FMYSQL_aligned_BINDs^[i].indicators);
-      FMYSQL_aligned_BINDs^[i].indicators := nil;
-      if TZSqlType(PZArray(BindList[i].Value).VArrayType) in [stAsciiStream..stBinaryStream] then begin
-        FreeMem(FMYSQL_aligned_BINDs^[i].buffer);
-        FMYSQL_aligned_BINDs^[i].buffer := nil;
-      end;
+      Bind := @FMYSQL_aligned_BINDs^[i];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      FreeMem(Bind.indicators, BatchDMLArrayCount);
+      Bind.indicators := nil;
+      Bind.indicator_address^ := nil;
+      if (Bind^.buffer_address^ = Bind.buffer) and (Bind.buffer <> nil) then begin
+        FreeMem(Bind.buffer);
+        Bind.buffer := nil;
+        if (PZArray(BindList[i].Value).VArrayType >= Byte(stGUID)) or
+          ((TZSqlType(PZArray(BindList[i].Value).VArrayType) = stBoolean) and not FMySQL_FieldType_Bit_1_IsBoolean) then begin
+          FreeMem(Bind^.length, SizeOf(ULong)*BatchDMLArrayCount);
+          GetMem(Bind^.length, SizeOf(ULong));
+          Bind.length_address^ := Bind^.length;
+          Bind.buffer_length_address^ := 0;
+        end;
+      end;
+      Bind^.buffer_address^ := Bind.buffer;
     end;
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then
       checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
@@ -2012,9 +2023,9 @@ var
     ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
     for I := 0 to BatchDMLArrayCount -1 do begin
       if (TInterfaceDynArray(Value)[i] = nil) or not Supports(TInterfaceDynArray(Value)[i], IZBlob, Lob) or Lob.IsEmpty then
-        Bind^.indicators[i] := Ord(STMT_INDICATOR_NULL)
+        {$R-}Bind^.indicators[i] := Ord(STMT_INDICATOR_NULL){$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       else if (Lob.Length = 0) then begin
-        Bind^.length[i] := 0;
+        {$R-}Bind^.length[i] := 0;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
         PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := PEmptyAnsiString;
       end else begin
         if SQLType <> stBinaryStream then begin
@@ -2026,7 +2037,7 @@ var
           Lob.GetPAnsiChar(ClientCP);
         end;
         PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Lob.GetBuffer;
-        Bind^.length[i] := Lob.Length;
+        {$R-}Bind^.length[i] := Lob.Length;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       end;
     end;
     Bind^.buffer_address^ := Pointer(Bind^.Buffer);
@@ -2036,8 +2047,10 @@ var
   begin
     ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount);
     for I := 0 to BatchDMLArrayCount -1 do begin
+      {$R-}
       Bind^.length[i] := Length(TRawByteStringDynArray(Value)[i]);
       if Bind^.length[i] > 0
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       then PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Pointer(TRawByteStringDynArray(Value)[i]) //write address
       else PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := PEmptyAnsiString;
     end;
@@ -2092,12 +2105,13 @@ move_from_temp:
           ReAllocMem(Bind^.Buffer, Cardinal(SizeOf(Pointer)*BatchDMLArrayCount)+BufferSize);
           P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
           for I := 0 to BatchDMLArrayCount -1 do begin
-            Bind^.length[i] := Length(ClientStrings[i]);
+            {$R-}Bind^.length[i] := Length(ClientStrings[i]);
             if Bind^.length[i] > 0
             then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]+1)  //write buffer
             else Byte(P^) := Ord(#0);
             PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
             Inc(P, Bind^.length[i]+1);
+            {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
           end;
           Bind^.buffer_address^ := Pointer(Bind^.buffer);
         end;
@@ -2105,26 +2119,28 @@ move_from_temp:
           ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount); //minumum size
           for I := 0 to BatchDMLArrayCount -1 do
             if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, ClientCP) or (TZCharRecDynArray(Value)[i].Len = 0) then begin
-              Bind^.length[i] := TZCharRecDynArray(Value)[i].Len;
+              {$R-}Bind^.length[i] := TZCharRecDynArray(Value)[i].Len;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
               PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := TZCharRecDynArray(Value)[i].P; //wite address
             end else if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, zCP_UTF16) then begin
               ClientStrings[i] := PUnicodeToRaw(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, ClientCP);
               BufferSize := BufferSize + Cardinal(Length(ClientStrings[i])) +1;
-              Bind^.length[i] := Length(ClientStrings[i]);
+              {$R-}Bind^.length[i] := Length(ClientStrings[i]);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
             end else begin
               UniTemp := PRawToUnicode(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, TZCharRecDynArray(Value)[i].CP);
               ClientStrings[i] := ZUnicodeToRaw(UniTemp, ClientCP);
               BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
-              Bind^.length[i] := Length(ClientStrings[i]);
+              {$R-}Bind^.length[i] := Length(ClientStrings[i]);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
             end;
           if BufferSize > 0 then begin
             ReAllocMem(Bind^.buffer, Cardinal(BatchDMLArrayCount*SizeOf(Pointer))+BufferSize);
             P := PAnsichar(Bind^.Buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
             for I := 0 to BatchDMLArrayCount -1 do
               if Pointer(ClientStrings[i]) <> nil then begin
+                {$R-}
                 {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(ClientStrings[i])^, P^, Bind^.length[i]); //write buffer
                 PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
                 Inc(P, Bind^.length[i]+1);
+                {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
               end;
             end;
           Bind^.buffer_address^ := Pointer(Bind^.buffer);
@@ -2165,7 +2181,9 @@ begin
         for i := 0 to BatchDMLArrayCount -1 do begin
           PWord(PAnsiChar(Bind^.buffer)+BatchDMLArrayCount*SizeOf(Pointer)+(i shl 1))^ := PWord(EnumBool[TBooleanDynArray(Value)[i]])^; //write data
           PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := PAnsiChar(Bind^.buffer)+BatchDMLArrayCount*SizeOf(Pointer)+(i shl 1); //write address
+          {$R-}
           Bind^.length[i] := 1;
+          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
         end;
       end;
     stByte, stShort: begin
@@ -2245,8 +2263,10 @@ begin
         ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
         Bind^.length_address^ := Bind^.length;
         for i := 0 to BatchDMLArrayCount -1 do begin
+          {$R-}
           Bind^.length[i] := Length(TBytesDynArray(Value)[i]);
           if Bind^.length[i] > 0
+          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
           then PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := Pointer(TBytesDynArray(Value)[i]) //write address
           else PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := PEmptyAnsiString;
         end;
@@ -2260,7 +2280,7 @@ begin
           Bind^.buffer_type_address^ := FIELD_TYPE_STRING;
           P := PAnsiChar(Bind^.buffer)+ SizeOf(Pointer)*BatchDMLArrayCount;
           for i := 0 to BatchDMLArrayCount -1 do begin
-            Bind^.length[i] := 36;
+            {$R-}Bind^.length[i] := 36; {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
             GUIDToBuffer(@TGUIDDynArray(Value)[i].D1, P, False, True);
             PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := P; //write address
             Inc(P, 37);
@@ -2270,7 +2290,7 @@ begin
           Bind^.buffer_type_address^ := FIELD_TYPE_TINY_BLOB;
           for i := 0 to BatchDMLArrayCount -1 do begin
             PPointer(PAnsiChar(Bind^.buffer)+I*SizeOf(Pointer))^ := @TGUIDDynArray(Value)[i].D1; //write address
-            Bind^.length[i] := SizeOf(TGUID);
+            {$R-}Bind^.length[i] := SizeOf(TGUID);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
           end;
         end;
         Bind^.buffer_address^ := Pointer(Bind^.buffer);
@@ -2478,12 +2498,12 @@ begin
     InternalRealPrepare;
   if (FMYSQL_STMT = nil) then
     raise EZSQLException.Create(SFailedtoPrepareStmt);
-  if Bind^.Iterations <> Cardinal(BatchDMLArrayCount) then begin
+  {if Bind^.Iterations <> Cardinal(BatchDMLArrayCount) then begin
     ReAllocMem(Bind^.indicators, BatchDMLArrayCount);
     Bind^.indicator_address^ := Pointer(Bind^.indicators);
     FBindAgain := True;
     Bind^.Iterations := BatchDMLArrayCount;
-  end;
+  end;}
   aArray := BindList[ParameterIndex].Value;
   if Pointer(Value) = nil
   then FillChar(Bind^.indicators^, BatchDMLArrayCount, Char(MySQLNullIndicatorMatrix[False, FUseDefaults]))

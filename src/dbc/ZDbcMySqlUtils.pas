@@ -865,6 +865,8 @@ begin
         FreeMem(Bind^.buffer);
       if Bind^.Length <> nil then
         FreeMem(Bind^.length);
+      if Bind^.Indicators <> nil then
+        FreeMem(Bind^.Indicators);
     end;
   ReallocMem(BindBuffer, NewCount*BindOffsets.Size);
   ReallocMem(MYSQL_aligned_BINDs, NewCount*SizeOf(TMYSQL_aligned_BIND));
