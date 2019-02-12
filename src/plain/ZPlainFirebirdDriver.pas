@@ -129,7 +129,7 @@ type
     procedure LoadCodePages; override;
     function GetUnicodeCodePageName: String; override;
     {$IFDEF ENABLE_INTERBASE_CRYPT}
-    procedure Initialize; virtual;
+    procedure Initialize(const Location: String = ''); virtual;
     {$ENDIF}
     procedure LoadApi; override;
   public
@@ -420,7 +420,7 @@ type
     function GetDescription: string; override;
   end;
 
-  function XSQLDA_LENGTH(Value: LongInt): LongInt;
+function XSQLDA_LENGTH(Value: LongInt): LongInt;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE}
 
@@ -512,11 +512,11 @@ begin
 end;
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
-procedure TZInterbasePlainDriver.Initialize;
+procedure TZInterbasePlainDriver.Initialize(const Location: String = '');
 begin
   If Assigned(FPreLoader) and not FPreLoader.Loaded then
     FPreLoader.LoadNativeLibrary;
-  inherited Initialize;
+  inherited Initialize(Location);
 end;
 {$ENDIF}
 
