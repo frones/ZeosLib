@@ -2531,6 +2531,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
 procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
@@ -2543,6 +2544,7 @@ begin
     then NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_stmt_insert_id(FMYSQL_STMT^))  //EH: why does it not work!?
     else }NewRowAccessor.SetULong(FAutoColumnIndex, FPlainDriver.mysql_insert_id(FPMYSQL^)); //and this also works with the prepareds??!
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZMySQLPreparedClob }
 constructor TZMySQLPreparedClob.Create(const PlainDriver: TZMySQLPlainDriver;

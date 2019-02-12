@@ -1264,6 +1264,7 @@ begin
     UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
 procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
@@ -1287,6 +1288,7 @@ begin
 
   RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZInterbase6Sequence }
 

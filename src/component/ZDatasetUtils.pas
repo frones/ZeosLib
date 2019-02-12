@@ -1202,7 +1202,9 @@ function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
 var
   I: Integer;
   ColumnIndex: Integer;
+  {$IFNDEF NEXTGEN}
   AValue1, AValue2: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
+  {$ENDIF}
   WValue1, WValue2: ZWideString;
   CurrentType : TZSQLType;
 begin
