@@ -1227,7 +1227,7 @@ var
   I: SmallInt;
   {$ELSE}
   C: Cardinal;
-label R4BDigit, R3BDigit, R2BDigit, R1BDigit;  {EH: small jump table for unrolled 32 bit opt }
+label R3BDigit, R2BDigit, R1BDigit;  {EH: small jump table for unrolled 32 bit opt }
   {$ENDIF}
 begin
   //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html#a3ae98a87bbc2d0dfc9cbe3d5845e0035
