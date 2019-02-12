@@ -431,19 +431,17 @@ begin
   if GetAutoCommit
   then raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if not (FTrHandle = 0)  then
-    //if FHardCommit then begin
-      FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+    if FHardCommit then begin
+      if FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle) <> 0 then
       // Jan Baumgarten: Added error checking here because setting the transaction
       // handle to 0 before we have checked for an error is simply wrong.
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcTransaction);
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcTransaction);
       FTrHandle := 0; //normaly not required! Old server code?
-    {end else begin
-      FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcTransaction);
-      DriverManager.LogMessage(lcTransaction,
-        ConSettings^.Protocol, 'TRANSACTION COMMIT');
-    end;}
+    end else
+      if FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle) <> 0 then
+        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcTransaction);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
 end;
 
 {**
@@ -925,18 +923,18 @@ begin
   if GetAutoCommit
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
   if FTrHandle <> 0 then begin
-    //if FHardCommit then begin
+    if FHardCommit then begin
       if FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
-      FTrHandle := 0;
-    {end else begin
+      FTrHandle := 0; //that's done by fb, obsolete code?
+    end else begin
       if FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
-    end;}
+    end;
   end;
 end;
 
@@ -1264,7 +1262,6 @@ begin
     UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
 procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
@@ -1288,7 +1285,6 @@ begin
 
   RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZInterbase6Sequence }
 
