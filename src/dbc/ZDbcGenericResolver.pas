@@ -376,46 +376,30 @@ end;
 }
 procedure TZGenericCachedResolver.DefineUpdateColumns(
   Columns: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
-var
-  I: Integer;
-  ColumnIndices: TIntegerDynArray;
-  CompareFuncs: TCompareFuncs;
+var I: Integer;
 begin
   { Use precached parameters. }
-  if UpdateAll and (UpdateColumns.Count > 0) then
-  begin
+  if UpdateAll and (UpdateColumns.Count > 0) then begin
     CopyResolveParameters(UpdateColumns, Columns);
     Exit;
   end;
 
   { Defines parameters for UpdateAll mode. }
-  if UpdateAll then
-  begin
-    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
-      if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
-        and Metadata.IsWritable(I) then
-      begin
+  if UpdateAll then begin
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+      if (Metadata.GetTableName(I) <> '') and
+         (Metadata.GetColumnName(I) <> '') and Metadata.IsWritable(I) then
         UpdateColumns.Add(TZResolverParameter.Create(I,
           Metadata.GetColumnName(I), Metadata.GetColumnType(I), True, ''));
-      end;
-    end;
     CopyResolveParameters(UpdateColumns, Columns);
-  end else begin{ Defines parameters for UpdateChanged mode. }
-    SetLength(ColumnIndices, 1);
-    SetLength(CompareFuncs, 1);
+  end else { Defines parameters for UpdateChanged mode. }
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    begin
-      ColumnIndices[0] := I;
-      CompareFuncs[0] := NewRowAccessor.GetCompareFunc(I, ckEquals);
-      if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
-        and Metadata.IsWritable(I) and ( OldRowAccessor.CompareBuffers(
-        OldRowAccessor.RowBuffer, NewRowAccessor.RowBuffer, ColumnIndices, CompareFuncs)  <> 0) then
-      begin
+      if (Metadata.GetTableName(I) <> '') and
+         (Metadata.GetColumnName(I) <> '') and Metadata.IsWritable(I) and
+         (OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
+          NewRowAccessor.RowBuffer, I, NewRowAccessor.GetCompareFunc(I, ckEquals))  <> 0) then
         Columns.Add(TZResolverParameter.Create(I,
           Metadata.GetColumnName(I), Metadata.GetColumnType(I), True, ''));
-      end;
-    end;
-  end;
 end;
 
 {**
@@ -920,7 +904,6 @@ procedure TZGenericCachedResolver.RefreshCurrentRow(const Sender: IZCachedResult
 begin
   raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Calculate default values for the fields.
@@ -1020,8 +1003,6 @@ begin
 end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
 procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);

@@ -750,17 +750,29 @@ end;
 procedure TZUpdateSQL.PostUpdates(const Sender: IZCachedResultSet;
  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
-    I: Integer;
-    Statement: IZPreparedStatement;
-    Config: TZSQLStrings;
-    CalcDefaultValues,
-    ExecuteStatement,
-    UpdateAutoIncFields: Boolean;
-    S,
-    Refresh_OldSQL:String;
-    RefreshResultSet: IZResultSet;
-    lValidateUpdateCount : Boolean;
-    lUpdateCount : Integer;
+  I: Integer;
+  Statement: IZPreparedStatement;
+  Config: TZSQLStrings;
+  CalcDefaultValues,
+  ExecuteStatement,
+  UpdateAutoIncFields: Boolean;
+  S,
+  Refresh_OldSQL:String;
+  RefreshResultSet: IZResultSet;
+  lValidateUpdateCount : Boolean;
+  lUpdateCount : Integer;
+
+  function SomethingChanged: Boolean;
+  var I: Integer;
+  begin
+    Result := False;
+    for I := 0 to DataSet.Fields.Count -1 do
+      if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
+         NewRowAccessor.RowBuffer, I+FirstDbcIndex, NewRowAccessor.GetCompareFunc(I+FirstDbcIndex, ckEquals))  <> 0 then begin
+        Result := True;
+        Break;
+      end;
+  end;
 begin
   if (UpdateType = utDeleted)
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
@@ -771,8 +783,9 @@ begin
       Config := FInsertSQL;
     utDeleted:
       Config := FDeleteSQL;
-    utModified:
-      Config := FModifySQL;
+    utModified: if SomethingChanged
+                then Config := FModifySQL
+                else Exit;
     else
       Exit;
   end;
@@ -808,8 +821,7 @@ begin
         utInserted: DoBeforeInsertSQLStatement(Self, I, ExecuteStatement);
         utModified: DoBeforeModifySQLStatement(Self, I, ExecuteStatement);
       end;
-      if ExecuteStatement then
-      begin
+      if ExecuteStatement then begin
         // if Property ValidateUpdateCount isn't set : assume it's true
         S := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
         lValidateUpdateCount := (S = '') or StrToBoolEx(S);
