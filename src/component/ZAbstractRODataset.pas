@@ -2135,14 +2135,11 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if Result then
-    Buffer^ := #0
-  else
-  begin //instead of StrPLCopy
-    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, Max(dsMaxStringSize, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+  if not Result then begin //instead of StrPLCopy
+    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, NativeUInt(Max(dsMaxStringSize, FieldSize-1))); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buffer^, L);
-    (Buffer+L)^ := #0;
   end;
+  PByte(Buffer+L)^ := Ord(#0);
 end;
 
 function TZAbstractRODataset.StringFieldGetterFromUnicode(ColumnIndex, FieldSize: Integer;
@@ -2152,10 +2149,9 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
-  if Result then
-    Buffer^ := #0
-  else //instead of StrPLCopy
-    PUnicode2PRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize), RowAccessor.ConSettings^.CTRL_CP);
+  if not Result then //instead of StrPLCopy
+    L := PUnicode2PRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize-1), RowAccessor.ConSettings^.CTRL_CP);
+  PByte(Buffer+L)^ := Ord(#0);
 end;
 
 function TZAbstractRODataset.StringFieldGetterRaw2RawConvert(ColumnIndex,
@@ -2165,11 +2161,10 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if Result then
-    PWord(Buffer)^ := Ord(#0)
-  else //instead of WStrLCopy
-    PRawToPRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize),
+  if not Result then //instead of WStrLCopy
+    L := PRawToPRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize-1),
       RowAccessor.ConSettings^.ClientCodePage^.CP, RowAccessor.ConSettings^.CTRL_CP);
+  PByte(Buffer+L)^ := Ord(#0)
 end;
 
 function TZAbstractRODataset.WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer;
@@ -2182,7 +2177,7 @@ begin
   if Result then
     PWord(Buffer)^ := Ord(#0)
   else //instead of WStrLCopy
-    PRaw2PUnicode(P, Buffer, L, Max(dsMaxStringSize shr 1, FieldSize), RowAccessor.ConSettings^.ClientCodePage^.CP);
+    PRaw2PUnicode(P, Buffer, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1, RowAccessor.ConSettings^.ClientCodePage^.CP);
 end;
 
 function TZAbstractRODataset.WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer;
@@ -2192,13 +2187,11 @@ var
   L: NativeUInt;
 begin
   P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
-  if not Result then
-  begin //instead of StrPLCopy
-    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, Max(dsMaxStringSize shr 1, FieldSize)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+  if not Result then begin //instead of WStrCopy
+    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, NativeUInt(Max(dsMaxStringSize, FieldSize -2) shr 1)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, L shl 1);
-    Inc(Buffer, L);
   end;
-  PWord(Buffer)^ := Ord(#0);
+  PWord(Buffer+L)^ := Ord(#0);
 end;
 
 {**
@@ -2688,10 +2681,8 @@ begin
      Exit;
 
   { Check the record by filter expression. }
-  if FilterEnabled and (FilterExpression.Expression <> '') then
-  begin
-    if not InitFilterFields then
-    begin
+  if FilterEnabled and (FilterExpression.Expression <> '') then begin
+    if not InitFilterFields then begin
       FilterFieldRefs := DefineFilterFields(Self, FilterExpression);
       InitFilterFields := True;
     end;
@@ -3302,18 +3293,16 @@ begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
         if (FieldType = ftCurrency) and not ResultSet.GetMetadata.IsCurrency(I) then
            FieldType := ftBCD;
-        if FieldType in [ftBytes, ftString, ftWidestring] then
-          if (FieldType = ftWideString) then
-              //most UTF8 DB's assume 4Byte / Char (surrogates included) such encoded characters may kill the heap of the FieldBuffer
-              //users are warned: http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=51427#p51427
-              Size := GetPrecision(I) shl Ord((ConSettings^.ClientCodePage^.CharWidth > 2) and (doAlignMaxRequiredWideStringFieldSize in fOptions))
-          else if (ConSettings^.CPType = cCP_UTF8) or
-            ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
-            ((ConSettings^.CPType = cGET_ACP) and (ZOSCodePage = zCP_UTF8)) then
-            Size := GetPrecision(I) shl 2
-          else
-            Size := GetPrecision(I)
-        else
+        if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
+          Size := GetPrecision(I);
+          if (FieldType = ftString) then
+            if (ConSettings^.CPType = cCP_UTF8) or (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+               ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
+               ((ConSettings^.CPType = cGET_ACP) and (ZOSCodePage = zCP_UTF8)) then
+              Size := Size * 4
+            else
+              Size := Size * ConSettings^.ClientCodePage^.CharWidth;
+        end else
           {$IFDEF WITH_FTGUID}
           if FieldType = ftGUID then
             Size := 38
@@ -3334,24 +3323,25 @@ begin
         end;
 
         if FUseZFields then
-          with TZFieldDef.Create(FieldDefs, FName, GetColumnType(I),
-            Size, False, I) do
-          begin
-            {$IFNDEF OLDFPC}
-            Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
-            {$ENDIF}
-            if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+          with TZFieldDef.Create(FieldDefs, FName, GetColumnType(I), Size, False, I) do begin
+            if not (ReadOnly or IsUniDirectional) then begin
+              {$IFNDEF OLDFPC}
+              Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
+              {$ENDIF}
+              if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+            end else
+              Attributes := Attributes + [faReadonly];
             Precision := GetPrecision(I);
             DisplayName := FName;
           end
-        else
-          with TFieldDef.Create(FieldDefs, FName, FieldType,
-            Size, False, I) do
-          begin
+        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I) do begin
+          if not (ReadOnly or IsUniDirectional) then begin
             {$IFNDEF OLDFPC}
             Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
             {$ENDIF}
             if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+          end else
+            Attributes := Attributes + [faReadonly];
             Precision := GetPrecision(I);
             DisplayName := FName;
           end;
@@ -3493,19 +3483,11 @@ begin
       CreateFields;
       if not (doNoAlignDisplayWidth in FOptions) then
         for i := 0 to Fields.Count -1 do
-          if Fields[i].DataType in [ftString, ftWideString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}] then
-            {$IFDEF WITH_FTGUID}
-            if Fields[i].DataType = ftGUID then
-              Fields[i].DisplayWidth := 40 //to get a full view of the GUID values
-            else
-            {$ENDIF}
-              if not (ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) = 0) then
-              begin
-                {$IFNDEF FPC}
-                //Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                {$ENDIF}
-                Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-              end;
+          if Fields[i].DataType = ftString then
+            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+          {$IFDEF WITH_FTGUID}
+          else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
+          {$ENDIF};
     end;
     BindFields(True);
 

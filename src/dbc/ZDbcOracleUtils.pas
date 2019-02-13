@@ -1154,7 +1154,10 @@ begin
         ErrorCode, ErrorMessage);
     if not ( ( LogCategory = lcDisconnect ) and ( ErrorCode = 3314 ) ) then //patch for disconnected Server
       //on the other hand we can't close the connction  MantisBT: #0000227
-      raise EZSQLException.CreateWithCode(ErrorCode,
+      if LogMessage <> ''
+      then raise EZSQLException.CreateWithCode(ErrorCode,
+        Format(cSSQLError3, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP), ErrorCode, LogMessage]))
+      else raise EZSQLException.CreateWithCode(ErrorCode,
         Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
   if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then

@@ -733,10 +733,11 @@ begin
   if not Closed then
     Exit;
 
-  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
   { Connect to PostgreSQL database. }
-  FHandle := GetPlainDriver.ConnectDatabase(PAnsiChar(BuildConnectStr));
+  LogMessage := BuildConnectStr;
+  FHandle := GetPlainDriver.ConnectDatabase(Pointer(LogMessage));
+  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
   try
     if GetPlainDriver.GetStatus(FHandle) = CONNECTION_BAD then
     begin
@@ -761,6 +762,10 @@ begin
     SetTransactionIsolation(GetTransactionIsolation);
     if not GetAutoCommit then
       DoStartTransaction;
+    if ReadOnly then begin
+      inherited SetReadOnly(False);
+      SetReadOnly(True);
+    end;
 
     if ReadOnly then begin
       inherited SetReadOnly(False);
@@ -1365,24 +1370,22 @@ var
   SQL: RawByteString;
   QueryHandle: PZPostgreSQLResult;
 begin
-  if not Closed then
-    if (GetServerMajorVersion > 7) or ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 4)) then begin
-      if Value <> isReadOnly then begin
-        SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ');
-        case Value of
-          true:
-            SQL := SQL + RawByteString('READ ONLY');
-          false:
-            SQL := SQL + RawByteString('READ WRITE');
-        end;
-
-        QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
-        CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
-        GetPlainDriver.PQclear(QueryHandle);
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+  if not Closed and (GetServerMajorVersion > 7) or ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 4)) then begin
+    if Value <> isReadOnly then begin
+      SQL := RawByteString('SET SESSION CHARACTERISTICS AS TRANSACTION ');
+      case Value of
+        true:
+          SQL := SQL + RawByteString('READ ONLY');
+        false:
+          SQL := SQL + RawByteString('READ WRITE');
       end;
-    end;
 
+      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
+      CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
+      GetPlainDriver.PQclear(QueryHandle);
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    end;
+  end;
   inherited SetReadOnly(Value);
 end;
 
