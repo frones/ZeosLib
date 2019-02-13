@@ -1277,6 +1277,7 @@ begin
   else Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // encoding unknown - parameter not used intentionally
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const TriggerNamePattern: string): IZResultSet;
@@ -1301,6 +1302,7 @@ begin
     GetConnection.CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(TriggersColumnsDynArray));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a description of the stored procedures available in a
@@ -1335,6 +1337,7 @@ end;
   @return <code>ResultSet</code> - each row is a procedure description
   @see #getSearchStringEscape
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // encoding unknown - parameter not used intentionally
 function TZInterbase6DatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
@@ -1357,7 +1360,7 @@ begin
     GetConnection.CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(ProceduresColumnsDynArray));
 end;
-
+{$IFDEF FPC} {$POP} {$ENDIF}
 {**
   Gets a description of a catalog's stored procedure parameters
   and result columns.
@@ -1694,7 +1697,7 @@ var
   TypeName, SubTypeName, FieldScale, FieldLength, Precision: Integer;
   LTableNamePattern, LColumnNamePattern: string;
   SQLType: TZSQLType;
-label GUID_Size, Str_Size;
+label Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -2743,6 +2746,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // encoding unknown - parameter not used intentionally
 function TZInterbase6DatabaseMetadata.UncachedGetSequences(
   const Catalog: string; const SchemaPattern: string;
   const SequenceNamePattern: string): IZResultSet;
@@ -2762,6 +2766,7 @@ begin
     GetConnection.CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(SequenceColumnsDynArray));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a privilege name.

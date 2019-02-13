@@ -44,7 +44,6 @@
 // Suppress some FPC hints that are known to be false
 {$WARN 4055 off : Conversion between ordinals and pointers is not portable} //suppress compiler buggy warning -> our Native(U)Int is Pointer size aligned
 {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
-{$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
 {$WARN 5093 off : function result variable of a managed type does not seem to be initialized} //suppress warning - we suppose all managed types are init'd as empty
 {$WARN 5094 off : function result variable of a managed type does not seem to be initialized}
 {$WARN 5089 off : Local variable "$1" of a managed type does not seem to be initialized}
@@ -150,10 +149,12 @@
     {.$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
     {$UNDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //issue seems to be fixed
     {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
-  {$IFEND}
-  {$IF FPC_FULLVERSION>30004} // introduced somewhere after 3.0.4 - these defines make the compile break on every 3.0.4 version in Hudson.
-    {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
-    {$DEFINE WITH_ASUTF8STRING} // TFIeld.AsUtf8String is supported
+    {$IF FPC_FULLVERSION>=30100}
+      {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
+      
+      {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
+      {$DEFINE WITH_ASUTF8STRING} // TFIeld.AsUtf8String is supported
+    {$IFEND}
   {$IFEND}
   // todo
   //   VIRTUALSETFIELDDATA: in nativeformat versions of SETFIELDDATA, inherited wasn't called.

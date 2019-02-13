@@ -2949,6 +2949,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
 procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
   Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
@@ -2968,6 +2969,7 @@ begin
     NewRowAccessor.SetULong(FAutoColumnIndex, PlainDriver.GetLastInsertID(FHandle));
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Forms a where clause for SELECT statements to calculate default values.

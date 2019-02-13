@@ -370,20 +370,18 @@ begin
     Exit;
   if GetAutoCommit
   then raise EZSQLException.Create(SInvalidOpInAutoCommit);
-  if not (FTrHandle = 0)  then
-    //if FHardCommit then begin
-      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+  if (FTrHandle <> 0) then
+    if FHardCommit then begin
+      if GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle) <> 0 then
       // Jan Baumgarten: Added error checking here because setting the transaction
       // handle to 0 before we have checked for an error is simply wrong.
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
       FTrHandle := 0; //normaly not required! Old server code?
-    {end else begin
-      GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
-      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-      DriverManager.LogMessage(lcTransaction,
-        ConSettings^.Protocol, 'TRANSACTION COMMIT');
-    end;}
+    end else
+      if GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle) <> 0 then
+        CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
 end;
 
 {**
@@ -875,16 +873,16 @@ begin
   if GetAutoCommit
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
   if FTrHandle <> 0 then begin
-    //if FHardCommit then begin
+    if FHardCommit then begin
       GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
-      FTrHandle := 0;
-    {end else begin
+      FTrHandle := 0; //that's done by fb, obsolete code?
+    end else begin
       GetPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
-    end;}
+  end;
   end;
 end;
 

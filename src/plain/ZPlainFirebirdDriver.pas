@@ -267,7 +267,7 @@ type
     procedure LoadCodePages; override;
     function GetUnicodeCodePageName: String; override;
     {$IFDEF ENABLE_INTERBASE_CRYPT}
-    procedure Initialize; virtual;
+    procedure Initialize(const Location: String = ''); virtual;
     {$ENDIF}
     procedure LoadApi; override;
   public
@@ -653,11 +653,11 @@ begin
 end;
 
 {$IFDEF ENABLE_INTERBASE_CRYPT}
-procedure TZFirebirdBaseDriver.Initialize;
+procedure TZFirebirdBaseDriver.Initialize(const Location: String = '');
 begin
   If Assigned(FPreLoader) and not FPreLoader.Loaded then
     FPreLoader.LoadNativeLibrary;
-  inherited Initialize;
+  inherited Initialize(Location);
 end;
 {$ENDIF}
 

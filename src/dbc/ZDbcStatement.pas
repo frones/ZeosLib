@@ -488,7 +488,9 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding{$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  ZEncoding
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
+  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 var
 {**
@@ -1693,12 +1695,16 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
+{$IFDEF FPC}
+  {$PUSH} {$WARN 5033 off : Function result does not seem to be set} // base class - result not returned intentionally
+{$ENDIF}
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil;
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Executes the SQL INSERT, UPDATE or DELETE statement
