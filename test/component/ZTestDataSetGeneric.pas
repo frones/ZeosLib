@@ -108,12 +108,9 @@ type
     procedure TestEmptyMemoAfterFullMemo;
     procedure TestInsertReturning;
     procedure TestNullUnionNull;
-  end;
-
-  TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
-  published
     procedure TestVeryLargeBlobs;
   end;
+
   {$IF not declared(TTestMethod)}
     TTestMethod = procedure of object;
   {$IFEND}
@@ -1980,7 +1977,7 @@ begin
       TextStreamE := TMemoryStream.Create;
       {$IFDEF WITH_WIDEMEMO}
       if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
-        TextStreamE.Write(WideString(teststring)[1], Length(teststring)*2)
+        TextStreamE.Write(ZWideString(teststring)[1], Length(teststring)*2)
       else
       {$ENDIF}
         TextStreamE.Write(teststring[1], Length(teststring));
@@ -1991,7 +1988,12 @@ begin
       Insert;
       FieldByName('b_id').AsInteger := TEST_ROW_ID-1;
       TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmWrite);
-      TextStreamA.Write(teststring[1],length(teststring));
+      {$IFDEF WITH_WIDEMEMO}
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+        TextStreamA.Write(ZWideString(teststring)[1], Length(teststring)*2)
+      else
+      {$ENDIF}
+        TextStreamA.Write(teststring[1],length(teststring));
       TextStreamA.Free;
       BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmWrite);
       TMemoryStream(BinStreamA).LoadFromFile(TestFilePath('images/horse.jpg'));
@@ -2471,9 +2473,7 @@ begin
   end;
 end;
 
-{ TZGenericTestDataSetMBCs }
-
-procedure TZGenericTestDataSetMBCs.TestVeryLargeBlobs;
+procedure TZGenericTestDataSet.TestVeryLargeBlobs;
 const teststring: ZWideString = '123456????';
 var
   Query: TZQuery;
@@ -2943,7 +2943,6 @@ end;
 
 initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
-  RegisterTest('component',TZGenericTestDataSetMBCs.Suite);
   {$IFDEF ENABLE_INTERBASE}
   RegisterTest('component',TZInterbaseTestGUIDS.Suite);
   {$ENDIF}

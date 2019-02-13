@@ -86,7 +86,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZSysUtils;
+  ZTestCase, ZSysUtils, ZEncoding;
 
 { ZTestCompOracleBugReport }
 
@@ -164,7 +164,8 @@ var
   BinFileStream: TFileStream;
   BinaryStream: TStream;
   Dir: String;
-
+  ConSettings: PZConSettings;
+  CP: Word;
   function GetBFILEDir: String;
   var I: Integer;
   begin
@@ -185,18 +186,19 @@ begin
     BinFileStream := TFileStream.Create(TestFilePath('images/horse.jpg'), fmOpenRead);
     Query.SQL.Text := 'select * from blob_values'; //NCLOB and BFILE is inlcuded
     Query.Open;
+    ConSettings := Connection.DbcConnection.GetConSettings;
     CheckEquals(6, Query.Fields.Count);
     CheckEquals('', Query.Fields[2].AsString);
-    CheckMemoFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
-    CheckMemoFieldType(Query.Fields[3].DataType, Connection.DbcConnection.GetConSettings);
+    CheckMemoFieldType(Query.Fields[2].DataType, ConSettings);
+    CheckMemoFieldType(Query.Fields[3].DataType, ConSettings);
     Query.Next;
     CheckEquals('Test string', Query.Fields[2].AsString); //read ORA NCLOB
     Query.Next;
     Query.Insert;
     Query.FieldByName('b_id').AsInteger := row_id;
     Query.FieldByName('b_long').AsString := 'aaa';
-    Query.FieldByName('b_nclob').AsString := GetDBTestString(testString+testString, Connection.DbcConnection.GetConSettings);
-    Query.FieldByName('b_clob').AsString := GetDBTestString(testString+testString+testString, Connection.DbcConnection.GetConSettings);
+    Query.FieldByName('b_nclob').AsString := GetDBTestString(testString+testString, ConSettings);
+    Query.FieldByName('b_clob').AsString := GetDBTestString(testString+testString+testString, ConSettings);
     (Query.FieldByName('b_blob') as TBlobField).LoadFromStream(BinFileStream);
     Query.Post;
     Dir := GetBFILEDir;
@@ -210,8 +212,18 @@ begin
       Query.Open;
       CheckEquals(6, Query.Fields.Count);
       CheckEquals('aaa', Query.FieldByName('b_long').AsString, 'value of b_long field');
-      CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, Query.Connection.DbcConnection.GetConSettings, 'value of b_nclob field');
-      CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, Query.Connection.DbcConnection.GetConSettings, 'value of b_clob field');
+
+      if ConSettings.CPType = cGET_ACP {no unicode strings or utf8 allowed}
+      then CP := ZOSCodePage
+      else CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+      //eh the russion abrakadabra can no be mapped to other charsets then:
+      if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+        {add some more if you run into same issue !!} then begin
+        BlankCheck;
+      end else begin
+        CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, ConSettings, 'value of b_nclob field');
+        CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, ConSettings, 'value of b_clob field');
+      end;
 
       (Query.FieldByName('b_blob') as TBlobField).SaveToStream(BinaryStream);
       CheckEquals(BinFileStream, BinaryStream, 'b_blob');

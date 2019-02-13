@@ -2127,8 +2127,7 @@ var
   RowCounter: Integer;
   I: Integer;
   Str1, Str2, Str3, Str4, Str5, Str6: ZWideString;
-  CP: Word;
-
+  ConSettings: PZConSettings;
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
@@ -2149,35 +2148,25 @@ begin
   // String 2 Starts with String 3
   // String 2 ends with String 4
   // String 5 is in the middle of String 2
-  Str2 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+
+  Str2 := ZWideString(AnsiString(Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+
           Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)+
           Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+
-          Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
-  Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
-  Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
-  Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
-  Str6 := Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239);
+          Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215)));
+  Str3 := ZWideString(AnsiString(Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)));
+  Str4 := ZWideString(AnsiString(Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215)));
+  Str5 := ZWideString(AnsiString(Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)));
+  Str6 := ZWideString(AnsiString(Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239)));
 
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed
   Check(Connection.Connected);
+  ConSettings := Connection.DbcConnection.GetConSettings;
   try
-    if (connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
-      not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
-      Exit;
-    CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
-    //eh the russion abrakadabra can no be mapped to other charsets then:
-    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
-      {add some more if you run into same issue !!} then
-      Exit;
-
-
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
-    if (ProtocolType = protOracle) or //oracle asumes one char = one byte except for varchar2
-      ( (ProtocolType in [protFirebird, protInterbase])
-        and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
+    if ( (ProtocolType in [protFirebird, protInterbase])
+        and (ConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
       InsertValues(str1, Copy(str2, 1, Length(Str2) div 2), str1, Copy(str2, 1, Length(Str2) div 2))
     else
       InsertValues(str1, str2, str1, str2);
@@ -2190,26 +2179,25 @@ begin
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
     if ProtocolType = protASA then //ASA has a limitation of 125chars for like statements
-      Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , 125)+'%'''
+      Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, ConSettings , 125)+'%'''
     else
-      if (ProtocolType = protOracle) or //oracle asumes one char = one byte except for varchar2
-        ( (ProtocolType in [protFirebird, protInterbase])
-          and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
-        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Copy(str2, 1, Length(Str2) div 2), Connection.DbcConnection.GetConSettings)+'%'''
+      if ( (ProtocolType in [protFirebird, protInterbase])
+          and (ConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
+        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Copy(str2, 1, Length(Str2) div 2), ConSettings)+'%'''
       else
-        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';
+        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, ConSettings)+'%''';
     Query.Open;
     CheckEquals(1, Query.RecordCount, 'RowCount of Str2');
-    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str3, Connection.DbcConnection.GetConSettings)+'%''';
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str3, ConSettings)+'%''';
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str3');
-    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str4, Connection.DbcConnection.GetConSettings)+'%''';
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str4, ConSettings)+'%''';
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str4');
-    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str5, Connection.DbcConnection.GetConSettings)+'%''';
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str5, ConSettings)+'%''';
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str5');
-    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str6, Connection.DbcConnection.GetConSettings)+'%''';
+    Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str6, ConSettings)+'%''';
     Query.Open;
   finally
     for i := TestRowID to TestRowID+RowCounter do
@@ -2226,6 +2214,7 @@ procedure ZTestCompCoreBugReportMBCs.TestUnicodeChars;
 var
   Query: TZQuery;
   CP: Word;
+  ConSettings: PZConSettings;
 const
   Str6: WideString = #$5317#$4EAC#$0020#$6771#$4EAC; // Beijing + Space + Tokyo
 
@@ -2239,13 +2228,18 @@ begin
   Query := CreateQuery;
   Query.Connection.Connect;
   Check(Query.Connection.Connected);
+  ConSettings := Connection.DbcConnection.GetConSettings;
+
   try
-    if (connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
-      not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
+    {no unicode strings or utf8 allowed}
+    if ((ConSettings.CPType = cGET_ACP)
+{$IF defined(MSWINDOWS) and not (defined(LCL) and defined(WITH_DEFAULTSYSTEMCODEPAGE))} //LCL is hacking the default-systemcodepage so they can pass this test pass nice (utf8 to Widcharmove)
+          or (ConSettings.CPType = cCP_UTF8)
+{$IFEND}
+      ) and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP)) then
       Exit;
-    CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
-    //eh the russion abrakadabra can no be mapped to other charsets then:
-    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    CP := ConSettings.ClientCodePage.CP;
+    if not ((CP = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP))
       {add some more if you run into same issue !!} then
       Exit;
     try
@@ -2275,6 +2269,8 @@ begin
       Query.Next;
       CheckEquals(1006, Query.FieldByName('s_id').AsInteger);
       Check(Str6 = Query.FieldByName('s_nvarchar').AsWideString);
+      Assert(CP <> 0);
+      Assert(Consettings <> nil);
     finally
       Query.Close;
       Query.SQL.Text := 'delete from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006)';
