@@ -469,8 +469,8 @@ var
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
-  Ansi: AnsiString;
-  WS: WideString;
+  WS: ZWideString;
+  ConSettings: PZConSettings;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
@@ -484,11 +484,19 @@ begin
   StrStream := TMemoryStream.Create;
   BinStream1 := TMemoryStream.Create;
   StrStream1 := TMemoryStream.Create;
-
+  ConSettings := Connection.DbcConnection.GetConSettings;
   try
     { load data to the stream }
     BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+    {$IFDEF WITH_WIDEMEMO}
+    if ( ConSettings.CPType = cCP_UTF16 ) then begin
+      StrStream.Position := 0;
+      WS := PRawToUnicode(StrStream.Memory, StrStream.Size, zCP_us_ascii);
+      StrStream.Write(Pointer(WS)^, Length(WS)*2);
+    end;
+    {$ENDIF}
+
     { post empty row }
     Query.SQL.Text := 'SELECT * FROM BLOB_VALUES';
     Query.Open;
@@ -504,16 +512,6 @@ begin
     Query.Post;
     Query.Close;
 
-    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16) then
-    begin
-      StrStream.position := 0;
-      SetLength(Ansi,StrStream.Size);
-      StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-      WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
-      StrStream.Clear;
-      StrStream.Write(PWideChar(WS)^, Length(WS)*2);
-      StrStream.Position := 0;
-    end;
     { check that data updated }
     Query.Open;
     (Query.FieldByName('B_TEXT') as TBlobField).SaveToStream(StrStream1);

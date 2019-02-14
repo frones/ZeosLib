@@ -208,9 +208,12 @@ begin
     SQLType := BindList[Index].SQLType;
   if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.value_sz < Len+SizeOf(Integer)) or (Bind.curelen <> 1) then
     InitBuffer(SQLType, Bind, Index, 1, Len);
-  POCILong(Bind.valuep).Len := Len;
-  if Buf <> nil then
-    Move(Buf^, POCILong(Bind.valuep).data[0], Len);
+  if Bind.dty = SQLT_LVB then begin
+    POCILong(Bind.valuep).Len := Len;
+    if Buf <> nil then
+      Move(Buf^, POCILong(Bind.valuep).data[0], Len);
+  end else if Bind.dty = SQLT_AFC then
+    GUIDToBuffer(Buf, Bind.valuep, []);
   Bind.indp[0] := 0;
 end;
 
@@ -229,15 +232,14 @@ begin
   else begin
     if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
       InitBuffer(SQLType, Bind, Index, 1, SizeOf(POCIDescriptor));
-    if not Supports(Value, IZOracleBlob, WriteTempBlob) then
-      if Bind.dty = SQLT_BLOB
-      then WriteTempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0,
-          FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-          PPOCIDescriptor(Bind^.valuep)^, ChunkSize, ConSettings)
-      else WriteTempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
-          FOracleConnection.GetConnectionHandle,
-          FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-          PPOCIDescriptor(Bind^.valuep)^, ChunkSize, ConSettings, ConSettings.ClientCodePage^.CP);
+    if Bind.dty = SQLT_BLOB
+    then WriteTempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0,
+        FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+        PPOCIDescriptor(Bind^.valuep)^, ChunkSize, ConSettings)
+    else WriteTempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
+        FOracleConnection.GetConnectionHandle,
+        FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+        PPOCIDescriptor(Bind^.valuep)^, ChunkSize, ConSettings, ConSettings.ClientCodePage^.CP);
     WriteTempBlob.CreateBlob;
     WriteTempBlob.WriteLobFromBuffer(Value.GetBuffer, Value.Length);
     IZBLob(BindList[Index].Value) := WriteTempBlob;
@@ -627,11 +629,11 @@ begin
   { free Desciptors }
   if (OCIBind.DescriptorType <> 0) then begin
     if (OCIBind.DescriptorType <> SQLType2OCIDescriptor[SQLType]) then
-      Status := 0
+      OldSize := 0
     else if (OCIBind.DescriptorType = SQLType2OCIDescriptor[SQLType]) and (ElementCnt < OCIBind.curelen) then
-      Status := ElementCnt
-    else Status := OCIBind.curelen;
-    for I := OCIBind.curelen-1 downto Status do begin
+      OldSize := ElementCnt
+    else OldSize := OCIBind.curelen;
+    for I := OCIBind.curelen-1 downto OldSize do begin
       Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(PAnsiChar(OCIBind.valuep)+I*SizeOf(POCIDescriptor))^, OCIBind.DescriptorType);
       if Status <> OCI_SUCCESS then
         CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings);
@@ -654,23 +656,15 @@ begin
 
   if ElementCnt = 1 then
     BindList[Index].SQLType := SQLType;
+  { allocmem for the null indicators }
   if OCIBind.curelen <> ElementCnt then begin
     if OCIBind.indp <> nil then
       FreeMem(OCIBind.indp, OCIBind.curelen*SizeOf(SB2));
     GetMem(OCIBind.indp, SizeOf(SB2)*ElementCnt); //alloc mem for indicators
   end;
   //alloc buffer space
-  if (OCIBind.DescriptorType <> 0) then
-    ReallocMem(OCIBind.valuep, OCIBind.value_sz*Integer(ElementCnt))
-  else begin
-    if OCIBind.valuep <> nil then begin
-      FreeMem(OCIBind.valuep, OldSize*Integer(OCIBind.curelen));
-      OCIBind.valuep := nil;
-    end;
-    if (not ((ElementCnt > 1) and (Ord(SQLType) < Ord(stCurrency)) and (OCIBind.dty <> SQLT_VNU) )) then
-      GetMem(OCIBind.valuep, OCIBind.value_sz*Integer(ElementCnt));
-  end;
-  if (OCIBind.DescriptorType <> 0) then
+  if (OCIBind.DescriptorType <> 0) then begin
+    ReallocMem(OCIBind.valuep, OCIBind.value_sz*Integer(ElementCnt));
     for I := OCIBind.curelen to ElementCnt -1 do begin
       { allocate lob/time oci descriptors }
       Status := FPlainDriver.OCIDescriptorAlloc(FOracleConnection.GetConnectionHandle,
@@ -678,6 +672,14 @@ begin
       if Status <> OCI_SUCCESS then
         CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings);
     end;
+  end else begin
+    if OCIBind.valuep <> nil then begin
+      FreeMem(OCIBind.valuep, OldSize*Integer(OCIBind.curelen));
+      OCIBind.valuep := nil;
+    end;
+    if (not ((ElementCnt > 1) and (Ord(SQLType) < Ord(stCurrency)) and (OCIBind.dty <> SQLT_VNU) )) then
+      GetMem(OCIBind.valuep, OCIBind.value_sz*Integer(ElementCnt));
+  end;
   OCIBind.curelen := ElementCnt;
   { in array bindings we directly OCIBind the pointer of the dyn arrays instead of moving data}
   if OCIBind.valuep <> nil then begin
@@ -1230,39 +1232,38 @@ var
   TS: TZTimeStamp;
   Status: sword;
   OraDate: POraDate;
-  D: Double;
 label bind_direct;
   {$R-}
-
   procedure SetLobs;
   var I: Integer;
     Lob: IZBLob;
     WriteTempBlob: IZOracleBlob;
+    OraLobs: TInterfaceDynArray;
+    Arr: TZArray;
   label write_lob;
   begin
+    SetLength(OraLobs, ArrayLen);
+    Arr := PZArray(BindList[ParameterIndex].Value)^;
+    Arr.VArray := Pointer(OraLobs);
+    BindList.Put(ParameterIndex, Arr, True);
     if SQLType = stBinaryStream then begin
       if (Bind.dty <> SQLT_BLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
         InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
       for i := 0 to ArrayLen -1 do
         if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
-          if not Supports(Lob, IZOracleBlob, WriteTempBlob) or (WriteTempBlob.IsCLob) then
-            WriteTempBlob := TZOracleBlob.Create(FPlainDriver,
-              nil, 0, FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, ChunkSize, ConSettings);
+          WriteTempBlob := TZOracleBlob.Create(FPlainDriver,
+            nil, 0, FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
+            PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, ChunkSize, ConSettings);
 write_lob:WriteTempBlob.CreateBlob;
-          { copy the buffer addresses }
-          WriteTempBlob.GetBufferAddress^ := Lob.GetBufferAddress^;
-          WriteTempBlob.GetLengthAddress^ := Lob.GetLengthAddress^;
-          { nil old buffer }
-          Lob.GetBufferAddress^ := nil;
-          Lob.GetLengthAddress^ := -1;
-          Lob := nil; //decref of old interface
-          WriteTempBlob.WriteLobFromBuffer(WriteTempBlob.GetBufferAddress^, WriteTempBlob.GetLengthAddress^);
-          TInterfaceDynArray(Value)[I] := WriteTempBlob; //destroy old interface or replace it
+          WriteTempBlob.WriteLobFromBuffer(Lob.GetBuffer, Lob.Length);
+          OraLobs[i] := WriteTempBlob; //destroy old interface or replace it
+          Lob := nil;
           WriteTempBlob := nil;
+        {$R-}
           Bind.indp[i] := 0;
         end else
           Bind.indp[i] := -1;
+        {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end else begin
       if (Bind.dty <> SQLT_CLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
         InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
@@ -1319,45 +1320,75 @@ write_lob:WriteTempBlob.CreateBlob;
       Inc(P, Bind.value_sz);
     end;
   end;
-  procedure BindConvertedStrings;
+  procedure BindRawFromUnicodeStrings;
+  var BufferSize, I: Integer;
+  begin
+    BufferSize := 0;
+    for i := 0 to ArrayLen -1 do
+      BufferSize := Max(BufferSize, Length(TUnicodeStringDynArray(Value)[I]));
+    BufferSize := (BufferSize shl 2);
+    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
+      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+    P := Bind.valuep;
+    for i := 0 to ArrayLen -1 do begin
+      POCILong(P).Len := ZEncoding.PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(Value)[I]),
+        @POCILong(P).data[0], Length(TUnicodeStringDynArray(Value)[I]), BufferSize, ClientCP);
+      Inc(P, Bind.value_sz);
+    end;
+  end;
+  procedure BindRawFromCharRec;
+  var BufferSize, I: Integer;
+  begin
+    BufferSize := 0;
+    for i := 0 to ArrayLen -1 do
+      BufferSize := Max(BufferSize, TZCharRecDynArray(Value)[I].Len);
+    if TZCharRecDynArray(Value)[0].CP <> ClientCP then
+      BufferSize := BufferSize shl 2; //oversized for best fit
+    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
+      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+    P := Bind.valuep;
+    for i := 0 to ArrayLen -1 do begin
+      if TZCharRecDynArray(Value)[I].CP = ClientCP then begin
+        POCILong(P).Len := TZCharRecDynArray(Value)[I].Len;
+        Move(TZCharRecDynArray(Value)[I].P^,POCILong(P).data[0], POCILong(P).Len);
+      end else if TZCharRecDynArray(Value)[I].CP = zCP_UTF16
+        then POCILong(P).Len := ZEncoding.PUnicode2PRawBuf(TZCharRecDynArray(Value)[I].P,
+          @POCILong(P).data[0], TZCharRecDynArray(Value)[I].Len, BufferSize, ClientCP)
+        else POCILong(P).Len := ZEncoding.PRawToPRawBuf(TZCharRecDynArray(Value)[I].P,
+          @POCILong(P).data[0], TZCharRecDynArray(Value)[I].Len, BufferSize, TZCharRecDynArray(Value)[I].CP, ClientCP);
+      Inc(P, Bind.value_sz);
+    end;
+  end;
+
+  procedure BindFromAutoEncode;
   var ClientStrings: TRawByteStringDynArray;
     var I: Integer;
   begin
     SetLength(ClientStrings, ArrayLen);
-    case VariantType of
-      {$IFNDEF UNICODE}
-      vtString: for i := 0 to ArrayLen -1 do
-            if (Pointer(TStringDynArray(Value)[I]) <> nil) then
-              ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[I], ConSettings^.CTRL_CP, ClientCP);
-      {$ENDIF}
-      {$IFNDEF NO_ANSISTRING}
-      vtAnsiString: for i := 0 to ArrayLen -1 do
-            if (Pointer(TAnsiStringDynArray(Value)[I]) <> nil) then begin
-              FUniTemp := PRawToUnicode(Pointer(TAnsiStringDynArray(Value)[I]), Length(TAnsiStringDynArray(Value)[I]), ZOSCodePage);
-              ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
-            end;
-      {$ENDIF}
-      {$IFNDEF NO_UTF8STRING}
-      vtUTF8String: for i := 0 to ArrayLen -1 do
-            if (Pointer(TUTF8StringDynArray(Value)[I]) <> nil) then begin
-              FUniTemp := PRawToUnicode(Pointer(TUTF8StringDynArray(Value)[I]), Length(TUTF8StringDynArray(Value)[I]), zCP_UTF8);
-              ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
-            end;
-      {$ENDIF}
-      vtCharRec: if ZCompatibleCodePages(TZCharRecDynArray(Value)[0].CP, zCP_UTF16) then begin
-                  for I := 0 to ArrayLen -1 do
-                    ClientStrings[I] := PUnicodeToRaw(TZCharRecDynArray(Value)[I].P, TZCharRecDynArray(Value)[I].Len, ClientCP);
-                end else for I := 0 to ArrayLen -1 do begin
-                  FUniTemp := PRawToUnicode(TZCharRecDynArray(Value)[I].P, TZCharRecDynArray(Value)[I].Len, TZCharRecDynArray(Value)[I].CP);
-                  ClientStrings[I] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), ClientCP);
-                end;
-      {$IFDEF UNICODE}vtString,{$ENDIF}
-      vtUnicodeString: for I := 0 to ArrayLen -1 do
-            ClientStrings[I] := PUnicodeToRaw(Pointer(TUnicodeStringDynArray(Value)[I]), Length(TUnicodeStringDynArray(Value)[I]), ClientCP);
-      else
-        raise Exception.Create('Unsupported String Variant');
-    end;
+      for i := 0 to ArrayLen -1 do
+         if (Pointer(TStringDynArray(Value)[I]) <> nil) then
     BindRawStrings(ClientStrings);
+  end;
+  procedure BindConvertedRaw2RawStrings(CP: Word);
+  var BufferSize, I: Integer;
+  begin
+    BufferSize := 0;
+    for i := 0 to ArrayLen -1 do
+      if Pointer(TRawByteStringDynArray(Value)[i]) <> nil then
+        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
+        {$ELSE}
+        BufferSize := Max(BufferSize, PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
+        {$ENDIF}
+    BufferSize := BufferSize shl 2; //oversized
+    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
+      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+    P := Bind.valuep;
+    for i := 0 to ArrayLen -1 do begin
+      POCILong(P).Len := ZEncoding.PRawToPRawBuf(Pointer(TRawByteStringDynArray(Value)[I]),
+        @POCILong(P).data[0], Length(TRawByteStringDynArray(Value)[I]), BufferSize, CP, ClientCP);
+      Inc(P, Bind.value_sz);
+    end;
   end;
 begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
@@ -1418,9 +1449,13 @@ bind_direct:
           //note as long we do not have a Value2OraNumber conversion we'll use the ora double instead!!
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOCINumber));
         for i := 0 to ArrayLen -1 do begin
-          D := TExtendedDynArray(Value)[i];
-          FplainDriver.OCINumberFromReal(FOCIError, @D, SizeOf(Double),
+          {$IFDEF BCD_TEST}
+          BCD2Nvu(TBCDDynArray(Value)[i], POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
+          {$ELSE}
+          PDouble(@fABuffer[0])^ := TExtendedDynArray(Value)[i];
+          FplainDriver.OCINumberFromReal(FOCIError, @fABuffer[0], SizeOf(Double),
             POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
+          {$ENDIF}
         end;
       end;
     stDate: begin
@@ -1475,39 +1510,23 @@ bind_direct:
         vtString:
           if not ConSettings.AutoEncode
           then BindRawStrings(TRawByteStringDynArray(Value))
-          else BindConvertedStrings;
+          else BindFromAutoEncode;
         {$ENDIF}
         {$IFNDEF NO_ANSISTRING}
         vtAnsiString:  if ZCompatibleCodePages(ClientCP, ZOSCodePage)
             then BindRawStrings(TRawByteStringDynArray(Value))
-            else BindConvertedStrings;
+            else BindConvertedRaw2RawStrings(ZOSCodePage);
         {$ENDIF}
         {$IFNDEF NO_UTF8STRING}
         vtUTF8String: if ZCompatibleCodePages(ClientCP, zCP_UTF8)
             then BindRawStrings(TRawByteStringDynArray(Value))
-            else BindConvertedStrings;
+            else BindConvertedRaw2RawStrings(zCP_UTF8);
         {$ENDIF}
         vtRawByteString: BindRawStrings(TRawByteStringDynArray(Value));
-        vtCharRec:
-            {in array bindings we assume all codepages are equal!}
-            if ZCompatibleCodePages(TZCharRecDynArray(Value)[0].CP, ClientCP) then begin
-              BufferSize := 0;
-              for i := 0 to ArrayLen -1 do
-                BufferSize := Max(BufferSize, TZCharRecDynArray(Value)[i].Len);
-              if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
-                InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
-              P := Bind.valuep;
-              for i := 0 to ArrayLen -1 do begin
-                POCILong(P).Len := TZCharRecDynArray(Value)[i].Len;
-                if (TZCharRecDynArray(Value)[i].P <> nil) and (TZCharRecDynArray(Value)[i].Len <> 0) then
-                  Move(TZCharRecDynArray(Value)[i].P^,POCILong(P).data[0], POCILong(P).Len);
-                Inc(P, Bind.value_sz);
-              end;
-            end else BindConvertedStrings;
+        vtCharRec: BindRawFromCharRec;
         {$IFDEF UNICODE}vtString,{$ENDIF}
-        vtUnicodeString: BindConvertedStrings;
-        else
-          raise Exception.Create('Unsupported String Variant');
+        vtUnicodeString: BindRawFromUnicodeStrings;
+        else raise Exception.Create('Unsupported String Variant');
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream: begin
         SetLobs;

@@ -67,7 +67,6 @@ type
     FBlob: IZBlob;
     FMode: TBlobStreamMode;
     FConSettings: PZConSettings;
-    function TestEncoding: TZCharEncoding;
   protected
     property Blob: IZBlob read FBlob write FBlob;
     property Mode: TBlobStreamMode read FMode write FMode;
@@ -138,9 +137,8 @@ type THackedDataset = class(TDataset);
 }
 destructor TZBlobStream.Destroy;
 var
-  ATmp: RawByteString;
-  UTmp: ZWideString;
   UnCachedLob: IZUnCachedLob;
+  RawCP: Word;
 begin
   if Mode in [bmWrite, bmReadWrite] then
   begin
@@ -149,164 +147,67 @@ begin
      instead of moving mem from A to B i set the mem-pointer to the lobs instead.
      But we have to validate the mem if required.. }
 
-    if Memory <> nil then
-    begin
+    if Memory <> nil then begin
       case FField.DataType of
-        {$IFDEF WITH_WIDEMEMO}ftWideMemo, {$ENDIF} ftMemo:
+        {$IFDEF WITH_WIDEMEMO}
+        { EH: i've omitted a ancoding detection for the UTF16 encoding that fails in all areas }
+        ftWideMemo: Blob.SetPWideChar(Memory, Size div 2);
+        {$ENDIF}
+        ftMemo:
           if Blob.IsClob then
             {EH: not happy about this part. TBlobStream.LoadFromFile loads single encoded strings
             but if the Data is set by a Memo than we've got two-byte encoded strings.
             So there is NO way around to test this encoding. Acutally i've no idea about a more exact way
             than going this route...}
-            {$IFDEF WITH_WIDEMEMO}
-            if FField.DataType = ftWideMemo then
-              case TestEncoding of  //testencoding adds two leadin null bytes
-                ceDefault: //us ascii found, use faster conversion
-                  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                  Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_us_ascii); //use only one #0 terminator
-                  {$ELSE} //need to move data
-                  Blob.SetPAnsiChar(Memory, ZEncoding.zCP_us_ascii, Size -2);
-                  {$ENDIF}
-                ceAnsi, ceUTF16: //We've to start from the premisse we've got a Unicode string in there
-                  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                  Blob.SetBlobData(Memory, Size, ZEncoding.zCP_UTF16); //use the #0#0 terminator
-                  {$ELSE} //need to move data
-                  Blob.SetPWideChar(Memory, (Size -2) div 2);
-                  {$ENDIF}
-                ceUTF8:
-                  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                  Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_UTF8); //use only one #0 terminator
-                  {$ELSE} //need to move data
-                  Blob.SetPAnsiChar(Memory, ZEncoding.zCP_UTF8, Size -2);
-                  {$ENDIF}
-              end
-            else
-            {$ENDIF}
-              if FConSettings^.AutoEncode then
-                case TestEncoding of  //testencoding adds two leadin null bytes
-                  ceDefault: //us ascii found, use faster conversion
-                    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                    Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_us_ascii); //use only one #0 terminator
-                    {$ELSE} //need to move data
-                    Blob.SetPAnsiChar(Memory, ZEncoding.zCP_us_ascii, Size -2);
-                    {$ENDIF}
-                  ceUTF16: //We've to start from the premisse we've got a Unicode string in there
-                    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                    Blob.SetBlobData(Memory, Size, ZEncoding.zCP_UTF16); //use the #0#0 terminator
-                    {$ELSE} //need to move data
-                    Blob.SetPWideChar(Memory, (Size -2) div 2);
-                    {$ENDIF}
-                  ceAnsi:
+            if FConSettings^.AutoEncode then
+              case ZDetectUTF8Encoding(Memory, Size) of  //testencoding adds one leading null bytes
+                etUSASCII: //us ascii found, use faster conversion
+                  Blob.SetPAnsiChar(Memory, ZEncoding.zCP_us_ascii, Size);
+                etAnsi: begin
                     if (ZCompatibleCodePages(FConSettings^.ClientCodePage^.CP, zCP_UTF8)) then
                       if (ZCompatibleCodePages(FConSettings^.CTRL_CP, zCP_UTF8)) then
                         if (ZCompatibleCodePages(ZOSCodePage, zCP_UTF8)) then
                         {no idea what to do with ansiencoding, if everything if set to UTF8!}
-                        begin
-                          SetLength(ATmp, Size-2);
-                          {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Memory^, Pointer(ATmp)^, Size -2);
-                          UTmp := ZWideString(ATmp); //random success
-                          Blob.SetPWideChar(Pointer(UTmp), Length(UTmp));
-                        end
-                        else
-                          {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                          Blob.SetBlobData(Memory, Size -1, ZOSCodePage) //use only one #0 terminator
-                          {$ELSE} //need to move data
-                          Blob.SetPAnsiChar(Memory, ZOSCodePage, Size -2)
-                          {$ENDIF}
-                      else
-                        {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                        Blob.SetBlobData(Memory, Size -1, FConSettings^.CTRL_CP) //use only one #0 terminator
-                        {$ELSE} //need to move data
-                        Blob.SetPAnsiChar(Memory, FConSettings^.CTRL_CP, Size -2)
-                        {$ENDIF}
-                    else
-                      {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                      Blob.SetBlobData(Memory, Size -1, FConSettings^.ClientCodePage^.CP); //use only one #0 terminator
-                      {$ELSE} //need to move data
-                      Blob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size -2);
-                      {$ENDIF}
-                  ceUTF8:
-                    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                    Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_UTF8); //use only one #0 terminator
-                    {$ELSE} //need to move data
-                    Blob.SetPAnsiChar(Memory, ZEncoding.zCP_UTF8, Size -2);
-                    {$ENDIF}
-                end
-              else
-                {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                begin
-                  Self.SetSize(Size+1);
-                  (PAnsiChar(Memory)+Size-1)^ := #0; //add leading terminator
-                  Blob.SetBlobData(Memory, Size, FConSettings^.ClientCodePage^.CP); //use only one #0 terminator
-                end
-                {$ELSE} //need to move data
-                Blob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size)
-                {$ENDIF}
-          else
+                          RawCP := zCP_UTF8 //all convertions would fail so.. let the server raise an error!
+                        else RawCP := ZOSCodePage
+                      else RawCP := FConSettings^.CTRL_CP
+                    else RawCP := FConSettings^.ClientCodePage^.CP;
+                    Blob.SetPAnsiChar(Memory, RawCP, Size);
+                  end;
+                etUTF8:
+                  Blob.SetPAnsiChar(Memory, ZEncoding.zCP_UTF8, Size);
+              end
+            else
+              Blob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size)
+          else begin
             {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
             Blob.SetBlobData(Memory, Size);
+            SetPointer(nil, 0); //don't forget! Keep Lob mem alive!
             {$ELSE} //need to move data
             Blob.SetBuffer(Memory, Size);
             {$ENDIF}
-        else
+          end
+        else begin//ftBLOB
           {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
           Blob.SetBlobData(Memory, Size);
+          SetPointer(nil, 0); //don't forget! Keep Lob mem alive!
           {$ELSE} //need to move data
           Blob.SetBuffer(Memory, Size);
           {$ENDIF}
-      end;
-      {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-      SetPointer(nil, 0); //don't forget! Keep Lob mem alive!
-      {$ENDIF}
-    end
-    else
+        end;
+      end; {case ...}
+    end else { if Memory <> nil then}
       Blob.Clear;
     //try
       if Assigned(FField.Dataset) then
         THackedDataset(FField.DataSet).DataEvent(deFieldChange, NativeInt(FField));
     //except ApplicationHandleException(Self); end; //commented see https://sourceforge.net/p/zeoslib/tickets/226/
-  end
-  else
-  begin
+  end else begin
     SetPointer(nil, 0); //don't forget! Keep Lob mem alive!
     if Supports(Blob, IZUnCachedLob, UnCachedLob) then
       UnCachedLob.FlushBuffer;
   end;
-
   inherited Destroy;
-end;
-
-function TZBlobStream.TestEncoding: TZCharEncoding;
-begin
-  Result := ceDefault;
-  Self.SetSize(Size+2);
-  (PAnsiChar(Memory)+(Size-1))^ := #0;
-  (PAnsiChar(Memory)+(Size-2))^ := #0;
-  {EgonHugeist:
-    Step one: Findout, wat's comming in! To avoid User-Bugs as good as possible
-      it is possible that a PAnsiChar OR a PWideChar was written into
-      the Stream!!!  And these chars could be trunced with changing the
-      Stream.Size.
-      I know this can lead to pain with two byte ansi chars, but what else can i do?
-    step two: detect the encoding }
-
-  if (Size mod 2 = 0) and ( ZFastCode.StrLen(PAnsiChar(Memory)) < Size-2 ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
-    result := ceUTF16 //exact
-  else
-    if FConSettings.AutoEncode then
-      case ZDetectUTF8Encoding(Memory, Size -2) of
-        etUSASCII: Result := ceDefault; //Exact!
-        etAnsi:
-          { Sure this isn't right in all cases!
-            Two/four byte WideChars causing the same result!
-            Leads to pain! Is there a way to get a better test?
-            I've to start from the premise the function which calls this func
-            should decide if ansi or unicode}
-          Result := ceAnsi;
-        etUTF8: Result := ceUTF8; //Exact!
-      end
-    else
-      Result := ceDefault;
 end;
 
 end.

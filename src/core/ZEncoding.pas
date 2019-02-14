@@ -171,6 +171,11 @@ procedure SetConvertFunctions(const CTRL_CP, DB_CP: Word;
   out PlainConvert, DbcConvert: TConvertEncodingFunction); overload;
 {$ENDIF}
 
+type
+  /// option set for RawUnicodeToUtf8() conversion
+  TCharConversionFlags = set of (
+    ccfNoTrailingZero, ccfReplacementCharacterForUnmatchedSurrogate);
+
 function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PRawToUnicode(Source: PAnsiChar; const SourceBytes: LengthInt; CP: Word): ZWideString;
 procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; SourceBytes, BufCodePoints: LengthInt; CP: Word); overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
@@ -180,6 +185,9 @@ function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PUnicodeToRaw(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, MaxDestBytes: LengthInt; CP: Word): LengthInt;
+function PUnicodeToUtf8Buf(Dest: PAnsiChar; DestLen: NativeUint;
+  Source: PWideChar; SourceLen: NativeUint; Flags: TCharConversionFlags): NativeUint;
+
 function PUnicodeToString(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): String;
 function ZUnicodeToString(const Source: ZWideString; CP: Word): String;
 
@@ -268,8 +276,6 @@ function ZMoveStringToRaw(const Src: String; const {%H-}StringCP, {%H-}RawCP: Wo
 function ZUnknownRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 function ZUnknownRawToUnicodeWithAutoEncode(const S: RawByteString;
   const CP: Word): ZWideString;
-function ZUnknownPRawToUnicodeWithAutoEncode(P: PAnsiChar; L: NativeUInt;
-  const CP: Word): ZWideString;
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 
 {**
@@ -319,7 +325,6 @@ procedure MapByteToUTF16(Source: PByteArray; SourceBytes: LengthInt;
 procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt; overload;
-function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: LengthInt; RawCP: Word): RawByteString;
 function PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, MaxDestBytes: LengthInt; SrcCP, DestCP: Word): LengthInt;
 
 const
@@ -1193,20 +1198,6 @@ begin
   end;
 end;
 
-function ZUnknownPRawToUnicodeWithAutoEncode(P: PAnsiChar; L: NativeUInt;
-  const CP: Word): ZWideString;
-begin
-  if P = nil then
-    Result := ''
-  else case ZDetectUTF8Encoding(P, L) of
-    etUSASCII: Result := USASCII7ToUnicodeString(P, L);
-    etUTF8: Result := PRawToUnicode(P, L, zCP_UTF8);
-    else if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8)
-      then Result := USASCII7ToUnicodeString(P, L) //random success, we don't know the CP here
-      else Result := PRawToUnicode(P, L, ZOSCodePage);
-  end;
-end;
-
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 begin
   Result := RawByteString(US);
@@ -1384,9 +1375,9 @@ end;
 // some constants used for UTF-8 conversion, including surrogates
 const
   UTF16_HISURROGATE_MIN = $d800;
-  //UTF16_HISURROGATE_MAX = $dbff;
+  UTF16_HISURROGATE_MAX = $dbff;
   UTF16_LOSURROGATE_MIN = $dc00;
-  //UTF16_LOSURROGATE_MAX = $dfff;
+  UTF16_LOSURROGATE_MAX = $dfff;
   UTF8_EXTRABYTES: packed array[$80..$ff] of byte = (
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -1404,7 +1395,7 @@ const
     (offset: $82082080;  minimum: $04000000),
     (offset: $00000000;  minimum: $04000000));
   //UTF8_EXTRA_SURROGATE = 3;
-  //UTF8_FIRSTBYTE: packed array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
+  UTF8_FIRSTBYTE: packed array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
 
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt;
 // faster than System.UTF8Decode()
@@ -1539,35 +1530,111 @@ NoSource:
   PWord(dest)^ := Ord(#0); // always append a WideChar(0) to the end of the buffer
 end;
 
-function PUTF8ToRaw(Source: PAnsiChar; SourceBytes: LengthInt; RawCP: Word): RawByteString;
-var
-  {$IFDEF WITH_LCONVENCODING}
-  Tmp: ZWideString;
-  {$ELSE}
-  WBuf: Array[0..dsMaxWStringSize] of Word;
-  Tmp: array of Word;
-  Dest: PWideChar;
-  {$ENDIF}
+{**
+  RawUnicodeToUtf8 and its's used constant original written by Arnaud Bouchez
+  see: syncommons.pas in mORMot framework www.synopse.info
+  convert a RawUnicode UTF-16 PWideChar into a UTF-8 buffer
+  orgiginal named as RawUnicodeToUtf8()
+   - replace system.UnicodeToUtf8 implementation, which is rather slow
+   since Delphi 2009+
+   - will append a trailing #0 to the ending PUTF8Char, unless
+   ccfNoTrailingZero is set
+   - if ccfReplacementCharacterForUnmatchedSurrogate is set, this function will identify
+   unmatched surrogate pairs and replace them with EF BF BD / FFFD  Unicode
+   Replacement character - see https://en.wikipedia.org/wiki/Specials_(Unicode_block)
+Changes by EgonHugeist:
+    - replace PUTF8Char to PAnsichar
+    - replace PtrInt to NativeUInt
+    - add hard word cast in the ascii-pair loop -> range-checks did make noise here
+    - added three labels ( loop_ascii_pairs & done & next ) to loop in code and test ascii-pairs
+      after each convertion again. so i commented the main repeat loop and all continue/break tests
+}
+//function RawUnicodeToUtf8(Dest: PAnsiChar; DestLen: NativeUint; Source: PWideChar;
+function PUnicodeToUtf8Buf(Dest: PAnsiChar; DestLen: NativeUint; Source: PWideChar;
+  SourceLen: NativeUint; Flags: TCharConversionFlags): NativeUint;
+var c, i: Cardinal;
+    Tail: PWideChar;
+    j: integer;
+label unmatch, loop_ascii_pairs, next, Done;
 begin
-  if (SourceBytes = 0) or (Source = nil) then
-    Result := EmptyRaw
-  else if RawCP = zCP_UTF8 then
-    ZSetString(Source, SourceBytes, Result)
-  else begin
-    {$IFDEF WITH_LCONVENCODING}
-    SetLength(Tmp, SourceBytes);
-    SetLength(Tmp, UTF8ToWideChar(Source, SourceBytes, Pointer(Tmp)));
-    Result := ZUnicodeToRaw(Tmp, RawCP);
-    {$ELSE}
-    if SourceBytes <= dsMaxWStringSize then
-      Dest := @WBuf[0]
-    else begin
-      SetLength(Tmp, SourceBytes+1);
-      Dest := Pointer(Tmp);
-    end;
-    Result := PUnicodeToRaw(Dest, UTF8ToWideChar(Source, SourceBytes, Dest), RawCP);
-    {$ENDIF}
+  result := NativeUint(Dest);
+  inc(DestLen,NativeUint(Dest));
+  if (Source<>nil) and (Dest<>nil) then begin
+    // first handle 7 bit ASCII WideChars, by pairs (Sha optimization)
+    SourceLen := SourceLen*2+NativeUint(Source);
+    Tail := PWideChar(SourceLen)-2;
+loop_ascii_pairs:
+    if (NativeUint(Dest)<DestLen) and (Source<=Tail) then
+      repeat
+        c := PCardinal(Source)^;
+        if c and $ff80ff80<>0 then
+          break; // break on first non ASCII pair
+        c := c shr 8 or c;
+        PWord(Dest)^ := Word(c);//EH: added this hard cast because of RangeCheck errors
+        inc(Source,2);
+        inc(Dest,2);
+      until (Source>Tail) or (NativeUint(Dest)>=DestLen);
+    // generic loop, handling one UCS4 char per iteration
+    if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then
+    begin//repeat
+      // inlined UTF16CharToUtf8() with bufferoverlow check and $FFFD on unmatch
+next: c := cardinal(Source^);
+      inc(Source);
+      case c of
+        0..$7f: begin
+            Dest^ := AnsiChar(c);
+            inc(Dest);
+            //if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
+            if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) //test if end is reached
+            then if PWord(Source+1)^ > $7f //next no ascii?
+              then goto next
+              else goto loop_ascii_pairs
+            else goto done;
+          end;
+        UTF16_HISURROGATE_MIN..UTF16_HISURROGATE_MAX:
+          if (NativeUint(Source)>=SourceLen) or
+             ((cardinal(Source^)<UTF16_LOSURROGATE_MIN) or (cardinal(Source^)>UTF16_LOSURROGATE_MAX)) then begin
+unmatch:    if (NativeUint(@Dest[3])>DestLen) or not (ccfReplacementCharacterForUnmatchedSurrogate in Flags)
+            then goto Done;//break;
+            PWord(Dest)^ := $BFEF;
+            Dest[2] := AnsiChar($BD);
+            inc(Dest,3);
+            goto loop_ascii_pairs;//if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
+          end else begin
+            c := ((c-$D7C0)shl 10)+(cardinal(Source^) xor UTF16_LOSURROGATE_MIN);
+            inc(Source);
+          end;
+        UTF16_LOSURROGATE_MIN..UTF16_LOSURROGATE_MAX:
+          if (NativeUint(Source)>=SourceLen) or
+             ((cardinal(Source^)<UTF16_HISURROGATE_MIN) or (cardinal(Source^)>UTF16_HISURROGATE_MAX)) then
+            goto unmatch
+          else begin
+            c := ((cardinal(Source^)-$D7C0)shl 10)+(c xor UTF16_LOSURROGATE_MIN);
+            inc(Source);
+          end;
+      end; // now c is the UTF-32/UCS4 code point
+      case c of
+        0..$7ff: i := 2;
+        $800..$ffff: i := 3;
+        $10000..$1FFFFF: i := 4;
+        $200000..$3FFFFFF: i := 5;
+        else i := 6;
+      end;
+      if NativeUint(Dest)+i>DestLen then
+        goto Done;//break;
+      for j := i-1 downto 1 do begin
+        Dest[j] := AnsiChar((c and $3f)+$80);
+        c := c shr 6;
+      end;
+      Dest^ := AnsiChar(Byte(c) or UTF8_FIRSTBYTE[i]);
+      inc(Dest,i);
+      goto loop_ascii_pairs;//if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
+    end; //until false;
+Done:
+    if not (ccfNoTrailingZero in Flags) then
+      Dest^ := #0;
   end;
+  result := NativeUint(Dest)-result;
 end;
 
 function PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, MaxDestBytes: LengthInt; SrcCP, DestCP: Word): LengthInt;
@@ -2141,21 +2208,23 @@ var
   s: RawByteString;
 {$IFEND}
 begin
-  if (Dest = nil) or (SrcCodePoints = 0) then
+  if CP = zCP_UTF8 then
+    Result := PUnicodeToUtf8Buf(Dest, MaxDestBytes, Source, SrcCodePoints, [ccfNoTrailingZero])
+  else if (Dest = nil) or (SrcCodePoints = 0) then
     Result := 0
   else begin
     if CP = zCP_NONE then
       CP := ZOSCodePage; //random success
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      Result := LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Pointer(Dest), MaxDestBytes, NIL, NIL);
-      {$ELSE}
+      {$IFDEF MSWINDOWS}
       Result := WideCharToMultiByte(CP, 0, Source, SrcCodePoints, Dest, MaxDestBytes, NIL, NIL);
+      {$ELSE}
+      Result := LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, Pointer(Dest), MaxDestBytes, NIL, NIL);
       {$ENDIF}
     {$ELSE} //FPC non Windows
-      if ZCompatibleCodePages(CP, zCP_UTF8) then //FPC has a build in function here just for UTF16 to UTF8
+      {if ZCompatibleCodePages(CP, zCP_UTF8) then //FPC has a build in function here just for UTF16 to UTF8
         Result := UnicodeToUtf8(Dest, MaxDestBytes, Source, SrcCodePoints)
-      else begin //no other build in function to encode into a buffer available yet ): i'm forced to localize the values
+      else }begin //no other build in function to encode into a buffer available yet ): i'm forced to localize the values
         {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
         WidestringManager.Unicode2AnsiMoveProc(Source, S, CP, SrcCodePoints);
         {$ELSE}
