@@ -2161,7 +2161,7 @@ begin
     ULen := Min(SrcCodePoints shl 2, High(Integer)-1);
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     if Ulen <= dsMaxRStringSize then
-      {$IFDEF MSWINDOWS}
+      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
       ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
       {$ELSE}
       ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcCodePoints, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
