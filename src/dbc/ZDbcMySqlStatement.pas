@@ -1801,7 +1801,6 @@ begin
     BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
     EmulatedAsRaw;
   end else begin
-    CheckParameterIndex(Index);
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
