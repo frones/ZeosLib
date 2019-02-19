@@ -138,30 +138,43 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
+  ConSettings: PZConSettings;
   procedure InsertValues(TestString: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-    Query.ParamByName('s_char').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_varchar').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_nchar').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_char').AsString := GetDBTestString(TestString, ConSettings);
+    Query.ParamByName('s_varchar').AsString := GetDBTestString(TestString, ConSettings);
+    Query.ParamByName('s_nchar').AsString := GetDBTestString(TestString, ConSettings);
+    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(TestString, ConSettings);
 
     Query.ExecSQL;
     inc(RowCounter);
   end;
 
   procedure CheckColumnValues(TestString: ZWideString);
+  var CP: Word;
   begin
-    CheckEquals(TestString, Query.FieldByName('s_char').AsString, Connection.DbcConnection.GetConSettings);
-    CheckEquals(TestString, Query.FieldByName('s_varchar').AsString, Connection.DbcConnection.GetConSettings);
-    CheckEquals(TestString, Query.FieldByName('s_nchar').AsString, Connection.DbcConnection.GetConSettings);
-    CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString, Connection.DbcConnection.GetConSettings);
+    if ConSettings.CPType = cGET_ACP {no unicode strings or utf8 allowed}
+    then CP := ZOSCodePage
+    else CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+    //eh the russion dull text can no be mapped to other charsets then:
+    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+      {add some more if you run into same issue !!} then begin
+      BlankCheck;
+    end else begin
+      CheckEquals(TestString, Query.FieldByName('s_char').AsString, ConSettings);
+      CheckEquals(TestString, Query.FieldByName('s_varchar').AsString, ConSettings);
+      CheckEquals(TestString, Query.FieldByName('s_nchar').AsString, ConSettings);
+      CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString, ConSettings);
+    end;
   end;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Connection.Connect;
+  Check(Connection.Connected);
+  ConSettings := Connection.DbcConnection.GetConSettings;
   try
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+

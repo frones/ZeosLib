@@ -691,7 +691,8 @@ begin
   if ConSettings^.AutoEncode or (ConSettings^.ClientcodePage^.Encoding = ceUTF16) or
      (not ConSettings^.ClientcodePage^.IsStringFieldCPConsistent) or
      (ConSettings^.CPType = cCP_UTF16) then
-    CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), Msg)
+    CheckEquals(ZUnicodeToRaw(Expected, ConSettings^.CTRL_CP), Actual, Msg)
+    //CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.CTRL_CP), Msg)
   else
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), Msg);
 end;
