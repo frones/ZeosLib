@@ -1546,6 +1546,7 @@ Changes by EgonHugeist:
     - replace PUTF8Char to PAnsichar
     - replace PtrInt to NativeUInt
     - add hard word cast in the ascii-pair loop -> range-checks did make noise here
+    - replace the ansichar casts with Byte/word  values -> nextgen
     - added three labels ( loop_ascii_pairs & done & next ) to loop in code and test ascii-pairs
       after each convertion again. so i commented the main repeat loop and all continue/break tests
 }
@@ -1582,7 +1583,7 @@ next: c := cardinal(Source^);
       inc(Source);
       case c of
         0..$7f: begin
-            Dest^ := AnsiChar(c);
+            PWord(Dest)^ := Byte(c);
             inc(Dest);
             //if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
             if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) //test if end is reached
@@ -1597,7 +1598,7 @@ next: c := cardinal(Source^);
 unmatch:    if (NativeUint(@Dest[3])>DestLen) or not (ccfReplacementCharacterForUnmatchedSurrogate in Flags)
             then goto Done;//break;
             PWord(Dest)^ := $BFEF;
-            Dest[2] := AnsiChar($BD);
+            PWord(Dest+2)^ := $BD;
             inc(Dest,3);
             goto loop_ascii_pairs;//if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
           end else begin
@@ -1623,10 +1624,10 @@ unmatch:    if (NativeUint(@Dest[3])>DestLen) or not (ccfReplacementCharacterFor
       if NativeUint(Dest)+i>DestLen then
         goto Done;//break;
       for j := i-1 downto 1 do begin
-        Dest[j] := AnsiChar((c and $3f)+$80);
+        PWord(Dest+j)^ := Word((c and $3f)+$80);
         c := c shr 6;
       end;
-      Dest^ := AnsiChar(Byte(c) or UTF8_FIRSTBYTE[i]);
+      PWord(Dest)^ := Byte(Byte(c) or UTF8_FIRSTBYTE[i]);
       inc(Dest,i);
       goto loop_ascii_pairs;//if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
     end; //until false;
@@ -2631,10 +2632,20 @@ end;
 {$ENDIF}
 
 procedure SetZOSCodePage;
+{$IFDEF MSWINDOWS}
+var lpcCPInfo: _cpinfo;
+{$ENDIF}
 begin
   {$IFDEF MSWINDOWS}
   ZOSCodePage := GetACP; //available for Windows and WinCE
+  if ZOSCodePage = zCP_UTF16 then begin { has WinCE an ansi CP ??? }
+    ZOSCodePageMaxCharSize := 4;
+    ZOSCodePage := zCP_UTF8;
+  end else If GetCPInfo(ZOSCodePage, lpcCPInfo) then
+    ZOSCodePageMaxCharSize := lpcCPInfo.MaxCharSize
+  else ZOSCodePageMaxCharSize := 1;
   {$ELSE}
+  ZOSCodePageMaxCharSize := 4; //utf8
     {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
     ZOSCodePage := Word(DefaultSystemCodePage);
     {$ELSE}

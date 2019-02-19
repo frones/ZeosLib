@@ -533,6 +533,7 @@ const
   EmptyRaw = {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}nil{$ELSE}RawByteString(''){$ENDIF};
 var
   ZOSCodePage: Word;
+  ZOSCodePageMaxCharSize: Word;
 
 implementation
 

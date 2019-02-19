@@ -651,18 +651,6 @@ TMYSQL_CLIENT_OPTIONS =
     extension:         Pointer;
   end;
 
-  // offsets to used MYSQL_BINDxx members. Filled by GetBindOffsets
-  PMYSQL_BINDOFFSETS = ^TMYSQL_BINDOFFSETS;
-  TMYSQL_BINDOFFSETS = record
-    buffer_type   :NativeUint;
-    buffer_length :NativeUint;
-    is_unsigned   :NativeUint;
-    buffer        :NativeUint;
-    length        :NativeUint;
-    is_null       :NativeUint;
-    Indicator     :NativeUint;
-    size          :word;    //size of MYSQL_BINDxx
-  end;
 
   PULongArray = ^TULongArray;
   TULongArray = array[0..4095] of Ulong; //https://dev.mysql.com/doc/refman/8.0/en/column-count-limit.html
@@ -673,28 +661,6 @@ TMYSQL_CLIENT_OPTIONS =
   TIndicator = ShortInt;
   Pmysql_indicator_types = ^Tmysql_indicator_types;
   Tmysql_indicator_types = array[0..High(Byte)] of TIndicator;
-
-  PMYSQL_aligned_BIND = ^TMYSQL_aligned_BIND;
-  TMYSQL_aligned_BIND = record
-    buffer:                 Pointer; //data place holder
-    buffer_address:         PPointer; //we don't need reserved mem at all, but we need to set the address
-    buffer_type_address:    PMysqlFieldType;
-    buffer_length_address:  PULong; //address of result buffer length
-    length_address:         PPointer;
-    length:                 PULongArray; //current length of our or bound data
-    is_null_address:        Pmy_bool; //adress of is_null -> the field should be used
-    is_null:                my_bool; //null indicator -> do not attach directly -> out params are referenced to stmt bindings
-    is_unsigned_address:    Pmy_bool; //signed ordinals or not?
-    //https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
-    indicators:             Pmysql_indicator_types; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum
-    indicator_address:      PPointer;
-    decimals:               Integer; //count of decimal digits for rounding the doubles
-    binary:                 Boolean; //binary field or not? Just for reading!
-    mysql_bind:             Pointer; //Save exact address of bind for lob reading /is used also on writting 4 the lob-buffer-address
-    Iterations:             ULong; //save count of array-Bindings to prevent reallocs for Length and Is_Null-Arrays
-  end;
-  PMYSQL_aligned_BINDs = ^TMYSQL_aligned_BINDs;
-  TMYSQL_aligned_BINDs = array[0..High(Byte)] of TMYSQL_aligned_BIND; //just 4 debugging
 
   PPMYSQL = ^PMYSQL;
   PMYSQL  = pointer;
