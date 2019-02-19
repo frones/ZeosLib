@@ -945,9 +945,11 @@ W_Len:                if PLen^ > MaxL then
               stDouble:       FUniTemp := FloatToUnicode(TDoubleDynArray(ZData)[J]);
               stCurrency:     FUniTemp := FloatToUnicode(TCurrencyDynArray(ZData)[J]);
               stBigDecimal:   FUniTemp := FloatToUnicode(TExtendedDynArray(ZData)[J]);
-              stTime:         FUniTemp := DateTimeToUnicodeSQLTime(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
-              stDate:         FUniTemp := DateTimeToUnicodeSQLDate(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
-              stTimeStamp:    FUniTemp := DateTimeToUnicodeSQLTimeStamp(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}
+              stTime:         FUniTemp := DateTimeToUnicodeSQLTime(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}
+              stDate:         if (WType = DBTYPE_WSTR) and (ConSettings.WriteFormatSettings.DateFormatLen <= MaxL)
+                              then DateTimeToUnicodeSQLDate(TDateTimeDynArray(ZData)[J], PWideChar(Data), ConSettings.WriteFormatSettings, False)
+                              else RaiseExceeded(I);
+              (*stTimeStamp:    FUniTemp := DateTimeToUnicodeSQLTimeStamp(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}*)
               stString, stUnicodeString: begin
                 case ZArray.VArrayVariantType of
                   {$IFNDEF UNICODE}vtString, {$ENDIF}
