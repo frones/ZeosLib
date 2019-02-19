@@ -3308,12 +3308,18 @@ begin
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           Size := GetPrecision(I);
           if (FieldType = ftString) then
-            if (ConSettings^.CPType = cCP_UTF8) or (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
+            if (ConSettings^.CPType = cCP_UTF8)
+            then Size := Size * 4
+            else Size := Size * ZOSCodePageMaxCharSize
+          else if (FieldType = ftWideString) and (doAlignMaxRequiredWideStringFieldSize in Options) {and (ConSettings.ClientCodePage.CharWidth > 3)} then
+            Size := Size * 2;
+
+            {if (ConSettings^.CPType = cCP_UTF8) or (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
                ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
                ((ConSettings^.CPType = cGET_ACP) and (ZOSCodePage = zCP_UTF8)) then
               Size := Size * 4
             else
-              Size := Size * ConSettings^.ClientCodePage^.CharWidth;
+              Size := Size * ConSettings^.ClientCodePage^.CharWidth;}
         end else
           {$IFDEF WITH_FTGUID}
           if FieldType = ftGUID then

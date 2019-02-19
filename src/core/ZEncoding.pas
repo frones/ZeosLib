@@ -2632,10 +2632,20 @@ end;
 {$ENDIF}
 
 procedure SetZOSCodePage;
+{$IFDEF MSWINDOWS}
+var lpcCPInfo: _cpinfo;
+{$ENDIF}
 begin
   {$IFDEF MSWINDOWS}
   ZOSCodePage := GetACP; //available for Windows and WinCE
+  if ZOSCodePage = zCP_UTF16 then begin { has WinCE an ansi CP ??? }
+    ZOSCodePageMaxCharSize := 4;
+    ZOSCodePage := zCP_UTF8;
+  end else If GetCPInfo(ZOSCodePage, lpcCPInfo) then
+    ZOSCodePageMaxCharSize := lpcCPInfo.MaxCharSize
+  else ZOSCodePageMaxCharSize := 1;
   {$ELSE}
+  ZOSCodePageMaxCharSize := 4; //utf8
     {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
     ZOSCodePage := Word(DefaultSystemCodePage);
     {$ELSE}
