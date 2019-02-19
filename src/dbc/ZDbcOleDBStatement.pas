@@ -1568,7 +1568,7 @@ begin
     Index := Index -1;
     {$ENDIF}
     CheckParameterIndex(Index);
-    InitFixedBind(Index, DBTYPE_UI1, SizeOf(Byte));
+    InitFixedBind(Index, SizeOf(Byte), DBTYPE_UI1);
     C := Value;
     BindList.Put(Index, stByte, P4Bytes(@C));
   end;
@@ -2448,7 +2448,7 @@ begin
     Index := Index -1;
     {$ENDIF}
     CheckParameterIndex(Index);
-    InitFixedBind(Index, DBTYPE_I1, SizeOf(ShortInt));
+    InitFixedBind(Index, SizeOf(ShortInt), DBTYPE_I1);
     I := Value;
     BindList.Put(Index, stShort, P4Bytes(@I));
   end;
@@ -2472,7 +2472,7 @@ begin
     Index := Index -1;
     {$ENDIF}
     CheckParameterIndex(Index);
-    InitFixedBind(Index, DBTYPE_I2, SizeOf(SmallInt));
+    InitFixedBind(Index, SizeOf(SmallInt), DBTYPE_I2);
     I := Value;
     BindList.Put(Index, stSmall, P4Bytes(@I));
   end;
@@ -2851,7 +2851,7 @@ begin
     Index := Index -1;
     {$ENDIF}
     CheckParameterIndex(Index);
-    InitFixedBind(Index, DBTYPE_UI2, SizeOf(Word));
+    InitFixedBind(Index, SizeOf(Word), DBTYPE_UI2);
     C := Value;
     BindList.Put(Index, stWord, P4Bytes(@C));
   end;
