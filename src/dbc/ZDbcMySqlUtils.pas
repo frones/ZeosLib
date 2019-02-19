@@ -155,13 +155,69 @@ function ReverseWordBytes(Src: Pointer): Word;
 function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
-function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
-function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
-function GetServerStatusOffset(Version: Integer): NativeUInt;
+type
+  // offsets to used MYSQL_BINDxx members. Filled by GetBindOffsets
+  PMYSQL_BINDOFFSETS = ^TMYSQL_BINDOFFSETS;
+  TMYSQL_BINDOFFSETS = record
+    buffer_type   :NativeUint;
+    buffer_length :NativeUint;
+    is_unsigned   :NativeUint;
+    buffer        :NativeUint;
+    length        :NativeUint;
+    is_null       :NativeUint;
+    Indicator     :NativeUint;
+    size          :word;    //size of MYSQL_BINDxx
+  end;
+
+  PMYSQL_aligned_BIND = ^TMYSQL_aligned_BIND;
+  TMYSQL_aligned_BIND = record
+    buffer:                 Pointer; //data place holder
+    buffer_address:         PPointer; //we don't need reserved mem at all, but we need to set the address
+    buffer_type_address:    PMysqlFieldType;
+    buffer_length_address:  PULong; //address of result buffer length
+    length_address:         PPointer;
+    length:                 PULongArray; //current length of our or bound data
+    is_null_address:        Pmy_bool; //adress of is_null -> the field should be used
+    is_null:                my_bool; //null indicator -> do not attach directly -> out params are referenced to stmt bindings
+    is_unsigned_address:    Pmy_bool; //signed ordinals or not?
+    //https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
+    indicators:             Pmysql_indicator_types; //stmt indicators for bulk bulk ops -> mariadb addresses to "u" and does not use the C-enum
+    indicator_address:      PPointer;
+    decimals:               Integer; //count of decimal digits for rounding the doubles
+    binary:                 Boolean; //binary field or not? Just for reading!
+    mysql_bind:             Pointer; //Save exact address of bind for lob reading /is used also on writting 4 the lob-buffer-address
+    Iterations:             ULong; //save count of array-Bindings to prevent reallocs for Length and Is_Null-Arrays
+  end;
+  PMYSQL_aligned_BINDs = ^TMYSQL_aligned_BINDs;
+  TMYSQL_aligned_BINDs = array[0..High(Byte)] of TMYSQL_aligned_BIND; //just 4 debugging
+
+  {** implements a struct to hold the mysql column bindings
+  EH: LibMySql is scribling in ColumnBindings even if mysql_stmt_free_result() was called
+    LibMariaDB doesn't show this terrible behavior
+    so i localize the column buffers in stmt and not in the ResultSet
+    findings did happen with old d7 on TZTestCompMySQLBugReport.Test727373
+    the newer delphi's have fastmm4 which deallocates the memory a bit later
+    so this behavior was invisible
+  }
+  PMYSQL_ColumnsBinding = ^TMYSQL_ColumnsBinding;
+  TMYSQL_ColumnsBinding = record
+    FieldCount: NativeUInt;
+    MYSQL_Col_BINDs: Pointer;
+    MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs;
+  end;
+  PMYSQL_ColumnsBindingArray = ^TMYSQL_ColumnsBindingArray;
+  TMYSQL_ColumnsBindingArray = array[0..0] of TMYSQL_ColumnsBinding;//just a debug range usually we obtain just one result
 
 procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
   OldCount, NewCount: Integer; Iterations: ULong);
+
+procedure ReAllocMySQLColumnBuffer(OldRSCount, NewRSCount: Integer;
+  var ColumnsBindingArray: PMYSQL_ColumnsBindingArray; BindOffset: PMYSQL_BINDOFFSETS);
+
+function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
+function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetServerStatusOffset(Version: Integer): NativeUInt;
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
@@ -899,6 +955,25 @@ begin
         raise EZSQLException.Create('Array bindings are not supported!');
     end;
   end;
+end;
+
+procedure ReAllocMySQLColumnBuffer(OldRSCount, NewRSCount: Integer;
+  var ColumnsBindingArray: PMYSQL_ColumnsBindingArray; BindOffset: PMYSQL_BINDOFFSETS);
+var i: Integer;
+  ColBinding: PMYSQL_ColumnsBinding;
+begin
+  if ColumnsBindingArray <> nil then
+    for i := OldRSCount-1 downto NewRSCount do begin
+      {$R-}
+      ColBinding := @ColumnsBindingArray[I];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      ReallocBindBuffer(ColBinding.MYSQL_Col_BINDs, ColBinding.MYSQL_aligned_BINDs, BindOffset,
+        ColBinding.FieldCount, 0, 1);
+    end;
+  ReallocMem(ColumnsBindingArray, NewRSCount*SizeOf(TMYSQL_ColumnsBinding));
+  if ColumnsBindingArray <> nil then
+    FillChar((PAnsichar(ColumnsBindingArray)+(OldRSCount*SizeOf(TMYSQL_ColumnsBinding)))^,
+      ((NewRSCount-OldRSCount)*SizeOf(TMYSQL_ColumnsBinding)), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
 end;
 
 initialization

@@ -66,7 +66,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
-  ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
+  ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement, ZDbcMySqlUtils,
   ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema;
 
 type
@@ -113,8 +113,8 @@ type
     FFetchStatus: Integer; //the FFetchStatus of mysql_stmt_fetch
     FMYSQL_STMT: PMYSQL_STMT; //the prepared stmt handle
     FPMYSQL_STMT: PPMYSQL_STMT; //address of the prepared stmt handle
-    FBindOffSets: PMYSQL_BINDOFFSETS;
-    FColBuffer: Pointer; //the buffer mysql writes in
+    //FBindOffSets: PMYSQL_BINDOFFSETS;
+    FMYSQL_Col_BIND_Address: PPointer; //the buffer mysql writes in
     FTempBlob: IZBlob; //temporary Lob
     FClosing: Boolean;
     FClientCP: Word;
@@ -123,7 +123,7 @@ type
   public
     constructor Create(const PlainDriver: TZMySQLPlainDriver;
       const Statement: IZStatement; const SQL: string; IsOutParamResult: Boolean;
-      PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; AffectedRows: PInteger;
+      PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; MYSQL_ColumnsBinding: PMYSQL_ColumnsBinding; AffectedRows: PInteger;
       out OpenCursorCallback: TOpenCursorCallback);
     destructor Destroy; override;
     procedure BeforeClose; override;
@@ -220,7 +220,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZSysUtils, ZMessages, ZEncoding, {$IFNDEF NO_UNIT_CONTNRS}ZClasses,{$ENDIF}
-  ZDbcMySqlUtils, ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
+  ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 { TZMySQLResultSetMetadata }
 
@@ -620,29 +620,30 @@ end;
 }
 constructor TZAbstractMySQLResultSet.Create(const PlainDriver: TZMySQLPlainDriver;
   const Statement: IZStatement; const SQL: string; IsOutParamResult: Boolean;
-  PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; AffectedRows: PInteger;
-  out OpenCursorCallback: TOpenCursorCallback);
-var ClientVersion: ULong;
+  PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; MYSQL_ColumnsBinding: PMYSQL_ColumnsBinding;
+  AffectedRows: PInteger; out OpenCursorCallback: TOpenCursorCallback);
+//var ClientVersion: ULong;
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
       Statement.GetConnection.GetConSettings);
   FClientCP := ConSettings.ClientCodePage.CP;
   fServerCursor := Self is TZMySQL_Use_ResultSet;
-  FColBuffer := nil;
-  FMYSQL_aligned_BINDs := nil;
+  FMYSQL_Col_BIND_Address := @MYSQL_ColumnsBinding.MYSQL_Col_BINDs;
+  FMYSQL_aligned_BINDs := MYSQL_ColumnsBinding.MYSQL_aligned_BINDs;
+  FFieldCount := MYSQL_ColumnsBinding.FieldCount;
   FPMYSQL := PMYSQL;
   FPMYSQL_STMT := PMYSQL_STMT;
   FMYSQL_STMT  := FPMYSQL_STMT^;
   FQueryHandle := nil;
   FRowHandle := nil;
-  FFieldCount := 0;
+//  FFieldCount := 0;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
   OpenCursorCallback := OpenCursor;
   //hooking very old versions -> we use this struct for some more logic
-  ClientVersion := FPlainDriver.mysql_get_client_version;
-  FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, Max(40101, ClientVersion));
+{  ClientVersion := FPlainDriver.mysql_get_client_version;
+  FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, Max(40101, ClientVersion));}
   FIsOutParamResult := IsOutParamResult;
   Open;
   if Assigned(AffectedRows) then
@@ -651,7 +652,7 @@ end;
 
 destructor TZAbstractMySQLResultSet.Destroy;
 begin
-  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, Ord(fBindBufferAllocated));
+  //ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, Ord(fBindBufferAllocated));
   inherited Destroy;
 end;
 
@@ -687,7 +688,7 @@ begin
       if FPlainDriver.mysql_stmt_store_result(FPMYSQL_STMT^) <> 0 then
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, 'mysql_stmt_store_result', Self);
     end;
-    if FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0
+    if FFieldCount > 0
     then QueryHandle := FPlainDriver.mysql_stmt_result_metadata(FMYSQL_STMT)
     else QueryHandle := nil;
     fBindBufferAllocated := True;
@@ -696,12 +697,12 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   { Fills the column info. }
   ColumnsInfo.Clear;
-  FFieldCount := FPlainDriver.mysql_num_fields(QueryHandle);
+//  FFieldCount := FPlainDriver.mysql_num_fields(QueryHandle);
 
   { We use the refetch logic of
     https://bugs.mysql.com/file.php?id=12361&bug_id=33086 }
-  ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, 0,
-    FFieldCount, 1);
+  {ReallocBindBuffer(FMYSQL_Col_BIND_Address^, FMYSQL_aligned_BINDs, FBindOffsets, 0,
+    FFieldCount, 1);}
 
   for I := 0 to FFieldCount -1 do begin
     FPlainDriver.mysql_field_seek(QueryHandle, I);
@@ -742,7 +743,7 @@ begin
       end;
       fBindBufferAllocated := True;
     end;
-    if (FPlainDriver.mysql_stmt_bind_result(FMYSQL_STMT,FColBuffer)<>0) then
+    if (FPlainDriver.mysql_stmt_bind_result(FMYSQL_STMT,FMYSQL_Col_BIND_Address^)<>0) then
       checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, 'mysql_stmt_bind_result', Self);
   end;
 end;
@@ -1266,7 +1267,7 @@ begin
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
   then Bind^.Buffer := nil
-  else GetMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ in [FIELD_TYPE_STRING]))) shr 3)+1) shl 3) ); //8Byte aligned
+  else ReallocMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ in [FIELD_TYPE_STRING]))) shr 3)+1) shl 3) ); //8Byte aligned
   Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
