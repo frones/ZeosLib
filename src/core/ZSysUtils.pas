@@ -2394,6 +2394,7 @@ var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   Temp: string;
   DateFound: Boolean;
+  tmp: TDateTime;
 
   procedure ExtractTime(const AString: String);
   var dotPos: Integer;
@@ -2424,30 +2425,23 @@ begin
     Month := StrToIntDef(Copy(Temp, 6, 2), 0);
     Day := StrToIntDef(Copy(Temp, 9, 2), 0);
 
-    if (Year <> 0) and (Month <> 0) and (Day <> 0) then
-    begin
-      try
-        Result := EncodeDate(Year, Month, Day);
+    if (Year <> 0) and (Month <> 0) and (Day <> 0) then begin
+      if TryEncodeDate(Year, Month, Day, tmp) then begin
+        Result := tmp;
         DateFound := True;
-      except
       end;
     end;
     Temp := RightStr(Temp, Length(Temp)-11);
   end;
 
-  if (Length(Temp) >= 8) or ( not DateFound ) then
-  begin
-    if DateFound then
-      ExtractTime(Temp)
-    else
-      ExtractTime(Value);
-    try
-      if Result >= 0 then
-        Result := Result + EncodeTime(Hour, Min, Sec, MSec)
-      else
-        Result := Result - EncodeTime(Hour, Min, Sec, MSec)
-    except
-    end;
+  if (Length(Temp) >= 8) or ( not DateFound ) then begin
+    if DateFound
+    then ExtractTime(Temp)
+    else ExtractTime(Value);
+    if TryEncodeTime(Hour, Min, Sec, MSec, tmp) then
+      if Result >= 0
+      then Result := Result + EncodeTime(Hour, Min, Sec, MSec)
+      else Result := Result - EncodeTime(Hour, Min, Sec, MSec)
   end;
 end;
 
