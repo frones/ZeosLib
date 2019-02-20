@@ -240,6 +240,7 @@
                         {$UNDEF WITH_ASANSISTRING}
                         {$UNDEF WITH_UNITANSISTRINGS}
                         {$UNDEF WITH_WIDESTRUTILS}
+                        {$DEFINE ZERO_BASED_STRINGS}
                         {$DEFINE TLIST_IS_DEPRECATED}
                         {$DEFINE NO_INLINE_SIZE_CHECK}
                         {$DEFINE NO_ANSISTRING}

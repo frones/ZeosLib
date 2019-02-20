@@ -71,6 +71,7 @@ type
   published
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;
+    procedure TestLastDelimiter;
     {$IFDEF ENABLE_POSTGRESQL}
     procedure TestIsIpAddr;
     {$ENDIF}
@@ -94,7 +95,7 @@ type
     procedure TestDateTimeToUnicodeSQLTime;
     procedure TestDateTimeToRawSQLTimeStamp;
     procedure TestDateTimeToUnicodeSQLTimeStamp;
-    {$IFDEF BENCHMARK}
+  {$IFDEF BENCHMARK}
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     procedure TestAnsiToUnicodePerformance;
     procedure TestUTF8ToUnicodePerformance;
@@ -127,7 +128,7 @@ type
     procedure BenchTestDateTimeToUnicodeSQLTimeStamp;
     procedure BenchBinToHexUnicode;
     procedure BenchBinToHexRaw;
-    {$ENDIF}
+  {$ENDIF}
   end;
 
 implementation
@@ -183,6 +184,33 @@ begin
   SourceStr := '';
   CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 3');
 end;
+
+procedure TZTestSysUtilsCase.TestLastDelimiter;
+var
+  SourceStr: string;
+  DelimiterStr: string;
+begin
+  { Position should exist }
+  DelimiterStr := '098g';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(17, LastDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 1');
+
+  { Position should not exist }
+  DelimiterStr := 'klmn';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 2');
+
+  { Check with empty string }
+  DelimiterStr := '';
+  SourceStr := '';
+  CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 3');
+
+  { Position should exist }
+  DelimiterStr := 'gac';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(7, LastDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 4');
+end;
+
 
 {$IFDEF ENABLE_POSTGRESQL}
 {**

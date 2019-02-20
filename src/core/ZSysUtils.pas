@@ -1076,18 +1076,27 @@ uses DateUtils, StrUtils, SysConst,
   Determines a position of a first delimiter.
   @param Delimiters a string with possible delimiters.
   @param Str a string to be checked.
-  @return a position of the first found delimiter or 0 if no delimiters was found.
+  @return a position of the first found delimiter or 0 or -1(Zero based strings) if no delimiters was found.
 }
 function FirstDelimiter(const Delimiters, Str: string): Integer;
-var
-  I, Index: Integer;
+var P: PChar absolute Str;
+  PStart, PEnd, PDStart, PDEnd: PChar;
 begin
-  Result := 0;
-  for I := 1 to Length(Delimiters) do
-  begin
-    Index := ZFastCode.Pos(Delimiters[I], Str);
-    if (Index > 0) and ((Index < Result) or (Result = 0)) then
-      Result := Index;
+  Result := InvalidStringIndex;
+  PDStart := Pointer(Delimiters);
+  if PDStart = nil then Exit;
+  PDEnd := PDStart+Length(Delimiters);
+  PStart := P;
+  PEnd := PStart+Length(Str);
+  while (PStart < PEnd) do begin
+    while PDStart < PDEnd do
+      if PStart^ = PDStart^ then begin
+        Result := PStart-P+1+InvalidStringIndex;
+        Exit;
+      end else
+        Inc(PDStart);
+    PDStart := Pointer(Delimiters);
+    Inc(PStart);
   end;
 end;
 
@@ -1098,18 +1107,24 @@ end;
   @return a position of the last found delimiter or 0 if no delimiters was found.
 }
 function LastDelimiter(const Delimiters, Str: string): Integer;
-var
-  I, Index: Integer;
+var P: PChar absolute Str;
+  PStart, PEnd, PDStart, PDEnd: PChar;
 begin
-  Result := 0;
-  for I := Length(Str) downto 1 do
-  begin
-    Index := ZFastCode.Pos(Str[I], Delimiters);
-    if (Index > 0) then
-    begin
-      Result := I;
-      Break;
-    end;
+  Result := InvalidStringIndex;
+  PDStart := Pointer(Delimiters);
+  if PDStart = nil then Exit;
+  PDEnd := PDStart+Length(Delimiters);
+  PStart := P;
+  PEnd := PStart+Length(Str)-1;
+  while (PEnd >= PStart) do begin
+    while PDStart < PDEnd do
+      if PEnd^ = PDStart^ then begin
+        Result := PEnd-P+1+InvalidStringIndex;
+        Exit;
+      end else
+        Inc(PDStart);
+    PDStart := Pointer(Delimiters);
+    Dec(PEnd);
   end;
 end;
 
@@ -1201,14 +1216,14 @@ function StartsWith(const Str, SubStr: RawByteString): Boolean;
 var
   LenSubStr: Integer;
 begin
-  LenSubStr := Length(SubStr);
-  if SubStr = EmptyRaw then
-    Result := True
-   else
-    if LenSubStr <= Length(Str) then
-      Result := MemLCompAnsi(PAnsiChar(Str), PAnsiChar(SubStr), LenSubStr)
-    else
-      Result := False;
+  if SubStr = EmptyRaw
+  then Result := True
+  else begin
+    LenSubStr := Length(SubStr);
+    if LenSubStr <= Length(Str)
+    then Result := MemLCompAnsi(PAnsiChar(Str), PAnsiChar(SubStr), LenSubStr)
+    else Result := False;
+  end;
 end;
 
 {**
@@ -1221,14 +1236,14 @@ function StartsWith(const Str, SubStr: ZWideString): Boolean;
 var
   LenSubStr: Integer;
 begin
-  LenSubStr := Length(SubStr);
-  if SubStr = '' then
-    Result := True
-  else
-    if LenSubStr <= Length(Str) then
-      Result := MemLCompUnicode(PWideChar(Str), PWideChar(SubStr), LenSubStr)
-    else
-      Result := False;
+  if SubStr = ''
+  then Result := True
+  else begin
+    LenSubStr := Length(SubStr);
+    if LenSubStr <= Length(Str)
+    then Result := MemLCompUnicode(PWideChar(Str), PWideChar(SubStr), LenSubStr)
+    else Result := False;
+  end;
 end;
 
 {**
@@ -1242,17 +1257,15 @@ var
   LenSubStr: Integer;
   LenStr: Integer;
 begin
-  if SubStr = '' then
-    Result := False // act like Delphi's AnsiEndsStr()
-  else
-  begin
+  if SubStr = ''
+  then Result := False // act like Delphi's AnsiEndsStr()
+  else begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
-    if LenSubStr <= LenStr then
-      Result := MemLCompUnicode(PWideChar(Str) + LenStr - LenSubStr,
+    if LenSubStr <= LenStr
+    then Result := MemLCompUnicode(PWideChar(Str) + LenStr - LenSubStr,
          PWidechar(SubStr), LenSubStr)
-    else
-      Result := False;
+    else Result := False;
   end;
 end;
 
@@ -1267,17 +1280,15 @@ var
   LenSubStr: Integer;
   LenStr: Integer;
 begin
-  if SubStr = EmptyRaw then
-    Result := False // act like Delphi's AnsiEndsStr()
-  else
-  begin
+  if SubStr = EmptyRaw
+  then Result := False // act like Delphi's AnsiEndsStr()
+  else begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
-    if LenSubStr <= LenStr then
-      Result := MemLCompAnsi(PAnsiChar(Str) + LenStr - LenSubStr,
+    if LenSubStr <= LenStr
+    then Result := MemLCompAnsi(PAnsiChar(Str) + LenStr - LenSubStr,
          PAnsiChar(SubStr), LenSubStr)
-    else
-      Result := False;
+    else Result := False;
   end;
 end;
 
@@ -4874,6 +4885,7 @@ end;
 
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(Src, Len, Result);
 end;
 
@@ -4931,6 +4943,7 @@ function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): R
 var
   Buffer: array[0..63] of AnsiChar;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(PAnsiChar(@Buffer[0]), FloatToRaw(Value, @Buffer[0]), Result);
 end;
 
@@ -4955,6 +4968,7 @@ function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF})
 var
   Buffer: array[0..63] of AnsiChar;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(PAnsiChar(@Buffer[0]), FloatToSqlRaw(Value, @Buffer[0]), Result);
 end;
 
@@ -5376,6 +5390,7 @@ end;
 
 function GUIDToStr(Value: PGUID; const Options: TGUIDConvOptions): string;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF}(Value, Options, {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}(Result));
 end;
 
