@@ -2184,7 +2184,7 @@ end;
 }
 procedure SplitToStringListEx(List: TStrings; const Str, Delimiter: string);
 var
-   temp: string;
+  temp: string;
    i: integer;
 begin
    temp := Str + Delimiter;
@@ -2287,7 +2287,7 @@ begin
   L := Length(Value);
   SetLength(Result, L);
   if Value <> '' then
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[1], Result[0], L)
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L)
 end;
 {$IFEND}
 
@@ -2343,8 +2343,7 @@ begin
   L := Length(Value);
   if L = 0 then
     Result := nil
-  else
-  begin
+  else begin
     RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(RBS)^, Pointer(Result)^, L)
@@ -2519,12 +2518,7 @@ var
         Inc(Value);
         if I+1 = vallen then Break;
       end;
-      Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
-      if not Failed then
-        try
-          Result := EncodeDate(Year, Month, Day);
-        except
-        end;
+      Failed := not TryEncodeDate(Year, Month, Day, Result);
     end;
   end;
 
@@ -2532,6 +2526,7 @@ var
   var
     DateLenCount: Cardinal;
     YPos, MPos, Code: Integer;
+    FltVal: Extended;
   begin
     Result := 0;
     Failed := False;
@@ -2592,15 +2587,14 @@ var
               Result := 0;
             Exit;
           end;
-      Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
-      if not Failed then
-        try
-          Result := EncodeDate(Year, Month, Day);
-        except
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
-          Failed := Code <> 0;
-          if Failed then Result := 0;
-        end;
+      Failed := not TryEncodeDate(Year, Month, Day, Result);
+      if Failed then begin
+        FltVal := ValRawExt(Pointer(Value), AnsiChar('.'), Code);
+        Failed := (Code <> 0) or (FltVal = 0);
+        if Failed
+        then Result := 0
+        else Result := Int(FltVal);
+      end;
     end;
   end;
 begin
@@ -2779,9 +2773,8 @@ var
               Exit;
             end;
         end;
-      try
-        Result := EncodeTime(Hour, Minute, Sec, MSec);
-      except
+      Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
+      if Failed then begin
         Result := Frac(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
@@ -2830,28 +2823,16 @@ var
   TimeStampFormat: PChar;
 
   procedure CheckFailAndEncode;
+  var timeval: TDateTime;
   begin
-    if ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
-      try
-        Result := EncodeDate(Year, Month, Day);
-      except
-        Result := 0;
-        Failed := True;
-      end
-    else
-      Failed := (Hour or Minute or Sec or MSec) = 0;;
-    if not Failed then
-      try
-        if Result >= 0 then
-          Result := Result + EncodeTime(Hour, Minute, Sec, MSec)
-        else
-          Result := Result - EncodeTime(Hour, Minute, Sec, MSec)
-      except
-        Result := 0;
-        Failed := True;
-      end
-    else
-      Failed := True;
+    Failed := not TryEncodeDate(Year, Month, Day, Result);
+    if Failed then begin
+      if ((Year or Month or Day) = 0) and ((Hour or Minute or Sec or MSec) <> 0) then
+        Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
+    end else if TryEncodeTime(Hour, Minute, Sec, MSec, timeval) then
+        if Result >= 0
+        then Result := Result + timeval
+        else Result := Result - timeval
   end;
 
   procedure TryExtractTimeStampFromFormat(Value: PAnsiChar);
@@ -4783,11 +4764,11 @@ var
   StrSave: string;
 begin
   DelimPos := ZFastCode.Pos(Delimiter, Str);
-  if DelimPos > 0 then
+  if DelimPos > InvalidStringIndex then
   begin
     DelimLen := Length(Delimiter);
     StrSave := Str; // allow one variable both as Str and Left
-    Left := Copy(StrSave, 1, DelimPos - 1);
+    Left := Copy(StrSave, FirstStringIndex, DelimPos - 1);
     Right := Copy(StrSave, DelimPos + DelimLen, MaxInt);
   end
   else
@@ -4902,8 +4883,7 @@ begin
   L := System.Length(Src); //temp l speeds x2
   if L = 0 then
     Result := EmptyRaw
-  else
-  begin
+  else begin
     if (Pointer(Result) = nil) or //empty ?
       ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
       (LengthInt(l) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }

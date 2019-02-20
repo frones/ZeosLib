@@ -157,6 +157,8 @@ const
   {$IF NOT DECLARED(SecsPerHour)}
   SecsPerHour = SecsPerMin * MinsPerHour;
   {$IFEND}
+  FirstStringIndex = {$IFDEF ZERO_BASED_STRINGS}0{$ELSE}1{$ENDIF}; //Str[i] fe.
+  InvalidStringIndex = {$IFDEF ZERO_BASED_STRINGS}-1{$ELSE}0{$ENDIF}; //such as Pos()
 
 type
   PZCharRec = ^TZCharRec;
