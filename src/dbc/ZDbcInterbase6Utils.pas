@@ -1954,7 +1954,7 @@ const
   EBSuspend =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('SUSPEND;'+LineEnding); //required for RETURNING syntax
   EBEnd = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('END');
   LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
-
+  cRETURNING: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = ('RETURNING');
 function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const IsParamIndexArray: TBooleanDynArray;
   const InParamCount, RemainingArrayRows: Integer;
@@ -2091,8 +2091,8 @@ begin
       end else begin
         Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
         P := Pointer(CurrentSQLTokens[i]);
-        if not ReturningFound and (Ord(P^) in [Ord('R'), Ord('r')]) then begin
-          ReturningFound := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(CurrentSQLTokens[i]) = 'RETURNING';
+        if not ReturningFound and (Ord(P^) in [Ord('R'), Ord('r')]) and (Length(CurrentSQLTokens[i]) = Length(cRETURNING)) then begin
+          ReturningFound := ZSysUtils.SameText(P, Pointer(cReturning), Length(cRETURNING));
           Inc(StmtLength, Ord(ReturningFound)*Length(EBSuspend));
         end;
       end;

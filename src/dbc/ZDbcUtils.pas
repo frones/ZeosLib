@@ -160,7 +160,7 @@ function TokenizeSQLQueryUni(const SQL: {$IF defined(FPC) and defined(WITH_RAWBY
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TUnicodeStringDynArray;
 
-function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
+function ExtractFields(const FieldNames: string; const SepChars: Array of Char): TStrings;
 
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
@@ -760,7 +760,7 @@ end;
 
   @returns list of field names.
 }
-function ExtractFields(const FieldNames: string; SepChars: TSysCharSet): TStrings;
+function ExtractFields(const FieldNames: string; const SepChars: Array of Char): TStrings;
 var
   Token: PZToken;
   Tokenizer: IZTokenizer;
@@ -770,6 +770,16 @@ var
     raise EZSQLException.Create(Format('Unexpected token "%s" in string "%s"', [TokenAsString(Token^), FieldNames]));
   end;
 
+  function CharInSet(P: Char; SepChars: Array of Char): Boolean;
+  var I: Integer;
+  begin
+    for I := Low(SepChars) to High(SepChars) do
+      if SepChars[i] = P then begin
+        Result := True;
+        Exit;
+      end;
+    Result := False;
+  end;
 var
   Tokens: TZTokenList;
   I: Integer;

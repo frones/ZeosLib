@@ -980,6 +980,8 @@ function Trim(P: PAnsiChar): RawByteString; overload;
 function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
 {$IF defined(UNICODE) and not defined(WITH_UNITANSISTRINGS)}
 function Trim(const Value: RawByteString): RawByteString; overload;
+function LowerCase(const Value: RawByteString): RawByteString; overload;
+function UpperCase(const Value: RawByteString): RawByteString; overload;
 {$IFEND}
 {$IFNDEF UNICODE}
 function Trim(const Value: ZWideString): ZWideString; overload;
@@ -6010,6 +6012,51 @@ begin
     ZSetString(P, PEnd-P+1, Result);
   end;
 end;
+
+function LowerCase(const Value: RawByteString): RawByteString;
+var Len: Integer;
+  Dst, Src, PEnd: PByte;
+  Ch: Byte;
+begin
+  Len := Length(Value);
+  SetLength(Result, Len);
+  if Len > 0 then begin
+    Dst := Pointer(Result);
+    Src := Pointer(Value);
+    PEnd := Dst+Len;
+    while Dst < Pend do begin
+      Ch := PByte(Src)^;
+      if (ch >= Ord('A')) and (ch <= Ord('Z')) then
+        Ch := Ch or $20;
+      Dst^ := Ch;
+      Inc(Dst);
+      Inc(Src);
+    end;
+  end;
+end;
+
+function UpperCase(const Value: RawByteString): RawByteString;
+var Len: Integer;
+  Dst, Src, PEnd: PByte;
+  Ch: Byte;
+begin
+  Len := Length(Value);
+  SetLength(Result, Len);
+  if Len > 0 then begin
+    Dst := Pointer(Result);
+    Src := Pointer(Value);
+    PEnd := Dst+Len;
+    while Dst < Pend do begin
+      Ch := PByte(Src)^;
+      if (ch >= Ord('a')) and (ch <= Ord('z')) then
+        Ch := Ch xor $20;
+      Dst^ := Ch;
+      Inc(Dst);
+      Inc(Src);
+    end;
+  end;
+end;
+
 {$IFEND}
 
 {$IFNDEF UNICODE}
