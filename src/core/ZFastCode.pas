@@ -408,13 +408,13 @@ function Trunc(const X: Single): Int64; overload;
 function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; overload;
 function Pos(const SubStr, Str: ZWideString): Integer; overload;
 
-function PosEx(const SubStr: RawByteString; Str: PAnsiChar; len: LengthInt; Offset: Integer = FirstStringIndex): Integer; overload;
-function PosEx(SubStr, Str: PAnsiChar; SubStrLen, Strlen: LengthInt; Offset: Integer = FirstStringIndex): Integer; overload;
-function PosEx(const SubStr, S: RawByteString; Offset: Integer = FirstStringIndex): Integer; overload;
+function PosEx(const SubStr: RawByteString; Str: PAnsiChar; len: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(SubStr, Str: PAnsiChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer; overload;
 
-function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = FirstStringIndex): Integer; overload;
-function PosEx(SubStr, Str: PWideChar; SubStrLen, Strlen: LengthInt; Offset: Integer = FirstStringIndex): Integer; overload;
-function PosEx(const SubStr, S: ZWideString; Offset: Integer = FirstStringIndex): Integer; overload;
+function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(SubStr, Str: PWideChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(const SubStr, S: ZWideString; Offset: Integer = 1): Integer; overload;
 
 function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(const Value: Int64; out U: UInt64; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -7306,7 +7306,7 @@ asm
  pop   ebx
 end;
 
-function PosEx(const SubStr, S: RawByteString; Offset: Integer = FirstStringIndex): Integer;
+function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
 //from John O'Harrow PosEx_JOH_IA32_7_c(const SubStr, S: string; Offset: Integer = 1): Integer;
 asm {180 Bytes}
   push    ebx
@@ -7534,7 +7534,7 @@ begin
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
-function PosEx(const SubStr, S: RawByteString; Offset: Integer = FirstStringIndex): Integer;
+function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
 begin
   Result := PosEx(SubStr, Pointer(S), Length(S){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Offset);
 end;
@@ -7542,26 +7542,26 @@ end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
 // changed to a unicode pointer version
-function PosEx(SubStr, Str: PWideChar; SubStrLen, Strlen: LengthInt; Offset: Integer = FirstStringIndex): Integer;
+function PosEx(SubStr, Str: PWideChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer;
 var ch: WideChar;
     pStart, pStop: PWideChar;
 label Loop0, Loop4, TestT, Test0, Test1, Test2, Test3, Test4,
       AfterTestT, AfterTest0, Ret, Exit;
 begin;
   if (Str=nil) or (SubStr=nil) or (Offset<FirstStringIndex) then begin
-    Result := InvalidStringIndex;
+    Result := 0;
     goto Exit;
   end;
   SubStrLen := SubStrLen-1;
   if (Strlen<SubStrLen+LengthInt(Offset)) or (SubStrLen<0) then begin
-    Result := InvalidStringIndex;
+    Result := 0;
     goto Exit;
   end;
   pStop := Str+Strlen;
   Str := Str+SubStrLen;
   SubStr := SubStr+SubStrLen;
   pStart := Str;
-  Str := Str+Offset+{$IFDEF ZERO_BASED_STRINGS}4{$ELSE}3{$ENDIF};
+  Str := Str+Offset+3;
   ch := SubStr^;
   SubStrLen := -SubStrLen;
   if Str<pStop then goto Loop4;
@@ -7581,7 +7581,7 @@ AfterTestT:
   if Str<pStop then goto Loop4;
   Str := Str-4;
   if Str<pStop then goto Loop0;
-  Result := InvalidStringIndex;
+  Result := 0;
   goto Exit;
 Test3: Str := Str-2;
 Test1: Str := Str-2;
@@ -7594,7 +7594,7 @@ TestT: Strlen := SubStrLen;
   until Strlen>=0;
   Str := Str+2;
   if Str<=pStop then goto Ret;
-  Result := InvalidStringIndex;
+  Result := 0;
   goto Exit;
 Test4: Str := Str-2;
 Test2: Str := Str-2;
@@ -7607,46 +7607,46 @@ Test0: Strlen := SubStrLen;
   until Strlen>=0;
   inc(Str);
 Ret:
-  Result := Str-pStart+InvalidStringIndex;
+  Result := Str-pStart;
 Exit:
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
 // changed to a unicode pointer version
-function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = FirstStringIndex): Integer;
+function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer;
 begin;
   Result := PosEx(Pointer(SubStr), Str, Length(SubStr), len, OffSet);
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
 // changed to a unicode version
-function PosEx(const SubStr, S: ZWideString; Offset: Integer = FirstStringIndex): Integer;
+function PosEx(const SubStr, S: ZWideString; Offset: Integer = 1): Integer;
 begin;
   Result := PosEx(SubStr, Pointer(S), Length(S), Offset);
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
 // changed to a raw pointer version
-function PosEx(SubStr, Str: PAnsiChar; SubStrLen, Strlen: LengthInt; Offset: Integer = FirstStringIndex): Integer;
+function PosEx(SubStr, Str: PAnsiChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer;
 var ch: AnsiChar;
     pStart, pStop: PAnsiChar;
 label Loop0, Loop4, TestT, Test0, Test1, Test2, Test3, Test4,
       AfterTestT, AfterTest0, Ret, Exit;
 begin;
   if (Str=nil) or (SubStr=nil) or (Offset<FirstStringIndex) then begin
-    Result := InvalidStringIndex;
+    Result := 0;
     goto Exit;
   end;
   SubStrLen := SubStrLen-1;
   if (Strlen<SubStrLen+LengthInt(Offset)) or (SubStrLen<0) then begin
-    Result := InvalidStringIndex;
+    Result := 0;
     goto Exit;
   end;
   pStop := Str+Strlen;
   Str := Str+SubStrLen;
   SubStr := SubStr+SubStrLen;
   pStart := Str;
-  Str := Str+Offset+{$IFDEF ZERO_BASED_STRINGS}4{$ELSE}3{$ENDIF};
+  Str := Str+Offset+3;
   ch := {$IFDEF NO_ANSICHAR}PByte{$ENDIF}(SubStr)^;
   SubStrLen := -SubStrLen;
   if Str<pStop then goto Loop4;
@@ -7666,7 +7666,7 @@ AfterTestT:
   if Str<pStop then goto Loop4;
   Str := Str-4;
   if Str<pStop then goto Loop0;
-  Result := InvalidStringIndex;
+  Result := 0;
   goto Exit;
 Test3: Str := Str-2;
 Test1: Str := Str-2;
@@ -7679,7 +7679,7 @@ TestT: Strlen := SubStrLen;
   until Strlen>=0;
   Str := Str+2;
   if Str<=pStop then goto Ret;
-  Result := InvalidStringIndex;
+  Result := 0;
   goto Exit;
 Test4: Str := Str-2;
 Test2: Str := Str-2;
@@ -7692,13 +7692,13 @@ Test0: Strlen := SubStrLen;
   until Strlen>=0;
   inc(Str);
 Ret:
-  Result := Str-pStart+InvalidStringIndex;
+  Result := Str-pStart;
 Exit:
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
 // changed to a unicode pointer version
-function PosEx(const SubStr: RawByteString; Str: PAnsiChar; len: LengthInt; Offset: Integer = FirstStringIndex): Integer;
+function PosEx(const SubStr: RawByteString; Str: PAnsiChar; len: LengthInt; Offset: Integer = 1): Integer;
 begin;
   Result := PosEx(Pointer(SubStr), Str, Length(SubStr){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, len, OffSet);
 end;

@@ -1082,7 +1082,7 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 var P: PChar absolute Str;
   PStart, PEnd, PDStart, PDEnd: PChar;
 begin
-  Result := InvalidStringIndex;
+  Result := 0;
   PDStart := Pointer(Delimiters);
   if PDStart = nil then Exit;
   PDEnd := PDStart+Length(Delimiters);
@@ -1091,7 +1091,7 @@ begin
   while (PStart < PEnd) do begin
     while PDStart < PDEnd do
       if PStart^ = PDStart^ then begin
-        Result := PStart-P+1+InvalidStringIndex;
+        Result := PStart-P+1;
         Exit;
       end else
         Inc(PDStart);
@@ -1110,7 +1110,7 @@ function LastDelimiter(const Delimiters, Str: string): Integer;
 var P: PChar absolute Str;
   PStart, PEnd, PDStart, PDEnd: PChar;
 begin
-  Result := InvalidStringIndex;
+  Result := 0;
   PDStart := Pointer(Delimiters);
   if PDStart = nil then Exit;
   PDEnd := PDStart+Length(Delimiters);
@@ -1119,7 +1119,7 @@ begin
   while (PEnd >= PStart) do begin
     while PDStart < PDEnd do
       if PEnd^ = PDStart^ then begin
-        Result := PEnd-P+1+InvalidStringIndex;
+        Result := PEnd-P+1;
         Exit;
       end else
         Inc(PDStart);
@@ -2208,20 +2208,20 @@ begin
     Exit;
   end;
   LD := Length(Delimiter);
-  OffSet := FirstStringIndex;
+  OffSet := 1;
   I := ZFastCode.PosEx(PD, P, LD, L, OffSet);
-  while I > InvalidStringIndex do begin
-    SetString(temp, (P+OffSet-FirstStringIndex), (i-OffSet));
+  while I > 0 do begin
+    SetString(temp, (P+OffSet-1), (i-OffSet));
     if (temp <> '') or (List.Count > 0) then
       List.Add(temp);
     OffSet := I+LD;
     I := ZFastCode.PosEx(PD, P, LD, L, OffSet);
   end;
   if OffSet < L then
-    if OffSet = FirstStringIndex
+    if OffSet = 1
     then List.Add(Str)
     else begin
-      SetString(temp, (P+OffSet-FirstStringIndex), (L-(OffSet-LD))-FirstStringIndex);
+      SetString(temp, (P+OffSet-1), (L-(OffSet-LD))-1);
       List.Add(temp);
     end;
 end;
@@ -2440,9 +2440,8 @@ var
       dotPos := ZFastCode.Pos('.', AString);
 
     //if the dot are found, milliseconds are present.
-    if dotPos > 0 then begin
+    if dotPos > 0 then
       MSec := StrToIntDef(LeftStr(RightStr(AString,Length(AString)-dotPos)+'000',3),0);
-    end;
   end;
 begin
   Temp := Value;
@@ -4793,15 +4792,12 @@ var
   StrSave: string;
 begin
   DelimPos := ZFastCode.Pos(Delimiter, Str);
-  if DelimPos > InvalidStringIndex then
-  begin
+  if DelimPos > 0 then begin
     DelimLen := Length(Delimiter);
     StrSave := Str; // allow one variable both as Str and Left
-    Left := Copy(StrSave, FirstStringIndex, DelimPos - 1);
+    Left := Copy(StrSave, 1, DelimPos-1);
     Right := Copy(StrSave, DelimPos + DelimLen, MaxInt);
-  end
-  else
-  begin
+  end else begin
     Left := Str;
     Right := '';
   end;
