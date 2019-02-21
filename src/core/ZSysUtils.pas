@@ -1060,6 +1060,9 @@ procedure ScaledOrdinal2Bcd(Value: SmallInt; Scale: Byte; var Result: TBCD); ove
 }
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean); overload;
 
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString; overload;
+
 var
   ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
 
@@ -6328,6 +6331,86 @@ begin
       Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString;
+var PSrc, PEnd: PAnsiChar;
+  POld: PAnsiChar absolute OldPattern;
+  PNew: PAnsiChar absolute NewPattern;
+  PRes, PResEnd: PAnsiChar;
+  L, iPos, LOld, LNew: Integer;
+begin
+  L := Length(Source);
+  LOld := Length(OldPattern);
+  PSrc := Pointer(Source);
+  iPos := PosEx(POld, PSrc, LOld, L, 1);
+  if iPos = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  PEnd := PSrc+L-1;
+  if PNew = nil
+  then LNew := 0
+  else LNew := Length(NewPattern);
+  Assert(LNew <= LOld);
+  SetLength(Result, L);
+  PRes := Pointer(Result);
+  PResEnd := PRes+L;
+  repeat
+    Move(PSrc^, PRes^, iPos-LOld+1);
+    Inc(PRes, (iPos-LOld+1));
+    if LNew > 0 then begin
+      Move(PNew^, PRes^, LNew);
+      Inc(PRes, LNew);
+    end;
+    Inc(PSrc, (iPos-1+LOld));
+    IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
+    if (Ipos = 0) and (PSrc <= PEnd) then begin
+      Move(PSrc^, PRes^, (PEnd-PSrc+1));
+      Inc(Pres, (PEnd-PSrc+1));
+    end;
+  until IPos = 0;
+  SetLength(Result, L-(PResEnd-PRes));
+end;
+
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString;
+var PSrc, PEnd: PWideChar;
+  POld: PWideChar absolute OldPattern;
+  PNew: PWideChar absolute NewPattern;
+  PRes, PResEnd: PWideChar;
+  L, iPos, LOld, LNew: Integer;
+begin
+  L := Length(Source);
+  LOld := Length(OldPattern);
+  PSrc := Pointer(Source);
+  iPos := PosEx(POld, PSrc, LOld, L, 1);
+  if iPos = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  PEnd := PSrc+L-1;
+  if PNew = nil
+  then LNew := 0
+  else LNew := Length(NewPattern);
+  Assert(LNew <= LOld);
+  SetLength(Result, L);
+  PRes := Pointer(Result);
+  PResEnd := PRes+L;
+  repeat
+    Move(PSrc^, PRes^, (iPos-LOld+1) shl 1);
+    Inc(PRes, (iPos-LOld+1));
+    if LNew > 0 then begin
+      Move(PNew^, PRes^, LNew shl 1);
+      Inc(PRes, LNew);
+    end;
+    Inc(PSrc, (iPos-1+LOld));
+    IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
+    if (Ipos = 0) and (PSrc <= PEnd) then begin
+      Move(PSrc^, PRes^, (NativeUInt(PEnd)-NativeUint(PSrc)+2));
+      Inc(Pres, (PEnd-PSrc+1));
+    end;
+  until IPos = 0;
+  SetLength(Result, L-(PResEnd-PRes));
 end;
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

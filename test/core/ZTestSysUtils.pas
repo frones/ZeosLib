@@ -68,11 +68,14 @@ type
     FQuote: string;
     FSrc: string;
     procedure RunDequotedStr;
+    procedure TestStringReplaceAll_CS_LToEQ_A;
+    procedure TestStringReplaceAll_CS_LToEQ_W;
   published
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;
     procedure TestLastDelimiter;
     procedure TestPutSplitStringEx;
+    procedure TestStringReplaceAll_CS_LToEQ;
     {$IFDEF ENABLE_POSTGRESQL}
     procedure TestIsIpAddr;
     {$ENDIF}
@@ -241,6 +244,76 @@ begin
   finally
     SL.Free;
   end;
+end;
+
+procedure TZTestSysUtilsCase.TestStringReplaceAll_CS_LToEQ;
+begin
+  TestStringReplaceAll_CS_LToEQ_A;
+  TestStringReplaceAll_CS_LToEQ_W;
+end;
+
+procedure TZTestSysUtilsCase.TestStringReplaceAll_CS_LToEQ_A;
+var SourceStr, Res: RawBytestring;
+begin
+  SourceStr := 'aaaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('aa'), RawByteString(''));
+  CheckEquals(RawByteString('a'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('aa'));
+  CheckEquals(RawByteString('aaaaaaaaaaaaaaaaaaaa'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('y'));
+  CheckEquals(RawByteString('aaayaaayaaayaaay'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('y'));
+  CheckEquals(RawByteString('aaayaaayaaayaaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('N'));
+  CheckEquals(RawByteString('aaaN'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('N'));
+  CheckEquals(RawByteString('Naaa'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString(''));
+  CheckEquals(RawByteString('aaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString(''));
+  CheckEquals(RawByteString('aaa'), Res);
+  SourceStr := 'aaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('aa'), RawByteString(''));
+  CheckEquals(RawByteString(''), Res);
+end;
+
+procedure TZTestSysUtilsCase.TestStringReplaceAll_CS_LToEQ_W;
+var SourceStr, Res: ZWideString;
+begin
+  SourceStr := 'aaaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('aa'), ZWideString(''));
+  CheckEquals(ZWideString('a'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('aa'));
+  CheckEquals(ZWideString('aaaaaaaaaaaaaaaaaaaa'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('y'));
+  CheckEquals(ZWideString('aaayaaayaaayaaay'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('y'));
+  CheckEquals(ZWideString('aaayaaayaaayaaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('N'));
+  CheckEquals(ZWideString('aaaN'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('N'));
+  CheckEquals(ZWideString('Naaa'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString(''));
+  CheckEquals(ZWideString('aaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString(''));
+  CheckEquals(ZWideString('aaa'), Res);
+  SourceStr := 'aaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('aa'), ZWideString(''));
+  CheckEquals(ZWideString(''), Res);
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}
