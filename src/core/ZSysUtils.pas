@@ -6365,11 +6365,11 @@ begin
     end;
     Inc(PSrc, (iPos-1+LOld));
     IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
-    if (Ipos = 0) and (PSrc <= PEnd) then begin
-      Move(PSrc^, PRes^, (PEnd-PSrc+1));
-      Inc(Pres, (PEnd-PSrc+1));
-    end;
   until IPos = 0;
+  if (PSrc <= PEnd) then begin
+    Move(PSrc^, PRes^, (PEnd-PSrc+1));
+    Inc(Pres, (PEnd-PSrc+1));
+  end;
   SetLength(Result, L-(PResEnd-PRes));
 end;
 
@@ -6405,11 +6405,11 @@ begin
     end;
     Inc(PSrc, (iPos-1+LOld));
     IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
-    if (Ipos = 0) and (PSrc <= PEnd) then begin
-      Move(PSrc^, PRes^, (NativeUInt(PEnd)-NativeUint(PSrc)+2));
-      Inc(Pres, (PEnd-PSrc+1));
-    end;
   until IPos = 0;
+  if (PSrc <= PEnd) then begin
+    Move(PSrc^, PRes^, (NativeUInt(PEnd)-NativeUint(PSrc)+2));
+    Inc(Pres, (PEnd-PSrc+1));
+  end;
   SetLength(Result, L-(PResEnd-PRes));
 end;
 
