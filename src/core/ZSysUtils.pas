@@ -2194,16 +2194,36 @@ end;
   @param Delimiters the delimiter string
 }
 procedure SplitToStringListEx(List: TStrings; const Str, Delimiter: string);
-var
+var P: PChar absolute Str;
   temp: string;
-   i: integer;
+  i, OffSet: integer;
+  PD: PChar;
+  L, LD: LengthInt;
 begin
-   temp := Str + Delimiter;
-   repeat
-      i := List.Add(Copy(temp, 0, AnsiPos(Delimiter, temp) - 1));
-      Delete(temp, 1, Length(List[i] + Delimiter));
-   until
-      temp = '';
+  if Str = '' then Exit;
+  L := Length(Str);
+  PD := Pointer(Delimiter);
+  if PD = nil then begin
+    List.Add(Str);
+    Exit;
+  end;
+  LD := Length(Delimiter);
+  OffSet := FirstStringIndex;
+  I := ZFastCode.PosEx(PD, P, LD, L, OffSet);
+  while I > InvalidStringIndex do begin
+    SetString(temp, (P+OffSet-FirstStringIndex), (i-OffSet));
+    if (temp <> '') or (List.Count > 0) then
+      List.Add(temp);
+    OffSet := I+LD;
+    I := ZFastCode.PosEx(PD, P, LD, L, OffSet);
+  end;
+  if OffSet < L then
+    if OffSet = FirstStringIndex
+    then List.Add(Str)
+    else begin
+      SetString(temp, (P+OffSet-FirstStringIndex), (L-(OffSet-LD))-FirstStringIndex);
+      List.Add(temp);
+    end;
 end;
 
 {**
@@ -4147,15 +4167,13 @@ procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
 var
   I, J, P, T: NativeUInt;
 begin;
-  while true do
-  begin
+  while true do begin
     I := L;
     J := R;
     if J-I <= InsLast * SOP then break;
     T := (J-I) shr 1 and MSOP + I;
 
-    if Compare(PPointer(J)^, PPointer(I)^)<0 then
-    begin
+    if Compare(PPointer(J)^, PPointer(I)^)<0 then begin
       P := PNativeUInt(I)^;
       PNativeUInt(I)^ := PNativeUInt(J)^;
       PNativeUInt(J)^ := P;

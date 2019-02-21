@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
   ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
 
 type
@@ -72,6 +72,7 @@ type
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;
     procedure TestLastDelimiter;
+    procedure TestPutSplitStringEx;
     {$IFDEF ENABLE_POSTGRESQL}
     procedure TestIsIpAddr;
     {$ENDIF}
@@ -211,6 +212,36 @@ begin
   CheckEquals(7, LastDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 4');
 end;
 
+procedure TZTestSysUtilsCase.TestPutSplitStringEx;
+var SL: TStrings;
+  SourceStr: string;
+  DelimiterStr: string;
+  I: Integer;
+begin
+  SL := TStringList.Create;
+  Check(SL <> nil);
+  try
+    SourceStr := 'aaaggaaaggaaaggaaagg';
+    DelimiterStr := 'gg';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(4, SL.Count, 'split count 1');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('aaa', SL[i], '1. Splitted String');
+    SourceStr := 'aaaggaaaggaaaggaaa';
+    DelimiterStr := 'gg';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(4, SL.Count, 'split count 2');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('aaa', SL[i], '2. Splitted String');
+    DelimiterStr := 'aaa';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(3, SL.Count, 'split count 3');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('gg', SL[i], '2. Splitted String');
+  finally
+    SL.Free;
+  end;
+end;
 
 {$IFDEF ENABLE_POSTGRESQL}
 {**
