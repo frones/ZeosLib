@@ -684,7 +684,7 @@ var ArrayLen, MaxL, I: Integer;
                               TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
                                   Length(TRawByteStringDynArray(D)[i]), zCP_UTF8, ConSettings);
                             {$ENDIF}
-                            {$IFNDEF NO_UTF8STRING}
+                            {$IFNDEF NO_ANSISTRING}
                             vtAnsiString: ParamDataLobs[I] :=
                               TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
                                   Length(TRawByteStringDynArray(D)[i]), ZOSCodePage, ConSettings);

@@ -619,7 +619,7 @@ begin
   end else
     Result := ASQL;
 end;
-
+{$IFDEF NEXTGEN}{$HINTS OFF}{$ENDIF}//wrong hint OldSize assigned value is never used
 procedure TZAbstractOraclePreparedStatement_A.InitBuffer(SQLType: TZSQLType;
   OCIBind: PZOCIParamBind; Index, ElementCnt: Cardinal; ActualLength: LengthInt);
 var
@@ -689,6 +689,7 @@ begin
       CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings);
   end;
 end;
+{$IFDEF NEXTGEN}{$HINTS ON}{$ENDIF}//wrong hint OldSize assigned value is never used
 
 {**
   prepares the statement on the server if minimum execution
@@ -1543,6 +1544,14 @@ begin
   InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
 end;
 
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZOraclePreparedStatement_A.SetDouble(Index: Integer;
   const Value: Double);
 begin
