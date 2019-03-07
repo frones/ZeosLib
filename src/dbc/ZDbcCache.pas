@@ -1414,10 +1414,32 @@ begin
                             JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.Add('"');
                           end;
-        stDate,
-        stTimestamp     : if (jcoMongoISODate in JSONComposeOptions) then begin
-                            JSONWriter.AddShort('ISODate("');
+        stDate          : if (jcoMongoISODate in JSONComposeOptions) then begin
+                            if Trunc(PDateTime(Data)^)=0 then
+                              JSONWriter.AddShort('ISODate("1899-12-30T00:00:00Z')
+                            else begin
+                              JSONWriter.AddShort('ISODate("');
+                              JSONWriter.AddDateTime(Int(PDateTime(Data)^), jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddShort('T00:00:00Z")')
+                            end;
+                          end else begin
+                            if jcoDATETIME_MAGIC in JSONComposeOptions
+                            then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else JSONWriter.Add('"');
                             JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.Add('"');
+                          end;
+        stTimestamp     : if (jcoMongoISODate in JSONComposeOptions) then begin
+                            if PDateTime(Data)^ = 0 then
+                              JSONWriter.AddShort('ISODate("1899-12-30T00:00:00')
+                            else begin
+                              JSONWriter.AddShort('ISODate("');
+                              if Trunc(PDateTime(Data)^)=0
+                              then JSONWriter.AddShort('1899-12-30')
+                              else JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
+                              if Frac(PDateTime(Data)^) = 0 then
+                              JSONWriter.AddShort('T00:00:00')
+                            end;
                             JSONWriter.AddShort('Z")')
                           end else begin
                             if jcoDATETIME_MAGIC in JSONComposeOptions
