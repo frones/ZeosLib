@@ -1384,6 +1384,14 @@ begin
 end;
 {$ENDIF}
 
+{**
+  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZOleDBPreparedStatement.SetBigDecimal(Index: Integer;
   const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
@@ -1836,6 +1844,14 @@ WConv:          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
   end;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZOleDBPreparedStatement.SetDouble(Index: Integer;
   const Value: Double);
 var Bind: PDBBINDING;

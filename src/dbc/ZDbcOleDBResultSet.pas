@@ -345,7 +345,7 @@ begin
                               PDBDate(FData)^.month, PDBDate(FData)^.day);
                             JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('Z")')
+                            then JSONWriter.AddShort('")')
                             else JSONWriter.Add('"');
                           end;
         DBTYPE_DBTIME:    begin
