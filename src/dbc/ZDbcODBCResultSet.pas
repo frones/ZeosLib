@@ -1980,7 +1980,6 @@ begin
   end;
 end;
 
-{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 { TZODBCColumnInfo }
 
 destructor TZODBCColumnInfo.Destroy;
@@ -1994,4 +1993,5 @@ begin
   inherited;
 end;
 
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.
