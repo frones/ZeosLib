@@ -406,8 +406,15 @@ function Trunc(const X: Single): Int64; overload;
 {$ENDIF USE_FAST_TRUNC}
 
 function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; overload;
-function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
 function Pos(const SubStr, Str: ZWideString): Integer; overload;
+
+function PosEx(const SubStr: RawByteString; Str: PAnsiChar; len: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(SubStr, Str: PAnsiChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer; overload;
+
+function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(SubStr, Str: PWideChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(const SubStr, S: ZWideString; Offset: Integer = 1): Integer; overload;
 
 function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(const Value: Int64; out U: UInt64; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -7480,7 +7487,11 @@ Ret:
 //Author:            Dennis Kjaer Christensen
 //Date:              18/07 2012
 //faster than Delphi and FPC RTL
-function Pos(const SubStr, Str: ZWideString): Integer; overload;
+function Pos(const SubStr, Str: ZWideString): Integer;
+{$IFDEF ZERO_BASED_STRINGS}
+begin
+  Result := PosEx(SubStr, Pointer(Str), Length(Str));
+{$ELSE ZERO_BASED_STRINGS}
 var
  I, J, StrLen, SubStrLen, Index : Integer;
  Match: Boolean;
@@ -7519,88 +7530,178 @@ begin
       end;
     end;
   end;
+{$ENDIF ZERO_BASED_STRINGS}
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
-// changed Fast Lenght to compiler common PLengthInt and StringLenOffSet
 function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer;
-var len, lenSub: LengthInt;
-    ch: AnsiChar;
-    p, pSub, pStart, pStop: PAnsiChar;
+begin
+  Result := PosEx(SubStr, Pointer(S), Length(S){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Offset);
+end;
+{$IFEND}
+
+// from Aleksandr Sharahov's PosEx_Sha_Pas_2()
+// changed to a unicode pointer version
+function PosEx(SubStr, Str: PWideChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer;
+var ch: WideChar;
+    pStart, pStop: PWideChar;
 label Loop0, Loop4, TestT, Test0, Test1, Test2, Test3, Test4,
       AfterTestT, AfterTest0, Ret, Exit;
 begin;
-  pSub := pointer(SubStr);
-  p := pointer(S);
-  if (p=nil) or (pSub=nil) or (Offset<1) then begin
+  if (Str=nil) or (SubStr=nil) or (Offset<FirstStringIndex) then begin
     Result := 0;
     goto Exit;
   end;
-  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  len:=Length(s)-1;
-  lenSub:=Length(SubStr)-2;
-  {$ELSE}
-  len:=PLengthInt(p-StringLenOffSet)^;
-  lenSub:=PLengthInt(pSub-StringLenOffSet)^-1;
-  {$ENDIF}
-  if (len<lenSub+LengthInt(Offset)) or (lenSub<0) then begin
+  SubStrLen := SubStrLen-1;
+  if (Strlen<SubStrLen+LengthInt(Offset)) or (SubStrLen<0) then begin
     Result := 0;
     goto Exit;
   end;
-  pStop := p+len;
-  p := p+lenSub;
-  pSub := pSub+lenSub;
-  pStart := p;
-  p := p+Offset+3;
-  ch := AnsiChar(pSub[0]);
-  lenSub := -lenSub;
-  if p<pStop then goto Loop4;
-  p := p-4;
+  pStop := Str+Strlen;
+  Str := Str+SubStrLen;
+  SubStr := SubStr+SubStrLen;
+  pStart := Str;
+  Str := Str+Offset+3;
+  ch := SubStr^;
+  SubStrLen := -SubStrLen;
+  if Str<pStop then goto Loop4;
+  Str := Str-4;
   goto Loop0;
 Loop4:
-  if ch=AnsiChar(p[-4]) then goto Test4;
-  if ch=AnsiChar(p[-3]) then goto Test3;
-  if ch=AnsiChar(p[-2]) then goto Test2;
-  if ch=AnsiChar(p[-1]) then goto Test1;
+  if ch=(Str-4)^ then goto Test4;
+  if ch=(Str-3)^ then goto Test3;
+  if ch=(Str-2)^ then goto Test2;
+  if ch=(Str-1)^ then goto Test1;
 Loop0:
-  if ch=AnsiChar(p[0]) then goto Test0;
+  if ch=Str^ then goto Test0;
 AfterTest0:
-  if ch=AnsiChar(p[1]) then goto TestT;
+  if ch=(Str+1)^ then goto TestT;
 AfterTestT:
-  p := p+6;
-  if p<pStop then goto Loop4;
-  p := p-4;
-  if p<pStop then goto Loop0;
+  Str := Str+6;
+  if Str<pStop then goto Loop4;
+  Str := Str-4;
+  if Str<pStop then goto Loop0;
   Result := 0;
   goto Exit;
-Test3: p := p-2;
-Test1: p := p-2;
-TestT: len := lenSub;
-  if lenSub<>0 then
+Test3: Str := Str-2;
+Test1: Str := Str-2;
+TestT: Strlen := SubStrLen;
+  if SubStrLen<>0 then
   repeat
-    if (psub[len]<>p[len+1]) or (psub[len+1]<>p[len+2]) then
+    if (SubStr[Strlen]<>Str[Strlen+1]) or (SubStr[Strlen+1]<>Str[Strlen+2]) then
       goto AfterTestT;
-    len := len+2;
-  until len>=0;
-  p := p+2;
-  if p<=pStop then goto Ret;
+    Strlen := Strlen+2;
+  until Strlen>=0;
+  Str := Str+2;
+  if Str<=pStop then goto Ret;
   Result := 0;
   goto Exit;
-Test4: p := p-2;
-Test2: p := p-2;
-Test0: len := lenSub;
-  if lenSub<>0 then
+Test4: Str := Str-2;
+Test2: Str := Str-2;
+Test0: Strlen := SubStrLen;
+  if SubStrLen<>0 then
   repeat
-    if (psub[len]<>p[len]) or (psub[len+1]<>p[len+1]) then
+    if (SubStr[Strlen]<>Str[Strlen]) or (SubStr[Strlen+1]<>Str[Strlen+1]) then
       goto AfterTest0;
-    len := len+2;
-  until len>=0;
-  inc(p);
+    Strlen := Strlen+2;
+  until Strlen>=0;
+  inc(Str);
 Ret:
-  Result := p-pStart;
+  Result := Str-pStart;
 Exit:
 end;
-{$IFEND}
+
+// from Aleksandr Sharahov's PosEx_Sha_Pas_2()
+// changed to a unicode pointer version
+function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer;
+begin;
+  Result := PosEx(Pointer(SubStr), Str, Length(SubStr), len, OffSet);
+end;
+
+// from Aleksandr Sharahov's PosEx_Sha_Pas_2()
+// changed to a unicode version
+function PosEx(const SubStr, S: ZWideString; Offset: Integer = 1): Integer;
+begin;
+  Result := PosEx(SubStr, Pointer(S), Length(S), Offset);
+end;
+
+// from Aleksandr Sharahov's PosEx_Sha_Pas_2()
+// changed to a raw pointer version
+function PosEx(SubStr, Str: PAnsiChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer;
+var ch: AnsiChar;
+    pStart, pStop: PAnsiChar;
+label Loop0, Loop4, TestT, Test0, Test1, Test2, Test3, Test4,
+      AfterTestT, AfterTest0, Ret, Exit;
+begin;
+  if (Str=nil) or (SubStr=nil) or (Offset<FirstStringIndex) then begin
+    Result := 0;
+    goto Exit;
+  end;
+  SubStrLen := SubStrLen-1;
+  if (Strlen<SubStrLen+LengthInt(Offset)) or (SubStrLen<0) then begin
+    Result := 0;
+    goto Exit;
+  end;
+  pStop := Str+Strlen;
+  Str := Str+SubStrLen;
+  SubStr := SubStr+SubStrLen;
+  pStart := Str;
+  Str := Str+Offset+3;
+  ch := {$IFDEF NO_ANSICHAR}PByte{$ENDIF}(SubStr)^;
+  SubStrLen := -SubStrLen;
+  if Str<pStop then goto Loop4;
+  Str := Str-4;
+  goto Loop0;
+Loop4:
+  if ch={$IFDEF NO_ANSICHAR}PByte{$ENDIF}(Str-4)^ then goto Test4;
+  if ch={$IFDEF NO_ANSICHAR}PByte{$ENDIF}(Str-3)^ then goto Test3;
+  if ch={$IFDEF NO_ANSICHAR}PByte{$ENDIF}(Str-2)^ then goto Test2;
+  if ch={$IFDEF NO_ANSICHAR}PByte{$ENDIF}(Str-1)^ then goto Test1;
+Loop0:
+  if ch={$IFDEF NO_ANSICHAR}PByte{$ENDIF}(Str)^ then goto Test0;
+AfterTest0:
+  if ch={$IFDEF NO_ANSICHAR}PByte{$ENDIF}(Str+1)^ then goto TestT;
+AfterTestT:
+  Str := Str+6;
+  if Str<pStop then goto Loop4;
+  Str := Str-4;
+  if Str<pStop then goto Loop0;
+  Result := 0;
+  goto Exit;
+Test3: Str := Str-2;
+Test1: Str := Str-2;
+TestT: Strlen := SubStrLen;
+  if SubStrLen<>0 then
+  repeat
+    if (SubStr[Strlen]<>Str[Strlen+1]) or (SubStr[Strlen+1]<>Str[Strlen+2]) then
+      goto AfterTestT;
+    Strlen := Strlen+2;
+  until Strlen>=0;
+  Str := Str+2;
+  if Str<=pStop then goto Ret;
+  Result := 0;
+  goto Exit;
+Test4: Str := Str-2;
+Test2: Str := Str-2;
+Test0: Strlen := SubStrLen;
+  if SubStrLen<>0 then
+  repeat
+    if (SubStr[Strlen]<>Str[Strlen]) or (SubStr[Strlen+1]<>Str[Strlen+1]) then
+      goto AfterTest0;
+    Strlen := Strlen+2;
+  until Strlen>=0;
+  inc(Str);
+Ret:
+  Result := Str-pStart;
+Exit:
+end;
+
+// from Aleksandr Sharahov's PosEx_Sha_Pas_2()
+// changed to a unicode pointer version
+function PosEx(const SubStr: RawByteString; Str: PAnsiChar; len: LengthInt; Offset: Integer = 1): Integer;
+begin;
+  Result := PosEx(Pointer(SubStr), Str, Length(SubStr){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, len, OffSet);
+end;
 
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
 type

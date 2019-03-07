@@ -403,7 +403,7 @@ begin
             Token := Tokens[TokenIndex-1];
           end;
 
-          if (Token.L >= 2) and CharInSet(Token.P^, [#39, '`', '"', '['])
+          if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
           then ParamName := Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^)
           else ParamName := TokenAsString(Token^);
 

@@ -59,7 +59,8 @@ uses
   Variants,
   SysUtils,  Classes, {$IFDEF MSEgui}mdb, mclasses{$ELSE}DB{$ENDIF},
   ZSqlUpdate, ZDbcIntfs, ZVariant, ZDbcCache, ZDbcCachedResultSet,
-  ZAbstractRODataset, ZCompatibility, ZSequence;
+  ZAbstractRODataset, ZCompatibility, ZSequence
+  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
 
 type
   {$IFDEF oldFPC} // added in 2006, probably pre 2.2.4
@@ -96,7 +97,7 @@ type
 
     FBeforeApplyUpdates: TNotifyEvent; {bangfauzan addition}
     FAfterApplyUpdates: TNotifyEvent; {bangfauzan addition}
-    FDetailDataSets: TList;
+    FDetailDataSets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FDetailCachedUpdates: array of Boolean;
   private
     function GetUpdatesPending: Boolean;
@@ -214,7 +215,7 @@ begin
   FWhereMode := wmWhereKeyOnly;
   FUpdateMode := umUpdateChanged;
   RequestLive := True;
-  FDetailDataSets := TList.Create;
+  FDetailDataSets := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
 end;
 
 {**

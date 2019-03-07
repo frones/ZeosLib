@@ -1774,7 +1774,9 @@ begin
           SQL_RETURN_VALUE:       Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
           else                    Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
-        SQLType := ConvertODBCTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), False, ConSettings.CPType);
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]),
+          GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]),
+          GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]), False, ConSettings, nil);
         if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
           if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
             SQLType := stByte
@@ -1960,7 +1962,9 @@ begin
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
         Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
         Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
-        SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]), False, ConSettings.CPType);
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
+          GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
+          SmallInt(GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex])), False, ConSettings, nil);
         if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
           if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
             SQLType := stByte
@@ -2496,7 +2500,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideChar(TypeInfoTypeNameIndex, Len), Len);
       Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
-         GetSmall(TypeInfoDataTypeIndex), GetBoolean(TypeInfoUnsignedAttributeIndex), ConSettings.CPType)));
+         GetSmall(TypeInfoDataTypeIndex), 0,0,GetBoolean(TypeInfoUnsignedAttributeIndex), ConSettings, nil)));
       Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
       Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideChar(TypeInfoLiteralPrefixIndex, Len), Len);
       Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideChar(TypeInfoLiteralSuffixIndex, Len), Len);
@@ -2721,7 +2725,9 @@ begin
           SQL_RETURN_VALUE:       Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
           else                    Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
-        SQLType := ConvertODBCTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), False, ConSettings.CPType);
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]),
+          GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]),
+          GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]), False, ConSettings, nil);
         if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
           if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
             SQLType := stByte
@@ -2907,7 +2913,9 @@ begin
         Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
         Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
         Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
-        SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]), False, ConSettings.CPType);
+        SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
+          GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
+          GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]), False, ConSettings, nil);
         if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
           if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
             SQLType := stByte
@@ -3443,7 +3451,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(TypeInfoTypeNameIndex, Len), Len);
       Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
-         GetSmall(TypeInfoDataTypeIndex), GetBoolean(TypeInfoUnsignedAttributeIndex), ConSettings.CPType)));
+         GetSmall(TypeInfoDataTypeIndex), 0, 0, GetBoolean(TypeInfoUnsignedAttributeIndex), ConSettings, nil)));
       Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
       Result.UpdatePAnsiChar(TypeInfoLiteralPrefixIndex, GetPAnsiChar(TypeInfoLiteralPrefixIndex, Len), Len);
       Result.UpdatePAnsiChar(TypeInfoLiteralSuffixIndex, GetPAnsiChar(TypeInfoLiteralSuffixIndex, Len), Len);
@@ -3470,8 +3478,19 @@ end;
 
 procedure TAbstractODBCDatabaseMetadata.CheckStmtError(RETCODE: SQLRETURN;
   StmtHandle: SQLHSTMT; const Connection: IZODBCConnection);
+procedure RaiseError;
+var imm: IImmediatelyReleasable;
 begin
-  CheckODBCError(RETCODE, StmtHandle, SQL_HANDLE_STMT, Connection);
+  Connection.QueryInterface(IImmediatelyReleasable, imm);
+  try
+    CheckODBCError(RETCODE, StmtHandle, SQL_HANDLE_STMT, '', imm, Connection);
+  finally
+    imm := nil;
+  end;
+end;
+begin
+  if RetCode <> SQL_SUCCESS then
+     RaiseError;
 end;
 
 {**

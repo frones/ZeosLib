@@ -980,6 +980,8 @@ function Trim(P: PAnsiChar): RawByteString; overload;
 function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
 {$IF defined(UNICODE) and not defined(WITH_UNITANSISTRINGS)}
 function Trim(const Value: RawByteString): RawByteString; overload;
+function LowerCase(const Value: RawByteString): RawByteString; overload;
+function UpperCase(const Value: RawByteString): RawByteString; overload;
 {$IFEND}
 {$IFNDEF UNICODE}
 function Trim(const Value: ZWideString): ZWideString; overload;
@@ -1058,6 +1060,9 @@ procedure ScaledOrdinal2Bcd(Value: SmallInt; Scale: Byte; var Result: TBCD); ove
 }
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean); overload;
 
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString; overload;
+
 var
   ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
 
@@ -1076,18 +1081,27 @@ uses DateUtils, StrUtils, SysConst,
   Determines a position of a first delimiter.
   @param Delimiters a string with possible delimiters.
   @param Str a string to be checked.
-  @return a position of the first found delimiter or 0 if no delimiters was found.
+  @return a position of the first found delimiter or 0 or -1(Zero based strings) if no delimiters was found.
 }
 function FirstDelimiter(const Delimiters, Str: string): Integer;
-var
-  I, Index: Integer;
+var P: PChar absolute Str;
+  PStart, PEnd, PDStart, PDEnd: PChar;
 begin
   Result := 0;
-  for I := 1 to Length(Delimiters) do
-  begin
-    Index := ZFastCode.Pos(Delimiters[I], Str);
-    if (Index > 0) and ((Index < Result) or (Result = 0)) then
-      Result := Index;
+  PDStart := Pointer(Delimiters);
+  if PDStart = nil then Exit;
+  PDEnd := PDStart+Length(Delimiters);
+  PStart := P;
+  PEnd := PStart+Length(Str);
+  while (PStart < PEnd) do begin
+    while PDStart < PDEnd do
+      if PStart^ = PDStart^ then begin
+        Result := PStart-P+1;
+        Exit;
+      end else
+        Inc(PDStart);
+    PDStart := Pointer(Delimiters);
+    Inc(PStart);
   end;
 end;
 
@@ -1098,18 +1112,24 @@ end;
   @return a position of the last found delimiter or 0 if no delimiters was found.
 }
 function LastDelimiter(const Delimiters, Str: string): Integer;
-var
-  I, Index: Integer;
+var P: PChar absolute Str;
+  PStart, PEnd, PDStart, PDEnd: PChar;
 begin
   Result := 0;
-  for I := Length(Str) downto 1 do
-  begin
-    Index := ZFastCode.Pos(Str[I], Delimiters);
-    if (Index > 0) then
-    begin
-      Result := I;
-      Break;
-    end;
+  PDStart := Pointer(Delimiters);
+  if PDStart = nil then Exit;
+  PDEnd := PDStart+Length(Delimiters);
+  PStart := P;
+  PEnd := PStart+Length(Str)-1;
+  while (PEnd >= PStart) do begin
+    while PDStart < PDEnd do
+      if PEnd^ = PDStart^ then begin
+        Result := PEnd-P+1;
+        Exit;
+      end else
+        Inc(PDStart);
+    PDStart := Pointer(Delimiters);
+    Dec(PEnd);
   end;
 end;
 
@@ -1201,14 +1221,14 @@ function StartsWith(const Str, SubStr: RawByteString): Boolean;
 var
   LenSubStr: Integer;
 begin
-  LenSubStr := Length(SubStr);
-  if SubStr = EmptyRaw then
-    Result := True
-   else
-    if LenSubStr <= Length(Str) then
-      Result := MemLCompAnsi(PAnsiChar(Str), PAnsiChar(SubStr), LenSubStr)
-    else
-      Result := False;
+  if SubStr = EmptyRaw
+  then Result := True
+  else begin
+    LenSubStr := Length(SubStr);
+    if LenSubStr <= Length(Str)
+    then Result := MemLCompAnsi(PAnsiChar(Str), PAnsiChar(SubStr), LenSubStr)
+    else Result := False;
+  end;
 end;
 
 {**
@@ -1221,14 +1241,14 @@ function StartsWith(const Str, SubStr: ZWideString): Boolean;
 var
   LenSubStr: Integer;
 begin
-  LenSubStr := Length(SubStr);
-  if SubStr = '' then
-    Result := True
-  else
-    if LenSubStr <= Length(Str) then
-      Result := MemLCompUnicode(PWideChar(Str), PWideChar(SubStr), LenSubStr)
-    else
-      Result := False;
+  if SubStr = ''
+  then Result := True
+  else begin
+    LenSubStr := Length(SubStr);
+    if LenSubStr <= Length(Str)
+    then Result := MemLCompUnicode(PWideChar(Str), PWideChar(SubStr), LenSubStr)
+    else Result := False;
+  end;
 end;
 
 {**
@@ -1242,17 +1262,15 @@ var
   LenSubStr: Integer;
   LenStr: Integer;
 begin
-  if SubStr = '' then
-    Result := False // act like Delphi's AnsiEndsStr()
-  else
-  begin
+  if SubStr = ''
+  then Result := False // act like Delphi's AnsiEndsStr()
+  else begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
-    if LenSubStr <= LenStr then
-      Result := MemLCompUnicode(PWideChar(Str) + LenStr - LenSubStr,
+    if LenSubStr <= LenStr
+    then Result := MemLCompUnicode(PWideChar(Str) + LenStr - LenSubStr,
          PWidechar(SubStr), LenSubStr)
-    else
-      Result := False;
+    else Result := False;
   end;
 end;
 
@@ -1267,17 +1285,15 @@ var
   LenSubStr: Integer;
   LenStr: Integer;
 begin
-  if SubStr = EmptyRaw then
-    Result := False // act like Delphi's AnsiEndsStr()
-  else
-  begin
+  if SubStr = EmptyRaw
+  then Result := False // act like Delphi's AnsiEndsStr()
+  else begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
-    if LenSubStr <= LenStr then
-      Result := MemLCompAnsi(PAnsiChar(Str) + LenStr - LenSubStr,
+    if LenSubStr <= LenStr
+    then Result := MemLCompAnsi(PAnsiChar(Str) + LenStr - LenSubStr,
          PAnsiChar(SubStr), LenSubStr)
-    else
-      Result := False;
+    else Result := False;
   end;
 end;
 
@@ -2183,16 +2199,36 @@ end;
   @param Delimiters the delimiter string
 }
 procedure SplitToStringListEx(List: TStrings; const Str, Delimiter: string);
-var
-   temp: string;
-   i: integer;
+var P: PChar absolute Str;
+  temp: string;
+  i, OffSet: integer;
+  PD: PChar;
+  L, LD: LengthInt;
 begin
-   temp := Str + Delimiter;
-   repeat
-      i := List.Add(Copy(temp, 0, AnsiPos(Delimiter, temp) - 1));
-      Delete(temp, 1, Length(List[i] + Delimiter));
-   until
-      temp = '';
+  if Str = '' then Exit;
+  L := Length(Str);
+  PD := Pointer(Delimiter);
+  if PD = nil then begin
+    List.Add(Str);
+    Exit;
+  end;
+  LD := Length(Delimiter);
+  OffSet := 1;
+  I := ZFastCode.PosEx(PD, P, LD, L, OffSet);
+  while I > 0 do begin
+    SetString(temp, (P+OffSet-1), (i-OffSet));
+    if (temp <> '') or (List.Count > 0) then
+      List.Add(temp);
+    OffSet := I+LD;
+    I := ZFastCode.PosEx(PD, P, LD, L, OffSet);
+  end;
+  if OffSet < L then
+    if OffSet = 1
+    then List.Add(Str)
+    else begin
+      SetString(temp, (P+OffSet-1), (L-(OffSet-LD))-1);
+      List.Add(temp);
+    end;
 end;
 
 {**
@@ -2287,7 +2323,7 @@ begin
   L := Length(Value);
   SetLength(Result, L);
   if Value <> '' then
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value[1], Result[0], L)
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L)
 end;
 {$IFEND}
 
@@ -2343,8 +2379,7 @@ begin
   L := Length(Value);
   if L = 0 then
     Result := nil
-  else
-  begin
+  else begin
     RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(RBS)^, Pointer(Result)^, L)
@@ -2410,9 +2445,8 @@ var
       dotPos := ZFastCode.Pos('.', AString);
 
     //if the dot are found, milliseconds are present.
-    if dotPos > 0 then begin
+    if dotPos > 0 then
       MSec := StrToIntDef(LeftStr(RightStr(AString,Length(AString)-dotPos)+'000',3),0);
-    end;
   end;
 begin
   Temp := Value;
@@ -2519,12 +2553,7 @@ var
         Inc(Value);
         if I+1 = vallen then Break;
       end;
-      Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
-      if not Failed then
-        try
-          Result := EncodeDate(Year, Month, Day);
-        except
-        end;
+      Failed := not TryEncodeDate(Year, Month, Day, Result);
     end;
   end;
 
@@ -2532,6 +2561,7 @@ var
   var
     DateLenCount: Cardinal;
     YPos, MPos, Code: Integer;
+    FltVal: Extended;
   begin
     Result := 0;
     Failed := False;
@@ -2592,15 +2622,14 @@ var
               Result := 0;
             Exit;
           end;
-      Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
-      if not Failed then
-        try
-          Result := EncodeDate(Year, Month, Day);
-        except
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
-          Failed := Code <> 0;
-          if Failed then Result := 0;
-        end;
+      Failed := not TryEncodeDate(Year, Month, Day, Result);
+      if Failed then begin
+        FltVal := ValRawExt(Pointer(Value), AnsiChar('.'), Code);
+        Failed := (Code <> 0) or (FltVal = 0);
+        if Failed
+        then Result := 0
+        else Result := Int(FltVal);
+      end;
     end;
   end;
 begin
@@ -2779,9 +2808,8 @@ var
               Exit;
             end;
         end;
-      try
-        Result := EncodeTime(Hour, Minute, Sec, MSec);
-      except
+      Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
+      if Failed then begin
         Result := Frac(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
@@ -2830,28 +2858,16 @@ var
   TimeStampFormat: PChar;
 
   procedure CheckFailAndEncode;
+  var timeval: TDateTime;
   begin
-    if ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
-      try
-        Result := EncodeDate(Year, Month, Day);
-      except
-        Result := 0;
-        Failed := True;
-      end
-    else
-      Failed := (Hour or Minute or Sec or MSec) = 0;;
-    if not Failed then
-      try
-        if Result >= 0 then
-          Result := Result + EncodeTime(Hour, Minute, Sec, MSec)
-        else
-          Result := Result - EncodeTime(Hour, Minute, Sec, MSec)
-      except
-        Result := 0;
-        Failed := True;
-      end
-    else
-      Failed := True;
+    Failed := not TryEncodeDate(Year, Month, Day, Result);
+    if Failed then begin
+      if ((Year or Month or Day) = 0) and ((Hour or Minute or Sec or MSec) <> 0) then
+        Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
+    end else if TryEncodeTime(Hour, Minute, Sec, MSec, timeval) then
+        if Result >= 0
+        then Result := Result + timeval
+        else Result := Result - timeval
   end;
 
   procedure TryExtractTimeStampFromFormat(Value: PAnsiChar);
@@ -4155,15 +4171,13 @@ procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
 var
   I, J, P, T: NativeUInt;
 begin;
-  while true do
-  begin
+  while true do begin
     I := L;
     J := R;
     if J-I <= InsLast * SOP then break;
     T := (J-I) shr 1 and MSOP + I;
 
-    if Compare(PPointer(J)^, PPointer(I)^)<0 then
-    begin
+    if Compare(PPointer(J)^, PPointer(I)^)<0 then begin
       P := PNativeUInt(I)^;
       PNativeUInt(I)^ := PNativeUInt(J)^;
       PNativeUInt(J)^ := P;
@@ -4783,15 +4797,12 @@ var
   StrSave: string;
 begin
   DelimPos := ZFastCode.Pos(Delimiter, Str);
-  if DelimPos > 0 then
-  begin
+  if DelimPos > 0 then begin
     DelimLen := Length(Delimiter);
     StrSave := Str; // allow one variable both as Str and Left
-    Left := Copy(StrSave, 1, DelimPos - 1);
+    Left := Copy(StrSave, 1, DelimPos-1);
     Right := Copy(StrSave, DelimPos + DelimLen, MaxInt);
-  end
-  else
-  begin
+  end else begin
     Left := Str;
     Right := '';
   end;
@@ -4893,6 +4904,7 @@ end;
 
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(Src, Len, Result);
 end;
 
@@ -4902,8 +4914,7 @@ begin
   L := System.Length(Src); //temp l speeds x2
   if L = 0 then
     Result := EmptyRaw
-  else
-  begin
+  else begin
     if (Pointer(Result) = nil) or //empty ?
       ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
       (LengthInt(l) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
@@ -4951,6 +4962,7 @@ function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): R
 var
   Buffer: array[0..63] of AnsiChar;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(PAnsiChar(@Buffer[0]), FloatToRaw(Value, @Buffer[0]), Result);
 end;
 
@@ -4975,6 +4987,7 @@ function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF})
 var
   Buffer: array[0..63] of AnsiChar;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(PAnsiChar(@Buffer[0]), FloatToSqlRaw(Value, @Buffer[0]), Result);
 end;
 
@@ -5396,6 +5409,7 @@ end;
 
 function GUIDToStr(Value: PGUID; const Options: TGUIDConvOptions): string;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   {$IFDEF UNICODE} GUIDToUnicode {$ELSE} GUIDToRaw {$ENDIF}(Value, Options, {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}(Result));
 end;
 
@@ -6001,6 +6015,51 @@ begin
     ZSetString(P, PEnd-P+1, Result);
   end;
 end;
+
+function LowerCase(const Value: RawByteString): RawByteString;
+var Len: Integer;
+  Dst, Src, PEnd: PByte;
+  Ch: Byte;
+begin
+  Len := Length(Value);
+  SetLength(Result, Len);
+  if Len > 0 then begin
+    Dst := Pointer(Result);
+    Src := Pointer(Value);
+    PEnd := Dst+Len;
+    while Dst < Pend do begin
+      Ch := PByte(Src)^;
+      if (ch >= Ord('A')) and (ch <= Ord('Z')) then
+        Ch := Ch or $20;
+      Dst^ := Ch;
+      Inc(Dst);
+      Inc(Src);
+    end;
+  end;
+end;
+
+function UpperCase(const Value: RawByteString): RawByteString;
+var Len: Integer;
+  Dst, Src, PEnd: PByte;
+  Ch: Byte;
+begin
+  Len := Length(Value);
+  SetLength(Result, Len);
+  if Len > 0 then begin
+    Dst := Pointer(Result);
+    Src := Pointer(Value);
+    PEnd := Dst+Len;
+    while Dst < Pend do begin
+      Ch := PByte(Src)^;
+      if (ch >= Ord('a')) and (ch <= Ord('z')) then
+        Ch := Ch xor $20;
+      Dst^ := Ch;
+      Inc(Dst);
+      Inc(Src);
+    end;
+  end;
+end;
+
 {$IFEND}
 
 {$IFNDEF UNICODE}
@@ -6272,6 +6331,86 @@ begin
       Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+end;
+
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString;
+var PSrc, PEnd: PAnsiChar;
+  POld: PAnsiChar absolute OldPattern;
+  PNew: PAnsiChar absolute NewPattern;
+  PRes, PResEnd: PAnsiChar;
+  L, iPos, LOld, LNew: Integer;
+begin
+  L := Length(Source);
+  LOld := Length(OldPattern);
+  PSrc := Pointer(Source);
+  iPos := PosEx(POld, PSrc, LOld, L, 1);
+  if iPos = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  PEnd := PSrc+L-1;
+  if PNew = nil
+  then LNew := 0
+  else LNew := Length(NewPattern);
+  Assert(LNew <= LOld);
+  SetLength(Result, L);
+  PRes := Pointer(Result);
+  PResEnd := PRes+L;
+  repeat
+    Move(PSrc^, PRes^, iPos-LOld+1);
+    Inc(PRes, (iPos-LOld+1));
+    if LNew > 0 then begin
+      Move(PNew^, PRes^, LNew);
+      Inc(PRes, LNew);
+    end;
+    Inc(PSrc, (iPos-1+LOld));
+    IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
+  until IPos = 0;
+  if (PSrc <= PEnd) then begin
+    Move(PSrc^, PRes^, (PEnd-PSrc+1));
+    Inc(Pres, (PEnd-PSrc+1));
+  end;
+  SetLength(Result, L-(PResEnd-PRes));
+end;
+
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString;
+var PSrc, PEnd: PWideChar;
+  POld: PWideChar absolute OldPattern;
+  PNew: PWideChar absolute NewPattern;
+  PRes, PResEnd: PWideChar;
+  L, iPos, LOld, LNew: Integer;
+begin
+  L := Length(Source);
+  LOld := Length(OldPattern);
+  PSrc := Pointer(Source);
+  iPos := PosEx(POld, PSrc, LOld, L, 1);
+  if iPos = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  PEnd := PSrc+L-1;
+  if PNew = nil
+  then LNew := 0
+  else LNew := Length(NewPattern);
+  Assert(LNew <= LOld);
+  SetLength(Result, L);
+  PRes := Pointer(Result);
+  PResEnd := PRes+L;
+  repeat
+    Move(PSrc^, PRes^, (iPos-LOld+1) shl 1);
+    Inc(PRes, (iPos-LOld+1));
+    if LNew > 0 then begin
+      Move(PNew^, PRes^, LNew shl 1);
+      Inc(PRes, LNew);
+    end;
+    Inc(PSrc, (iPos-1+LOld));
+    IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
+  until IPos = 0;
+  if (PSrc <= PEnd) then begin
+    Move(PSrc^, PRes^, (NativeUInt(PEnd)-NativeUint(PSrc)+2));
+    Inc(Pres, (PEnd-PSrc+1));
+  end;
+  SetLength(Result, L-(PResEnd-PRes));
 end;
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

@@ -215,8 +215,13 @@ end;
 { TZAbstractODBCConnection }
 
 procedure TZAbstractODBCConnection.CheckDbcError(RETCODE: SQLRETURN);
+  procedure RaiseError;
+  begin
+    CheckODBCError(RetCode, fHDBC, SQL_HANDLE_DBC, '', self, Self);
+  end;
 begin
-  CheckODBCError(RetCode, fHDBC, SQL_HANDLE_DBC, Self);
+  if RetCode <> SQL_SUCCESS then
+    RaiseError;
 end;
 
 {**
@@ -376,7 +381,7 @@ begin
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
   else begin
     //set minimum Major Version 3
-    CheckODBCError(fPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0), fHENV, SQL_HANDLE_ENV, Self);
+    CheckODBCError(fPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0), fHENV, SQL_HANDLE_ENV, 'SQL_ATTR_ODBC_VERSION', Self, Self);
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
   end;
   if (Info.Values[ConnProps_Codepage] <> '') or (Info.Values[ConnProps_Charset] <> '') then begin
@@ -465,7 +470,7 @@ var
 begin
   if not Closed then
     Exit;
-  CheckODBCError(fPLainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC),fHENV, SQL_HANDLE_ENV, Self);
+  CheckODBCError(fPLainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC),fHENV, SQL_HANDLE_ENV, '', Self, Self);
   if Info.Values[ConnProps_Timeout] <> '' then
   begin
     TimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_Timeout],0);

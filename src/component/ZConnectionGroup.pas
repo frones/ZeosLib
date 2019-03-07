@@ -56,7 +56,7 @@ interface
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {Forms, Dialogs,}
-  ZDbcIntfs,ZCompatibility;
+  ZDbcIntfs,ZCompatibility{$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
 
 const
   mask = 'æææ#2ææ0#ææ39æ-V„–FFVæææ';  { define your own mask  }
@@ -83,7 +83,7 @@ type
     //procedure DoChange(Sender: TObject);
     procedure Change;
   protected
-    FClients: tList;
+    FClients: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FProtocol: string;
     FHostName: string;
     FPort: Integer;
@@ -151,7 +151,7 @@ end;
 constructor TZConnectionGroup.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FClients := tList.Create;
+  FClients := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
 end;
 
 destructor TZConnectionGroup.Destroy;

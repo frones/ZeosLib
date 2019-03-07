@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
   ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
 
 type
@@ -68,9 +68,14 @@ type
     FQuote: string;
     FSrc: string;
     procedure RunDequotedStr;
+    procedure TestStringReplaceAll_CS_LToEQ_A;
+    procedure TestStringReplaceAll_CS_LToEQ_W;
   published
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;
+    procedure TestLastDelimiter;
+    procedure TestPutSplitStringEx;
+    procedure TestStringReplaceAll_CS_LToEQ;
     {$IFDEF ENABLE_POSTGRESQL}
     procedure TestIsIpAddr;
     {$ENDIF}
@@ -94,7 +99,7 @@ type
     procedure TestDateTimeToUnicodeSQLTime;
     procedure TestDateTimeToRawSQLTimeStamp;
     procedure TestDateTimeToUnicodeSQLTimeStamp;
-    {$IFDEF BENCHMARK}
+  {$IFDEF BENCHMARK}
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     procedure TestAnsiToUnicodePerformance;
     procedure TestUTF8ToUnicodePerformance;
@@ -127,7 +132,7 @@ type
     procedure BenchTestDateTimeToUnicodeSQLTimeStamp;
     procedure BenchBinToHexUnicode;
     procedure BenchBinToHexRaw;
-    {$ENDIF}
+  {$ENDIF}
   end;
 
 implementation
@@ -182,6 +187,133 @@ begin
   DelimiterStr := '';
   SourceStr := '';
   CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 3');
+end;
+
+procedure TZTestSysUtilsCase.TestLastDelimiter;
+var
+  SourceStr: string;
+  DelimiterStr: string;
+begin
+  { Position should exist }
+  DelimiterStr := '098g';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(17, LastDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 1');
+
+  { Position should not exist }
+  DelimiterStr := 'klmn';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 2');
+
+  { Check with empty string }
+  DelimiterStr := '';
+  SourceStr := '';
+  CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 3');
+
+  { Position should exist }
+  DelimiterStr := 'gac';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(7, LastDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 4');
+end;
+
+procedure TZTestSysUtilsCase.TestPutSplitStringEx;
+var SL: TStrings;
+  SourceStr: string;
+  DelimiterStr: string;
+  I: Integer;
+begin
+  SL := TStringList.Create;
+  Check(SL <> nil);
+  try
+    SourceStr := 'aaaggaaaggaaaggaaagg';
+    DelimiterStr := 'gg';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(4, SL.Count, 'split count 1');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('aaa', SL[i], '1. Splitted String');
+    SourceStr := 'aaaggaaaggaaaggaaa';
+    DelimiterStr := 'gg';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(4, SL.Count, 'split count 2');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('aaa', SL[i], '2. Splitted String');
+    DelimiterStr := 'aaa';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(3, SL.Count, 'split count 3');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('gg', SL[i], '2. Splitted String');
+  finally
+    SL.Free;
+  end;
+end;
+
+procedure TZTestSysUtilsCase.TestStringReplaceAll_CS_LToEQ;
+begin
+  TestStringReplaceAll_CS_LToEQ_A;
+  TestStringReplaceAll_CS_LToEQ_W;
+end;
+
+procedure TZTestSysUtilsCase.TestStringReplaceAll_CS_LToEQ_A;
+var SourceStr, Res: RawBytestring;
+begin
+  SourceStr := 'aaaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('aa'), RawByteString(''));
+  CheckEquals(RawByteString('a'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('aa'));
+  CheckEquals(RawByteString('aaaaaaaaaaaaaaaaaaaa'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('y'));
+  CheckEquals(RawByteString('aaayaaayaaayaaay'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('y'));
+  CheckEquals(RawByteString('aaayaaayaaayaaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('N'));
+  CheckEquals(RawByteString('aaaN'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString('N'));
+  CheckEquals(RawByteString('Naaa'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString(''));
+  CheckEquals(RawByteString('aaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('gg'), RawByteString(''));
+  CheckEquals(RawByteString('aaa'), Res);
+  SourceStr := 'aaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, RawByteString('aa'), RawByteString(''));
+  CheckEquals(RawByteString(''), Res);
+end;
+
+procedure TZTestSysUtilsCase.TestStringReplaceAll_CS_LToEQ_W;
+var SourceStr, Res: ZWideString;
+begin
+  SourceStr := 'aaaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('aa'), ZWideString(''));
+  CheckEquals(ZWideString('a'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('aa'));
+  CheckEquals(ZWideString('aaaaaaaaaaaaaaaaaaaa'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('y'));
+  CheckEquals(ZWideString('aaayaaayaaayaaay'), Res);
+  SourceStr := 'aaaggaaaggaaaggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('y'));
+  CheckEquals(ZWideString('aaayaaayaaayaaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('N'));
+  CheckEquals(ZWideString('aaaN'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('N'));
+  CheckEquals(ZWideString('Naaa'), Res);
+  SourceStr := 'ggaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString(''));
+  CheckEquals(ZWideString('aaa'), Res);
+  SourceStr := 'aaagg';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString(''));
+  CheckEquals(ZWideString('aaa'), Res);
+  SourceStr := 'aaaa';
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('aa'), ZWideString(''));
+  CheckEquals(ZWideString(''), Res);
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}

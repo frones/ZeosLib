@@ -945,9 +945,11 @@ W_Len:                if PLen^ > MaxL then
               stDouble:       FUniTemp := FloatToUnicode(TDoubleDynArray(ZData)[J]);
               stCurrency:     FUniTemp := FloatToUnicode(TCurrencyDynArray(ZData)[J]);
               stBigDecimal:   FUniTemp := FloatToUnicode(TExtendedDynArray(ZData)[J]);
-              stTime:         FUniTemp := DateTimeToUnicodeSQLTime(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
-              stDate:         FUniTemp := DateTimeToUnicodeSQLDate(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);
-              stTimeStamp:    FUniTemp := DateTimeToUnicodeSQLTimeStamp(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}
+              stTime:         FUniTemp := DateTimeToUnicodeSQLTime(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}
+              stDate:         if (WType = DBTYPE_WSTR) and (ConSettings.WriteFormatSettings.DateFormatLen <= MaxL)
+                              then DateTimeToUnicodeSQLDate(TDateTimeDynArray(ZData)[J], PWideChar(Data), ConSettings.WriteFormatSettings, False)
+                              else RaiseExceeded(I);
+              (*stTimeStamp:    FUniTemp := DateTimeToUnicodeSQLTimeStamp(TDateTimeDynArray(ZData)[J], ConSettings.WriteFormatSettings, False);}*)
               stString, stUnicodeString: begin
                 case ZArray.VArrayVariantType of
                   {$IFNDEF UNICODE}vtString, {$ENDIF}
@@ -1382,6 +1384,14 @@ begin
 end;
 {$ENDIF}
 
+{**
+  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZOleDBPreparedStatement.SetBigDecimal(Index: Integer;
   const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
@@ -1834,6 +1844,14 @@ WConv:          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
   end;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZOleDBPreparedStatement.SetDouble(Index: Integer;
   const Value: Double);
 var Bind: PDBBINDING;

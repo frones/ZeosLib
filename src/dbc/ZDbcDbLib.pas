@@ -85,7 +85,6 @@ type
     function GetPlainDriver: IZDBLibPlainDriver;
     function GetConnectionHandle: PDBPROCESS;
     function GetServerAnsiCodePage: Word;
-    procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawByteString);
   end;
 
@@ -267,28 +266,22 @@ end;
   Executes simple statements internally.
 }
 procedure TZDBLibConnection.InternalExecuteStatement(const SQL: RawByteString);
-var
-  ASQL: RawByteString;
 begin
   FHandle := GetConnectionHandle;
   //2018-09-17 commented by marsupilami79 - this should not be called because it
   //just hides logic errors. -> not fully processed result sets would be canceled.
   //if GetPlainDriver.dbCancel(FHandle) <> DBSUCCEED then
   //  CheckDBLibError(lcExecute, SQL);
-  if FProvider = dpMsSQL then
-    ASQL := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Sql, '\'#13, '\\'#13, [rfReplaceAll])
-  else
-    ASQL := SQL;
 
-  if (GetPlainDriver.dbcmd(FHandle, Pointer(ASQL)) <> DBSUCCEED) or
+  if (GetPlainDriver.dbcmd(FHandle, Pointer(SQL)) <> DBSUCCEED) or
      (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) then
-    CheckDBLibError(lcExecute, ASQL);
+    CheckDBLibError(lcExecute, SQL);
   repeat
     GetPlainDriver.dbresults(FHandle);
     GetPlainDriver.dbcanquery(FHandle);
   until GetPlainDriver.dbmorecmds(FHandle) = DBFAIL;
-  CheckDBLibError(lcExecute, ASQL);
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  CheckDBLibError(lcExecute, SQL);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 end;
 
 {**

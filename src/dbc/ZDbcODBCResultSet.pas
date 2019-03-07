@@ -73,6 +73,20 @@ type
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
+  TZODBCColumnInfo = class(TZColumnInfo)
+  private
+    fODBC_CType: SQLSMALLINT;
+    fFixedWidth, fBound: Boolean;
+    fColumnBuffer: PAnsiChar;
+    fStrLen_or_IndArray: PSQLLENArray;
+  public
+    destructor Destroy; override;
+    property ODBC_CType: SQLSMALLINT read fODBC_CType write fODBC_CType;
+    property FixedWidth: Boolean read fFixedWidth write fFixedWidth;
+    property Bound: Boolean read fBound write fBound;
+    property ColumnBuffer: PAnsiChar read fColumnBuffer write fColumnBuffer;
+    property StrLen_or_IndArray: PSQLLENArray read fStrLen_or_IndArray write fStrLen_or_IndArray;
+  end;
 
   TAbstractODBCResultSet = Class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
@@ -83,18 +97,13 @@ type
     fEnhancedColInfo, FIsMetaData: Boolean;
     fColumnCount: SQLSMALLINT;
     fMaxFetchableRows, fFetchedRowCount, fCurrentBufRowNo: SQLULEN;
-    fColumnBuffers: array of TByteDynArray;
-    fColumnBuffSizes: array of NativeUInt;
     fStrLen_or_Ind: SQLLEN;
     fColDataPtr: Pointer;
     //fSQLTypes: TZSQLTypeArray;
     fIsUnicodeDriver: Boolean;
     fFreeHandle, fCursorOpened: Boolean;
-    fFixedWidthStrings, fBoundColumns: TBooleanDynArray;
-    fODBC_CTypes: array of SQLSMALLINT;
-    fRowBlobs: array of IZBlob; //row wise storage of unbound lobs
     fSQL_GETDATA_EXTENSIONS: SQLUINTEGER;
-    fFirstGetDataIndex: Integer;
+    fFirstGetDataIndex, fLastGetDataIndex: Integer;
     FTinyBuffer: array[Byte] of Byte;
     FClientCP: Word;
     procedure LoadUnBoundColumns;
@@ -102,7 +111,7 @@ type
     procedure CheckStmtError(RETCODE: SQLRETURN);
     function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; virtual; abstract;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; virtual; abstract;
-    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZColumnInfo); virtual; abstract;
+    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); virtual; abstract;
   public
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
@@ -148,7 +157,7 @@ type
   protected
     function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; override;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; override;
-    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZColumnInfo); override;
+    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); override;
   public
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
@@ -161,7 +170,7 @@ type
   protected
     function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; override;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; override;
-    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZColumnInfo); override;
+    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); override;
   public
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
@@ -203,30 +212,27 @@ uses Math,
 { TAbstractODBCResultSet }
 
 procedure TAbstractODBCResultSet.CheckStmtError(RETCODE: SQLRETURN);
+  procedure HandleError;
+  begin
+    if Statement <> nil
+    then CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, Statement.GetSQL, Self, fConnection)
+    else CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, 'MetaData-call', Self, fConnection);
+  end;
 begin
-  CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, fConnection);
+  if RETCODE <> SQL_SUCCESS then
+    HandleError;
 end;
 
 procedure TAbstractODBCResultSet.BeforeClose;
-var RETCODE: SQLRETURN;
+var STMT: SQLHSTMT;
 begin
   inherited BeforeClose;
-  if Assigned(fPHSTMT^) then
-    if fFreeHandle then begin // from metadata
-      CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fPHSTMT^)); //free handle
-      fPHSTMT^ := nil;
-    end else
-      if Assigned(Statement) and ((Statement as IZODBCStatement).GetMoreResultsIndicator = mriUnknown) then begin
-        ResetCursor;
-        CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
-        RETCODE := fPlainDriver.SQLMoreResults(fPHSTMT^);
-        if RETCODE = SQL_SUCCESS then
-          (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasMoreResults)
-        else if RETCODE = SQL_NO_DATA then
-          (Statement as IZODBCStatement).SetMoreResultsIndicator(mriHasNoMoreResults)
-        else CheckStmtError(RETCODE);
-      end else
-        CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart bindings
+  if Assigned(fPHSTMT^) and fFreeHandle then begin// from metadata
+    STMT := fPHSTMT^;
+    fPHSTMT^ := nil;
+    CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT)); //free handle
+  end;
+  //CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart col bindings -> commented this kills our memory
 end;
 
 {$IFDEF USE_SYNCOMMONS}
@@ -253,10 +259,10 @@ begin
         end;
       end else
         JSONWriter.AddShort('null,')
-    else begin
+    else with TZODBCColumnInfo(ColumnsInfo[C]) do begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[I]);
-      case TZColumnInfo(ColumnsInfo[C]).ColumnType of
+      case ColumnType of
         stBoolean:    JSONWriter.AddShort(JSONBool[PWordBool(PByte(fColDataPtr)^ <> 0)^]);
         stByte:       JSONWriter.AddU(PByte(fColDataPtr)^);
         stShort:      JSONWriter.Add(PShortInt(fColDataPtr)^);
@@ -264,11 +270,11 @@ begin
         stSmall:      JSONWriter.Add(PSmallInt(fColDataPtr)^);
         stLongWord:   JSONWriter.AddU(PCardinal(fColDataPtr)^);
         stInteger:    JSONWriter.Add(PInteger(fColDataPtr)^);
-        stULong:      JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(fColDataPtr)^));
+        stULong:      JSONWriter.AddQ(PUInt64(fColDataPtr)^);
         stLong:       JSONWriter.Add(PInt64(fColDataPtr)^);
         stFloat:      JSONWriter.AddSingle(PSingle(fColDataPtr)^);
+        stCurrency:   JSONWriter.AddCurr64(ODBCNumeric2Curr(fColDataPtr));
         stDouble,
-        stCurrency,
         stBigDecimal: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
         stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
         stGUID:       begin
@@ -283,7 +289,7 @@ begin
                           JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                         end else
                           JSONWriter.Add('"');
-                        if fODBC_CTypes[C] = SQL_C_BINARY then
+                        if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                           TimeToIso8601PChar(@FTinyBuffer[0], True, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                             PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                             PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, 'T', jcoMilliseconds in JSONComposeOptions)
@@ -332,11 +338,11 @@ begin
         stString, stUnicodeString: begin
             JSONWriter.Add('"');
             if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then begin
-              if fFixedWidthStrings[c] then
+              if FixedWidth then
                 while (PWideChar(fColDataPtr)+(fStrLen_or_Ind shr 1)-1)^ = ' ' do Dec(fStrLen_or_Ind, 2);
               JSONWriter.AddJSONEscapeW(fColDataPtr, fStrLen_or_Ind shr 1)
             end else begin
-              if fFixedWidthStrings[c] then
+              if FixedWidth then
                 while (PAnsiChar(fColDataPtr)+(fStrLen_or_Ind)-1)^ = ' ' do Dec(fStrLen_or_Ind);
               if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
                 JSONWriter.AddJSONEscape(fColDataPtr, fStrLen_or_Ind)
@@ -350,16 +356,16 @@ begin
         stAsciiStream, stUnicodeStream: begin
             JSONWriter.Add('"');
             if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or (ConSettings^.ClientCodePage^.CP <> zCP_UTF8) then begin
-              P := fRowBlobs[C].GetPWideChar;
-              JSONWriter.AddJSONEscapeW(P, fRowBlobs[C].Length shr 1);
+              P := IZBlob(fColDataPtr).GetPWideChar;
+              JSONWriter.AddJSONEscapeW(P, IZBlob(fColDataPtr).Length shr 1);
             end else begin
-              P := fRowBlobs[C].GetPAnsiChar(zCP_UTF8);
-              JSONWriter.AddJSONEscape(P, fRowBlobs[C].Length);
+              P := IZBlob(fColDataPtr).GetPAnsiChar(zCP_UTF8);
+              JSONWriter.AddJSONEscape(P, IZBlob(fColDataPtr).Length);
             end;
             JSONWriter.Add('"');
           end;
         stBinaryStream:
-          JSONWriter.WrBase64(fRowBlobs[C].GetBuffer, fRowBlobs[C].Length, True);
+          JSONWriter.WrBase64(IZBlob(fColDataPtr).GetBuffer, IZBlob(fColDataPtr).Length, True);
         else //stArray, stDataSet:
           JSONWriter.AddShort('null,') ;
       end;
@@ -375,8 +381,9 @@ end;
 {$ENDIF USE_SYNCOMMONS}
 
 constructor TAbstractODBCResultSet.Create(const Statement: IZStatement;
-  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
-  ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True);
+  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
+  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
+  const EnhancedColInfo: Boolean = True);
 var Supported: SQLUSMALLINT;
 begin
   inherited Create(Statement, SQL, TODBCTResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
@@ -413,36 +420,36 @@ end;
 function TAbstractODBCResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var P: Pointer;
   L: NativeUInt;
-  SQLType: TZSQLType;
 begin
-  SQLType := TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType;
-  if (Ord(SQLType) < Ord(stString)) or (SQLType in [stBytes, stBinaryStream]) then begin
-    PAnsiChar(P) := GetPAnsiChar(ColumnIndex, L);
-    System.SetString(Result, PAnsiChar(P), L);
-  end else if IsNull(ColumnIndex) then  //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    Result := ''
-  else case SQLType of
-    stString, stUnicodeString: begin
-                      if fIsUnicodeDriver then begin
-                        L := fStrLen_or_Ind shr 1;
-                        if fFixedWidthStrings[ColumnIndex] then
-                          L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
-                        Result := PUnicodeToRaw(fColDataPtr, L, zOSCodePage);
-                      end else begin
-                        L := fStrLen_or_Ind;
-                        if fFixedWidthStrings[ColumnIndex] then
-                          L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
-                        if FClientCP = zOSCodePage then
-                          System.SetString(Result, PAnsiChar(fColDataPtr), L)
-                        else begin
-                          FUniTemp := PRawToUnicode(fColDataPtr, l, FClientCP);
-                          Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zOSCodePage);
+  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    if (Ord(ColumnType) < Ord(stString)) or (ColumnType in [stBytes, stBinaryStream]) then begin
+      PAnsiChar(P) := GetPAnsiChar(ColumnIndex, L);
+      System.SetString(Result, PAnsiChar(P), L);
+    end else if IsNull(ColumnIndex) then  //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+      Result := ''
+    else case ColumnType of
+      stString, stUnicodeString: begin
+                        if fIsUnicodeDriver then begin
+                          L := fStrLen_or_Ind shr 1;
+                          if FixedWidth then
+                            L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
+                          Result := PUnicodeToRaw(fColDataPtr, L, zOSCodePage);
+                        end else begin
+                          L := fStrLen_or_Ind;
+                          if FixedWidth then
+                            L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
+                          if FClientCP = zOSCodePage then
+                            System.SetString(Result, PAnsiChar(fColDataPtr), L)
+                          else begin
+                            FUniTemp := PRawToUnicode(fColDataPtr, l, FClientCP);
+                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zOSCodePage);
+                          end;
                         end;
-                      end;
-      end;
-    stAsciiStream, stUnicodeStream:
-      Result := GetBlob(ColumnIndex).GetAnsiString;
-    else Result := '';
+        end;
+      stAsciiStream, stUnicodeStream:
+        Result := GetBlob(ColumnIndex).GetAnsiString;
+      else Result := '';
+    end;
   end;
 end;
 {$ENDIF}
@@ -455,12 +462,10 @@ end;
 function TAbstractODBCResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 begin
   Result := nil;
-  if not IsNull(ColumnIndex) then begin //loads the lob on demand -> a second call is impossible
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType in [stBinaryStream, stAsciiStream, stUnicodeStream] then
-        Result := fRowBlobs[ColumnIndex]
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //loads the lob on demand -> a second call is impossible
+    if ColumnType in [stBinaryStream, stAsciiStream, stUnicodeStream]
+    then Result := IZBlob(ColumnBuffer)
     else Result := TZAbstractBlob.Create;
   end;
 end;
@@ -469,11 +474,9 @@ function TAbstractODBCResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var L: LengthInt;
 begin
   Result := False;
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^ <> 0;
       stByte:       Result := PByte(fColDataPtr)^ <> 0;
       stShort:      Result := PShortInt(fColDataPtr)^ <> 0;
@@ -484,14 +487,13 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^ <> 0;
       stLong:       Result := PInt64(fColDataPtr)^ <> 0;
       stFloat:      Result := PSingle(fColDataPtr)^ <> 0;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr) <> 0;
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^ <> 0;
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
-                      Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
+                    then Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000) <> 0
-                    else
-                      Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                    else Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0) <> 0;
       stDate:
         Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
@@ -504,17 +506,17 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction) <> 0);
       stString, stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := StrToBoolEx(PWideChar(fColDataPtr), PWideChar(fColDataPtr)+L);
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := StrToBoolEx(PAnsiChar(fColDataPtr), PAnsiChar(fColDataPtr)+L);
                 end;
       stAsciiStream, stUnicodeStream:
-        Result := StrToBoolEx(fRowBlobs[ColumnIndex].{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetString{$ENDIF});
+        Result := StrToBoolEx(IZBlob(ColumnBuffer).{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetString{$ENDIF});
     end;
   end;
 end;
@@ -526,12 +528,9 @@ begin
   else if fColDataPtr = nil then //streamed data
     Result := nil
   else begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     Result := BufferToBytes(
       fColDataPtr,
-      fStrLen_or_Ind shl Ord((TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType in [stString, stUnicodeString]) and fIsUnicodeDriver));
+      fStrLen_or_Ind shl Ord((TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in [stString, stUnicodeString]) and fIsUnicodeDriver));
   end;
 
 end;
@@ -539,11 +538,9 @@ end;
 function TAbstractODBCResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -554,10 +551,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -575,12 +572,12 @@ begin
       stString,
       stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   SQLStrToFloatDef(PWideChar(fColDataPtr), 0, Result, L)
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   SQLStrToFloatDef(PAnsiChar(fColDataPtr), 0, Result, L)
                 end;
@@ -594,11 +591,9 @@ function TAbstractODBCResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var Failed: Boolean;
   L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -609,25 +604,23 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stDate:
-        Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-          PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
-      stTimeStamp:
-        Result := EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
-          PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day);
+      stDate:       Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                      PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
+      stTimeStamp:  Result := EncodeDate(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
+                      PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day);
       stString,
       stUnicodeString: begin
                 if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeSQLDateToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end else begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawSQLDateToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end;
@@ -644,11 +637,9 @@ end;
 function TAbstractODBCResultSet.GetDouble(ColumnIndex: Integer): Double;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -659,10 +650,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -679,12 +670,12 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction);
       stString, stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   SQLStrToFloatDef(PWideChar(fColDataPtr), 0, Result, L)
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   SQLStrToFloatDef(PAnsiChar(fColDataPtr), 0, Result, L)
                 end;
@@ -697,11 +688,9 @@ end;
 function TAbstractODBCResultSet.GetFloat(ColumnIndex: Integer): Single;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -712,10 +701,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -732,12 +721,12 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction);
       stString, stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   SQLStrToFloatDef(PWideChar(fColDataPtr), 0, Result, L)
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   SQLStrToFloatDef(PAnsiChar(fColDataPtr), 0, Result, L)
                 end;
@@ -751,11 +740,9 @@ end;
 function TAbstractODBCResultSet.GetInt(ColumnIndex: Integer): Integer;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -766,10 +753,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
@@ -786,12 +773,12 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
       stString, stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeToIntDef(PWideChar(fColDataPtr), PWideChar(fColDataPtr)+L, 0)
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawToIntDef(PAnsiChar(fColDataPtr), PAnsiChar(fColDataPtr)+L, 0);
                 end;
@@ -805,11 +792,9 @@ end;
 function TAbstractODBCResultSet.GetLong(ColumnIndex: Integer): Int64;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -820,10 +805,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
@@ -840,12 +825,12 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
       stString, stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeToInt64Def(PWideChar(fColDataPtr), PWideChar(fColDataPtr)+L, 0)
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawToInt64Def(PAnsiChar(fColDataPtr), PAnsiChar(fColDataPtr)+L, 0);
                 end;
@@ -860,11 +845,9 @@ function TAbstractODBCResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
 Label Set_Results;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    if Boolean(PByte(fColDataPtr)^) then begin
                       Result := Pointer(BoolStrsRaw[True]);
                       Len := 4
@@ -909,8 +892,12 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       Len := FloatToSqlRaw(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
+      stCurrency:   begin
+                      Result := @FTinyBuffer[SizeOf(Pointer)];
+                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
+                      Len := Result-PPAnsiChar(@FTinyBuffer[0])^;
+                    end;
       stDouble,
-      stCurrency,
       stBigDecimal: begin
                       Len := FloatToSqlRaw(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
@@ -926,7 +913,7 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     end;
       stTime:       begin
                       Result := @FTinyBuffer[0];
-                      if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY
+                      if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
                       then Len := DateTimeToRawSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
@@ -955,7 +942,7 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
       stString, stUnicodeString: begin
                       if fIsUnicodeDriver then begin
                         Len := fStrLen_or_Ind shr 1;
-                        if fFixedWidthStrings[ColumnIndex] then
+                        if FixedWidth then
                           Len := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), Len);
                         fRawTemp := PUnicodeToRaw(fColDataPtr, Len, FClientCP);
                         Len := Length(fRawTemp);
@@ -964,19 +951,19 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         else Result := pEmptyAnsiString;
                       end else begin
                         Result := fColDataPtr;
-                        if fFixedWidthStrings[ColumnIndex]
+                        if FixedWidth
                         then Len := GetAbsorbedTrailingSpacesLen(Result, fStrLen_or_Ind)
                         else Len := fStrLen_or_Ind;
                       end;
                     end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
                     begin
-                      if fRowBlobs[ColumnIndex].IsCLob then begin
-                        Result := fRowBlobs[ColumnIndex].GetPAnsiChar(FClientCP);
-                        Len := fRowBlobs[ColumnIndex].Length;
+                      if IZBlob(ColumnBuffer).IsCLob then begin
+                        Result := IZBlob(ColumnBuffer).GetPAnsiChar(FClientCP);
+                        Len := IZBlob(ColumnBuffer).Length;
                       end else begin
-                        Result := fRowBlobs[ColumnIndex].GetBuffer;
-                        Len := fRowBlobs[ColumnIndex].Length;
+                        Result := IZBlob(ColumnBuffer).GetBuffer;
+                        Len := IZBlob(ColumnBuffer).Length;
                       end;
                     end
       else          begin
@@ -994,11 +981,9 @@ function TAbstractODBCResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 Label Set_Results, Set_From_Temp;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    if Boolean(PByte(fColDataPtr)^) then begin
                       Result := Pointer(BoolStrsW[True]);
                       Len := 4
@@ -1043,8 +1028,12 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                       Len := FloatToSqlUnicode(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
+      stCurrency:   begin
+                      Result := @FTinyBuffer[SizeOf(Pointer)];
+                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
+                      Len := Result-ZPPWideChar(@FTinyBuffer[0])^;
+                    end;
       stDouble,
-      stCurrency,
       stBigDecimal: begin
                       Len := FloatToSqlUnicode(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
@@ -1060,7 +1049,7 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                     end;
       stTime:       begin
                       Result := @FTinyBuffer[0];
-                      if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY
+                      if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
                       then Len := DateTimeToUnicodeSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
@@ -1090,11 +1079,11 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                       if fIsUnicodeDriver then begin
                         Result := PWideChar(fColDataPtr);
                         Len := fStrLen_or_Ind shr 1;
-                        if fFixedWidthStrings[ColumnIndex] then
+                        if FixedWidth then
                           Len := GetAbsorbedTrailingSpacesLen(Result, Len);
                       end else begin
                         Len := fStrLen_or_Ind;
-                        if fFixedWidthStrings[ColumnIndex] then
+                        if FixedWidth then
                           Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), Len);
                         fUniTemp := PRawToUnicode(fColDataPtr, Len, FClientCP);
                         goto Set_From_Temp;
@@ -1102,11 +1091,11 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                     end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
                     begin
-                      if fRowBlobs[ColumnIndex].IsCLob then begin
-                        Result := fRowBlobs[ColumnIndex].GetPWideChar;
-                        Len := fRowBlobs[ColumnIndex].Length shr 1;
+                      if IZBlob(ColumnBuffer).IsCLob then begin
+                        Result := IZBlob(ColumnBuffer).GetPWideChar;
+                        Len := IZBlob(ColumnBuffer).Length shr 1;
                       end else begin
-                        fUniTemp := Ascii7ToUnicodeString(fRowBlobs[ColumnIndex].GetBuffer, fRowBlobs[ColumnIndex].Length);
+                        fUniTemp := Ascii7ToUnicodeString(IZBlob(ColumnBuffer).GetBuffer, IZBlob(ColumnBuffer).Length);
 Set_From_Temp:          Len := Length(fUniTemp);
                         if Len > 0
                         then Result := Pointer(fUniTemp)
@@ -1127,11 +1116,9 @@ end;
 function TAbstractODBCResultSet.GetUInt(ColumnIndex: Integer): LongWord;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -1144,10 +1131,10 @@ begin
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
@@ -1164,13 +1151,13 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
       stString, stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
         {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
                   Result := UnicodeToUInt64Def(PWideChar(fColDataPtr), PWideChar(fColDataPtr)+L, 0)
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawToUInt64Def(PAnsiChar(fColDataPtr), PAnsiChar(fColDataPtr)+L, 0);
         {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -1186,31 +1173,31 @@ function TAbstractODBCResultSet.GetRawByteString(
   ColumnIndex: Integer): RawByteString;
 var P: Pointer;
   L: NativeUInt;
-  SQLType: TZSQLType;
 begin
-  SQLType := TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType;
-  if (Ord(SQLType) < Ord(stString)) or (SQLType in [stBytes, stBinaryStream]) then begin
-    PAnsiChar(P) := GetPAnsiChar(ColumnIndex, L);
-    System.SetString(Result, PAnsiChar(P), L);
-  end else if IsNull(ColumnIndex) then  //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    Result := ''
-  else case SQLType of
-    stString, stUnicodeString: begin
-                      if fIsUnicodeDriver then begin
-                        L := fStrLen_or_Ind shr 1;
-                        if fFixedWidthStrings[ColumnIndex] then
-                          L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
-                        Result := PUnicodeToRaw(fColDataPtr, L, FClientCP);
-                      end else begin
-                        L := fStrLen_or_Ind;
-                        if fFixedWidthStrings[ColumnIndex] then
-                          L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
-                        ZSetString(PAnsiChar(fColDataPtr), L, Result);
-                      end;
-      end;
-    stAsciiStream, stUnicodeStream:
-      Result := GetBlob(ColumnIndex).GetRawByteString;
-    else Result := '';
+  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    if (Ord(ColumnType) < Ord(stString)) or (ColumnType in [stBytes, stBinaryStream]) then begin
+      PAnsiChar(P) := GetPAnsiChar(ColumnIndex, L);
+      System.SetString(Result, PAnsiChar(P), L);
+    end else if IsNull(ColumnIndex) then  //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+      Result := ''
+    else case ColumnType of
+      stString, stUnicodeString: begin
+                        if fIsUnicodeDriver then begin
+                          L := fStrLen_or_Ind shr 1;
+                          if FixedWidth then
+                            L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
+                          Result := PUnicodeToRaw(fColDataPtr, L, FClientCP);
+                        end else begin
+                          L := fStrLen_or_Ind;
+                          if FixedWidth then
+                            L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
+                          ZSetString(PAnsiChar(fColDataPtr), L, Result);
+                        end;
+        end;
+      stAsciiStream, stUnicodeStream:
+        Result := GetBlob(ColumnIndex).GetRawByteString;
+      else Result := '';
+    end;
   end;
 end;
 
@@ -1218,11 +1205,9 @@ function TAbstractODBCResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var Failed: Boolean;
   L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -1233,10 +1218,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -1249,12 +1234,12 @@ begin
       stString, stUnicodeString: begin
                 if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeSQLTimeToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end else begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawSQLTimeToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end;
@@ -1272,11 +1257,9 @@ function TAbstractODBCResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var Failed: Boolean;
   L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -1287,10 +1270,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -1308,12 +1291,12 @@ begin
       stString, stUnicodeString: begin
                 if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeSQLTimeStampToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end else begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawSQLTimeStampToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end;
@@ -1331,11 +1314,9 @@ end;
 function TAbstractODBCResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+  if not IsNull(ColumnIndex) then with
+    TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;
       stShort:      Result := PShortInt(fColDataPtr)^;
@@ -1346,10 +1327,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if fODBC_CTypes[ColumnIndex] = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
@@ -1366,12 +1347,12 @@ begin
           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction));
       stString, stUnicodeString: if fIsUnicodeDriver then begin
                   L := fStrLen_or_Ind shr 1;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeToUInt64Def(PWideChar(fColDataPtr), PWideChar(fColDataPtr)+L, 0)
                 end else begin
                   L := fStrLen_or_Ind;
-                  if fFixedWidthStrings[ColumnIndex] then
+                  if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawToUInt64Def(PAnsiChar(fColDataPtr), PAnsiChar(fColDataPtr)+L, 0);
                 end;
@@ -1386,52 +1367,52 @@ end;
 function TAbstractODBCResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: Pointer;
   L: NativeUInt;
-  SQLType: TZSQLType;
 begin
-  SQLType := TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType;
-  if (Ord(SQLType) < Ord(stString)) or (SQLType in [stBytes, stBinaryStream]) then begin
-    P := GetPAnsiChar(ColumnIndex, L);
-    System.SetString(Result, PAnsiChar(P), L);
-  end else if IsNull(ColumnIndex) then  //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    Result := ''
-  else case SQLType of
-    stString, stUnicodeString: begin
-                      if fIsUnicodeDriver then begin
-                        L := fStrLen_or_Ind shr 1;
-                        if fFixedWidthStrings[ColumnIndex] then
-                          L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
-                        Result := PUnicodeToRaw(fColDataPtr, L, zCP_UTF8);
-                      end else begin
-                        L := fStrLen_or_Ind;
-                        if fFixedWidthStrings[ColumnIndex] then
-                          L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
-                        if FClientCP = zCP_UTF8 then
-                          System.SetString(Result, PAnsiChar(fColDataPtr), L)
-                        else begin
-                          FUniTemp := PRawToUnicode(fColDataPtr, l, FClientCP);
-                          Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zCP_UTF8);
+  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    if (Ord(ColumnType) < Ord(stString)) or (ColumnType in [stBytes, stBinaryStream]) then begin
+      P := GetPAnsiChar(ColumnIndex, L);
+      System.SetString(Result, PAnsiChar(P), L);
+    end else if IsNull(ColumnIndex) then  //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+      Result := ''
+    else case ColumnType of
+      stString, stUnicodeString: begin
+                        if fIsUnicodeDriver then begin
+                          L := fStrLen_or_Ind shr 1;
+                          if FixedWidth then
+                            L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
+                          Result := PUnicodeToRaw(fColDataPtr, L, zCP_UTF8);
+                        end else begin
+                          L := fStrLen_or_Ind;
+                          if FixedWidth then
+                            L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
+                          if FClientCP = zCP_UTF8 then
+                            System.SetString(Result, PAnsiChar(fColDataPtr), L)
+                          else begin
+                            FUniTemp := PRawToUnicode(fColDataPtr, l, FClientCP);
+                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zCP_UTF8);
+                          end;
                         end;
-                      end;
-      end;
-    stAsciiStream, stUnicodeStream:
-      Result := GetBlob(ColumnIndex).GetUTF8String;
-    else Result := '';
+        end;
+      stAsciiStream, stUnicodeStream:
+        Result := GetBlob(ColumnIndex).GetUTF8String;
+      else Result := '';
+    end;
   end;
 end;
 
 function TAbstractODBCResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
   Assert((ColumnIndex >= FirstDbcIndex) and (ColumnIndex{$IFDEF GENERIC_INDEX}<{$ELSE}<={$ENDIF} fColumnCount), SColumnIsNotAccessable);
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  fStrLen_or_Ind := PStrLen_or_IndArray(Pointer(fColumnBuffers[ColumnIndex]))^[fCurrentBufRowNo-1];
+  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+  {$R-}
+  fStrLen_or_Ind := StrLen_or_IndArray[fCurrentBufRowNo-1];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := fStrLen_or_Ind = SQL_NULL_DATA;
   fColDataPtr := nil;
-  if (Ord(TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType) <= Ord(stUnicodeString)) and (not Result) then
-    fColDataPtr := { Start entry }            @fColumnBuffers[ColumnIndex][
-      { increase by size of indicator array } (SizeOf(SQLLEN)*fMaxFetchableRows){%H-}+
-      { get entry of Data in current row }    (fColumnBuffSizes[ColumnIndex]*(fCurrentBufRowNo-1))];
+    if (Ord(ColumnType) <= Ord(stUnicodeString)) and (not Result) then
+      fColDataPtr := { Start entry }            ColumnBuffer+Cardinal(CharOctedLength)*(fCurrentBufRowNo-1)
+        { increase by size of indicator array } ;
+  end;
   LastWasNull := Result;
 end;
 
@@ -1440,37 +1421,40 @@ var
   ColumnIndex: Integer;
   StrLen_or_IndPtr: PSQLLEN;
 begin
-  for ColumnIndex := fFirstGetDataIndex to fColumnCount-1 do begin
-    StrLen_or_IndPtr := Pointer(fColumnBuffers[ColumnIndex]);
-    if not fBoundColumns[ColumnIndex] then //some drivers allow GetData in mixed order so check it!
-      if Ord(TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType) < Ord(stAsciiStream) then //move data to buffers
-        CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1, fODBC_CTypes[ColumnIndex],
-          SQLPOINTER(NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN)), fColumnBuffSizes[ColumnIndex], StrLen_or_IndPtr))
-      else begin
-        { check out length of lob }
-        CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1,
-          fODBC_CTypes[ColumnIndex], Pointer(1){can not be nil}, 0, StrLen_or_IndPtr));
-        { store the lob -> a second call to same column is impossible for some Drivers }
-        if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType = stBinaryStream then
-          fRowBlobs[ColumnIndex] := TZODBCBlob.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver)
-        else if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType in [stAsciiStream, stUnicodeStream] then
-          if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
-            fRowBlobs[ColumnIndex] := TZODBCClobW.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver, ConSettings)
-          else
-            fRowBlobs[ColumnIndex] := TZODBCClobA.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver, ConSettings);
-      end;
+  for ColumnIndex := fFirstGetDataIndex to fLastGetDataIndex do
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+      {$R-}
+      StrLen_or_IndPtr := @StrLen_or_IndArray[fCurrentBufRowNo-1];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      if not Bound then //some drivers allow GetData in mixed order so check it!
+        if Ord(ColumnType) < Ord(stAsciiStream) then //move data to buffers
+          CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1, ODBC_CType,
+            ColumnBuffer, CharOctedLength, StrLen_or_IndPtr))
+        else begin
+          { check out length of lob }
+          CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1,
+            ODBC_CType, Pointer(1){can not be nil}, 0, StrLen_or_IndPtr));
+          if StrLen_or_IndPtr^ = SQL_NULL_DATA then
+            PIZlob(@ColumnBuffer)^ := nil
+          else if ColumnType = stBinaryStream
+            then PIZlob(@ColumnBuffer)^ := TZODBCBlob.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver)
+            else if ColumnType in [stAsciiStream, stUnicodeStream]
+              then if ConSettings^.ClientCodePage^.Encoding = ceUTF16
+                then PIZlob(@ColumnBuffer)^ := TZODBCClobW.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver, ConSettings)
+                else PIZlob(@ColumnBuffer)^ := TZODBCClobA.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver, ConSettings);
+        end;
   end;
 end;
 
 function TAbstractODBCResultSet.Next: Boolean;
 //const FetchOrientation: array[Boolean] of SQLSMALLINT = (SQL_FETCH_FIRST, SQL_FETCH_NEXT); //using FetchScroll or ExtendedFetch??
 var RETCODE: SQLRETURN;
-label Fail, FetchData;  //ugly but faster and no double code
+label Fail, FetchData, cls_crs;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
   Result := False;
   if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (fPHSTMT^ = nil) or (Closed and not FIsMetaData) then
-    goto Fail;
+    Exit;
   if (RowNo = 0) then begin//fetch Iteration count of rows
     if Closed then Open;
 FetchData:
@@ -1480,10 +1464,9 @@ FetchData:
     if fMaxFetchableRows > 1 then //block cursor mode
       case RetCode of
         SQL_NO_DATA: //SQL_NO_DATA is returned too if final block fetch is done too but less rows than demanded are fetched
-          if fFetchedRowCount = 0 then //so check out the how many rows have been obtained
-            goto Fail
-          else
-            LoadUnBoundColumns;
+          if fFetchedRowCount = 0 //so check out the how many rows have been obtained
+          then goto Fail
+          else goto cls_crs;
         SQL_INVALID_HANDLE: begin
             fPHSTMT^ := nil;
             inherited ResetCursor;
@@ -1492,7 +1475,12 @@ FetchData:
         SQL_PARAM_DATA_AVAILABLE: ; //v3.8+
         else begin
             CheckStmtError(RETCODE);
-            LoadUnBoundColumns;
+cls_crs:    if fLastGetDataIndex >= fFirstGetDataIndex then
+              LoadUnBoundColumns;
+            if fFetchedRowCount < fMaxFetchableRows then begin
+              CheckStmtError(fPlainDriver.SQLCloseCursor(fPHSTMT^));
+              fCursorOpened := False;
+            end
           end;
       end
     else if RETCODE = SQL_NO_DATA then //single row fetch -> SQL_NO_DATA = end ow row set
@@ -1501,7 +1489,8 @@ FetchData:
       if (RETCODE <> SQL_PARAM_DATA_AVAILABLE) and (RETCODE <> SQL_SUCCESS) then
         CheckStmtError(RETCODE);
       fFetchedRowCount := 1;
-      LoadUnBoundColumns;
+      if fLastGetDataIndex >= fFirstGetDataIndex then
+        LoadUnBoundColumns;
     end;
   end else
     if FCurrentBufRowNo < fFetchedRowCount then
@@ -1517,6 +1506,10 @@ FetchData:
   Result := True;
   Exit;
 Fail:
+  if fCursorOpened then begin
+    CheckStmtError(fPlainDriver.SQLCloseCursor(fPHSTMT^));
+    fCursorOpened := False;
+  end;
   if RowNo <= LastRowNo then
     RowNo := LastRowNo + 1;
 end;
@@ -1525,33 +1518,29 @@ procedure TAbstractODBCResultSet.Open;
 var
   bufSQLLEN: SQLLEN;
   ColumnNumber: SQLUSMALLINT;
-  ColumnInfo: TZColumnInfo;
+  ColumnInfo: TZODBCColumnInfo;
   RowSize: NativeUInt;
   LobsInResult: Boolean;
   StrBuf: TByteDynArray;
+  Desc: SQLHDESC;
   function NoStreamedColFollows: Boolean;
   var I: Integer;
   begin
     Result := True;
     for i := ColumnsInfo.Count -1 downto 0+ColumnNumber do
-      if ord(TZColumnInfo(ColumnsInfo[I]).ColumnType) <= Ord(stUnicodeString) then begin
+      if ord(TZODBCColumnInfo(ColumnsInfo[I]).ColumnType) <= Ord(stUnicodeString) then begin
         Result := False;
         Break;
       end;
   end;
 begin
   if Closed and Assigned(fPHSTMT^) then begin
-    CheckStmtError(fPlainDriver.SQLNumResultCols(fPHSTMT^, @fColumnCount));
+    if fColumnCount = 0 then
+      CheckStmtError(fPlainDriver.SQLNumResultCols(fPHSTMT^, @fColumnCount));
     if fColumnCount = 0 then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     RowSize := 0;
     LobsInResult := False;
-    SetLength(fColumnBuffSizes, fColumnCount);
-    SetLength(fColumnBuffers, fColumnCount);
-    SetLength(fBoundColumns, fColumnCount);
-    SetLength(fRowBlobs, fColumnCount);
-    SetLength(fFixedWidthStrings, fColumnCount);
-    SetLength(fODBC_CTypes, fColumnCount);
     SetLength(StrBuf, (Max(32,
       Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxTableNameLength,
         Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxSchemaNameLength,
@@ -1559,89 +1548,102 @@ begin
             fConnection.GetMetaData.GetDataBaseInfo.GetMaxColumnNameLength))))+1) shl Ord(ConSettings^.ClientCodePage^.Encoding = ceUTF16));
 
     for ColumnNumber := 1 to fColumnCount do begin
-      ColumnInfo := TZColumnInfo.Create;
+      ColumnInfo := TZODBCColumnInfo.Create;
       ColumnsInfo.Add(ColumnInfo); //add first -> memleaksave
-      if fEnhancedColInfo then begin
-        ColumnInfo.CharOctedLength := ColNumAttribute(ColumnNumber, SQL_DESC_OCTET_LENGTH);
-        ColumnInfo.AutoIncrement := ColNumAttribute(ColumnNumber, SQL_DESC_AUTO_UNIQUE_VALUE) = SQL_TRUE;
-        ColumnInfo.CaseSensitive := ColNumAttribute(ColumnNumber, SQL_DESC_CASE_SENSITIVE) = SQL_TRUE;
-        ColumnInfo.ColumnDisplaySize := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
-        bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_NULLABLE);
-        if bufSQLLEN = SQL_NULLABLE then
-          ColumnInfo.Nullable := ntNullable
-        else if bufSQLLEN = SQL_NO_NULLS then
-          ColumnInfo.Nullable := ntNoNulls
-        else
-          ColumnInfo.Nullable := ntNullableUnknown;
-        ColumnInfo.Searchable := ColNumAttribute(ColumnNumber, SQL_DESC_SEARCHABLE) <> SQL_PRED_NONE;
-        bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_UPDATABLE);
-        ColumnInfo.ReadOnly := bufSQLLEN = SQL_ATTR_READONLY;
-        ColumnInfo.Writable := bufSQLLEN <> SQL_ATTR_READONLY;
-        ColumnInfo.DefinitelyWritable := bufSQLLEN = SQL_ATTR_WRITE;
+      with ColumnInfo do begin
+        if fEnhancedColInfo then begin
+          //ColumnInfo.CharOctedLength := ColNumAttribute(ColumnNumber, SQL_DESC_OCTET_LENGTH);
+          AutoIncrement := ColNumAttribute(ColumnNumber, SQL_DESC_AUTO_UNIQUE_VALUE) = SQL_TRUE;
+          CaseSensitive := ColNumAttribute(ColumnNumber, SQL_DESC_CASE_SENSITIVE) = SQL_TRUE;
+          ColumnDisplaySize := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
+          bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_NULLABLE);
+          if bufSQLLEN = SQL_NULLABLE then
+            Nullable := ntNullable
+          else if bufSQLLEN = SQL_NO_NULLS then
+            Nullable := ntNoNulls
+          else
+            Nullable := ntNullableUnknown;
+          Searchable := ColNumAttribute(ColumnNumber, SQL_DESC_SEARCHABLE) <> SQL_PRED_NONE;
+          bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_UPDATABLE);
+          ReadOnly := bufSQLLEN = SQL_ATTR_READONLY;
+          Writable := bufSQLLEN <> SQL_ATTR_READONLY;
+          DefinitelyWritable := bufSQLLEN = SQL_ATTR_WRITE;
 
-        ColumnInfo.ColumnLabel := ColStrAttribute(ColumnNumber, SQL_DESC_LABEL, StrBuf);
-        ColumnInfo.ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf);
-        if ColumnInfo.ColumnName = '' then
-          ColumnInfo.ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf);
-        if ColumnInfo.ColumnName = '' then //aggregates like SUM() don't have a columname -> skip processing
-          ColumnInfo.ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
-        else begin
-          ColumnInfo.TableName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_TABLE_NAME, StrBuf);
-          if ColumnInfo.TableName = '' then
-            ColumnInfo.TableName := ColStrAttribute(ColumnNumber, SQL_DESC_TABLE_NAME, StrBuf);
-          if ColumnInfo.TableName <> '' then begin //no table? -> no schema or catalog !
-            ColumnInfo.SchemaName := ColStrAttribute(ColumnNumber, SQL_DESC_SCHEMA_NAME, StrBuf);
-            ColumnInfo.CatalogName := ColStrAttribute(ColumnNumber, SQL_DESC_CATALOG_NAME, StrBuf);
+          ColumnLabel := ColStrAttribute(ColumnNumber, SQL_DESC_LABEL, StrBuf);
+          ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf);
+          if ColumnName = '' then
+            ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf);
+          if ColumnName = '' then //aggregates like SUM() don't have a columname -> skip processing
+            ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
+          else begin
+            TableName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_TABLE_NAME, StrBuf);
+            if TableName = '' then
+              TableName := ColStrAttribute(ColumnNumber, SQL_DESC_TABLE_NAME, StrBuf);
+            if TableName <> '' then begin //no table? -> no schema or catalog !
+              SchemaName := ColStrAttribute(ColumnNumber, SQL_DESC_SCHEMA_NAME, StrBuf);
+              CatalogName := ColStrAttribute(ColumnNumber, SQL_DESC_CATALOG_NAME, StrBuf);
+            end;
           end;
-        end;
-        //ColumnInfo.DefaultValue -> not implemented
-        //ColumnInfo.DefaultExpression -> not implemented
-        { get signed for determing the C_DATA_TYPE }
-        ColumnInfo.Signed := ColNumAttribute(ColumnNumber, SQL_DESC_UNSIGNED) = SQL_FALSE;
-        { process TZSQLType }
-        bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_CONCISE_TYPE);
-        fFixedWidthStrings[ColumnNumber-1] := (bufSQLLEN = SQL_CHAR) or (bufSQLLEN = SQL_WCHAR);
-        if bufSQLLEN = SQL_TYPE_VARIANT then begin//SQL Server type
-          ColumnInfo.ColumnType := ConvertODBC_CTypeToSQLType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), ConSettings^.CPType);
-          fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(ConvertSQLTypeToODBCType(ColumnInfo.ColumnType,SQL_TYPE_VARIANT, ConSettings^.ClientCodePage^.Encoding), not ColumnInfo.Signed, ConSettings^.ClientCodePage^.Encoding);
+          //DefaultValue -> not implemented
+          //DefaultExpression -> not implemented
+          bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_CONCISE_TYPE);
+          if bufSQLLEN = SQL_TYPE_VARIANT then begin//SQL Server type
+            bufSQLLEN := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), fSigned);
+            Signed := fSigned;
+          end;
+          case bufSQLLEN of
+            SQL_NUMERIC, SQL_DECIMAL, SQL_FLOAT, SQL_REAL, SQL_DOUBLE: begin
+                Precision := ColNumAttribute(ColumnNumber, SQL_DESC_PRECISION);
+                Scale := ColNumAttribute(ColumnNumber, SQL_DESC_SCALE);
+                Signed := True;
+              end;
+            SQL_CHAR, SQL_WCHAR: begin
+                Precision := ColumnDisplaySize;
+                FixedWidth := True;
+              end;
+            SQL_BINARY: begin
+                Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
+                FixedWidth := True;
+              end;
+            SQL_VARCHAR, SQL_WVARCHAR, SQL_VARBINARY:
+                Precision := ColumnDisplaySize;
+            SQL_TINYINT, SQL_SMALLINT, SQL_INTEGER, SQL_BIGINT: begin
+                Precision := ColumnDisplaySize;
+                Signed := ColNumAttribute(ColumnNumber, SQL_DESC_UNSIGNED) = SQL_FALSE;
+              end;
+            else Precision := ColumnDisplaySize;
+          end;
+
+          ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, Scale, Precision,
+              not Signed, ConSettings, @ODBC_CType);
+          {numeric data type infos: }
+          Currency := (ColumnType in [stDouble, stCurrency]) and
+            (ZFastCode.Pos('MONEY', UpperCase(ColStrAttribute(ColumnNumber, SQL_DESC_TYPE_NAME, StrBuf))) > 0); //handle smallmoney oslt too
+          if ColumnType in [stString, stUnicodeString] then begin
+            { character / binary info}
+            if ColumnType in [stString, stUnicodeString] then
+              if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16)
+              then ColumnCodePage := zCP_UTF16
+              else ColumnCodePage := FClientCP;
+          end;
         end else begin
-          fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(bufSQLLEN, not ColumnInfo.Signed, ConSettings^.ClientCodePage^.Encoding);
-          ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, not ColumnInfo.Signed, ConSettings^.CPType);
+          DescribeColumn(ColumnNumber, StrBuf, ColumnInfo);
+          ColumnLabel := ColumnName;
+          if (ColumnType in [stString, stUnicodeString, stBytes]) and
+             (Precision = 0) then
+               ColumnType := TZSQLType(Ord(ColumnType)+3); //switch to streamed mode
         end;
-        {numeric data type infos: }
-        if ColumnInfo.ColumnType in [stFloat, stDouble] then begin
-          ColumnInfo.Precision := ColNumAttribute(ColumnNumber, SQL_DESC_PRECISION);
-          ColumnInfo.Scale := ColNumAttribute(ColumnNumber, SQL_DESC_SCALE);
-          if ColumnInfo.ColumnType = stDouble then begin
-            ColumnInfo.Currency := ZFastCode.Pos('MONEY', UpperCase(ColStrAttribute(ColumnNumber, SQL_DESC_TYPE_NAME, StrBuf))) > 0; //handle smallmoney oslt too
-            if ColumnInfo.Currency then
-              ColumnInfo.ColumnType := stCurrency;
-          end
-        end else if ColumnInfo.ColumnType in [stString, stUnicodeString, stBytes, stGUID] then begin
-          { character / binary info}
-          ColumnInfo.Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
-          if ColumnInfo.Precision = 0 then
-             ColumnInfo.ColumnType := TZSQLType(Ord(ColumnInfo.ColumnType)+3); //switch to streamed mode
-          if ColumnInfo.ColumnType in [stString, stUnicodeString] then
-            if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16)
-            then ColumnInfo.ColumnCodePage := zCP_UTF16
-            else ColumnInfo.ColumnCodePage := FClientCP;
+        { calc buf size }
+        if Ord(ColumnType) < Ord(stAsciiStream) then begin //streams will be fetched by GetData()
+          //if Ord(ColumnType) >= Ord(stString) then
+            CharOctedLength := CalcBufSize(Precision, ODBC_CType,
+              ColumnType, ConSettings^.ClientCodePage);
+          Inc(RowSize, Cardinal(CharOctedLength));
+        end else begin
+          LobsInResult := True;
+          Precision := 0;
+          CharOctedLength := 0;
         end;
-      end else begin
-        DescribeColumn(ColumnNumber, StrBuf, ColumnInfo);
-        ColumnInfo.ColumnLabel := ColumnInfo.ColumnName;
-        if (ColumnInfo.ColumnType in [stString, stUnicodeString, stBytes]) and
-           (ColumnInfo.Precision = 0) then
-             ColumnInfo.ColumnType := TZSQLType(Ord(ColumnInfo.ColumnType)+3); //switch to streamed mode
-      end;
-      { calc buf size }
-      if not (ColumnInfo.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then begin //streams will be fetched by GetData()
-        fColumnBuffSizes[ColumnNumber-1] := CalcBufSize(ColumnInfo.Precision, fODBC_CTypes[ColumnNumber-1],
-          ColumnInfo.ColumnType, ConSettings^.ClientCodePage)+SizeOf(SQLLEN);
-        Inc(RowSize, fColumnBuffSizes[ColumnNumber-1]);
-      end else begin
-        LobsInResult := True;
-        ColumnInfo.Precision := 0;
       end;
     end;
     //GetData don't work with multiple fetched rows for most drivers
@@ -1652,29 +1654,48 @@ begin
       CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROWS_FETCHED_PTR, @fFetchedRowCount, 0));
     end;
     fFirstGetDataIndex := fColumnCount;
-    for ColumnNumber := 0 to fColumnCount -1 do
-      if fColumnBuffSizes[ColumnNumber] > 0 then begin //streams will be fetched by GetData()
-        SetLength(fColumnBuffers[ColumnNumber], fColumnBuffSizes[ColumnNumber]*fMaxFetchableRows);
-        fColumnBuffSizes[ColumnNumber] := fColumnBuffSizes[ColumnNumber]-SizeOf(SQLLEN); // now omit indicator space again
-        if (ColumnNumber = 0) or ((ColumnNumber > 0) and fBoundColumns[ColumnNumber-1]) then begin
-          CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
-            fODBC_CTypes[ColumnNumber], @fColumnBuffers[ColumnNumber][SizeOf(SQLLEN)*fMaxFetchableRows],
-            fColumnBuffSizes[ColumnNumber], @fColumnBuffers[ColumnNumber][0]));
-          fBoundColumns[ColumnNumber] := True;
-        end;
-      end else begin
-        SetLength(fColumnBuffers[ColumnNumber], SizeOf(SQLLEN)); //left space for Str_Or_Ind which will be filled by LoadUnboundColumn
-        { improve Invalid descriptor index error .. }
-        if (fSQL_GETDATA_EXTENSIONS and SQL_GD_BOUND = SQL_GD_BOUND ) then //E: (DM) The specified column was bound.
-          if (fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN ) //E: (DM) The number of the specified column was less than or equal to the number of the highest bound column
-              or NoStreamedColFollows then begin
-            CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
-              fODBC_CTypes[ColumnNumber], nil, SQL_DATA_AT_EXEC, @fColumnBuffers[ColumnNumber][0]));
-            fBoundColumns[ColumnNumber] := True;
+    fLastGetDataIndex := 0;
+    for ColumnNumber := 0 to fColumnCount -1 do begin
+      ColumnInfo := TZODBCColumnInfo(ColumnsInfo[ColumnNumber]);
+      with ColumnInfo do begin
+         GetMem(fStrLen_or_IndArray, SizeOf(SQLLEN)*fMaxFetchableRows);
+        if CharOctedLength > 0 then begin //streams will be fetched by GetData()
+          GetMem(fColumnBuffer, CharOctedLength*Integer(fMaxFetchableRows));
+          if (ColumnNumber = 0) or ((ColumnNumber > 0) and (CharOctedLength > 0)) then
+            if ((fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN ) or (ColumnNumber < fFirstGetDataIndex)) then begin
+              CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
+                ODBC_CType, ColumnBuffer, CharOctedLength,
+                PSQLLEN(StrLen_or_IndArray)));
+              Bound := True;
+            end
+          else fLastGetDataIndex := Max(ColumnNumber, fLastGetDataIndex);
+          if (ColumnType in [stBigDecimal, stCurrency]) then begin
+            CheckStmtError(FPlainDriver.SQLGetStmtAttr(fPHSTMT^, SQL_ATTR_APP_ROW_DESC, @Desc, 0, nil));
+            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+              SQL_DESC_CONCISE_TYPE, SQLPointer(ODBC_CType), SQL_IS_SMALLINT));
+            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+              SQL_DESC_PRECISION, SQLPointer(Precision), SQL_IS_INTEGER));
+            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+              SQL_DESC_SCALE, SQLPointer(Scale), SQL_IS_SMALLINT));
+            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+              SQL_DESC_DATA_PTR, ColumnBuffer, SQL_IS_POINTER));
           end;
-        if not fBoundColumns[ColumnNumber] then
-          fFirstGetDataIndex := Min(ColumnNumber, fFirstGetDataIndex);
+        end else begin
+          { improve Invalid descriptor index error .. }
+          if (fSQL_GETDATA_EXTENSIONS and SQL_GD_BOUND = SQL_GD_BOUND ) then //E: (DM) The specified column was bound.
+            if (fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN ) //E: (DM) The number of the specified column was less than or equal to the number of the highest bound column
+                or NoStreamedColFollows then begin
+              CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
+                ODBC_CType, nil, SQL_DATA_AT_EXEC, PSQLLEN(StrLen_or_IndArray)));
+              Bound := True;
+            end;
+          if not Bound then begin
+            fFirstGetDataIndex := Min(ColumnNumber, fFirstGetDataIndex);
+            fLastGetDataIndex := Max(ColumnNumber, fLastGetDataIndex);
+          end;
+        end;
       end;
+    end;
     inherited Open;
   end;
 end;
@@ -1682,7 +1703,7 @@ end;
 procedure TAbstractODBCResultSet.ResetCursor;
 begin
   if Assigned(fPHSTMT^) and fCursorOpened then begin
-    {CheckStmtError}(fPlainDriver.SQLCloseCursor(fPHSTMT^)); //close cursor and discrad pending result
+    CheckStmtError(fPlainDriver.SQLCloseCursor(fPHSTMT^)); //close cursor and discard pending result
     fCursorOpened := False;
   end;
   inherited ResetCursor;
@@ -1715,17 +1736,18 @@ begin
   else Result := '';
 end;
 
-constructor TODBCResultSetW.Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
-  ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
-  ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean);
+constructor TODBCResultSetW.Create(const Statement: IZStatement;
+  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
+  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
+  const EnhancedColInfo: Boolean);
 begin
   fPlainW := Connection.GetPLainDriver.GetInstance as TODBC3UnicodePlainDriver;
-  inherited Create(Statement, StmtHandle, ConnectionHandle, SQL, Connection, ZBufferSize,
-    ChunkSize, EnhancedColInfo);
+  inherited Create(Statement, StmtHandle, ConnectionHandle, SQL, Connection,
+    ZBufferSize, ChunkSize, EnhancedColInfo);
 end;
 
 procedure TODBCResultSetW.DescribeColumn(ColumnNumber: SQLUSMALLINT;
-  const Buf: TByteDynArray; var ColumnInfo: TZColumnInfo);
+  const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo);
 var
   NameLength, DataType, DecimalDigits, Nullable: SQLSMALLINT;
   ColumnSize: SQLULEN;
@@ -1753,8 +1775,8 @@ begin
     ColumnInfo.Nullable := ntNoNulls
   else
     ColumnInfo.Nullable := ntNullableUnknown;
-  ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(DataType, False, ConSettings^.CPType);
-  fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(DataType, False, ConSettings^.ClientCodePage^.Encoding);
+  ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(DataType,
+    DecimalDigits, ColumnSize, False, ConSettings, @ColumnInfo.ODBC_CType);
   if ColumnInfo.ColumnType in [stString, stUnicodeString] then
     if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16)
     then ColumnInfo.ColumnCodePage := zCP_UTF16
@@ -1788,9 +1810,10 @@ begin
   else Result := '';
 end;
 
-constructor TODBCResultSetA.Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
-  ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
-  ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean);
+constructor TODBCResultSetA.Create(const Statement: IZStatement;
+  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
+  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
+  const EnhancedColInfo: Boolean);
 begin
   fPlainA := Connection.GetPLainDriver.GetInstance as TODBC3RawPlainDriver;
   inherited Create(Statement, StmtHandle, ConnectionHandle, SQL, Connection,
@@ -1798,7 +1821,7 @@ begin
 end;
 
 procedure TODBCResultSetA.DescribeColumn(ColumnNumber: SQLUSMALLINT;
-  const Buf: TByteDynArray; var ColumnInfo: TZColumnInfo);
+  const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo);
 var
   {$IFNDEF UNICODE}
   ColumnName: String;
@@ -1826,8 +1849,8 @@ begin
     ColumnInfo.Nullable := ntNoNulls
   else
     ColumnInfo.Nullable := ntNullableUnknown;
-  ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(DataType, False, ConSettings^.CPType);
-  fODBC_CTypes[ColumnNumber-1] := ConvertODBCTypeToODBC_CType(DataType, False, ConSettings^.ClientCodePage^.Encoding);
+  ColumnInfo.ColumnType := ConvertODBCTypeToSQLType(DataType,
+    DecimalDigits, ColumnSize, False, ConSettings, @ColumnInfo.ODBC_CType);
   if ColumnInfo.ColumnType in [stString, stUnicodeString] then
     if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16)
     then ColumnInfo.ColumnCodePage := zCP_UTF16
@@ -1963,6 +1986,19 @@ begin
     end;
     PWord(PAnsiChar(FBlobData)+FBlobSize-SizeOf(WideChar))^ := Ord(#0); //set trailing #0
   end;
+end;
+
+{ TZODBCColumnInfo }
+
+destructor TZODBCColumnInfo.Destroy;
+begin
+  if (fColumnBuffer <> nil) then
+    if (CharOctedLength > 0)  then
+      FreeMem(fColumnBuffer)
+    else IZBLob(fColumnBuffer) := nil;
+  if (fStrLen_or_IndArray <> nil) then
+    FreeMem(fStrLen_or_IndArray);
+  inherited;
 end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit

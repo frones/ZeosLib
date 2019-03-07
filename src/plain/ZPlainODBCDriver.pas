@@ -93,6 +93,8 @@ type
   SQLULEN = NativeUInt;
   SQLSETPOSIROW = {$IFDEF CPU64}UInt64{$ELSE}Word{$ENDIF};
   SQLHWND = Pointer;
+  PSQLLENArray = ^TSQLLENArray;
+  TSQLLENArray = array[Byte] of SQLLEN;
 
 //For Backward compatibility
   SQLROWCOUNT = SQLULEN;
@@ -175,6 +177,7 @@ type
   end;
 
 // New Structure for TIMESTAMPOFFSET
+  PSQL_SS_TIMESTAMPOFFSET_STRUCT = ^TSQL_SS_TIMESTAMPOFFSET_STRUCT;
   TSQL_SS_TIMESTAMPOFFSET_STRUCT = record
     year:           SQLSMALLINT;
     month:          SQLUSMALLINT;
@@ -228,7 +231,8 @@ type
 const
   SQL_MAX_NUMERIC_LEN = 16;
 type
-  SQL_NUMERIC_STRUCT = packed record
+  PSQL_NUMERIC_STRUCT = ^TSQL_NUMERIC_STRUCT;
+  TSQL_NUMERIC_STRUCT = packed record
     precision:  SQLCHAR;
     scale:      SQLSCHAR;
     sign:       SQLCHAR; //* 1 if positive, 0 if negative */

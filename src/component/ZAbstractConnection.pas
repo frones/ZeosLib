@@ -269,7 +269,7 @@ type
     procedure HideSQLHourGlass;
   published
     property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetControlsCodePage;
-    property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode default True;
+    property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode stored True default {$IFDEF UNICODDE}True{$ELSE}False{$ENDIF};
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read GetProperties write SetProperties;
@@ -873,8 +873,7 @@ begin
       FConnection := DriverManager.GetConnectionWithParams(
         ConstructURL(UserName, Password), FURL.Properties);
       try
-        with FConnection do
-        begin
+        with FConnection do begin
           SetAutoCommit(FAutoCommit);
           SetReadOnly(FReadOnly);
           SetCatalog(FCatalog);

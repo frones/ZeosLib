@@ -86,7 +86,7 @@ function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
   CtrlsCPType: TZControlsCodePage; const SrcRS: IZResultSet): TZSQLType; overload;
 
 procedure OleDBCheck(aResult: HRESULT; const SQL: String;
-  Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray = nil);
+  const Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray = nil);
 
 {**
   Brings up the OleDB connection string builder dialog.
@@ -266,7 +266,7 @@ begin
 end;
 
 procedure OleDBCheck(aResult: HRESULT; const SQL: String;
-  Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray = nil);
+  const Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray = nil);
 var
   OleDBErrorMessage, FirstSQLState: String;
   ErrorInfo, ErrorInfoDetails: IErrorInfo;

@@ -209,13 +209,15 @@ var
   LastComment: String;
 
   function CountChars(const Str: string; Chr: Char): Integer;
-  var
-    I: Integer;
+  var P, PEnd: PChar;
   begin
     Result := 0;
-    for I := 1 to Length(Str) do
-      if Str[I] = Chr then
-        Inc(Result);
+    P := Pointer(Str);
+    PEnd := P+Length(Str);
+    while P < PEnd do begin
+      Inc(Result, Ord(P^ = Chr));
+      Inc(P);
+    end;
   end;
 
   procedure SetNextToken;

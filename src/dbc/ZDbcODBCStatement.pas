@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{           ODBC Database Connectivity Classes           }
+{           ODBC Database Connectivity Classes            }
 {                                                         }
 {            Originally written by EgonHugeist            }
 {                                                         }
@@ -64,59 +64,46 @@ uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
 type
   PSQLHDBC = ^SQLHDBC;
 
-  IZODBCStatement = interface(IZPreparedStatement)
-    ['{FF765EE4-B278-451E-A534-333C22D234B1}']
-    function GetMoreResultsIndicator: TZMoreResultsIndicator;
-    procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
-  end;
-
-  PZODBCParamInfo = ^TZODBCParamInfo;
-  TZODBCParamInfo = record
-    DataType: SQLSMALLINT;
-    C_DataType: SQLSMALLINT;
-    InputDataType: SQLSMALLINT;
+  PZODBCParamBind = ^TZODBCParamBind;
+  TZODBCParamBind = record
+    InputOutputType: SQLSMALLINT; //the InputOutputType of the Parameter
+    ValueType: SQLSMALLINT; //the C-DataType
+    ParameterType: SQLSMALLINT; //the SQL-DataType
+    ColumnSize: SQLULEN;
     DecimalDigits: SQLSMALLINT;
-    LastParamDataPtr, CurrParamDataPtr: SQLPOINTER;
-    LastStrLen_or_IndPtr, CurrStrLen_or_IndPtr: SQLPOINTER;
+    ParameterValuePtr: SQLPOINTER;
+    StrLen_or_IndPtr: PSQLLEN;
     Nullable: SQLSMALLINT;
-    ColumnSize: SQLLEN;
-    BufferSize: SQLLEN;
-    ValueCount: SQLULEN;
+    BufferLength: SQLLEN;
+    ValueCount: Integer;
     SQLType: TZSQLType;
-    DescBindBuffer: TByteDynArray;
+    Described, ExternalMem: Boolean;
   end;
-  PZODBCParamInfoArray = ^TZODBCParamInfoArray;
-  TZODBCParamInfoArray = array[Byte] of TZODBCParamInfo;
+  PZODBCParamBindArray = ^TZODBCParamBindArray;
+  TZODBCParamBindArray = array[Byte] of TZODBCParamBind;
 
-  TZAbstractODBCStatement = class(TZAbstractPreparedStatement, IZODBCStatement)
+  TZAbstractODBCStatement = class(TZAbstractPreparedStatement2)
   private
     fPlainDriver: TZODBC3PlainDriver;
     fPHDBC: PSQLHDBC;
     fHSTMT: SQLHSTMT;
-    fParamInfos: array of TZODBCParamInfo;
     fStreamSupport: Boolean;
-    fZBufferSize, fArrayOffSet, fMaxBufArrayBound, fCurrentIterations: Integer;
+    fZBufferLength: Integer;
     fStmtTimeOut: SQLULEN;
     fEnhancedColInfo: Boolean;
-    fBufferSize: Integer;
-    fBatchLobBuf: TIZBlobsDynArray;
     fMoreResultsIndicator: TZMoreResultsIndicator;
-    fBindBuffer: TByteDynArray;
-    fBindRowWise: Boolean;
     fLastAutoCommit: Boolean;
     procedure InternalExecute;
-    procedure InternalBindParams;
     procedure PrepareOpenedResultSetsForReusing;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
+    procedure CheckDbcError(RETCODE: SQLRETURN);
+    procedure HandleError(RETCODE: SQLRETURN; Handle: SQLHANDLE; HandleType: SQLSMALLINT);
     function InternalCreateResultSet: IZResultSet; virtual; abstract;
     procedure InternalBeforePrepare;
     function GetCurrentResultSet: IZResultSet;
   protected
-    procedure PrepareInParameters; override;
-    procedure BindInParameters; override;
-    procedure UnPrepareInParameters; override;
-    function SupportsSingleColumnArrays: Boolean; override;
+    function SupportsSingleColumnArrays: Boolean;
   public
     constructor Create(const Connection: IZODBCConnection;
       var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
@@ -130,24 +117,87 @@ type
     procedure AfterClose; override;
     procedure Cancel; override;
 
-
-    procedure SetDataArray(ParameterIndex: Integer; const Value;
-      const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
-
-    procedure ClearParameters; override;
-  public
-    function GetMoreResultsIndicator: TZMoreResultsIndicator;
-    procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
+    function GetMoreResults: Boolean; override;
   end;
 
-  TZODBCPreparedStatementW = class(TZAbstractODBCStatement)
+  TZAbstractODBCPreparedStatement = class(TZAbstractODBCStatement)
+  private
+    fParamBindings: PZODBCParamBindArray;
+    fBindImmediat: Boolean;
+    FClientEncoding: TZCharEncoding;
+    fCurrentIterations: NativeUInt;
+    procedure RaiseUnsupportedParamType(Index: Integer; SQLCType: SQLSMALLINT; SQLType: TZSQLType);
+    procedure RaiseExceeded(Index: Integer);
+    procedure SetPWideChar(Index: Integer; Value: PWideChar; WLen: LengthInt);
+    procedure SetPAnsiChar(Index: Integer; Value: PAnsiChar; BLen: LengthInt);
+    procedure BindInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}); overload;
+    procedure BindInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF}); overload;
+    procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
+    procedure InitBind(Index, ValueCount: Integer; SQLType: TZSQLType; ActualLength: LengthInt = 0);
+    procedure BindRaw(Index: Integer; const Value: RawByteString; CP: Word);
+    procedure DescribeParameterFromODBC;
+    procedure DescribeParameterFromBindList;
+    procedure BindParam(Bind: PZODBCParamBind; ParameterNumber: SQLUSMALLINT);
+    procedure BindArrayColumnWise(Index: Integer);
+
+    procedure ReallocParamBindings(OldCount, NewCount: Integer);
+  protected
+    function SupportsBidirectionalParams: Boolean; override;
+    procedure CheckParameterIndex(Value: Integer); override;
+    procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
+    procedure UnPrepareInParameters; override;
+    procedure SetBindCapacity(Capacity: Integer); override;
+  public
+    constructor Create(const Connection: IZODBCConnection;
+      var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
+  public
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
+
+    procedure SetNull(Index: Integer; SQLType: TZSQLType);
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
+    procedure SetByte(ParameterIndex: Integer; Value: Byte); reintroduce;
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt); reintroduce;
+    procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
+    procedure SetInt(ParameterIndex: Integer; Value: Integer); reintroduce;
+    procedure SetULong(Index: Integer; const Value: UInt64); reintroduce;
+    procedure SetLong(Index: Integer; const Value: Int64); reintroduce;
+    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
+    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
+    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce;
+    procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
+
+    procedure SetString(Index: Integer; const Value: String); reintroduce;
+    procedure SetUnicodeString(Index: Integer; const Value: ZWideString); reintroduce;
+    procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
+    {$IFNDEF NO_ANSISTRING}
+    procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    procedure SetUTF8String(Index: Integer; const Value: UTF8String); reintroduce;
+    {$ENDIF}
+    procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
+
+    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
+
+    procedure ClearParameters; override;
+  end;
+
+  TZODBCPreparedStatementW = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
   protected
     function InternalCreateResultSet: IZResultSet; override;
   public
     procedure Prepare; override;
   end;
 
-  TZODBCPreparedStatementA = class(TZAbstractODBCStatement)
+  TZODBCPreparedStatementA = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
   protected
     function InternalCreateResultSet: IZResultSet; override;
   public
@@ -158,7 +208,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
-uses Math, DateUtils,
+uses Math, DateUtils, TypInfo, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZSysUtils, ZMessages, ZEncoding, ZDbcUtils, ZDbcResultSet, ZFastCode, ZDbcLogging,
   ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver, ZClasses;
 
@@ -167,56 +217,9 @@ const
 
 type
   PLobArray = ^TLobArray;
-  TLobArray = array[0..High(Word)] of IInterface;
+  TLobArray = array[Byte] of IZBlob;
 
 { TZAbstractODBCStatement }
-
-procedure TZAbstractODBCStatement.BindInParameters;
-var
-  RowCount: SQLLEN;
-begin
-  fLastAutoCommit := Connection.GetAutoCommit;
-  if Length(fParamInfos) = 0 then
-    exit
-  else
-    if (ArrayCount = 0) or (fMaxBufArrayBound = -1) then begin
-      if fCurrentIterations <> 1 then begin
-        fCurrentIterations := 1;
-        SetLength(fBindBuffer, fBufferSize)
-      end;
-      InternalBindParams;
-    end else begin
-      LastUpdateCount := 0;
-      fArrayOffSet := 0;
-      Connection.SetAutoCommit(False);
-      while True do
-      begin
-        if (FArrayOffSet+fMaxBufArrayBound >= ArrayCount) then
-        begin //left space for last excution
-          if fCurrentIterations <> ArrayCount - FArrayOffSet then begin
-            fCurrentIterations := ArrayCount - FArrayOffSet;
-            SetLength(fBindBuffer, fBufferSize*fCurrentIterations)
-          end;
-          InternalBindParams;
-          FArrayOffSet := 0; //Reset!
-          Break
-        end
-        else
-        begin
-          if fCurrentIterations <> fMaxBufArrayBound then begin
-            fCurrentIterations := fMaxBufArrayBound;
-            SetLength(fBindBuffer, fBufferSize*fMaxBufArrayBound)
-          end;
-          InternalBindParams;
-          InternalExecute;
-          Inc(FArrayOffSet, fMaxBufArrayBound);
-          CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-          LastUpdateCount := LastUpdateCount + RowCount;
-        end
-      end
-    end;
-  inherited BindInParameters;
-end;
 
 {**
   Cancels this <code>Statement</code> object if both the DBMS and
@@ -225,26 +228,21 @@ end;
   is being executed by another thread.
 }
 procedure TZAbstractODBCStatement.Cancel;
-var RetCode: SQLRETURN;
 begin
-  if fHSTMT <> nil then begin
-    RetCode := FPlainDriver.SQLCancel(fHSTMT);
-    if RETCODE <> SQL_SUCCESS then
-      CheckODBCError(RETCODE, fHSTMT, SQL_HANDLE_STMT, Connection as IZODBCConnection);
-  end;
+  if fHSTMT <> nil then
+    CheckStmtError(FPlainDriver.SQLCancel(fHSTMT));
+end;
+
+procedure TZAbstractODBCStatement.CheckDbcError(RETCODE: SQLRETURN);
+begin
+  if RETCODE <> SQL_SUCCESS then
+    HandleError(RETCODE, fPHDBC^, SQL_HANDLE_DBC);
 end;
 
 procedure TZAbstractODBCStatement.CheckStmtError(RETCODE: SQLRETURN);
 begin
-  CheckODBCError(RETCODE, fHSTMT, SQL_HANDLE_STMT, Connection as IZODBCConnection);
-end;
-
-procedure TZAbstractODBCStatement.ClearParameters;
-var I: Integer;
-begin
-  inherited ClearParameters;
-  for i := low(fBatchLobBuf) to high(fBatchLobBuf) do
-    SetLength(fBatchLobBuf[i], 0);
+  if RETCODE <> SQL_SUCCESS then
+    HandleError(RETCODE, fHSTMT, SQL_HANDLE_STMT);
 end;
 
 procedure TZAbstractODBCStatement.AfterClose;
@@ -259,99 +257,54 @@ constructor TZAbstractODBCStatement.Create(const Connection: IZODBCConnection;
   var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  //inherited Create(Connection, Connection.NativeSQL(SQL), Info);
   fPlainDriver := TZODBC3PlainDriver(Connection.GetPlainDriver.GetInstance);
   fStreamSupport := Connection.ODBCVersion >= {%H-}Word(SQL_OV_ODBC3_80);
   fPHDBC := @ConnectionHandle;
-  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
+  FZBufferLength := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EnhancedColumnInfo, 'True'));
   fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_StatementTimeOut, ''), SQL_QUERY_TIMEOUT_DEFAULT); //execution timeout in seconds by default 1
   fMoreResultsIndicator := TZMoreResultsIndicator(Ord(not Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets));
-  fBindRowWise := False;
 end;
 
 function TZAbstractODBCStatement.ExecutePrepared: Boolean;
 var
   RowCount: SQLLEN;
   ColumnCount: SQLSMALLINT;
-  RETCODE: SQLRETURN;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := 0;
   Prepare;
   BindInParameters;
-  try
-    InternalExecute;
+  InternalExecute;
+  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+  if ColumnCount > 0 then begin
+    LastUpdateCount := -1;
+    LastResultSet := GetCurrentResultSet;
+  end else begin
     CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-    LastUpdateCount := LastUpdateCount + RowCount;
-    CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-    if ColumnCount > 0 then begin
-      LastUpdateCount := -1;
-      LastResultSet := GetCurrentResultSet;
-    end else
-      if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets and
-         (fMoreResultsIndicator <> mriHasNoMoreResults) then
-        repeat
-          RETCODE := fPlainDriver.SQLMoreResults(fHSTMT);
-          if RETCODE = SQL_SUCCESS then begin
-            fMoreResultsIndicator := mriHasMoreResults;
-            CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-            if ColumnCount > 0 then
-              LastResultSet := GetCurrentResultSet;
-          end else if RETCODE = SQL_NO_DATA then begin
-            if fMoreResultsIndicator <> mriHasMoreResults then
-              fMoreResultsIndicator := mriHasNoMoreResults;
-          end else
-            CheckStmtError(RETCODE);
-        until RETCODE = SQL_NO_DATA;
-    Result := Assigned(LastResultSet);
-  finally
-    Connection.SetAutoCommit(fLastAutoCommit);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    LastUpdateCount := RowCount;
   end;
+  Result := Assigned(LastResultSet);
 end;
 
 function TZAbstractODBCStatement.ExecuteQueryPrepared: IZResultSet;
-var
-  ColumnCount: SQLSMALLINT;
-  RETCODE: SQLRETURN;
+var ColumnCount: SQLSMALLINT;
 begin
   PrepareOpenedResultSetsForReusing;
   Prepare;
   BindInParameters;
-  try
-    InternalExecute;
-    CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-    if ColumnCount > 0 then
-      if Assigned(FOpenResultSet) then
-        Result := IZResultSet(FOpenResultSet)
-      else
-        Result := GetCurrentResultSet
-    else begin
-      Result := nil;
-      if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets and
-        (fMoreResultsIndicator <> mriHasNoMoreResults) then
-      begin
-        repeat
-          RETCODE := fPlainDriver.SQLMoreResults(fHSTMT);
-          if RETCODE = SQL_SUCCESS then begin
-            fMoreResultsIndicator := mriHasMoreResults;
-            CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-            if ColumnCount > 0 then
-              Result := GetCurrentResultSet
-          end else if RETCODE = SQL_NO_DATA then begin
-            if fMoreResultsIndicator <> mriHasMoreResults then
-              fMoreResultsIndicator := mriHasNoMoreResults;
-          end else
-            CheckStmtError(RETCODE);
-        until RETCODE = SQL_NO_DATA;
-      end;
-    end;
-    if Result = nil then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
-  finally
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  InternalExecute;
+  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+  if ColumnCount > 0 then
+    if Assigned(FOpenResultSet) 
+    then Result := IZResultSet(FOpenResultSet)
+    else Result := GetCurrentResultSet
+  else begin
+    while GetMoreResults and (LastResultSet = nil) do ;
+    Result := GetResultSet;
   end;
+  if Result = nil then
+    raise EZSQLException.Create(SCanNotOpenResultSet);
 end;
 
 function TZAbstractODBCStatement.ExecuteUpdatePrepared: Integer;
@@ -363,15 +316,10 @@ begin
   Prepare;
   BindInParameters;
   LastUpdateCount := 0;
-  try
-    InternalExecute;
-    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-    LastUpdateCount := LastUpdateCount + RowCount;
-    Result := RowCount;
-  finally
-    Connection.SetAutoCommit(fLastAutoCommit);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  end;
+  InternalExecute;
+  CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+  LastUpdateCount := LastUpdateCount + RowCount;
+  Result := RowCount;
 end;
 
 function TZAbstractODBCStatement.GetCurrentResultSet: IZResultSet;
@@ -395,1606 +343,101 @@ begin
   FOpenResultSet := Pointer(Result);
 end;
 
-function TZAbstractODBCStatement.GetMoreResultsIndicator: TZMoreResultsIndicator;
+{**
+  Moves to a <code>Statement</code> object's next result.  It returns
+  <code>true</code> if this result is a <code>ResultSet</code> object.
+  This method also implicitly closes any current <code>ResultSet</code>
+  object obtained with the method <code>getResultSet</code>.
+
+  <P>There are no more results when the following is true:
+  <PRE>
+        <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
+  </PRE>
+
+ @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+   <code>false</code> if it is an update count or there are no more results
+ @see #execute
+}
+function TZAbstractODBCStatement.GetMoreResults: Boolean;
+var
+  ColumnCount: SQLSMALLINT;
+  RowCount: SQLLEN;
+  RETCODE: SQLRETURN;
 begin
-  Result := fMoreResultsIndicator;
+  Result := False;
+  if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then begin
+    RETCODE := fPlainDriver.SQLMoreResults(fHSTMT);
+    if RETCODE = SQL_SUCCESS then begin
+      Result := True;
+      fMoreResultsIndicator := mriHasMoreResults;
+      CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+      if ColumnCount > 0
+      then LastResultSet := GetCurrentResultSet
+      else begin
+        CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+        LastUpdateCount := RowCount;
+      end;
+    end else if RETCODE = SQL_NO_DATA then begin
+      if fMoreResultsIndicator <> mriHasMoreResults then
+        fMoreResultsIndicator := mriHasNoMoreResults;
+    end else
+      CheckStmtError(RETCODE);
+  end;
+end;
+
+procedure TZAbstractODBCStatement.HandleError(RETCODE: SQLRETURN;
+  Handle: SQLHANDLE; HandleType: SQLSMALLINT);
+begin
+  CheckODBCError(RETCODE, Handle, HandleType, SQL, Self, Connection as IZODBCConnection);
 end;
 
 procedure TZAbstractODBCStatement.InternalBeforePrepare;
 begin
   if not Assigned(fHSTMT) then begin
-    CheckODBCError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT), fPHDBC^, SQL_HANDLE_DBC, Connection as IZODBCConnection);
+    CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT));
     CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
     fMoreResultsIndicator := mriUnknown;
   end;
 end;
 
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-procedure TZAbstractODBCStatement.InternalBindParams;
-var
-  I, J: SQLUSMALLINT;
-  Value: TZVariant;
-  ParamSetChanged: Boolean;
-  TmpLobIndex: Integer;
-  Param: PZODBCParamInfo;
-  StrLen_or_IndOffSet, ParameterDataOffSet: Integer;
-
-  GUID: TGUID;
-  { array DML bindings }
-  ZData: Pointer; //array entry
-  { using mem entry of ZData saves cast code }
-  ZBooleanArray: TBooleanDynArray absolute ZData;
-  ZByteArray: TByteDynArray absolute ZData;
-  ZShortIntArray: TShortIntDynArray absolute ZData;
-  ZWordArray: TWordDynArray absolute ZData;
-  ZSmallIntArray: TSmallIntDynArray absolute ZData;
-  ZLongWordArray: TLongWordDynArray absolute ZData;
-  ZIntegerArray: TIntegerDynArray absolute ZData;
-  ZInt64Array: TInt64DynArray absolute ZData;
-  ZUInt64Array: TUInt64DynArray absolute ZData;
-  ZSingleArray: TSingleDynArray absolute ZData;
-  ZDoubleArray: TDoubleDynArray absolute ZData;
-  ZCurrencyArray: TCurrencyDynArray absolute ZData;
-  ZExtendedArray: TExtendedDynArray absolute ZData;
-  ZDateTimeArray: TDateTimeDynArray absolute ZData;
-  ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
-  {$IFNDEF NO_ANSISTRING}
-  ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
-  {$ENDIF}
-  ZUTF8StringArray: TUTF8StringDynArray absolute ZData;
-  {$IFNDEF NO_UTF8STRING}
-  ZStringArray: TStringDynArray absolute ZData;
-  {$ENDIF}
-  ZUnicodeStringArray: TUnicodeStringDynArray absolute ZData;
-  ZCharRecArray: TZCharRecDynArray absolute ZData;
-  ZBytesArray: TBytesDynArray absolute ZData;
-  ZInterfaceArray: TInterfaceDynArray absolute ZData;
-  ZGUIDArray: TGUIDDynArray absolute ZData;
-
-  ParameterDataPtr: SQLPOINTER;
-  StrLen_or_IndPtr: SQLPOINTER;
-
-  year, fraction: Word;
-  TempBlob: IZBlob;
-  TmpStream: TStream;
-  RawTemp: RawByteString;
-  CharRec: TZCharRec;
-
-  function IsNotNull: Boolean;
-  begin
-    if Assigned(Value.VArray.VIsNullArray) and TBooleanDynArray(Value.VArray.VIsNullArray)[j+fArrayOffSet] then begin
-      PSQLLEN(StrLen_or_IndPtr)^ := SQL_NULL_DATA;
-      Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-      Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-      Result := False;
-    end else begin
-      PSQLLEN(StrLen_or_IndPtr)^ := SQL_NO_NULLS;
-      Result := True;
-    end;
-  end;
-
-  function LobIsNotNull: Boolean;
-  begin
-    Result := not (Assigned(Value.VArray.VIsNullArray) and TBooleanDynArray(Value.VArray.VIsNullArray)[j+fArrayOffSet]);
-    PSQLLEN(StrLen_or_IndPtr)^ := SQL_DATA_AT_EXEC;
-    if (not Result) then
-      Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-
-  procedure SetByte(B: Byte);
-  begin
-    PByte(ParameterDataPtr)^ := B;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetShort(S: ShortInt);
-  begin
-    PShortInt(ParameterDataPtr)^ := s;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetWord(W: Word);
-  begin
-    PWord(ParameterDataPtr)^ := W;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetSmall(S: SmallInt);
-  begin
-    PSmallInt(ParameterDataPtr)^ := S;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetCardinal(C: Cardinal);
-  begin
-    PLongWord(ParameterDataPtr)^ := C;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetInteger(I: Integer);
-  begin
-    PInteger(ParameterDataPtr)^ := I;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetUInt64(const I: UInt64);
-  begin
-    PUInt64(ParameterDataPtr)^ := I;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetInt64(const I: Int64);
-  begin
-    PInt64(ParameterDataPtr)^ := I;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetSingle(s: Single); overload;
-  begin
-    PSingle(ParameterDataPtr)^ := S;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetSingle(P: PAnsiChar; Len: Integer); overload;
-  begin
-    SQLStrToFloatDef(P, 0, PSingle(ParameterDataPtr)^, Len);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetSingle(P: PWideChar; Len: Integer); overload;
-  begin
-    SQLStrToFloatDef(P, 0, PSingle(ParameterDataPtr)^, Len);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetDouble(const d: Double); overload;
-  begin
-    PDouble(ParameterDataPtr)^ := D;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetDouble(P: PAnsiChar; Len: Integer); overload;
-  begin
-    SQLStrToFloatDef(P, 0, PDouble(ParameterDataPtr)^, Len);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetDouble(P: PWideChar; Len: Integer); overload;
-  begin
-    SQLStrToFloatDef(P, 0, PDouble(ParameterDataPtr)^, Len);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetBinary(P: Pointer; Len: Integer);
-  begin
-    PSQLLEN(StrLen_or_IndPtr)^ := Len;
-    if Assigned(P) then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetDate(const D: TDateTime);
-  begin
-    DecodeDate(D, Year, PSQL_DATE_STRUCT(ParameterDataPtr)^.month, PSQL_DATE_STRUCT(ParameterDataPtr)^.day);
-    PSQL_DATE_STRUCT(ParameterDataPtr)^.year := year;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetTime(const D: TDateTime);
-  begin
-    if Param.C_DataType = SQL_C_BINARY then begin
-      //https://bytes.com/topic/sql-server/answers/851494-sql-state-22003-numeric-value-out-range-time-data-type
-      PSQLLEN(StrLen_or_IndPtr)^ := SizeOf(TSQL_SS_TIME2_STRUCT);
-      DecodeTime(D, PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.hour, PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.minute,
-        PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.second, fraction);
-      //https://msdn.microsoft.com/de-de/library/bb677243%28v=sql.120%29.aspx
-      PSQL_SS_TIME2_STRUCT(ParameterDataPtr)^.fraction := fraction*1000000;
-    end else
-      DecodeTime(D, PSQL_TIME_STRUCT(ParameterDataPtr)^.hour, PSQL_TIME_STRUCT(ParameterDataPtr)^.minute,
-        PSQL_TIME_STRUCT(ParameterDataPtr)^.second, fraction);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetTimeStamp(const D: TDateTime);
-  begin
-    DecodeDateTime(D, Year, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.day,
-      PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.second, fraction);
-    PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.year := year;
-    PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := fraction*1000000;
-      //https://social.msdn.microsoft.com/Forums/sqlserver/en-US/ac1b5a6d-5e64-4603-9c92-b75ba4e51bf2/error-22008-datetime-field-overflow-when-inserting-a-record-with-datetime2-field-via-odbc?forum=sqldataaccess
-    //PSQL_TIMESTAMP_STRUCT(ParameterDataPtr)^.fraction := 0;//puff what a shit: fraction available but can't be set???;
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetPUnicode(P: PWidechar; Len: Integer);
-  begin
-    PSQLLEN(StrLen_or_IndPtr)^ := Min(Param.BufferSize-2, Len shl 1);
-    if Assigned(P) then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-    PWord(PWideChar(ParameterDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := Ord(#0);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetUnicode(const U: ZWideString);{$IFDEF WITH_INLINE}inline;{$ENDIF}
-  begin
-    SetPUnicode(Pointer(U), Length(U));
-  end;
-  procedure SetPRaw(P: PAnsiChar; Len: Integer);
-  begin
-    PSQLLEN(StrLen_or_IndPtr)^ := Min(Param.BufferSize-1, Len);
-    if Assigned(P) then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-    PByte(PAnsiChar(ParameterDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := Ord(#0);
-    Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetRaw(const R: RawByteString);{$IFDEF WITH_INLINE}inline;{$ENDIF}
-  begin
-    SetPRaw(Pointer(R), Length(R));
-  end;
-  procedure SetLob(const Lob: IInterface);
-  begin
-    PLobArray(PPointer(Param.CurrParamDataPtr)^)[j] := lob;
-    Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-  end;
-  procedure SetCLobFromPUnicode(P: PWidechar; Len: Integer);
-  begin
-    SetLob(TZAbstractCLob.CreateWithData(P, Len, ConSettings));
-  end;
-  procedure SetCLobFromUnicode(const U: ZWideString); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-  begin
-    if Pointer(U) = nil then
-      SetCLobFromPUnicode(PEmptyUnicodeString, 0)
-    else
-      SetCLobFromPUnicode(PWideChar(Pointer(U)), Length(U));
-  end;
-  procedure SetClobFromPRaw(P: PAnsiChar; Len: Integer);
-  begin
-    SetLob(TZAbstractCLob.CreateWithData(P, Len, ConSettings^.ClientCodePage^.CP, ConSettings));
-  end;
-  procedure SetClobFromRaw(const R: RawByteString); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-  begin
-    if Pointer(R) = nil then
-      SetClobFromPRaw(PEmptyAnsiString, 0)
-    else
-      SetClobFromPRaw(Pointer(R), Length(R));
-  end;
-  procedure SetBlob(P: Pointer; Len: Integer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-  begin
-    SetLob(TZAbstractBLob.CreateWithData(P, Len));
-  end;
-  procedure SetBlobFromBts(const B: TBytes); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-  begin
-    SetBlob(Pointer(B), Length(B));
-  end;
-begin
-  { missing point(no test case): desc array bindings of a single column so not params are arrays indicated by fMaxBufArrayBound = -1 }
-  if Length(fParamInfos) > 0 then begin
-    ParamSetChanged := False;
-    TmpLobIndex := -1;
-    Assert(((fMaxBufArrayBound = -1) and (ArrayCount = 0)) or (fMaxBufArrayBound > 0), 'Desc array binding not done yet');
-    StrLen_or_IndPtr := Pointer(fBindBuffer);
-    if fBindRowWise then
-      ParameterDataPtr := {%H-}Pointer({%H-}NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN))
-    else
-      ParameterDataPtr := {%H-}Pointer({%H-}NativeUInt(StrLen_or_IndPtr)+(SizeOf(SQLLEN)*Cardinal(fCurrentIterations)));
-    { initialize offset ranges }
-    if (not fBindRowWise) or (fMaxBufArrayBound < 0) or (ArrayCount = 0) then begin
-      StrLen_or_IndOffSet := SizeOf(SQLLEN);
-      ParameterDataOffSet := 0;
-    end else begin
-      StrLen_or_IndOffSet := fBufferSize;
-      ParameterDataOffSet := fBufferSize;
-    end;
-    for i := low(fParamInfos) to high(fParamInfos) do begin
-      Value := InParamValues[i];
-      Param := @fParamInfos[I];
-      Param.CurrStrLen_or_IndPtr := StrLen_or_IndPtr;
-      if (ArrayCount = 0) or (not fBindRowWise) or (fMaxBufArrayBound < 0) then
-        ParameterDataOffSet := Param^.BufferSize;
-      if Value.VType = vtArray then begin //array DML binding
-        if Assigned(Value.VArray.VArray) then begin
-          if fMaxBufArrayBound < 0 then begin
-            fCurrentIterations := {%H-}PArrayLenInt({%H-}NativeUInt(Value.VArray.VArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF} //FPC returns High() for this pointer location
-          end else
-            fCurrentIterations := Min(fMaxBufArrayBound, {%H-}PArrayLenInt({%H-}NativeUInt(Value.VArray.VArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}-fArrayOffSet);
-          { fast binary C and Pascal equal binary types first if we bind column wise }
-          if (not fBindRowWise) and (TZSQLType(Value.VArray.VArrayType) = Param.SQLType) and
-             ((Ord(Param.SQLType) <= Ord(stDouble)) and (Ord(Param.SQLType) > Ord(stBoolean))) then begin
-            ZData := Value.VArray.VArray;
-            //!no! move just reference -> can be used for inout param as well
-            case Param.SQLType of
-              stByte:     Param.CurrParamDataPtr := @ZByteArray[fArrayOffSet];
-              stShort:    Param.CurrParamDataPtr := @ZShortIntArray[fArrayOffSet];
-              stWord:     Param.CurrParamDataPtr := @ZWordArray[fArrayOffSet];
-              stSmall:    Param.CurrParamDataPtr := @ZSmallIntArray[fArrayOffSet];
-              stLongWord: Param.CurrParamDataPtr := @ZLongWordArray[fArrayOffSet];
-              stInteger:  Param.CurrParamDataPtr := @ZIntegerArray[fArrayOffSet];
-              stULong:    Param.CurrParamDataPtr := @ZUInt64Array[fArrayOffSet];
-              stLong:     Param.CurrParamDataPtr := @ZInt64Array[fArrayOffSet];
-              stFloat:    Param.CurrParamDataPtr := @ZSingleArray[fArrayOffSet];
-              stDouble:   Param.CurrParamDataPtr := @ZDoubleArray[fArrayOffSet];
-              else Param.CurrParamDataPtr := nil; //satisfy compiler
-            end;
-            Param.ValueCount := fCurrentIterations;
-            if Assigned(Value.VArray.VIsNullArray) then
-              case TZSQLType(Value.VArray.VIsNullArrayType) of
-                stBoolean: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TBooleanDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stByte: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TByteDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stShort: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TShortIntDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stWord: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TWordDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stSmall: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TSmallIntDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stInteger: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TIntegerDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stLongWord: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TLongwordDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stLong: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TInt64DynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stULong: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TUInt64DynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stFloat: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TSingleDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stDouble: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TDoubleDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stBigDecimal: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TExtendedDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stTime, stDate, stTimeStamp: for J := fArrayOffSet to fCurrentIterations -1 do begin
-                    PSQLLEN(StrLen_or_IndPtr)^ := NullInd[TDateTimeDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet]<>0];
-                    Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                  end;
-                stString, stUnicodeString:
-                    case Value.VArray.VIsNullArrayVariantType of
-                      {$IFNDEF UNICODE}vtString, {$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
-                      vtRawByteString:
-                        for J := fArrayOffSet to fCurrentIterations -1 do begin
-                          PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(TRawByteStringDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet])];
-                          Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                        end;
-                      {$IFDEF UNICODE} vtString, {$ENDIF}
-                      vtUnicodeString:
-                        for J := fArrayOffSet to fCurrentIterations -1 do begin
-                          PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(TUnicodeStringDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet])];
-                          Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                        end;
-                      vtCharRec:
-                        for J := fArrayOffSet to fCurrentIterations -1 do begin
-                          if ZCompatibleCodePages(TZCharRecDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet].CP, zCP_UTF16)
-                          then PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(PWideChar(TZCharRecDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet].P))]
-                          else PSQLLEN(StrLen_or_IndPtr)^ := NullInd[StrToBoolEx(PAnsiChar(TZCharRecDynArray(Value.VArray.VIsNullArray)[J+fArrayOffSet].P))];
-                          Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-                        end;
-                      else
-                        raise EZSQLException.Create(sUnsupportedOperation);
-                    end;
-              end
-            else if Assigned(Value.VArray.VArray) then
-              FillChar(StrLen_or_IndPtr^, fCurrentIterations*SizeOf(SQLLEN), #0) { fast not null indcator.. }
-            else
-              for J := fArrayOffSet to fCurrentIterations -1 do begin
-                PSQLLEN(StrLen_or_IndPtr)^ := SQL_NULL_DATA;
-                Inc(PAnsiChar(StrLen_or_IndPtr), SizeOf(SQLLEN));
-              end;
-            Inc(PAnsiChar(ParameterDataPtr), fCurrentIterations*Param.BufferSize);//don't forget!
-          end else begin
-            { remaining are conversion effected or move required types only }
-            if SQLULEN(fCurrentIterations) <> Param.ValueCount then begin
-              Param.ValueCount := fCurrentIterations;
-              ParamSetChanged := True;
-            end;
-            Param.CurrParamDataPtr := ParameterDataPtr;
-            { EH note : the following code make 2 case(ODBC expected and Zeos given) checks and the array loop follows
-              this is up to a half second faster for 5000 rows with 5 field but ugly to read  ... is it?
-              optimized code ... however }
-            ZData := Value.VArray.VArray;
-            case Param.SQLType of
-              stBoolean:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZByteArray[J+fArrayOffSet] <> 0));
-                  stShort:          for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZShortIntArray[J+fArrayOffSet] <> 0));
-                  stWord:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZWordArray[J+fArrayOffSet] <> 0));
-                  stSmall:          for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZSmallIntArray[J+fArrayOffSet] <> 0));
-                  stLongWord:       for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZLongWordArray[J+fArrayOffSet] <> 0));
-                  stInteger:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZIntegerArray[J+fArrayOffSet] <> 0));
-                  stLong:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZInt64Array[J+fArrayOffSet] <> 0));
-                  stULong:          for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZUInt64Array[J+fArrayOffSet] <> 0));
-                  stFloat:          for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZSingleArray[J+fArrayOffSet] <> 0));
-                  stDouble:         for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZDoubleArray[J+fArrayOffSet] <> 0));
-                  stCurrency:       for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZCurrencyArray[J+fArrayOffSet] <> 0));
-                  stBigDecimal:     for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZExtendedArray[J+fArrayOffSet] <> 0));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(StrToBoolEx(ZRawByteStringArray[J+fArrayOffSet])));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(StrToBoolEx(ZUnicodeStringArray[J+fArrayOffSet])));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do If IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetByte(Ord(StrToBoolEx(PWideChar(ZCharRecArray[J+fArrayOffSet].P))))
-                                          else
-                                            SetByte(Ord(StrToBoolEx(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P))));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZDateTimeArray[J+fArrayOffSet] <> 0));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stByte:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZLongWordArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZIntegerArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZInt64Array[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(ZUInt64Array[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(UnicodeToIntDef(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetByte(UnicodeToIntDef(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetByte(RawToIntDef(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do If IsNotNull then SetByte(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stShort:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZLongWordArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZIntegerArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZInt64Array[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(ZUInt64Array[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetShort(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetShort(UnicodeToIntDef(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetShort(UnicodeToIntDef(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetShort(RawToIntDef(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetShort(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetShort(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stWord:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZLongWordArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZIntegerArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZInt64Array[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(ZUInt64Array[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case InParamValues[i].VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString, {$ENDIF}
-                      {$IFNDEF NO_ANSISTRING} vtAnsiString, {$ENDIF}
-                      {$IFNDEF NO_UTF8STRING} vtUTF8String, {$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetWord(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE} vtString, {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetWord(UnicodeToIntDef(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetWord(UnicodeToIntDef(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetWord(RawToIntDef(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetWord(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetWord(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stSmall:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZLongWordArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZIntegerArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZInt64Array[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(ZUInt64Array[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetSmall(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetSmall(UnicodeToIntDef(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetSmall(UnicodeToIntDef(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetSmall(RawToIntDef(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetSmall(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSmall(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stLongWord:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZLongWordArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZIntegerArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZInt64Array[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(ZUInt64Array[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetCardinal(RawToUInt64Def(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetCardinal(UnicodeToUInt64Def(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetCardinal(UnicodeToUInt64Def(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetCardinal(RawToUInt64Def(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetCardinal(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetCardinal(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stInteger:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZLongWordArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZIntegerArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZInt64Array[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(ZUInt64Array[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetInteger(RawToIntDef(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetInteger(UnicodeToIntDef(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetInteger(UnicodeToIntDef(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetInteger(RawToIntDef(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetInteger(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInteger(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stULong:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZLongWordArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZIntegerArray[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZUInt64Array[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(ZInt64Array[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetUInt64(RawToUInt64Def(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetUInt64(UnicodeToUInt64Def(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetUInt64(UnicodeToUInt64Def(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetUInt64(RawToUInt64Def(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetUInt64(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:              for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:          for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUInt64(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stLong:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZLongWordArray[J+fArrayOffSet]);
-                  stULong:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZUInt64Array[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZInt64Array[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(ZIntegerArray[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Trunc(ZSingleArray[J+fArrayOffSet]));
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Trunc(ZDoubleArray[J+fArrayOffSet]));
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Trunc(ZCurrencyArray[J+fArrayOffSet]));
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Trunc(ZExtendedArray[J+fArrayOffSet]));
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetUInt64(RawToInt64Def(ZRawByteStringArray[J+fArrayOffSet], 0));
-                      {$IFDEF UNICODE}
-                      vtString,
-                      {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do If IsNotNull then SetUInt64(UnicodeToInt64Def(ZUnicodeStringArray[J+fArrayOffSet], 0));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            SetInt64(UnicodeToInt64Def(PWideChar(ZCharRecArray[J+fArrayOffSet].P),0))
-                                          else
-                                            SetInt64(RawToInt64Def(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P),0));
-                      vtNull:           for J := 0 to fCurrentIterations -1 do If IsNotNull then SetInt64(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:              for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:          for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetInt64(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stFloat:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZLongWordArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZSingleArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZIntegerArray[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZSingleArray[J+fArrayOffSet]);
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZDoubleArray[J+fArrayOffSet]);
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZCurrencyArray[J+fArrayOffSet]);
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(ZExtendedArray[J+fArrayOffSet]);
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(PAnsiChar(Pointer(ZRawByteStringArray[J+fArrayOffSet])), Length(ZRawByteStringArray[J+fArrayOffSet]));
-                      {$IFDEF UNICODE}vtString, {$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(PWideChar(Pointer(ZUnicodeStringArray[J+fArrayOffSet])), Length(ZUnicodeStringArray[J+fArrayOffSet]));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            if IsNotNull then SetSingle(PWideChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len)
-                                          else
-                                            if IsNotNull then SetSingle(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len);
-                      vtNull:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:              for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:          for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetSingle(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stDouble, stCurrency, stBigDecimal:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(Ord(ZBooleanArray[J+fArrayOffSet]));
-                  stByte:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZByteArray[J+fArrayOffSet]);
-                  stShort:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZShortIntArray[J+fArrayOffSet]);
-                  stWord:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZWordArray[J+fArrayOffSet]);
-                  stSmall:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZSmallIntArray[J+fArrayOffSet]);
-                  stLongWord:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZLongWordArray[J+fArrayOffSet]);
-                  stLong:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZDoubleArray[J+fArrayOffSet]);
-                  stInteger:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZIntegerArray[J+fArrayOffSet]);
-                  stFloat:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZSingleArray[J+fArrayOffSet]);
-                  stDouble:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZDoubleArray[J+fArrayOffSet]);
-                  stCurrency:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZCurrencyArray[J+fArrayOffSet]);
-                  stBigDecimal:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(ZExtendedArray[J+fArrayOffSet]);
-                  //stGUID:
-                  stString, stUnicodeString:
-                    case Value.VArray.VArrayVariantType of
-                      {$IFNDEF UNICODE} vtString,{$ENDIF}
-                      {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                      {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                      vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(PAnsiChar(Pointer(ZRawByteStringArray[J+fArrayOffSet])), Length(ZRawByteStringArray[J+fArrayOffSet]));
-                      {$IFDEF UNICODE}vtString,{$ENDIF}
-                      vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(PWidechar(Pointer(ZUnicodeStringArray[J+fArrayOffSet])), Length(ZUnicodeStringArray[J+fArrayOffSet]));
-                      vtCharRec:        for J := 0 to fCurrentIterations -1 do
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                                            if IsNotNull then SetDouble(PWideChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len)
-                                          else
-                                            if IsNotNull then SetDouble(PAnsiChar(ZCharRecArray[J+fArrayOffSet].P), ZCharRecArray[J+fArrayOffSet].Len);
-                      vtNull:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(0);
-                      else
-                        raise Exception.Create('Unsupported String Variant');
-                    end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(Ord(ZBytesArray[J+fArrayOffSet] = nil));
-                  stDate,
-                  stTime,
-                  stTimestamp:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(Trunc(ZDateTimeArray[J+fArrayOffSet]));
-                  stAsciiStream,
-                  stUnicodeStream,
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDouble(Ord(ZInterfaceArray[J+fArrayOffSet] = nil));
-                  else
-                    raise EZSQLException.Create(SUnsupportedParameterType);
-                end;
-              stGUID:
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                                      Assert(Length(ZBytesArray[J+fArrayOffSet])=16, 'Wrong byte Array size for GUID column');
-                                      SetBinary(Pointer(ZBytesArray[J+fArrayOffSet]), 16);
-                                    end;
-                    stGUID:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetBinary(@ZGUIDArray[J+fArrayOffSet].D1, 16);
-                    stString, stUnicodeString: begin
-                        case InParamValues[i].VArray.VArrayVariantType of
-                          {$IFNDEF UNICODE} vtString,{$ENDIF}
-                          {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                          {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                          vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                                              GUID := StringToGUID({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(ZRawByteStringArray[J+fArrayOffSet]));
-                                              SetBinary(@GUID.D1, 16);
-                                            end;
-                          {$IFDEF UNICODE}
-                          vtString,
-                          {$ENDIF}
-                          vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                                              GUID := StringToGUID({$IFNDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(ZUnicodeStringArray[J+fArrayOffSet]));
-                                              SetBinary(@GUID.D1, 16);
-                                            end;
-                          vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                                              GUID := StringToGUID(ClientVarManager.GetAsString(EncodeCharRec(ZCharRecArray[J+fArrayOffSet])));
-                                              SetBinary(@GUID.D1, 16);
-                                            end;
-                          else
-                            raise Exception.Create('Unsupported String Variant');
-                        end;
-                      end;
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                  end;
-              stBytes:
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                                    TempBlob := ZInterfaceArray[J+fArrayOffSet] as IZBLob;
-                                    SetBinary(TempBlob.GetBuffer, Min(TempBlob.Length, Param.BufferSize));
-                                  end;
-                  stBytes:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetBinary(Pointer(ZBytesArray[J+fArrayOffSet]), Min(Length(ZBytesArray[J+fArrayOffSet]), Param.BufferSize));
-                  stGUID:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetBinary(@ZGUIDArray[J+fArrayOffSet].D1, Min(16, Param.BufferSize));
-                  stString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE} vtString,{$ENDIF}
-                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetBinary(Pointer(ZRawByteStringArray[J+fArrayOffSet]), Min(Length(ZRawByteStringArray[J+fArrayOffSet]), Param.BufferSize));
-                        {$IFDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                                            RawTemp := UnicodeStringToASCII7(ZUnicodeStringArray[J+fArrayOffSet]);
-                                            SetBinary(Pointer(RawTemp), Min(Length(RawTemp), Param.BufferSize));
-                                          end;
-                        vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then begin
-                                            RawTemp := UnicodeStringToASCII7(ZCharRecArray[J+fArrayOffSet].P, Min(ZCharRecArray[J+fArrayOffSet].Len,Param.BufferSize));
-                                            SetBinary(Pointer(RawTemp), Length(RawTemp));
-                                          end else
-                                            SetBinary(ZCharRecArray[J+fArrayOffSet].P, Min(ZCharRecArray[J+fArrayOffSet].Len, Param.BufferSize));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    else
-                      raise Exception.Create('Unsupported Byte-Array Variant');
-                  end;
-              stDate:
-                begin
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stByte:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZByteArray[J+fArrayOffSet]);
-                    stShort:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZShortIntArray[J+fArrayOffSet]);
-                    stWord:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZWordArray[J+fArrayOffSet]);
-                    stSmall:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZSmallIntArray[J+fArrayOffSet]);
-                    stLongWord:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZLongWordArray[J+fArrayOffSet]);
-                    stInteger:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZIntegerArray[J+fArrayOffSet]);
-                    stLong:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZInt64Array[J+fArrayOffSet]);
-                    stULong:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZUInt64Array[J+fArrayOffSet]);
-                    stFloat:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZSingleArray[J+fArrayOffSet]);
-                    stDouble:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZDoubleArray[J+fArrayOffSet]);
-                    stCurrency:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZCurrencyArray[J+fArrayOffSet]);
-                    stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZExtendedArray[J+fArrayOffSet]);
-                    stString, stUnicodeString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE} vtString,{$ENDIF}
-                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ClientVarManager.GetAsDateTime(EncodeRawByteString(ZRawByteStringArray[J+fArrayOffSet])));
-                        {$IFDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ClientVarManager.GetAsDateTime(EncodeUnicodeString(ZUnicodeStringArray[J+fArrayOffSet])));
-                        vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ClientVarManager.GetAsDateTime(EncodeCharRec(ZCharRecArray[J+fArrayOffSet])));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    stTime,
-                    stDate,
-                    stTimeStamp:          for J := 0 to fCurrentIterations -1 do if IsNotNull then SetDate(ZDateTimeArray[J+fArrayOffSet]);
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                  end;
-                end;
-              stTime:
-                begin
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stByte:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZByteArray[J+fArrayOffSet]);
-                    stShort:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZShortIntArray[J+fArrayOffSet]);
-                    stWord:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZWordArray[J+fArrayOffSet]);
-                    stSmall:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZSmallIntArray[J+fArrayOffSet]);
-                    stLongWord:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZLongWordArray[J+fArrayOffSet]);
-                    stInteger:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZIntegerArray[J+fArrayOffSet]);
-                    stLong:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZInt64Array[J+fArrayOffSet]);
-                    stULong:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZUInt64Array[J+fArrayOffSet]);
-                    stFloat:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZSingleArray[J+fArrayOffSet]);
-                    stDouble:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZDoubleArray[J+fArrayOffSet]);
-                    stCurrency:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZCurrencyArray[J+fArrayOffSet]);
-                    stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZExtendedArray[J+fArrayOffSet]);
-                    stString, stUnicodeString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE} vtString,{$ENDIF}
-                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ClientVarManager.GetAsDateTime(EncodeRawByteString(ZRawByteStringArray[J+fArrayOffSet])));
-                        {$IFDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ClientVarManager.GetAsDateTime(EncodeUnicodeString(ZUnicodeStringArray[J+fArrayOffSet])));
-                        vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ClientVarManager.GetAsDateTime(EncodeCharRec(ZCharRecArray[J+fArrayOffSet])));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    stTime,
-                    stDate,
-                    stTimeStamp:          for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTime(ZDateTimeArray[J+fArrayOffSet]);
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                  end;
-                end;
-              stTimeStamp:
-                begin
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stByte:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZByteArray[J+fArrayOffSet]);
-                    stShort:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZShortIntArray[J+fArrayOffSet]);
-                    stWord:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZWordArray[J+fArrayOffSet]);
-                    stSmall:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZSmallIntArray[J+fArrayOffSet]);
-                    stLongWord:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZLongWordArray[J+fArrayOffSet]);
-                    stInteger:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZIntegerArray[J+fArrayOffSet]);
-                    stLong:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZInt64Array[J+fArrayOffSet]);
-                    stULong:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZUInt64Array[J+fArrayOffSet]);
-                    stFloat:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZSingleArray[J+fArrayOffSet]);
-                    stDouble:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZDoubleArray[J+fArrayOffSet]);
-                    stCurrency:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZCurrencyArray[J+fArrayOffSet]);
-                    stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZExtendedArray[J+fArrayOffSet]);
-                    stString, stUnicodeString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        {$IFNDEF UNICODE} vtString,{$ENDIF}
-                        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ClientVarManager.GetAsDateTime(EncodeRawByteString(ZRawByteStringArray[J+fArrayOffSet])));
-                        {$IFDEF UNICODE}
-                        vtString,
-                        {$ENDIF}
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ClientVarManager.GetAsDateTime(EncodeUnicodeString(ZUnicodeStringArray[J+fArrayOffSet])));
-                        vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ClientVarManager.GetAsDateTime(EncodeCharRec(ZCharRecArray[J+fArrayOffSet])));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    stTime,
-                    stDate,
-                    stTimeStamp:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetTimeStamp(ZDateTimeArray[J+fArrayOffSet]);
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                  end;
-                end;
-              stString, stUnicodeString:
-                if ConSettings^.ClientCodePage.Encoding = ceUTF16 then
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stBoolean:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(BoolToUnicodeEx(ZBooleanArray[J+fArrayOffSet]));
-                    stByte:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZByteArray[J+fArrayOffSet]));
-                    stShort:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZShortIntArray[J+fArrayOffSet]));
-                    stWord:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZWordArray[J+fArrayOffSet]));
-                    stSmall:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZSmallIntArray[J+fArrayOffSet]));
-                    stLongWord:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZLongWordArray[J+fArrayOffSet]));
-                    stInteger:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZIntegerArray[J+fArrayOffSet]));
-                    stULong:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZUInt64Array[J+fArrayOffSet]));
-                    stLong:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(IntToUnicode(ZInt64Array[J+fArrayOffSet]));
-                    stFloat:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(FloatToUnicode(ZSingleArray[J+fArrayOffSet]));
-                    stDouble:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(FloatToUnicode(ZDoubleArray[J+fArrayOffSet]));
-                    stCurrency:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(FloatToUnicode(ZCurrencyArray[J+fArrayOffSet]));
-                    stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(FloatToUnicode(ZExtendedArray[J+fArrayOffSet]));
-                    stTime:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(DateTimeToUnicodeSQLTime(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stDate:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(DateTimeToUnicodeSQLDate(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stTimeStamp:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(DateTimeToUnicodeSQLTimeStamp(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stString, stUnicodeString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        vtString:
-                          {$IFDEF UNICODE}
-                          for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ZStringArray[J+fArrayOffSet]);
-                          {$ELSE}
-                          for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ConSettings^.ConvFuncs.ZStringToUnicode(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP));
-                          {$ENDIF}
-                        {$IFNDEF NO_ANSISTRING}
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZOSCodePage));
-                        {$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}
-                        vtUTF8String:     for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                          if Assigned(Pointer(ZUTF8StringArray[J+fArrayOffSet])) and (Length(ZUTF8StringArray[J+fArrayOffSet]) <= Param.ColumnSize) then begin
-                            PSQLLEN(StrLen_or_IndPtr)^ := UTF8ToWideChar(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), ParameterDataPtr) shl 1;
-                            (PWideChar(ParameterDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := #0;
-                            Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-                            Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-                          end else
-                            SetUnicode(PRawToUnicode(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), zCP_UTF8));
-                        {$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ConSettings.ConvFuncs.ZRawToUnicode(ZRawByteStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetUnicode(ZUnicodeStringArray[J+fArrayOffSet]);
-                        vtCharRec:        for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                            SetPUnicode(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len)
-                          else
-                            SetUnicode(PRawToUnicode(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len, ZCharRecArray[J+fArrayOffSet].CP));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    stAsciiStream,
-                    stUnicodeStream: for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                        TempBlob := ZInterfaceArray[J+fArrayOffSet] as IZBLob;
-                        if TempBlob.IsClob then begin
-                          TempBlob.GetPWideChar; //make conversion first
-                          SetPUnicode(TempBlob.GetPWideChar, TempBlob.Length shr 1);
-                        end else begin
-                          TmpStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings, False);
-                          SetPUnicode(TMemoryStream(TmpStream).Memory, TmpStream.Size shr 1);
-                          TmpStream.Free;
-                        end;
-                      end;
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                  end
-                else
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stBoolean:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(BoolToRawEx(ZBooleanArray[J+fArrayOffSet]));
-                    stByte:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZByteArray[J+fArrayOffSet]));
-                    stShort:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZShortIntArray[J+fArrayOffSet]));
-                    stWord:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZWordArray[J+fArrayOffSet]));
-                    stSmall:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZSmallIntArray[J+fArrayOffSet]));
-                    stLongWord:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZLongWordArray[J+fArrayOffSet]));
-                    stInteger:    for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZIntegerArray[J+fArrayOffSet]));
-                    stULong:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZUInt64Array[J+fArrayOffSet]));
-                    stLong:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(IntToRaw(ZInt64Array[J+fArrayOffSet]));
-                    stFloat:      for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(FloatToRaw(ZSingleArray[J+fArrayOffSet]));
-                    stDouble:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(FloatToRaw(ZDoubleArray[J+fArrayOffSet]));
-                    stCurrency:   for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(FloatToRaw(ZCurrencyArray[J+fArrayOffSet]));
-                    stBigDecimal: for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(FloatToRaw(ZExtendedArray[J+fArrayOffSet]));
-                    stTime:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(DateTimeToRawSQLTime(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stDate:       for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(DateTimeToRawSQLDate(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stTimeStamp:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(DateTimeToRawSQLTimeStamp(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stString, stUnicodeString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        vtString:         for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-                        {$IFNDEF NO_ANSISTRING}
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZOSCodePage, ConSettings^.ClientCodePage^.CP));
-                        {$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}
-                        vtUTF8String:     for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
-                        {$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ZRawByteStringArray[J+fArrayOffSet]);
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if IsNotNull then SetRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(ZUnicodeStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
-                        vtCharRec: for J := 0 to fCurrentIterations -1 do if IsNotNull then
-                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, ConSettings^.ClientCodePage^.CP) then
-                            SetPRaw(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len)
-                          else if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                            SetRaw(PUnicodeToRaw(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len, ConSettings^.ClientCodePage^.CP))
-                          else
-                            SetRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(PRawToUnicode(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len, ZCharRecArray[J+fArrayOffSet].CP), ConSettings^.ClientCodePage^.CP));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    stAsciiStream,
-                    stUnicodeStream:  for J := 0 to fCurrentIterations -1 do if IsNotNull then begin
-                        TempBlob := ZInterfaceArray[J+fArrayOffSet] as IZBLob;
-                        if TempBlob.IsClob then begin
-                          TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP); //make internal conversion first
-                          SetPRaw(TempBlob.GetBuffer,TempBlob.Length);
-                        end else
-                          SetRaw(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings));
-                      end;
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                end;
-              stAsciiStream, stUnicodeStream: begin
-                Param.CurrParamDataPtr := Pointer(Param.DescBindBuffer); //little trick for get data
-                if (not (TZSQLType(Value.VArray.VArrayType) in [stAsciiStream, stUnicodeStream])) then begin
-                  Inc(TmpLobIndex);
-                  SetLength(FBatchLobBuf[TmpLobIndex], Min(fCurrentIterations, fMaxBufArrayBound)); //minimal length
-                  PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobArrayIndexOffSet))^ := fArrayOffSet; //write offset to buff -> getdata
-                  PPointer(Param.CurrParamDataPtr)^:= @FBatchLobBuf[TmpLobIndex][fArrayOffSet];
-                end else begin
-                  PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobArrayIndexOffSet))^ := fArrayOffSet; //write offset to buff -> getdata
-                  PPointer(Param.CurrParamDataPtr)^:= @TInterfaceDynArray(Value.VArray.VArray)[fArrayOffSet];
-                end;
-                //if Param IO is out we need to know which kind of IZLob need to load the data
-                PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobParameterIndexOffSet))^ := I;
-                if ConSettings^.ClientCodePage.Encoding = ceUTF16 then
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stBoolean:    for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(BoolToUnicodeEx(ZBooleanArray[J+fArrayOffSet]));
-                    stByte:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZByteArray[J+fArrayOffSet]));
-                    stShort:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZShortIntArray[J+fArrayOffSet]));
-                    stWord:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZWordArray[J+fArrayOffSet]));
-                    stSmall:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZSmallIntArray[J+fArrayOffSet]));
-                    stLongWord:   for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZLongWordArray[J+fArrayOffSet]));
-                    stInteger:    for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZIntegerArray[J+fArrayOffSet]));
-                    stULong:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZUInt64Array[J+fArrayOffSet]));
-                    stLong:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(IntToUnicode(ZInt64Array[J+fArrayOffSet]));
-                    stFloat:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(FloatToUnicode(ZSingleArray[J+fArrayOffSet]));
-                    stDouble:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(FloatToUnicode(ZDoubleArray[J+fArrayOffSet]));
-                    stCurrency:   for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(FloatToUnicode(ZCurrencyArray[J+fArrayOffSet]));
-                    stBigDecimal: for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(FloatToUnicode(ZExtendedArray[J+fArrayOffSet]));
-                    stTime:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(DateTimeToUnicodeSQLTime(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stDate:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(DateTimeToUnicodeSQLDate(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stTimeStamp:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(DateTimeToUnicodeSQLTimeStamp(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stString, stUnicodeString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        vtString:
-                          {$IFDEF UNICODE}
-                          for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ZStringArray[J+fArrayOffSet]);
-                          {$ELSE}
-                          for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ConSettings^.ConvFuncs.ZStringToUnicode(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP));
-                          {$ENDIF}
-                        {$IFNDEF NO_ANSISTRING}
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(PRawToUnicode(Pointer(ZAnsiStringArray[J+fArrayOffSet]), Length(ZAnsiStringArray[J+fArrayOffSet]), ZOSCodePage));
-                        {$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}
-                        vtUTF8String:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(PRawToUnicode(Pointer(ZUTF8StringArray[J+fArrayOffSet]), Length(ZUTF8StringArray[J+fArrayOffSet]), zCP_UTF8));
-                        {$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ConSettings.ConvFuncs.ZRawToUnicode(ZRawByteStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetCLobFromUnicode(ZUnicodeStringArray[J+fArrayOffSet]);
-                        vtCharRec:        for J := 0 to fCurrentIterations -1 do if LobIsNotNull then
-                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                            SetCLobFromPUnicode(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len)
-                          else
-                            SetCLobFromUnicode(PRawToUnicode(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len, ZCharRecArray[J+fArrayOffSet].CP));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    stAsciiStream,
-                    stUnicodeStream: for J := 0 to fCurrentIterations -1 do if LobIsNotNull then begin
-                        TempBlob := ZInterfaceArray[J+fArrayOffSet] as IZBLob;
-                        if TempBlob.IsClob then begin
-                          TempBlob.GetPWideChar; //make conversion first
-                          Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-                        end else begin
-                          TmpStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings, False);
-                          SetCLobFromPUnicode(TMemoryStream(TmpStream).Memory, TmpStream.Size shr 1); //replaces ZInterfaceArray[J+fArrayOffSet]
-                          TmpStream.Free;
-                        end;
-                      end;
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                  end
-                else
-                  case TZSQLType(Value.VArray.VArrayType) of
-                    stBoolean:    for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(BoolToRawEx(ZBooleanArray[J+fArrayOffSet]));
-                    stByte:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZByteArray[J+fArrayOffSet]));
-                    stShort:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZShortIntArray[J+fArrayOffSet]));
-                    stWord:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZWordArray[J+fArrayOffSet]));
-                    stSmall:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZSmallIntArray[J+fArrayOffSet]));
-                    stLongWord:   for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZLongWordArray[J+fArrayOffSet]));
-                    stInteger:    for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZIntegerArray[J+fArrayOffSet]));
-                    stULong:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZUInt64Array[J+fArrayOffSet]));
-                    stLong:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(IntToRaw(ZInt64Array[J+fArrayOffSet]));
-                    stFloat:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(FloatToRaw(ZSingleArray[J+fArrayOffSet]));
-                    stDouble:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(FloatToRaw(ZDoubleArray[J+fArrayOffSet]));
-                    stCurrency:   for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(FloatToRaw(ZCurrencyArray[J+fArrayOffSet]));
-                    stBigDecimal: for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(FloatToRaw(ZExtendedArray[J+fArrayOffSet]));
-                    stTime:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(DateTimeToRawSQLTime(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stDate:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(DateTimeToRawSQLDate(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stTimeStamp:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(DateTimeToRawSQLTimeStamp(ZDateTimeArray[J+fArrayOffSet], ConSettings.WriteFormatSettings, False));
-                    stString, stUnicodeString:
-                      case InParamValues[i].VArray.VArrayVariantType of
-                        vtString:         for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-                        {$IFNDEF NO_ANSISTRING}
-                        vtAnsiString:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[J+fArrayOffSet], ZOSCodePage, ConSettings^.ClientCodePage^.CP));
-                        {$ENDIF}
-                        {$IFNDEF NO_UTF8STRING}
-                        vtUTF8String:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
-                        {$ENDIF}
-                        vtRawByteString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ZRawByteStringArray[J+fArrayOffSet]);
-                        vtUnicodeString:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetClobFromRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(ZUnicodeStringArray[J+fArrayOffSet], ConSettings^.ClientCodePage^.CP));
-                        vtCharRec: for J := 0 to fCurrentIterations -1 do if LobIsNotNull then
-                          if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, ConSettings^.ClientCodePage^.CP) then
-                            SetClobFromPRaw(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len)
-                          else if ZCompatibleCodePages(ZCharRecArray[J+fArrayOffSet].CP, zCP_UTF16) then
-                            SetClobFromRaw(PUnicodeToRaw(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len, ConSettings^.ClientCodePage^.CP))
-                          else
-                            SetClobFromRaw(ConSettings^.ConvFuncs.ZUnicodeToRaw(PRawToUnicode(ZCharRecArray[J+fArrayOffSet].P, ZCharRecArray[J+fArrayOffSet].Len, ZCharRecArray[J+fArrayOffSet].CP), ConSettings^.ClientCodePage^.CP));
-                        else
-                          raise Exception.Create('Unsupported String Variant');
-                      end;
-                    stAsciiStream,
-                    stUnicodeStream:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then begin
-                        TempBlob := ZInterfaceArray[J+fArrayOffSet] as IZBLob;
-                        if TempBlob.IsClob then begin
-                          TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP); //make internal conversion first
-                          Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-                        end else
-                          SetClobFromRaw(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings));
-                      end;
-                    else
-                      raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                  end;
-                end;
-              stBinaryStream: begin
-                Param.CurrParamDataPtr := Pointer(Param.DescBindBuffer); //little trick for get data
-                if (TZSQLType(Value.VArray.VArrayType) <> stBinaryStream) then begin
-                  Inc(TmpLobIndex);
-                  SetLength(FBatchLobBuf[TmpLobIndex], Min(fCurrentIterations, fMaxBufArrayBound)); //minimal length
-                  PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobArrayIndexOffSet))^ := fArrayOffSet; //write offset to buff -> getdata
-                  PPointer(Param.CurrParamDataPtr)^:= @FBatchLobBuf[TmpLobIndex][fArrayOffSet];
-                end else begin
-                  PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobArrayIndexOffSet))^ := fArrayOffSet; //write offset to buff -> getdata
-                  PPointer(Param.CurrParamDataPtr)^:= @TInterfaceDynArray(Value.VArray.VArray)[fArrayOffSet];
-                end;
-                PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobParameterIndexOffSet))^ := I;
-                case TZSQLType(Value.VArray.VArrayType) of
-                  stBoolean:    for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZBooleanArray[J+fArrayOffSet], SizeOf(Boolean));
-                  stByte:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZByteArray[J+fArrayOffSet], 1);
-                  stShort:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZShortIntArray[J+fArrayOffSet], 1);
-                  stWord:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZWordArray[J+fArrayOffSet], 2);
-                  stSmall:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZSmallIntArray[J+fArrayOffSet], 2);
-                  stLongWord:   for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZLongWordArray[J+fArrayOffSet], 4);
-                  stInteger:    for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZIntegerArray[J+fArrayOffSet], 4);
-                  stULong:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZUInt64Array[J+fArrayOffSet], 8);
-                  stLong:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZInt64Array[J+fArrayOffSet], 8);
-                  stFloat:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZSingleArray[J+fArrayOffSet], 4);
-                  stDouble:     for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZDoubleArray[J+fArrayOffSet], 8);
-                  stCurrency:   for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZCurrencyArray[J+fArrayOffSet], 8);
-                  stBigDecimal: for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZExtendedArray[J+fArrayOffSet], 8);
-                  stTime,
-                  stDate,
-                  stTimeStamp:  for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZDateTimeArray[J+fArrayOffSet], 8);
-                  stGUID:       for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(@ZGUIDArray[J+fArrayOffSet].D1, 16);
-                  stBytes:      for J := 0 to fCurrentIterations -1 do if LobIsNotNull then SetBlob(Pointer(ZBytesArray[J+fArrayOffSet]), Length(ZBytesArray[J+fArrayOffSet]));
-                  stBinaryStream: for J := 0 to fCurrentIterations -1 do if LobIsNotNull then Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-                  else
-                    raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                end
-              end;
-            end; //for j := 0 to CurrArrayCount -1 do begin
-          end; //if (TZSQLType(Value.VArray.VIsNullArrayType) = fSQLTypes[
-        end else begin
-          for J := 0 to fCurrentIterations -1 do begin
-            PSQLLEN(StrLen_or_IndPtr)^ := SQL_NULL_DATA;
-            Inc(PAnsiChar(ParameterDataPtr), ParameterDataOffSet);
-            Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-          end;
-        end;
-        if (fBindRowWise) then begin
-          { enter new param in 1. row }
-          StrLen_or_IndPtr := {%H-}Pointer({%H-}NativeUInt(Param.CurrStrLen_or_IndPtr)+Cardinal(Param.BufferSize)+SizeOf(SQLLEN));
-          ParameterDataPtr := {%H-}Pointer({%H-}NativeUInt(StrLen_or_IndPtr)+SizeOf(SQLLEN));
-        end else begin
-          { enter new param array }
-          StrLen_or_IndPtr := ParameterDataPtr;
-          Inc(PAnsiChar(ParameterDataPtr), fCurrentIterations*SizeOf(SQLLEN))
-        end;
-      end else begin //single value binding
-        Param.CurrParamDataPtr := ParameterDataPtr;
-        if Param.ValueCount <> 1 then begin
-          Param.ValueCount := 1;
-          ParamSetChanged := True;
-        end;
-        if Value.VType = vtNull then begin
-          PSQLLEN(StrLen_or_IndPtr)^ := SQL_NULL_DATA;
-          if Param.SQLType in [stDate, stTimeStamp] then begin//year 0.0.0 is invalid also for NULL
-            PSQL_DATE_STRUCT(ParameterDataPtr)^.year := 1899;
-            PSQL_DATE_STRUCT(ParameterDataPtr)^.month := 12;
-            PSQL_DATE_STRUCT(ParameterDataPtr)^.day := 31;
-          end;
-
-          Inc(PAnsiChar(ParameterDataPtr), Param.BufferSize);
-        end else begin
-          PSQLLEN(StrLen_or_IndPtr)^ := SQL_NO_NULLS;
-          case Param.SQLType of
-            stBoolean:    SetByte(Ord(ClientVarManager.GetAsBoolean(Value)));
-            stByte:       SetByte(ClientVarManager.GetAsUInteger(Value));
-            stShort:      SetShort(ClientVarManager.GetAsInteger(Value));
-            stWord:       SetWord(ClientVarManager.GetAsUInteger(Value));
-            stSmall:      SetSmall(ClientVarManager.GetAsInteger(Value));
-            stLongWord:   SetCardinal(ClientVarManager.GetAsUInteger(Value));
-            stInteger:    SetInteger(ClientVarManager.GetAsInteger(Value));
-            stULong:      SetUInt64(ClientVarManager.GetAsUInteger(Value));
-            stLong:       SetInt64(ClientVarManager.GetAsInteger(Value));
-            stFloat:      SetSingle(ClientVarManager.GetAsFloat(Value));
-            stDouble,
-            stCurrency,
-            stBigDecimal: SetDouble(ClientVarManager.GetAsFloat(Value));
-            stString, stUnicodeString: begin
-                if Param.C_DataType = SQL_C_WCHAR then
-                begin
-                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], zCP_UTF16);
-                  PSQLLEN(StrLen_or_IndPtr)^ := Min(Param.ColumnSize shl 1, CharRec.Len shl 1);
-                  if Param.InputDataType = SQL_PARAM_INPUT then
-                    Param.CurrParamDataPtr := CharRec.P
-                  else
-                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-                  if not ((PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ = WideChar(#0)) then //WideChar use for FPC else dead slow
-                    (PWideChar(Param.CurrParamDataPtr)+(PSQLLEN(StrLen_or_IndPtr)^ shr 1))^ := WideChar(#0); //set a terminating #0 to top of data
-                end else begin
-                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
-                  PSQLLEN(StrLen_or_IndPtr)^ := {%H-}Min((Param.ColumnSize*ConSettings^.ClientCodePage^.CharWidth), CharRec.Len);
-                  if Param.InputDataType = SQL_PARAM_INPUT then
-                    Param.CurrParamDataPtr := CharRec.P
-                  else
-                    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(CharRec.P^, ParameterDataPtr^, PSQLLEN(StrLen_or_IndPtr)^);
-                  if not (PByte(PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ = Ord(#0)) then
-                    PByte(PAnsiChar(Param.CurrParamDataPtr)+PSQLLEN(StrLen_or_IndPtr)^)^ := Ord(#0); //terminate the String if a truncation happens
-                end;
-                Inc(PAnsiChar(ParameterDataPtr), Param.BufferSize);
-              end;
-            stBytes, stGUID: begin
-                if Value.VType <> vtBytes then begin
-                  Value := EncodeBytes(ClientVarManager.GetAsBytes(Value));
-                  InParamValues[i] := Value;
-                end;
-                if Param.InputDataType = SQL_PARAM_INPUT then begin
-                  Param.CurrParamDataPtr := Pointer(InParamValues[i].VBytes);
-                  PSQLLEN(StrLen_or_IndPtr)^ := Min(Length(InParamValues[i].VBytes), Param.ColumnSize);
-                  Inc(PAnsiChar(ParameterDataPtr), Param.ColumnSize);
-                end else
-                  SetBinary(Value.VBytes, Min(Length(Value.VBytes), Param.ColumnSize));
-              end;
-            stDate: SetDate(ClientVarManager.GetAsDateTime(Value));
-            stTime: SetTime(ClientVarManager.GetAsDateTime(Value));
-            stTimestamp: SetTimeStamp(ClientVarManager.GetAsDateTime(Value));
-            //stArray, stDataSet,
-            stAsciiStream, stUnicodeStream: begin
-              Param.CurrParamDataPtr := Pointer(Param.DescBindBuffer); //little trick for get data
-              PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobArrayIndexOffSet))^ := 0;//initialize a virtual index
-              PSQLLEN(StrLen_or_IndPtr)^ := SQL_DATA_AT_EXEC; //indicate streamed mode
-              if (not (InParamTypes[i] in [stAsciiStream, stUnicodeStream])) then begin
-                Inc(TmpLobIndex);
-                SetLength(FBatchLobBuf[TmpLobIndex], 1); //minimal length
-                PPointer(Param.CurrParamDataPtr)^:= @FBatchLobBuf[TmpLobIndex][0];
-                J := 0;
-              end else
-                PPointer(Param.CurrParamDataPtr)^:= @InParamValues[I].VInterface;
-              PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobParameterIndexOffSet))^ := I;
-              if Param.C_DataType = SQL_C_WCHAR then
-                case InParamTypes[i] of
-                  stBoolean:    SetCLobFromUnicode(BoolToUnicodeEx(ClientVarManager.GetAsBoolean(Value)));
-                  stByte, stWord, stLongWord, stULong:
-                    SetCLobFromUnicode(IntToUnicode(ClientVarManager.GetAsInteger(Value)));
-                  stShort, stSmall, stInteger, stLong:
-                    SetCLobFromUnicode(IntToUnicode(ClientVarManager.GetAsUInteger(Value)));
-                  stFloat, stDouble, stCurrency, stBigDecimal:
-                    SetCLobFromUnicode(FloatToUnicode(ClientVarManager.GetAsFloat(Value)));
-                  stTime:       SetCLobFromUnicode(DateTimeToUnicodeSQLTime(ClientVarManager.GetAsDateTime(Value), ConSettings.WriteFormatSettings, False));
-                  stDate:       SetCLobFromUnicode(DateTimeToUnicodeSQLDate(ClientVarManager.GetAsDateTime(Value), ConSettings.WriteFormatSettings, False));
-                  stTimeStamp:  SetCLobFromUnicode(DateTimeToUnicodeSQLTimeStamp(ClientVarManager.GetAsDateTime(Value), ConSettings.WriteFormatSettings, False));
-                  //stBytes, stGUID:
-                  stString, stUnicodeString:
-                    begin
-                      CharRec := ClientVarManager.GetAsCharRec(Value, zCP_UTF16);
-                      SetCLobFromPUnicode(CharRec.P, CharRec.Len);
-                    end;
-                  stAsciiStream,
-                  stUnicodeStream: begin
-                      TempBlob := ClientVarManager.GetAsInterface(Value) as IZBLob;
-                      if TempBlob.IsClob then
-                        TempBlob.GetPWideChar //make conversion first
-                      else begin
-                        TmpStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings, False);
-                        InParamValues[i].VInterface := TZODBCClobW.CreateWithData(PWideChar(TMemoryStream(TmpStream).Memory), TmpStream.Size shr 1, ConSettings);
-                        TmpStream.Free;
-                      end;
-                    end;
-                  else
-                    raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                end
-              else
-                case InParamTypes[i] of
-                  stBoolean:    SetCLobFromRaw(BoolToRawEx(ClientVarManager.GetAsBoolean(Value)));
-                  stByte, stWord, stLongWord, stULong:
-                    SetCLobFromRaw(IntToRaw(ClientVarManager.GetAsInteger(Value)));
-                  stShort, stSmall, stInteger, stLong:
-                    SetCLobFromRaw(IntToRaw(ClientVarManager.GetAsUInteger(Value)));
-                  stFloat, stDouble, stCurrency, stBigDecimal:
-                    SetCLobFromRaw(FloatToRaw(ClientVarManager.GetAsFloat(Value)));
-                  stTime:       SetCLobFromRaw(DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value), ConSettings.WriteFormatSettings, False));
-                  stDate:       SetCLobFromRaw(DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value), ConSettings.WriteFormatSettings, False));
-                  stTimeStamp:  SetCLobFromRaw(DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value), ConSettings.WriteFormatSettings, False));
-                  stString, stUnicodeString:
-                    begin
-                      CharRec := ClientVarManager.GetAsCharRec(Value, ConSettings^.ClientCodePage^.CP);
-                      SetClobFromPRaw(CharRec.P, CharRec.Len)
-                    end;
-                  stAsciiStream,
-                  stUnicodeStream:  begin
-                      TempBlob := ClientVarManager.GetAsInterface(Value) as IZBLob;
-                      if TempBlob.IsClob then
-                        TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP) //make internal conversion first
-                      else begin
-                        RawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
-                        InParamValues[i].VInterface := TZODBCClobA.CreateWithData(Pointer(RawTemp), Length(RawTemp), ConSettings^.ClientCodePage^.CP, ConSettings);
-                      end;
-                    end;
-                  else
-                    raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-                end;
-            end;
-          stBinaryStream: begin
-              Param.CurrParamDataPtr := Pointer(Param.DescBindBuffer); //little trick for get data
-              PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobArrayIndexOffSet))^ := 0;//initialize a virtual index
-              PSQLLEN(StrLen_or_IndPtr)^ := SQL_DATA_AT_EXEC; //indicate streamed mode
-              //Inc(PAnsiChar(StrLen_or_IndPtr), StrLen_or_IndOffSet);
-              if (InParamTypes[i] <> stBinaryStream) then begin
-                Inc(TmpLobIndex);
-                SetLength(FBatchLobBuf[TmpLobIndex], 1); //minimal length
-                PPointer(Param.CurrParamDataPtr)^:= @FBatchLobBuf[TmpLobIndex][0];
-                j:= 0;
-              end else
-                PPointer(Param.CurrParamDataPtr)^ := @InParamValues[I].VInterface;
-              PInteger({%H-}Pointer({%H-}NativeUInt(Param.CurrParamDataPtr)+LobParameterIndexOffSet))^ := I;
-              case InParamTypes[i] of
-                stGUID, stBytes: SetBlobFromBts(ClientVarManager.GetAsBytes(Value));
-                stBinaryStream: ;
-                else
-                  raise EZSQLException.Create(IntToStr(Ord(Param.SQLType))+' '+SUnsupportedParameterType);
-              end;
-            end;
-          end
-        end;
-        StrLen_or_IndPtr := ParameterDataPtr;
-        Inc(PAnsiChar(ParameterDataPtr), SizeOf(SQLLEN));
-      end;
-      if (Param.CurrParamDataPtr <> Param.LastParamDataPtr) or
-         (Param.CurrStrLen_or_IndPtr <> Param.LastStrLen_or_IndPtr) then begin //..Bindings remain in effect until the application calls SQLBindParameter again...oslt.
-        CheckStmtError(fPlainDriver.SQLBindParameter(fHSTMT, I+1,//0=bookmark and Params do starts with 1
-          Param.InputDataType, Param.C_DataType, Param.DataType, Param.ColumnSize, Param.DecimalDigits * Ord(Param.SQLType in [stDouble, stTime, stTimeStamp]),
-            Param.CurrParamDataPtr, Param.BufferSize, Param.CurrStrLen_or_IndPtr));
-        Param.LastParamDataPtr := Param.CurrParamDataPtr;
-        Param.LastStrLen_or_IndPtr := Param.CurrStrLen_or_IndPtr;
-      end;
-    end;
-    if ParamSetChanged then
-      if (fMaxBufArrayBound = -1)
-      then CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, Pointer(1), 0))
-      else CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, SQLPOINTER(NativeUInt(fCurrentIterations)), 0));
-  end;
-end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-
 procedure TZAbstractODBCStatement.InternalExecute;
 var
   RETCODE, RETCODE2: SQLRETURN;
-  ValuePtr: SQLPOINTER;
-  TempBlob: IZBLob;
-  Buf: PAnsiChar; //simple to increment by ide
-  StrLen_or_Ind: SQLLEN;
-  PRowIndex: PInteger;
-  I: Integer;
-begin
-  CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE)); //handle a get data issue
-  RETCODE := fPlainDriver.SQLExecute(fHSTMT);
-  while RETCODE = SQL_NEED_DATA do begin
-    RETCODE := fPlainDriver.SQLParamData(fHSTMT, @ValuePtr);
-    if RetCode <> SQL_NEED_DATA then break;
-    Assert(Assigned(ValuePtr), 'wrong descriptor token');
-    PRowIndex := {%H-}Pointer({%H-}NativeUInt(ValuePtr)+LobArrayIndexOffSet);
-    {$R-}
-    TempBlob := PLobArray(PPointer(ValuePtr)^)^[PRowIndex^] as IZBlob; //note ValuePtr is a user defined token we also could use the columnNumber on binding the column -> this is faster
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    if (TempBlob = nil) or TempBlob.IsEmpty then begin
-      CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, nil, SQL_NULL_DATA)); //set to null
-    end else begin
-      Buf := TempBlob.GetBuffer;
-      { put data chunked }
-      StrLen_or_Ind := Min(ChunkSize, TempBlob.Length);
-      for i := 1 to TempBlob.Length div ChunkSize do begin
-        CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, Buf, StrLen_or_Ind));
-        Inc(Buf, ChunkSize);
+  procedure MoveLateBoundData(var RETCODE: SQLRETURN);
+  var I,l: Integer;
+    ValuePtr: PIZLob;
+    Buf: PAnsiChar; //simple to increment by compiler
+    StrLen_or_Ind: SQLLEN;
+  begin
+    while RETCODE = SQL_NEED_DATA do begin
+      RETCODE := fPlainDriver.SQLParamData(fHSTMT, @ValuePtr);
+      if RetCode <> SQL_NEED_DATA then break;
+      Assert(Assigned(ValuePtr), 'wrong descriptor token');
+      {$R-}
+      if (ValuePtr^ = nil) or ValuePtr^.IsEmpty
+      then CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, nil, SQL_NULL_DATA)) //set to null
+      else begin
+        Buf := ValuePtr^.GetBuffer;
+        { put data chunked }
+        L := ValuePtr^.Length;
+        StrLen_or_Ind := Min(ChunkSize, L);
+        for i := 1 to L div ChunkSize do begin
+          CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, Buf, StrLen_or_Ind));
+          Inc(Buf, ChunkSize);
+        end;
+        StrLen_or_Ind := ValuePtr^.Length - NativeInt(({%H-}NativeUInt(Buf)-{%H-}NativeUInt(ValuePtr^.GetBuffer)));
+        CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, Buf, StrLen_or_Ind)); //final chunk
       end;
-      StrLen_or_Ind := TempBlob.Length - NativeInt(({%H-}NativeUInt(Buf)-{%H-}NativeUInt(TempBlob.GetBuffer)));
-      CheckStmtError(fPlainDriver.SQLPutData(fHSTMT, Buf, StrLen_or_Ind)); //final chunk
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
-    inc(PRowIndex^);
   end;
-  { roll back PRowIndex^ misses yet}
+begin
+//  CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE)); //handle a get data issue
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  RETCODE := fPlainDriver.SQLExecute(fHSTMT);
+  if RETCODE = SQL_NEED_DATA then
+    MoveLateBoundData(RETCODE);
   if RETCODE = SQL_PARAM_DATA_AVAILABLE then begin //check output params ...
     RETCODE2 := fPlainDriver.SQLMoreResults(fHSTMT);
     if RETCODE2 = SQL_NO_DATA then
@@ -2002,9 +445,8 @@ begin
     else begin
       { get data chunked }
       CheckStmtError(RETCODE2);
-      CheckStmtError(fPlainDriver.SQLParamData(fHSTMT, @ValuePtr));
-      Assert(Assigned(ValuePtr), 'wrong descriptor pointer');
-      TempBlob := IZBlob(ValuePtr);
+    // CheckStmtError(fPlainDriver.SQLParamData(fHSTMT, @ValuePtr));
+    // Assert(Assigned(ValuePtr), 'wrong descriptor pointer');
     end;
   end else if not RETCODE in [SQL_NO_DATA, SQL_SUCCESS] then
     CheckStmtError(RetCode);
@@ -2013,103 +455,28 @@ end;
 procedure TZAbstractODBCStatement.Prepare;
 begin
   if not Prepared then begin
+    {EH commented!
+     this options means slower performance even if docs explain it vice versa:
+     https://docs.microsoft.com/en-us/sql/relational-databases/native-client-odbc-api/sqlsetstmtattr?view=sql-server-2017
     if Connection.GetServerProvider = spMSSQL then
-      CheckStmtError(FPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_SOPT_SS_CURSOR_OPTIONS, Pointer(SQL_CO_FFO),0));
+      CheckStmtError(FPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_SOPT_SS_CURSOR_OPTIONS, Pointer(SQL_CO_FFO),0));}
     inherited Prepare;
-  end;
-end;
-
-procedure TZAbstractODBCStatement.PrepareInParameters;
-var
-  ParameterNumber: SQLUSMALLINT;
-  ParameterCount: SQLSMALLINT;
-  NoLobBoundParamCount: Integer;
-  AllParamsAreArrays: Boolean;
-begin
-  CheckStmtError(fPlainDriver.SQLNumParams(fHSTMT, @ParameterCount));
-  if ParameterCount > 0 then begin
-    if ParameterCount <> InParamCount then
-      raise EZSQLException.Create(SInvalidInputParameterCount);
-    SetLength(fParamInfos, ParameterCount);
-    NoLobBoundParamCount := 0;
-    fBufferSize := 0;
-    AllParamsAreArrays := False;
-    for ParameterNumber := 0 to ParameterCount-1 do begin
-      CheckStmtError(fPlainDriver.SQLDescribeParam(fHSTMT, ParameterNumber +1, //0=bookmark and Params do starts with 1
-        @fParamInfos[ParameterNumber].DataType, @fParamInfos[ParameterNumber].ColumnSize,
-        @fParamInfos[ParameterNumber].DecimalDigits, @fParamInfos[ParameterNumber].Nullable));
-      //get "best" TZSQLType -> ODBC does not returns the C-Data types
-      fParamInfos[ParameterNumber].SQLType := ConvertODBCTypeToSQLType(fParamInfos[ParameterNumber].DataType,
-                                      InParamTypes[ParameterNumber], Consettings^.CPType);
-      //now assign minimal conversion datatypes
-      fParamInfos[ParameterNumber].DataType := ConvertSQLTypeToODBCType(fParamInfos[ParameterNumber].SQLType,
-                                    fParamInfos[ParameterNumber].DataType, ConSettings^.ClientCodePage^.Encoding);
-      fParamInfos[ParameterNumber].C_DataType := ConvertODBCTypeToODBC_CType(fParamInfos[ParameterNumber].DataType,
-        fParamInfos[ParameterNumber].SQLType in [stByte, stWord, stLongWord, stULong], ConSettings^.ClientCodePage^.Encoding);
-      //test for (N)VARCHAR(MAX)/VARBINARY(MAX)
-      if (fParamInfos[ParameterNumber].SQLType in [stBytes, stString, stUnicodeString]) and
-         (fParamInfos[ParameterNumber].ColumnSize = 0) then
-        fParamInfos[ParameterNumber].SQLType := TZSQLType(Ord(fParamInfos[ParameterNumber].SQLType)+3); //switch to streamed mode
-      Inc(NoLobBoundParamCount, Ord((fParamInfos[ParameterNumber].SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) and
-         (not (InParamTypes[ParameterNumber] in [stAsciiStream, stUnicodeStream, stBinaryStream]))));
-      //note: Code is prepared to handle any case of Param-Directions  except fetching returned data
-      fParamInfos[ParameterNumber].InputDataType := ParamTypeToODBCParamType(pctIn, fParamInfos[ParameterNumber].SQLType, fStreamSupport);
-      fParamInfos[ParameterNumber].BufferSize := CalcBufSize(fParamInfos[ParameterNumber].ColumnSize * Ord(not (fParamInfos[ParameterNumber].SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream])),
-        fParamInfos[ParameterNumber].C_DataType, fParamInfos[ParameterNumber].SQLType, ConSettings^.ClientCodePage);
-      if fParamInfos[ParameterNumber].SQLType = stTimeStamp then begin
-        fParamInfos[ParameterNumber].ColumnSize := 23;
-        fParamInfos[ParameterNumber].DecimalDigits := 3;
-      end else if (fParamInfos[ParameterNumber].SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
-                                                              {1. Intf entry} {cur. array index} {ParameterIndex}
-        SetLength(fParamInfos[ParameterNumber].DescBindBuffer, SizeOf(Pointer)+  SizeOf(Integer)+  SizeOf(Integer));
-      AllParamsAreArrays := ((ParameterNumber = 0) and (InParamValues[ParameterNumber].VType = vtArray)) or
-                              (AllParamsAreArrays and (InParamValues[ParameterNumber].VType = vtArray));
-      inc(fBufferSize, fParamInfos[ParameterNumber].BufferSize+SizeOf(SQLLEN))
-    end;
-    SetLength(fBatchLobBuf, NoLobBoundParamCount);
-    if AllParamsAreArrays then
-      fMaxBufArrayBound := Max(1, fZBufferSize div fBufferSize)
-    else
-      fMaxBufArrayBound := -1;
-    if fBindRowWise
-    then CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, SQLPOINTER(fBufferSize), 0))
-    else CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, Pointer(SQL_PARAM_BIND_BY_COLUMN), 0));
   end;
 end;
 
 procedure TZAbstractODBCStatement.PrepareOpenedResultSetsForReusing;
 begin
   if Assigned(FOpenResultSet) then
-    if fMoreResultsIndicator <> mriHasNoMoreResults then
-      if (Pointer(LastResultSet) = FOpenResultSet) then begin
-        LastResultSet.Close;
-        LastResultSet := nil;
-      end else begin
-        IZResultSet(FOpenResultSet).Close;
-        FOpenResultSet := nil;
-      end
-    else
-      IZResultSet(FOpenResultSet).ResetCursor;
+    if fMoreResultsIndicator = mriHasMoreResults
+    then IZResultSet(FOpenResultSet).Close
+    else IZResultSet(FOpenResultSet).ResetCursor;
   if Assigned(LastResultSet) then
-    if (fMoreResultsIndicator <> mriHasNoMoreResults) then begin
+    if fMoreResultsIndicator <> mriHasMoreResults
+    then LastResultSet.ResetCursor
+    else begin
       LastResultSet.Close;
       LastResultSet := nil;
-    end else
-      LastResultSet.ResetCursor;
-end;
-
-procedure TZAbstractODBCStatement.SetDataArray(ParameterIndex: Integer;
-  const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
-begin
-  if ParameterIndex = FirstDbcIndex then
-    FArrayOffSet := 0;
-  inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
-end;
-
-procedure TZAbstractODBCStatement.SetMoreResultsIndicator(
-  Value: TZMoreResultsIndicator);
-begin
-  fMoreResultsIndicator := Value;
+    end;
 end;
 
 function TZAbstractODBCStatement.SupportsSingleColumnArrays: Boolean;
@@ -2126,20 +493,12 @@ begin
   end;
 end;
 
-procedure TZAbstractODBCStatement.UnPrepareInParameters;
-begin
-  SetLength(fParamInfos, 0);
-  SetLength(fBatchLobBuf, 0);
-  if Assigned(fHSTMT) and Assigned(fPHDBC^) then
-    CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_RESET_PARAMS));
-end;
-
 { TZODBCPreparedStatementW }
 
 function TZODBCPreparedStatementW.InternalCreateResultSet: IZResultSet;
 begin
   Result := TODBCResultSetW.Create(Self, fHSTMT, fPHDBC^, SQL, Connection as IZODBCConnection,
-    fZBufferSize, ChunkSize, FEnhancedColInfo);
+    fZBufferLength, ChunkSize, FEnhancedColInfo);
 end;
 
 procedure TZODBCPreparedStatementW.Prepare;
@@ -2158,7 +517,7 @@ end;
 function TZODBCPreparedStatementA.InternalCreateResultSet: IZResultSet;
 begin
   Result := TODBCResultSetA.Create(Self, fHSTMT, fPHDBC^, SQL, Connection as IZODBCConnection,
-    fZBufferSize, ChunkSize, FEnhancedColInfo);
+    fZBufferLength, ChunkSize, FEnhancedColInfo);
 end;
 
 procedure TZODBCPreparedStatementA.Prepare;
@@ -2171,8 +530,1692 @@ begin
     if Assigned(fHSTMT) and Assigned(fPHDBC^) then
       CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
 end;
-{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
+{ TZAbstractODBCPreparedStatement }
+
+procedure TZAbstractODBCPreparedStatement.BindInteger(Index: Integer;
+  SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
+var Bind: PZODBCParamBind;
+begin
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount <> 1) or (not Bind.Described and (SQLType <> Bind.SQLType)) then
+      InitBind(Index, 1, SQLType);
+    case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(Value <> 0);
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := ShortInt(Value);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := Byte(Value);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := SmallInt(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := Word(Value);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Integer(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Cardinal(Value);
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := Value;
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := UInt64(Value);
+      SQL_C_TYPE_DATE, SQL_C_DATE,
+      SQL_C_TYPE_TIME, SQL_C_TIME, SQL_C_SS_TIME2,
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_C_SS_TIMESTAMPOFFSET,
+      SQL_C_FLOAT, SQL_C_DOUBLE: InternalBindDouble(Index, SQLType, Value);
+      SQL_C_NUMERIC:  Curr2ODBCNumeric(Value, Bind.ParameterValuePtr);
+      SQL_C_WCHAR:  begin
+                      IntToUnicode(Value, @fWBuffer[SizeOf(Pointer)], @fWBuffer[0]);
+                      SetPWideChar(Index, @fWBuffer[SizeOf(Pointer)], ZPPWideChar(@fWBuffer[0])^-PWideChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      SQL_C_CHAR:   begin
+                      IntToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
+                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, SQLType);
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else
+    BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
+end;
+
+const
+  ODBCSQLTypeOrdinalMatrix: array[stBoolean..stDouble] of SQLSmallInt = (
+    SQL_BIT,
+    SQL_TINYINT, SQL_TINYINT, SQL_SMALLINT, SQL_SMALLINT, SQL_INTEGER, SQL_INTEGER, SQL_BIGINT, SQL_BIGINT,
+    SQL_FLOAT, SQL_DOUBLE);
+
+procedure TZAbstractODBCPreparedStatement.BindArrayColumnWise(Index: Integer);
+var ArrayLen, MaxL, I: Integer;
+  Arr: PZArray;
+  D: Pointer;
+  P: PAnsiChar;
+  SQL_DATE_STRUCT: PSQL_DATE_STRUCT absolute P;
+  SQL_TIME_STRUCT: PSQL_TIME_STRUCT absolute P;
+  SQL_SS_TIME2_STRUCT: PSQL_SS_TIME2_STRUCT absolute P;
+  SQL_SS_TIMESTAMPOFFSET_STRUCT: PSQL_SS_TIMESTAMPOFFSET_STRUCT absolute P;
+  SQL_TIMESTAMP_STRUCT: PSQL_TIMESTAMP_STRUCT absolute P;
+  ParamDataLobs: PLobArray absolute P;
+  N: PSQLLENArray;
+  Bind: PZODBCParamBind;
+  SQLType: TZSQLType;
+  Native, BindAgain: Boolean;
+  DT: TDateTime;
+  Fraction: Word;
+
+{$R-}
+  Procedure BindRawStrings(CP: Word);
+  var I, B: Integer;
+  begin
+    if FClientEncoding = ceUTF16 then begin
+      MaxL := (Bind.BufferLength shr 1) -1;
+      for I := 0 to ArrayLen -1 do begin
+        if IsNullFromArray(Arr, I)
+        then N[I] := SQL_NULL_DATA
+        else begin
+          B := ZEncoding.PRaw2PUnicode(Pointer(TRawByteStringDynArray(D)[i]), PWideChar(P), CP, LengthInt(Length(TRawByteStringDynArray(D)[i])), LengthInt(MaxL)) shl 1;
+          if B < Bind.BufferLength then begin
+            PWord(P+B)^ := 0;
+            N[I] := B;
+          end else
+            RaiseExceeded(Index);
+        end;
+        Inc(P, Bind.BufferLength);
+      end;
+    end else begin
+      MaxL := Bind.BufferLength-1;
+      if CP = FClientCP then
+        for I := 0 to ArrayLen -1 do begin
+          if IsNullFromArray(Arr, I)
+          then N[I] := SQL_NULL_DATA
+          else begin
+            B := Length(TRawByteStringDynArray(D)[i]);
+            if B <= MaxL then begin
+              if B > 0
+              then Move(Pointer(TRawByteStringDynArray(D)[i])^, P^, B+1)
+              else PByte(P)^ := 0;
+              N[I] := B;
+            end else
+              RaiseExceeded(Index)
+          end;
+          Inc(P, Bind.BufferLength);
+        end
+      else
+        for I := 0 to ArrayLen -1 do begin
+          if IsNullFromArray(Arr, I)
+          then N[I] := SQL_NULL_DATA
+          else begin
+            B := ZEncoding.PRawToPRawBuf(Pointer(TRawByteStringDynArray(D)[i]), P,
+              Length(TRawByteStringDynArray(D)[i]), MaxL, CP, FClientCP);
+            if B <= MaxL then begin
+              PByte(P+B)^ := 0;
+              N[I] := B;
+            end else
+              RaiseExceeded(Index)
+          end;
+          Inc(P, Bind.BufferLength);
+        end
+    end;
+  end;
+  procedure BinLobs;
+  var I: Integer;
+    TmpLob: IZBlob;
+  begin
+    case SQLtype of
+      stString,
+      stUnicodeString: for I := 0 to ArrayLen-1 do begin
+                        if IsNullFromArray(Arr, I) then begin
+                          ParamDataLobs[I] := nil;
+                        end else begin
+                          case Arr.VArrayVariantType of
+                            {$IFDEF UNICODE}vtString,{$ENDIF}
+                            vtUnicodeString: ParamDataLobs[I] :=
+                              TZAbstractClob.CreateWithData(Pointer(TUnicodeStringDynArray(D)[i]),
+                              Length(TUnicodeStringDynArray(D)[i]), ConSettings);
+                            vtCharRec: if TZCharRecDynArray(D)[i].CP = zCP_UTF16
+                              then ParamDataLobs[I] :=
+                                TZAbstractClob.CreateWithData(TZCharRecDynArray(D)[i].P,
+                                  TZCharRecDynArray(D)[i].Len, ConSettings)
+                              else ParamDataLobs[I] :=
+                                TZAbstractClob.CreateWithData(TZCharRecDynArray(D)[i].P,
+                                  TZCharRecDynArray(D)[i].Len, TZCharRecDynArray(D)[i].CP, ConSettings);
+                            vtRawByteString: ParamDataLobs[I] :=
+                                  TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
+                                    Length(TRawByteStringDynArray(D)[i]), FClientCP, ConSettings);
+                            {$IFNDEF NO_UTF8STRING}
+                            vtUTF8String: ParamDataLobs[I] :=
+                              TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
+                                  Length(TRawByteStringDynArray(D)[i]), zCP_UTF8, ConSettings);
+                            {$ENDIF}
+                            {$IFNDEF NO_ANSISTRING}
+                            vtAnsiString: ParamDataLobs[I] :=
+                              TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
+                                  Length(TRawByteStringDynArray(D)[i]), ZOSCodePage, ConSettings);
+                            {$ENDIF}
+                            {$IFNDEF UNICODE}
+                            vtString: if ConSettings^.AutoEncode then
+                                        ParamDataLobs[I] :=
+                                          TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
+                                              Length(TRawByteStringDynArray(D)[i]), zCP_None, ConSettings)
+                                      else
+                                        ParamDataLobs[I] :=
+                                          TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
+                                              Length(TRawByteStringDynArray(D)[i]), FClientCP, ConSettings);
+                            {$ENDIF}
+                            else
+                              raise EZSQLException.Create('Unsupported String Variant');
+                          end;
+                          if FClientEncoding = ceUTF16
+                          then ParamDataLobs^[I].GetPWideChar
+                          else ParamDataLobs[I].GetPAnsiChar(FClientCP);
+                        end;
+                        N[I] := SQL_DATA_AT_EXEC;
+                      end;
+      stBytes:          for I := 0 to ArrayLen-1 do begin
+                          if (TBytesDynArray(D)[i] = nil) or IsNullFromArray(Arr, I)
+                          then  ParamDataLobs[I] := nil
+                          else  ParamDataLobs[I] := TZAbstractBlob.CreateWithData(Pointer(TBytesDynArray(D)[i]),
+                            Length(TBytesDynArray(D)[i]));
+                          N[I] := SQL_DATA_AT_EXEC;
+                        end;
+      stAsciiStream, stUnicodeStream,
+      stBinaryStream: begin
+                        for I := 0 to ArrayLen-1 do begin
+                          if (TInterfaceDynArray(D)[i] <> nil) and (TInterfaceDynArray(D)[i].QueryInterface(IZBlob, TmpLob) = S_OK) and not TmpLob.IsEmpty then begin
+                            if not (Bind.SQLtype = stBinaryStream) then begin
+                              if TmpLob.IsClob then
+                                if FClientEncoding = ceUTF16 then
+                                  TmpLob.GetPWideChar
+                                else TmpLob.GetPAnsiChar(FClientCP)
+                              else
+                                raise Exception.Create('Fehlermeldung');
+                            end;
+                            ParamDataLobs[I] := TmpLob;
+                          end else
+                            ParamDataLobs[I] := nil;
+                          N[I] := SQL_DATA_AT_EXEC;
+                        end;
+                      end;
+      else RaiseUnsupportedException;
+    end;
+  end;
+begin
+  Bind := @fParamBindings[Index];
+  Arr := BindList[Index].Value;
+  D := Arr.VArray;
+  ArrayLen := {%H-}PArrayLenInt({%H-}NativeUInt(D) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
+  SQLType := TZSQLType(Arr.VArrayType);
+  if not Bind.Described  then
+    if (Ord(SQLType) < Ord(stString)) then begin
+      Bind.ParameterType := ConvertSQLTypeToODBCType(SQLType, Bind.ValueType, FClientEncoding);
+      MaxL := CalcBufSize(0, Bind.ValueType, SQLType, ConSettings.ClientCodePage)
+    end else if (Ord(SQLType) > Ord(stBytes)) then
+      MaxL := 0 //streams
+    else begin
+      MaxL := 0;
+      case Arr.VArrayVariantType of
+        {$IFDEF UNICODE}vtString,{$ENDIF}
+        vtUnicodeString: for I := 0 to ArrayLen -1 do
+                            MaxL := Max(MaxL, Length(TUnicodeStringDynArray(D)[i])*
+                              (ConSettings.ClientCodePage.CharWidth*Ord(FClientEncoding <> ceUTF16)));
+        {$IFNDEF UNICODE}vtString,{$ENDIF}
+        {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+        {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+        vtRawByteString: for I := 0 to ArrayLen -1 do
+                            MaxL := Max(MaxL, Length(TRawByteStringDynArray(D)[i]));
+        vtCharRec:       for I := 0 to ArrayLen -1 do
+                            MaxL := Max(MaxL, Integer(TZCharRecDynArray(D)[i].Len)*
+                              (ConSettings.ClientCodePage.CharWidth*Ord((FClientEncoding <> ceUTF16) and (TZCharRecDynArray(D)[i].CP = zCP_UTF16))));
+        vtBytes:         for I := 0 to ArrayLen -1 do
+                            MaxL := Max(MaxL, Length(TBytesDynArray(D)[i]));
+      end;
+    end
+  else MaxL := Bind.BufferLength;
+  Native := (Arr.VArrayVariantType = vtNull) and
+          (Ord(Bind.SQLType) >= Ord(stBoolean)) and (Ord(SQLType) >= Ord(stBoolean)) and (
+          (((Ord(Bind.SQLType) <= Ord(stDouble)) and (Ord(SQLType) <= Ord(stDouble))) and (ODBCSQLTypeOrdinalMatrix[Bind.SQLType] = ODBCSQLTypeOrdinalMatrix[SQLType])) or
+          ((Bind.SQLType = stGUID) and (SQLType = stGUID)));
+  BindAgain := False;
+  if Native and (ArrayLen > 1) then begin
+    InitBind(Index, 0, SQLType, MaxL);
+    Bind.ParameterValuePtr := D;
+    Bind.ValueCount := ArrayLen;
+    GetMem(Bind.StrLen_or_IndPtr, ArrayLen * SizeOf(SQLLEN));
+    BindAgain := True;
+    N := PSQLLENArray(Bind.StrLen_or_IndPtr);
+    if Arr.VIsNullArray <> nil then
+      for I := 0 to ArrayLen -1 do
+        N[I] := NullInd[IsNullFromArray(Arr, I)]
+    else FillChar(N[0], SizeOf(SQLLEN)*ArrayLen, #0);
+  end else begin
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount <> ArrayLen) or (not Bind.Described and (Bind.SQLType <> SQLType)) then
+      InitBind(Index, ArrayLen, SQLType, MaxL);
+    N := PSQLLENArray(Bind.StrLen_or_IndPtr);
+    P := Bind.ParameterValuePtr;
+    case Bind.SQLType of
+      stBoolean:      for I := 0 to ArrayLen -1 do begin
+                        PByte(P+I)^ := Ord(ArrayValueToBoolean(Arr, I));
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stByte:         for I := 0 to ArrayLen -1 do begin
+                        PByte(P+I)^ := ArrayValueToCardinal(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stShort:        for I := 0 to ArrayLen -1 do begin
+                        PShortInt(P+I)^ := ArrayValueToCardinal(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stWord:         for I := 0 to ArrayLen -1 do begin
+                        PWord(P+(I*SizeOf(Word)))^ := ArrayValueToCardinal(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stSmall:        for I := 0 to ArrayLen -1 do begin
+                        PSmallInt(P+(I*SizeOf(SmallInt)))^ := ArrayValueToInteger(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stLongWord:     for I := 0 to ArrayLen -1 do begin
+                        PCardinal(P+(I*SizeOf(Cardinal)))^ := ArrayValueToCardinal(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stInteger:      for I := 0 to ArrayLen -1 do begin
+                        PInteger(P+(I*SizeOf(Integer)))^ := ArrayValueToInteger(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stULong:        for I := 0 to ArrayLen -1 do begin
+                        PUInt64(P+(I*SizeOf(UInt64)))^ := ArrayValueToUInt64(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stLong:         for I := 0 to ArrayLen -1 do begin
+                        PInt64(P+(I*SizeOf(Int64)))^ := ArrayValueToInt64(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stFloat:       for I := 0 to ArrayLen -1 do begin
+                        PSingle(P+(I*SizeOf(Single)))^ := ArrayValueToDouble(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stDouble:       for I := 0 to ArrayLen -1 do begin
+                        PDouble(P+(I*SizeOf(Double)))^ := ArrayValueToDouble(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stCurrency:     for I := 0 to ArrayLen -1 do begin
+                        Curr2ODBCNumeric(ArrayValueToCurrency(Arr, I), PSQL_NUMERIC_STRUCT(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stBigDecimal:   {$IFNDEF BCD_TEST}
+                      for I := 0 to ArrayLen -1 do begin
+                        PDouble(P+(I*SizeOf(Double)))^ := ArrayValueToDouble(Arr, I);
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+                      {$ELSE}
+                      Complete me!
+                      {$ENDIF}
+      stDate:         begin
+                        Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
+                        for I := 0 to ArrayLen -1 do begin
+                          if IsNullFromArray(Arr, I) then
+                            N[I] := SQL_NULL_DATA
+                          else begin
+                            if Native
+                            then DT := TDateTimeDynArray(D)[i]
+                            else DT := ArrayValueToDate(Arr, I, ConSettings^.WriteFormatSettings);
+                            DecodeDate(DT, PWord(@SQL_DATE_STRUCT.year)^, SQL_DATE_STRUCT.month,
+                              SQL_DATE_STRUCT.day);
+                            N[I] := SQL_NO_NULLS;
+                          end;
+                          Inc(P, SizeOf(TSQL_DATE_STRUCT));
+                        end;
+                      end;
+      stTime:         begin
+                        Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
+                        if Bind.ValueType = SQL_C_SS_TIME2 then begin
+                          for I := 0 to ArrayLen -1 do begin
+                            if IsNullFromArray(Arr, I) then
+                              N[I] := SQL_NULL_DATA
+                            else begin
+                              N[I] := SQL_NO_NULLS;
+                              if Native
+                              then DT := TDateTimeDynArray(D)[i]
+                              else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
+                              DecodeTime(DT, SQL_TIME_STRUCT.hour, SQL_TIME_STRUCT.minute,
+                                SQL_TIME_STRUCT.second, Fraction);
+                            end;
+                            Inc(P, SizeOf(TSQL_TIME_STRUCT));
+                          end;
+                        end else for I := 0 to ArrayLen -1 do begin
+                          if IsNullFromArray(Arr, I) then
+                            N[I] := SQL_NULL_DATA
+                          else begin
+                            N[I] := SQL_NO_NULLS;
+                            if Native
+                            then DT := TDateTimeDynArray(D)[i]
+                            else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
+                            DecodeTime(DT, SQL_SS_TIME2_STRUCT.hour, SQL_SS_TIME2_STRUCT.minute,
+                              SQL_SS_TIME2_STRUCT.second, Fraction);
+                            SQL_SS_TIME2_STRUCT.fraction := fraction*1000000;
+                          end;
+                          Inc(P, SizeOf(TSQL_SS_TIME2_STRUCT));
+                        end;
+                      end;
+      stTimeStamp:    begin
+                        Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
+                        if Bind.ValueType = SQL_C_SS_TIMESTAMPOFFSET then
+                          for I := 0 to ArrayLen -1 do begin
+                            if IsNullFromArray(Arr, I) then
+                              N[I] := SQL_NULL_DATA
+                            else begin
+                              N[I] := SQL_NO_NULLS;
+                            if Native
+                            then DT := TDateTimeDynArray(D)[i]
+                            else DT := ArrayValueToDateTime(Arr, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTime(DT, PWord(@SQL_SS_TIMESTAMPOFFSET_STRUCT.Year)^,
+                              SQL_SS_TIMESTAMPOFFSET_STRUCT.month, SQL_SS_TIMESTAMPOFFSET_STRUCT.day,
+                              SQL_SS_TIMESTAMPOFFSET_STRUCT.hour, SQL_SS_TIMESTAMPOFFSET_STRUCT.minute,
+                              SQL_SS_TIMESTAMPOFFSET_STRUCT.second, Fraction);
+                              SQL_SS_TIMESTAMPOFFSET_STRUCT.fraction := fraction*1000000;
+                            end;
+                          Inc(P, SizeOf(TSQL_SS_TIMESTAMPOFFSET_STRUCT));
+                        end else for I := 0 to ArrayLen -1 do begin
+                          if IsNullFromArray(Arr, I) then
+                            N[I] := SQL_NULL_DATA
+                          else begin
+                            N[I] := SQL_NO_NULLS;
+                            if Native
+                            then DT := TDateTimeDynArray(D)[i]
+                            else DT := ArrayValueToDateTime(Arr, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTime(DT, PWord(@SQL_TIMESTAMP_STRUCT.Year)^,
+                              SQL_TIMESTAMP_STRUCT.month, SQL_TIMESTAMP_STRUCT.day,
+                              SQL_TIMESTAMP_STRUCT.hour, SQL_TIMESTAMP_STRUCT.minute,
+                              SQL_TIMESTAMP_STRUCT.second, Fraction);
+                              SQL_TIMESTAMP_STRUCT.fraction := fraction*1000000;
+                          end;
+                          Inc(P, SizeOf(TSQL_TIMESTAMP_STRUCT));
+                        end;
+                      end;
+      stGUID:         for I := 0 to ArrayLen -1 do begin
+                        ArrayValueToGUID(Arr, I, PGUID(P+(I*SizeOf(TGUID))));
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+      stString, stUnicodeString:
+        case Arr.VArrayVariantType of
+          {$IFDEF UNICODE}vtString,{$ENDIF}
+          vtUnicodeString:  if FClientEncoding = ceUTF16 then
+                              for I := 0 to ArrayLen -1 do begin
+                                if IsNullFromArray(Arr, I) then
+                                  N[I] := SQL_NULL_DATA
+                                else begin
+                                  MaxL := Length(TUnicodeStringDynArray(D)[i]) shl 1;
+                                  if MaxL < Bind.BufferLength then begin
+                                    Move(Pointer(TUnicodeStringDynArray(D)[i])^, P^, MaxL+2);
+                                    N[I] := MaxL;
+                                  end else
+                                    RaiseExceeded(Index);
+                                end;
+                                Inc(P, Bind.BufferLength);
+                              end
+                            else
+                              for I := 0 to ArrayLen -1 do begin
+                                if IsNullFromArray(Arr, I) then
+                                  N[I] := SQL_NULL_DATA
+                                else begin
+                                  MaxL := PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(D)[i]),
+                                    P, Length(TUnicodeStringDynArray(D)[i]), Bind.BufferLength-1, FClientCP);
+                                  if MaxL < Bind.BufferLength then begin
+                                    Move(Pointer(TUnicodeStringDynArray(D)[i])^, P^, MaxL +2);
+                                    N[i] := MaxL;
+                                    PByte(P+MaxL)^ := 0;
+                                  end else
+                                    RaiseExceeded(Index);
+                                end;
+                                Inc(P, Bind.BufferLength);
+                              end;
+          {$IFNDEF UNICODE}
+          vtString: if ConSettings.AutoEncode then
+                                     else BindRawStrings(FClientCP);
+          {$ENDIF}
+          {$IFNDEF NO_ANSISTRING}vtAnsiString: BindRawStrings(ZOSCodePage);{$ENDIF}
+          {$IFNDEF NO_UTF8STRING}vtUTF8String: BindRawStrings(zCP_UTF8);{$ENDIF}
+          vtRawByteString: BindRawStrings(FClientCP);
+          vtCharRec:       for I := 0 to ArrayLen -1 do
+                              MaxL := Max(MaxL, Integer(TZCharRecDynArray(D)[i].Len));
+        end;
+      stBytes:              for I := 0 to ArrayLen -1 do begin
+                              if IsNullFromArray(Arr, I)
+                              then N[I] := SQL_NULL_DATA
+                              else begin
+                                MaxL := Length(TBytesDynArray(D)[i]);
+                                if MaxL <= Bind.BufferLength then begin
+                                  if MaxL > 0
+                                  then Move(Pointer(TBytesDynArray(D)[i])^, P^, MaxL);
+                                  N[I] := MaxL;
+                                end else
+                                  RaiseExceeded(Index)
+                              end;
+                              Inc(P, Bind.BufferLength);
+                            end;
+      stAsciiStream, stUnicodeStream, stBinaryStream: BinLobs;
+    end;
+  end;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if BindAgain then
+    BindParam(Bind, Index+1);
+end;
+
+procedure TZAbstractODBCPreparedStatement.BindInParameters;
+var I: Integer;
+begin
+  if BindList.Count = 0 then
+    exit;
+  if (BatchDMLArrayCount > 0) then begin
+    fLastAutoCommit := Connection.GetAutoCommit;
+    for I := 0 to BindList.Count -1 do
+      BindArrayColumnWise(I);
+    if (fCurrentIterations <> NativeUInt(BatchDMLArrayCount)) then begin
+      fCurrentIterations := BatchDMLArrayCount;
+      CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, SQLPOINTER(fCurrentIterations), 0));
+    end;
+  end else begin
+    if (fCurrentIterations <> 1) then begin
+      fCurrentIterations := 1;
+      CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAMSET_SIZE, SQLPOINTER(fCurrentIterations), 0));
+    end;
+    if not fBindImmediat then begin
+      DescribeParameterFromBindList;
+      BindList.BindValuesToStatement(Self, SupportsBidirectionalParams);
+    end;
+  end;
+  inherited BindInParameters;
+end;
+
+procedure TZAbstractODBCPreparedStatement.BindInteger(Index: Integer;
+  SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF});
+var Bind: PZODBCParamBind;
+begin
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (SQLType <> Bind.SQLType)) then
+      InitBind(Index, 1, SQLType);
+    case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(Value <> 0);
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := ShortInt(Value);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := Byte(Value);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := SmallInt(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := Word(Value);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Integer(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Value;
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := UInt64(Value);
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := UInt64(Value);
+      SQL_C_TYPE_DATE, SQL_C_DATE,
+      SQL_C_TYPE_TIME, SQL_C_TIME, SQL_C_SS_TIME2,
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_C_SS_TIMESTAMPOFFSET,
+      SQL_C_FLOAT, SQL_C_DOUBLE:
+                    begin
+                      InternalBindDouble(Index, Bind.SQLType, Value);
+                      Exit;
+                    end;
+      SQL_C_NUMERIC: Curr2ODBCNumeric(Value, Bind.ParameterValuePtr);
+      SQL_C_WCHAR:  begin
+                      IntToUnicode(Value, @fWBuffer[SizeOf(Pointer)], @fWBuffer[0]);
+                      SetPWideChar(Index, @fWBuffer[SizeOf(Pointer)], ZPPWideChar(@fWBuffer[0])^-PWideChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      SQL_C_CHAR:   begin
+                      IntToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
+                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, SQLType);
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else
+    BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
+end;
+
+procedure TZAbstractODBCPreparedStatement.BindParam(Bind: PZODBCParamBind;
+  ParameterNumber: SQLUSMALLINT);
+var Desc: SQLHDesc;
+begin
+  CheckStmtError(fPlainDriver.SQLBindParameter(fHSTMT, ParameterNumber,//0=bookmark and Params do starts with 1
+    Bind.InputOutputType, Bind.ValueType, Bind.ParameterType, Bind.ColumnSize,
+    Bind.DecimalDigits * Ord(Bind.SQLType in [stCurrency, stBigDecimal, stDouble, stTime, stTimeStamp]),
+      Bind.ParameterValuePtr, Bind.BufferLength, Bind.StrLen_or_IndPtr));
+  if Bind.ValueType = SQL_C_NUMERIC then begin
+    CheckStmtError(FPlainDriver.SQLGetStmtAttr(fHSTMT, SQL_ATTR_APP_PARAM_DESC, @Desc, 0, nil));
+    CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ParameterNumber, SQL_DESC_TYPE, SQLPointer(SQL_NUMERIC), SQL_IS_SMALLINT));
+    CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ParameterNumber, SQL_DESC_CONCISE_TYPE, SQLPointer(SQL_C_NUMERIC), SQL_IS_SMALLINT));
+    CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ParameterNumber, SQL_DESC_PRECISION, SQLPointer(Bind.ColumnSize), SQL_IS_INTEGER));
+    CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ParameterNumber, SQL_DESC_SCALE, SQLPointer(Bind.DecimalDigits), SQL_IS_SMALLINT));
+    CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ParameterNumber, SQL_DESC_DATA_PTR, Bind.ParameterValuePtr, SQL_IS_POINTER));
+  end;
+end;
+
+procedure TZAbstractODBCPreparedStatement.BindRaw(Index: Integer;
+  const Value: RawByteString; CP: Word);
+var Bind: PZODBCParamBind;
+begin
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and ((stUnicodeString <> Bind.SQLType) or (Bind.BufferLength < Length(Value)+1))) then
+      InitBind(Index, 1, stString, Length(Value));
+    if Bind.SQLType in [stAsciiStream, stUnicodeStream] then begin
+      if Value = ''
+      then PIZlob(Bind.ParameterValuePtr)^ := TZAbstractClob.CreateWithData(PEmptyAnsiString, 0, CP, ConSettings)
+      else PIZlob(Bind.ParameterValuePtr)^ := TZAbstractClob.CreateWithData(Pointer(Value), Length(Value), CP, ConSettings);
+      if FClientEncoding = ceUTF16
+      then PIZlob(Bind.ParameterValuePtr)^.GetPWideChar
+      else if CP <> FClientCP then
+        PIZlob(Bind.ParameterValuePtr)^.GetPAnsiChar(CP);
+      Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
+    end else case Bind.ValueType of
+      SQL_C_WCHAR:    begin
+                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := PRaw2PUnicode(Pointer(Value), Bind.ParameterValuePtr, CP, LengthInt(Length(Value)), LengthInt(Bind.ColumnSize)) shl 1;
+                        if PSQLLEN(Bind.StrLen_or_IndPtr)^ >= Bind.BufferLength then
+                          RaiseExceeded(Index);
+                        PWord(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := 0;
+                      end;
+      SQL_C_CHAR:     begin
+                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := ZEncoding.PRawToPRawBuf(Pointer(Value),
+                          Bind.ParameterValuePtr, LengthInt(Length(Value)), Bind.ColumnSize, CP, FClientCP);
+                        if PSQLLEN(Bind.StrLen_or_IndPtr)^ >= Bind.BufferLength then
+                          RaiseExceeded(Index);
+                        PByte(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := 0;
+                      end;
+      else SetPAnsiChar(Index, Pointer(Value), Length(Value));
+    end;
+  end else
+    BindList.Put(Index, stString, Value, CP);
+end;
+
+procedure TZAbstractODBCPreparedStatement.CheckParameterIndex(Value: Integer);
+begin
+  if not Prepared then
+    Prepare;
+  if (BindList.Capacity < Value+1) then
+    if fBindImmediat
+    then raise EZSQLException.Create(SInvalidInputParameterCount)
+    else inherited CheckParameterIndex(Value);
+end;
+
+procedure TZAbstractODBCPreparedStatement.ClearParameters;
+begin
+  inherited ClearParameters;
+end;
+
+constructor TZAbstractODBCPreparedStatement.Create(
+  const Connection: IZODBCConnection; var ConnectionHandle: SQLHDBC;
+  const SQL: string; Info: TStrings);
+begin
+  inherited Create(Connection, ConnectionHandle, SQL, Info);
+  FClientEncoding := ConSettings^.ClientCodePage.Encoding;
+  fCurrentIterations := 1;
+end;
+
+procedure TZAbstractODBCPreparedStatement.DescribeParameterFromBindList;
+var
+  Idx: SQLUSMALLINT;
+begin
+  for idx := 0 to BindList.Count -1 do begin
+  end;
+end;
+
+procedure TZAbstractODBCPreparedStatement.DescribeParameterFromODBC;
+var
+  Idx: SQLUSMALLINT;
+  ParameterCount: SQLSMALLINT;
+  UnSigned: Boolean;
+  Status: SQLRETURN;
+  Bind: PZODBCParamBind;
+begin
+  Status := fPlainDriver.SQLNumParams(fHSTMT, @ParameterCount);
+  if Status <> SQL_SUCCESS then begin
+    fBindImmediat := False;
+    CheckStmtError(Status);
+  end;
+  if ParameterCount > 0 then begin
+    if ParameterCount <> BindList.Count then
+      SetParamCount(ParameterCount);
+    for Idx := 0 to ParameterCount-1 do begin
+      {$R-}
+      Bind := @fParamBindings[Idx];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      Status := fPlainDriver.SQLDescribeParam(fHSTMT, Idx +1, //0=bookmark and Params do starts with 1
+        @Bind.ParameterType, @Bind.ColumnSize, @Bind.DecimalDigits, @Bind.Nullable);
+      if Status <> SQL_SUCCESS then
+        CheckStmtError(SQL_SUCCESS);
+      // this is the only type where unsigned is correct
+      UnSigned := (Bind.ParameterType = SQL_BIGINT) and (Bind.ColumnSize = 20);
+      //get "best" TZSQLType -> ODBC does not returns the C-Data types
+      Bind.SQLType := ConvertODBCTypeToSQLType(Bind.ParameterType,
+        Bind.DecimalDigits, Bind.ColumnSize, Unsigned, Consettings, @Bind.ValueType);
+      //note: Code is prepared to handle any case of Param-Directions  except fetching returned data
+      if (Bind.SQLtype in [stAsciiStream, stUnicodeStream, stBinaryStream])
+      then Bind.BufferLength := SizeOf(Pointer) //range check issue on CalcBufSize
+      else Bind.BufferLength := CalcBufSize(Bind.ColumnSize,
+          Bind.ValueType, Bind.SQLType, ConSettings^.ClientCodePage);
+      Bind.InputOutputType := ODBCInputOutputType[False
+        { incomplete -> Bind.SQLtype in [stAsciiStream, stUnicodeStream, stBinaryStream]}][pctIn];
+      if Bind.SQLType = stTimeStamp then begin
+        Bind.ColumnSize := 23;
+        Bind.DecimalDigits := 3;
+      end;
+      Bind.Described := True;
+    end;
+    fBindImmediat := True;
+    CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_PARAM_BIND_TYPE, nil, 0))
+  end;
+end;
+
+procedure TZAbstractODBCPreparedStatement.InternalBindDouble(Index: Integer;
+  SQLType: TZSQLType; const Value: Double);
+var Bind: PZODBCParamBind;
+  Year, fraction: Word;
+begin
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (SQLType <> Bind.SQLType)) then
+      InitBind(Index, 1, SQLType);
+    case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Byte(Value <> 0);
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := Trunc(Value);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := Trunc(Value);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := Trunc(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := Trunc(Value);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Trunc(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Trunc(Value);
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := Trunc(Value);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := Trunc(Value);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      SQL_C_TYPE_DATE, SQL_C_DATE: begin
+          DecodeDate(Value, Year, PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.month,
+            PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.day);
+          PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.year := year;
+        end;
+      SQL_C_TYPE_TIME, SQL_C_TIME: begin
+          DecodeTime(Value, PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.hour,
+            PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.minute,
+            PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.second, fraction);
+        end;
+      SQL_C_SS_TIME2: begin
+          //https://bytes.com/topic/sql-server/answers/851494-sql-state-22003-numeric-value-out-range-time-data-type
+//          PSQLLEN(StrLen_or_IndPtr)^ := SizeOf(TSQL_SS_TIME2_STRUCT);
+          DecodeTime(Value, PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.hour,
+            PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.minute,
+            PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.second, fraction);
+          //https://msdn.microsoft.com/de-de/library/bb677243%28v=sql.120%29.aspx
+          PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.fraction := fraction*1000000;
+        end;
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP: begin
+          DecodeDateTime(Value, Year, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.month,
+            PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.day,
+            PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.hour, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.minute,
+            PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.second, fraction);
+          PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.year := year;
+          PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.fraction := fraction*1000000;
+            //https://social.msdn.microsoft.com/Forums/sqlserver/en-US/ac1b5a6d-5e64-4603-9c92-b75ba4e51bf2/error-22008-datetime-field-overflow-when-inserting-a-record-with-datetime2-field-via-odbc?forum=sqldataaccess
+        end;
+      SQL_C_SS_TIMESTAMPOFFSET: begin
+          DecodeDateTime(Value, Year, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.month,
+            PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.day,
+            PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.hour,
+            PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.minute,
+            PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.second, fraction);
+          PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.year := year;
+          PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.fraction := fraction*1000000;
+            //https://social.msdn.microsoft.com/Forums/sqlserver/en-US/ac1b5a6d-5e64-4603-9c92-b75ba4e51bf2/error-22008-datetime-field-overflow-when-inserting-a-record-with-datetime2-field-via-odbc?forum=sqldataaccess
+        end;
+      SQL_C_FLOAT:  PSingle(Bind.ParameterValuePtr)^ := Value;
+      SQL_C_DOUBLE: PDouble(Bind.ParameterValuePtr)^ := Value;
+      SQL_C_NUMERIC: Curr2ODBCNumeric(Value, Bind.ParameterValuePtr);
+      SQL_C_WCHAR:  begin
+          case SQLType of
+            stFloat, stDouble, stCurrency,
+            stBigDecimal: SetPWideChar(Index, @fWBuffer[0], FloatToSQLUnicode(Value, @fWBuffer[0]));
+            stTime: SetPWideChar(Index, @fWBuffer[0], ZSysUtils.DateTimeToUnicodeSQLTime(Value, @fWBuffer[0], ConSettings^.WriteFormatSettings, False));
+            stDate: SetPWideChar(Index, @fWBuffer[0], ZSysUtils.DateTimeToUnicodeSQLDate(Value, @fWBuffer[0], ConSettings^.WriteFormatSettings, False));
+            stTimeStamp: SetPWideChar(Index, @fWBuffer[0], ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value, @fWBuffer[0], ConSettings^.WriteFormatSettings, False));
+          end;
+          Exit;
+        end;
+      SQL_C_CHAR:   begin
+          case SQLType of
+            stFloat, stDouble, stCurrency,
+            stBigDecimal: SetPAnsiChar(Index, @fABuffer[0], FloatToSQLRaw(Value, @fABuffer[0]));
+            stTime: SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.DateTimeToRawSQLTime(Value, @fABuffer[0], ConSettings^.WriteFormatSettings, False));
+            stDate: SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.DateTimeToRawSQLDate(Value, @fABuffer[0], ConSettings^.WriteFormatSettings, False));
+            stTimeStamp: SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.DateTimeToRawSQLTimeStamp(Value, @fABuffer[0], ConSettings^.WriteFormatSettings, False));
+          end;
+          Exit;
+        end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, SQlType);
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else {$IFNDEF CPU64}
+    if SQLType = stFloat then begin
+      PSingle(@fABuffer[0])^ := Value;
+      BindList.Put(Index, SQLType, P4Bytes(@fABuffer[0]));
+    end else
+    {$ENDIF}
+      BindList.Put(Index, SQLType, P8Bytes(@Value));
+end;
+
+procedure TZAbstractODBCPreparedStatement.InitBind(Index, ValueCount: Integer;
+  SQLType: TZSQLType; ActualLength: LengthInt);
+var BindAgain: Boolean;
+  ODBC_CType: SQLSMALLINT;
+  Bind: PZODBCParamBind;
+  label ReAlloc;
+  procedure FlushLobs;
+  var J: Integer;
+  begin
+    for j := 0 to Bind.ValueCount -1 do
+      {$R-}PLobArray(Bind.ParameterValuePtr)[j] := nil;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  end;
+begin
+  {$R-}
+  Bind := @fParamBindings[Index];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  BindAgain := (Bind.ParameterValuePtr = nil) or (Bind.InputOutputType <> ODBCInputOutputType[False][BindList[Index].ParamType]);
+  if (SQLType in [stString, stAsciiStream]) and (FClientEncoding = ceUTF16)
+  then SQLType := TZSQLType(Ord(SQLType)+1)
+  else if (SQLType in [stUnicodeString, stUnicodeStream]) and (FClientEncoding <> ceUTF16) then
+    SQLType := TZSQLType(Ord(SQLType)-1);
+
+  if (Bind.SQLType <> SQLType) then begin
+    if not Bind.Described or ((Ord(SQLType) <= Ord(stLong)) and (Bind.ParameterType = ODBCSQLTypeOrdinalMatrix[SQLType])) then begin
+      {$IFDEF FPC}ODBC_CType := 0;{$ENDIF}
+      Bind.SQLType := SQLType;
+      Bind.ParameterType := ConvertSQLTypeToODBCType(SQLType, ODBC_CType, FClientEncoding);;
+      Bind.ValueType := ODBC_CType;
+      BindAgain := True;
+      if not Bind.Described then begin
+        if (Ord(SQLType) < Ord(stString)) then
+          ActualLength := CalcBufSize(ActualLength, ODBC_CType, SQLType, ConSettings.ClientCodePage);
+          if ActualLength <> Bind.BufferLength then
+            goto ReAlloc;
+      end;
+    end;
+  end;
+  if (ValueCount <> Bind.ValueCount) then begin
+    BindAgain := True;
+    if Bind.ValueCount > 0 then
+      FreeMem(Bind.StrLen_or_IndPtr, Bind.ValueCount * SizeOf(SQLLEN));
+    if ValueCount > 0 //FPC heaptrc shows us 0 Bytes unreleased mem ?
+    then GetMem(Bind.StrLen_or_IndPtr, ValueCount * SizeOf(SQLLEN))
+    else Bind.StrLen_or_IndPtr := nil;
+  end;
+  if not Bind.Described and (SQLType in [stBytes, stString, stUnicodeString]) and
+     ((Bind.BufferLength shr Ord(SQLType = stUnicodeString)-Ord(SQLType <> stBytes)) < ActualLength) then begin
+    BindAgain := True;
+    ActualLength := ((((ActualLength shl Ord(SQLType = stUnicodeString))-1) shr 3)+1) shl 3; //8Byte align
+    Bind.BufferLength := ActualLength;
+ReAlloc:
+    if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil)
+    then FreeMem(Bind.ParameterValuePtr, Bind.BufferLength*Bind.ValueCount);
+    if ValueCount > 0 //FPC heaptrc shows us 0 Bytes unreleased mem ?
+    then GetMem(Bind.ParameterValuePtr, Bind.BufferLength*ValueCount)
+    else Bind.ParameterValuePtr := nil;
+  end else if (Ord(Bind.SQLType) < Ord(stAsciiStream)) then
+    if (Bind.ParameterValuePtr = nil) and (ValueCount> 0)
+    then GetMem(Bind.ParameterValuePtr, Bind.BufferLength * ValueCount)
+    else goto ReAlloc
+  else begin
+      if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
+        FlushLobs;
+        FreeMem(Bind.ParameterValuePtr, Bind.ValueCount*SizeOf(Pointer));
+        Bind.ParameterValuePtr := nil;
+      end;
+      Bind.BufferLength := SizeOf(Pointer);
+      GetMem(Bind.ParameterValuePtr, SizeOf(Pointer)*ValueCount);
+      FillChar(Bind.ParameterValuePtr^, SizeOf(Pointer)*ValueCount, #0);
+    end;
+  Bind.ValueCount := ValueCount;
+  Bind.ExternalMem := ValueCount = 0;
+  if BindAgain and (ValueCount > 0) then
+    BindParam(Bind, Index+1);
+end;
+
+procedure TZAbstractODBCPreparedStatement.PrepareInParameters;
+begin
+  DescribeParameterFromODBC;
+end;
+
+procedure TZAbstractODBCPreparedStatement.RaiseExceeded(Index: Integer);
+begin
+  raise EZSQLException.Create(Format(cSParamValueExceeded, [Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}])+LineEnding+
+    'Stmt: '+GetSQL);
+end;
+
+procedure TZAbstractODBCPreparedStatement.RaiseUnsupportedParamType(Index: Integer;
+  SQLCType: SQLSMALLINT; SQLType: TZSQLType);
+begin
+  raise EZSQLException.Create('Index: '+ZFastCode.IntToStr(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF})+
+    ', ODBC-C-Type: '+ZFastCode.IntToStr(SQLCType)+', SQLType: '+GetEnumName(TypeInfo(TZSQLType), Ord(SQLType))+
+    LineEnding+SUnsupportedParameterType+LineEnding+ 'Stmt: '+GetSQL);
+end;
+
+procedure TZAbstractODBCPreparedStatement.ReallocParamBindings(OldCount,
+  NewCount: Integer);
+var
+  I, j: Integer;
+  Bind: PZODBCParamBind;
+begin
+  {first clean mem of binds we don't need any more}
+  if (fParamBindings <> nil) then
+    for i := OldCount-1 downto NewCount do begin
+      {$R-}
+      Bind := @fParamBindings[I];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
+        if Ord(Bind.SQLType) >= Ord(stAsciiStream) then
+          for j := 0 to Bind.ValueCount -1 do
+            {$R-}
+            PLobArray(Bind.ParameterValuePtr)[j] := nil;
+            {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        FreeMem(Bind.ParameterValuePtr, Bind.BufferLength*Bind.ValueCount)
+      end;
+      FreeMem(Bind.StrLen_or_IndPtr, SizeOf(SQLLEN)*Bind.ValueCount);
+    end;
+  ReallocMem(fParamBindings, NewCount*SizeOf(TZODBCParamBind));
+  if fParamBindings <> nil then begin
+    FillChar((PAnsichar(fParamBindings)+(OldCount*SizeOf(TZODBCParamBind)))^,
+      ((NewCount-OldCount)*SizeOf(TZODBCParamBind)), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    for i := OldCount to NewCount-1 do begin
+      {$R-}
+      GetMem(fParamBindings[I].StrLen_or_IndPtr, SizeOf(SQLLEN));
+      fParamBindings[I].ValueCount := 1;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    end;
+  end;
+end;
+
+{$IFNDEF NO_ANSISTRING}
+procedure TZAbstractODBCPreparedStatement.SetAnsiString(Index: Integer;
+  const Value: AnsiString);
+begin
+  BindRaw(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value, ZOSCodePage);
+end;
+{$ENDIF}
+
+procedure TZAbstractODBCPreparedStatement.SetBigDecimal(Index: Integer;
+  const Value: Extended);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
+end;
+
+{**
+  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetBindCapacity(Capacity: Integer);
+var OldCap: Integer;
+begin
+  OldCap := BindList.Capacity;
+  inherited SetBindCapacity(Capacity);
+  if OldCap <> Capacity then
+    ReallocParamBindings(OldCap, Capacity);
+end;
+
+procedure TZAbstractODBCPreparedStatement.SetBlob(ParameterIndex: Integer;
+  SQLType: TZSQLType; const Value: IZBlob);
+var Bind: PZODBCParamBind;
+begin
+  inherited;
+  if fBindImmediat then begin
+    {$R-}
+    {$IFNDEF GENERIC_INDEX}
+    ParameterIndex := ParameterIndex-1;
+    {$ENDIF}
+    Bind := @fParamBindings[ParameterIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (FClientEncoding = ceUTF16) and (SQLType = stAsciiStream) then
+      SQLType := stUnicodeStream
+    else if (FClientEncoding <> ceUTF16) and (SQLType = stUnicodeStream) then
+      SQLType := stAsciiStream;
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (SQLType <> Bind.SQLType)) then
+      InitBind(ParameterIndex, 1, SQLType);
+    if (Value = nil) or Value.IsEmpty
+    then Bind.StrLen_or_IndPtr^ := SQL_NULL_DATA
+    else begin
+      if Bind.SQLType <> stBinaryStream then
+        if Value.IsClob then
+          if FClientEncoding = ceUTF16
+          then Value.GetPWideChar
+          else Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP)
+        else if (FClientEncoding <> ceUTF16) then begin
+          fRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
+          inherited SetBlob(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream,
+            TZAbstractCLob.CreateWithData(Pointer(fRawTemp),
+            Length(fRawTemp), ConSettings^.ClientCodePage.CP, ConSettings));
+        end;
+      PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
+      Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC
+    end;
+  end;
+end;
+
+{**
+  Sets the designated parameter to a Java <code>boolean</code> value.
+  The driver converts this
+  to an SQL <code>BIT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetBoolean(ParameterIndex: Integer;
+  Value: Boolean);
+begin
+  if fBindImmediat then
+    BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean,
+      Ord(Value))
+  else BindList.Put(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
+  The driver converts this
+  to an SQL <code>BYTE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetByte(ParameterIndex: Integer; Value: Byte);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte, Cardinal(Value))
+end;
+
+{**
+  Sets the designated parameter to a Java array of bytes.  The driver converts
+  this to an SQL <code>VARBINARY</code> or <code>LONGVARBINARY</code>
+  (depending on the argument's size relative to the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetBytes(Index: Integer;
+  const Value: TBytes);
+var Bind: PZODBCParamBind;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and ((stBytes <> Bind.SQLType) or (Bind.BufferLength < Length(Value)))) then
+      InitBind(Index, 1, stBytes);
+    if Bind.SQLType = stBinaryStream then begin
+      PIZlob(Bind.ParameterValuePtr)^ := TZAbstractBlob.CreateWithData(Pointer(Value), Length(Value));
+      Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
+    end else case Bind.ValueType of
+      SQL_C_BINARY:   begin
+                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := Length(Value);
+                        if PSQLLEN(Bind.StrLen_or_IndPtr)^ > Bind.BufferLength then
+                          RaiseExceeded(Index);
+                        Move(Pointer(Value)^, Bind.ParameterValuePtr^, PSQLLEN(Bind.StrLen_or_IndPtr)^);
+                      end;
+      SQL_C_GUID:     if Length(Value) = 16
+                      then PGUID(Bind.ParameterValuePtr)^ := PGUID(Value)^
+                      else RaiseExceeded(Index);
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+    end;
+  end else
+    BindList.Put(Index, stByte, Value);
+end;
+
+procedure TZAbstractODBCPreparedStatement.SetCharRec(Index: Integer;
+  const Value: TZCharRec);
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    if Value.CP = zCP_UTF16 then
+      SetPWideChar(Index, Value.P, Value.Len)
+    else if (FClientEncoding = ceUTF16) or (Value.CP <> FClientCP) then begin
+      FUniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP);
+      SetPWideChar(Index, Pointer(FUniTemp), Length(FUniTemp));
+    end else
+     SetPAnsiChar(Index, Value.P, Value.Len)
+  end else
+    BindList.Put(Index, stString, Value.P, Value.Len, Value.CP);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>currency</code> value.
+  The driver converts this
+  to an SQL <code>CURRENCY</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetCurrency(Index: Integer;
+  const Value: Currency);
+var Bind: PZODBCParamBind;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (Bind.ValueCount > 1) or (not Bind.Described and (stCurrency <> Bind.SQLType)) then
+      InitBind(Index, 1, stCurrency);
+    case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(Value <> 0);
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := Trunc(Value);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := Trunc(Value);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := Trunc(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := Trunc(Value);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Trunc(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Trunc(Value);
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := Trunc(Value);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := Trunc(Value);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      SQL_C_FLOAT:    PSingle(Bind.ParameterValuePtr)^   := Value;
+      SQL_C_DOUBLE:   PDouble(Bind.ParameterValuePtr)^   := Value;
+      SQL_C_NUMERIC:  Curr2ODBCNumeric(Value, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
+      SQL_C_WCHAR:    begin
+                        CurrToUnicode(Value, @fWBuffer[SizeOf(Pointer)], @fWBuffer[0]);
+                        SetPWideChar(Index, @fWBuffer[SizeOf(Pointer)], ZPPWideChar(@fWBuffer[0])^ - PWideChar(@fWBuffer[SizeOf(Pointer)]));
+                      end;
+      SQL_C_CHAR:     begin
+                        CurrToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
+                        SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^ - PAnsiChar(@fABuffer[SizeOf(Pointer)]));
+                      end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+    end;
+  end else
+    BindList.Put(Index, stCurrency, P8Bytes(@Value));
+end;
+
+{**
+  Sets the designated parameter to a <code<java.sql.Date</code> value.
+  The driver converts this to an SQL <code>DATE</code>
+  value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetDate(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
+end;
+
+{**
+  Sets the designated parameter the default SQL value.
+  <P><B>Note:</B> You must specify the default value.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the default value normally defined in the field's DML SQL statement
+}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
+procedure TZAbstractODBCPreparedStatement.SetDefaultValue(
+  ParameterIndex: Integer; const Value: string);
+begin
+  //its' a nop
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetDouble(Index: Integer;
+  const Value: Double);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value)
+end;
+
+{**
+  Sets the designated parameter to a Java <code>float</code> value.
+  The driver converts this
+  to an SQL <code>FLOAT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetFloat(Index: Integer;
+  Value: Single);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value)
+end;
+
+{**
+  Sets the designated parameter to a GUID.
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetGUID(Index: Integer;
+  const Value: TGUID);
+var Bind: PZODBCParamBind;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (stGUID <> Bind.SQLType)) then
+      InitBind(Index, 1, stGUID);
+    case Bind.ValueType of
+      SQL_C_BINARY:   begin
+                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := SizeOf(TGUID);
+                        if PSQLLEN(Bind.StrLen_or_IndPtr)^ > Bind.BufferLength then
+                          RaiseExceeded(Index);
+                        PGUID(Bind.ParameterValuePtr)^ := Value;
+                      end;
+      SQL_C_GUID:     PGUID(Bind.ParameterValuePtr)^ := Value;
+      SQL_C_CHAR:     begin
+                        if Bind.BufferLength < 36 then
+                          RaiseExceeded(Index);
+                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := 36;
+                        GUIDToBuffer(@Value.D1, PAnsiChar(Bind.ParameterValuePtr), []);
+                      end;
+      SQL_C_WCHAR:    begin
+                        if Bind.BufferLength < 36*2 then
+                          RaiseExceeded(Index);
+                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := 36*2;
+                        GUIDToBuffer(@Value.D1, PWideChar(Bind.ParameterValuePtr), []);
+                      end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+    end;
+  end else
+    BindList.Put(Index, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetInt(ParameterIndex, Value: Integer);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value)
+end;
+
+{**
+  Sets the designated parameter to a Java <code>long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetLong(Index: Integer; const Value: Int64);
+{$IFDEF CPU64}
+begin
+  BindInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value)
+{$ELSE}
+var Bind: PZODBCParamBind;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (stLong <> Bind.SQLType)) then
+      InitBind(Index, 1, stLong);
+    case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(Value <> 0);
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := ShortInt(Value);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := Byte(Value);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := SmallInt(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := Word(Value);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Integer(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Cardinal(Value);
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := Value;
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := UInt64(Value);
+      SQL_C_TYPE_DATE, SQL_C_DATE,
+      SQL_C_TYPE_TIME, SQL_C_TIME, SQL_C_SS_TIME2,
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_C_SS_TIMESTAMPOFFSET,
+      SQL_C_FLOAT, SQL_C_DOUBLE: InternalBindDouble(Index, stULong, Value);
+      SQL_C_NUMERIC: Curr2ODBCNumeric(Value, Bind.ParameterValuePtr);
+      SQL_C_WCHAR:  begin
+                      IntToUnicode(Value, @fWBuffer[SizeOf(Pointer)], @fWBuffer[0]);
+                      SetPWideChar(Index, @fWBuffer[SizeOf(Pointer)], ZPPWideChar(@fWBuffer[0])^-PWideChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      SQL_C_CHAR:   begin
+                      IntToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
+                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stULong);
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else
+    BindList.Put(Index, stULong, P8Bytes(@Value));
+{$ENDIF}
+end;
+
+{**
+  Sets the designated parameter to SQL <code>NULL</code>.
+  <P><B>Note:</B> You must specify the parameter's SQL type.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param sqlType the SQL type code defined in <code>java.sql.Types</code>
+}
+procedure TZAbstractODBCPreparedStatement.SetNull(Index: Integer;
+  SQLType: TZSQLType);
+var Bind: PZODBCParamBind;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.SQLType <> SQLType)) then
+      InitBind(Index, 1, SQLType);
+    Bind.StrLen_or_IndPtr^ := SQL_NULL_DATA;
+  end else
+    BindList.SetNull(Index, SQLType);
+end;
+
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZAbstractODBCPreparedStatement.SetPAnsiChar(Index: Integer;
+  Value: PAnsiChar; BLen: LengthInt);
+var Bind: PZODBCParamBind;
+begin
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IF defined(RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.BufferLength <= BLen)) then
+      InitBind(Index, 1, stString);
+    if Bind.SQLType in [stAsciiStream, stUnicodeStream] then begin
+      if Value = nil then Value := PEmptyAnsiString;
+      PIZlob(Bind.ParameterValuePtr)^ := TZAbstractClob.CreateWithData(Value, BLen, FClientCP, ConSettings);
+      Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
+    end else case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(StrToBoolEx(Value, Value+BLen, True, False));
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := RawToIntDef(Value, Value+BLen, 0);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := RawToIntDef(Value, Value+BLen, 0);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := RawToIntDef(Value, Value+BLen, 0);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := RawToIntDef(Value, Value+BLen, 0);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := RawToIntDef(Value, Value+BLen, 0);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Cardinal(RawToUInt64Def(Value, Value+BLen, 0));
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := RawToInt64Def(Value, Value+BLen, 0);
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := RawToUInt64Def(Value, Value+BLen, 0);
+      {SQL_C_TYPE_DATE, SQL_C_DATE,
+      SQL_C_TYPE_TIME, SQL_C_TIME, SQL_C_SS_TIME2,
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_C_SS_TIMESTAMPOFFSET,}
+      SQL_C_FLOAT:    PSingle(Bind.ParameterValuePtr)^   := RawToFloatDef(Value, AnsiChar('.'), 0);
+      SQL_C_DOUBLE:   PDouble(Bind.ParameterValuePtr)^   := RawToFloatDef(Value, AnsiChar('.'), 0);
+      SQL_C_NUMERIC: if Bind.SQLType = stCurrency then begin
+                        RawToFloatDef(Value, AnsiChar('.'), 0, PCurrency(@fABuffer[0])^);
+                        Curr2ODBCNumeric(PCurrency(@fABuffer[0])^, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
+                      end else begin
+                        //ZFastCode.UnicodeToFloatDef(Value, '.', 0, PDouble(@fABuffer[0])^);
+                        RaiseUnsupportedException;
+                      end;
+      SQL_C_WCHAR:  begin
+                      PSQLLEN(Bind.StrLen_or_IndPtr)^ := ZEncoding.PRaw2PUnicodeBuf(Value, BLen, Bind.ColumnSize, Bind.ParameterValuePtr, FClientCP) shl 1;
+                      if PSQLLEN(Bind.StrLen_or_IndPtr)^ > Bind.BufferLength then
+                        RaiseExceeded(Index);
+                      Exit;
+                    end;
+      SQL_C_CHAR:   begin
+                      if BLen > Bind.BufferLength-1 then
+                        RaiseExceeded(Index);
+                      Move(Value^, PAnsiChar(Bind.ParameterValuePtr)^, BLen);
+                      PSQLLEN(Bind.StrLen_or_IndPtr)^ := BLen;
+                      PByte(PAnsiChar(Bind.ParameterValuePtr)+Blen)^ := 0;
+                      Exit;
+                    end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else begin
+    ZSetString(Value, BLen, fRawTemp);
+    BindList.Put(Index, stString, fRawTemp, FClientCP);
+  end;
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
+procedure TZAbstractODBCPreparedStatement.SetPWideChar(Index: Integer;
+  Value: PWideChar; WLen: LengthInt);
+var Bind: PZODBCParamBind;
+begin
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.BufferLength <= WLen shl 1)) then
+      InitBind(Index, 1, stUnicodeString);
+    if Bind.SQLType in [stAsciiStream, stUnicodeStream] then begin
+      if Value = nil then Value := PEmptyUnicodeString;
+      PIZlob(Bind.ParameterValuePtr)^ := TZAbstractClob.CreateWithData(Value, WLen, ConSettings);
+      Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
+    end else case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^      := Ord(StrToBoolEx(Value, Value+WLen, True, False));
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^  := UnicodeToIntDef(Value, Value+WLen, 0);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^      := UnicodeToIntDef(Value, Value+WLen, 0);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^  := UnicodeToIntDef(Value, Value+WLen, 0);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^      := UnicodeToIntDef(Value, Value+WLen, 0);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^   := UnicodeToIntDef(Value, Value+WLen, 0);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^  := Cardinal(UnicodeToUInt64Def(Value, Value+WLen, 0));
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^     := UnicodeToInt64Def(Value, Value+WLen, 0);
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^    := UnicodeToUInt64Def(Value, Value+WLen, 0);
+      {SQL_C_TYPE_DATE, SQL_C_DATE,
+      SQL_C_TYPE_TIME, SQL_C_TIME, SQL_C_SS_TIME2,
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_C_SS_TIMESTAMPOFFSET,}
+      SQL_C_FLOAT:    PSingle(Bind.ParameterValuePtr)^    := UnicodeToFloatDef(Value, WideChar('.'), 0);
+      SQL_C_DOUBLE:   PDouble(Bind.ParameterValuePtr)^    := UnicodeToFloatDef(Value, WideChar('.'), 0);
+      SQL_C_NUMERIC:  if Bind.SQLType = stCurrency then begin
+                        ZFastCode.UnicodeToFloatDef(Value, WideChar('.'), 0, PCurrency(@fABuffer[0])^);
+                        Curr2ODBCNumeric(PCurrency(@fABuffer[0])^, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
+                      end else begin
+                        //ZFastCode.UnicodeToFloatDef(Value, '.', 0, PDouble(@fABuffer[0])^);
+                        RaiseUnsupportedException;
+                      end;
+      SQL_C_WCHAR:  begin
+                      WLen := WLen shl 1;
+                      if WLen < Bind.BufferLength then begin
+                        Move(Value^, Bind.ParameterValuePtr^, WLen);
+                        PWord(PAnsiChar(Bind.ParameterValuePtr)+WLen)^ := Ord(#0);
+                      end else
+                        RaiseExceeded(Index);
+                      PSQLLEN(Bind.StrLen_or_IndPtr)^ := WLen;
+                      Exit;
+                    end;
+      SQL_C_CHAR:   begin
+                      PSQLLEN(Bind.StrLen_or_IndPtr)^ := PUnicode2PRawBuf(Value, Bind.ParameterValuePtr, WLen, Bind.BufferLength, ClientCP);
+                      if PSQLLEN(Bind.StrLen_or_IndPtr)^ > Bind.BufferLength-1 then
+                        RaiseExceeded(Index);
+                      PByte(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := Ord(#0);
+                      Exit;
+                    end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else begin
+    System.SetString(fUniTemp, Value, WLen);
+    BindList.Put(Index, stUnicodeString, fUniTemp);
+  end;
+end;
+
+procedure TZAbstractODBCPreparedStatement.SetRawByteString(Index: Integer;
+  const Value: RawByteString);
+begin
+  BindRaw(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value, FClientCP);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>ShortInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetShort(ParameterIndex: Integer;
+  Value: ShortInt);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stShort, Integer(Value))
+end;
+
+{**
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetSmall(ParameterIndex: Integer;
+  Value: SmallInt);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Integer(Value))
+end;
+
+{**
+  Sets the designated parameter to a Java <code>String</code> value.
+  The driver converts this
+  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
+  (depending on the argument's
+  size relative to the driver's limits on <code>VARCHAR</code> values)
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetString(Index: Integer;
+  const Value: String);
+{$IFNDEF UNICODE}
+var Bind: PZODBCParamBind;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  SetPWideChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(Value), Length(Value));
+  {$ELSE}
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  if ConSettings.AutoEncode and (Value <> '') then begin
+    CheckParameterIndex(Index);
+    if fBindImmediat then begin
+      {$R-}
+      Bind := @fParamBindings[Index];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      if (Bind.ValueType = SQL_C_WCHAR) then begin
+        fUniTemp := ZRawToUnicode(Value, FClientCP);
+        SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fUniTemp);
+      end else if (Bind.ValueType = SQL_C_CHAR) then begin
+        fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
+        BindRaw(Index, FRawTemp, FClientCP);
+      end else
+       SetPAnsiChar(Index, Pointer(Value), Length(Value))
+    end else if FClientEncoding = ceUTF16 then begin
+      fUniTemp := ZRawToUnicode(Value, FClientCP);
+      BindList.Put(Index, stUnicodeString, fUniTemp);
+    end else begin
+      fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
+      BindList.Put(Index, stString, Value, FClientCP);
+    end;
+  end else BindRaw(Index, Value, FClientCP);
+  {$ENDIF}
+end;
+
+{**
+  Sets the designated parameter to a <code>java.sql.Time</code> value.
+  The driver converts this to an SQL <code>TIME</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetTime(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+end;
+
+{**
+  Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
+  The driver converts this to an SQL <code>TIMESTAMP</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetTimestamp(Index: Integer;
+  const Value: TDateTime);
+begin
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetUInt(ParameterIndex: Integer;
+  Value: Cardinal);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord, Value)
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned long long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetULong(Index: Integer; const Value: UInt64);
+{$IFDEF CPU64}
+begin
+  BindInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value)
+{$ELSE}
+var Bind: PZODBCParamBind;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (stULong <> Bind.SQLType)) then
+      InitBind(Index, 1, stULong);
+    case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(Value <> 0);
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := ShortInt(Value);
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := Byte(Value);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := SmallInt(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := Word(Value);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Integer(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Cardinal(Value);
+      SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := Int64(Value);
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := Value;
+      SQL_C_TYPE_DATE, SQL_C_DATE,
+      SQL_C_TYPE_TIME, SQL_C_TIME, SQL_C_SS_TIME2,
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_C_SS_TIMESTAMPOFFSET,
+      SQL_C_FLOAT, SQL_C_DOUBLE: InternalBindDouble(Index, stLong, Value);
+      SQL_C_NUMERIC:  Curr2ODBCNumeric(Value, Bind.ParameterValuePtr);
+      SQL_C_WCHAR:  begin
+                      IntToUnicode(Value, @fWBuffer[SizeOf(Pointer)], @fWBuffer[0]);
+                      SetPWideChar(Index, @fWBuffer[SizeOf(Pointer)], ZPPWideChar(@fWBuffer[0])^-PWideChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      SQL_C_CHAR:   begin
+                      IntToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
+                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
+                      Exit;
+                    end;
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stLong);
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else
+    BindList.Put(Index, stLong, P8Bytes(@Value));
+{$ENDIF}
+end;
+
+{**
+  Sets the designated parameter to a Java <code>UnicodeString</code> value.
+  The driver converts this
+  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
+  (depending on the argument's
+  size relative to the driver's limits on <code>VARCHAR</code> values)
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetUnicodeString(Index: Integer;
+  const Value: ZWideString);
+var Bind: PZODBCParamBind;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and ((stUnicodeString <> Bind.SQLType) or (Bind.BufferLength < (Length(Value)+1) shl 1))) then
+      InitBind(Index, 1, stUnicodeString);
+    case Bind.ValueType of
+      SQL_C_WChar:    if Bind.SQLType in [stString, stUnicodeString] then begin
+                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := Length(Value) shl 1;
+                        if PSQLLEN(Bind.StrLen_or_IndPtr)^ >= Bind.BufferLength then
+                          RaiseExceeded(Index);
+                        Move(Pointer(Value)^, Bind.ParameterValuePtr^, PSQLLEN(Bind.StrLen_or_IndPtr)^);
+                        PWord(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := 0;
+                      end else
+                        SetPWideChar(Index, Pointer(Value), Length(Value));
+      else SetPWideChar(Index, Pointer(Value), Length(Value));
+    end;
+  end else
+    BindList.Put(Index, stUnicodeString, Value);
+end;
+
+{$IFNDEF NO_UTF8STRING}
+procedure TZAbstractODBCPreparedStatement.SetUTF8String(Index: Integer;
+  const Value: UTF8String);
+begin
+  BindRaw(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value, zCP_UTF8);
+end;
+{$ENDIF}
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
+  The driver converts this
+  to an SQL <code>WORD</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractODBCPreparedStatement.SetWord(ParameterIndex: Integer; Value: Word);
+begin
+  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Cardinal(Value))
+end;
+
+function TZAbstractODBCPreparedStatement.SupportsBidirectionalParams: Boolean;
+begin
+  Result:= True;
+end;
+
+{**
+  Removes eventual structures for binding input parameters.
+}
+procedure TZAbstractODBCPreparedStatement.UnPrepareInParameters;
+begin
+  try
+    if Assigned(fHSTMT) and Assigned(fPHDBC^) then
+      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_RESET_PARAMS));
+  finally
+    inherited UnPrepareInParameters;
+  end;
+end;
+
+{$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.
 
 

@@ -2631,6 +2631,9 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF FPC}
+  {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+{$ENDIF}
 procedure SetZOSCodePage;
 {$IFDEF MSWINDOWS}
 var lpcCPInfo: _cpinfo;
@@ -2653,6 +2656,7 @@ begin
     {$ENDIF}
   {$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Is the codepage equal or compatible?
