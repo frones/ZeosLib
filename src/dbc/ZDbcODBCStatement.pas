@@ -1192,7 +1192,7 @@ begin
       //note: Code is prepared to handle any case of Param-Directions  except fetching returned data
       if (Bind.SQLtype in [stAsciiStream, stUnicodeStream, stBinaryStream])
       then Bind.BufferLength := SizeOf(Pointer) //range check issue on CalcBufSize
-      else Bind.BufferLength := CalcBufSize(Bind.ColumnSize {* Ord(not (Bind.SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]))},
+      else Bind.BufferLength := CalcBufSize(Bind.ColumnSize,
           Bind.ValueType, Bind.SQLType, ConSettings^.ClientCodePage);
       Bind.InputOutputType := ODBCInputOutputType[False
         { incomplete -> Bind.SQLtype in [stAsciiStream, stUnicodeStream, stBinaryStream]}][pctIn];
@@ -1307,7 +1307,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.InitBind(Index, ValueCount: Integer;
   SQLType: TZSQLType; ActualLength: LengthInt);
 var BindAgain: Boolean;
-  ODBC_CType, ODBCSQLType: SQLSMALLINT;
+  ODBC_CType: SQLSMALLINT;
   Bind: PZODBCParamBind;
   label ReAlloc;
   procedure FlushLobs;
@@ -1326,14 +1326,12 @@ begin
   else if (SQLType in [stUnicodeString, stUnicodeStream]) and (FClientEncoding <> ceUTF16) then
     SQLType := TZSQLType(Ord(SQLType)-1);
 
-  if (Bind.SQLType <> SQLType) {or (Bind.ValueType = SQL_UNKNOWN_TYPE)} then begin
-    {$IFDEF FPC}ODBC_CType := 0;{$ENDIF}
-    ODBCSQLType := ConvertSQLTypeToODBCType(SQLType, ODBC_CType, FClientEncoding);
-    if not Bind.Described or //(Bind.ValueType = SQL_UNKNOWN_TYPE) or
-        ((Ord(SQLType) <= Ord(stLong)) and (ODBCSQLType = Bind.ParameterType) and (Bind.ValueType <> ODBC_CType)) then begin
-      Bind.ValueType := ODBC_CType;
+  if (Bind.SQLType <> SQLType) then begin
+    if not Bind.Described or ((Ord(SQLType) <= Ord(stLong)) and (Bind.ParameterType = ODBCSQLTypeOrdinalMatrix[SQLType])) then begin
+      {$IFDEF FPC}ODBC_CType := 0;{$ENDIF}
       Bind.SQLType := SQLType;
-      Bind.ParameterType := ODBCSQLType;
+      Bind.ParameterType := ConvertSQLTypeToODBCType(SQLType, ODBC_CType, FClientEncoding);;
+      Bind.ValueType := ODBC_CType;
       BindAgain := True;
       if not Bind.Described then begin
         if (Ord(SQLType) < Ord(stString)) then
@@ -1359,7 +1357,7 @@ begin
 ReAlloc:
     if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil)
     then FreeMem(Bind.ParameterValuePtr, Bind.BufferLength*Bind.ValueCount);
-    if ValueCount > 0
+    if ValueCount > 0 //FPC heaptrc shows us 0 Bytes unreleased mem ?
     then GetMem(Bind.ParameterValuePtr, Bind.BufferLength*ValueCount)
     else Bind.ParameterValuePtr := nil;
   end else if (Ord(Bind.SQLType) < Ord(stAsciiStream)) then
@@ -1384,11 +1382,7 @@ end;
 
 procedure TZAbstractODBCPreparedStatement.PrepareInParameters;
 begin
-  try
-    DescribeParameterFromODBC;
-  except
-    fBindImmediat := False;
-  end;
+  DescribeParameterFromODBC;
 end;
 
 procedure TZAbstractODBCPreparedStatement.RaiseExceeded(Index: Integer);
@@ -1417,8 +1411,6 @@ begin
       {$R-}
       Bind := @fParamBindings[I];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      {if (Bind^.SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) And (PIZLob(Bind.ParameterValuePtr)^ <> nil) then
-        PIZLob(Bind.ParameterValuePtr)^ := nil;}
       if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
         if Ord(Bind.SQLType) >= Ord(stAsciiStream) then
           for j := 0 to Bind.ValueCount -1 do

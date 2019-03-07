@@ -289,7 +289,7 @@ begin
                           JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                         end else
                           JSONWriter.Add('"');
-                        if ODBC_CType = SQL_C_BINARY then
+                        if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                           TimeToIso8601PChar(@FTinyBuffer[0], True, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                             PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                             PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, 'T', jcoMilliseconds in JSONComposeOptions)
@@ -487,10 +487,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^ <> 0;
       stLong:       Result := PInt64(fColDataPtr)^ <> 0;
       stFloat:      Result := PSingle(fColDataPtr)^ <> 0;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr) <> 0;
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^ <> 0;
-      stTime:       if ODBC_CType = SQL_C_BINARY
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
                     then Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000) <> 0
                     else Result := EncodeTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
@@ -551,10 +551,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
-      stDouble:     Result := PDouble(fColDataPtr)^;
       stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
+      stDouble,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -604,8 +604,8 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
       stDate:       Result := EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                       PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
@@ -653,7 +653,7 @@ begin
       stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -701,10 +701,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -753,10 +753,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
@@ -805,10 +805,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
@@ -892,8 +892,12 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       Len := FloatToSqlRaw(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
+      stCurrency:   begin
+                      Result := @FTinyBuffer[SizeOf(Pointer)];
+                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
+                      Len := Result-PPAnsiChar(@FTinyBuffer[0])^;
+                    end;
       stDouble,
-      stCurrency,
       stBigDecimal: begin
                       Len := FloatToSqlRaw(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
@@ -909,7 +913,7 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     end;
       stTime:       begin
                       Result := @FTinyBuffer[0];
-                      if ODBC_CType = SQL_C_BINARY
+                      if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
                       then Len := DateTimeToRawSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
@@ -1024,8 +1028,12 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                       Len := FloatToSqlUnicode(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
+      stCurrency:   begin
+                      Result := @FTinyBuffer[SizeOf(Pointer)];
+                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
+                      Len := Result-ZPPWideChar(@FTinyBuffer[0])^;
+                    end;
       stDouble,
-      stCurrency,
       stBigDecimal: begin
                       Len := FloatToSqlUnicode(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
@@ -1041,7 +1049,7 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                     end;
       stTime:       begin
                       Result := @FTinyBuffer[0];
-                      if ODBC_CType = SQL_C_BINARY
+                      if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
                       then Len := DateTimeToUnicodeSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
@@ -1123,10 +1131,10 @@ begin
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
@@ -1210,10 +1218,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := ODBCNumeric2Curr(fColDataPtr);
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -1262,10 +1270,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := PSingle(fColDataPtr)^;
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := PDouble(fColDataPtr)^;
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000)
                     else
@@ -1319,10 +1327,10 @@ begin
       stULong:      Result := PUInt64(fColDataPtr)^;
       stLong:       Result := PInt64(fColDataPtr)^;
       stFloat:      Result := Trunc(PSingle(fColDataPtr)^);
+      stCurrency:   Result := Trunc(ODBCNumeric2Curr(fColDataPtr));
       stDouble,
-      stCurrency,
       stBigDecimal: Result := Trunc(PDouble(fColDataPtr)^);
-      stTime:       if ODBC_CType = SQL_C_BINARY then
+      stTime:       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
                       Result := Trunc(EncodeTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000))
                     else
