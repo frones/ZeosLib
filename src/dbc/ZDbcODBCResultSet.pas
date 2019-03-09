@@ -62,7 +62,7 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZSysUtils, ZDbcIntfs,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
   ZPlainODBCDriver, ZDbcODBCCon;
@@ -140,7 +140,11 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    {$ELSE}
     function GetBigDecimal(ColumnIndex: Integer): Extended;
+    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -454,9 +458,15 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF BCD_TEST}
+procedure TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+begin
+  Result := DoubleToBCD(GetDouble(ColumnIndex));
+{$ELSE}
 function TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
   Result := GetDouble(ColumnIndex);
+{$ENDIF}
 end;
 
 function TAbstractODBCResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
@@ -1533,6 +1543,10 @@ var
         Break;
       end;
   end;
+  function IsMoney: Boolean;
+  begin
+    Result := (ZFastCode.Pos('MONEY', UpperCase(ColStrAttribute(ColumnNumber, SQL_DESC_TYPE_NAME, StrBuf))) > 0); //handle smallmoney oslt too
+  end;
 begin
   if Closed and Assigned(fPHSTMT^) then begin
     if fColumnCount = 0 then
@@ -1617,8 +1631,8 @@ begin
           ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, Scale, Precision,
               not Signed, ConSettings, @ODBC_CType);
           {numeric data type infos: }
-          Currency := (ColumnType in [stDouble, stCurrency]) and
-            (ZFastCode.Pos('MONEY', UpperCase(ColStrAttribute(ColumnNumber, SQL_DESC_TYPE_NAME, StrBuf))) > 0); //handle smallmoney oslt too
+          if (ColumnType in [stDouble, stCurrency]) then
+            Currency := IsMoney;
           if ColumnType in [stString, stUnicodeString] then begin
             { character / binary info}
             if ColumnType in [stString, stUnicodeString] then
@@ -1658,29 +1672,29 @@ begin
     for ColumnNumber := 0 to fColumnCount -1 do begin
       ColumnInfo := TZODBCColumnInfo(ColumnsInfo[ColumnNumber]);
       with ColumnInfo do begin
-         GetMem(fStrLen_or_IndArray, SizeOf(SQLLEN)*fMaxFetchableRows);
-        if CharOctedLength > 0 then begin //streams will be fetched by GetData()
+        GetMem(fStrLen_or_IndArray, SizeOf(SQLLEN)*fMaxFetchableRows);
+        if CharOctedLength > 0 then //streams will be fetched by GetData()
           GetMem(fColumnBuffer, CharOctedLength*Integer(fMaxFetchableRows));
-          if (ColumnNumber = 0) or ((ColumnNumber > 0) and (CharOctedLength > 0)) then
-            if ((fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN ) or (ColumnNumber < fFirstGetDataIndex)) then begin
-              CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
-                ODBC_CType, ColumnBuffer, CharOctedLength,
-                PSQLLEN(StrLen_or_IndArray)));
-              Bound := True;
-            end
-          else fLastGetDataIndex := Max(ColumnNumber, fLastGetDataIndex);
-          if (ColumnType in [stBigDecimal, stCurrency]) then begin
-            CheckStmtError(FPlainDriver.SQLGetStmtAttr(fPHSTMT^, SQL_ATTR_APP_ROW_DESC, @Desc, 0, nil));
-            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
-              SQL_DESC_CONCISE_TYPE, SQLPointer(ODBC_CType), SQL_IS_SMALLINT));
-            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
-              SQL_DESC_PRECISION, SQLPointer(Precision), SQL_IS_INTEGER));
-            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
-              SQL_DESC_SCALE, SQLPointer(Scale), SQL_IS_SMALLINT));
-            CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
-              SQL_DESC_DATA_PTR, ColumnBuffer, SQL_IS_POINTER));
-          end;
-        end else begin
+        Bound := (CharOctedLength > 0) and ((ColumnNumber < fFirstGetDataIndex) or (fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN));
+        if Bound then
+          CheckStmtError(fPlainDriver.SQLBindCol(fPHSTMT^, ColumnNumber+1,
+              ODBC_CType, ColumnBuffer, CharOctedLength, PSQLLEN(StrLen_or_IndArray)))
+        else begin
+          fFirstGetDataIndex := Min(ColumnNumber, fFirstGetDataIndex);
+          fLastGetDataIndex := Max(ColumnNumber, fLastGetDataIndex)
+        end;
+        if (ColumnType in [stBigDecimal, stCurrency]) then begin
+          CheckStmtError(FPlainDriver.SQLGetStmtAttr(fPHSTMT^, SQL_ATTR_APP_ROW_DESC, @Desc, 0, nil));
+          CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+            SQL_DESC_CONCISE_TYPE, SQLPointer(ODBC_CType), SQL_IS_SMALLINT));
+          CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+            SQL_DESC_PRECISION, SQLPointer(Precision), SQL_IS_INTEGER));
+          CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+            SQL_DESC_SCALE, SQLPointer(Scale), SQL_IS_SMALLINT));
+          if Bound then CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
+            SQL_DESC_DATA_PTR, ColumnBuffer, SQL_IS_POINTER));
+        end;
+        (*end else begin
           { improve Invalid descriptor index error .. }
           if (fSQL_GETDATA_EXTENSIONS and SQL_GD_BOUND = SQL_GD_BOUND ) then //E: (DM) The specified column was bound.
             if (fSQL_GETDATA_EXTENSIONS and SQL_GD_ANY_COLUMN = SQL_GD_ANY_COLUMN ) //E: (DM) The number of the specified column was less than or equal to the number of the highest bound column
@@ -1689,11 +1703,7 @@ begin
                 ODBC_CType, nil, SQL_DATA_AT_EXEC, PSQLLEN(StrLen_or_IndArray)));
               Bound := True;
             end;
-          if not Bound then begin
-            fFirstGetDataIndex := Min(ColumnNumber, fFirstGetDataIndex);
-            fLastGetDataIndex := Max(ColumnNumber, fLastGetDataIndex);
-          end;
-        end;
+        end;*)
       end;
     end;
     inherited Open;

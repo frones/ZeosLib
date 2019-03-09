@@ -319,7 +319,7 @@ begin
                           ODBC_CType^ := SQL_C_NUMERIC;
                         {$ELSE}
                         goto dbl;
-                        {$ENDIF};
+                        {$ENDIF}
                       end;
     SQL_INTEGER:      if UnSigned then begin
                         Result := stLongWord;

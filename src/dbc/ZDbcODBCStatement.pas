@@ -57,6 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties,
   ZDbcODBCCon, ZPlainODBCDriver;
@@ -456,7 +457,7 @@ procedure TZAbstractODBCStatement.Prepare;
 begin
   if not Prepared then begin
     {EH commented!
-     this options means slower performance even if docs explain it vice versa:
+     this options means performance loss even if docs explain it vice versa:
      https://docs.microsoft.com/en-us/sql/relational-databases/native-client-odbc-api/sqlsetstmtattr?view=sql-server-2017
     if Connection.GetServerProvider = spMSSQL then
       CheckStmtError(FPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_SOPT_SS_CURSOR_OPTIONS, Pointer(SQL_CO_FFO),0));}
@@ -838,13 +839,16 @@ begin
                         Curr2ODBCNumeric(ArrayValueToCurrency(Arr, I), PSQL_NUMERIC_STRUCT(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
                         N[I] := NullInd[IsNullFromArray(Arr, I)];
                       end;
-      stBigDecimal:   {$IFNDEF BCD_TEST}
+      stBigDecimal:   {$IFDEF BCD_TEST}
+                      for I := 0 to ArrayLen -1 do begin
+                        Curr2ODBCNumeric(ArrayValueToCurrency(Arr, I), PSQL_NUMERIC_STRUCT(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
+                        N[I] := NullInd[IsNullFromArray(Arr, I)];
+                      end;
+                      {$ELSE}
                       for I := 0 to ArrayLen -1 do begin
                         PDouble(P+(I*SizeOf(Double)))^ := ArrayValueToDouble(Arr, I);
                         N[I] := NullInd[IsNullFromArray(Arr, I)];
                       end;
-                      {$ELSE}
-                      Complete me!
                       {$ENDIF}
       stDate:         begin
                         Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
@@ -1443,9 +1447,13 @@ end;
 {$ENDIF}
 
 procedure TZAbstractODBCPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: Extended);
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
+  {$IFDEF BCD_TEST}
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, BCDToDouble(Value));
+  {$ELSE}
   InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
+  {$ENDIF}
 end;
 
 {**
