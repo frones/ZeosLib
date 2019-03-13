@@ -1727,29 +1727,30 @@ var PGSQLType: TZSQLType;
   end;
 begin
   PGSQLType := OIDToSQLType(Index, SQLType);
-  if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
-    BindList.Put(Index, PGSQLType, P4Bytes(@Value));
-    LinkBinParam2PG(Index, BindList._4Bytes[Index], 4);
-  end else begin
-    BindList.Put(Index, PGSQLType, P8Bytes(@Value));
-    LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
-  end;
-  case PGSQLType of
-    stBoolean:    PByte(FPQparamValues[Index])^ := Byte(Ord(Value <> 0));
-    stSmall:      SmallInt2PG(Trunc(Value), FPQparamValues[Index]);
-    stInteger:    Integer2PG(Trunc(Value), FPQparamValues[Index]);
-    stLong:       Int642PG(Trunc(Value), FPQparamValues[Index]);
-    stFloat:      Single2PG(Value, FPQparamValues[Index]);
-    stDouble:     {$IFNDEF ENDIAN_BIG}Reverse8Bytes(FPQparamValues[Index]){$ENDIF};
-    stDate:       Date2PG(Value, PInteger(FPQparamValues[Index])^);
-    stTime:       if Finteger_datetimes
-                  then Time2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else Time2PG(Value, PDouble(FPQparamValues[Index])^);
-    stTimeStamp:  if Finteger_datetimes
-                  then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
-                  else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
-    else        SetAsRaw;
-  end;
+  if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
+    if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
+      BindList.Put(Index, PGSQLType, P4Bytes(@Value));
+      LinkBinParam2PG(Index, BindList._4Bytes[Index], 4);
+    end else begin
+      BindList.Put(Index, PGSQLType, P8Bytes(@Value));
+      LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
+    end;
+    case PGSQLType of
+      stBoolean:    PByte(FPQparamValues[Index])^ := Byte(Ord(Value <> 0));
+      stSmall:      SmallInt2PG(Trunc(Value), FPQparamValues[Index]);
+      stInteger:    Integer2PG(Trunc(Value), FPQparamValues[Index]);
+      stLong:       Int642PG(Trunc(Value), FPQparamValues[Index]);
+      stFloat:      Single2PG(Value, FPQparamValues[Index]);
+      stDouble:     {$IFNDEF ENDIAN_BIG}Reverse8Bytes(FPQparamValues[Index]){$ENDIF};
+      stDate:       Date2PG(Value, PInteger(FPQparamValues[Index])^);
+      stTime:       if Finteger_datetimes
+                    then Time2PG(Value, PInt64(FPQparamValues[Index])^)
+                    else Time2PG(Value, PDouble(FPQparamValues[Index])^);
+      stTimeStamp:  if Finteger_datetimes
+                    then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
+                    else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
+    end;
+  end else SetAsRaw;
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.InternalBindInt(Index: Integer;
@@ -1759,7 +1760,7 @@ var PGSQLType: TZSQLType;
 procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value)); end;
 begin
   PGSQLType := OIDToSQLType(Index, SQLType);
-  if (Ord(PGSQLType) < Ord(stGUID)) then begin
+  if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
     if (FPQparamValues[Index] = nil) or (BindList[Index].SQLType <> PGSQLType) then
       if ZSQLType2PGBindSizes[PGSQLType] <= 4 then begin
         BindList.Put(Index, PGSQLType, P4Bytes(@Value));
@@ -2004,7 +2005,7 @@ procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   PGSQLType := OIDToSQLType(Index, stLong);
-  if (Ord(PGSQLType) < Ord(stGUID)) then begin
+  if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
     if (FPQparamValues[Index] = nil) or (BindList[Index].SQLType <> PGSQLType) then
       if ZSQLType2PGBindSizes[PGSQLType] <= 4 then begin
         BindList.Put(Index, PGSQLType, P4Bytes(@Value));
