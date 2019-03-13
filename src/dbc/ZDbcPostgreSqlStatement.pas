@@ -59,6 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
   ZCompatibility, ZVariant, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcPostgreSql, ZDbcUtils;
@@ -824,7 +825,6 @@ function TZAbstractPostgreSQLPreparedStatementV3.ExecuteDMLBatchWithUnnestVarlen
 var
   Stmt: TZPostgreSQLPreparedStatementV3;
   I: Cardinal;
-  PGresult: TPGresult;
   function CreateBatchDMLStmt: TZPostgreSQLPreparedStatementV3;
   var I, OffSet: Cardinal;
     aOID: OID;
@@ -969,7 +969,6 @@ unnest(array[$1]::int8[])
     Result.InternalRealPrepare; //force describe the params to get the array oids
   end;
 begin
-  Result := nil;
   if FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Intf = nil then begin
     Stmt := CreateBatchDMLStmt;
     FPGArrayDMLStmts[TArrayDMLType(FTokenMatchIndex)].Obj := Stmt;
@@ -979,13 +978,12 @@ begin
   for i := 0 to bindList.Count -1 do
     if BindList[I].BindType in [zbtArray, zbtRefArray] then
       BindArray(i, stmt);
-  PGresult := Stmt.PGExecutePrepared;
+  Result := Stmt.PGExecutePrepared;
   try
     if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
       HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
         lcExecute, ASQL, Result);
   finally
-    FPlainDriver.PQclear(PGresult); //free postgres mem
     Stmt.BindList.ClearValues; //free allocated mem
   end;
 end;
@@ -1133,13 +1131,11 @@ begin
   Prepare;
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
-  if BatchDMLArrayCount > 0 then begin
-    ExecuteDMLBatchWithUnnestVarlenaArrays;
-    Exit;
-  end;
-  if (FRawPlanName = '') or Findeterminate_datatype
-  then Fres := PGExecute
-  else Fres := PGExecutePrepared;
+  if BatchDMLArrayCount > 0
+  then FRes := ExecuteDMLBatchWithUnnestVarlenaArrays
+  else if (FRawPlanName = '') or Findeterminate_datatype
+    then Fres := PGExecute
+    else Fres := PGExecutePrepared;
   if Fres <> nil then
     if (FPlainDriver.PQresultStatus(Fres) = PGRES_TUPLES_OK) and (FHasInOutParams or (FOutParamCount > 0)) then begin
       if not Assigned(LastResultSet) then
@@ -1727,7 +1723,9 @@ var PGSQLType: TZSQLType;
   end;
 begin
   PGSQLType := OIDToSQLType(Index, SQLType);
-  if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
+  if PGSQLType in [stCurrency, stBigDecimal] then
+    SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
+  else if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
     if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
       BindList.Put(Index, PGSQLType, P4Bytes(@Value));
       LinkBinParam2PG(Index, BindList._4Bytes[Index], 4);
