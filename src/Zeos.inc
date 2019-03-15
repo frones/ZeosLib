@@ -41,6 +41,7 @@
 {********************************************************@}
 {.$DEFINE ZEOS_TEST_ONLY}
 {.$DEFINE GENERIC_INDEX}
+{.$DEFINE BCD_TEST}
 //common compilation directives
 {$DEFINE ZEOS72UP}
 {$DEFINE ZEOS73UP}
@@ -206,6 +207,7 @@
                   {$DEFINE WITH_FORMATSETTINGS}
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
+                  {$DEFINE HAVE_BCDTOSTR_FORMATSETTINGS} //BCDToStr/(Try)StrToBCD has parameter FormatSettings
                   {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
 
                   {$IF CompilerVersion >= 23} //Delphi XE2+

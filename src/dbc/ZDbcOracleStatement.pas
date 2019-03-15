@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
+  {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}{$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainOracleDriver,
   ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants,
@@ -158,7 +158,7 @@ type
 implementation
 
 uses
-  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} FmtBCD,
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZFastCode, ZDbcOracleResultSet, ZTokenizer, ZDbcCachedResultSet,
   ZEncoding, ZDbcProperties, ZMessages, ZClasses, ZDbcResultSet,
   ZSelectSchema;
@@ -1149,12 +1149,72 @@ end;
 
 procedure TZOraclePreparedStatement_A.SetBigDecimal(Index: Integer;
   const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+{$IFDEF BCD_TEST}
+var
+  Bind: PZOCIParamBind;
+  status: sword;
+  TS: TZTimeStamp;
+  SQLType: TZSQLType;
+  procedure SetRaw;
+  begin
+    SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(BCDToStr(Value)))
+  end;
 begin
-  {$IFDEF BCD_TEST}
-  xyz
-  {$ELSE}
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (stBigDecimal <> BindList[Index].SQLType)
+  then SQLType := BindList[Index].SQLType
+  else SQLType := stBigDecimal;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_VNU:     begin
+                    Bind.indp[0] := BCD2Nvu(Value, POCINUmber(Bind.valuep));
+                    exit;
+                  end;
+    SQLT_BFLOAT:  PSingle(Bind.valuep)^ := BCDToDouble(Value);
+    SQLT_BDOUBLE: PDouble(Bind.valuep)^ := BCDToDouble(Value);
+    SQLT_DAT:   begin
+                  DecodeDate(BCDToDouble(Value), TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
+                  POraDate(Bind^.valuep).Cent   := TS.Year div 100 +100;
+                  POraDate(Bind^.valuep).Year   := TS.Year mod 100 +100;
+                  POraDate(Bind^.valuep).Month  := TS.Month;
+                  PInteger(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
+                  POraDate(Bind^.valuep).Day    := TS.Day;
+                end;
+    SQLT_TIMESTAMP: begin
+                  PDouble(@fABuffer[0])^ := BCDToDouble(Value);
+                  DecodeDate(PDouble(@fABuffer[0])^, TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
+                  DecodeTime(PDouble(@fABuffer[0])^, TS.Hour, TS.Minute, TS.Second, PWord(@TS.Fractions)^);
+                  TS.Fractions := Word(TS.Fractions) * 1000000;
+                  Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
+                    FOCIError, PPOCIDescriptor(Bind.valuep)^, TS.Year, TS.Month, TS.Day,
+                      TS.Hour, TS.Minute, TS.Second, TS.Fractions, nil, 0);
+                  if Status <> OCI_SUCCESS then
+                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                end;
+
+    SQLT_INT:   {$IFDEF CPU64}
+                BindSInteger(Index, stLong, BCD2Int64(Value));
+                {$ELSE}
+                SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2Int64(Value));
+                {$ENDIF}
+    SQLT_UIN:   {$IFDEF CPU64}
+                BindSInteger(Index, stULong, BCD2UInt64(Value));
+                {$ELSE}
+                SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2UInt64(Value));
+                {$ENDIF}
+    else SetRaw;
+  end;
+  Bind.indp[0] := 0;
+{$ELSE}
+begin
   InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, Value);
-  {$ENDIF}
+{$ENDIF}
 end;
 
 {**
@@ -1451,13 +1511,16 @@ bind_direct:
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOCINumber));
         for i := 0 to ArrayLen -1 do begin
           {$IFDEF BCD_TEST}
-          BCD2Nvu(TBCDDynArray(Value)[i], POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
+          {$R-}
+          Bind.indp[I] := BCD2Nvu(TBCDDynArray(Value)[i], POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
+          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
           {$ELSE}
           PDouble(@fABuffer[0])^ := TExtendedDynArray(Value)[i];
           FplainDriver.OCINumberFromReal(FOCIError, @fABuffer[0], SizeOf(Double),
             POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
           {$ENDIF}
         end;
+        {$IFDEF BCD_TEST}Exit{$ENDIF};
       end;
     stDate: begin
         if (Bind.dty <> SQLT_DAT) or (Bind.value_sz <> SizeOf(TOraDate)) or (Bind.curelen <> ArrayLen) then

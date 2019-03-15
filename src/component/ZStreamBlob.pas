@@ -160,7 +160,7 @@ begin
             So there is NO way around to test this encoding. Acutally i've no idea about a more exact way
             than going this route...}
             if FConSettings^.AutoEncode then
-              case ZDetectUTF8Encoding(Memory, Size) of  //testencoding adds one leading null bytes
+              case ZDetectUTF8Encoding(Memory, Size) of
                 etUSASCII: //us ascii found, use faster conversion
                   Blob.SetPAnsiChar(Memory, ZEncoding.zCP_us_ascii, Size);
                 etAnsi: begin

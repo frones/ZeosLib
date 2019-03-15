@@ -653,12 +653,20 @@ begin
           end;
         stFloat:
           begin
+            {$IFDEF BCD_TEST}
+            Params[I].AsFloat := SoftVarManager.GetAsDouble(InParamValues[I]);
+            {$ELSE}
             Params[I].AsFloat := SoftVarManager.GetAsFloat(InParamValues[I]);
+            {$ENDIF}
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsFlt4), -1, -1, @(Params[I].AsFloat));
           end;
         stLong, stULong, stDouble, stBigDecimal, stCurrency:
           begin
-            Params[I].AsDouble := SoftVarManager.GetAsFloat(InParamValues[I]);
+            {$IFDEF BCD_TEST}
+            Params[I].AsFloat := SoftVarManager.GetAsDouble(InParamValues[I]);
+            {$ELSE}
+            Params[I].AsFloat := SoftVarManager.GetAsFloat(InParamValues[I]);
+            {$ENDIF}
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsFlt8), -1, -1, @(Params[I].AsDouble));
           end;
         stString, stUnicodeString:
@@ -834,12 +842,20 @@ begin
         tdsInt8:
           SoftVarManager.SetAsInteger(Temp,
             PInt64(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
-        tdsFlt4:
+        tdsFlt4: {$IFDEF BCD_TEST}
+          SoftVarManager.SetAsDouble(Temp,
+            PSingle(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+                 {$ELSE}
           SoftVarManager.SetAsFloat(Temp,
             PSingle(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
-        tdsFlt8:
+          {$ENDIF}
+        tdsFlt8: {$IFDEF BCD_TEST}
+          SoftVarManager.SetAsDouble(Temp,
+            PDouble(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+                 {$ELSE}
           SoftVarManager.SetAsFloat(Temp,
             PDouble(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
+          {$ENDIF}
         tdsNumeric,
         tdsDecimal,
         tdsMoney,
@@ -849,7 +865,11 @@ begin
               FPlainDriver.dbRetData(FHandle, ParamIndex),
                 FPLainDriver.dbRetLen(FHandle, ParamIndex), Ord(tdsFlt8),
               @OutDouble, 8);
+            {$IFDEF BCD_TEST}
+            SoftVarManager.SetAsDouble(Temp, OutDouble);
+            {$ELSE}
             SoftVarManager.SetAsFloat(Temp, OutDouble);
+            {$ENDIF}
           end;
         tdsDateTime4, tdsDateTimeN:
           begin

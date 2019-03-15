@@ -60,6 +60,7 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZOleDB, ZDbcOleDBUtils, ZDbcCache,
@@ -113,7 +114,11 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    {$ELSE !BCD_TEST}
     function GetBigDecimal(ColumnIndex: Integer): Extended;
+    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -1254,12 +1259,50 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF BCD_TEST}
+procedure TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+  procedure FromString(ColumnIndex: Integer; var Result: TBCD);
+  begin
+    LastWasNull := not TryStrToBCD(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})
+  end;
+{$ELSE !BCD_TEST}
 function TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+{$ENDIF !BCD_TEST}
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_DECIMAL	= 14;
+      {$IFDEF BCD_TEST}
+      DBTYPE_I2:        ScaledOrdinal2Bcd(PSmallInt(FData)^, 0, Result);
+      DBTYPE_I4:        ScaledOrdinal2Bcd(PInteger(FData)^, 0, Result);
+      DBTYPE_R4:        Result := DoubleToBCD(PSingle(FData)^);
+      DBTYPE_R8:        Result := DoubleToBCD(PDouble(FData)^);
+      DBTYPE_CY:        Currency2Bcd(PCurrency(FData)^, Result);
+      DBTYPE_DATE:      Result := DoubleToBCD(PDateTime(FData)^);
+      DBTYPE_BSTR, DBTYPE_BSTR or DBTYPE_BYREF,
+      DBTYPE_STR, DBTYPE_STR or DBTYPE_BYREF,
+      DBTYPE_WSTR,
+      DBTYPE_WSTR or DBTYPE_BYREF,
+      DBTYPE_VARIANT:   FromString(ColumnIndex, Result);
+      DBTYPE_ERROR:     ScaledOrdinal2Bcd(PInteger(FData)^, 0, Result);
+      DBTYPE_BOOL:      ScaledOrdinal2Bcd(Word(Ord(PWord(FData)^ <> 0)), 0, Result);
+      DBTYPE_UI1:       ScaledOrdinal2Bcd(Word(PByte(FData)^), 0, Result, False);
+      DBTYPE_I1:        ScaledOrdinal2Bcd(SmallInt(PShortInt(FData)^), 0, Result);
+      DBTYPE_UI2:       ScaledOrdinal2Bcd(PWord(FData)^, 0, Result);
+      DBTYPE_UI4:       ScaledOrdinal2Bcd(PCardinal(FData)^, 0, Result, False);
+      DBTYPE_I8:        ScaledOrdinal2Bcd(PInt64(FData)^, 0, Result);
+      DBTYPE_UI8:       ScaledOrdinal2Bcd(PUInt64(FData)^, 0, Result, False);
+      //DBTYPE_UDT	= 132;
+      //DBTYPE_DBDATE	= 133;
+      //DBTYPE_DBTIME	= 134;
+      //DBTYPE_DBTIMESTAMP	= 135;
+      DBTYPE_HCHAPTER:  ScaledOrdinal2Bcd(PCHAPTER(FData)^, 0, Result, False);
+      //DBTYPE_FILETIME	= 64;
+      //DBTYPE_PROPVARIANT	= 138;
+      //DBTYPE_VARNUMERIC	= 139;
+      else Result := NullBcd;
+      {$ELSE}
       DBTYPE_I2:        Result := PSmallInt(FData)^;
       DBTYPE_I4:        Result := PInteger(FData)^;
       DBTYPE_R4:        Result := PSingle(FData)^;
@@ -1293,8 +1336,9 @@ begin
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
       else Result := 0;
+      {$ENDIF}
     end
-  else Result := 0;
+  else Result := {$IFDEF BCD_TEST}NullBcd{$ELSE}0{$ENDIF};
 end;
 
 {**
@@ -1770,7 +1814,11 @@ begin
                                           stFloat       : RowAccessor.SetFloat(I, POleVariant(FData^)^);
                                           stDouble      : RowAccessor.SetDouble(I, POleVariant(FData^)^);
                                           stCurrency    : RowAccessor.SetCurrency(I, POleVariant(FData^)^);
+                                          {$IFDEF BCD_TEST}
+                                          stBigDecimal  : RowAccessor.SetBigDecimal(I, DoubleToBCD(POleVariant(FData^)^));
+                                          {$ELSE}
                                           stBigDecimal  : RowAccessor.SetBigDecimal(I, POleVariant(FData^)^);
+                                          {$ENDIF}
                                           {stDate, stTime, stTimestamp,
                                           stGUID,
                                           //now varying size types in equal order

@@ -3231,9 +3231,16 @@ var
   PostgreSQLConnection: IZPostgreSQLConnection;
 begin
   PostgreSQLConnection := GetConnection as IZPostgreSQLConnection;
+
   Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, OID, AttTypMod);
-  if Result = stUnknown then
+  if Result = stUnknown then begin
     Result := PostgreSQLToSQLType(PostgreSQLConnection, PostgreSQLConnection.GetTypeNameByOid(Oid));
+    {$IFDEF BCD_TEST}
+    if Result = stBigDecimal then //Currency range?
+      Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, NUMERICOID, AttTypMod);
+    {$ENDIF}
+  end;
+
 end;
 
 function TZPostgreSQLDatabaseMetadata.InternalUncachedGetColumns(const Catalog,

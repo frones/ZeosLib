@@ -66,6 +66,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement,
   ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties;
 
@@ -1395,7 +1396,11 @@ end;
 procedure TZOleDBPreparedStatement.SetBigDecimal(Index: Integer;
   const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
+  {$IFDEF BCD_TEST}
+  SetDouble(Index, BCDToDouble(Value));
+  {$ELSE}
   SetDouble(Index, Value);
+  {$ENDIF}
 end;
 
 procedure TZOleDBPreparedStatement.SetBindOffsets;

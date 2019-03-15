@@ -299,3 +299,4 @@ initialization
   RegisterTest('core',TZTestTokenizer.Suite);
 end.
 
+

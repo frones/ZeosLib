@@ -318,7 +318,7 @@ begin
                         if ODBC_CType <> nil then
                           ODBC_CType^ := SQL_C_NUMERIC;
                         {$ELSE}
-                        goto dbl;
+                        goto Dbl;
                         {$ENDIF}
                       end;
     SQL_INTEGER:      if UnSigned then begin

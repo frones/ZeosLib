@@ -3023,6 +3023,9 @@ begin
           PDouble(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
         ftBcd:
           PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result);
+        {$IFDEF BCD_TEST}
+        ftFmtBcd: RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^, Result);
+        {$ENDIF}
         else
           {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
             Pointer(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
@@ -3040,7 +3043,7 @@ begin
         if Field.DataType = ftExtended then
         begin
           SetLength(Buffer, SizeOf(Extended));
-          PExtended(Buffer)^ := RowAccessor.GetBigDecimal(ColumnIndex, Result);
+          PExtended(Buffer)^ := RowAccessor.{$IFDEF BCD_TEST}GetDouble{$ELSE}GetBigDecimal{$ENDIF}(ColumnIndex, Result);
           Result := not Result;
         end
         else
@@ -3131,9 +3134,23 @@ begin
           end;
         {$ENDIF}
         ftCurrency:
-          RowAccessor.SetCurrency(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
+          RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
         ftBCD:
           RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
+        {$IFDEF WITH_FTEXTENDED}
+        ftExtended:
+          {$IFDEF BCD_TEST}
+          RowAccessor.SetDouble(ColumnIndex, PExtended(Buffer)^);
+          {$ELSE}
+          RowAccessor.SetBigDecimal(ColumnIndex, PExtended(Buffer)^);
+          {$ENDIF}
+        {$ENDIF}
+        ftFmtBCD: {$IFDEF BCD_TEST}
+                    RowAccessor.SetBigDecimal(ColumnIndex, PBCD(Buffer)^);
+                  {$ELSE}
+                    RowAccessor.SetBigDecimal(ColumnIndex, BCDToDouble(PBCD(Buffer)^));
+                  {$ENDIF}
+
         else  { Processes all other fields. }
           begin
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
@@ -3326,7 +3343,7 @@ begin
             Size := 38
           else
           {$ENDIF}
-          if FieldType = ftBCD then
+          if FieldType in [ftBCD, ftFmtBCD] then
             Size := GetScale(I)
           else
             Size := 0;
@@ -3360,9 +3377,9 @@ begin
             if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
           end else
             Attributes := Attributes + [faReadonly];
-            Precision := GetPrecision(I);
-            DisplayName := FName;
-          end;
+          Precision := GetPrecision(I);
+          DisplayName := FName;
+        end;
       end;
     end;
 
@@ -5588,7 +5605,7 @@ function TZField.GetAsCurrency: Currency;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBigDecimal(FFieldIndex, IsNull)
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetCurrency(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5597,7 +5614,7 @@ function TZField.GetAsBCD: TBcd;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull), Result)
+    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})
   else
     Result := NullBcd;
 end;
@@ -5625,7 +5642,7 @@ function TZField.GetAsExtended: Extended;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBigDecimal(FFieldIndex, IsNull)
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.{$IFDEF BCD_TEST}GetDouble{$ELSE}GetBigDecimal{$ENDIF}(FFieldIndex, IsNull)
   else
     Result := 0.0;
 end;
@@ -5903,7 +5920,7 @@ procedure TZField.SetAsCurrency(Value: Currency);
 begin
   if IsFieldEditable then
   begin
-    (DataSet as TZAbstractRODataset).FRowAccessor.SetBigDecimal(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetCurrency(FFieldIndex, Value);
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
@@ -5930,7 +5947,7 @@ procedure TZField.SetAsExtended(Value: Extended);
 begin
   if IsFieldEditable then
   begin
-    (DataSet as TZAbstractRODataset).FRowAccessor.SetBigDecimal(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).FRowAccessor.{$IFDEF BCD_TEST}SetDouble{$ELSE}SetBigDecimal{$ENDIF}(FFieldIndex, Value);
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;

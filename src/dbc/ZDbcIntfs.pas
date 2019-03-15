@@ -575,7 +575,7 @@ type
     procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
     function GetLocateUpdates: TZLocateUpdatesMode;
 
-    procedure AddBatch(const SQL: string); deprecated;
+    procedure AddBatch(const SQL: string);
     procedure AddBatchRequest(const SQL: string);
 
     procedure ClearBatch;
@@ -684,7 +684,11 @@ type
     function GetFloat(ParameterIndex: Integer): Single;
     function GetDouble(ParameterIndex: Integer): Double;
     function GetCurrency(ParameterIndex: Integer): Currency;
-    function GetBigDecimal(ParameterIndex: Integer): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
+    {$ELSE}
+    function GetBigDecimal(ParameterIndex: Integer): Extended;
+    {$ENDIF}
     function GetBytes(ParameterIndex: Integer): TBytes;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;

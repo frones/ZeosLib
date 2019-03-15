@@ -62,7 +62,7 @@ uses
   Contnrs, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcCache, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZSysUtils,
   ZDbcIntfs, SysUtils, Classes, ZDbcResultSetMetadata,
-  ZCompatibility, ZTestCase;
+  ZCompatibility, ZTestCase{$IFDEF BCD_TEST}, FmtBCD{$ENDIF};
 
 type
 
@@ -78,7 +78,7 @@ type
     FLong: LongInt;
     FFloat: Single;
     FDouble: Double;
-    FBigDecimal: Int64;
+    FBigDecimal: {$IFDEF BCD_TEST}TBCD{$ELSE}Int64{$ENDIF};
     FString: string;
     FDate: TDateTime;
     FTime: TDateTime;
@@ -279,7 +279,7 @@ begin
   FLong := 1147483647;
   FFloat := 3.4E-38;
   FDouble := 1.7E-308;
-  FBigDecimal := 9223372036854775807;
+  FBigDecimal := {$IFDEF BCD_TEST}StrToBCD('9223372036854775807'){$ELSE}9223372036854775807{$ENDIF};
   FString := '0123456789';
 
   SetLength(FByteArray, 5);
@@ -492,10 +492,12 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorBigDecimal;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(stBigDecimalIndex, WasNull), 'GetBoolean');
+    {$IFNDEF BCD_TEST}
     CheckEquals(Byte(FBigDecimal), GetByte(stBigDecimalIndex, WasNull), 0, 'GetByte');
     CheckEquals(ShortInt(FBigDecimal), GetShort(stBigDecimalIndex, WasNull), 0, 'GetShort');
     CheckEquals(SmallInt(FBigDecimal), GetSmall(stBigDecimalIndex, WasNull), 0, 'GetSmall');
@@ -503,10 +505,17 @@ begin
 {$IFNDEF VER130BELOW}
     CheckEquals(Int64(FBigDecimal), GetLong(stBigDecimalIndex, WasNull), 0, 'GetLong');
 {$ENDIF}
+    {$ENDIF}
 //    CheckEquals(FBigDecimal, GetFloat(stDoubleIndex, WasNull), 0.001, 'GetFloat');
 //    CheckEquals(FBigDecimal, GetDouble(stDoubleIndex, WasNull), 0.001, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stBigDecimalIndex, BCD, WasNull);
+    CheckEquals(0, BCDCompare(FBigDecimal, BCD), 'GetBigDecimal');
+    CheckEquals(BCDToStr(FBigDecimal), GetString(stBigDecimalIndex, WasNull), 'GetString');
+    {$ELSE}
     CheckEquals(FBigDecimal, GetBigDecimal(stBigDecimalIndex, WasNull), 0.001, 'GetBigDecimal');
     CheckEquals(FloatToSQLStr(FBigDecimal), GetString(stBigDecimalIndex, WasNull), 'GetString');
+    {$ENDIF}
   end;
 end;
 
@@ -543,6 +552,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorBoolean;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -554,7 +564,12 @@ begin
     CheckEquals(1, GetLong(stBooleanIndex, WasNull), 0, 'GetLong');
     CheckEquals(1, GetFloat(stBooleanIndex, WasNull), 0, 'GetFloat');
     CheckEquals(1, GetDouble(stBooleanIndex, WasNull), 0, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stBooleanIndex, BCD, WasNull);
+    CheckEquals(Integer(1), BCDToInteger(BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(1, GetBigDecimal(stBooleanIndex, WasNull), 0, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals('True', GetString(stBooleanIndex, WasNull), 'GetString');
   end;
 end;
@@ -565,6 +580,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorByte;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -576,7 +592,12 @@ begin
     CheckEquals(FByte, GetLong(stByteIndex, WasNull), 0, 'GetLong');
     CheckEquals(FByte, GetFloat(stByteIndex, WasNull), 0, 'GetFloat');
     CheckEquals(FByte, GetDouble(stByteIndex, WasNull), 0, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stByteIndex, BCD, WasNull);
+    CheckEquals(Integer(FByte), BCDToInteger(BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(FByte, GetBigDecimal(stByteIndex, WasNull), 0, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(IntToStr(FByte), GetString(stByteIndex, WasNull), 'GetString');
   end;
 end;
@@ -630,6 +651,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorDouble;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -641,7 +663,12 @@ begin
     CheckEquals(Trunc(FDouble), GetLong(stDoubleIndex, WasNull), 0, 'GetLong');
     CheckEquals(FDouble, GetFloat(stDoubleIndex, WasNull), 0.001, 'GetFloat');
     CheckEquals(FDouble, GetDouble(stDoubleIndex, WasNull), 0.001, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stDoubleIndex, BCD, WasNull);
+    CheckEquals(0, BCDCompare(DoubleToBCD(FDouble), BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(FDouble, GetBigDecimal(stDoubleIndex, WasNull), 0.001, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(FloatToSQLStr(FDouble), GetString(stDoubleIndex, WasNull), 'GetString');
   end;
 end;
@@ -664,6 +691,7 @@ end;
 }
 procedure TZTestRowAccessorCase.TestRowAccessorFloat;
 var
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
   WasNull: Boolean;
 begin
   with RowAccessor do
@@ -676,7 +704,12 @@ begin
     CheckEquals(Trunc(FFloat), GetLong(stFloatIndex, WasNull), 0, 'GetLong');
     CheckEquals(FFloat, GetFloat(stFloatIndex, WasNull), 0.001, 'GetFloat');
     CheckEquals(FFloat, GetDouble(stFloatIndex, WasNull), 0.001, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stFloatIndex, BCD, WasNull);
+    CheckEquals(0, BCDCompare(DoubleToBCD(FFloat), BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(FFloat, GetBigDecimal(stFloatIndex, WasNull), 0.001, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(FloatToSQLStr(FFloat), GetString(stFloatIndex, WasNull), 'GetString');
   end;
 end;
@@ -687,6 +720,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorInteger;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -698,7 +732,12 @@ begin
     CheckEquals(FInt, GetLong(stIntegerIndex, WasNull), 0, 'GetLong');
     CheckEquals(FInt, GetFloat(stIntegerIndex, WasNull), 1, 'GetFloat');
     CheckEquals(FInt, GetDouble(stIntegerIndex, WasNull), 0, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stIntegerIndex, BCD, WasNull);
+    CheckEquals(FInt, BCDToInteger(BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(FInt, GetBigDecimal(stIntegerIndex, WasNull), 0, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(IntToStr(FInt), GetString(stIntegerIndex, WasNull), 'GetString');
   end;
 end;
@@ -709,6 +748,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorLong;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -720,7 +760,12 @@ begin
     CheckEquals(FLong, GetLong(stLongIndex, WasNull), 0, 'GetLong');
     CheckEquals(FLong, GetFloat(stLongIndex, WasNull), 1, 'GetFloat');
     CheckEquals(FLong, GetDouble(stLongIndex, WasNull), 0, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stLongIndex, BCD, WasNull);
+    CheckEquals(FLong, BCD2Int64(BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(FLong, GetBigDecimal(stLongIndex, WasNull), 0, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(IntToStr(FLong), GetString(stLongIndex, WasNull), 'GetString');
   end;
 end;
@@ -752,6 +797,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorShort;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -763,7 +809,12 @@ begin
     CheckEquals(FShort, GetLong(stShortIndex, WasNull), 0, 'GetLong');
     CheckEquals(FShort, GetFloat(stShortIndex, WasNull), 0, 'GetFloat');
     CheckEquals(FShort, GetDouble(stShortIndex, WasNull), 0, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stShortIndex, BCD, WasNull);
+    CheckEquals(Integer(FShort), BCDToInteger(BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(FShort, GetBigDecimal(stShortIndex, WasNull), 0, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(IntToStr(FShort), GetString(stShortIndex, WasNull), 'GetString');
   end;
 end;
@@ -771,6 +822,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorSmall;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -782,7 +834,12 @@ begin
     CheckEquals(FSmall, GetLong(stSmallIndex, WasNull), 0, 'GetLong');
     CheckEquals(FSmall, GetFloat(stSmallIndex, WasNull), 0, 'GetFloat');
     CheckEquals(FSmall, GetDouble(stSmallIndex, WasNull), 0, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stSmallIndex, BCD, WasNull);
+    CheckEquals(Integer(FSmall), BCDToInteger(BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(FSmall, GetBigDecimal(stSmallIndex, WasNull), 0, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(IntToStr(FSmall), GetString(stSmallIndex, WasNull), 'GetString');
   end;
 end;
@@ -793,6 +850,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorString;
 var
   WasNull: Boolean;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -803,7 +861,12 @@ begin
     CheckEquals(LongInt(StrToIntDef(FString, 0)), GetLong(stStringIndex, WasNull), 0, 'GetLong');
     CheckEquals(StrToFloatDef(FString, 0), GetFloat(stStringIndex, WasNull), 100, 'GetFloat');
     CheckEquals(StrToFloatDef(FString, 0), GetDouble(stStringIndex, WasNull), 0, 'GetDouble');
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(stStringIndex, BCd, WasNull);
+    CheckEquals(StrToInt64(FString), BCD2Int64(BCD), 'GetBigDecimal');
+    {$ELSE}
     CheckEquals(Int64(StrToInt(FString)), GetBigDecimal(stStringIndex, WasNull), 0, 'GetBigDecimal');
+    {$ENDIF}
     CheckEquals(FString, GetString(stStringIndex, WasNull), 'GetString');
 {    Check(ArraysComapre(GetByteArrayFromString(FString),
        GetBytes(stStringIndex, WasNull)));}

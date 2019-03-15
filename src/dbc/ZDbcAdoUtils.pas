@@ -559,7 +559,13 @@ begin
         AdoCommand.Parameters.Append(AdoCommand.CreateParameter(
           'P' + ZFastCode.IntToUnicode(ParameterIndex), adUnsignedBigInt,
             ParamDirection, 0, SoftVarManager.GetAsUInteger(RetValue)));
+    {$IFDEF BCD_TEST}
+    vtCurrency: V := SoftVarManager.GetAsCurrency(RetValue);
+    vtDouble: V := SoftVarManager.GetAsDouble(RetValue);
+    vtBigDecimal: V := SoftVarManager.GetAsDouble(RetValue);
+    {$ELSE}
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
+    {$ENDIF}
     vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
     begin
       RetValue.VUnicodeString := Connection.GetClientVariantManager.GetAsUnicodeString(RetValue);
@@ -990,9 +996,15 @@ begin
         DBTYPE_NULL:      PDBSTATUS(NativeUInt(DBParams.pData)+DBBindingArray[i].obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
         DBTYPE_I2:        PSmallInt(Data)^ := ClientVarManager.GetAsInteger(InParamValues[i]);
         DBTYPE_I4:        PInteger(Data)^ := ClientVarManager.GetAsInteger(InParamValues[i]);
+        {$IFDEF BCD_TEST}
+        DBTYPE_R4:        PSingle(Data)^ := ClientVarManager.GetAsDouble(InParamValues[i]);
+        DBTYPE_R8:        PDouble(Data)^ := ClientVarManager.GetAsDouble(InParamValues[i]);
+        DBTYPE_CY:        PCurrency(Data)^ := ClientVarManager.GetAsCurrency(InParamValues[i]);
+        {$ELSE}
         DBTYPE_R4:        PSingle(Data)^ := ClientVarManager.GetAsFloat(InParamValues[i]);
         DBTYPE_R8:        PDouble(Data)^ := ClientVarManager.GetAsFloat(InParamValues[i]);
         DBTYPE_CY:        PCurrency(Data)^ := ClientVarManager.GetAsFloat(InParamValues[i]);
+        {$ENDIF}
         DBTYPE_DATE:      PDateTime(Data)^ := ClientVarManager.GetAsDateTime(InParamValues[i]);
         //DBTYPE_IDISPATCH	= 9;
         //DBTYPE_ERROR	= 10;

@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Types, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility, ZDbcProperties;
+  ZCompatibility, ZDbcProperties{$IFDEF BCD_TEST}, ZDbcUtils, FmtBCD{$ENDIF};
 
 type
   {** Implements a test case for . }
@@ -94,7 +94,7 @@ type
     stIntegerArray: TIntegerDynArray;
     stFloatArray: TSingleDynArray;
     stDoubleArray: TDoubleDynArray;
-    stBigDecimalArray: TExtendedDynArray;
+    stBigDecimalArray: {$IFDEF BCD_TEST}TBCDDynArray{$ELSE}TExtendedDynArray{$ENDIF};
     stStringArray: TRawByteStringDynArray;
     stUnicodeStringArray: TUnicodeStringDynArray;
     stBytesArray: TBytesDynArray;
@@ -1654,7 +1654,7 @@ var
       stIntegerArray[I] := I;
       stFloatArray[i] := RandomFloat(-5000, 5000);
       stDoubleArray[i] := RandomFloat(-5000, 5000);
-      stBigDecimalArray[i] := RandomFloat(-5000, 5000);
+      stBigDecimalArray[i] := {$IFDEF BCD_TEST}DoubleToBCD{$ENDIF}(RandomFloat(-5000, 5000));
       stStringArray[i] := RandomStr(Random(99)+1);
       stUnicodeStringArray[i] := RandomStr(Random(254+1));
       stBytesArray[i] := RandomBts(ArrayLen);
@@ -1842,12 +1842,12 @@ begin
         end;
     end;
   end;
-  PStatement.ExecuteUpdatePrepared;
+  CheckEquals(ArrayLen, PStatement.ExecuteUpdatePrepared);
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 const
-  LastFieldIndices: array[0..2] of Integer = (stTimeStamp_Index, stAsciiStream_Index, stBinaryStream_Index);
+  LastFieldIndices: array[0..2] of Integer = (stUnicode_Index, stDate_Index, stBinaryStream_Index);
   HighLoadFields: array[hl_id_Index..stBinaryStream_Index] of String = (
     'hl_id', 'stBoolean', 'stByte', 'stShort', 'stInteger', 'stLong', ''+
       'stFloat', 'stDouble', 'stBigDecimal', 'stString', 'stUnicodeString', 'stBytes',

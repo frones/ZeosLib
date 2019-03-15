@@ -221,7 +221,8 @@ type
 
 implementation
 
-uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset, ZAbstractDataset,
+uses {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset, ZAbstractDataset,
   ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZClasses;
 
 { TZUpdateSQL }
@@ -603,8 +604,15 @@ begin
         stCurrency:
           Statement.SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCurrency(ColumnIndex, WasNull));
         stBigDecimal:
+          {$IFDEF BCD_TEST}
+          begin
+            RowAccessor.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^, WasNull);
+            Statement.SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@RowAccessor.TinyBuffer[0])^);
+          end;
+          {$ELSE}
           Statement.SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
             RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
+          {$ENDIF}
         stString, stUnicodeString:
           Statement.SetCharRec(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCharRec(ColumnIndex, WasNull));
         stBytes:
@@ -666,6 +674,7 @@ var
   RefreshColumnName: String;
   RefreshColumnType: TZSQLType;
   Len: NativeUInt;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 Label CheckColumnType;
 begin
   if Assigned(RefreshResultSet) then begin
@@ -700,7 +709,14 @@ CheckColumnType:
           stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
           stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
           stCurrency: RefreshRowAccessor.SetCurrency(RefreshColumnIndex, RefreshResultSet.GetCurrency(I));
+          {$IFDEF BCD_TEST}
+          stBigDecimal: begin
+                          RefreshResultSet.GetBigDecimal(I, BCD);
+                          RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, BCD);
+                        end;
+          {$ELSE}
           stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
+          {$ENDIF}
           stString, stUnicodeString:
             if RefreshRowAccessor.IsRaw
             then RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), Len)

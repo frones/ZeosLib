@@ -119,8 +119,6 @@ type
     FHighBytesCols, FHighStringCols, FHighArrayCols, FHighLobCols, FHighDataSetCols: Integer;
     FBytesCols, FStringCols, FArrayCols, FLobCols, FDataSetCols: array of Integer;
     FConSettings: PZConSettings;
-    FTinyBuffer: array[Byte] of Byte;
-
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
     function InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer; {$IFDEF WITHINLINE} inline; {$ENDIF}
     function InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64; {$IFDEF WITHINLINE} inline; {$ENDIF}
@@ -137,6 +135,8 @@ type
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
+  public
+    TinyBuffer: array[Byte] of Byte;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
 
@@ -208,7 +208,12 @@ type
     function GetFloat(ColumnIndex: Integer; out IsNull: Boolean): Single;
     function GetDouble(ColumnIndex: Integer; out IsNull: Boolean): Double;
     function GetCurrency(ColumnIndex: Integer; out IsNull: Boolean): Currency;
-    function GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD; out IsNull: Boolean);
+    {$ELSE}
+    function GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): Extended;
+    {$ENDIF}
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID; out IsNull: Boolean);
     function GetBytes(ColumnIndex: Integer; out IsNull: Boolean): TBytes; overload;
     function GetBytes(ColumnIndex: Integer; out IsNull: Boolean; out Len: Word): Pointer; overload;
     function GetDate(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
@@ -1048,7 +1053,7 @@ begin
     stAsciiStream, stUnicodeStream, stBinaryStream,
     stDataSet, stArray:
       Result := SizeOf(Pointer);
-    stGUID: Result := 16;
+    stGUID: Result := SizeOf(TGUID);
     stBytes:
       Result := SizeOf(Pointer) + SizeOf(Word);
     stDate, stTime, stTimestamp:
@@ -1082,7 +1087,7 @@ begin
       stDouble: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^));
       stCurrency: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^));
       stBigDecimal: {$IFDEF BCD_TEST}
-                    Result := BCDToInteger(PBCD(Data)^);
+                    Result := BCD2Int64(PBCD(Data)^);
                     {$ELSE}
                     Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^));
                     {$ENDIF}
@@ -1131,7 +1136,11 @@ begin
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      stBigDecimal: {$IFDEF BCD_TEST}
+                    Result := BCD2UInt64(PBCD(Data)^);
+                    {$ELSE}
+                    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+                    {$ENDIF}
       stString, stUnicodeString: if Data^ <> nil then
           if fRaw
           then Result := RawToUInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
@@ -1164,20 +1173,24 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stBoolean: PWordBool(Data)^ := Value <> 0;
-    stByte: PByte(Data)^ := Value;
-    stShort: PShortInt(Data)^ := Value;
-    stWord: PWord(Data)^ := Value;
-    stSmall: PSmallInt(Data)^ := Value;
-    stLongWord: PCardinal(Data)^ := Value;
+    stByte: PByte(Data)^ := Byte(Value);
+    stShort: PShortInt(Data)^ := ShortInt(Value);
+    stWord: PWord(Data)^ := Word(Value);
+    stSmall: PSmallInt(Data)^ := SmallInt(Value);
+    stLongWord: PCardinal(Data)^ := Cardinal(Value);
     stInteger: PInteger(Data)^ := Value;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-    stULong: PUInt64(Data)^ := Value;
+    stULong: PUInt64(Data)^ := Uint64(Value);
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: PInt64(Data)^ := Value;
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
-    stBigDecimal: PExtended(Data)^ := Value;
+    stBigDecimal: {$IFDEF BCD_TEST}
+                    ScaledOrdinal2BCD(Value, 0, PBCD(Data)^);
+                    {$ELSE}
+                    PExtended(Data)^ := Value;
+                    {$ENDIF}
     stString, stUnicodeString: if fRaw
         then SetRawByteString(ColumnIndex, IntToRaw(Value))
         else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -1205,7 +1218,11 @@ begin
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
-    stBigDecimal: PExtended(Data)^ := Value;
+    stBigDecimal: {$IFDEF BCD_TEST}
+                    ScaledOrdinal2BCD(Value, 0, PBCD(Data)^, False);
+                    {$ELSE}
+                    PExtended(Data)^ := Value;
+                    {$ENDIF}
     stString, stUnicodeString: if fRaw
         then SetRawByteString(ColumnIndex, IntToRaw(Value))
         else SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -1340,6 +1357,12 @@ procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
 var Data: PPointer;
     I, H, C: SmallInt;
     Blob: IZBlob;
+{$IFDEF BCDTEST}
+procedure AddBCDString
+begin
+  JSONWriter.AddString(BCDToString(PBCD(Data)^));
+end;
+{$ENDIF}
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -1377,7 +1400,7 @@ begin
         stFloat         : JSONWriter.AddSingle(PSingle(Data)^);
         stDouble        : JSONWriter.AddDouble(PDouble(Data)^);
         stCurrency      : JSONWriter.AddCurr64(PCurrency(Data)^);
-        stBigDecimal    : JSONWriter.AddDouble(PExtended(Data)^);
+        stBigDecimal    : {$IFDEF BCDTEST}AddBCDString{$ELSE}JSONWriter.AddDouble(PExtended(Data)^){$ENDIF};
         stString,
         stUnicodeString : begin
                             JSONWriter.Add('"');
@@ -2038,6 +2061,12 @@ function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; out IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 var Data: PPointer;
 label Set_Results, SetEmpty;
+{$IFDEF BCD_TEST}
+procedure BCDToRaw;
+begin
+  fRawTemp := BcdToSQLRaw(PBCD(Data)^);
+end;
+{$ENDIF}
 begin
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
@@ -2053,53 +2082,58 @@ begin
                     Len := 5;
                   end;
       stByte:     begin
-                    IntToRaw(Cardinal(PByte(Data)^), @FTinyBuffer[0], @Result);
+                    IntToRaw(Cardinal(PByte(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stShort:    begin
-                    IntToRaw(Integer(PShortInt(Data)^), @FTinyBuffer[0], @Result);
+                    IntToRaw(Integer(PShortInt(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stWord:     begin
-                    IntToRaw(Cardinal(PWord(Data)^), @FTinyBuffer[0], @Result);
+                    IntToRaw(Cardinal(PWord(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stSmall:    begin
-                    IntToRaw(Integer(PSmallInt(Data)^), @FTinyBuffer[0], @Result);
+                    IntToRaw(Integer(PSmallInt(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stLongWord: begin
-                    IntToRaw(PCardinal(Data)^, @FTinyBuffer[0], @Result);
+                    IntToRaw(PCardinal(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stInteger:  begin
-                    IntToRaw(PInteger(Data)^, @FTinyBuffer[0], @Result);
+                    IntToRaw(PInteger(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stULong:    begin
-                    IntToRaw(PUInt64(Data)^, @FTinyBuffer[0], @Result);
+                    IntToRaw(PUInt64(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stLong:     begin
-                    IntToRaw(PInt64(Data)^, @FTinyBuffer[0], @Result);
+                    IntToRaw(PInt64(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stFloat:    begin
-                    Len := FloatToSqlRaw(PSingle(Data)^, @FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    Len := FloatToSqlRaw(PSingle(Data)^, @TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
                   end;
       stDouble:   begin
-                    Len := FloatToSqlRaw(PDouble(Data)^, @FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    Len := FloatToSqlRaw(PDouble(Data)^, @TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
                   end;
       stCurrency: begin
-                    CurrToRaw(PCurrency(Data)^, @FTinyBuffer[0], @Result);
-Set_Results:        Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    CurrToRaw(PCurrency(Data)^, @TinyBuffer[0], @Result);
+Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
                   end;
       stBigDecimal: begin
-                    Len := FloatToSqlRaw(PExtended(Data)^, @FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    {$IFDEF BCD_TEST}
+                    BCDToRaw; Result := Pointer(fRawTemp);
+                    Len := Length(fRawTemp);
+                    {$ELSE}
+                    Len := FloatToSqlRaw(PExtended(Data)^, @TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
+                    {$ENDIF}
                   end;
       stString,
       stUnicodeString: if (Data^ = nil) then
@@ -2121,23 +2155,23 @@ Set_Results:        Len := Result - PAnsiChar(@FTinyBuffer[0]);
                   end else
                     goto SetEmpty;
       stGUID:     begin
-                    GUIDToBuffer(Data, PAnsiChar(@FTinyBuffer[0]), [guidWithBrackets]);
-                    Result := @FTinyBuffer[0];
+                    GUIDToBuffer(Data, PAnsiChar(@TinyBuffer[0]), [guidWithBrackets]);
+                    Result := @TinyBuffer[0];
                     Len := 38;
                   end;
       stDate:     begin
-                    Result := @FTinyBuffer[0];
-                    Len := DateTimeToRawSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
+                    Result := @TinyBuffer[0];
+                    Len := DateTimeToRawSQLDate(PDateTime(Data)^, @TinyBuffer[0],
                       ConSettings^.DisplayFormatSettings, False);
                   end;
       stTime:     begin
-                    Result := @FTinyBuffer[0];
-                    Len := DateTimeToRawSQLTime(PDateTime(Data)^, @FTinyBuffer[0],
+                    Result := @TinyBuffer[0];
+                    Len := DateTimeToRawSQLTime(PDateTime(Data)^, @TinyBuffer[0],
                       ConSettings^.DisplayFormatSettings, False);
                   end;
       stTimestamp:begin
-                    Result := @FTinyBuffer[0];
-                    Len := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
+                    Result := @TinyBuffer[0];
+                    Len := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @TinyBuffer[0],
                       ConSettings^.DisplayFormatSettings, False);
                   end;
       stAsciiStream, stUnicodeStream:
@@ -2332,6 +2366,12 @@ end;
 function TZRowAccessor.GetPWideChar(ColumnIndex: Integer;
   out IsNull: Boolean; out Len: NativeUInt): PWideChar;
 var Data: PPointer;
+{$IFDEF BCD_TEST}
+procedure BCDToUni;
+begin
+  fUniTemp := BcdToSQLUni(PBCD(Data)^);
+end;
+{$ENDIF}
 label Set_Results, SetEmpty, Set_From_Temp;
 begin
   {$R-}
@@ -2348,53 +2388,58 @@ begin
                     Len := 5;
                   end;
       stByte:     begin
-                    IntToUnicode(Cardinal(PByte(Data)^), @FTinyBuffer[0], @Result);
+                    IntToUnicode(Cardinal(PByte(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stShort:    begin
-                    IntToUnicode(Integer(PShortInt(Data)^), @FTinyBuffer[0], @Result);
+                    IntToUnicode(Integer(PShortInt(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stWord:     begin
-                    IntToUnicode(Cardinal(PWord(Data)^), @FTinyBuffer[0], @Result);
+                    IntToUnicode(Cardinal(PWord(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stSmall:    begin
-                    IntToUnicode(Integer(PSmallInt(Data)^), @FTinyBuffer[0], @Result);
+                    IntToUnicode(Integer(PSmallInt(Data)^), @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stLongWord: begin
-                    IntToUnicode(PCardinal(Data)^, @FTinyBuffer[0], @Result);
+                    IntToUnicode(PCardinal(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stInteger:  begin
-                    IntToUnicode(PInteger(Data)^, @FTinyBuffer[0], @Result);
+                    IntToUnicode(PInteger(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stULong:    begin
-                    IntToUnicode(PUInt64(Data)^, @FTinyBuffer[0], @Result);
+                    IntToUnicode(PUInt64(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stLong:     begin
-                    IntToUnicode(PInt64(Data)^, @FTinyBuffer[0], @Result);
+                    IntToUnicode(PInt64(Data)^, @TinyBuffer[0], @Result);
                     goto Set_Results;
                   end;
       stFloat:    begin
-                    Len := FloatToSqlUnicode(PSingle(Data)^, @FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    Len := FloatToSqlUnicode(PSingle(Data)^, @TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
                   end;
       stDouble:   begin
-                    Len := FloatToSqlUnicode(PDouble(Data)^, @FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    Len := FloatToSqlUnicode(PDouble(Data)^, @TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
                   end;
       stCurrency: begin
-                    CurrToUnicode(PCurrency(Data)^, @FTinyBuffer[0], @Result);
-Set_Results:        Len := Result - PWideChar(@FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    CurrToUnicode(PCurrency(Data)^, @TinyBuffer[0], @Result);
+Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
                   end;
       stBigDecimal: begin
-                    Len := FloatToSqlUnicode(PExtended(Data)^, @FTinyBuffer[0]);
-                    Result := @FTinyBuffer[0];
+                    {$IFDEF BCD_TEST}
+                    BCDToUni; Result := Pointer(fUniTemp);
+                    Len := Length(fUniTemp);
+                    {$ELSE}
+                    Len := FloatToSqlUnicode(PExtended(Data)^, @TinyBuffer[0]);
+                    Result := @TinyBuffer[0];
+                    {$ENDIF}
                   end;
       stString,
       stUnicodeString: if (Data^ = nil) then
@@ -2412,24 +2457,24 @@ Set_Results:        Len := Result - PWideChar(@FTinyBuffer[0]);
                   end else
                     goto SetEmpty;
       stGUID:     begin
-                    GUIDToBuffer(Data, PWideChar(@FTinyBuffer[0]), [guidWithBrackets]);
-                    Result := @FTinyBuffer[0];
+                    GUIDToBuffer(Data, PWideChar(@TinyBuffer[0]), [guidWithBrackets]);
+                    Result := @TinyBuffer[0];
                     Len := 38;
                   end;
       stDate:     begin
-                    Result := @FTinyBuffer[0];
-                    Len := DateTimeToUnicodeSQLDate(PDateTime(Data)^, @FTinyBuffer[0],
+                    Result := @TinyBuffer[0];
+                    Len := DateTimeToUnicodeSQLDate(PDateTime(Data)^, @TinyBuffer[0],
                       ConSettings^.DisplayFormatSettings, False);
                   end;
       stTime:     begin
-                    DateTimeToUnicodeSQLTime(PDateTime(Data)^, @FTinyBuffer[0],
+                    DateTimeToUnicodeSQLTime(PDateTime(Data)^, @TinyBuffer[0],
                       ConSettings^.DisplayFormatSettings, False);
-                    Result := @FTinyBuffer[0];
+                    Result := @TinyBuffer[0];
                     Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
                   end;
       stTimestamp:begin
-                    Result := @FTinyBuffer[0];
-                    Len := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, @FTinyBuffer[0],
+                    Result := @TinyBuffer[0];
+                    Len := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, @TinyBuffer[0],
                       ConSettings^.DisplayFormatSettings, False);
                   end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -2511,7 +2556,11 @@ begin
       stFloat: Result := PSingle(Data)^ <> 0;
       stDouble: Result := PDouble(Data)^ <> 0;
       stCurrency: Result := PCurrency(Data)^ <> 0;
-      stBigDecimal: Result := PExtended(Data)^ <> 0;
+      stBigDecimal: {$IFDEF BCD_TEST}
+                    Result := BCDCompare(NullBCD, PBCD(Data)^) <> 0;
+                    {$ELSE}
+                    Result := PExtended(Data)^ <> 0;
+                    {$ENDIF}
       stDate, stTime, stTimeStamp: Result := PDateTime(Data)^ <> 0;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
@@ -2683,7 +2732,11 @@ begin
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      {$IFDEF BCD_TEST}
+      stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
+      {$ELSE}
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(Data)^);
+      {$ENDIF}
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
         then Result := RawToInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
@@ -2759,6 +2812,44 @@ begin
     IsNull := False;
   end else
     IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>GUID</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Result the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null-guid</code>
+}
+procedure TZRowAccessor.GetGUID(ColumnIndex: Integer; var Result: TGUID;
+  out IsNull: Boolean);
+var Data: PPointer;
+label zero_guid;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDouble);
+{$ENDIF}
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stString, stUnicodeString,
+      stAsciiStream, stUnicodeStream: StringToGUID(GetString(ColumnIndex, IsNull));
+      stBytes:    if PWord(PAnsiChar(Data)+SizeOf(Pointer))^ = SizeOf(TGUID)
+                  then Result := PGUID(Data^)^
+                  else goto zero_guid;
+      stGUID:     Result := PGUID(Data)^;
+      else
+zero_guid: FillChar(Result.D1, SizeOf(TGUID), #0);
+    end;
+    IsNull := False;
+  end else begin
+    IsNull := True;
+    FillChar(Result.D1, SizeOf(TGUID), #0);
+  end;
 end;
 
 {**
@@ -2855,7 +2946,7 @@ begin
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
       {$IFDEF BCD_TEST}
-      stBigDecimal: Result := BCDToCurr(PBCD(Data)^);
+      stBigDecimal: BCDToCurr(PBCD(Data)^, Result);
       {$ELSE}
       stBigDecimal: Result := PExtended(Data)^;
       {$ENDIF}
@@ -2888,8 +2979,18 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+{$IFDEF BCD_TEST}
+procedure TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD; out IsNull: Boolean);
+{$ELSE}
+function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): Extended;
+{$ENDIF}
 var Data: PPointer;
+  {$IFDEF BCD_TEST}
+ procedure Str2BCD;
+ begin
+   TryStrToBCD(GetString(ColumnIndex, IsNull), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})
+ end;
+  {$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -2906,31 +3007,21 @@ begin
     {$Q-}
     {$IFDEF BCD_TEST}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(Data)^ then IntegerToBcd(1);
-      stByte: Result := IntegerToBcd(PByte(Data)^);
-      stShort: Result := IntegerToBcd(PShortInt(Data)^);
-      stWord: Result := IntegerToBcd(PWord(Data)^);
-      stSmall: Result := IntegerToBcd(PSmallInt(Data)^);
-      stLongWord: Result := StrToBCD(IntToStr(PCardinal(Data)^));
-      stInteger: Result := IntegerToBcd(PInteger(Data)^);
-      stULong: Result := StrToBCD(ZFastCode.IntToStr(PUInt64(Data)^));
-      stLong: Result := StrToBCD(ZFastCode.IntToStr(PInt64(Data)^));
+      stBoolean: ScaledOrdinal2BCD(Word(PWord(Data)^ <> 0), 0, Result);
+      stByte: ScaledOrdinal2BCD(Word(PByte(Data)^), 0, Result);
+      stShort: ScaledOrdinal2BCD(SmallInt(PShortInt(Data)^), 0, Result);
+      stWord: ScaledOrdinal2BCD(PWord(Data)^, 0, Result);
+      stSmall: ScaledOrdinal2BCD(PSmallInt(Data)^, 0, Result);
+      stLongWord: ScaledOrdinal2BCD(PCardinal(Data)^, 0, Result);
+      stInteger: ScaledOrdinal2BCD(PInteger(Data)^, 0, Result);
+      stULong: ScaledOrdinal2BCD(PUInt64(Data)^,0, Result, False);
+      stLong: ScaledOrdinal2BCD(PInt64(Data)^, 0, Result);
       stFloat: Result := DoubleToBCD(PSingle(Data)^);
       stDouble: Result := DoubleToBCD(PDouble(Data)^);
-      stCurrency: Result := CurrencyToBcd(PCurrency(Data)^);
+      stCurrency: CurrToBcd(PCurrency(Data)^, Result);
       stBigDecimal: Result := PBCD(Data)^;
-      stString, stUnicodeString: if Data^ <> nil then
-        if fRaw
-        then StrToBCD(String(PPAnsiChar(Data)^+PAnsiInc))
-        else StrToBCD(String(ZPPWideChar(Data)^+PWideInc));
-      {stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
-          if PIZlob(Data)^.IsClob
-          then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
-          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
-      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
-          if PIZlob(Data)^.IsClob
-          then SQLStrToFloatDef(PIZlob(Data)^.GetPWideChar, 0, Result)
-          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);}
+      stString, stUnicodeString,
+      stAsciiStream, stUnicodeStream: Str2BCD;
     end;
     {$ELSE}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
@@ -3578,7 +3669,11 @@ begin
     stFloat: PSingle(Data)^ := Ord(Value);
     stDouble: PDouble(Data)^ := Ord(Value);
     stCurrency: PCurrency(Data)^ := Ord(Value);
+    {$IFDEF BCD_TEST}
+    stBigDecimal: ScaledOrdinal2BCD(Word(Value), 0, PBCD(Data)^);
+    {$ELSE}
     stBigDecimal: PExtended(Data)^ := Ord(Value);
+    {$ENDIF}
     stString, stUnicodeString: SetString(ColumnIndex, BoolStrs[Value]);
   end;
 end;
@@ -3749,7 +3844,11 @@ begin
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
+    {$IFDEF BCD_TEST}
+    stBigDecimal: ScaledOrdinal2BCD(Value, 0, PBCD(Data)^);
+    {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
+    {$ENDIF}
     stString, stUnicodeString:
       if fRaw
       then SetRawByteString(ColumnIndex, IntToRaw(Value))
@@ -3792,7 +3891,11 @@ begin
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
+    {$IFDEF BCD_TEST}
+    stBigDecimal: PBCD(Data)^ := DoubleToBCD(Value);
+    {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
+    {$ENDIF}
     stString, stUnicodeString:
       if fRaw
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
@@ -3835,7 +3938,11 @@ begin
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
+    {$IFDEF BCD_TEST}
+    stBigDecimal: PBCD(Data)^ := DoubleToBCD(Value);
+    {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
+    {$ENDIF}
     stString, stUnicodeString:
       if fRaw
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
@@ -3878,7 +3985,11 @@ begin
     stFloat: PSingle(Data)^ := Value;
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
+    {$IFDEF BCD_TEST}
+    stBigDecimal: Currency2Bcd(Value, PBCD(Data)^);
+    {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
+    {$ENDIF}
     stString, stUnicodeString:
       if fRaw
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
@@ -3899,7 +4010,6 @@ end;
 }
 procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 var Data: PPointer;
-  {$IFDEF BCD_TEST}BCD_REMINDER: BOOLEAN;{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -3907,10 +4017,27 @@ begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-  {$IFDEF BCD_TEST}
-  {$ELSE}
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+  {$IFDEF BCD_TEST}
+    stBoolean: PWordBool(Data)^ := BcdCompare(Value, NullBCD) <> 0;
+    stByte: PByte(Data)^ := BCDToInteger(Value);
+    stShort: PShortInt(Data)^ := BCDToInteger(Value);
+    stWord: PWord(Data)^ := BCDToInteger(Value);
+    stSmall: PSmallInt(Data)^ := BCDToInteger(Value);
+    stLongWord: PCardinal(Data)^ := Bcd2UInt64(Value);
+    stInteger: PInteger(Data)^ := BCD2Int64(Value);
+    stLong: PInt64(Data)^ := Bcd2Int64(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+    stULong: PUInt64(Data)^ := Bcd2UInt64(Value);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+    stFloat: PSingle(Data)^ := BcdToDouble(Value);
+    stDouble: PDouble(Data)^ := BcdToDouble(Value);
+    stCurrency: BCDToCurr(Value, PCurrency(Data)^);
+    stBigDecimal: PBCD(Data)^ := Value;
+    stString, stUnicodeString:
+      SetString(ColumnIndex, BcdToStr(Value));
+  {$ELSE}
     stBoolean: PWordBool(Data)^ := Value <> 0;
     stByte: PByte(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stShort: PShortInt(Data)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
@@ -3930,8 +4057,8 @@ begin
       if fRaw
       then SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
-  end;
   {$ENDIF}
+  end;
 end;
 
 {**
@@ -3968,7 +4095,11 @@ begin
     stFloat: PSingle(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stDouble: PDouble(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stCurrency: PCurrency(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    {$IFDEF BCD_TEST}
+    stBigDecimal: TryStrToBcd(Value, PBCD(Data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ELSE}
     stBigDecimal: PExtended(Data)^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    {$ENDIF}
     stString, stUnicodeString: if fRaw
       then InternalSetString(Data, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, FClientCP))
       {$IFDEF UNICODE}
@@ -4044,7 +4175,18 @@ procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsichar;
 var
   Data: PPointer;
   Failed: Boolean;
-  tmp: ZWideString;
+  {$IFDEF BCD_TEST}
+  procedure RawAsBCD;
+  begin
+    {$IFDEF UNICODE}
+    fUniTemp := ASCII7ToUnicodeString(Value, Len);
+    TryStrToBcd(fUniTemp, PBcd(data)^ {$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ELSE}
+    ZSetString(Value, Len, fRawTemp);
+    TryStrToBcd(fRawTemp, PBcd(data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ENDIF}
+  end;
+  {$ENDIF}
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
@@ -4065,12 +4207,16 @@ begin
     stFloat: SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len);
     stDouble: SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len);
     stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(Data)^, Len);
+    {$IFDEF BCD_TEST}
+    stBigDecimal: RawAsBCD;
+    {$ELSE}
     stBigDecimal: SQLStrToFloatDef(Value, 0, PExtended(Data)^, Len);
+    {$ENDIF}
     stString, stUnicodeString: if fRaw then
         InternalSetPAnsiChar(Data, Value, Len)
       else begin
-        tmp := PRawToUnicode(Value, Len, FClientCP); //localize because of WideString overrun
-        InternalSetPWideChar(Data, Pointer(tmp), Length(tmp));
+        fUniTemp := PRawToUnicode(Value, Len, FClientCP); //localize because of WideString overrun
+        InternalSetPWideChar(Data, Pointer(fUniTemp), Length(fUniTemp));
       end;
     stBytes: InternalSetBytes(Data, Value, len);
     stGUID:
@@ -4121,6 +4267,18 @@ procedure TZRowAccessor.SetPWideChar(ColumnIndex: Integer;
 var
   Data: PPointer;
   Failed: Boolean;
+  {$IFDEF BCD_TEST}
+  procedure UniAsBCD;
+  begin
+    {$IFDEF UNICODE}
+    System.SetString(fUniTemp, Value, Len);
+    TryStrToBcd(fUniTemp, PBcd(data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ELSE}
+    fRawTemp := UnicodeStringToAscii7(Value, Len);
+    TryStrToBcd(fRawTemp, PBcd(data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ENDIF}
+  end;
+  {$ENDIF}
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
@@ -4141,7 +4299,11 @@ begin
     stFloat: PSingle(Data)^ := SQLStrToFloatDef(Value, 0, Len);
     stDouble: PDouble(Data)^ := SQLStrToFloatDef(Value, 0, Len);
     stCurrency: PCurrency(Data)^ := SQLStrToFloatDef(Value, 0, Len);
+    {$IFDEF BCD_TEST}
+    stBigDecimal: UniAsBCD;
+    {$ELSE}
     stBigDecimal: PExtended(Data)^ := SQLStrToFloatDef(Value, 0, Len);
+    {$ENDIF}
     stUnicodeString, stString: if fRaw
       then InternalSetString(Data, PUnicodeToRaw(Value, Len, FClientCP))
       else InternalSetPWideChar(Data, Value, Len);
@@ -4237,6 +4399,17 @@ var
   Data: PPointer;
   Failed: Boolean;
   Tmp: ZWideString;
+  {$IFDEF BCD_TEST}
+  procedure RawAsBCD;
+  begin
+    {$IFDEF UNICODE}
+    fUniTemp := Ascii7ToUnicodeString(Value);
+    TryStrToBcd(fUniTemp, PBcd(data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ELSE}
+    TryStrToBcd(Value, PBcd(data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ENDIF}
+  end;
+  {$ENDIF}
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
@@ -4257,7 +4430,11 @@ begin
     stFloat: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
     stDouble: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
     stCurrency: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PCurrency(Data)^, Length(Value));
+    {$IFDEF BCD_TEST}
+    stBigDecimal: RawAsBCD;
+    {$ELSE}
     stBigDecimal: SQLStrToFloatDef(PAnsiChar(Pointer(Value)), 0, PExtended(Data)^, Length(Value));
+    {$ENDIF}
     stString, stUnicodeString: if fRaw
       then InternalSetPAnsichar(Data, Pointer(Value), Length(Value))
       else begin
@@ -4316,6 +4493,17 @@ procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; const Value: ZWid
 var
   Data: PPointer;
   Failed: Boolean;
+  {$IFDEF BCD_TEST}
+  procedure UniAsBCD;
+  begin
+    {$IFDEF UNICODE}
+    TryStrToBcd(Value, PBcd(data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ELSE}
+    fRawTemp := UnicodeStringToAscii7(Value);
+    TryStrToBcd(fRawTemp, PBcd(data)^{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+    {$ENDIF}
+  end;
+  {$ENDIF}
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
@@ -4336,7 +4524,11 @@ begin
     stFloat: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PSingle(Data)^, Length(Value));
     stDouble: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PDouble(Data)^, Length(Value));
     stCurrency: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PCurrency(Data)^, Length(Value));
+    {$IFDEF BCD_TEST}
+    stBigDecimal: UniAsBCD;
+    {$ELSE}
     stBigDecimal: SQLStrToFloatDef(PWideChar(Pointer(Value)), 0, PExtended(Data)^, Length(Value));
+    {$ENDIF}
     stUnicodeString, stString: if fRaw
       then InternalSetString(Data, ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, FClientCP))
       else InternalSetPWideChar(Data, Pointer(Value), Length(Value));
@@ -4724,7 +4916,12 @@ begin
     vtBoolean: SetBoolean(ColumnIndex, Value.VBoolean);
     vtInteger: SetLong(ColumnIndex, Value.VInteger);
     vtUInteger: SetULong(ColumnIndex, Value.VUInteger);
+    {$IFDEF BCD_TEST}
+    vtBigDecimal: SetBigDecimal(ColumnIndex, Value.VBigDecimal);
+    //vtGUID:  Self.SetBytes(ColumnIndex, Value.VGUID);
+    {$ELSE}
     vtFloat: SetBigDecimal(ColumnIndex, Value.VFloat);
+    {$ENDIF}
     vtBytes: SetBytes(ColumnIndex, Value.VBytes);
     vtString: SetString(ColumnIndex, Value.VString);
     {$IFNDEF NO_ANSISTRING}

@@ -60,6 +60,7 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
@@ -447,8 +448,10 @@ function TZInterbase6XSQLDAResultSet.GetBigDecimal(ColumnIndex: Integer): Extend
 {$ENDIF}
 var
   TempDate: TZTimeStamp;
+  {$IFNDEF BCD_TEST}
   P: PAnsiChar;
   Len: NativeUInt;
+  {$ENDIF}
   XSQLVAR: PXSQLVAR;
   dDT, tDT: TDateTime;
 begin
@@ -474,18 +477,18 @@ begin
       SQL_SHORT     : ScaledOrdinal2Bcd(PISC_SHORT(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
       SQL_INT64     : ScaledOrdinal2Bcd(PISC_INT64(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
       SQL_TEXT,
-      SQL_VARYING   : if not TryStrToBcd(GetString(ColumnIndex), Result) then begin
+      SQL_VARYING   : if not TryStrToBcd(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}) then begin
                         Result := NullBcd;
                         LastWasNull := True;
                       end;
       SQL_TIMESTAMP : begin
-                        isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
+                       isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         if not TryEncodeDate(TempDate.Year, TempDate.Month, TempDate.Day, dDT) then
                           dDT := 0;
-                        if not TryEncodeTime(TempDate.Day,TempDate.Hour, TempDate.Minute,
+                        if not TryEncodeTime(TempDate.Hour, TempDate.Minute,
                                 TempDate.Second, TempDate.Fractions div 10, tDT) then
                           tDT :=0;
                         if dDT < 0

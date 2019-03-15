@@ -600,16 +600,27 @@ begin
                       end
                   end;
     stBigDecimal: begin
-                    AllocArray(Index, SizeOf(Double)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    AllocArray(Index, {$IFDEF BCD_TEST}MaxBCD2NumSize{$ELSE}SizeOf(Double){$ENDIF}*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
                       if IsNullFromArray(Arr, j) then begin
                         Integer2PG(-1, P);
                         Inc(P,SizeOf(int32));
+                        {$IFDEF BCD_TEST}
+                        Dec(Stmt.FPQparamLengths[Index], MaxBCD2NumSize);
+                        {$ELSE}
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Double));
+                        {$ENDIF}
                       end else begin
+                        {$IFDEF BCD_TEST}
+                        BCD2PGNumeric(TBCDDynArray(D)[j], P+SizeOf(int32), x);
+                        Integer2PG(X, P);
+                        Inc(P,SizeOf(int32)+X);
+                        Dec(Stmt.FPQparamLengths[Index], MaxBCD2NumSize-X);
+                        {$ELSE}
                         Integer2PG(SizeOf(Double), P);
                         Double2PG(TExtendedDynArray(D)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(Double));
+                        {$ENDIF}
                       end;
                   end;
     stDate:       begin
@@ -979,13 +990,10 @@ begin
     if BindList[I].BindType in [zbtArray, zbtRefArray] then
       BindArray(i, stmt);
   Result := Stmt.PGExecutePrepared;
-  try
-    if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
-      HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
-        lcExecute, ASQL, Result);
-  finally
-    Stmt.BindList.ClearValues; //free allocated mem
-  end;
+  Stmt.BindList.ClearValues; //free allocated mem
+  if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
+    HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
+      lcExecute, ASQL, Result);
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.PGExecute: TPGresult;
@@ -1127,7 +1135,6 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.ExecuteUpdatePrepared: Integer;
 begin
   PrepareLastResultSetForReuse;
-  Result := -1;
   Prepare;
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
@@ -1510,6 +1517,8 @@ procedure TZAbstractPostgreSQLPreparedStatementV3.RegisterParameter(
   const Name: String; PrecisionOrSize, Scale: LengthInt);
 var I: Integer;
 begin
+  if SQLType in [stUnicodeString, stUnicodeStream] then
+    SQLType := TZSQLType(Ord(SQLType)-1);
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
   if ParamType in [pctOut, pctReturn] then begin
     FOutParamCount := 0;
@@ -1815,7 +1824,14 @@ begin
                             else SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGNumeric2Currency(FPQparamValues[i]));
                 stFloat:    SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Single(FPQparamValues[i]));
                 stDouble:   SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
-                stBigDecimal:SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
+                stBigDecimal:{$IFDEF BCD_TEST}
+                            begin
+                              PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
+                              SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
+                            end;
+                            {$ELSE}
+                            SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
+                            {$ENDIF}
                 stTime:     if Finteger_datetimes
                             then SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Time(PInt64(FPQparamValues[i])^))
                             else SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Time(PDouble(FPQparamValues[i])^));
@@ -1845,10 +1861,35 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetBigDecimal(Index: Integer;
   const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+{$IFDEF BCD_TEST}
+var SQLType: TZSQLType;
+procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BcdToSQLRaw(Value)); end;
 begin
-  {$IFDEF BCD_TEST}
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, BCDToDouble(Value));
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  SQLType := OIDToSQLType(Index, stBigDecimal);
+  if (FPQParamOIDs[index] = NUMERICOID) then begin
+    if (FPQparamValues[Index] = nil) or (BindList.SQLTypes[Index] <> SQLType) then begin
+      FPQparamValues[Index] := BindList.AquireCustomValue(Index, SQLType, MaxBCD2NumSize);
+      FPQparamFormats[Index] := ParamFormatBin;
+    end;
+    BCD2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+  end else case SQLType of
+    stBoolean,
+    stSmall,
+    stInteger,
+    {$IFDEF CPU64}stLong,{$ENDIF}
+    stLongWord: InternalBindInt(Index, SQLType, PInt64(@Value)^ div 10000);
+    {$IFNDEF CPU64}
+    stLong:     SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2Int64(Value));
+    {$ENDIF}
+    stTime, stDate, stTimeStamp, stFloat,
+    stDouble:   InternalBindDouble(Index, SQLType, BCDToDouble(Value));
+    else SetAsRaw;
+  end;
   {$ELSE}
+begin
   InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
   {$ENDIF}
 end;

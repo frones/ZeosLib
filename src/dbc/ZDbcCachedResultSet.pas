@@ -61,6 +61,7 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcCache, ZCompatibility;
 
@@ -194,7 +195,11 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    {$ELSE}
     function GetBigDecimal(ColumnIndex: Integer): Extended;
+    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -1085,12 +1090,21 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF BCD_TEST}
+procedure TZAbstractCachedResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+{$ELSE}
 function TZAbstractCachedResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
+{$IFDEF BCD_TEST}
+  //FillChar(Result, SizeOf(TBCD), #0);
+  FRowAccessor.GetBigDecimal(ColumnIndex, Result, LastWasNull);
+{$ELSE}
   Result := FRowAccessor.GetBigDecimal(ColumnIndex, LastWasNull);
+{$ENDIF}
 end;
 
 {**
@@ -2213,7 +2227,14 @@ begin
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
         stCurrency: RowAccessor.SetCurrency(I, ResultSet.GetCurrency(I));
+        {$IFDEF BCD_TEST}
+          stBigDecimal: begin
+                          ResultSet.GetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
+                          RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
+                        end;
+        {$ELSE}
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
+        {$ENDIF}
         stString, stUnicodeString: FStringFieldAssignFromResultSet(i);
         stBytes,stGUID: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));

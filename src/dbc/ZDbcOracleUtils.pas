@@ -231,7 +231,18 @@ procedure OraWriteLob(const PlainDriver: TZOraclePlainDriver; const BlobData: Po
   BlobSize: Int64; Const BinaryLob: Boolean; const ConSettings: PZConSettings);
 
 
-procedure BCD2Nvu(const bcd: TBCD; num: POCINumber);
+{** Autor: EgonHugeist (EH)
+  Prolog:
+  the TBCD is a nightmare because of missing strict rules to fill the record.
+  I would vote for strict left padding like all database are doing that! That
+  would push the performance and working with the bcd's would be much easier.
+
+  converts a <code>java.math.BigDecimal</code> value into oracle number format;
+  @param bcd the <code>java.math.BigDecimal</code> value which to be converted
+  @param num the pointer to a valid oracle number value
+  @return the length of used bytes
+}
+function BCD2Nvu(const bcd: TBCD; num: POCINumber): SB2;
 procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
 
 
@@ -322,6 +333,7 @@ procedure Curr2Vnu(const Value: Currency; num: POCINumber);
 function OCIType2Name(DataType: ub2): String;
 
 const
+  NVUBase100Adjust: array[Boolean] of Byte = (1,101);
   VNU_NUM_INTState: array[Boolean] of TnvuKind = (vnuNegInt, vnuPosInt);
   VNU_NUM_CurState: array[Boolean] of TnvuKind = (vnuNegCurr, vnuPosCurr);
   sPosScaleFaktor: array[0..18] of Int64 = (
@@ -586,9 +598,9 @@ begin
     i := 2;
     P := 0;
     trailing_zeros := 0;
-    { reduce the int64 muls/mods by checking the high bytes for leading dbl zeros
+    { reduce the int64 muls/mods by checking the high bytes for leading dbl zeroes
       the docs: "The mantissa is normalized; leading zeroes are not stored."
-      EH: also right packing the trailing zeros by using the exponents makes
+      EH: also right packing the trailing zeroes by using the exponents makes
       reading the values back loads faster}
     for n := Low(UInt64Divisor) to High(UInt64Divisor)-(5*Ord(Int64Rec(I64).Hi=0)) do
       if I64 >= UInt64Divisor[n]
@@ -821,65 +833,98 @@ begin
   {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
-// Conversions
-// original Autor might be Joost van der Sluis
-// Code is from oracleconnection.pp of FPC
-//Procedure FmtBCD2Nvu(bcd:tBCD;b:pByte);
-procedure BCD2Nvu(const bcd: TBCD; num: POCINumber);
+{** Autor: EgonHugeist (EH)
+  Prolog:
+  the TBCD is a nightmare because of missing strict rules to fill the record.
+  I would vote for strict left padding like all database are doing that! That
+  would push the performance and working with the bcd's would be much easier.
+
+  converts a <code>java.math.BigDecimal</code> value into oracle number format;
+  @param bcd the <code>java.math.BigDecimal</code> value which to be converted
+  @param num the pointer to a valid oracle number value
+  @return the length of used bytes
+}
+function BCD2Nvu(const bcd: TBCD; num: POCINumber): sb2;
 var
-  i,j,cnt   : integer;
-  nibbles   : array [0..maxfmtbcdfractionsize-1] of byte;
-  exp       : shortint;
-  bb        : byte;
+  pNibble, pLastNibble, pNum, pLastNum: PAnsiChar;
+  NumDigit, Precision: Integer;
+  Negative, GetFirstBCDHalfByte, SetNumDigit: Boolean;
+label NextDigitOrNum, Done;
 begin
-  //fillchar(num[0],22,#0);
-  FillChar(num[0],SizeOf(TOCINUmber),#0);
-  if BCDPrecision(bcd)=0 then begin// zero, special case
+  pNibble := @bcd.Fraction[0];
+  pLastNum := pNibble; //remainder
+  if bcd.Precision > 0 then begin
+    pLastNibble := pNibble + ((bcd.Precision+1) shr 1); //stop main loop here -> the only save point i found!
+    if PByte(pNibble)^ = 0 then begin
+      pNum := pLastNibble-1;
+      // ... skip leading zeroes (scale > precision)
+      while (pNibble <= pNum) and (PWord(pNibble)^ = 0) do
+        Inc(pNibble, 2);
+      Inc(pNibble, Ord((pNibble <= pLastNibble) and (PByte(pNibble)^ = 0)));
+    end;
+  end else
+    pLastNibble := pNibble-1;
+  pNum := @num^[2]; //set offset after len and exponent bytes
+  //init the 22 byte result: we ignore the first two (len+exp) bytes -> set in all cases
+  {$IFDEF CPU64}
+  PInt64(pNum)^ := 0; PInt64(pNum+8)^ := 0; PInt64(pNum+14)^ := 0;
+  {$ELSE}
+  PCardinal(pNum)^    := 0; PCardinal(pNum+4)^  := 0; PCardinal(pNum+8)^ := 0;
+  PCardinal(pNum+12)^ := 0; PCardinal(pNum+16)^ := 0;
+  {$ENDIF}
+  if (pLastNibble < pNibble) then begin //zero!
     num[0] := 1;
     num[1] := $80;
-  end else begin
-    if (BCDPrecision(bcd)-BCDScale(bcd)) mod 2 <>0 then begin// odd number before decimal point
-      nibbles[0] := 0;
-      j := 1;
-    end else
-      j := 0;
-    for i := 0 to bcd.Precision -1 do
-      if i mod 2 =0
-      then nibbles[i+j] := bcd.Fraction[i div 2] shr 4
-      else nibbles[i+j] := bcd.Fraction[i div 2] and $0f;
-    nibbles[bcd.Precision+j] := 0; // make sure last nibble is also 0 in case we have odd scale
-    exp := (BCDPrecision(bcd)-BCDScale(bcd)+1) div 2;
-    cnt := exp+(BCDScale(bcd)+1) div 2;
-    // to avoid "ora 01438: value larger than specified precision allowed for this column"
-    // remove trailing zeros (scale < 0)...
-    while (nibbles[cnt*2-2]*10+nibbles[cnt*2-1])=0 do
-      cnt := cnt-1;
-    // ... and remove leading zeros (scale > precision)
-    j:=0;
-    while (nibbles[j*2]*10+nibbles[j*2+1])=0 do begin
-      j:=j+1;
-      exp:=exp-1;
+    Result := 2;
+    Exit;
+  end;
+  Precision := Bcd.Precision - (bcd.SignSpecialPlaces and 63);
+  Negative := (bcd.SignSpecialPlaces and (1 shl 7)) <> 0; //no call to BCDNegative
+  SetNumDigit := Odd(Precision);
+  Inc(Precision, Ord(SetNumDigit)); //in case of odd scale!
+  GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0; //skip first half byte?
+  SetNumDigit := SetNumDigit and GetFirstBCDHalfByte;
+  //set exponent
+  num^[1] := ((Precision shr 1) - 1 - (pNibble - pLastNum) - Ord(not GetFirstBCDHalfByte) + 65 + 128);
+  pLastNum := pNum+(OCI_NUMBER_SIZE-3); //mark end of byte array
+
+NextDigitOrNum: //main loop without any condition
+  if GetFirstBCDHalfByte
+  then NumDigit := (PByte(pNibble)^ shr 4)
+  else begin
+    NumDigit := (PByte(pNibble)^ and $0f);
+    if (pNibble < pLastNibble)
+    then Inc(pNibble) //next nibble
+    else goto Done;
+  end;
+  if SetNumDigit then begin
+    if Negative
+    then PByte(pNum)^ := 101 - PByte(pNum)^ + NumDigit
+    else PByte(pNum)^ := PByte(pNum)^ + NumDigit + 1;
+    if (pNum < pLastNum)
+    then Inc(pNum) //next base 100 vnu digit
+    else goto Done;
+  end else
+    PByte(pNum)^ := NumDigit * 10;
+  { now invert the getter/setter logic }
+  GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
+  SetNumDigit := not SetNumDigit;
+  goto NextDigitOrNum;
+Done: //job done -> finalize
+  // to avoid "ora 01438: value larger than specified precision allowed for this column"
+  while PByte(pNum-1)^ = NVUBase100Adjust[Negative] do begin
+    dec(pNum);
+    PByte(pNum)^ := 0;
+  end;
+  if Negative then begin
+    num^[1] := not num^[1]; //invert the bits
+    if pNum-PAnsiChar(Num) < OCI_NUMBER_SIZE then begin
+      PByte(pNum)^ := 102; //as documented for whatever it is..
+      inc(pNum);
     end;
-    if IsBCDNegative(bcd) then begin
-      num[0]:=cnt-j+1;
-      num[1]:=not(exp+64) and $7f ;
-      for i:=j to cnt-1 do begin
-        bb:=nibbles[i*2]*10+nibbles[i*2+1];
-        num[2+i-j]:=101-bb;
-        end;
-      if 2+cnt-j<22 then begin // add a 102 at the end of the number if place left.
-        num[0]:=num[0]+1;
-        num[2+cnt-j]:=102;
-      end;
-    end else begin
-      num[0]:=cnt-j+1;
-      num[1]:=(exp+64) or $80 ;
-      for i:=j to cnt-1 do begin
-        bb:=nibbles[i*2]*10+nibbles[i*2+1];
-        num[2+i-j]:=1+bb;
-        end;
-      end;
-    end;
+  end;
+  Result := pNum-PAnsiChar(Num);
+  num^[0] := Result - 1;
 end;
 
 // Conversions
@@ -1153,7 +1198,7 @@ begin
           DataType := SQLT_BDOUBLE;
           DataSize := SizeOf(Double);
         end else if (Scale = 0) and (Precision > 0) and (Precision < 19) then
-          //No digits found, but possible signed or not/overrun of converiosn? No way to find this out -> just use a "save" type
+          //No digits found, but possible signed or not/overrun of converions? No way to find this out -> just use a "save" type
           case Precision of
             1..2: begin // 0/-99..(-)99
                     Result := stShort;
