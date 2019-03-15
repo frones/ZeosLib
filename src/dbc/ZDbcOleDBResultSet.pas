@@ -70,7 +70,6 @@ type
   {** Implements Ado ResultSet. }
   TZAbstractOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
-    FInMemoryDataLobs: Boolean;
     FChunkSize: Integer;
     FRowSet: IRowSet;
     FZBufferSize: Integer;
@@ -135,7 +134,7 @@ type
     procedure Open; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer; InMemoryDataLobs: Boolean;
+      const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer;
       const {%H-}EnhancedColInfo: Boolean = True);
     procedure ResetCursor; override;
     function Next: Boolean; override;
@@ -423,14 +422,9 @@ begin
 end;
 
 procedure TZAbstractOleDBResultSet.ReleaseFetchedRows;
-var I,j: Integer;
 begin
   if (FRowsObtained > 0) then
   begin
-    if FInMemoryDataLobs and (Length(FLobColsIndex) > 0) then
-      for i := 0 to high(FLobColsIndex) do
-        for J := 0 to FRowsObtained -1 do
-          (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(Pointer(@FColBuffer[FDBBindingArray[FLobColsIndex[i]].obValue+NativeUInt(FRowSize*J)]));
     CheckError(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates)));
     (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(FHROWS);
     FHROWS := nil;
@@ -2048,7 +2042,7 @@ end;
 }
 constructor TZOleDBResultSet.Create(const Statement: IZStatement;
   const SQL: string; const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer;
-  InMemoryDataLobs: Boolean; const EnhancedColInfo: Boolean);
+  const EnhancedColInfo: Boolean);
 begin
   {if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
   then inherited Create(Statement, SQL, TZOleDBMSSQLResultSetMetadata.Create(
@@ -2061,7 +2055,6 @@ begin
   FCurrentBufRowNo := 0;
   FRowsObtained := 0;
   FHROWS := nil;
-  FInMemoryDataLobs := InMemoryDataLobs;
   FChunkSize := ChunkSize;
   Open;
 end;
@@ -2176,7 +2169,7 @@ begin
         Dec(fpcColumns);
       end;
     SetLength(FDBBINDSTATUSArray, fpcColumns);
-    FRowSize := PrepareOleColumnDBBindings(fpcColumns, FInMemoryDataLobs,
+    FRowSize := PrepareOleColumnDBBindings(fpcColumns,
       FDBBindingArray, prgInfo, FLobColsIndex);
     FRowCount := Max(1, FZBufferSize div NativeInt(FRowSize));
     if (MaxRows > 0) and (FRowCount > MaxRows) then

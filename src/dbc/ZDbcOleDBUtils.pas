@@ -97,7 +97,7 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; ParamInfoArray: PDBParamInfoArray;
   SupportsByRefAccessor: Boolean): DBROWOFFSET;
 
-function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; InMemoryData: Boolean;
+function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
   var LobColIndexArray: TIntegerDynArray): DBROWOFFSET;
 
@@ -506,7 +506,7 @@ begin
   Result := DBBindingArray[DBUPARAMS -1].obValue + DBBindingArray[DBUPARAMS -1].cbMaxLen;
 end;
 
-function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; InMemoryData: Boolean;
+function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
   var LobColIndexArray: TIntegerDynArray): DBROWOFFSET;
 var
@@ -518,23 +518,15 @@ var
     DBBindingArray[Index].iOrdinal := DBCOLUMNINFO^.iOrdinal;
     DBBindingArray[Index].obLength := DBBindingArray[Index].obStatus + SizeOf(DBSTATUS);
     DBBindingArray[Index].wType := MapOleTypesToZeos(DBCOLUMNINFO^.wType);
-    if (DBCOLUMNINFO^.dwFlags and DBPARAMFLAGS_ISLONG <> 0) then begin //lob's/referenced
-      if InMemoryData then begin//BLOBs as In-Memory Data version
-        //(need to release mem on freeing the rows!):
-        DBBindingArray[Index].cbMaxLen  := SizeOf(Pointer);
-        DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
-        DBBindingArray[Index].wType     := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
-        DBBindingArray[Index].dwPart    := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
-        //DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
-      end else begin //using ISeqentialStream -> Retrieve data directly from Provider
-        DBBindingArray[Index].cbMaxLen  := 0;
-        DBBindingArray[Index].dwPart    := DBPART_STATUS; //we only need a NULL indicator!
-        DBBindingArray[Index].wType     := DBCOLUMNINFO^.wType; //Save the wType to know Binary/Ansi/Unicode-Lob's later on
-        DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength;
-        //DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
-        //dirty improvements!
-        DBBindingArray[Index].obLength  := Length(LobColIndexArray); //Save the HACCESSOR lookup index -> avoid loops!
-      end;
+    if (DBCOLUMNINFO^.dwFlags and DBPARAMFLAGS_ISLONG <> 0) then begin //lob's
+      //using ISeqentialStream -> Retrieve data directly from Provider
+      DBBindingArray[Index].cbMaxLen  := 0;
+      DBBindingArray[Index].dwPart    := DBPART_STATUS; //we only need a NULL indicator!
+      DBBindingArray[Index].wType     := DBCOLUMNINFO^.wType; //Save the wType to know Binary/Ansi/Unicode-Lob's later on
+      DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength;
+      //DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
+      //dirty improvements!
+      DBBindingArray[Index].obLength  := Length(LobColIndexArray); //Save the HACCESSOR lookup index -> avoid loops!
       SetLength(LobColIndexArray, Length(LobColIndexArray)+1);
       LobColIndexArray[High(LobColIndexArray)] := Index;
     end else begin

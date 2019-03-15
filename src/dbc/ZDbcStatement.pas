@@ -5809,9 +5809,10 @@ var RawTemp: RawByteString;
 begin
   inherited BindLob(Index, SQLType, Value);
   if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then
-    if Value.IsClob then
-      Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP)
-    else begin
+    if Value.IsClob then begin
+      Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
+      BindList[Index].SQLType := stAsciiStream;
+    end else begin
       RawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
       inherited BindLob(Index, stAsciiStream, TZAbstractCLob.CreateWithData(Pointer(RawTemp),
         Length(RawTemp), ConSettings^.ClientCodePage.CP, ConSettings));
