@@ -487,6 +487,10 @@ function Max(const A, B: NativeUInt): NativeUInt; overload; {$IFDEF WITH_INLINE}
 function ReturnAddress: Pointer;
 {$IFEND}
 
+{$IF defined(CPUARM) and not defined(FPC)}
+function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt; inline;
+{$IFEND}
+
 var
   {$IFDEF FPC}
     {$PUSH}
@@ -976,6 +980,16 @@ begin
       Inc(P, L);
     end;
 end;
+
+{$IF defined(CPUARM) and not defined(FPC)}
+function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt;
+var
+  tmp: NativeUInt;
+begin
+  tmp := addr + (alignment-1);
+  result := tmp - (tmp mod alignment)
+end;
+{$IFEND}
 
 {$IFDEF ZReturnAddress}
 function ReturnAddress: Pointer;

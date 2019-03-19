@@ -2778,18 +2778,18 @@ end;
   @returns a JDBC privilege name.
 }
 function TZInterbase6DatabaseMetadata.GetPrivilege(const Privilege: string): string;
+var P: PChar absolute Privilege;
 begin
   Result := '';
   // Accept only 1-char strings
-  if Length(Privilege) <> 1 then
-    Exit;
-  case Privilege[1] of
-    'S': Result := 'SELECT';
-    'I': Result := 'INSERT';
-    'U': Result := 'UPDATE';
-    'D': Result := 'DELETE';
-    'R': Result := 'REFERENCE';
-  end;
+  if Length(Privilege) = 1 then
+    case P^ of
+      'S': Result := 'SELECT';
+      'I': Result := 'INSERT';
+      'U': Result := 'UPDATE';
+      'D': Result := 'DELETE';
+      'R': Result := 'REFERENCE';
+    end;
 end;
 
 {**

@@ -207,6 +207,8 @@ var
   EndOfStatement: Boolean;
   Extract: Boolean;
   LastComment: String;
+  P1: PChar;
+  P2: PChar absolute Temp;
 
   function CountChars(const Str: string; Chr: Char): Integer;
   var P, PEnd: PChar;
@@ -299,12 +301,10 @@ begin
               begin
                 Temp := TokenValue;
                 Extract := True;
-                while (Delimiter[1]=Temp[1]) and
-                      (Length(Delimiter) > Length(Temp))
-                       and not (TokenType in [ttWhitespace, ttEOF]) do
-                begin
+                P1 := Pointer(Delimiter);
+                while (P1^=P2^) and (Length(Delimiter) > Length(Temp)) and
+                      not (TokenType in [ttWhitespace, ttEOF]) do begin
                   SetNextToken;
-
                   if not (TokenType in [ttWhitespace, ttEOF]) then
                   begin
                     Temp := Temp + TokenValue;

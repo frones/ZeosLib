@@ -636,7 +636,7 @@ begin
       Result := GUIDToUnicode(PGUID(P)^)
     else if DT = tdsSybaseLongBinary then begin
       SetLength(Result, Len div 2);
-      Move(P^, Result[1], Len);
+      Move(P^, Pointer(Result)^, Len);
     end else if (DT = tdsImage) then
       ZSetString(P, Len, Result)
     else

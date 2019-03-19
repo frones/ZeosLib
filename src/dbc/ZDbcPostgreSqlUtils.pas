@@ -257,6 +257,7 @@ function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
   const TypeName: string): TZSQLType;
 var
   TypeNameLo: string;
+  P: PChar absolute TypeNameLo;
 begin
   TypeNameLo := LowerCase(TypeName);
   if (TypeNameLo = 'interval') or (TypeNameLo = 'char') or (TypeNameLo = 'bpchar')
@@ -322,7 +323,7 @@ begin
   end
   else if (TypeNameLo = 'int2vector') or (TypeNameLo = 'oidvector') then
     Result := stAsciiStream
-  else if (TypeNameLo <> '') and (TypeNameLo[1] = '_') then // ARRAY TYPES
+  else if (TypeNameLo <> '') and (P^ = '_') then // ARRAY TYPES
     Result := stAsciiStream
   else if (TypeNameLo = 'uuid') then
     Result := stGuid

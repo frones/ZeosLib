@@ -1255,16 +1255,16 @@ end;
 
 function TZDbLibBaseDatabaseMetadata.ConvertEscapes(const Pattern: String): String;
 var
-  EscapeChar: Char;
+  EscapeChar: PChar;
   P: PChar;
 begin
   Result := '';
-  if Length(Pattern) = 0 then Exit;
-  EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
   P := Pointer(Pattern);
+  if P = nil then Exit;
+  EscapeChar := Pointer(GetDatabaseInfo.GetSearchStringEscape);
   ClearBuf;
   while P^ <> #0 do begin
-    if (P^ = EscapeChar) and (((P+1)^ = WildcardsArray[0]) or ((P+1)^=WildcardsArray[1])) then begin
+    if (P^ = EscapeChar^) and (((P+1)^ = WildcardsArray[0]) or ((P+1)^=WildcardsArray[1])) then begin
       ToBuf('[', Result);
       Inc(P);
       ToBuf(P^, Result);
@@ -2609,6 +2609,7 @@ function TZSybaseDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: str
   const ColumnNamePattern: string): IZResultSet;
 var
   ProcNamePart: string;
+  P: PChar absolute ProcNamePart;
   NumberPart: string;
   status2: Integer;
 begin
@@ -2651,15 +2652,14 @@ begin
 
   NumberPart := '1';
   ProcNamePart := '';
-  if AnsiPos(';', ProcNamePart) > 0 then
-  begin
+  if AnsiPos(';', ProcNamePart) > 0 then begin
     NumberPart := Copy(ProcNamePart, LastDelimiter(';', ProcNamePart) + 1,
       Length(ProcNamePart));
     if NumberPart = '' then
       NumberPart := '1';
 
     ProcNamePart := Copy(ProcNamePart, 1, LastDelimiter(';', ProcNamePart));
-    if ProcNamePart[Length(ProcNamePart)] = ';' then
+    if (P+Length(ProcNamePart)-1)^ = ';' then
       Delete(ProcNamePart, Length(ProcNamePart), 1);
   end;
 //status2 is added in sybase ASE 12.5 to store the storedprocedure parameters
@@ -3141,15 +3141,14 @@ end;
 function TZSybaseDatabaseMetadata.RemoveQuotesFromIdentifier(const Identifier: String): String;
 var
   QuoteStr: String;
+  pI, pQ: PChar;
 begin
   QuoteStr := GetDatabaseInfo.GetIdentifierQuoteString;
-  if Length(Identifier) > 0 then begin
-    if (Identifier[1] = QuoteStr) and (Identifier[Length(Identifier)] = QuoteStr)
-    then Result := Copy(Identifier, 2, length(Identifier) - 2)
-    else Result := Identifier;
-  end else begin
-    Result := Identifier;
-  end;
+  pI := Pointer(Identifier);
+  pQ := Pointer(QuoteStr);
+  if (pI <> nil) and (pQ <> nil) and (pI^ = pq^) and ((pI+Length(Identifier)-1)^ = pQ^)
+  then Result := Copy(Identifier, 2, length(Identifier) - 2)
+  else Result := Identifier;
 end;
 
 {**
