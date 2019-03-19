@@ -201,7 +201,7 @@ function TZDBLibPreparedStatementEmulated.GetParamAsString(
 var
   Connection: IZDBLibConnection;
   Len: Integer;
-  P: PChar;
+  P: PAnsiChar;
 begin
   // Todo: Talk with EgonHugeist wether this requiresmodifications for his Mextgen effort
   if InParamCount <= ParamIndex
