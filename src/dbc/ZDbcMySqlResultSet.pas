@@ -63,6 +63,9 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
+  {$IFDEF BCD_TEST}
+  FmtBCD,
+  {$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,

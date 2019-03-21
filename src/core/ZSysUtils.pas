@@ -990,7 +990,6 @@ function Trim(const Value: ZWideString): ZWideString; overload;
 {$IFDEF NO_RAW_HEXTOBIN}
 function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
 {$ENDIF}
-
 {**
    Creates a memory stream with copy of data in buffer.
    If buffer contains no data, creates an empty stream.
@@ -1062,6 +1061,17 @@ procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative
 
 function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
 function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString; overload;
+
+(*function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
+function StringReplaceAll_CI_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;*)
+
+function BcdToSQLRaw(const Value: TBCD): RawByteString;
+function BcdToSQLUni(const Value: TBCD): ZWideString;
+
+procedure BCD2Int64(const Value: TBCD; out Result: Int64); overload;
+function BCD2Int64(const Value: TBCD): Int64; overload;
+procedure BCD2UInt64(const Value: TBCD; out Result: UInt64); overload;
+function BCD2UInt64(const Value: TBCD): UInt64; overload;
 
 var
   ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
@@ -5976,6 +5986,7 @@ begin
     Inc(P);
   while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
     Dec(PEnd);
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(P, PEnd-P+1, Result);
 end;
 
@@ -6206,6 +6217,7 @@ end;
 }
 procedure ScaledOrdinal2Bcd(Value: UInt64; Scale: Byte; var Result: TBCD; Negative: Boolean);
 var V2: UInt64;
+  B: Cardinal; //D7 int overflow -> reason unknown
   Precision, Place: Byte;
 begin
   {$R-} {$Q-}
@@ -6213,7 +6225,8 @@ begin
   if Odd(Precision) then begin
     v2 := Value div 10;
     Result.Precision := Precision+1;
-    Result.Fraction[Precision div 2] := Byte(Value-(V2*10)) shl 4;
+    B := (Value-(V2*10)) shl 4;
+    Result.Fraction[Precision div 2] := Byte(B);
     Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
     Value := V2;
   end else begin
@@ -6223,7 +6236,8 @@ begin
   if Precision > 1 then begin
     for Place := (Precision div 2)-1 downto 1 do begin
       v2 := Value div 100;
-      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(Value-(V2*100))];
+      B := Value-(V2*100);
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
       Value := V2;
     end;
     Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
@@ -6256,7 +6270,7 @@ end;
    @param Negative the converted value was negative
 }
 procedure ScaledOrdinal2Bcd(Value: Cardinal; Scale: Byte; var Result: TBCD; Negative: Boolean);
-var V2: Cardinal;
+var V2, B: Cardinal; //B: D7 int overflow -> reason unknown
   Precision, Place: Byte;
 begin
   {$R-} {$Q-}
@@ -6264,7 +6278,8 @@ begin
   if Odd(Precision) then begin
     v2 := Value div 10;
     Result.Precision := Precision+1;
-    Result.Fraction[Precision div 2] := Byte(Value{%H-}-(V2*10)) shl 4;
+    B := Value{%H-}-(V2*10);
+    Result.Fraction[Precision div 2] := B shl 4;
     Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
     Value := V2;
   end else begin
@@ -6274,7 +6289,8 @@ begin
   if Precision > 1 then begin
     for Place := (Precision div 2)-1 downto 1 do begin
       v2 := Value div 100;
-      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(Value{%H-}-(V2*100))];
+      B := Value{%H-}-(V2*100);
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
       Value := V2;
     end;
     Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
@@ -6307,7 +6323,7 @@ end;
    @param Negative the converted value was negative
 }
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean);
-var V2: Word;
+var V2, B: Word;
   Precision: Byte;
 begin
   {$R-} {$Q-}
@@ -6315,7 +6331,8 @@ begin
   if Odd(Precision) then begin
     v2 := Value div 10;
     Result.Precision := Precision+1;
-    Result.Fraction[Precision div 2] := Byte(Value-(V2*10)) shl 4;
+    B := (Value-(V2*10)) shl 4;
+    Result.Fraction[Precision div 2] := Byte(B);
     Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
     Value := V2;
   end else begin
@@ -6326,7 +6343,8 @@ begin
   if Precision > 1 then
     if Precision >= 4 then begin
       v2 := Value div 100;
-      PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(Value-(V2*100))] shl 8;
+      B := Value-(V2*100);
+      PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
     end else
       Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -6407,11 +6425,103 @@ begin
     IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
   until IPos = 0;
   if (PSrc <= PEnd) then begin
-    Move(PSrc^, PRes^, (NativeUInt(PEnd)-NativeUint(PSrc)+2));
+    Move(PSrc^, PRes^, (PAnsiChar(PEnd)-PAnsiChar(PSrc)+2));
     Inc(Pres, (PEnd-PSrc+1));
   end;
   SetLength(Result, L-(PResEnd-PRes));
 end;
+
+
+procedure BCD2Int64(const Value: TBCD; out Result: Int64);
+begin
+  Result := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(BcdToStr(Value), 0);
+end;
+
+function BCD2Int64(const Value: TBCD): Int64; overload;
+begin
+  BCD2Int64(Value, Result);
+end;
+
+procedure BCD2UInt64(const Value: TBCD; out Result: UInt64);
+begin
+  Result := {$IFDEF UNICODE}UnicodeToUInt64Def{$ELSE}RawToUInt64Def{$ENDIF}(BcdToStr(Value), Uint64(0));
+end;
+
+function BCD2UInt64(const Value: TBCD): UInt64;
+begin
+  BCD2UInt64(Value, Result);
+end;
+
+(*function GetStringReplaceAllIndices(Source, OldPattern: PAnsiChar; SourceLen, OldPatternLen: Integer): TIntegerDynArray; overload;
+var
+  iPos, L: Integer;
+  ArrIdx: Byte;
+  PosArr: Array[1..256] of Integer;
+begin
+  ArrIdx := 0;
+  Result := nil;
+  L := 0;
+  iPos := PosEx(OldPattern, Source, OldPatternLen, SourceLen);
+  while iPos > 0 do begin
+    if (ArrIdx = High(Byte)) then begin
+      SetLength(Result, L+ArrIdx);
+      Move(PosArr[1], Result[L], ArrIdx*SizeOf(Integer));
+      L := L + ArrIdx;
+      ArrIdx := 0;
+    end;
+    Inc(ArrIdx);
+    PosArr[ArrIdx] := iPos;
+    iPos := PosEx(OldPattern, Source, OldPatternLen, SourceLen, iPos+1);
+  end;
+  if ArrIdx > 0 then begin
+    SetLength(Result, L+ArrIdx);
+    Move(PosArr[1], Result[L], ArrIdx*SizeOf(Integer));
+  end;
+end;
+
+function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
+var AllIndices: TIntegerDynArray;
+  I, L, LS, LOP, LNP: Integer;
+  pS, pNP, pRes: PAnsiChar;
+begin
+  LS := Length(Source);
+  LNP := Length(NewPattern);
+  LOP := Length(OldPattern);
+  pS := Pointer(Source);
+  pNP := Pointer(NewPattern);
+  AllIndices := GetStringReplaceAllIndices(ps, Pointer(OldPattern), LS, LOP);
+  L := Length(AllIndices);
+  if L = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  SetLength(Result, LS+(L*(LNP-LOP)));
+  pRes := Pointer(Result);
+  for I := 0 to L-1 do begin
+    Move((Ps+Ps(I*IPos)^, PRes^, AllIndices[I]-Lop);
+
+  end;
+end;
+
+function StringReplaceAll_CI_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString;
+var AllIndices: TIntegerDynArray;
+  S, OP: RawByteString;
+begin
+  S := UpperCase(Source);
+  Op := UpperCase(OldPattern);
+  AllIndices := GetStringReplaceAllIndices(Pointer(S), Pointer(OP), Length(S), Length(Op));
+end;*)
+
+function BcdToSQLRaw(const Value: TBCD): RawByteString;
+begin
+  Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
+end;
+
+function BcdToSQLUni(const Value: TBCD): ZWideString;
+begin
+  Result := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(BCDToStr(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
+end;
+
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
 procedure BoolConstFiller;

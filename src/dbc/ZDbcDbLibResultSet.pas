@@ -65,6 +65,7 @@ uses
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
   ZPlainDbLibConstants, ZPlainDBLibDriver;
@@ -153,7 +154,11 @@ type
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
+    {$ELSE !BCD_TEST}
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
+    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
@@ -631,7 +636,7 @@ begin
       Result := GUIDToUnicode(PGUID(P)^)
     else if DT = tdsSybaseLongBinary then begin
       SetLength(Result, Len div 2);
-      Move(P^, Result[1], Len);
+      Move(P^, Pointer(Result)^, Len);
     end else if (DT = tdsImage) then
       ZSetString(P, Len, Result)
     else
@@ -885,9 +890,15 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF BCD_TEST}
+procedure TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+begin
+  Result := DoubleToBCD(GetDouble(ColumnIndex));
+{$ELSE !BCD_TEST}
 function TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
   Result := GetDouble(ColumnIndex);
+{$ENDIF !BCD_TEST}
 end;
 
 {**

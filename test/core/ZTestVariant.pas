@@ -230,7 +230,11 @@ begin
   CheckEquals(False, Manager.GetAsBoolean(Value));
   CheckEquals('', Manager.GetAsString(Value));
   CheckEquals(0, Manager.GetAsInteger(Value));
+  {$IFDEF BCD_TEST}
+  CheckEquals(0.0, Manager.GetAsDouble(Value), 0.001);
+  {$ELSE}
   CheckEquals(0.0, Manager.GetAsFloat(Value), 0.001);
+  {$ENDIF}
 end;
 
 {**
@@ -248,7 +252,11 @@ begin
   CheckEquals(True, Manager.GetAsBoolean(Value));
   CheckEquals(StrTrueUp, Manager.GetAsString(Value));
   CheckEquals(1, Manager.GetAsInteger(Value));
+  {$IFDEF BCD_TEST}
+  CheckEquals(1, Manager.GetAsDouble(Value));
+  {$ELSE}
   CheckEquals(1, Manager.GetAsFloat(Value));
+  {$ENDIF}
 end;
 
 {**
@@ -267,7 +275,11 @@ begin
   CheckEquals(True, Manager.GetAsBoolean(Value));
   CheckEquals('123', Manager.GetAsString(Value));
   CheckEquals(123, Manager.GetAsInteger(Value));
+  {$IFDEF BCD_TEST}
+  CheckEquals(123, Manager.GetAsDouble(Value), 0.1);
+  {$ELSE}
   CheckEquals(123, Manager.GetAsFloat(Value), 0.1);
+  {$ENDIF}
 end;
 
 {**
@@ -288,7 +300,11 @@ begin
   Check(not Manager.IsNull(Value));
   CheckEquals(True, Manager.GetAsBoolean(Value));
   CheckEquals(123, Manager.GetAsInteger(Value));
+  {$IFDEF BCD_TEST}
+  CheckEquals(123, Manager.GetAsDouble(Value), 0.1);
+  {$ELSE}
   CheckEquals(123, Manager.GetAsFloat(Value), 0.1);
+  {$ENDIF}
 end;
 
 {**
@@ -298,16 +314,26 @@ procedure TZTestVariantCase.TestDouble;
 var
   Value: TZVariant;
 begin
+  {$IFDEF BCD_TEST}
+  Manager.SetAsDouble(Value, 123.456);
+  CheckEquals(123.456, Value.VDouble, 0.001);
+  CheckEquals(Ord(vtDouble), Ord(Value.VType));
+  {$ELSE}
   Manager.SetAsFloat(Value, 123.456);
-
   CheckEquals(123.456, Value.VFloat, 0.001);
   CheckEquals(Ord(vtFloat), Ord(Value.VType));
+  {$ENDIF}
+
 
   Check(not Manager.IsNull(Value));
   CheckEquals(True, Manager.GetAsBoolean(Value));
   CheckEquals('123.456', Manager.GetAsString(Value));
   CheckEquals(123, Manager.GetAsInteger(Value));
+  {$IFDEF BCD_TEST}
+  CheckEquals(123.456, Manager.GetAsDouble(Value), 0.001);
+  {$ELSE}
   CheckEquals(123.456, Manager.GetAsFloat(Value), 0.001);
+  {$ENDIF}
 end;
 
 {**

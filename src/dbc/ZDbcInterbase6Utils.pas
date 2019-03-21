@@ -2221,9 +2221,10 @@ procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: B
 var
   Nibbles, BCDScale, P, I, F: Byte;
   i64: Int64;
-  Negative: boolean;
+  Negative, OddPrec: boolean;
 begin
-  Nibbles := Value.Precision div 2;
+  Nibbles := (Value.Precision+1) div 2;
+  OddPrec := Odd(Value.Precision) and ((Value.Fraction[Nibbles-1] and $0f) = 0);
   F := Value.SignSpecialPlaces;
   BCDScale := (F and 63);
   Negative := (F and $80) <> 0;
@@ -2245,16 +2246,19 @@ begin
   { initialize the Result }
   i64 := F;
   if Nibbles > 0 then begin
-    for I := P to Nibbles-1-Ord(Odd(BCDScale)) do
+    for I := P to Nibbles-1-Ord(OddPrec) do
       i64 := i64 * 100 + ZBcdNibble2Base100ByteLookup[Value.Fraction[i]];
-    if Odd(BCDScale) then begin
+    if OddPrec then begin
       i64 := i64 * 10 + Value.Fraction[P+Nibbles-2] shr 4;
       Dec(BCDScale);
     end;
     if negative then
       i64 := -i64;
     if BCDScale < Scale then
-      i64 := i64 * IBScaleDivisor[scale-BCDScale];
+      i64 := i64 * IBScaleDivisor[BCDScale-scale]
+    else if BCDScale > Scale then
+      i64 := i64 div IBScaleDivisor[scale-BCDScale]
+
   end;
   case DestSize of
     8: PInt64(Dest)^ := i64;

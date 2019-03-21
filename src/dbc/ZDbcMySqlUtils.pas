@@ -599,6 +599,7 @@ var
   TempPos: Integer;
   pB, pC: Integer;
   Signed: Boolean;
+  P: PAnsiChar;
 label SetLobSize, lByte, lWord, lLong, lLongLong;
 begin
   TypeInfoSecond := '';
@@ -672,10 +673,10 @@ lLong:
     end else begin
       pC := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond);
       if pC > 0 then begin
-        TypeInfoSecond[pC] := #0;
-        ColumnSize := RawToIntDef(@TypeInfoSecond[1], 0);
-        Scale := RawToIntDef(@TypeInfoSecond[pC+1], 0);
-        TypeInfoSecond[pC] := ',';
+        P := Pointer(TypeInfoSecond);
+        PByte(P+pC-1)^ := Ord(#0);
+        ColumnSize := RawToIntDef(P, 0);
+        Scale := RawToIntDef(P+pC, 0);
       end;
       if Scale = 0 then
         if ColumnSize < 10 then

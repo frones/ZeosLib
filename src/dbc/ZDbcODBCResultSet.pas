@@ -210,7 +210,7 @@ implementation
 
 uses Math,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcODBCStatement, ZDbcProperties,
+  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcProperties,
   ZClasses, ZDbcUtils;
 
 { TAbstractODBCResultSet }

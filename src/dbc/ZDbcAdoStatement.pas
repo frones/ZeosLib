@@ -812,8 +812,14 @@ begin
         ClientVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
         ClientVarManager.SetAsInteger(Result, Temp);
+      {$IFDEF BCD_TEST}
+      stFloat, stDouble: ClientVarManager.SetAsDouble(Result, Temp);
+      stCurrency:        ClientVarManager.SetAsCurrency(Result, Temp);
+      stBigDecimal:      ClientVarManager.SetAsDouble(Result, Temp);
+      {$ELSE}
       stFloat, stDouble, stCurrency, stBigDecimal:
         ClientVarManager.SetAsFloat(Result, Temp);
+      {$ENDIF}
       stGUID:
         ClientVarManager.SetAsString(Result, Temp);
       stString, stAsciiStream:

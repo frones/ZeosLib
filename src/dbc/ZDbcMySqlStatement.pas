@@ -59,6 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
   ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils;
 
@@ -2025,9 +2026,13 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: Extended);
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
+  {$IFDEF BCD_TEST}
+  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, BCDToDouble(Value));
+  {$ELSE}
   InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, Value);
+  {$ENDIF}
 end;
 
 {**

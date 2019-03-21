@@ -73,9 +73,9 @@ type
     FSearchable: Boolean;
     FCurrency: Boolean; //note we'll map all fixed numbers to stCurrency(ftBCD)
                         //if Scale&Precision allows it. But if a field is a true
-                        //currency field like MS-Money should be indicated here
+                        //currency field like MS/PG-Money should be indicated here
     FNullable: TZColumnNullableType;
-    FSigned: Boolean;
+    FSigned: Boolean; //signed ordinals or fixed with datatype?
     FColumnDisplaySize: Integer;
     FCharOctedLength: Integer;
     FColumnLabel: string;
@@ -319,6 +319,12 @@ begin
       end
   else
     ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
+  {Precision or column-size}
+  if not TableColumns.IsNull(TableColColumnSizeIndex) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+  {Scale}
+  if not TableColumns.IsNull(TableColColumnDecimalDigitsIndex) then
+    ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
   {nullable}
   if not TableColumns.IsNull(TableColColumnNullableIndex) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));

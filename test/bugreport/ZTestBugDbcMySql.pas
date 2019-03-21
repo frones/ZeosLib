@@ -78,7 +78,7 @@ type
 
 implementation
 
-uses ZTestCase, ZSysUtils;
+uses ZTestCase, ZSysUtils {$IFDEF BCD_TEST},FmtBCD{$ENDIF};
 
 { TZTestDbcMySQLBugReport }
 
@@ -208,6 +208,7 @@ const
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
+  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   if SkipForReason(srClosedBug) then Exit;
 
@@ -222,7 +223,7 @@ begin
   with ResultSet do
   begin
     MoveToInsertRow;
-    UpdateBigDecimal(fld1_Index, 2147483648);
+    UpdateBigDecimal(fld1_Index, {$IFDEF BCD_TEST}StrToBCD('2147483648'){$ELSE}2147483648{$ENDIF});
     InsertRow;
     Close;
   end;
@@ -232,7 +233,12 @@ begin
   with ResultSet do
   begin
     Next;
+    {$IFDEF BCD_TEST}
+    GetBigDecimal(fld1_Index, BCD);
+    CheckEquals('2147483648', BCDToStr(BCD));
+    {$ELSE}
     CheckEquals(2147483648, GetBigDecimal(fld1_Index));
+    {$ENDIF}
     Close;
   end;
     ResultSet := nil;

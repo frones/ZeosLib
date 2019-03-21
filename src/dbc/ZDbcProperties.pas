@@ -411,9 +411,6 @@ const
   // Type: STR
   // ?
   ConnProps_Initial_Catalog = 'Initial Catalog';
-  // Type: BOOLEAN
-  // ?
-  DSProps_InMemoryDataLobs = 'InMemoryDataLobs';
 {$ENDIF}
 
 {$IFDEF ENABLE_ODBC}

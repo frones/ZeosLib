@@ -60,6 +60,7 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFNDEF FPC}{$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
@@ -121,7 +122,11 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    {$ELSE}
     function GetBigDecimal(ColumnIndex: Integer): Extended;
+    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -867,6 +872,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF BCD_TEST}
+procedure TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+begin
+  LastwasNull := not TryStrToBCD(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+{$ELSE}
 function TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -880,6 +890,7 @@ begin
     Result := 0
   else
     pgSQLStrToFloatDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0, Result);
+{$ENDIF}
 end;
 
 {**

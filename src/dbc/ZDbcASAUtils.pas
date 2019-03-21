@@ -59,6 +59,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging, ZCompatibility, ZDbcASA,
   ZDbcStatement, ZVariant, ZPlainASAConstants;
 
@@ -103,11 +104,12 @@ type
     procedure UpdateWord(const Index: Integer; Value: Word);
     procedure UpdateInt(const Index: Integer; Value: Integer);
     procedure UpdateUInt(const Index: Integer; Value: LongWord);
-    procedure UpdateLong(const Index: Integer; Value: Int64);
-    procedure UpdateULong(const Index: Integer; Value: UInt64);
+    procedure UpdateLong(const Index: Integer; const Value: Int64);
+    procedure UpdateULong(const Index: Integer; const Value: UInt64);
     procedure UpdateFloat(const Index: Integer; Value: Single);
-    procedure UpdateDouble(const Index: Integer; Value: Double);
-    procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
+    procedure UpdateDouble(const Index: Integer; const Value: Double);
+    procedure UpdateCurrency(const Index: Integer; const Value: Currency);
+    procedure UpdateBigDecimal(const Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
     procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -169,11 +171,12 @@ type
     procedure UpdateWord(const Index: Integer; Value: Word);
     procedure UpdateInt(const Index: Integer; Value: Integer);
     procedure UpdateUInt(const Index: Integer; Value: LongWord);
-    procedure UpdateLong(const Index: Integer; Value: Int64);
-    procedure UpdateULong(const Index: Integer; Value: UInt64);
+    procedure UpdateLong(const Index: Integer; const Value: Int64);
+    procedure UpdateULong(const Index: Integer; const Value: UInt64);
     procedure UpdateFloat(const Index: Integer; Value: Single);
-    procedure UpdateDouble(const Index: Integer; Value: Double);
-    procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
+    procedure UpdateDouble(const Index: Integer; const Value: Double);
+    procedure UpdateCurrency(const Index: Integer; const Value: Currency);
+    procedure UpdateBigDecimal(const Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
     procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -704,7 +707,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateLong(const Index: integer; Value: Int64);
+procedure TZASASQLDA.UpdateLong(const Index: integer; const Value: Int64);
 begin
   SetFieldType( Index, DT_BIGINT or 1, SizeOf( Int64));
   with FSQLDA.sqlvar[Index] do
@@ -720,7 +723,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateULong(const Index: integer; Value: UInt64);
+procedure TZASASQLDA.UpdateULong(const Index: integer; const Value: UInt64);
 begin
   SetFieldType( Index, DT_UNSBIGINT or 1, SizeOf(UInt64));
   with FSQLDA.sqlvar[Index] do
@@ -752,7 +755,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateDouble(const Index: Integer; Value: Double);
+procedure TZASASQLDA.UpdateDouble(const Index: Integer; const Value: Double);
 begin
   SetFieldType( Index, DT_DOUBLE or 1, SizeOf( Double));
   with FSQLDA.sqlvar[Index] do
@@ -768,12 +771,13 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
+procedure TZASASQLDA.UpdateBigDecimal(const Index: Integer;
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
   SetFieldType( Index, DT_DOUBLE or 1, SizeOf( Double));
   with FSQLDA.sqlvar[Index] do
   begin
-    PDouble(sqldata)^ := Value;
+    PDouble(sqldata)^ := {$IFDEF BCD_TEST}BCDToDouble(Value){$ELSE}Value{$ENDIF};
     if (sqlind <> nil) then
        sqlind^ := 0; // not null
   end;
@@ -836,6 +840,12 @@ begin
     if (sqlind <> nil) then
       sqlind^ := 0; // not null
   end;
+end;
+
+procedure TZASASQLDA.UpdateCurrency(const Index: Integer;
+  const Value: Currency);
+begin
+  UpdateDouble(Index, Value);
 end;
 
 {**
@@ -1090,7 +1100,7 @@ begin
       GetMem(Buffer, PZASABlobStruct( sqlData).untrunc_len);
       SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
       ReadBlob(Index, Buffer, Length(Str));
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Str[1], PZASABlobStruct( sqlData).untrunc_len);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Str)^, PZASABlobStruct( sqlData).untrunc_len);
       FreeMem(buffer);
     end
     else
@@ -1465,15 +1475,29 @@ begin
         stLong:
           ParamSqlData.UpdateLong( i,
             ClientVarManager.GetAsInteger( InParamValues[i]));
+        {$IFDEF BCD_TEST}
+        stFloat:
+          ParamSqlData.UpdateFloat( i,
+            ClientVarManager.GetAsDouble( InParamValues[i]));
+        stDouble:
+          ParamSqlData.UpdateDouble( i,
+            ClientVarManager.GetAsDouble( InParamValues[i]));
+        stCurrency: ParamSqlData.UpdateCurrency( i,
+            ClientVarManager.GetAsCurrency( InParamValues[i]));
+        stBigDecimal:
+          ParamSqlData.UpdateBigDecimal( i,
+            ClientVarManager.GetAsBigDecimal( InParamValues[i]));
+        {$ELSE}
         stFloat:
           ParamSqlData.UpdateFloat( i,
             ClientVarManager.GetAsFloat( InParamValues[i]));
-        stDouble:
+        stDouble, stCurrency:
           ParamSqlData.UpdateDouble( i,
             ClientVarManager.GetAsFloat( InParamValues[i]));
         stBigDecimal:
           ParamSqlData.UpdateBigDecimal( i,
             ClientVarManager.GetAsFloat( InParamValues[i]));
+        {$ENDIF}
         stString, stUnicodeString:
           begin
             CharRec := ClientVarManager.GetAsCharRec( InParamValues[i], ConSettings^.ClientCodePage^.CP);

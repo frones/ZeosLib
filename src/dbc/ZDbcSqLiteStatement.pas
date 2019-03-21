@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
   ZVariant, Types;
 
@@ -546,7 +546,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLiteCAPIPreparedStatement.SetBigDecimal(ParameterIndex: Integer;
-  const Value: Extended);
+  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
 begin
   {$IFDEF BCD_TEST}
   SetDouble(ParameterIndex, BCDToDouble(Value));

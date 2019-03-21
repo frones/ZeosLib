@@ -3231,9 +3231,16 @@ var
   PostgreSQLConnection: IZPostgreSQLConnection;
 begin
   PostgreSQLConnection := GetConnection as IZPostgreSQLConnection;
+
   Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, OID, AttTypMod);
-  if Result = stUnknown then
+  if Result = stUnknown then begin
     Result := PostgreSQLToSQLType(PostgreSQLConnection, PostgreSQLConnection.GetTypeNameByOid(Oid));
+    {$IFDEF BCD_TEST}
+    if Result = stBigDecimal then //Currency range?
+      Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, NUMERICOID, AttTypMod);
+    {$ENDIF}
+  end;
+
 end;
 
 function TZPostgreSQLDatabaseMetadata.InternalUncachedGetColumns(const Catalog,
@@ -3489,31 +3496,31 @@ var
   PrevChar: Char;
   InQuotes: Boolean;
   I, BeginIndex: Integer;
+  P: PChar;
 begin
   if AclString = '' then Exit;
   InQuotes := False;
   PrevChar := ' ';
   BeginIndex := 2;
-  for I := BeginIndex to Length(AclString) do
-  begin
-    if (AclString[I] = '"') and (PrevChar <> '\' ) then
-      InQuotes := not InQuotes
-    else if (AclString[I] = ',') and not InQuotes then
-    begin
+  P := Pointer(AclString);
+  for I := BeginIndex to Length(AclString) do begin
+    Inc(P);
+    if (P^ = '"') and (PrevChar <> '\' )
+    then InQuotes := not InQuotes
+    else if (P^ = ',') and not InQuotes then begin
       List.Add(Copy(AclString, BeginIndex, I - BeginIndex));
       BeginIndex := I+1;
     end;
-    PrevChar := AclString[I];
+    PrevChar := P^;
   end;
 
   // add last element removing the trailing "}"
   List.Add(Copy(AclString, BeginIndex, Length(AclString) - BeginIndex));
 
   // Strip out enclosing quotes, if any.
-  for I := 0 to List.Count-1 do
-  begin
-    if (List.Strings[i][1] = '"')
-      and (List.Strings[i][Length(List.Strings[i])] = '"') then
+  for I := 0 to List.Count-1 do begin
+    P := Pointer(List.Strings[i]);
+    if (P^ = '"') and ((P+Length(List.Strings[i])-1)^ = '"') then
       List.Strings[i] := Copy(List.Strings[i], 2, Length(List.Strings[i])-2);
   end;
 end;
@@ -3625,29 +3632,29 @@ function TZPostgreSQLIdentifierConvertor.ExtractQuote(
   const Value: string): string;
 var
   QuoteDelim: string;
+  P: PChar absolute QuoteDelim;
 begin
-  if IsQuoted(Value) then
-  begin
+  if IsQuoted(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     case Length(QuoteDelim) of
-      1: Result := SQLDequotedStr(Value, QuoteDelim[1]);
-      2: Result := SQLDequotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
-      else
-        Result := Value;
+      1: Result := SQLDequotedStr(Value, P^);
+      2: Result := SQLDequotedStr(Value, P^, (P+1)^);
+      else Result := Value;
     end;
-  end
-  else
+  end else
     Result := AnsiLowerCase(Value);
 end;
 
 function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
+  pQ, pV: PChar;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := (QuoteDelim <> '') and (Value <> '') and
-            (Value[1] = QuoteDelim[1]) and
-            (Value[Length(Value)] = QuoteDelim[Length(QuoteDelim)]);
+  pQ := Pointer(QuoteDelim);
+  pV := Pointer(Value);
+  Result := (pQ <> nil) and (pV <> nil) and (pQ^ = pV^) and
+            ((pV+Length(Value)-1)^ = (pQ+Length(QuoteDelim)-1)^);
 end;
 
 function TZPostgreSQLIdentifierConvertor.IsSpecialCase(
@@ -3672,17 +3679,16 @@ end;
 function TZPostgreSQLIdentifierConvertor.Quote(const Value: string): string;
 var
   QuoteDelim: string;
+  P: PChar absolute QuoteDelim;
 begin
   Result := Value;
-  if IsCaseSensitive(Value) then
-  begin
+  if IsCaseSensitive(Value) then begin
     QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
     case Length(QuoteDelim) of
       0: Result := Value;
-      1: Result := SQLQuotedStr(Value, QuoteDelim[1]);
-      2: Result := SQLQuotedStr(Value, QuoteDelim[1], QuoteDelim[2]);
-      else
-        Result := Value;
+      1: Result := SQLQuotedStr(Value, P^);
+      2: Result := SQLQuotedStr(Value, P^, (P+1)^);
+      else Result := Value;
     end;
   end;
 end;

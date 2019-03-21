@@ -182,6 +182,9 @@ procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline
 function PGNumeric2Currency(P: Pointer): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
+procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
+
 function PGCash2Currency(P: Pointer): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -212,13 +215,13 @@ function ARR_DATA_PTR(a: PArrayType): Pointer;
 
 const MinPGNumSize = (1{ndigits}+1{weight}+1{sign}+1{dscale})*SizeOf(Word);
 const MaxCurr2NumSize = MinPGNumSize+(5{max 5 NBASE ndigits}*SizeOf(Word));
-const MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 5 NBASE ndigits}*SizeOf(Word));
+const MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 16 NBASE ndigits}*SizeOf(Word));
 
 const ZSQLType2PGBindSizes: array[stUnknown..stGUID] of Integer = (-1,
     SizeOf(Byte){stBoolean},
     SizeOf(SmallInt){stByte}, SizeOf(SmallInt){stShort}, SizeOf(Integer){stWord},
     SizeOf(SmallInt){stSmall}, SizeOf(Cardinal){stLongWord}, SizeOf(Integer){stInteger}, SizeOf(Int64){stULong}, SizeOf(Int64){stLong},  //ordinals
-    SizeOf(Single){stFloat}, SizeOf(Double){stDouble}, MaxCurr2NumSize{stCurrency}, -1{stBigDecimal}, //floats
+    SizeOf(Single){stFloat}, SizeOf(Double){stDouble}, MaxCurr2NumSize{stCurrency}, {$IFDEF BCD_TEST}MaxBCD2NumSize{$ELSE}-1{$ENDIF}{stBigDecimal}, //floats
     SizeOf(Integer){stDate}, 8{stTime}, 8{stTimestamp},
     SizeOf(TGUID){stGUID});
 
@@ -238,7 +241,7 @@ const ZSQLType2OID: array[Boolean, stUnknown..stBinaryStream] of OID = (
     VARCHAROID, VARCHAROID, BYTEAOID,
     TEXTOID, TEXTOID, OIDOID));
 
-  {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
@@ -254,6 +257,7 @@ function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
   const TypeName: string): TZSQLType;
 var
   TypeNameLo: string;
+  P: PChar absolute TypeNameLo;
 begin
   TypeNameLo := LowerCase(TypeName);
   if (TypeNameLo = 'interval') or (TypeNameLo = 'char') or (TypeNameLo = 'bpchar')
@@ -290,9 +294,13 @@ begin
     Result := stLong
   else if TypeNameLo = 'float4' then
     Result := stFloat
-  else if (TypeNameLo = 'float8') or (TypeNameLo = 'decimal')
-    or (TypeNameLo = 'numeric') then
+  else if (TypeNameLo = 'float8') {$IFNDEF BCD_TEST}or (TypeNameLo = 'decimal')
+    or (TypeNameLo = 'numeric'){$ENDIF} then
     Result := stDouble
+  {$IFDEF BCD_TEST}
+  else if (TypeNameLo = 'decimal') or (TypeNameLo = 'numeric') then
+    Result := stBigDecimal
+  {$ENDIF}
   else if TypeNameLo = 'money' then
     Result := stCurrency
   else if TypeNameLo = 'bool' then
@@ -315,7 +323,7 @@ begin
   end
   else if (TypeNameLo = 'int2vector') or (TypeNameLo = 'oidvector') then
     Result := stAsciiStream
-  else if (TypeNameLo <> '') and (TypeNameLo[1] = '_') then // ARRAY TYPES
+  else if (TypeNameLo <> '') and (P^ = '_') then // ARRAY TYPES
     Result := stAsciiStream
   else if (TypeNameLo = 'uuid') then
     Result := stGuid
@@ -372,7 +380,7 @@ begin
       //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
         if TypeModifier <> -1 then begin
           Scale := (TypeModifier - VARHDRSZ) and $FFFF;
-          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF <= sAlignCurrencyScale2Precision[Scale]) then
+          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF < sAlignCurrencyScale2Precision[Scale]) then
             Result := stCurrency
         end;
       end;
@@ -1303,6 +1311,77 @@ R1BDigit: Word2PG(Word(Int64Rec(u64).Words[0]), @Numeric_External.digits[0]);
   {$ENDIF CPU64}
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
+const WordFactors: array[0..3] of Integer = (1000, 100, 10, 1);
+procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
+var
+  pNibble, PLastNibble, pWords: PAnsichar;
+  FactorIndexOrScale: Integer;
+  GetFirstBCDHalfByte: Boolean;
+  label next_nibble, SetWord, Done;
+begin
+  //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html#a3ae98a87bbc2d0dfc9cbe3d5845e0035
+  pNibble := @Src.Fraction[0];
+  if Src.Precision > 0 then begin
+    pLastNibble := pNibble + (Src.Precision+1) shr 1;
+    if PByte(pNibble)^ = 0 then begin
+      // ... skip leading zeroes (scale > precision)
+      while (pNibble <= pLastNibble-1) and (PWord(pNibble)^ = 0) do
+        Inc(pNibble, 2);
+      Inc(pNibble, Ord((pNibble <= pLastNibble) and (PByte(pNibble)^ = 0)));
+    end;
+  end else
+    pLastNibble := pNibble -1;
+  if (pLastNibble < pNibble) then begin //zero!
+    PInt64(Dst)^ := 0; //clear NBSEDigit, weight, sign, dscale  once
+    Size := 8;
+    Exit;
+  end;
+  GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0; //skip first half byte?
+
+  FactorIndexOrScale := 0;
+  PWords := Dst + 8; //set entry ptr
+  pWord(PWords)^ := 0; //init first NBASE digit
+next_nibble:
+  if GetFirstBCDHalfByte
+  then PWord(pWords)^ := PWord(pWords)^ + ((PByte(pNibble)^ shr 4) * WordFactors[FactorIndexOrScale])
+  else begin
+    PWord(pWords)^ := PWord(pWords)^ + ((PByte(pNibble)^ and $0f) * WordFactors[FactorIndexOrScale]);
+    Inc(pNibble); //next nibble
+    if (pNibble > pLastNibble)
+    then goto SetWord;
+  end;
+  if FactorIndexOrScale = 3 then begin
+SetWord:
+    {$IFNDEF ENDIAN_BIG}
+    Reverse2Bytes(PWords);
+    {$ENDIF !ENDIAN_BIG}
+    Inc(pWords, SizeOf(Word));
+    if (pNibble <= pLastNibble) then begin
+      PWord(pWords)^ := 0;
+      FactorIndexOrScale := 0;
+    end else
+      goto Done;
+  end else
+    Inc(FactorIndexOrScale);
+  GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
+  goto next_nibble;
+Done:
+  Size := (PWords - Dst - 8) shr 1; //count of nbase digits
+  Word2PG(Word(Size), Dst); //NBASEDigits
+  FactorIndexOrScale := Src.SignSpecialPlaces and 63;
+  //https://www.postgresql.org/message-id/491DC5F3D279CD4EB4B157DDD62237F404E27FE9%40zipwire.esri.com
+  SmallInt2PG(Size-((FactorIndexOrScale+1) shr 2), Dst+2);//weight
+  if Src.SignSpecialPlaces and (1 shl 7) <> 0 //sign
+  then Word2PG(NUMERIC_NEG, Dst+4)
+  else PWord(Dst+4)^ := NUMERIC_POS;
+  Word2PG(Word(FactorIndexOrScale), Dst+6); //dscale
+  Size := (pWords - Dst); //return size in bytes
+end;
+
+procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
+begin
+end;
 
 function PGCash2Currency(P: Pointer): Currency;
 begin

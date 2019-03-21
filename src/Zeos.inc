@@ -41,6 +41,7 @@
 {********************************************************@}
 {.$DEFINE ZEOS_TEST_ONLY}
 {.$DEFINE GENERIC_INDEX}
+{.$DEFINE BCD_TEST}
 //common compilation directives
 {$DEFINE ZEOS72UP}
 {$DEFINE ZEOS73UP}
@@ -206,6 +207,7 @@
                   {$DEFINE WITH_FORMATSETTINGS}
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
+                  {$DEFINE HAVE_BCDTOSTR_FORMATSETTINGS} //(Try)BCDToStr/StrToBCD has parameter FormatSettings
                   {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
 
                   {$IF CompilerVersion >= 23} //Delphi XE2+
@@ -287,6 +289,9 @@
                           {$DEFINE TFIELD_HAS_ASLONGWORD}       //TField has supports virtual AsLongWord Gettet & Setter
                           {$IFDEF NEXTGEN}
                             {$DEFINE WITH_TSYSCHARSET_DEPRECATED}
+                            {$IFDEF CPUARM} 
+                              {$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT} //see https://sourceforge.net/p/zeoslib/tickets/337/
+                            {$ENDIF}
                           {$ENDIF}  
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+

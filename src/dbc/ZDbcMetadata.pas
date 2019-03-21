@@ -58,6 +58,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
   ZDbcCache, ZCompatibility, ZSelectSchema, ZURL, ZDbcConnection;
 
@@ -2133,27 +2134,35 @@ end;
 }
 function TZAbstractDatabaseMetadata.StripEscape(const Pattern: string): string;
 var
-  I, J: Integer;
+  L: Integer;
   PreviousChar, EscapeChar: Char;
+  pPat, pPatEnd, pRes: PChar;
 begin
   PreviousChar := #0;
-  Result := Pattern;
-  EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
-  J := 0;
-  for I := 1 to Length(Pattern) do begin
-    if (Pattern[i] <> EscapeChar) then begin
-      Inc(J);
-      Result[J] := Pattern[I];
-      PreviousChar := Pattern[I];
+  L := Length(Pattern);
+  SetLength(Result, L);
+  pRes := Pointer(GetDatabaseInfo.GetSearchStringEscape);
+  if (L = 0) or (pRes = nil) then Exit;
+  EscapeChar := pRes^;
+  pRes := Pointer(Result);
+  pPat := Pointer(Pattern);
+  pPatEnd := pPat+L;
+  while pPat < pPatEnd do begin
+    if (pPat^ <> EscapeChar) then begin
+      PreviousChar := pPat^;
+      pRes^ := PreviousChar;
+      Inc(pRes);
     end else if (PreviousChar = EscapeChar) then begin
-      Inc(J);
-      Result[J] := Pattern[I];
+      pRes^ := PreviousChar;
       PreviousChar := #0;
+      Inc(pRes);
     end else
-      PreviousChar := Pattern[i];
+      PreviousChar := pPat^;
+    Inc(pPat);
   end;
-  if J <> Length(Result) then
-    SetLength(Result, j);
+  pPat := Pointer(Result);
+  if (pRes-pPat) <> L then
+    SetLength(Result, (pRes-pPat));
 end;
 
 procedure TZAbstractDatabaseMetadata.ToBuf(C: Char; var Value: String);
@@ -2201,7 +2210,8 @@ begin
   Result := False;
   PreviousChar := #0;
   PreviousCharWasEscape := False;
-  EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
+  P := Pointer(GetDatabaseInfo.GetSearchStringEscape);
+  EscapeChar := P^;
   WildcardsSet := GetWildcardsSet;
   P := Pointer(Pattern);
   PEnd := P+Length(Pattern);
@@ -2235,13 +2245,11 @@ end;
 }
 function TZAbstractDatabaseMetadata.DecomposeObjectString(const S: String): String;
 begin
-  if S = '' then
-    Result := S
-  else
-    if IC.IsQuoted(S) then
-      Result := IC.ExtractQuote(S)
-    else
-      Result := S;
+  if S = ''
+  then Result := S
+  else if IC.IsQuoted(S)
+    then Result := IC.ExtractQuote(S)
+    else Result := S;
 end;
 
 {**  Destroys this object and cleanups the memory.}
@@ -2403,6 +2411,9 @@ var
   I: Integer;
   Metadata: IZResultSetMetadata;
   Len: NativeUInt;
+  {$IFDEF BCD_TEST}
+  Buff: array[Byte] of Byte;
+  {$ENDIF}
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
@@ -2439,14 +2450,21 @@ begin
         stCurrency:
           DestResultSet.UpdateCurrency(I, SrcResultSet.GetCurrency(I));
         stBigDecimal:
+          {$IFDEF BCD_TEST}
+          begin
+            SrcResultSet.GetBigDecimal(I, PBCD(@Buff[0])^);
+            DestResultSet.UpdateBigDecimal(I, PBCD(@Buff[0])^);
+          end;
+          {$ELSE}
           DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
+          {$ENDIF}
         stString, stUnicodeString, stAsciiStream, stUnicodeStream:
           if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
              (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
             DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), Len)
           else
             DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), Len);
-        stBytes, stBinaryStream:
+        stGUID, stBytes, stBinaryStream:
           DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
         stDate:
           DestResultSet.UpdateDate(I, SrcResultSet.GetDate(I));

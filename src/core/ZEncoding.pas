@@ -1344,16 +1344,7 @@ begin
       SetLength(Dest, NewLen);
   end else begin
     NewLen := MapProc(Source, SourceBytes, @Buf[0]);
-    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-    if (Pointer(Dest) = nil) or//empty
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-       (NewLen <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-    {$ELSE}
-    if Length(Dest) <> NewLen then //WideString isn't ref counted
-    {$ENDIF}
-      System.SetString(Dest, PWideChar(@Buf[0]), NewLen)
-    else
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf[0], Dest[1], NewLen shl 1);
+    System.SetString(Dest, PWideChar(@Buf[0]), NewLen);
   end;
 end;
 
@@ -1686,7 +1677,7 @@ begin
       if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the Result String
         wlen := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, CP);
         ZSetString(nil, wlen, Result);
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Result[1], wlen shl 1);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Pointer(Result)^, wlen shl 1);
       end else begin //nope Buf to small
         ZSetString(nil, SourceBytes, Result);
         wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
@@ -1848,7 +1839,7 @@ A2U:
               W := ZWideString(S); //random success
               {$ENDIF}
               BufCodePoints := Min(Length(W), BufCodePoints);
-              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(W[1], Dest^, BufCodePoints shl 1);
+              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(W)^, Dest^, BufCodePoints shl 1);
               Inc(Dest, BufCodePoints);
             {$ENDIF}
           {$ENDIF}
@@ -2000,7 +1991,7 @@ begin
               {$ENDIF}
               BufCodePoints := Min(Length(W), wlen);
               if BufCodePoints > 0 then
-                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(W[1], Dest^, BufCodePoints shl 1);
+                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(W)^, Dest^, BufCodePoints shl 1);
             {$ENDIF}
           {$ENDIF}
 A2U:      Result := SourceBytes - wlen + BufCodePoints;

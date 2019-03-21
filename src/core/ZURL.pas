@@ -137,9 +137,10 @@ end;
 {TZURLStringList}
 
 function TZURLStringList.GetURLText: String;
+var P: PChar absolute Result;
 begin
   Result := Escape(Text);
-  if Result[Length(Result)] = ';' then
+  if (P+Length(Result)-1)^ = ';' then
     SetLength(Result, Length(Result)-1);
 end;
 

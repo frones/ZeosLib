@@ -66,6 +66,7 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
@@ -106,7 +107,11 @@ type
     function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    {$IFDEF BCD_TEST}
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
+    {$ELSE !BCD_TEST}
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
+    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
@@ -1389,20 +1394,54 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF BCD_TEST}
+procedure TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+{$ELSE}
 function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
   Len: NativeUint;
   P: PWideChar;
 label ProcessFixedChar;
+{$ENDIF}
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
   LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-    Result := 0
+    Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF}
   else
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
+      {$IFDEF BCD_TEST}
+      adTinyInt: ScaledOrdinal2Bcd(SmallInt(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt), 0, Result);
+      adSmallInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt, 0, Result);
+      adInteger, adError: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger, 0, Result);
+      adBigInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64, 0, Result);
+      adUnsignedTinyInt: ScaledOrdinal2Bcd(Word(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte), 0, Result);
+      adUnsignedSmallInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord, 0, Result);
+      adUnsignedInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VLongWord, 0, Result);
+      {$IFDEF WITH_VARIANT_UINT64}
+      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VUInt64, 0, Result);
+      {$ELSE !WITH_VARIANT_UINT64}
+      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64, 0, Result);
+      {$ENDIF !WITH_VARIANT_UINT64}
+      adSingle: Result := DoubleToBCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
+      adDouble: Result := DoubleToBCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
+      adCurrency: Currency2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency, Result);
+      adBoolean: ScaledOrdinal2Bcd(Word(Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean)), 0, Result);
+      adDate,
+      adDBDate,
+      adDBTime,
+      adDBTimeStamp: Result := DoubleToBCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDate);
+      adChar,
+      adWChar,
+      adVarChar,
+      adLongVarChar,
+      adBSTR,
+      adVarWChar,
+      adLongVarWChar: LastWasNull := not TryStrToBCD(GetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      else Result := NullBCD;
+      {$ELSE !BCD_TEST}
       adTinyInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
       adSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
       adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
@@ -1448,6 +1487,7 @@ begin
         except
           Result := 0;
         end;
+      {$ENDIF !BCD_TEST}
     end;
 end;
 

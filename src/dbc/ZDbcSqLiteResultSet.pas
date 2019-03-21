@@ -64,7 +64,7 @@ uses
     System.Types, System.Contnrs
   {$ELSE}
     {$IFNDEF NO_UNIT_CONTNRS} Contnrs{$ELSE}ZClasses{$ENDIF}
-  {$ENDIF},
+  {$ENDIF}, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,

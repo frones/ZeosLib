@@ -57,6 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
@@ -217,7 +218,7 @@ begin
           stFloat: Stmt.SetFloat(ParamIndex, TSingleDynArray(ZData)[J]);
           stDouble: Stmt.SetDouble(ParamIndex, TDoubleDynArray(ZData)[J]);
           stCurrency: Stmt.SetCurrency(ParamIndex, TCurrencyDynArray(ZData)[J]);
-          stBigDecimal: Stmt.SetBigDecimal(ParamIndex, TExtendedDynArray(ZData)[J]);
+          stBigDecimal: Stmt.SetBigDecimal(ParamIndex, {$IFDEF BCD_TEST}TBCDDynArray{$ELSE}TExtendedDynArray{$ENDIF}(ZData)[J]);
           stGUID: Stmt.SetGUID(ParamIndex, TGUIDDynArray(ZData)[j]);
           stString, stUnicodeString:
                 case PZArray(BindList[i].Value).VArrayVariantType of

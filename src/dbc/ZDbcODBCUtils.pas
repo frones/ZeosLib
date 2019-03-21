@@ -208,6 +208,7 @@ var
   FirstMsgA, FirstNErrA: RawByteString;
   MsgA, NErrA, ErrorStringA: RawByteString;
   aException: EZSQLThrowable;
+  P: Pointer;
 begin
   if not SQL_SUCCEDED(RETCODE) then begin
     if (Handle=nil) or (RETCODE=SQL_INVALID_HANDLE) then
@@ -233,11 +234,12 @@ begin
           end else begin
             NErrW := IntToUnicode(NativeError);
             SetLength(MsgW, SizeOf(TSQLSTATE)+Length(NErrW)+2+TextLength);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateW, MsgW[1], SQL_SQLSTATE_SIZE  shl 1);
-            MsgW[6] := '[';
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(NErrW[1], MsgW[7], Length(NErrW)  shl 1);
-            MsgW[7+Length(NErrW)] := ']'; MsgW[8+Length(NErrW)] := ':';
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], MsgW[9+Length(NErrW)], TextLength shl 1);
+            P := Pointer(MsgW);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateW, P^, SQL_SQLSTATE_SIZE  shl 1);
+            PWord(PWideChar(P)+6)^ := Ord('[');
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(NErrW)^, (PWideChar(P)+7)^, Length(NErrW)  shl 1);
+            PWord(PWideChar(P)+7+Length(NErrW))^ := Ord(']'); PWord(PWideChar(P)+8+Length(NErrW))^ := Ord(':');
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], (PWideChar(P)+9+Length(NErrW))^, TextLength shl 1);
             ErrorStringW := ErrorStringW+ZWideString(LineEnding)+MsgW;
           end;
           inc(RecNum);
@@ -262,11 +264,12 @@ begin
           end else begin
             NErrA := IntToRaw(NativeError);
             SetLength(MsgA, SizeOf(TSQLSTATE)+Length(NErrA)+2+TextLength);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateA, MsgA[1], SQL_SQLSTATE_SIZE);
-            MsgA[6] := '[';
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(NErrA[1], MsgA[7], Length(NErrA));
-            MsgA[7+Length(NErrA)] := ']'; MsgA[8+Length(NErrA)] := ':';
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], MsgA[9+Length(NErrA)], TextLength);
+            P := Pointer(MsgA);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateA, P^, SQL_SQLSTATE_SIZE);
+            PByte(PAnsiChar(P)+6)^ := Ord('[');
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(NErrA)^, (PAnsiChar(P)+7)^, Length(NErrA));
+            PByte(PAnsiChar(P)+7+Length(NErrA))^ := Ord(']'); PByte(PAnsiChar(P)+8+Length(NErrA))^ := Ord(':');
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], (PAnsiChar(P)+9+Length(NErrA))^, TextLength);
             ErrorStringA := ErrorStringA+RawByteString(LineEnding)+MsgA
           end;
           inc(RecNum);
@@ -318,7 +321,7 @@ begin
                         if ODBC_CType <> nil then
                           ODBC_CType^ := SQL_C_NUMERIC;
                         {$ELSE}
-                        goto dbl;
+                        goto Dbl;
                         {$ENDIF}
                       end;
     SQL_INTEGER:      if UnSigned then begin
