@@ -319,6 +319,12 @@ begin
       end
   else
     ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
+  {Precision or column-size}
+  if not TableColumns.IsNull(TableColColumnSizeIndex) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+  {Scale}
+  if not TableColumns.IsNull(TableColColumnDecimalDigitsIndex) then
+    ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
   {nullable}
   if not TableColumns.IsNull(TableColColumnNullableIndex) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));
