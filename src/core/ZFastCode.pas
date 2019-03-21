@@ -3171,7 +3171,8 @@ begin
     end else begin
       IntToUnicode(i64, Buf, Digits);
       Inc(Buf, Digits);
-      PUInt64(Buf-3)^ := PUInt64(Buf-4)^; //move trailing digits one pos forward;
+      I64 := PUInt64(Buf-4)^; //localize (CPU32 makes two cadinal moves and the value would be incorrect then)
+      PUInt64(Buf-3)^ := i64; //move trailing digits one pos forward;
       PWord(Buf-4)^ := Ord('.');
     end;
     if PWord(Buf)^ = Ord('0') then begin
