@@ -114,6 +114,13 @@ const
   SQL_NULL                       = 32766;
   // FB30
   SQL_BOOLEAN_FB                 = 32764;
+  // FB40
+  SQL_TIMESTAMP_TZ_FB            = 32754;
+  SQL_TIME_TZ_FB                 = 32756;
+  SQL_DEC_FIXED_FB               = 32758;
+  SQL_DEC16_FB                   = 32760;
+  SQL_DEC34_FB                   = 32762;
+  
   // deprecated alias for pre V6 applications
   SQL_DATE                       = SQL_TIMESTAMP;
 
@@ -151,6 +158,11 @@ const
   blr_column_name     = 21;
   blr_column_name2    = 22;
   blr_bool            = 23;
+  blr_dec64           = 24;
+  blr_dec128          = 25;
+  blr_dec_fixed       = 26;
+  blr_sql_time_tz     = 28;
+  blr_timestamp_tz    = 29;
 
   // Historical alias for pre V6 applications
   blr_date		      = blr_timestamp;
@@ -209,8 +221,9 @@ const
 #define blr_maximum		(unsigned char)29
 #define blr_minimum		(unsigned char)30
 #define blr_total		(unsigned char)31
+#define blr_receive_batch	(unsigned char)32
 
-// unused codes: 32..33
+// unused code: 33
 
 #define blr_add			(unsigned char)34
 #define blr_subtract		(unsigned char)35
@@ -360,6 +373,8 @@ const
 #define blr_extract_yearday		(unsigned char)7
 #define blr_extract_millisecond	(unsigned char)8
 #define blr_extract_week		(unsigned char)9
+#define blr_extract_timezone_hour	(unsigned char)10
+#define blr_extract_timezone_minute	(unsigned char)11
 
 #define blr_current_date	(unsigned char)160
 #define blr_current_timestamp	(unsigned char)161
@@ -488,6 +503,30 @@ const
 #define blr_subfunc_decl			(unsigned char) 207
 #define blr_subfunc					(unsigned char) 208
 #define blr_record_version2			(unsigned char) 209
+#define blr_gen_id2                 (unsigned char) 210 
+
+// FB 4.0 specific BLR
+
+#define blr_window_win              (unsigned char) 211
+
+#define blr_window_win_partition    (unsigned char) 1
+#define blr_window_win_order        (unsigned char) 2
+#define blr_window_win_map          (unsigned char) 3
+#define blr_window_win_extent_unit  (unsigned char) 4
+#define blr_window_win_extent_frame_bound (unsigned char) 5
+#define blr_window_win_extent_frame_value (unsigned char) 6
+#define blr_window_win_exclusion    (unsigned char) 7
+
+#define blr_default                 (unsigned char) 212
+#define blr_store3                  (unsigned char) 213
+
+#define blr_local_timestamp         (unsigned char) 214
+#define blr_local_time              (unsigned char) 215
+
+#define blr_at                      (unsigned char) 216
+
+#define blr_at_local                (unsigned char) 0
+#define blr_at_zone                 (unsigned char) 1
 
 #endif // JRD_BLR_H
 *)
@@ -579,6 +618,10 @@ const
   isc_blob_dbase_ole             = 23;
   isc_blob_typed_binary          = 24;
 { FB2.5 down < }
+
+  // beware - these might be wrong - in SQL things are just the other way around - binary is 0 and text is 1.
+  fb_text_subtype_text           = 0;
+  fb_text_subtype_binary         = 1;
 
   {* Blob information items *}
   isc_info_blob_num_segments = 4;
@@ -1718,7 +1761,9 @@ const
   isc_dpb_nolinger				       = 88;
   isc_dpb_reset_icu				       = 89;
   isc_dpb_map_attach             = 90;
-  isc_dpb_last_dpb_constant      = isc_dpb_map_attach;
+  isc_dpb_session_time_zone      = 91;
+  isc_dpb_set_db_replica         = 92;
+  isc_dpb_last_dpb_constant      = isc_dpb_set_db_replica;
 
   { isc_dpb_verify specific flags }
   isc_dpb_pages                  = 1;
@@ -1772,6 +1817,8 @@ const
   isc_tpb_no_savepoint            = 21;
   // Since FB20
   isc_tpb_lock_timeout            = 21;
+  // Since FB40
+  isc_tpb_read_consistency        = 22;
 
   { Blob Parameter Block }
   isc_bpb_version1               = 1;
@@ -1810,6 +1857,12 @@ const
   isc_info_sql_get_plan          = 22;
   isc_info_sql_records           = 23;
   isc_info_sql_batch_fetch       = 24;
+  isc_info_sql_relation_alias    = 25;
+  isc_info_sql_explain_plan      = 26;
+  isc_info_sql_stmt_flags        = 27;
+  isc_info_sql_stmt_timeout_user = 28;
+  isc_info_sql_stmt_timeout_run  = 29;
+  isc_info_sql_stmt_blob_align   = 30;
 
   { SQL information return values }
   isc_info_sql_stmt_select         = 1;
@@ -1926,6 +1979,40 @@ const
   isc_info_active_tran_count     = 110;
   isc_info_creation_date         = 111;
   isc_info_db_file_size          = 112;
+  
+  fb_info_page_contents          = 113;
+
+  fb_info_implementation         = 114;
+
+  fb_info_page_warns             = 115;
+  fb_info_record_warns           = 116;
+  fb_info_bpage_warns            = 117;
+  fb_info_dpage_warns            = 118;
+  fb_info_ipage_warns            = 119;
+  fb_info_ppage_warns            = 120;
+  fb_info_tpage_warns            = 121;
+  fb_info_pip_errors             = 122;
+  fb_info_pip_warns              = 123;
+
+  fb_info_pages_used             = 124;
+  fb_info_pages_free             = 125;
+
+  fb_info_ses_idle_timeout_db    = 129;
+  fb_info_ses_idle_timeout_att   = 130;
+  fb_info_ses_idle_timeout_run   = 131;
+
+  fb_info_conn_flags             = 132;
+
+  fb_info_crypt_key              = 133;
+  fb_info_crypt_state            = 134;
+
+  fb_info_statement_timeout_db   = 135;
+  fb_info_statement_timeout_att  = 136;
+
+  fb_info_protocol_version       = 137;
+  fb_info_crypt_plugin           = 138;
+
+  fb_info_creation_timestamp_tz  = 139;
 
 type
 
@@ -1997,12 +2084,35 @@ type
   ISC_TIME = Cardinal;
   PISC_TIME = ^ISC_TIME;
 
+  // why do we prefix records with a T (TISC_TIMESTAMP) while we don't prefix
+  // simple types (ISC_DATE)?
+  TISC_TIME_TZ = record
+    utc_time: ISC_TIME;
+	time_zone: ISC_USHORT;
+  end;
+  PISC_TIME_TZ = ^TISC_TIME_TZ;
+  
   TISC_TIMESTAMP = record
     timestamp_date: ISC_DATE;
     timestamp_time: ISC_TIME;
   end;
   PISC_TIMESTAMP = ^TISC_TIMESTAMP;
+  
+  TISC_TIMESTAMP_TZ = record
+    utc_timestamp: TISC_TIMESTAMP;
+	  time_zone: ISC_USHORT;
+  end;
+  PTISC_TIMESTAMP_TZ = ^TISC_TIMESTAMP_TZ;
 
+  TFB_DEC16 = record
+    fb_data: array[0..0] of ISC_UINT64;
+  end;
+  PFB_DEC16 = ^TFB_DEC16;
+  
+  TFB_DEC34 = record
+    fb_data: array[0..1] of ISC_UINT64;
+  end;  
+  
   { Blob id structure }
   TGDS_QUAD = record
     gds_quad_high:  ISC_LONG;
@@ -2012,7 +2122,7 @@ type
 
   TISC_QUAD            = TGDS_QUAD;
   PISC_QUAD            = ^TISC_QUAD;
-
+  
   TISC_ARRAY_BOUND = record
     array_bound_lower:  Short;
     array_bound_upper:  Short;

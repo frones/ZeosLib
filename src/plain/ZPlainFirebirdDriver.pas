@@ -316,7 +316,23 @@ type
       stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
       buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+	  
+	fb_dsql_set_timeout: function(status_vector: PISC_STATUS;
+	  stmt_handle: PISC_STMT_HANDLE; milliseconds: ISC_ULONG): ISC_STATUS
+	  {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
+    
+	//this function is commented out in the Firebird 4.0 Beta 1 ibase.h too
+    //fb_get_statement_interface: function(status_vector: PISC_STATUS;
+	//  api_handle: PFB_API_HANDLE; stmt_interface: Pointer;): ISC_STATUS;
+	//  {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+	  
+	{  
+    ISC_STATUS ISC_EXPORT fb_get_statement_interface(ISC_STATUS*,
+												    FB_API_HANDLE*,
+												    void**);
+    }
+	  
     { Blob processing routines }
 
     isc_open_blob2: function(status_vector: PISC_STATUS;
@@ -374,7 +390,7 @@ type
       event_function_arg: PVoid): ISC_STATUS;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-    { Types convertion routines }
+    { Types conversion routines }
 
     //isc_decode_date: procedure(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
       //{$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
