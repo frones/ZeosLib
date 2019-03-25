@@ -441,12 +441,14 @@ end;
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
 function TZAbstractOleDBResultSet.IsNull(ColumnIndex: Integer): Boolean;
+var Bind: PDBBINDING;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
-  {$R-}
-  Result := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(FRowSize*FCurrentBufRowNo)])^ = DBSTATUS_S_ISNULL;
+  {.$R-}
+  Bind := @FDBBindingArray[ColumnIndex];
+  Result := PDBSTATUS(@FColBuffer[Bind.obStatus+NativeUInt(FRowSize*FCurrentBufRowNo)])^ = DBSTATUS_S_ISNULL;
   LastWasNull := Result;
   if Result then
   begin
@@ -456,11 +458,13 @@ begin
   else
   begin
     //note FData is valid only if no Lobs DBPART_VALUE was set on binding!!!
-    FData := @FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)];
+    FData := @FColBuffer[Bind.obValue+NativeUInt(FRowSize*FCurrentBufRowNo)];
     //note FLength is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
-    FLength := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+    if Bind.dwPart and DBPART_LENGTH <> 0
+    then FLength := PDBLENGTH(@FColBuffer[Bind.obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^
+    else FLength := 0;
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  //{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
