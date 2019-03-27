@@ -443,24 +443,20 @@ end;
 function TZAbstractOleDBResultSet.IsNull(ColumnIndex: Integer): Boolean;
 var Bind: PDBBINDING;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   {.$R-}
-  Bind := @FDBBindingArray[ColumnIndex];
+  Bind := @FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   Result := PDBSTATUS(@FColBuffer[Bind.obStatus+NativeUInt(FRowSize*FCurrentBufRowNo)])^ = DBSTATUS_S_ISNULL;
   LastWasNull := Result;
-  if Result then
-  begin
+  if Result then begin
     FData := nil;
     FLength := 0;
-  end
-  else
-  begin
+  end else begin
     //note FData is valid only if no Lobs DBPART_VALUE was set on binding!!!
-    FData := @FColBuffer[Bind.obValue+NativeUInt(FRowSize*FCurrentBufRowNo)];
+    if Bind.dwPart and DBPART_VALUE <> 0 //test if lob's are bound
+    then FData := @FColBuffer[Bind.obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]
+    else FData := nil;
     //note FLength is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
-    if Bind.dwPart and DBPART_LENGTH <> 0
+    if Bind.dwPart and DBPART_LENGTH <> 0 //fixed types don't have a length indicator
     then FLength := PDBLENGTH(@FColBuffer[Bind.obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^
     else FLength := 0;
   end;
