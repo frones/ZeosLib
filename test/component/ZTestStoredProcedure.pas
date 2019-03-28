@@ -631,7 +631,11 @@ begin
 
   CheckEquals('P9', StoredProc.Params[8].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[8].ParamType));
+  {$IFDEF BCD_TEST}
+  CheckEquals(ord(ftFmtBCD), ord(StoredProc.Params[8].DataType));
+  {$ELSE}
   CheckEquals(ord(ftFloat), ord(StoredProc.Params[8].DataType));
+  {$ENDIF}
 
   CheckEquals('P10', StoredProc.Params[9].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[9].ParamType));

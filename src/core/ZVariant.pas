@@ -2663,7 +2663,7 @@ begin
         vtUInteger:
           ScaledOrdinal2BCD(Value.VUInteger, 0, Result.VBigDecimal, False);
         vtDouble:
-          Result.VBigDecimal := DoubleToBCD(Value.VDouble);
+          Double2BCD(Value.VDouble, Result.VBigDecimal);
         vtCurrency:
           CurrToBCD(Value.VCurrency, Result.VBigDecimal);
         vtBigDecimal:
@@ -2687,7 +2687,7 @@ begin
           then Result.VBigDecimal := StrToBCD(String(PWideChar(Value.VCharRec.P)){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})
           else Result.VBigDecimal := StrToBCD(String(PAnsiChar(Value.VCharRec.P)){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
         vtDateTime:
-          Result.VBigDecimal := DoubleToBCD(Value.VDateTime);
+          Double2BCD(Value.VDateTime, Result.VBigDecimal);
         else
           RaiseTypeMismatchError;
       end;

@@ -1086,6 +1086,9 @@ function TryRawToBcd(const Value: RawByteString; var Bcd: TBcd; DecimalSep: Char
 function TryRawToBcd(Buf: PAnsiChar; Len: LengthInt; var Bcd: TBcd; DecimalSep: Char): Boolean; overload;
 
 function TryStr2BCD(const Value: String; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean;
+function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): TBCD;
+
+procedure Double2BCD(const Value: Double; var Result: TBCD); overload;
 var
   ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
 
@@ -1095,7 +1098,7 @@ const
 
 implementation
 
-uses DateUtils, StrUtils, SysConst,
+uses DateUtils, StrUtils, SysConst{$IFDEF WITH_DBCONSTS}, DBConsts{$ENDIF},
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   ZFastCode;
 
@@ -6493,6 +6496,9 @@ begin
   Inc(Buf, Ord(Negative or (PWord(Buf)^ = Ord('+'))));
   // Skip trailing white chars
   while (PEnd > Buf) and ((PWord(PEnd-1)^ <= Ord('0')) and (Byte(PWord(PEnd-1)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14), Ord('0')]))  do Dec(PEnd);
+  P := PEnd; //remainder for Exponent
+  // Skip trailing zeroes
+  while (PEnd > Buf) and (PWord(PEnd-1)^ = Ord('0')) do Dec(PEnd);
   Pos := 0;
   DecimalPos := -1;
   if Buf = PEnd then
@@ -6527,8 +6533,7 @@ begin
   end;
   goto CheckPos;
 CompExp:
-  While PWord(PEnd)^ = Ord('0') do Inc(PEnd);
-  P := PEnd;
+  PEnd := P;
   Exp := ValUnicodeInt(Buf+1, p);
   if pEnd <> P
   then goto Fail;
@@ -6542,11 +6547,8 @@ CompExp:
       bcd.SignSpecialPlaces := Pos -1;
       Exp := Pos - Exp;
       Pos := Pos - DecimalPos;
-      if Exp > MaxFMTBcdFractionSize then begin
-        dec(Pos,  Exp - MaxFMTBcdFractionSize);
-        DecimalPos := Exp - MaxFMTBcdFractionSize;
-        Exp := MaxFMTBcdFractionSize;
-      end;
+      if Exp > MaxFMTBcdFractionSize then
+        goto Fail;
       if not NormalizeBcd(bcd, bcd, Exp, Pos)
       then goto Fail;
       Pos := Exp;
@@ -6568,12 +6570,12 @@ Finalize:
     Bcd.Precision := 10;
     Bcd.SignSpecialPlaces := 2;
   end else begin
-    if Pos > 64
+    if Pos > MaxFMTBcdFractionSize
     then goto Fail;
     Bcd.Precision := Pos;
     if DecimalPos = -1
     then Bcd.SignSpecialPlaces := 0
-    else Bcd.SignSpecialPlaces := Pos - DecimalPos;
+    else Bcd.SignSpecialPlaces := Byte(Pos - DecimalPos);
     if (Pos and 1) = 1 then begin
       Inc(Bcd.Precision);
       Inc(Bcd.SignSpecialPlaces);
@@ -6615,8 +6617,10 @@ begin
   Inc(Buf, Ord(Negative or (PByte(Buf)^ = Ord('+'))));
   Pos := 0;
   DecimalPos := -1;
-  // Skip trailing white chars and pad trailing zeroes away
-  while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14), Ord('0')])  do Dec(PEnd);
+  // Skip trailing white chars
+  while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14)])  do Dec(PEnd);
+  P := PEnd; //remainder for Exponent
+  while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away
   if Buf = PEnd then
     if PByte(PEnd)^ = Ord('0')
     then goto Finalize
@@ -6647,8 +6651,7 @@ begin
   end;
   goto CheckPos;
 CompExp:
-  While PByte(PEnd)^ = Ord('0') do Inc(PEnd);
-  P := PEnd;
+  PEnd := P;
   Exp := ValRawInt(Buf+1, p);
   if pEnd <> P
   then goto Fail;
@@ -6662,11 +6665,8 @@ CompExp:
       bcd.SignSpecialPlaces := Pos -1;
       Exp := Pos - Exp;
       Pos := Pos - DecimalPos;
-      if Exp > MaxFMTBcdFractionSize then begin
-        dec(Pos,  Exp - MaxFMTBcdFractionSize);
-        DecimalPos := Exp - MaxFMTBcdFractionSize;
-        Exp := MaxFMTBcdFractionSize;
-      end;
+      if Exp > MaxFMTBcdFractionSize then //bcd overflow?
+        goto Fail;
       if not NormalizeBcd(bcd, bcd, Exp, Pos)
       then goto Fail;
       Pos := Exp;
@@ -6688,7 +6688,7 @@ Finalize:
     Bcd.Precision := 10;
     Bcd.SignSpecialPlaces := 2;
   end else begin
-    if Pos > 64
+    if Pos > MaxFMTBcdFractionSize
     then goto Fail;
     Bcd.Precision := Pos;
     if DecimalPos = -1
@@ -6716,6 +6716,22 @@ begin
     FillChar(BCD, SizeOf(BCD), #0);
     Result := False;
   end;
+end;
+
+function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): TBCD;
+begin
+  if not TryStr2BCD(Value, Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS},FormatSettings{$ENDIF}) then
+    raise EBcdException.CreateFmt({$IFDEF WITH_DBCONSTS}SInvalidBcdValue{$ELSE}'%s is not a valid BCD-Value'{$ENDIF}, [Value]);
+end;
+
+procedure Double2BCD(const Value: Double; var Result: TBCD);
+var Buffer: array[0..63] of Char;
+begin
+  {$IFDEF UNICODE}
+  TryUniToBCD(@Buffer[0], FloatToSqlUnicode(Value, @Buffer[0]), Result, '.');
+  {$ELSE}
+  TryRawToBCD(@Buffer[0], FloatToSqlRaw(Value, @Buffer[0]), Result, '.');
+  {$ENDIF}
 end;
 
 (*function GetStringReplaceAllIndices(Source, OldPattern: PAnsiChar; SourceLen, OldPatternLen: Integer): TIntegerDynArray; overload;
@@ -6779,8 +6795,16 @@ begin
 end;*)
 
 function BcdToSQLRaw(const Value: TBCD): RawByteString;
+{$IFNDEF HAVE_BCDTOSTR_FORMATSETTINGS}var OldDecSep: Char;{$ENDIF}
 begin
+  {$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}
   Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
+  {$ELSE}
+  OldDecSep := DecimalSeparator;
+  DecimalSeparator := '.';
+  Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value));
+  DecimalSeparator := OldDecSep;
+  {$ENDIF}
 end;
 
 function RawToBCD(Value: PAnsiChar; Len: LengthInt): TBCD;
@@ -6802,8 +6826,16 @@ begin
 end;
 
 function BcdToSQLUni(const Value: TBCD): ZWideString;
+{$IFNDEF HAVE_BCDTOSTR_FORMATSETTINGS}var OldDecSep: Char;{$ENDIF}
 begin
+  {$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}
   Result := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(BCDToStr(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
+  {$ELSE}
+  OldDecSep := DecimalSeparator;
+  DecimalSeparator := '.';
+  Result := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(BCDToStr(Value));
+  DecimalSeparator := OldDecSep;
+  {$ENDIF}
 end;
 
 function UniToBCD(Value: PWideChar; Len: LengthInt): TBCD;

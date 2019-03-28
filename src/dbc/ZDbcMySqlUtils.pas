@@ -128,8 +128,6 @@ function EncodeMySQLVersioning(const MajorVersion: Integer;
 }
 function ConvertMySQLVersionToSQLVersion( const MySQLVersion: Integer ): Integer;
 
-function getMySQLFieldSize (field_type: TMysqlFieldType; field_size: LongWord): LongWord;
-
 {**
   Returns a valid TZColumnInfo from a FieldHandle
   @param PlainDriver the MySQL PlainDriver interface
@@ -249,6 +247,7 @@ end;
 }
 function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS;
   CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
+var PrecOrLen: ULong;
 begin
   case PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ of
     FIELD_TYPE_TINY:
@@ -272,25 +271,46 @@ begin
     FIELD_TYPE_FLOAT, FIELD_TYPE_DOUBLE:
       Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
-      if (FieldOffsets.decimals > 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ = 0) then
-        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0 then begin
-          if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 2 then
-            Result := stShort
-          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 4 then
-            Result := stSmall
-          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 9 then
-            Result := stInteger
-          else Result := stLong;
-        end else begin
-          if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 3 then
-            Result := stByte
-          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 5 then
-            Result := stWord
-          else if PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= 10 then
-            Result := stLongWord
-          else Result := stULong;
-        end
-      else
+      if (FieldOffsets.decimals > 0) then begin
+        PrecOrLen := PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
+        if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ = 0) then
+          if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0 then begin
+            if PrecOrLen <= 2 then
+              Result := stShort
+            else if PrecOrLen <= 4 then
+              Result := stSmall
+            else if PrecOrLen <= 9 then
+              Result := stInteger
+            {$IFDEF BCD_TEST}
+            else if PrecOrLen <= 18 then
+              Result := stLong
+            else Result := stBigDecimal;
+            {$ELSE}
+            else Result := stLong;
+            {$ENDIF}
+          end else begin
+            if PrecOrLen <= 3 then
+              Result := stByte
+            else if PrecOrLen <= 5 then
+              Result := stWord
+            else if PrecOrLen <= 10 then
+              Result := stLongWord
+            {$IFDEF BCD_TEST}
+            else if PrecOrLen <= 19 then
+              Result := stULong
+            else Result := stBigDecimal;
+            {$ELSE}
+            else Result := stULong;
+            {$ENDIF}
+          end
+        else begin
+          Dec(PrecOrLen, 1+ORd(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0)); //one digit for the decimal sep and one for the sign
+          if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ <= 4) and
+             (PrecOrLen < ULong(sAlignCurrencyScale2Precision[PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^]))
+            then Result := stCurrency
+            else Result := {$IFDEF BCD_TEST}stBigDecimal{$ELSE}stDouble{$ENDIF}
+          end;
+      end else
         Result := stDouble;
     FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE:
       Result := stDate;
@@ -434,27 +454,6 @@ begin
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
-function getMySQLFieldSize(field_type: TMysqlFieldType; field_size: LongWord): LongWord;
-begin
-  case field_type of
-    FIELD_TYPE_ENUM:        Result := 1;
-    FIELD_TYPE_TINY:        Result := 1;
-    FIELD_TYPE_SHORT:       Result := 2;
-    FIELD_TYPE_LONG:        Result := 4;
-    FIELD_TYPE_LONGLONG:    Result := 8;
-    FIELD_TYPE_FLOAT:       Result := 4;
-    FIELD_TYPE_DOUBLE:      Result := 8;
-    FIELD_TYPE_DATE:        Result := sizeOf(TMYSQL_TIME);
-    FIELD_TYPE_TIME:        Result := sizeOf(TMYSQL_TIME);
-    FIELD_TYPE_DATETIME:    Result := sizeOf(TMYSQL_TIME);
-    FIELD_TYPE_TINY_BLOB:   Result := field_size; //stBytes
-    FIELD_TYPE_BLOB:        Result := field_size;
-    FIELD_TYPE_STRING:      Result := field_size;
-  else
-    Result := 255;  {unknown ??}
-  end;
-end;
-
 {**
   Returns a valid TZColumnInfo from a FieldHandle
   @param PlainDriver the MySQL PlainDriver interface
@@ -516,11 +515,11 @@ begin
     FieldLength := PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
 
-    if Result.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      Result.ColumnCodePage := ConSettings^.ClientCodePage^.CP
-    else
-      Result.ColumnCodePage := High(Word);
+    if Result.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]
+    then Result.ColumnCodePage := ConSettings^.ClientCodePage^.CP
+    else Result.ColumnCodePage := High(Word);
 
+    Result.Signed := (UNSIGNED_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^) = 0;
     if Result.ColumnType in [stString, stUnicodeString] then begin
        Result.CharOctedLength := FieldLength;
        if FieldOffsets.charsetnr > 0
@@ -570,13 +569,13 @@ begin
           else Result.CharOctedLength := FieldLength shl 1;
         end;
       end
-    end else
-      Result.Precision := Integer(FieldLength)*Ord(not (PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ in
+    end else if Result.ColumnType in [stCurrency, stBigDecimal]
+    then Result.Precision := Integer(FieldLength) - 1 - Ord(Result.Signed)
+    else Result.Precision := Integer(FieldLength)*Ord(not (PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ in
         [FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB]));
     Result.Scale := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
     Result.AutoIncrement := (AUTO_INCREMENT_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ <> 0);// or
       //(TIMESTAMP_FLAG and MYSQL_FIELD.flags <> 0);
-    Result.Signed := (UNSIGNED_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^) = 0;
     if NOT_NULL_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ <> 0
     then Result.Nullable := ntNoNulls
     else Result.Nullable := ntNullable;
@@ -679,17 +678,19 @@ lLong:
         Scale := RawToIntDef(P+pC, 0);
       end;
       if Scale = 0 then
-        if ColumnSize < 10 then
-          goto lLong
-        else
-          goto lLongLong
-      else {if ColumnSize < 25 then begin
-        FieldType := stFloat;
-        ColumnSize := 12;
-      end else} begin
-        FieldType := stDouble;
-        ColumnSize := 22;
-      end;
+        if ColumnSize < 10
+        then goto lLong
+        else goto lLongLong
+      else if (Scale <= 4) and (ColumnSize < sAlignCurrencyScale2Precision[Scale])
+        then FieldType := stCurrency
+      {$IFDEF BCD_TEST}
+        else FieldType := stBigDecimal
+      {$ELSE}
+        else begin
+          FieldType := stDouble;
+          ColumnSize := 22;
+        end;
+      {$ENDIF}
     end
   end else if (TypeName = 'float') or StartsWith(TypeName, RawByteString('double')) then begin
     FieldType := stDouble;

@@ -267,17 +267,17 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2, fld3, fld4 from table816925');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_Index)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld2_Index)));
+  CheckEquals(Ord(stCurrency), Ord(Metadata.GetColumnType(fld2_Index)));
   CheckEquals(Ord(stLong), Ord(Metadata.GetColumnType(fld3_Index)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld4_Index)));
+  CheckEquals(Ord(stCurrency), Ord(Metadata.GetColumnType(fld4_Index)));
 
   Statement.SetResultSetConcurrency(rcUpdatable);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2, fld3, fld4 from table816925');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_Index)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld2_Index)));
+  CheckEquals(Ord(stCurrency), Ord(Metadata.GetColumnType(fld2_Index)));
   CheckEquals(Ord(stLong), Ord(Metadata.GetColumnType(fld3_Index)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld4_Index)));
+  CheckEquals(Ord(stCurrency), Ord(Metadata.GetColumnType(fld4_Index)));
 end;
 
 {**

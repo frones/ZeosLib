@@ -121,6 +121,7 @@ type
     FTempBlob: IZBlob; //temporary Lob
     FClosing: Boolean;
     FClientCP: Word;
+    procedure RaiseConversionError(Index: Integer);
   protected
     procedure Open; override;
   public
@@ -397,6 +398,8 @@ begin
           FIELD_TYPE_LONGLONG   : if Bind^.is_unsigned_address^ = 0
                                   then JSONWriter.Add(PInt64(Bind^.Buffer)^)
                                   else JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(Bind^.Buffer)^));
+          FIELD_TYPE_NEWDECIMAL,
+          FIELD_TYPE_DECIMAL    : JSONWriter.AddNoJSONEscape(Bind^.Buffer,Bind^.Length[0]);
           FIELD_TYPE_YEAR       : JSONWriter.AddU(PWord(Bind^.Buffer)^);
           FIELD_TYPE_NULL       : JSONWriter.AddShort('null');
           FIELD_TYPE_TIMESTAMP,
@@ -458,7 +461,7 @@ begin
                         else if Bind^.Length[0] < SizeOf(FTinyBuffer) then begin
                           Bind^.buffer_address^ := @FTinyBuffer[0];
                           Bind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
-                          FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, Bind^.mysql_bind, C, 0);
+                          FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, Bind^.mysql_bind, C, 0);
                           Bind^.buffer_address^ := nil;
                           Bind^.buffer_Length_address^ := 0;
                           JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], Bind^.Length[0]);
@@ -489,7 +492,7 @@ begin
                         else if Bind^.Length[0] < SizeOf(FTinyBuffer) then begin
                           Bind^.buffer_address^ := @FTinyBuffer[0];
                           Bind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
-                          FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, Bind^.mysql_bind, C, 0);
+                          FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, Bind^.mysql_bind, C, 0);
                           Bind^.buffer_address^ := nil;
                           Bind^.buffer_Length_address^ := 0;
                           if Bind^.binary then
@@ -751,6 +754,13 @@ begin
   end;
 end;
 
+procedure TZAbstractMySQLResultSet.RaiseConversionError(Index: Integer);
+begin
+  raise EZSQLException.Create(Format(SErrorConvertionField,
+    ['Field '+ZFastCode.IntToStr(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}),
+      DefineColumnTypeName(GetMetadata.GetColumnType(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))]));
+end;
+
 procedure TZAbstractMySQLResultSet.ReleaseImmediat(
   const Sender: IImmediatelyReleasable);
 begin
@@ -980,6 +990,8 @@ begin
 set_Results:Len := Result - PAnsiChar(@FTinyBuffer);
             Result := @FTinyBuffer;
           end;
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         FIELD_TYPE_ENUM, FIELD_TYPE_SET, FIELD_TYPE_STRING:
           begin
@@ -995,7 +1007,7 @@ set_Results:Len := Result - PAnsiChar(@FTinyBuffer);
             end else if ColBind^.Length[0] < SizeOf(FTinyBuffer) then begin
               ColBind^.buffer_address^ := @FTinyBuffer[0];
               ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
-              Status := FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+              Status := FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
               ColBind^.buffer_address^ := nil;
               ColBind^.buffer_Length_address^ := 0;
               Result := @FTinyBuffer[0];
@@ -1009,10 +1021,7 @@ set_Results:Len := Result - PAnsiChar(@FTinyBuffer);
               Len := FTempBlob.Length;
               Result := FTempBlob.GetBuffer;
             end;
-        else
-          raise EZSQLException.Create(Format(SErrorConvertionField,
-            ['Field '+ZFastCode.IntToStr(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}),
-              DefineColumnTypeName(GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))]));
+        else RaiseConversionError(ColumnIndex);
       end;
     end;
   end else begin
@@ -1123,6 +1132,8 @@ begin
 set_Results:Len := Result - PWideChar(@FTinyBuffer);
             Result := @FTinyBuffer;
           end;
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         FIELD_TYPE_ENUM, FIELD_TYPE_SET, FIELD_TYPE_STRING,
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
@@ -1135,7 +1146,7 @@ set_Results:Len := Result - PWideChar(@FTinyBuffer);
             end else if ColBind^.Length[0] < SizeOf(FTinyBuffer) then begin
               ColBind^.buffer_address^ := @FTinyBuffer[0];
               ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1; //mysql sets $0 on to of data and corrupts our mem
-              Status := FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+              Status := FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
               ColBind^.buffer_address^ := nil;
               ColBind^.buffer_Length_address^ := 0;
               Result := @FTinyBuffer[0];
@@ -1160,10 +1171,7 @@ set_Results:Len := Result - PWideChar(@FTinyBuffer);
                 goto set_from_tmp;
               end;
             end;
-        else
-          raise EZSQLException.Create(Format(SErrorConvertionField,
-            ['Field '+ZFastCode.IntToStr(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}),
-              DefineColumnTypeName(GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))]));
+        else RaiseConversionError(ColumnIndex);
       end;
     end;
   end else begin
@@ -1240,7 +1248,7 @@ begin
     FIELD_TYPE_STRING,
     FIELD_TYPE_ENUM, FIELD_TYPE_SET: begin
         bind^.buffer_type_address^ := FIELD_TYPE_STRING;
-        Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;//+Byte(Ord(not bind^.binary));
+        Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
       end;
     FIELD_TYPE_NEWDECIMAL,
     FIELD_TYPE_DECIMAL:
@@ -1254,23 +1262,38 @@ begin
         end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(9+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONG;
           Bind^.Length[0] := 4;
-        end else begin
+        end else {$IFDEF BCD_TEST}if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(18+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then {$ENDIF} begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONGLONG;
           Bind^.Length[0] := 8;
-        end
-      end else begin //force binary conversion to double values!
-        bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
-        Bind^.Length[0] := 8;
+        end {$IFDEF BCD_TEST}else begin
+          Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
+          bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
+        end{$ENDIF};
+      end else begin
+        {$IFDEF BCD_TEST}
+        Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
         bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
+        //see: http://www.iskm.org/mysql56/libmysql_8c_source.html / setup_one_fetch_function mysql always converts the decimal_t record to a string
+        {$ELSE}
+        if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ <= 4) and
+           (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^-2 < Cardinal(sAlignCurrencyScale2Precision[PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^])) then
+          Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^
+        else begin
+          //force binary conversion to double values!
+          bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
+          Bind^.Length[0] := 8;
+        end;
+        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
+        {$ENDIF}
       end;
-    FIELD_TYPE_NULL: Bind^.Length[0] := 8;
-    else
+    else begin
       Bind^.Length[0] := (((PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^) shr 3)+1) shl 3; //8Byte Aligned
+    end;
     //Length := MYSQL_FIELD^.length;
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
   then Bind^.Buffer := nil
-  else ReallocMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ in [FIELD_TYPE_STRING]))) shr 3)+1) shl 3) ); //8Byte aligned
+  else ReallocMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ in [FIELD_TYPE_STRING, FIELD_TYPE_NEWDECIMAL, FIELD_TYPE_DECIMAL]))) shr 3)+1) shl 3) ); //8Byte aligned
   Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
@@ -1330,6 +1353,8 @@ begin
         FIELD_TYPE_YEAR:
           Result := PWord(ColBind^.buffer)^ <> 0;
         FIELD_TYPE_STRING,
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_ENUM, FIELD_TYPE_SET:
           Result := StrToBoolEx(PAnsiChar(ColBind^.buffer), True, False);
         FIELD_TYPE_BIT://http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
@@ -1343,15 +1368,14 @@ begin
             //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
-          if ( ColBind^.Length[0]  > 0 ) and
-             (ColBind^.Length[0]  < 12{Max Int32 Length = 11} ) then
+          if ( ColBind^.Length[0]  > 0 ) and (ColBind^.Length[0]  < 12{Max Int32 Length = 11} ) then
           begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
             ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
-            Result := StrToBoolEx(PAnsiChar(@FTinyBuffer[0]));
+            Result := StrToBoolEx(PAnsiChar(@FTinyBuffer[0]), @FTinyBuffer[ColBind^.Length[0]]);
           end;
       end
   end else begin
@@ -1421,6 +1445,8 @@ begin
                               else Result := Integer(PUInt64(ColBind^.buffer)^);
         FIELD_TYPE_YEAR: Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_STRING,
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_ENUM, FIELD_TYPE_SET:
           Result := RawToIntDef(PAnsiChar(ColBind^.buffer), 0);
         FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
@@ -1436,14 +1462,13 @@ begin
         FIELD_TYPE_LONG_BLOB,
         FIELD_TYPE_BLOB,
         FIELD_TYPE_GEOMETRY:
-          if not ColBind^.binary and ( ColBind^.Length[0]  > 0 ) and
-             (ColBind^.Length[0]  < 13{Max Int32 Length = 11+#0} ) then begin
+          if ( ColBind^.Length[0]  > 0 ) and (ColBind^.Length[0]  < 13{Max Int32 Length = 11+#0} ) then begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on top of data and corrupts our mem
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
-            Result := RawToIntDef(@FTinyBuffer[0], 0);
+            Result := RawToIntDef(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
       end
   end else begin
@@ -1511,6 +1536,8 @@ begin
                               else Result := PUInt64(ColBind^.buffer)^;
         FIELD_TYPE_YEAR: Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_STRING,
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_ENUM, FIELD_TYPE_SET:
           Result := RawToInt64Def(PAnsiChar(ColBind^.buffer), 0);
         FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
@@ -1523,15 +1550,14 @@ begin
             end;
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
-          if not ColBind^.binary and ( ColBind^.Length[0]  > 0 ) and
-             (ColBind^.Length[0]  < 22{Max Int64 Length = 20+#0}) then
+          if ( ColBind^.Length[0]  > 0 ) and (ColBind^.Length[0]  < 22{Max Int64 Length = 20+#0}) then
           begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
             ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
-            Result := RawToInt64Def(@FTinyBuffer[0], 0);
+            Result := RawToInt64Def(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
       end
   end else begin
@@ -1569,7 +1595,7 @@ var
   ColBind: PMYSQL_aligned_BIND;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stULong);
+  CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
@@ -1599,6 +1625,8 @@ begin
                               else Result := PUInt64(ColBind^.buffer)^;
         FIELD_TYPE_YEAR: Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_STRING,
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_ENUM, FIELD_TYPE_SET:
           Result := RawToUInt64Def(PAnsiChar(ColBind^.buffer), 0);
         FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
@@ -1611,15 +1639,14 @@ begin
             end;
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
-        if ( ColBind^.Length[0]  > 0 ) and
-           (ColBind^.Length[0]  < 22{Max UInt64 Length = 20+#0} ) then
+        if ( ColBind^.Length[0]  > 0 ) and (ColBind^.Length[0]  < 22{Max UInt64 Length = 20+#0} ) then
           begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
             ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
-            Result := RawToUInt64Def(@FTinyBuffer[0], 0);
+            Result := RawToUInt64Def(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
       end
   end else begin
@@ -1679,6 +1706,8 @@ begin
                               else Result := PUInt64(ColBind^.buffer)^;
         FIELD_TYPE_YEAR: Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_STRING,
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_ENUM, FIELD_TYPE_SET:
           Result := RawToUInt64Def(PAnsiChar(ColBind^.buffer), 0);
         FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
@@ -1691,15 +1720,14 @@ begin
             end;
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
-        if ( ColBind^.Length[0]  > 0 ) and
-           (ColBind^.Length[0]  < 22{Max UInt64 Length = 20+#0} ) then
+        if ( ColBind^.Length[0]  > 0 ) and (ColBind^.Length[0]  < 22{Max UInt64 Length = 20+#0} ) then
           begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
             ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
-            Result := RawToUInt64Def(@FTinyBuffer[0], 0);
+            Result := RawToUInt64Def(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
       end
   end else begin
@@ -1752,7 +1780,7 @@ var
   ColBind: PMYSQL_aligned_BIND;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stFloat);
+  CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
@@ -1785,6 +1813,8 @@ begin
                               then Result := Integer(PInt64(ColBind^.buffer)^)
                               else Result := Integer(PUInt64(ColBind^.buffer)^);
         FIELD_TYPE_YEAR: Result := PWord(ColBind^.buffer)^;
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_STRING,
         FIELD_TYPE_ENUM,
         FIELD_TYPE_SET:
@@ -1792,13 +1822,13 @@ begin
         FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
-          if ( ColBind^.Length[0]  > 0 ) and
-             (ColBind^.Length[0]  < 30{Max Extended Length = 28 ??} ) then begin
+          if ( ColBind^.Length[0]  > 0 ) and (ColBind^.Length[0]  < 30{Max Extended Length = 28 ??} ) then begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
             ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
+            FTinyBuffer[ColBind^.Length[0]] := 0;
             RawToFloatDef(PAnsichar(@FTinyBuffer[0]), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), 0, Result);
           end;
       end
@@ -1825,15 +1855,79 @@ end;
 }
 {$IFDEF BCD_TEST}
 procedure TZAbstractMySQLResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+var
+  Len: NativeUInt;
+  Buffer: PAnsiChar;
+  ColBind: PMYSQL_aligned_BIND;
 begin
-  DoubleToBCD(GetDouble(ColumnIndex), Result);
-end;
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBigDecimal);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  {$R-}
+  ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if fBindBufferAllocated then begin
+    LastWasNull := ColBind^.is_null =1;
+    if not LastWasNull then
+      //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
+      //see: setup_one_fetch_function in http://www.iskm.org/mysql56/libmysql_8c_source.html
+      //libmysql does always convert the decimal_t to a str-buffer
+      Case ColBind^.buffer_type_address^ of
+        FIELD_TYPE_TINY:  if ColBind^.is_unsigned_address^ = 0
+                          then ScaledOrdinal2BCD(SmallInt(PShortInt(ColBind^.buffer)^), 0, Result)
+                          else ScaledOrdinal2BCD(Word(PByte(ColBind^.buffer)^), 0, Result);
+        FIELD_TYPE_SHORT: if ColBind^.is_unsigned_address^ = 0
+                          then ScaledOrdinal2BCD(PSmallInt(ColBind^.buffer)^, 0, Result)
+                          else ScaledOrdinal2BCD(PWord(ColBind^.buffer)^, 0, Result);
+        FIELD_TYPE_LONG:  if ColBind^.is_unsigned_address^ = 0
+                          then ScaledOrdinal2BCD(PInteger(ColBind^.buffer)^, 0, Result)
+                          else ScaledOrdinal2BCD(PCardinal(ColBind^.buffer)^, 0, Result);
+        FIELD_TYPE_FLOAT:   Double2BCD(PSingle(ColBind^.buffer)^, Result);
+        FIELD_TYPE_DOUBLE:  Double2BCD(PDouble(ColBind^.buffer)^, Result);
+        FIELD_TYPE_LONGLONG:  if ColBind^.is_unsigned_address^ = 0
+                              then ScaledOrdinal2BCD(PInt64(ColBind^.buffer)^, 0, Result)
+                              else ScaledOrdinal2BCD(PUInt64(ColBind^.buffer)^, 0, Result);
+        FIELD_TYPE_YEAR: ScaledOrdinal2BCD(PWord(ColBind^.buffer)^, 0, Result);
+        FIELD_TYPE_STRING,
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
+        FIELD_TYPE_ENUM,
+        FIELD_TYPE_SET: LastWasNull := not TryRawToBCD(PAnsiChar(ColBind^.buffer), ColBind^.Length[0], Result, '.');
+        FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
+          if ( ColBind^.Length[0]  > 0 ) and
+             (ColBind^.Length[0]  <= 66{MaxFMTBcdFractionSize + dot + sign} ) then begin
+            ColBind^.buffer_address^ := @FTinyBuffer[0];
+            ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
+            ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
+            LastWasNull := not TryRawToBCD(@FTinyBuffer[0], ColBind^.Length[0], Result, '.');
+          end else
+            Result := nullbcd;
+        else begin
+            Result := nullbcd;
+            RaiseConversionError(ColumnIndex);
+          end;
+      end
+    else Result := nullbcd;
+  end else begin
+    {$R-}
+    Buffer := PMYSQL_ROW(FRowHandle)[ColumnIndex];
+    Len := FLengthArray^[ColumnIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    LastWasNull := (Buffer = nil) or not TryRawToBCD(Buffer, Len, Result, '.');
+  end;
 {$ELSE}
 function TZAbstractMySQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
   Result := GetDouble(ColumnIndex);
-end;
 {$ENDIF}
+end;
 
 {**
   Gets the value of the designated column in the current row
@@ -1875,7 +1969,7 @@ begin
           if ColBind^.Length[0] < SizeOf(FTinyBuffer) then begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
             ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
             Result := BufferToBytes(@FTinyBuffer[0], ColBind^.Length[0] );
@@ -1944,6 +2038,8 @@ begin
         FIELD_TYPE_YEAR: Result := PWord(ColBind^.buffer)^;
         FIELD_TYPE_STRING,
         FIELD_TYPE_ENUM,
+        FIELD_TYPE_NEWDECIMAL,
+        FIELD_TYPE_DECIMAL,
         FIELD_TYPE_SET:
           ZSysUtils.SQLStrToFloatDef(PAnsiChar(ColBind^.buffer), 0, Result, ColBind^.Length[0] );
         FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
@@ -1953,9 +2049,10 @@ begin
              (ColBind^.Length[0]  < 30{Max Extended Length = 28 ??} ) then begin
             ColBind^.buffer_address^ := @FTinyBuffer[0];
             ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FPMYSQL^, ColBind^.mysql_bind, ColumnIndex, 0);
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
             ColBind^.buffer_address^ := nil;
             ColBind^.buffer_Length_address^ := 0;
+            FTinyBuffer[ColBind^.Length[0]] := 0;
             RawToFloatDef(PAnsichar(@FTinyBuffer[0]), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), 0, Result);
           end;
       end
