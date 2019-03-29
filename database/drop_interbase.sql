@@ -30,6 +30,7 @@ drop table default_values2;
 drop table domain_values;
 drop table guids;
 drop table insert_returning;
+drop table bcd_values;
 
 drop domain tinteger;
 drop domain tfloat;

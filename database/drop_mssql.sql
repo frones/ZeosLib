@@ -55,6 +55,9 @@ go
 drop table default_values2
 go
 
+drop table bcd_values
+go
+
 drop procedure procedure1
 go
 

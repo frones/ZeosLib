@@ -30,4 +30,5 @@ drop table IF EXISTS high_load;
 drop table IF EXISTS `Spaced Names`;
 drop table IF EXISTS TEST_BIT_FIELDS;
 drop table IF EXISTS TEST_MYSQL_BOOLEANS;
+drop table IF EXISTS bcd_values;
 

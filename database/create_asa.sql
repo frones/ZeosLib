@@ -209,6 +209,9 @@ create table default_values
    primary key (d_id)
 );
 
+/*==============================================================*/
+/* Table : default_values2                                      */
+/*==============================================================*/
 create table default_values2
 (
    d_id                           INTEGER NOT NULL		default autoincrement,
@@ -219,6 +222,23 @@ create table default_values2
    d_fld5                     	  TIMESTAMP default '2003-12-11 23:12:11',
    d_fld6                     	  TIME default '23:12:11',
    primary key (d_id)
+);
+
+/*==============================================================*/
+/* Table : bcd_values                                           */
+/*==============================================================*/
+create table bcd_values
+(
+   id                             INTEGER NOT NULL,
+   curr18_4                       DECIMAL(18,4),
+   curr15_2                       DECIMAL(15,2),
+   curr10_4                       DECIMAL(10,4),
+   curr4_4                        DECIMAL(4,4),
+   bigd18_1                       DECIMAL(18,1),
+   bigd18_5                       DECIMAL(18,5),
+   bigd12_10                      DECIMAL(12,10),
+   bigd18_18                      DECIMAL(18,18),
+   primary key (id)
 );
 
 /*==============================================================*/

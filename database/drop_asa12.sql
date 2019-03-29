@@ -17,6 +17,7 @@ drop table string_values;
 drop table not_null_values;
 drop table high_load;
 drop table default_values;
+drop table bcd_values;
 drop table "Spaced Names";
 /*drop table domain_values;
 
