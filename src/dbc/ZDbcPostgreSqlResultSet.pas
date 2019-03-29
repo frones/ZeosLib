@@ -874,10 +874,10 @@ end;
 }
 {$IFDEF BCD_TEST}
 procedure TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-begin
-  LastwasNull := not TryStrToBCD(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+var P: PAnsiChar;
 {$ELSE}
 function TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -886,11 +886,17 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
-    pgSQLStrToFloatDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0, Result);
-{$ENDIF}
+  if LastWasNull
+  {$IFDEF BCD_TEST}
+  then Result := NullBCD
+  else begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    LastWasNull := (P = nil) or not TryRawToBCD(P, StrLen(P), Result, '.');
+  end;
+  {$ELSE}
+  then Result := 0
+  else pgSQLStrToFloatDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0, Result);
+  {$ENDIF}
 end;
 
 {**

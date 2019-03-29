@@ -1425,14 +1425,14 @@ begin
       {$ELSE !WITH_VARIANT_UINT64}
       adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64, 0, Result);
       {$ENDIF !WITH_VARIANT_UINT64}
-      adSingle: Result := DoubleToBCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
-      adDouble: Result := DoubleToBCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
+      adSingle: Double2BCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle, Result);
+      adDouble: Double2BCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble, Result);
       adCurrency: Currency2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency, Result);
       adBoolean: ScaledOrdinal2Bcd(Word(Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean)), 0, Result);
       adDate,
       adDBDate,
       adDBTime,
-      adDBTimeStamp: Result := DoubleToBCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDate);
+      adDBTimeStamp: Double2BCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDate, Result);
       adChar,
       adWChar,
       adVarChar,

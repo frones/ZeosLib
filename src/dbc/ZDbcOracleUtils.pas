@@ -881,14 +881,15 @@ begin
   NumDigit := NumDigit - (bcd.SignSpecialPlaces and 63);
   //find out if first halfbyte need to be multiplied by 10(padd left)
   if (NumDigit and 1 = 1) then //in case of odd precisons we usually add the values
-    if not GetFirstBCDHalfByte and ( //in case of odd scale or the last byte is zero
-        ((PByte(pLastNibble)^ and $0F) = 0) or ((bcd.SignSpecialPlaces and 63) and 1 = 0))
+    if not GetFirstBCDHalfByte and (
+        ((PByte(pLastNibble)^ and $0F) = 0) {in case of last byte is zero: }or
+        ((bcd.SignSpecialPlaces and 63) and 1 = 0)) {in case of odd scale: }
     then NotMultiplyBy10 := False //we padd the values a half byte to left
     else begin
       NotMultiplyBy10 := True;
       Inc(NumDigit); //corret results for the next division
     end
-  else NotMultiplyBy10 := not GetFirstBCDHalfByte; //or if first half byte is empty
+  else NotMultiplyBy10 := not GetFirstBCDHalfByte; //or if first half byte is zero
   num^[1] := (NumDigit shr 1)-(pNibble+1-pLastNum) + 65 + 128; //set the exponent
   pLastNum := pNum+(OCI_NUMBER_SIZE-2); //mark end of byte array
 NextDigitOrNum: //main loop without any condition

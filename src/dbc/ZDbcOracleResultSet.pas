@@ -60,7 +60,7 @@ uses
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,{$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver,
   ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils,
@@ -84,7 +84,6 @@ type
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
     FTempLob: IZBlob;
     FClientCP: Word;
-    Fbufsize: UB4; //a temporary variable uses for Number2Text
     fStatus: Sword;
     FvnuInfo: TZvnuInfo;
     function GetFinalObject(Obj: POCIObject): POCIObject;
@@ -477,6 +476,11 @@ const rNegInfinity: RawbyteString = '-Infinity';
 function TZOracleAbstractResultSet_A.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 var SQLVarHolder: PZSQLVar;
 label dbl, sin, set_Result;
+  procedure RawFromNVU;
+  begin
+    Nvu2BCD(POCINumber(Result), PBCD(@FTinyBuffer[0])^);
+    FRawTemp := BcdToSQLRaw(PBCD(@FTinyBuffer[0])^);
+  end;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -539,14 +543,9 @@ begin
               goto set_Result;
             end;
           else begin
-              Fbufsize := SizeOf(FTinyBuffer);
-              fStatus := FplainDriver.OCINumberToText(FErrorHandle, POCINumber(Result),
-                sql_fmt, sql_fmt_length, sql_nls_params, sql_nls_p_length, @Fbufsize, @FTinyBuffer[0]);
-              if fStatus <> OCI_SUCCESS then
-                CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther,
-                      'OCINumberToText', ConSettings);
-              Len := Fbufsize;
-              Result := @FTinyBuffer[0];
+              RawFromNVU;
+              Result := Pointer(FRawTemp);
+              Len := Length(FRawTemp);
             end;
         end;
       { the ordinals we yet do support }
@@ -635,8 +634,12 @@ function TZOracleAbstractResultSet_A.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
-  D: Double;
 label dbl, sin, set_from_tmp, set_Result;
+  procedure UniFromNVU;
+  begin
+    Nvu2BCD(POCINumber(P), PBCD(@FTinyBuffer[0])^);
+    FUniTemp := ZSysUtils.BcdToSQLUni(PBCD(@FTinyBuffer[0])^);
+  end;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -702,11 +705,9 @@ begin
               goto set_Result;
             end;
           else begin
-              Result := @FTinyBuffer[0];
-              fStatus := FplainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @D);
-              if fStatus <> OCI_SUCCESS then
-                CheckOracleError(FPlainDriver, FErrorHandle, fStatus, lcOther, 'OCINumberToReal', ConSettings);
-              Len := FloatToSQLUnicode(D, @FTinyBuffer)
+              UniFromNVU;
+              Result := Pointer(FUniTemp);
+              Len := Length(FUniTemp);
             end;
         end;
       { the ordinals we yet do support }
@@ -1260,15 +1261,15 @@ begin
       {$IFDEF BCD_TEST}
       { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
-                    then Result := DoubleToBCD(PDouble(P)^)
-                    else Result := DoubleToBCD(PSingle(P)^);
-      SQLT_BFLOAT:  Result := DoubleToBCD(PSingle(P)^);
-      SQLT_BDOUBLE: Result := DoubleToBCD(PDouble(P)^);
+                    then Double2BCD(PDouble(P)^, Result)
+                    else Double2BCD(PSingle(P)^, Result);
+      SQLT_BFLOAT:  Double2BCD(PSingle(P)^, Result);
+      SQLT_BDOUBLE: Double2BCD(PDouble(P)^, Result);
       { the binary raw we support }
       //SQLT_VBI, SQLT_LVB:
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := DoubleToBCD(GetTimeStamp(ColumnIndex));
+        Double2BCD(GetTimeStamp(ColumnIndex), Result);
       else
         Result := NullBCD;
       {$ELSE}

@@ -461,7 +461,7 @@ end;
 {$IFDEF BCD_TEST}
 procedure TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 begin
-  Result := DoubleToBCD(GetDouble(ColumnIndex));
+  Double2BCD(GetDouble(ColumnIndex), Result);
 {$ELSE}
 function TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin

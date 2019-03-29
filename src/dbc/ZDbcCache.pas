@@ -3008,8 +3008,8 @@ begin
       stInteger: ScaledOrdinal2BCD(PInteger(Data)^, 0, Result);
       stULong: ScaledOrdinal2BCD(PUInt64(Data)^,0, Result, False);
       stLong: ScaledOrdinal2BCD(PInt64(Data)^, 0, Result);
-      stFloat: Result := DoubleToBCD(PSingle(Data)^);
-      stDouble: Result := DoubleToBCD(PDouble(Data)^);
+      stFloat: Double2BCD(PSingle(Data)^, Result);
+      stDouble: Double2BCD(PDouble(Data)^,Result);
       stCurrency: CurrToBcd(PCurrency(Data)^, Result);
       stBigDecimal: Result := PBCD(Data)^;
       stString, stUnicodeString: if fRaw
@@ -3900,7 +3900,7 @@ begin
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
     {$IFDEF BCD_TEST}
-    stBigDecimal: PBCD(Data)^ := DoubleToBCD(Value);
+    stBigDecimal: Double2BCD(Value,PBCD(Data)^);
     {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
     {$ENDIF}
@@ -3947,7 +3947,7 @@ begin
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
     {$IFDEF BCD_TEST}
-    stBigDecimal: PBCD(Data)^ := DoubleToBCD(Value);
+    stBigDecimal: Double2BCD(Value,PBCD(Data)^);
     {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
     {$ENDIF}
