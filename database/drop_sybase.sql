@@ -62,6 +62,13 @@ if exists (select 1
             and   type = 'U')
    drop table default_values2
 go
+
+if exists (select 1
+            from  sysobjects
+           where  id = object_id('bcd_values')
+            and   type = 'U')
+   drop table bcd_values
+go
 /*
 drop procedure abtest
 go */

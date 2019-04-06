@@ -2985,21 +2985,13 @@ procedure TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD; ou
 function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; out IsNull: Boolean): Extended;
 {$ENDIF}
 var Data: PPointer;
-  {$IFDEF BCD_TEST}
- procedure Str2BCD;
- begin
-   TryStrToBCD(GetString(ColumnIndex, IsNull), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})
- end;
-  {$ENDIF}
+{$IFDEF BCD_TEST}
+label NBCD;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  {$IFDEF BCD_TEST}
-  Result := NullBcd;
-  {$ELSE}
-  Result := 0;
-  {$ENDIF}
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
@@ -3016,12 +3008,25 @@ begin
       stInteger: ScaledOrdinal2BCD(PInteger(Data)^, 0, Result);
       stULong: ScaledOrdinal2BCD(PUInt64(Data)^,0, Result, False);
       stLong: ScaledOrdinal2BCD(PInt64(Data)^, 0, Result);
-      stFloat: Result := DoubleToBCD(PSingle(Data)^);
-      stDouble: Result := DoubleToBCD(PDouble(Data)^);
+      stFloat: Double2BCD(PSingle(Data)^, Result);
+      stDouble: Double2BCD(PDouble(Data)^,Result);
       stCurrency: CurrToBcd(PCurrency(Data)^, Result);
       stBigDecimal: Result := PBCD(Data)^;
-      stString, stUnicodeString,
-      stAsciiStream, stUnicodeStream: Str2BCD;
+      stString, stUnicodeString: if fRaw
+          then TryRawToBcd(PAnsiChar(Data^)+PAnsiInc, PLongWord(Data^)^, Result, '.')
+          else TryUniToBcd(PWideChar(Data^)+PWideInc, PLongWord(Data^)^, Result, '.');
+      stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then begin
+            if PIZlob(Data)^.IsClob then
+              PIZlob(Data)^.GetPAnsiChar(FClientCP);
+            TryRawToBcd(PIZlob(Data)^.GetBuffer, PIZlob(Data)^.Length, Result, '.');
+          end else goto NBCD;
+      stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then begin
+          if PIZlob(Data)^.IsClob then
+            PIZlob(Data)^.GetPWideChar;
+          TryUniToBcd(PIZlob(Data)^.GetBuffer, PIZlob(Data)^.Length, Result, '.');
+        end else goto NBCD;
+      else
+NBCD:   Result := NullBcd;
     end;
     {$ELSE}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
@@ -3045,11 +3050,14 @@ begin
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
-          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length)
+        else Result := 0.0;
       stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPWideChar, 0, Result)
-          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length);
+          else SQLStrToFloatDef(PAnsiChar(PIZlob(Data)^.GetBuffer), 0, Result, PIZlob(Data)^.Length)
+        else Result := 0.0;
+      else Result := 0.0;
     end;
     {$ENDIF}
     {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
@@ -3892,7 +3900,7 @@ begin
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
     {$IFDEF BCD_TEST}
-    stBigDecimal: PBCD(Data)^ := DoubleToBCD(Value);
+    stBigDecimal: Double2BCD(Value,PBCD(Data)^);
     {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
     {$ENDIF}
@@ -3939,7 +3947,7 @@ begin
     stDouble: PDouble(Data)^ := Value;
     stCurrency: PCurrency(Data)^ := Value;
     {$IFDEF BCD_TEST}
-    stBigDecimal: PBCD(Data)^ := DoubleToBCD(Value);
+    stBigDecimal: Double2BCD(Value,PBCD(Data)^);
     {$ELSE}
     stBigDecimal: PExtended(Data)^ := Value;
     {$ENDIF}

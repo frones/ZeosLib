@@ -211,6 +211,23 @@ create table default_values
 
 
 /*==============================================================*/
+/* Table : bcd_values                                           */
+/*==============================================================*/
+create table bcd_values
+(
+   id                             INTEGER NOT NULL,
+   curr18_4                       DECIMAL(18,4),
+   curr15_2                       DECIMAL(15,2),
+   curr10_4                       DECIMAL(10,4),
+   curr4_4                        DECIMAL(4,4),
+   bigd18_1                       DECIMAL(18,1),
+   bigd18_5                       DECIMAL(18,5),
+   bigd12_10                      DECIMAL(12,10),
+   bigd18_18                      DECIMAL(18,18),
+   primary key (id)
+);
+
+/*==============================================================*/
 /* Table : domain_values                                        */
 /*==============================================================*/
 

@@ -999,7 +999,7 @@ begin
     CheckEquals(1, Query.RecordCount);
 
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[0].DataType));
-    CheckEquals(Ord(ftFloat), Ord(Query.Fields[1].DataType));
+    CheckEquals(Ord(ftBCD), Ord(Query.Fields[1].DataType));
 
 //    CheckEquals(2, Query.FieldDefs[0].Precision);
 //    CheckEquals(4, Query.FieldDefs[1].Precision);

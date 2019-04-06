@@ -697,16 +697,19 @@ TMYSQL_CLIENT_OPTIONS =
   // -> "Leading “+” and “0” characters are not stored."
   Pdecimal_t = ^Tdecimal_t;
   Tdecimal_t = record
-    intg: Integer; //is the number of *decimal* digits (NOT number of decimal_digit_t's !) before the point
-    frac: Integer; //is the number of decimal digits after the point
-    len:  integer; //is the length of buf (length of allocated space) in decimal_digit_t's, not in bytes
-    sign: my_bool; //false means positive, true means negative
+    TruncPrecision{intg}: Integer; //is the number of *decimal* digits (NOT number of decimal_digit_t's !) before the point
+    Scale{frac}: Integer; //is the number of decimal digits after the point
+    Decimal_digit_ts{len}:  integer; //is the length of buf (length of allocated space) in decimal_digit_t's, not in bytes
+    Negative{sign}: my_bool; //false means positive, true means negative
     buf:  Pdecimal_digit_ts;  //is an array of decimal_digit_t's
   end;
 
   TMySQLForks = (fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta);
 
 const
+  DIG_PER_DEC1 = 9;
+  Powers10: array[0..DIG_PER_DEC1] of Tdecimal_digit_t = (
+    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000);
   EMBEDDED_DEFAULT_DATA_DIR = {$IFDEF WINDOWS}'.\data\'{$ELSE}'./data/'{$ENDIF};
   SERVER_ARGUMENTS_KEY_PREFIX = 'ServerArgument';
   SERVER_GROUPS : array [0..2] of PAnsiChar = ('embedded'#0, 'server'#0, nil);

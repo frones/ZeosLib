@@ -893,7 +893,7 @@ end;
 {$IFDEF BCD_TEST}
 procedure TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 begin
-  Result := DoubleToBCD(GetDouble(ColumnIndex));
+  Double2BCD(GetDouble(ColumnIndex), Result);
 {$ELSE !BCD_TEST}
 function TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin

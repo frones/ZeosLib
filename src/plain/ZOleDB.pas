@@ -1322,6 +1322,10 @@ const
   SSPROP_COLUMN_ID                = 22;
   SSPROP_COMPUTE_BYLIST           = 23;
   SSPROP_ISSAsynchStatus          = 24;
+
+//ficed numeric precision size
+  SQL_MAX_NUMERIC_LEN = 16;
+
 //Forward declarations
 type
  IColumnsInfo = interface;
@@ -1797,7 +1801,7 @@ type
     precision:  Byte;
     scale:      Byte;
     sign:       Byte;
-    val:        array[0..15] of BYTE; //fixed len
+    val:        array[0..SQL_MAX_NUMERIC_LEN -1] of BYTE; //fixed len
   end;
 
   PDB_VARNUMERIC = ^TDB_VARNUMERIC;

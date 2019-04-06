@@ -1187,7 +1187,7 @@ begin
       Status := fPlainDriver.SQLDescribeParam(fHSTMT, Idx +1, //0=bookmark and Params do starts with 1
         @Bind.ParameterType, @Bind.ColumnSize, @Bind.DecimalDigits, @Bind.Nullable);
       if Status <> SQL_SUCCESS then
-        CheckStmtError(SQL_SUCCESS);
+        CheckStmtError(Status);
       // this is the only type where unsigned is correct
       UnSigned := (Bind.ParameterType = SQL_BIGINT) and (Bind.ColumnSize = 20);
       //get "best" TZSQLType -> ODBC does not returns the C-Data types

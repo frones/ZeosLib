@@ -61,7 +61,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 uses
-  Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD,
   ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement, Variants;
 
 type
@@ -104,6 +104,14 @@ function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
 function MapOleTypesToZeos(DBType: DBTYPEENUM): DBTYPE;
 
 function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
+
+(** written by EgonHugeist
+  converts a oledb DB_(VAR)NUMERIC value into a <code>java.math.BigDecimal</code>
+  @param Src the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Dest the <code>java.math.BigDecimal</code> value which should be filled
+  @param NumericLen the count of value digits of the numeric
+*)
+procedure OleDBNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
 
 const SQLType2OleDBTypeEnum: array[TZSQLType] of DBTYPEENUM = (DBTYPE_NULL,
   DBTYPE_BOOL,
@@ -471,10 +479,6 @@ var
           DBBindingArray[Index].cbMaxLen := ((ParamInfoArray^[Index].ulParamSize +1) shl 1)
         else
           DBBindingArray[Index].cbMaxLen := ParamInfoArray^[Index].ulParamSize;
-        if False and SupportsByRefAccessor and (ParamInfoArray^[Index].dwFlags and DBPARAMFLAGS_ISINPUT <> 0) then begin
-          DBBindingArray[Index].wType := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
-          DBBindingArray[Index].cbMaxLen := {DBBindingArray[Index].cbMaxLen+}SizeOf(Pointer);
-        end;
       end else begin { fixed size types do not need a length indicator }
         DBBindingArray[Index].cbMaxLen := ParamInfoArray[Index].ulParamSize;
         DBBindingArray[Index].obValue := DBBindingArray[Index].obLength;
@@ -614,5 +618,117 @@ begin
     end;
 end;
 
+{$IFDEF BCD_TEST}
+const
+  testNum: TDB_NUMERIC = (Precision: 18; Scale: 1; Sign: 1; val: (78, 243, 48, 166, 75, 155, 182, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+{$ENDIF}
+
+(** EgonHugeist prolog:
+  i didn't found any description/documentation how to work the the ole numerics.
+  After some tests like PUInt64(@TestNum.Val[0])^:
+    testNum: TDB_NUMERIC = (Precision: 18; Scale: 1; Sign: 1;
+      val: (78, 243, 48, 166, 75, 155, 182, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+  i found out all byte are a multiple of 16 starting with 1. Byte order
+  is Endian_little. Same as ordinals are stored on a Win-OS.
+  But we've more than 8 Bytes. Encode it into the BCD is messy and not fast.
+  Each byte need to be recalculated again because we need the modula of 100 for the nibbles.
+  So i need a local copy of the bytes first.
+  Also is there no precise Nibble position possible -> which means i'd to start
+  from last nibble down to first niblle and move all data afterwards.
+  If someone finds a faster way ... please let me know it!
+
+  converts a oledb DB_(VAR)NUMERIC value into a <code>java.math.BigDecimal</code>
+  @param Src the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Dest the <code>java.math.BigDecimal</code> value which should be filled
+  @param NumericLen the count of value digits of the numeric
+*)
+procedure OleDBNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
+var
+  Remainder, NextDigit: Word;
+  NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
+  pDigitCopy, pNumDigit, pNibble, pFirstNibble: PAnsiChar;
+  OddPrecision: Boolean;
+label Done, Fill;
+begin
+  // check for zero value and padd trailing zeroes away to reduce the main loop
+  pNumDigit := @Src.val[0];
+  pNibble := pNumDigit + (NumericLen -1);
+  pFirstNibble := @Dest.Fraction[0];
+  Remainder := 0;
+
+  while (pNibble >= pNumDigit) and (PByte(pNibble)^ = 0) do
+    Dec(pNibble);
+  if pNibble < pNumDigit then begin
+    Dest.Precision := 10;
+    Dest.SignSpecialPlaces := 2;
+    OddPrecision := False;
+    goto Fill;
+  end;
+  if Src.sign <> 0 //positive ?
+  then Dest.SignSpecialPlaces := Src.scale
+  else Dest.SignSpecialPlaces := (1 shl 7) + Src.scale;
+  { prepare local buffer }
+  NumericLen := (pNibble - pNumDigit);
+  if NumericLen >= SQL_MAX_NUMERIC_LEN
+  then GetMem(pDigitCopy, NumericLen+1)
+  else pDigitCopy := @NumericVal[0];
+  Move(pNumDigit^, pDigitCopy^, NumericLen+1); //localize all bytes for next calculation loop.
+  { calcutate precision }
+  if Src.scale > Src.precision //normalize precision
+  then Dest.Precision := Src.precision + (Src.scale - Src.precision)
+  else Dest.Precision := Src.precision;
+  OddPrecision := Dest.Precision and 1 = 1;
+  { address last bcd nibble }
+  pNibble := pFirstNibble + (MaxFMTBcdDigits-1);
+  if OddPrecision then begin
+    PByte(pNibble)^ := 0; //clear last nibble
+    Dec(pNibble);
+  end;
+
+  while NumericLen >= 0 do begin //outer loop bcd loop
+    pNumDigit := pDigitCopy+Cardinal(NumericLen);
+    while pNumDigit > pDigitCopy do begin //inner digit calc loop
+      NextDigit := PByte(pNumDigit)^ + Remainder;
+      PByte(pNumDigit)^ := NextDigit div 100;
+      Remainder := (NextDigit - (PByte(pNumDigit)^ * 100) {mod 100}) shl 8;
+      Dec(pNumDigit);
+    end;
+    NextDigit := PByte(pNumDigit)^ + Remainder;
+    PByte(pNumDigit)^ := NextDigit div 100;
+    Remainder := NextDigit - (PByte(pNumDigit)^ * 100); //mod 100
+    if OddPrecision then begin
+      PByte(pNibble+1)^ := (PByte(pNibble+1)^) + (Remainder mod 10) shl 4;
+      PByte(pNibble)^ := (Remainder div 10);
+    end else
+      PByte(pNibble)^ := (Remainder mod 10) + (Remainder div 10) shl 4;
+    if pNibble > pFirstNibble //overflow save
+    then Dec(pNibble)
+    else goto Done; //ready....? Should not happen
+    Dec(NumericLen, Ord(PByte(pDigitCopy+NumericLen)^ = 0)); //as long we've no zero we've to loop again
+    Remainder := 0;
+  end;
+  Remainder := PAnsiChar(@Dest.Fraction[MaxFMTBcdDigits-1])-PNibble;
+  Move((PNibble+1)^, pFirstNibble^, Remainder);
+Done: //free possibly allocated mem
+  if Pointer(pDigitCopy) <> Pointer(@NumericVal[0]) then
+    FreeMem(pDigitCopy);
+Fill: //clear all nibbles after new offset
+  FillChar((pFirstNibble+Remainder)^, MaxFMTBcdDigits-Remainder-Ord(OddPrecision), #0);
+end;
+
+{$IFDEF BCD_TEST}
+procedure X;
+var BCD: array[Byte] of Byte;
+
+S: String;
+begin
+  FillChar(BCD[0], SizeOf(BCD), #1);
+ OleDBNumeric2BCD(@TestNum, pBCD(@BCD[0])^, 8);
+ S := BCDToStr(pBCD(@BCD[0])^);
+ Assert(S = '12345678901234567,8');
+end;
+initialization
+  X;
+{$ENDIF BCD_TEST}
 {$ENDIF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 end.

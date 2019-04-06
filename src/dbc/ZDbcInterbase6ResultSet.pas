@@ -469,18 +469,15 @@ begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_D_FLOAT,
-      SQL_DOUBLE    : DoubleToBCD(PDouble(XSQLVAR.sqldata)^, Result);
+      SQL_DOUBLE    : Double2BCD(PDouble(XSQLVAR.sqldata)^, Result);
       SQL_LONG      : ScaledOrdinal2Bcd(PISC_LONG(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
-      SQL_FLOAT     : DoubleToBCD(PSingle(XSQLVAR.sqldata)^, Result);
+      SQL_FLOAT     : Double2BCD(PSingle(XSQLVAR.sqldata)^, Result);
       SQL_BOOLEAN   : ScaledOrdinal2Bcd(Ord(PISC_BOOLEAN(XSQLVAR.sqldata)^ <> 0), 0, Result);
       SQL_BOOLEAN_FB: ScaledOrdinal2Bcd(Ord(PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ <> 0), 0, Result);
       SQL_SHORT     : ScaledOrdinal2Bcd(PISC_SHORT(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
       SQL_INT64     : ScaledOrdinal2Bcd(PISC_INT64(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
-      SQL_TEXT,
-      SQL_VARYING   : if not TryStrToBcd(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}) then begin
-                        Result := NullBcd;
-                        LastWasNull := True;
-                      end;
+      SQL_TEXT      : LastWasNull := not TryRawToBCD(XSQLVAR.sqldata, XSQLVAR.sqllen, Result, '.');
+      SQL_VARYING   : LastWasNull := not TryRawToBCD(@PISC_VARYING(XSQLVAR.sqldata).str[0], PISC_VARYING(XSQLVAR.sqldata).strlen, Result, '.');
       SQL_TIMESTAMP : begin
                        isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
@@ -494,17 +491,17 @@ begin
                         if dDT < 0
                         then dDT := dDT-tDT
                         else dDT := dDT+tDT;
-                        DoubleToBCD(dDT, Result);
+                        Double2BCD(dDT, Result);
                       end;
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
-                        DoubleToBCD(SysUtils.EncodeDate(TempDate.Year,TempDate.Month, TempDate.Day), Result);
+                        Double2BCD(SysUtils.EncodeDate(TempDate.Year,TempDate.Month, TempDate.Day), Result);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        DoubleToBCD(SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
+                        Double2BCD(SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions div 10), Result);
                       end;
       else raise EZIBConvertError.Create(Format(SErrorConvertionField,

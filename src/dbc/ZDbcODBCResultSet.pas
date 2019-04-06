@@ -267,7 +267,7 @@ begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[I]);
       case ColumnType of
-        stBoolean:    JSONWriter.AddShort(JSONBool[PWordBool(PByte(fColDataPtr)^ <> 0)^]);
+        stBoolean:    JSONWriter.AddShort(JSONBool[PByte(fColDataPtr)^ <> 0]);
         stByte:       JSONWriter.AddU(PByte(fColDataPtr)^);
         stShort:      JSONWriter.Add(PShortInt(fColDataPtr)^);
         stWord:       JSONWriter.AddU(PWord(fColDataPtr)^);
@@ -461,7 +461,7 @@ end;
 {$IFDEF BCD_TEST}
 procedure TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 begin
-  Result := DoubleToBCD(GetDouble(ColumnIndex));
+  Double2BCD(GetDouble(ColumnIndex), Result);
 {$ELSE}
 function TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin

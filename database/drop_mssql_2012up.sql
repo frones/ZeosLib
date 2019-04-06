@@ -64,6 +64,9 @@ go
 drop procedure ABTEST
 go
 
+drop table bcd_values
+go
+
 drop SEQUENCE generate_id
 go
 

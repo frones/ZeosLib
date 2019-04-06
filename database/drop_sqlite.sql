@@ -21,4 +21,5 @@ drop table default_values;
 drop table default_values2;
 drop table empty_types;
 drop table "Spaced Names";
+drop table bcd_values;
 

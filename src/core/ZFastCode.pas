@@ -3395,7 +3395,7 @@ begin
 end;
 
 {$IF defined (WIN32) and not defined(FPC)}
-procedure StrToIntError(const S: string);
+procedure StrToIntError(const S: PAnsiChar);
 begin
   raise EConvertError.CreateResFmt(@SInvalidInteger, [S]);
 end;

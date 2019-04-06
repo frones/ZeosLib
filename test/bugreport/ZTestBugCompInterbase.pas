@@ -469,7 +469,9 @@ var
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
+  {$IFDEF WITH_WIDEMEMO}
   WS: ZWideString;
+  {$ENDIF}
   ConSettings: PZConSettings;
 begin
   if SkipForReason(srClosedBug) then Exit;

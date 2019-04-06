@@ -956,8 +956,27 @@ end;
 }
 {$IFDEF BCD_TEST}
 procedure TZSQLiteResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+var ColType: Integer;
+  Buf: PAnsiChar;
 begin
-  DoubleToBCD(GetDouble(ColumnIndex), Result);
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBigDecimal);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
+  LastWasNull := ColType = SQLITE_NULL;
+  if LastWasNull or (ColType = SQLITE_BLOB) then begin
+    FillChar(Result, SizeOf(TBCD), #0);
+  end else case ColType of
+    SQLITE_INTEGER: ScaledOrdinal2BCD(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex), 0, Result);
+    SQLITE_FLOAT:   ZSysUtils.Double2BCD(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex), Result);
+    else {SQLITE_TEXT:}    begin
+                      Buf := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
+                      TryRawToBcd(Buf, StrLen(Buf), Result, '.');
+                    end;
+  end;
 end;
 {$ELSE}
 function TZSQLiteResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;

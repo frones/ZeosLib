@@ -399,7 +399,7 @@ const
   );
 
   { count transaction parameters }
-  MAX_TPB_PARAMS = 22;
+  MAX_TPB_PARAMS = 23;
   { prefix transaction parameters names it used in paramters scann procedure }
   TPBPrefix = 'isc_tpb_';
   { list transaction parameters and their apropriate numbers }
@@ -428,7 +428,9 @@ const
     // IB75+
     (Name: 'isc_tpb_no_savepoint';     ValueType: pvtNone;    Number: isc_tpb_no_savepoint),
     // FB20+
-    (Name: 'isc_tpb_lock_timeout';     ValueType: pvtNum;     Number: isc_tpb_lock_timeout)
+    (Name: 'isc_tpb_lock_timeout';     ValueType: pvtNum;     Number: isc_tpb_lock_timeout),
+    // FB40+
+    (Name: 'isc_tpb_read_consistency'; ValueType: pvtNone;    Number: isc_tpb_read_consistency)
   );
 
 //ported  from NoThrowTimeStamp.cpp

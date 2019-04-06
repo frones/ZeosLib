@@ -848,21 +848,18 @@ function BCD2Nvu(const bcd: TBCD; num: POCINumber): sb2;
 var
   pNibble, pLastNibble, pNum, pLastNum: PAnsiChar;
   NumDigit: Integer;
-  Negative, GetFirstBCDHalfByte, SetNumDigit: Boolean;
-//  S: String;
-label NextDigitOrNum, Done, AddNumDigit;
-begin// S := BCDToStr(bcd);
+  Negative, GetFirstBCDHalfByte, NotMultiplyBy10: Boolean;
+label NextDigitOrNum, Done;
+begin
   pNibble := @bcd.Fraction[0];
-  //pLastNum := pNibble; //remainder
-  if bcd.Precision > 0 then begin
-    pLastNibble := pNibble + ((bcd.Precision-1) shr 1); //stop main loop here -> the only save point i found!
+  pLastNum := pNibble; //remainder
+  NumDigit := bcd.Precision;
+  if NumDigit > 0 then begin
+    //pad all zero nibbles away because the slow mainloop uses halfbytes
+    pLastNibble := pNibble + ((NumDigit-1) shr 1); //top most significant digit
     // to avoid "ora 01438: value larger than specified precision allowed for this column"
-    // skip trailing zeroes
-    while (pLastNibble >= pNibble) and (PByte(pLastNibble)^ = 0) do
-      Dec(pLastNibble);
-    // ... skip leading zeroes
-    while (pNibble <= pLastNibble) and (PByte(pNibble)^ = 0) do
-      Inc(pNibble);
+    while (pLastNibble >= pNibble) and (PByte(pLastNibble)^ = 0) do Dec(pLastNibble); // skip trailing zeroes
+    while (pNibble <= pLastNibble) and (PByte(pNibble)^ = 0) do Inc(pNibble); // ... skip leading zeroes
   end else
     pLastNibble := pNibble-1;
   pNum := @num^[2]; //set offset after len and exponent bytes
@@ -881,60 +878,57 @@ begin// S := BCDToStr(bcd);
   end;
   Negative := (bcd.SignSpecialPlaces and (1 shl 7)) <> 0; //no call to BCDNegative
   GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0; //skip first half byte?
-  NumDigit := Bcd.Precision - (bcd.SignSpecialPlaces and 63);
-  //find out if first byte need to be multiplied by 10 or added
+  NumDigit := NumDigit - (bcd.SignSpecialPlaces and 63);
+  //find out if first halfbyte need to be multiplied by 10(padd left)
   if (NumDigit and 1 = 1) then //in case of odd precisons we usually add the values
     if not GetFirstBCDHalfByte and (
-        ((PByte(pLastNibble)^ and $0F) = 0) or
-        ((pLastNibble = pNibble) and ((bcd.SignSpecialPlaces and 63) and 1 = 0)))
-    then SetNumDigit := False //we padd the values to left
+        ((PByte(pLastNibble)^ and $0F) = 0) {in case of last byte is zero: }or
+        ((bcd.SignSpecialPlaces and 63) and 1 = 0)) {in case of odd scale: }
+    then NotMultiplyBy10 := False //we padd the values a half byte to left
     else begin
-      SetNumDigit := True;
-      Inc(NumDigit);
+      NotMultiplyBy10 := True;
+      Inc(NumDigit); //corret results for the next division
     end
-  else SetNumDigit := not GetFirstBCDHalfByte; //or if first half byte is empty
-  //set the exponent
-  num^[1] := (NumDigit shr 1)-(pNibble+1-PAnsiChar(@bcd.Fraction[0])) + 65 + 128;
+  else NotMultiplyBy10 := not GetFirstBCDHalfByte; //or if first half byte is zero
+  num^[1] := (NumDigit shr 1)-(pNibble+1-pLastNum) + 65 + 128; //set the exponent
   pLastNum := pNum+(OCI_NUMBER_SIZE-2); //mark end of byte array
-  Inc(pLastNibble);
 NextDigitOrNum: //main loop without any condition
   if GetFirstBCDHalfByte
   then NumDigit := (PByte(pNibble)^ shr 4)
   else begin
     NumDigit := (PByte(pNibble)^ and $0f);
-    Inc(pNibble) //next nibble
+    Inc(pNibble); //next nibble
   end;
-AddNumDigit:
-  if SetNumDigit then begin
+  if NotMultiplyBy10 then begin
     if Negative
     then NumDigit := 101 - PByte(pNum)^ + NumDigit
     else NumDigit := PByte(pNum)^ + NumDigit + 1;
-    PByte(pNum)^ := NumDigit;
-    if (pNum < pLastNum) then begin
-      if (pNibble = pLastNibble) then begin
+    PByte(pNum)^ := Byte(NumDigit);
+    if (pNum < pLastNum) then
+      if (pNibble > pLastNibble) then begin
         if (NumDigit = NVUBase100Adjust[Negative])
         then PByte(pNum)^ := 0
-        else Inc(pNum, Ord(NumDigit <> 0));
+        else Inc(pNum, Ord(NumDigit <> 0));  //remainder for len calculation
         goto Done;
       end else
-        Inc(pNum); //next base 100 vnu digit
-    end else goto Done;
+        Inc(pNum) //next base 100 vnu digit
+    else goto Done;
   end else
     PByte(pNum)^ := NumDigit * 10;
   { now invert the getter/setter logic }
   GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
-  SetNumDigit := not SetNumDigit;
+  NotMultiplyBy10 := not NotMultiplyBy10;
   goto NextDigitOrNum;
 Done: //job done -> finalize
   if Negative then begin
     num^[1] := not num^[1]; //invert the bits
-    if pNum-PAnsiChar(Num) < OCI_NUMBER_SIZE then begin
+    if pNum < PLastNum then begin
       PByte(pNum)^ := 102; //as documented for whatever it is..
-      inc(pNum);
+      inc(pNum); //for len calculation
     end;
   end;
   Result := pNum-PAnsiChar(Num);
-  num^[0] := Result - 1; // Assert(S <> '');
+  num^[0] := Result - 1;
 end;
 
 // Conversions
@@ -1489,7 +1483,7 @@ begin
     if not ( ( LogCategory = lcDisconnect ) and ( ErrorCode = 3314 ) ) then //patch for disconnected Server
       //on the other hand we can't close the connction  MantisBT: #0000227
       if LogMessage <> ''
-      then raise EZSQLException.CreateWithCode(ErrorCode,
+        then raise EZSQLException.CreateWithCode(ErrorCode,
         Format(cSSQLError3, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP), ErrorCode, LogMessage]))
       else raise EZSQLException.CreateWithCode(ErrorCode,
         Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));

@@ -82,6 +82,9 @@ type
     procedure TestStringToUnsignedIntegerConversions;
     procedure TestAfterLast;
     procedure TestQuestionMarks;
+    {$IFDEF BCD_TEST}
+    procedure TestDbcBCDValues;
+    {$ENDIF}
   end;
 
   TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
@@ -449,6 +452,77 @@ begin
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 end;
+
+{$IFDEF BCD_TEST}
+procedure TZGenericTestDbcResultSet.TestDbcBCDValues;
+const
+  id_Index        = FirstDbcIndex;
+  Curr18_4_Index  = FirstDbcIndex+1;
+  Curr15_2_Index  = FirstDbcIndex+2;
+  Curr10_4_Index  = FirstDbcIndex+3;
+  Curr4_4_Index   = FirstDbcIndex+4;
+  BigD18_1_Index  = FirstDbcIndex+5;
+  BigD18_5_Index  = FirstDbcIndex+6;
+  BigD12_10_Index = FirstDbcIndex+7;
+  BigD18_18_Index = FirstDbcIndex+8;
+
+  id_Value        = 1;
+  Curr18_4_Value  = '12345678901234.5678';
+  Curr15_2_Value  = '1234567890123.45';
+  Curr10_4_Value  = '123456,7890';
+  Curr4_4_Value   = '0.1234';
+  BigD18_1_Value  = '12345678901234567.8';
+  BigD18_5_Value  = '1234567890123.45678';
+  BigD12_10_Value = '12.3456789012';
+  BigD18_18_Value = '0.123456789012345678';
+var RS: IZResultSet;
+  SelStmt: IZPreparedStatement;
+  procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
+  var S: String;
+    BCD: TBCD;
+  begin
+    S := RS.GetMetadata.GetColumnLabel(ColumnIndex);
+    //firbird can't pass this tests -> missing precision in native RS but with metainformation it should be able to
+    if not ((ProtocolType = protFirebird) and (RS.GetType = rtForwardOnly)) then
+      CheckEquals(Precision, Ord(RS.GetMetadata.GetPrecision(ColumnIndex)), Protocol+': Precision mismatch, for column "'+S+'"');
+    if not (((ColumnIndex = BigD18_1_Index) or (ColumnIndex = Curr15_2_Index)) and
+              (RS.GetType = rtForwardOnly) and (ProtocolType = protFirebird)) then
+      CheckEquals(Ord(SQLType), Ord(RS.GetMetadata.GetColumnType(ColumnIndex)), Protocol+': SQLType mismatch, for column "'+S+'"');
+    CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
+    CheckEquals(Value, RS.GetString(ColumnIndex), Protocol+': StrValue('+Value+') mismatch, for column "'+S+'"');
+    RS.GetBigDecimal(ColumnIndex, BCD);
+    CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Value: '+Value);
+  end;
+  procedure TestColTypes(ResultSetType: TZResultSetType);
+  var i: Integer;
+  begin
+    SelStmt.SetResultSetType(ResultSetType);
+    for I := 0 to 4 do begin  //force realprepared to test as well
+      RS := SelStmt.ExecuteQueryPrepared;
+      if ResultSetType = rtScrollSensitive then
+        RS.GetMetadata.IsWritable(FirstDbcIndex); //force meta loading
+      try
+        Check(RS.Next, 'No row retrieved from bcd_values');
+        CheckEquals(1, RS.GetInt(id_Index));
+        CheckField(Curr18_4_Index,  18, 4,  stCurrency,    Curr18_4_Value);
+        CheckField(Curr15_2_Index,  15, 2,  stCurrency,    Curr15_2_Value);
+        CheckField(Curr4_4_Index,    4, 4,  stCurrency,    Curr4_4_Value);
+        CheckField(BigD18_1_Index,  18, 1,  stBigDecimal,  BigD18_1_Value);
+        CheckField(BigD18_5_Index,  18, 5,  stBigDecimal,  BigD18_5_Value);
+        CheckField(BigD12_10_Index, 12, 10, stBigDecimal,  BigD12_10_Value);
+        CheckField(BigD18_18_Index, 18, 18, stBigDecimal,  BigD18_18_Value);
+      finally
+        RS.Close;
+        RS := nil;
+      end;
+    end;
+  end;
+begin
+  SelStmt := Connection.PrepareStatement('select * from bcd_values');
+  TestColTypes(rtForwardOnly);
+  TestColTypes(rtScrollSensitive);
+end;
+{$ENDIF}
 
 {**
   Checks functionality prepared statement

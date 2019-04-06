@@ -835,7 +835,7 @@ end;
 {$IFDEF BCD_TEST}
 procedure TZASAAbstractResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 begin
-  Result := DoubleToBCD(GetDouble(ColumnIndex));
+  Double2BCD(GetDouble(ColumnIndex), Result);
 {$ELSE}
 function TZASAAbstractResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin

@@ -1032,7 +1032,11 @@ begin
       case TransactIsolationLevel of
         tiReadCommitted:
           begin
-            OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
+            // hier
+            if (self as IZInterbase6Connection).GetHostVersion >= 4000000 then
+              OverwritableParams[parRecVer] := 'isc_tpb_read_consistency'
+            else
+              OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
             OverwritableParams[parWait] := 'isc_tpb_nowait';
             AddStrings(Params, Info, OverwritableParams);
             OverwritableParams[parRW] := tpb_Access[ReadOnly];

@@ -20,7 +20,8 @@ BEGIN
                                             'DEFAULT_VALUES2',
                                             'TABLE_NUM1',
                                             'CUSTOMERS',
-                                            'SPACED NAMES')
+                                            'SPACED NAMES',
+                                            'BCD_VALUES')
                order by decode(upper(object_name),'DEPARTMENT',2,'EQUIPMENT',2,1)) LOOP
     execute immediate('DROP TABLE "'||rec.object_name||'"');
   END LOOP;
