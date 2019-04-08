@@ -810,7 +810,7 @@ begin
   while (pLastDigit >= pNumDigit) and (PByte(pLastDigit)^ = 0) do
     Dec(pLastDigit);
   if pLastDigit < pNumDigit then begin
-    PByte(Dest)^ := Ord('0');
+    PWord(Dest)^ := Ord('0');
     NumericLen := 1;
     Exit;
   end;
