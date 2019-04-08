@@ -94,13 +94,15 @@ type
     fEnhancedColInfo: Boolean;
     fMoreResultsIndicator: TZMoreResultsIndicator;
     fLastAutoCommit: Boolean;
+    FClientEncoding: TZCharEncoding;
+    FODBCConnection: IZODBCConnection;
     procedure InternalExecute;
     procedure PrepareOpenedResultSetsForReusing;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
     procedure CheckDbcError(RETCODE: SQLRETURN);
     procedure HandleError(RETCODE: SQLRETURN; Handle: SQLHANDLE; HandleType: SQLSMALLINT);
-    function InternalCreateResultSet: IZResultSet; virtual; abstract;
+    function InternalCreateResultSet: IZResultSet;
     procedure InternalBeforePrepare;
     function GetCurrentResultSet: IZResultSet;
   protected
@@ -125,7 +127,6 @@ type
   private
     fParamBindings: PZODBCParamBindArray;
     fBindImmediat: Boolean;
-    FClientEncoding: TZCharEncoding;
     fCurrentIterations: NativeUInt;
     procedure RaiseUnsupportedParamType(Index: Integer; SQLCType: SQLSMALLINT; SQLType: TZSQLType);
     procedure RaiseExceeded(Index: Integer);
@@ -192,15 +193,11 @@ type
   end;
 
   TZODBCPreparedStatementW = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
-  protected
-    function InternalCreateResultSet: IZResultSet; override;
   public
     procedure Prepare; override;
   end;
 
   TZODBCPreparedStatementA = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
-  protected
-    function InternalCreateResultSet: IZResultSet; override;
   public
     procedure Prepare; override;
   end;
@@ -265,6 +262,8 @@ begin
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EnhancedColumnInfo, 'True'));
   fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_StatementTimeOut, ''), SQL_QUERY_TIMEOUT_DEFAULT); //execution timeout in seconds by default 1
   fMoreResultsIndicator := TZMoreResultsIndicator(Ord(not Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets));
+  FClientEncoding := ConSettings^.ClientCodePage.Encoding;
+  FODBCConnection := Connection;
 end;
 
 function TZAbstractODBCStatement.ExecutePrepared: Boolean;
@@ -389,7 +388,7 @@ end;
 procedure TZAbstractODBCStatement.HandleError(RETCODE: SQLRETURN;
   Handle: SQLHANDLE; HandleType: SQLSMALLINT);
 begin
-  CheckODBCError(RETCODE, Handle, HandleType, SQL, Self, Connection as IZODBCConnection);
+  CheckODBCError(RETCODE, Handle, HandleType, SQL, Self, FODBCConnection);
 end;
 
 procedure TZAbstractODBCStatement.InternalBeforePrepare;
@@ -399,6 +398,15 @@ begin
     CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
     fMoreResultsIndicator := mriUnknown;
   end;
+end;
+
+function TZAbstractODBCStatement.InternalCreateResultSet: IZResultSet;
+begin
+  if (FClientEncoding = ceUTF16)
+  then Result := TODBCResultSetW.Create(Self, fHSTMT, fPHDBC^, SQL, FODBCConnection,
+    fZBufferLength, ChunkSize, FEnhancedColInfo)
+  else Result := TODBCResultSetA.Create(Self, fHSTMT, fPHDBC^, SQL, FODBCConnection,
+    fZBufferLength, ChunkSize, FEnhancedColInfo);
 end;
 
 procedure TZAbstractODBCStatement.InternalExecute;
@@ -482,7 +490,7 @@ end;
 
 function TZAbstractODBCStatement.SupportsSingleColumnArrays: Boolean;
 begin
-  Result := (GetConnection as IZODBCConnection).GetArraySelectSupported;
+  Result := FODBCConnection.GetArraySelectSupported;
 end;
 
 procedure TZAbstractODBCStatement.Unprepare;
@@ -496,12 +504,6 @@ end;
 
 { TZODBCPreparedStatementW }
 
-function TZODBCPreparedStatementW.InternalCreateResultSet: IZResultSet;
-begin
-  Result := TODBCResultSetW.Create(Self, fHSTMT, fPHDBC^, SQL, Connection as IZODBCConnection,
-    fZBufferLength, ChunkSize, FEnhancedColInfo);
-end;
-
 procedure TZODBCPreparedStatementW.Prepare;
 begin
   if Not Prepared then begin
@@ -514,12 +516,6 @@ begin
 end;
 
 { TZODBCPreparedStatementA }
-
-function TZODBCPreparedStatementA.InternalCreateResultSet: IZResultSet;
-begin
-  Result := TODBCResultSetA.Create(Self, fHSTMT, fPHDBC^, SQL, Connection as IZODBCConnection,
-    fZBufferLength, ChunkSize, FEnhancedColInfo);
-end;
 
 procedure TZODBCPreparedStatementA.Prepare;
 begin
@@ -1152,7 +1148,6 @@ constructor TZAbstractODBCPreparedStatement.Create(
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, ConnectionHandle, SQL, Info);
-  FClientEncoding := ConSettings^.ClientCodePage.Encoding;
   fCurrentIterations := 1;
 end;
 
