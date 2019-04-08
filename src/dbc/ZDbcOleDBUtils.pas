@@ -779,7 +779,12 @@ MainLoop: //outer digit filler loop
     else goto Done;
   goto MainLoop;
 Done:
-  Inc(pDigit, Ord(PByte(pDigit)^ = Ord('0')));
+  if Src.scale < Src.Precision then
+    Inc(pDigit, Ord(PByte(pDigit)^ = Ord('0')))
+  else if PByte(pDigit)^ <> Ord('0') then begin
+    Dec(pDigit);
+    PByte(pDigit)^ := Ord('0');
+  end;
   if Src.sign = 0 then begin//negative ?
     Dec(pDigit);
     PByte(pDigit)^ := Ord('-');
@@ -848,7 +853,12 @@ MainLoop: //outer digit filler loop
     else goto Done;
   goto MainLoop;
 Done:
-  Inc(pDigit, Ord(PWord(pDigit)^ = Ord('0')));
+  if Src.scale < Src.Precision then
+    Inc(pDigit, Ord(PWord(pDigit)^ = Ord('0')))
+  else if PWord(pDigit)^ <> Ord('0') then begin
+    Dec(pDigit);
+    PWord(pDigit)^ := Ord('0');
+  end;
   if Src.sign = 0 then begin//negative ?
     Dec(pDigit);
     PWord(pDigit)^ := Ord('-');
@@ -857,7 +867,7 @@ Done:
   Move(pDigit^, Dest^, (NumericLen-Src.scale) shl 1);
   if Src.scale > 0 then begin
     pWord(Dest+(NumericLen-Src.scale))^ := Ord('.');
-    Move((pLastDigit-Src.scale)^, (Dest+(NumericLen-Src.scale)+1)^,Src.scale shl 1);
+    Move((PWideChar(pLastDigit)-Src.scale)^, (Dest+(NumericLen-Src.scale)+1)^,Src.scale shl 1);
     Inc(NumericLen);
   end;
   //free possibly allocated mem

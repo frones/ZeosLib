@@ -535,7 +535,7 @@ end;
 }
 function TZAbstractOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
-label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref;
+label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref, set_from_num;
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
@@ -678,13 +678,12 @@ set_from_tmp:         Len := Length(FRawTemp);
     {$IFDEF BCD_TEST}
     DBTYPE_NUMERIC: begin
                       Len := SQL_MAX_NUMERIC_LEN;
-                      OleDBNumeric2Raw(fData, PBCD(@fTinyBuffer[0])^, Len);
-                      Result := @fTinyBuffer[0];
+                      goto set_from_num;
                     end;
     DBTYPE_VARNUMERIC: begin
                       Len := FLength;
-                      OleDBNumeric2Raw(fData, PBCD(@fTinyBuffer[0])^, Len);
-                      Result := @fTinyBuffer[0];
+set_from_num:         Result := @fTinyBuffer[0];
+                      OleDBNumeric2Raw(fData, @fTinyBuffer[0], Len);
                     end;
     {$ENDIF}
     //DBTYPE_UDT	= 132;
@@ -708,7 +707,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
-label set_from_tmp, set_from_buf, set_from_clob;
+label set_from_tmp, set_from_buf, set_from_clob, set_from_num;
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
@@ -863,13 +862,12 @@ set_from_clob:    fTempBlob := GetBlob(ColumnIndex); //localize
     {$IFDEF BCD_TEST}
     DBTYPE_NUMERIC: begin
                       Len := SQL_MAX_NUMERIC_LEN;
-                      OleDBNumeric2Uni(fData, PBCD(@fTinyBuffer[0])^, Len);
-                      Result := @fTinyBuffer[0];
+                      goto set_from_num;
                     end;
     DBTYPE_VARNUMERIC: begin
                       Len := FLength;
-                      OleDBNumeric2Uni(fData, PBCD(@fTinyBuffer[0])^, Len);
-                      Result := @fTinyBuffer[0];
+set_from_num:         Result := @fTinyBuffer[0];
+                      OleDBNumeric2Uni(fData, Result, Len);
                     end;
     {$ENDIF}
 
