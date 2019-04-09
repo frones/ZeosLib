@@ -1265,15 +1265,15 @@ begin
                   PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, PWideChar(Data)) shl 1;
             stDate: if Bind.cbMaxLen >= 22 then
 DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
-                        DateTimeToUnicodeSQLDate(Value, PWideChar(Data), ConSettings.WriteFormatSettings, False)
+                        DateTimeToUnicodeSQLDate(Value, PWideChar(Data), ConSettings.WriteFormatSettings, False) shl 1
                     else RaiseExceeded(Index);
             stTime: if (Bind.cbMaxLen >= 26 ){00.00.00.000#0} or ((Bind.cbMaxLen-2) shr 1 = DBLENGTH(ConSettings.WriteFormatSettings.TimeFormatLen)) then
 TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
-                        DateTimeToUnicodeSQLTime(Value, PWideChar(Data), ConSettings.WriteFormatSettings, False)
+                        DateTimeToUnicodeSQLTime(Value, PWideChar(Data), ConSettings.WriteFormatSettings, False) shl 1
                       else RaiseExceeded(Index);
             stTimeStamp: if (Bind.cbMaxLen >= 48){0000-00-00T00.00.00.000#0}  or ((Bind.cbMaxLen-2) shr 1 = DBLENGTH(ConSettings.WriteFormatSettings.DateTimeFormatLen)) then
 TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
-                        DateTimeToUnicodeSQLTime(Value, PWideChar(Data), ConSettings.WriteFormatSettings, False)
+                        DateTimeToUnicodeSQLTime(Value, PWideChar(Data), ConSettings.WriteFormatSettings, False) shl 1
                     else RaiseExceeded(Index);
             else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
           end;
