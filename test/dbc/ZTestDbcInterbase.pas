@@ -724,10 +724,10 @@ begin
     ResultSet.Close;
     Statement.Close;
 
-    if ServerVersion <= 4000000 then
+    if ServerVersion >= 4000000 then
       CheckEquals(4, IsolationMode, 'Expected Isolation mode to be READ COMMITTED READ CONSISTENCY (4) but got something else.')
     else
-      CheckEquals(3, IsolationMode, 'Expected Isolation mode to be READ COMMITTED NO RECORD VERSION (3) but got something else.');
+      CheckEquals(2, IsolationMode, 'Expected Isolation mode to be READ COMMITTED RECORD VERSION (2) but got something else.');
   end;
 end;
 
