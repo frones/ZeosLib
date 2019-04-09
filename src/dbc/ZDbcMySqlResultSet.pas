@@ -1889,7 +1889,7 @@ begin
         FIELD_TYPE_DOUBLE:  Double2BCD(PDouble(ColBind^.buffer)^, Result);
         FIELD_TYPE_LONGLONG:  if ColBind^.is_unsigned_address^ = 0
                               then ScaledOrdinal2BCD(PInt64(ColBind^.buffer)^, 0, Result)
-                              else ScaledOrdinal2BCD(PUInt64(ColBind^.buffer)^, 0, Result);
+                              else ScaledOrdinal2BCD(PUInt64(ColBind^.buffer)^, 0, Result, False);
         FIELD_TYPE_YEAR: ScaledOrdinal2BCD(PWord(ColBind^.buffer)^, 0, Result);
         FIELD_TYPE_STRING,
         FIELD_TYPE_NEWDECIMAL,
