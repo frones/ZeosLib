@@ -1065,10 +1065,12 @@ function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideSt
 (*function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
 function StringReplaceAll_CI_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;*)
 
-function BcdToSQLRaw(const Value: TBCD): RawByteString;
+function BcdToSQLRaw(const Value: TBCD): RawByteString; overload;
+function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt; overload;
 function RawToBCD(Value: PAnsiChar; Len: LengthInt): TBCD; overload;
 function RawToBCD(const Value: RawByteString): TBCD; overload;
 function BcdToSQLUni(const Value: TBCD): ZWideString;
+function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
 function UniToBCD(Value: PWideChar; Len: LengthInt): TBCD; overload;
 function UniToBCD(const Value: ZWideString): TBCD; overload;
 
@@ -6807,6 +6809,115 @@ begin
   {$ENDIF}
 end;
 
+function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt;
+var
+  PBuf, pNibble, pLastNibble: PAnsiChar;
+  DecimalPos, I, Precision: Integer;
+  GetFirstBCDHalfByte: Boolean;
+label zero;
+begin
+  PByte(Buf)^ := Ord('0');
+  Precision := Bcd.Precision;
+  if Precision = 0 then
+    goto zero;
+  DecimalPos := Bcd.SignSpecialPlaces and $3F;
+  if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision) then
+    raise EBcdOverflowException.Create(SBcdOverflow)
+  else DecimalPos := Precision - DecimalPos;
+  PNibble := @Bcd.Fraction[0];
+  PLastNibble := PNibble + ((Precision -1) shr 1);
+  PBuf        := PNibble + ((DecimalPos-1) shr 1);
+
+  while (PLastNibble > PBuf) and (PByte(PLastNibble)^ = 0) do begin//skip trailing zeroes
+    Dec(PLastNibble);
+    Dec(Precision, 2);
+  end;
+  while (PNibble < PBuf) and (PByte(PNibble)^ = 0) do //skip leading zeroes
+    Inc(PNibble);
+  if PNibble > pLastNibble then begin
+zero:
+    Result := 1;
+    Exit;
+  end;
+  PBuf := Buf;
+  GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0;
+  if (Bcd.SignSpecialPlaces and $80) = $80 then begin
+    PWord(Buf)^ := Ord('-')+Ord('0') shl 8;
+    Inc(Buf);
+  end;
+  Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
+  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 +Ord(not GetFirstBCDHalfByte) to Precision do begin
+    if I = DecimalPos then begin
+      PByte(Buf+1)^ := Ord(DecimalSep);
+      Inc(Buf, 2);
+    end;
+    if GetFirstBCDHalfByte
+    then PByte(Buf)^ := Ord('0') + (PByte(pNibble)^ shr 4)
+    else begin
+      PByte(Buf)^ := Ord('0') + (PByte(pNibble)^ and $0f);
+      Inc(pNibble);
+    end;
+    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
+    Inc(Buf);
+  end;
+  Result := Buf-PBuf;
+end;
+
+function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
+var
+  pNibble, pLastNibble: PAnsiChar;
+  PBuf: PWideChar;
+  DecimalPos, I, Precision: Integer;
+  GetFirstBCDHalfByte: Boolean;
+label zero;
+begin
+  PWord(Buf)^ := Ord('0');
+  Precision := Bcd.Precision;
+  if Precision = 0 then
+    goto zero;
+  DecimalPos := Bcd.SignSpecialPlaces and $3F;
+  if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision) then
+    raise EBcdOverflowException.Create(SBcdOverflow)
+  else DecimalPos := Precision - DecimalPos;
+  PNibble := @Bcd.Fraction[0];
+  PLastNibble := PNibble + ((Precision -1) shr 1);
+  PBuf        := Pointer(PNibble + ((DecimalPos-1) shr 1));
+
+  while (PLastNibble > PAnsiChar(PBuf)) and (PByte(PLastNibble)^ = 0) do begin//skip trailing zeroes
+    Dec(PLastNibble);
+    Dec(Precision, 2);
+  end;
+  while (PNibble < PAnsiChar(PBuf)) and (PByte(PNibble)^ = 0) do //skip leading zeroes
+    Inc(PNibble);
+  if PNibble > pLastNibble then begin
+zero:
+    Result := 1;
+    Exit;
+  end;
+  PBuf := Buf;
+  GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0;
+  if (Bcd.SignSpecialPlaces and $80) = $80 then begin
+    PCardinal(Buf)^ := Ord('-')+Ord('0') shl 16;
+    Inc(Buf);
+  end;
+  Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
+  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 +Ord(not GetFirstBCDHalfByte) to Precision do begin
+    if I = DecimalPos then begin
+      PWord(Buf+1)^ := Ord(DecimalSep);
+      Inc(Buf, 2);
+    end;
+    if GetFirstBCDHalfByte
+    then PWord(Buf)^ := Ord('0') + (PByte(pNibble)^ shr 4)
+    else begin
+      PWord(Buf)^ := Ord('0') + (PByte(pNibble)^ and $0f);
+      Inc(pNibble);
+    end;
+    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
+    Inc(Buf);
+  end;
+  Result := Buf-PBuf;
+end;
+
 function RawToBCD(Value: PAnsiChar; Len: LengthInt): TBCD;
 begin
   {$IFDEF UNICODE}
@@ -6876,7 +6987,44 @@ begin
   end;
 end;
 
+{$IFDEF BCD_TEST}
+procedure X;
+var Buff: array[Byte] of AnsiChar;
+  BCD: TBCD;
+  L: LengthInt;
+begin
+  BCD := -0.12345;
+  L := BcdToRaw(BCD, @Buff[0], '.');
+  Assert(L = 8);
+  L := BcdToUni(BCD, @Buff[0], '.');
+  Assert(L = 8);
+
+  BCD := 912345;
+  L := BcdToRaw(BCD, @Buff[0], '.');
+  Assert(L = 6);
+  L := BcdToUni(BCD, @Buff[0], '.');
+  Assert(L = 6);
+
+  BCD := 912345.0001;
+  L := BcdToRaw(BCD, @Buff[0], '.');
+  Assert(L = 12);
+  L := BcdToUni(BCD, @Buff[0], '.');
+  Assert(L = 12);
+
+  BCD := IntegerToBCD(1234567);
+  L := BcdToRaw(BCD, @Buff[0], '.');
+  Assert(L = 7);
+
+  BCD := IntegerToBCD(1234567);
+  L := BcdToUni(BCD, @Buff[0], '.');
+  Assert(L = 7);
+end;
+{$ENDIF}
+
 initialization;
+{$IFDEF BCD_TEST}
+  X;
+{$ENDIF}
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
