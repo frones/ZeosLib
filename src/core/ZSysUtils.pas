@@ -6987,44 +6987,7 @@ begin
   end;
 end;
 
-{$IFDEF BCD_TEST}
-procedure X;
-var Buff: array[Byte] of AnsiChar;
-  BCD: TBCD;
-  L: LengthInt;
-begin
-  BCD := -0.12345;
-  L := BcdToRaw(BCD, @Buff[0], '.');
-  Assert(L = 8);
-  L := BcdToUni(BCD, @Buff[0], '.');
-  Assert(L = 8);
-
-  BCD := 912345;
-  L := BcdToRaw(BCD, @Buff[0], '.');
-  Assert(L = 6);
-  L := BcdToUni(BCD, @Buff[0], '.');
-  Assert(L = 6);
-
-  BCD := 912345.0001;
-  L := BcdToRaw(BCD, @Buff[0], '.');
-  Assert(L = 12);
-  L := BcdToUni(BCD, @Buff[0], '.');
-  Assert(L = 12);
-
-  BCD := IntegerToBCD(1234567);
-  L := BcdToRaw(BCD, @Buff[0], '.');
-  Assert(L = 7);
-
-  BCD := IntegerToBCD(1234567);
-  L := BcdToUni(BCD, @Buff[0], '.');
-  Assert(L = 7);
-end;
-{$ENDIF}
-
 initialization;
-{$IFDEF BCD_TEST}
-  X;
-{$ENDIF}
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
