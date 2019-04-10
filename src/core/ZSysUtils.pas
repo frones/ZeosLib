@@ -6822,7 +6822,7 @@ begin
     goto zero;
   DecimalPos := Bcd.SignSpecialPlaces and $3F;
   if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision) then
-    raise EBcdOverflowException.Create({$IFDEF FPC}'BCD-Overflow'{$ELSE}SBcdOverflow{$ENDIF})
+    raise EBcdOverflowException.Create(SBcdOverflow)
   else DecimalPos := Precision - DecimalPos;
   PNibble := @Bcd.Fraction[0];
   PLastNibble := PNibble + ((Precision -1) shr 1);
@@ -6877,7 +6877,7 @@ begin
     goto zero;
   DecimalPos := Bcd.SignSpecialPlaces and $3F;
   if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision) then
-    raise EBcdOverflowException.Create({$IFDEF FPC}'BCD-Overflow'{$ELSE}SBcdOverflow{$ENDIF})
+    raise EBcdOverflowException.Create(SBcdOverflow)
   else DecimalPos := Precision - DecimalPos;
   PNibble := @Bcd.Fraction[0];
   PLastNibble := PNibble + ((Precision -1) shr 1);
