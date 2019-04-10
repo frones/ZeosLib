@@ -114,6 +114,9 @@ resourcestring
   {$IFNDEF WITH_SBCDOVERFLOW}
     cBcdOverflow = 'BCD-Overflow';
   {$ENDIF}
+  {$IFNDEF WITH_SInvalidBcdValue}
+    cInvalidBcdValue = '%s is not a valid BCD-Value';
+  {$ENDIF}
   cSLibraryNotCompatible = 'Client-Library %s found but could not be loaded. Check compile-target and library compatibility!';
 //--- added by Serge Girard --------------------------------------------------------
 {$IFDEF FRENCH}
@@ -1983,6 +1986,9 @@ var
   {$IFNDEF WITH_SBCDOVERFLOW}
   SBcdOverflow: String;
   {$ENDIF}
+  {$IFNDEF WITH_SInvalidBcdValue}
+  SInvalidBcdValue: String;
+  {$ENDIF}
 
   SSQLError1: String;
   SSQLError2: String;
@@ -2160,6 +2166,9 @@ begin
   {$ENDIF}
   {$IFNDEF WITH_SBCDOVERFLOW}
   SBcdOverflow := cBcdOverflow;
+  {$ENDIF}
+  {$IFNDEF WITH_SInvalidBcdValue}
+  SInvalidBcdValue := cInvalidBcdValue;
   {$ENDIF}
 
   SSQLError1 := cSSQLError1;

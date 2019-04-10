@@ -6722,8 +6722,8 @@ end;
 
 function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): TBCD;
 begin
-  if not TryStr2BCD(Value, Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS},FormatSettings{$ENDIF}) then
-    raise EBcdException.CreateFmt({$IFDEF WITH_DBCONSTS}SInvalidBcdValue{$ELSE}'%s is not a valid BCD-Value'{$ENDIF}, [Value]);
+  if not TryStr2BCD(Value, Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}{%H-},FormatSettings{$ENDIF}) then
+    raise EBcdException.CreateFmt(SInvalidBcdValue, [Value]);
 end;
 
 procedure Double2BCD(const Value: Double; var Result: TBCD);

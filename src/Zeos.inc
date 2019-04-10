@@ -86,7 +86,8 @@
   {$IFEND}
   {$DEFINE DELPHI}
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
-  {$DEFINE WITH_SBCDOVERFLOW}             //DBConst have error message SBcdOverflow
+  {$DEFINE WITH_SBCDOVERFLOW}             //DBConsts have error message SBcdOverflow
+  {$DEFINE WITH_SInvalidBcdValue}         //DBConsts have error message SInvalidBcdValue
   {$DEFINE WITH_DBTABLES}                 //Have the BDE DBTables Unit
   {$DEFINE WITH_DBCONSTS}                 //Delphi DBCONSTS, FPC DBCONST
   {$DEFINE WITH_ASCURRENCY}               // Has AsCurrency.
