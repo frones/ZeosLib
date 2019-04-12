@@ -2048,15 +2048,14 @@ begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if (BindList.SQLTypes[Index] <> stCurrency) or (Bind^.buffer = nil) then
-      InitBuffer(stCurrency, Index, Bind);
+    if (BindList.SQLTypes[Index] <> stBigDecimal) or (Bind^.buffer = nil) then
+      InitBuffer(stBigDecimal, Index, Bind);
     case Bind^.buffer_type_address^ of
       FIELD_TYPE_DOUBLE:  PDouble(Bind^.buffer)^ := BCDToDouble(Value);
       FIELD_TYPE_NEWDECIMAL,
       FIELD_TYPE_STRING:  begin
-                            FRawTemp := BcdToSQLRaw(Value);
-                            Bind^.Length[0] := Length(FRawTemp);
-                            Move(Pointer(FRawTemp)^, Bind.buffer^, Bind^.Length[0]+1); //include trailing #0 term
+                            Bind^.Length[0] := BcdToRaw(Value, Bind.buffer, '.');
+                            PByte(PAnsiChar(Bind.buffer)+Bind^.Length[0])^ := Ord(#0);
                           end;
     end;
     Bind^.is_null_address^ := 0;
