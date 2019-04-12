@@ -54,6 +54,7 @@
 
 {.$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values
 {$DEFINE WITH_VARIANT_UNICODESTRING}  // System.TVariant supports UnicodeString Values
+{$DEFINE NO_CONST_ZEROBCD}  // FmtBcd.ZeroBcd is a operator not a const
 {$DEFINE WITH_TFIELD_FREEBUFFERS}     //TField has virtual FreeBuffers procedure
 {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
 {$DEFINE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
