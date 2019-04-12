@@ -116,9 +116,8 @@ procedure OleDBNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer
   converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
   @param Dest the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
   @param Src the <code>java.math.BigDecimal</code> value which should be filled
-  @return the count of value digits of the numeric
 *)
-function BCD2OleDBNumeric(const Src: TBCD; Dest: PDB_NUMERIC): Integer;
+procedure BCD2OleDBNumeric(const Src: TBCD; Dest: PDB_NUMERIC);
 
 procedure OleDBNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: DBLENGTH);
 procedure OleDBNumeric2Uni(Src: PDB_NUMERIC; Dest: PWideChar; var NumericLen: DBLENGTH);
@@ -748,7 +747,7 @@ Type
     Values: array[0..SQL_MAX_NUMERIC_LEN - 1] of TSQLDigit;
   end;
 const
-  FlushDoubleDigit: TSQLDigit = {$IFDEF CPU64}$FFFFFFFF{$ELSE}$FFFF{$ENDIF}; //$FF
+  FlushHalfDoubleDigit: TSQLDigit = {$IFDEF CPU64}$FFFFFFFF{$ELSE}$FFFF{$ENDIF}; //$FF
   ShrSQLDigit = SizeOf(TSQLDigit) * 8;
 var
   OleDBMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
@@ -757,11 +756,10 @@ var
   converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
   @param Dest the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
   @param Src the <code>java.math.BigDecimal</code> value which should be filled
-  @return the count of value digits of the numeric
 *)
-function BCD2OleDBNumeric(const Src: TBCD; Dest: PDB_NUMERIC): Integer;
+procedure BCD2OleDBNumeric(const Src: TBCD; Dest: PDB_NUMERIC);
 var PNibble, pLastNibble, pFirstNibble: PAnsiChar;
-  base100Digit, Carry, I, SQLDigitCount: TSQLDigit;
+  Base100Digit, Carry, I: TSQLDigit;
   NextVal: TDoubleSQLDigit;
   pValues: PSQLDigitArray;
   PrecisionIsEven: Boolean;
@@ -772,8 +770,6 @@ begin
   Dest.precision := Src.Precision;
   Dest.scale := Src.SignSpecialPlaces and $3F;
   Dest.sign := Byte(Src.SignSpecialPlaces and (1 shl 7) = 0);
-
-  SQLDigitCount := 1;
 
   pFirstNibble := @Src.Fraction[0];
   pLastNibble := pFirstNibble+((Src.Precision -1) shr 1);
@@ -791,19 +787,15 @@ begin
     Base100Digit := ZSysUtils.ZBcdNibble2Base100ByteLookup[PByte(pNibble)^];
     Carry := 0;
     MultiplyLookup := @OleDBMultiplyLookup[PrecisionIsEven][pLastNibble-pNibble];
-    SQLDigitCount := MultiplyLookup.Count;
-    for I := 0 to SQLDigitCount - 1 do begin
+    for I := 0 to MultiplyLookup.Count - 1 do begin
       NextVal := pValues[I] + TDoubleSQLDigit(MultiplyLookup.Values[i]) * Base100Digit + Carry;
-      pValues[I] := TSQLDigit(NextVal and FlushDoubleDigit);
+      pValues[I] := TSQLDigit(NextVal and FlushHalfDoubleDigit);
       Carry := NextVal shr ShrSQLDigit;
     end;
-    if Carry <> 0 then begin
-      pValues[SQLDigitCount] := Carry;
-      Inc(SQLDigitCount);
-    end;
+    if Carry <> 0 then
+      pValues[MultiplyLookup.Count] := Carry;
     Dec(pNibble);
   end;
-  Result := SQLDigitCount;
 end;
 
 procedure OleDBNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: DBLENGTH);
@@ -970,7 +962,7 @@ begin
       Move(OleDBMultiplyLookup[b][I-1], OleDBMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
       for J := 0 to Cnt - 1 do begin
         NextVal := (TDoubleSQLDigit(OleDBMultiplyLookup[b][I].Values[J]) * 100) + Carry;
-        OleDBMultiplyLookup[b][I].Values[J] := TSQLDigit(NextVal and FlushDoubleDigit);
+        OleDBMultiplyLookup[b][I].Values[J] := TSQLDigit(NextVal and FlushHalfDoubleDigit);
         Carry := NextVal shr ShrSQLDigit;
       end;
       if Carry <> 0 then begin
