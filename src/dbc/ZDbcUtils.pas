@@ -1168,7 +1168,7 @@ begin
                                   ZSysUtils.SameText(null_a, PAnsiChar(TZCharRecDynArray(P)[Index].P), 4));
               vtNull: IsNullFromArray := True;
               else
-                raise Exception.Create('Unsupported String Variant');
+                raise EZSQLException.Create('Unsupported String Variant');
             end;
         stBytes:
           IsNullFromArray := TBytesDynArray(P)[Index] = nil;
@@ -1570,7 +1570,7 @@ begin
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1606,7 +1606,7 @@ begin
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1642,7 +1642,7 @@ begin
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1678,7 +1678,7 @@ begin
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1718,12 +1718,16 @@ begin
         stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
         stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
         stCurrency:   Result := TCurrencyDynArray(ZArray.VArray)[Index];
-        stBigDecimal: Result := TExtendedDynArray(ZArray.VArray)[Index];
+        stBigDecimal:  {$IFDEF BCD_TEST}
+                      BCDToCurr(TBCDDynArray(ZArray.VArray)[Index], Result);
+                      {$ELSE}
+                      Result := TExtendedDynArray(ZArray.VArray)[Index];
+                      {$ENDIF}
         stTime, stDate, stTimeStamp:
           Result := TDateTimeDynArray(ZArray.VArray)[Index];
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1768,7 +1772,7 @@ begin
           Result := TDateTimeDynArray(ZArray.VArray)[Index];
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1804,7 +1808,7 @@ begin
         stTime, stDate, stTimeStamp: Result := TDateTimeDynArray(ZArray.VArray)[Index]  <> 0;
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1853,7 +1857,7 @@ Str_Conv:
         stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1902,7 +1906,7 @@ Str_Conv:
         stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1947,7 +1951,7 @@ Str_Conv:
         stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
@@ -1988,7 +1992,7 @@ W_Conv: ZSysUtils.ValidGUIDToBinary(PAnsiChar(P), @GUID.D1);
         else goto DoRaise;
       end;
     else
-DoRaise: raise Exception.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
