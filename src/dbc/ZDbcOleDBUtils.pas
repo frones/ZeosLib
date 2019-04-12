@@ -112,6 +112,13 @@ function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZ
   @param NumericLen the count of value digits of the numeric
 *)
 procedure OleDBNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
+(** written by EgonHugeist
+  converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
+  @param Dest the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Src the <code>java.math.BigDecimal</code> value which should be filled
+  @return the count of value digits of the numeric
+*)
+function BCD2OleDBNumeric(const Src: TBCD; Dest: PDB_NUMERIC): Integer;
 
 procedure OleDBNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: DBLENGTH);
 procedure OleDBNumeric2Uni(Src: PDB_NUMERIC; Dest: PWideChar; var NumericLen: DBLENGTH);
@@ -728,6 +735,77 @@ Fill: //clear all nibbles after new offset
   FillChar((pFirstNibble+Remainder)^, MaxFMTBcdDigits-Remainder-Ord(OddPrecision), #0);
 end;
 
+Type
+  TSQLDigit = {$IFDEF CPU64}Cardinal{$ELSE}Word{$ENDIF}; //Byte
+  PSQLDigitArray = ^TSQLDigitArray;
+  TSQLDigitArray = array[0..SQL_MAX_NUMERIC_LEN] of TSQLDigit;
+
+  TDoubleSQLDigit = NativeUInt; //Word
+
+  POleDBMultiplyLookup = ^TOleDBMultiplyLookup;
+  TOleDBMultiplyLookup = record
+    Count: TSQLDigit;
+    Values: array[0..SQL_MAX_NUMERIC_LEN - 1] of TSQLDigit;
+  end;
+const
+  FlushDoubleDigit: TSQLDigit = {$IFDEF CPU64}$FFFFFFFF{$ELSE}$FFFF{$ENDIF}; //$FF
+  ShrSQLDigit = SizeOf(TSQLDigit) * 8;
+var
+  OleDBMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
+
+(** EH:
+  converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
+  @param Dest the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Src the <code>java.math.BigDecimal</code> value which should be filled
+  @return the count of value digits of the numeric
+*)
+function BCD2OleDBNumeric(const Src: TBCD; Dest: PDB_NUMERIC): Integer;
+var PNibble, pLastNibble, pFirstNibble: PAnsiChar;
+  base100Digit, Carry, I, SQLDigitCount: TSQLDigit;
+  NextVal: TDoubleSQLDigit;
+  pValues: PSQLDigitArray;
+  PrecisionIsEven: Boolean;
+  MultiplyLookup: POleDBMultiplyLookup;
+begin
+  pValues := @Dest.val[0];
+  FillChar(pValues^, SQL_MAX_NUMERIC_LEN, #0);
+  Dest.precision := Src.Precision;
+  Dest.scale := Src.SignSpecialPlaces and $3F;
+  Dest.sign := Byte(Src.SignSpecialPlaces and (1 shl 7) = 0);
+
+  SQLDigitCount := 1;
+
+  pFirstNibble := @Src.Fraction[0];
+  pLastNibble := pFirstNibble+((Src.Precision -1) shr 1);
+  pNibble := pLastNibble-1;
+  { init first byte }
+  if (Src.Precision and 1) = 0 then begin
+    pValues[0] := ZBcdNibble2Base100ByteLookup[PByte(pLastNibble)^];
+    PrecisionIsEven := True;
+  end else begin
+    pValues[0] := PByte(pLastNibble)^ shr 4;
+    PrecisionIsEven := False;
+  end;
+
+  while pNibble >= pFirstNibble do begin
+    Base100Digit := ZSysUtils.ZBcdNibble2Base100ByteLookup[PByte(pNibble)^];
+    Carry := 0;
+    MultiplyLookup := @OleDBMultiplyLookup[PrecisionIsEven][pLastNibble-pNibble];
+    SQLDigitCount := MultiplyLookup.Count;
+    for I := 0 to SQLDigitCount - 1 do begin
+      NextVal := pValues[I] + TDoubleSQLDigit(MultiplyLookup.Values[i]) * Base100Digit + Carry;
+      pValues[I] := TSQLDigit(NextVal and FlushDoubleDigit);
+      Carry := NextVal shr ShrSQLDigit;
+    end;
+    if Carry <> 0 then begin
+      pValues[SQLDigitCount] := Carry;
+      Inc(SQLDigitCount);
+    end;
+    Dec(pNibble);
+  end;
+  Result := SQLDigitCount;
+end;
+
 procedure OleDBNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: DBLENGTH);
 var
   Remainder, NextDigit: Word;
@@ -875,5 +953,39 @@ Done:
     FreeMem(pDigitCopy);
 end;
 
+procedure OleDBMultiplyLookupFiller;
+const bL: array[Boolean] of TSQLDigit = (10, 100);
+var B: Boolean;
+  I, j, cnt: Integer;
+  Carry: TSQLDigit;
+  NextVal: TDoubleSQLDigit;
+begin
+  for b := False to True do begin
+    cnt := 1;
+    FillChar(OleDBMultiplyLookup[b], SizeOf(TOleDBMultiplyLookup), #0);
+    OleDBMultiplyLookup[b][1].Count := Cnt;
+    OleDBMultiplyLookup[b][1].Values[0] := bl[b];
+    for I := 2 to MaxFMTBcdDigits-1 do begin
+      Carry := 0;
+      Move(OleDBMultiplyLookup[b][I-1], OleDBMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
+      for J := 0 to Cnt - 1 do begin
+        NextVal := (TDoubleSQLDigit(OleDBMultiplyLookup[b][I].Values[J]) * 100) + Carry;
+        OleDBMultiplyLookup[b][I].Values[J] := TSQLDigit(NextVal and FlushDoubleDigit);
+        Carry := NextVal shr ShrSQLDigit;
+      end;
+      if Carry <> 0 then begin
+        OleDBMultiplyLookup[b][i].Values[Cnt] := Carry;
+        Inc(Cnt);
+        if Cnt > SQL_MAX_NUMERIC_LEN then
+          Break;
+        OleDBMultiplyLookup[b][i].Count := Cnt;
+      end;
+    end;
+
+  end;
+end;
+
+initialization
+  OleDBMultiplyLookupFiller;
 {$ENDIF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 end.
