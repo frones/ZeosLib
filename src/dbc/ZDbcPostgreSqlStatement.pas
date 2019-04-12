@@ -1693,17 +1693,17 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   Buf: PAnsiChar; Len: LengthInt);
 begin
-  inherited BindRawStr(Index, Buf, Len);
-  LinkTxtParam2PG(Index, Buf, Len);
+    inherited BindRawStr(Index, Buf, Len);
+    LinkTxtParam2PG(Index, Buf, Len);
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   const Value: RawByteString);
 begin
-  inherited BindRawStr(Index, Value); //localize
-  LinkTxtParam2PG(Index, Pointer(Value), Length(Value));
-  if Pointer(Value) = nil then
-    FPQparamValues[Index] := PEmptyAnsiString;
+    inherited BindRawStr(Index, Value); //localize
+    LinkTxtParam2PG(Index, Pointer(Value), Length(Value));
+    if Pointer(Value) = nil then
+      FPQparamValues[Index] := PEmptyAnsiString;
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.ClearParameters;
@@ -1733,6 +1733,12 @@ var PGSQLType: TZSQLType;
 begin
   PGSQLType := OIDToSQLType(Index, SQLType);
   if PGSQLType in [stCurrency, stBigDecimal] then
+    {$IFDEF BCD_TEST}
+    if PGSQLType = stBigDecimal then begin
+      Double2BCD(Value, PBCD(@fABuffer[0])^);
+      SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
+    end else
+    {$ENDIF}
     SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
   else if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
     if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
@@ -1756,7 +1762,7 @@ begin
       stTimeStamp:  if Finteger_datetimes
                     then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
                     else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
-    end;
+                    end;
   end else SetAsRaw;
 end;
 
@@ -1788,6 +1794,12 @@ begin
       stLong:     Int642PG(Value, FPQparamValues[Index]);
       stDouble:   Double2PG(Value, FPQparamValues[Index]);
       stCurrency: Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+      {$IFDEF BCD_TEST}
+      stBigDecimal: Begin
+                      ScaledOrdinal2BCD(Value, 0, PBCD(@fABuffer[0])^);
+                      BCD2PGNumeric(PBCD(@fABuffer[0])^, FPQparamValues[Index], FPQparamLengths[Index]);
+                    end;
+      {$ENDIF}
     end;
   end else SetAsRaw;
 end;
