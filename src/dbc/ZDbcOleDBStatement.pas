@@ -581,7 +581,7 @@ end;
 
 { TZOleDBPreparedStatement }
 
-const OleDbNotNullTable: array[Boolean] of DBSTATUS = (DBSTATUS_S_ISNULL, DBSTATUS_S_OK);
+//const OleDbNotNullTable: array[Boolean] of DBSTATUS = (DBSTATUS_S_ISNULL, DBSTATUS_S_OK);
 procedure TZOleDBPreparedStatement.BindBatchDMLArrays;
 var
   ZData, Data, P: Pointer;

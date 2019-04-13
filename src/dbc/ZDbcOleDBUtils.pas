@@ -743,11 +743,12 @@ Type
 
   POleDBMultiplyLookup = ^TOleDBMultiplyLookup;
   TOleDBMultiplyLookup = record
-    Count: TSQLDigit;
-    Values: array[0..SQL_MAX_NUMERIC_LEN - 1] of TSQLDigit;
+    MultiplierCount: TSQLDigit;
+    ByteCount: TSQLDigit;
+    Values: array[0..(MaxFMTBcdDigits div SizeOf(TSQLDigit)) - 1] of TSQLDigit;
   end;
 const
-  FlushHalfDoubleDigit: TSQLDigit = {$IFDEF CPU64}$FFFFFFFF{$ELSE}$FFFF{$ENDIF}; //$FF
+  FlushHalfDoubleDigit: TSQLDigit = TSQLDigit(-1);
   ShrSQLDigit = SizeOf(TSQLDigit) * 8;
 var
   OleDBMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
@@ -787,13 +788,13 @@ begin
     Base100Digit := ZSysUtils.ZBcdNibble2Base100ByteLookup[PByte(pNibble)^];
     Carry := 0;
     MultiplyLookup := @OleDBMultiplyLookup[PrecisionIsEven][pLastNibble-pNibble];
-    for I := 0 to MultiplyLookup.Count - 1 do begin
+    for I := 0 to MultiplyLookup.MultiplierCount - 1 do begin
       NextVal := pValues[I] + TDoubleSQLDigit(MultiplyLookup.Values[i]) * Base100Digit + Carry;
       pValues[I] := TSQLDigit(NextVal and FlushHalfDoubleDigit);
       Carry := NextVal shr ShrSQLDigit;
     end;
     if Carry <> 0 then
-      pValues[MultiplyLookup.Count] := Carry;
+      pValues[MultiplyLookup.MultiplierCount] := Carry;
     Dec(pNibble);
   end;
 end;
@@ -950,30 +951,60 @@ const bL: array[Boolean] of TSQLDigit = (10, 100);
 var B: Boolean;
   I, j, cnt: Integer;
   Carry: TSQLDigit;
+  bCarry: Byte;
+  wNextVal: Word;
   NextVal: TDoubleSQLDigit;
+  pVals: PByteArray;
+  bOleDBMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
 begin
+  { calulate amount of packed multipliers }
   for b := False to True do begin
     cnt := 1;
     FillChar(OleDBMultiplyLookup[b], SizeOf(TOleDBMultiplyLookup), #0);
-    OleDBMultiplyLookup[b][1].Count := Cnt;
+    OleDBMultiplyLookup[b][1].MultiplierCount := Cnt;
     OleDBMultiplyLookup[b][1].Values[0] := bl[b];
     for I := 2 to MaxFMTBcdDigits-1 do begin
-      Carry := 0;
       Move(OleDBMultiplyLookup[b][I-1], OleDBMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
+      Carry := 0;
       for J := 0 to Cnt - 1 do begin
-        NextVal := (TDoubleSQLDigit(OleDBMultiplyLookup[b][I].Values[J]) * 100) + Carry;
-        OleDBMultiplyLookup[b][I].Values[J] := TSQLDigit(NextVal and FlushHalfDoubleDigit);
+        NextVal := (TDoubleSQLDigit(OleDBMultiplyLookup[b][I].Values[J]) * TDoubleSQLDigit(100)) + Carry;
+        OleDBMultiplyLookup[b][I].Values[J] := NextVal and FlushHalfDoubleDigit;
         Carry := NextVal shr ShrSQLDigit;
       end;
       if Carry <> 0 then begin
         OleDBMultiplyLookup[b][i].Values[Cnt] := Carry;
         Inc(Cnt);
-        if Cnt > SQL_MAX_NUMERIC_LEN then
+        if Cnt > MaxFMTBcdDigits div SizeOf(TSQLDigit) then
           Break;
-        OleDBMultiplyLookup[b][i].Count := Cnt;
+        OleDBMultiplyLookup[b][i].MultiplierCount := Cnt;
       end;
     end;
-
+  end;
+  { now calculate the amount of bytes for the VAR_NUMERICS }
+  for b := False to True do begin
+    cnt := 1;
+    FillChar(bOleDBMultiplyLookup[b], SizeOf(TOleDBMultiplyLookup), #0);
+    bOleDBMultiplyLookup[b][1].MultiplierCount := Cnt;
+    pByte(@bOleDBMultiplyLookup[b][1].Values[0])^ := bl[b];
+    for I := 2 to MaxFMTBcdDigits-1 do begin
+      Move(bOleDBMultiplyLookup[b][I-1], bOleDBMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
+      pVals := @bOleDBMultiplyLookup[b][I].Values[0];
+      bCarry := 0;
+      for J := 0 to Cnt - 1 do begin
+        wNextVal := (Word(pVals[J]) * Word(100)) + bCarry;
+        pVals[J] := wNextVal and $FF;
+        bCarry := wNextVal shr 8;
+      end;
+      if bCarry <> 0 then begin
+        pVals[Cnt] := bCarry;
+        Inc(Cnt);
+        bOleDBMultiplyLookup[b][i].MultiplierCount := Cnt;
+        OleDBMultiplyLookup[b][i].ByteCount := Cnt;
+        if Cnt > MaxFMTBcdDigits then
+          Break;
+      end else
+        OleDBMultiplyLookup[b][i].ByteCount := Cnt;
+    end;
   end;
 end;
 

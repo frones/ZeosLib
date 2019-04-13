@@ -535,7 +535,7 @@ end;
 }
 function TZAbstractOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
-label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref, set_from_num;
+label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref{$IFDEF BCD_TEST}, set_from_num{$ENDIF};
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
@@ -707,7 +707,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
-label set_from_tmp, set_from_buf, set_from_clob, set_from_num;
+label set_from_tmp, set_from_buf, set_from_clob{$IFDEF BCD_TEST}, set_from_num{$ENDIF};
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
