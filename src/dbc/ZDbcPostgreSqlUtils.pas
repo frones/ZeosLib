@@ -245,7 +245,8 @@ const ZSQLType2OID: array[Boolean, stUnknown..stBinaryStream] of OID = (
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
-uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses, ZDbcUtils;
+uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses, ZDbcUtils
+  {$IFDEF WITH_SBCDOVERFLOW}, DBConsts{$ENDIF};
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -1312,6 +1313,7 @@ R1BDigit: Word2PG(Word(Int64Rec(u64).Words[0]), @Numeric_External.digits[0]);
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
+//each postgres num digit is a base 0...9999 digit, so we need to multiply
 const WordFactors: array[0..3] of Integer = (1000, 100, 10, 1);
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 var
@@ -1380,7 +1382,100 @@ Done:
 end;
 
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
+var
+  i, NBASEDigitsCount, Weight, Precision, Scale: Integer;
+  NBASEDigit, FirstNibbleDigit: Word;
+  pNibble, pLastNibble: PAnsiChar;
+label DecOne, ZeroBCD, FourNibbles;
 begin
+  FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
+  NBASEDigitsCount := PG2Word(Src);
+  NBASEDigit := PG2Word(Src+4); //read sign
+
+  if ((NBASEDigitsCount = 0) and (NBASEDigit = NUMERIC_POS)) or      // zero
+     ((NBASEDigit <> NUMERIC_POS) and (NBASEDigit <> NUMERIC_NEG)) then begin // NaN or NULL
+ZeroBCD:
+    Dst.Precision := 10;
+    Dst.SignSpecialPlaces := 2;
+    Exit;
+  end;
+  if NBASEDigit = NUMERIC_NEG then
+    Dst.SignSpecialPlaces := $80;
+
+  Weight := PG2SmallInt(Src+2); //weight can be less than zero!
+  Inc(Src, 8);
+  pNibble := @Dst.Fraction[0];
+  pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
+  if Weight < 0 then begin {save absolute Weight value to I }
+    I := -Weight;
+    Inc(pNibble, (I - 1) * 2); //set new bcd nibble offset
+    if pNibble > pLastNibble then //overflow -> raise AV ?
+      goto ZeroBCD;
+  end else
+    I := Weight;
+  if NBASEDigitsCount <= I then begin
+    Precision := (I - NBASEDigitsCount + 1) * BASE1000Digits;
+    Scale := Precision * Ord(Weight < 0);
+  end else if Weight < -1 then begin //scale starts with weight -1 nbase digits
+    Precision := (I - 1) * BASE1000Digits;
+    Scale := Precision;
+  end else begin
+    Precision := 0;
+    Scale := 0;
+  end;
+  //process first base-digit -> pack nibbles left  i.e. '0001' will be '01' half nibbles i do ignore @t.moment..
+  NBASEDigit := PG2Word(Src); //each digit is a base 10000 digit -> 0..9999
+  FirstNibbleDigit := NBASEDigit div 100;
+  if FirstNibbleDigit > 0 then begin
+    I := 0; //tested in loop
+    goto FourNibbles;
+  end else begin
+    PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
+    Inc(Precision, 2);
+    if 0 > Weight then Inc(Scale, 2);
+    Inc(pNibble, Ord(NBASEDigitsCount > 0));
+  end;
+  for i := 1 to NBASEDigitsCount - 1 do begin
+    NBASEDigit := PG2Word(Src+i*SizeOf(Word)); //each digit is a base 10000 digit -> 0..9999
+    FirstNibbleDigit := NBASEDigit div 100;
+FourNibbles:
+    PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+    PByte(pNibble+1)^ := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)];
+    Inc(Precision, BASE1000Digits);
+    if i > Weight then //if weight is negative or offset reached Weight +1
+      Inc(Scale, BASE1000Digits);
+    if pNibble < pLastNibble
+    then Inc(pNibble, Ord(I<NBASEDigitsCount-1) shl 1) //keep offset of pNibble to lastnibble if loop end reached
+    else begin
+      pNibble := pLastNibble +1;
+      break; //overflow -> raise BCDOverflow?
+    end;
+  end;
+  if (Scale > 0) then begin
+    if (pNibble <= pLastNibble) then begin
+      pLastNibble := pNibble;
+      pNibble := @Dst.Fraction[0]; // trim trailing zeros
+      while (Scale > 0) and (pLastNibble>=pNibble)  do begin
+        if PByte(pLastNibble)^ = 0 then begin
+          if Scale > 1 then begin
+            Dec(Precision, 2);
+            Dec(Scale, 2)
+          end else
+            goto DecOne;
+          Dec(pLastNibble);
+        end else if PByte(pLastNibble)^ shr 4 = 0 then begin
+  DecOne: Dec(Precision);
+          Dec(Scale);
+          Break;
+        end else Break;
+      end;
+    end;
+    if Scale > 0 then
+      if Dst.SignSpecialPlaces = $80
+      then Dst.SignSpecialPlaces := Scale or $80
+      else Dst.SignSpecialPlaces := Scale;
+  end;
+  Dst.Precision := Min(Precision, 1);
 end;
 
 function PGCash2Currency(P: Pointer): Currency;
