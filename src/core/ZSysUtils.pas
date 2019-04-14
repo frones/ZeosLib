@@ -1092,6 +1092,7 @@ function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const
 
 procedure Double2BCD(const Value: Double; var Result: TBCD); overload;
 var
+  ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
   ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
 
 const
@@ -6199,9 +6200,6 @@ end;
 
 const
   SignSpecialPlacesArr: Array[Boolean] of Byte = ($00, $80);
-var
-  ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
-  //{%H-}ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
 
 {** EH:
    Encode a scaled signed longlong to a TBCD
