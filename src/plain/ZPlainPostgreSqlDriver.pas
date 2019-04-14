@@ -84,6 +84,8 @@ const
   BLOB_SEEK_CUR     = 1;
   BLOB_SEEK_END     = 2;
 
+
+  BASE1000Digits    = 4;
 { PostgreSQL basic type OIDs. These OIDs are hard coded in PostgreSQL and according to the following mail never change:
   https://www.postgresql.org/message-id/AANLkTimiNjQa7ws1tyR_W6RQPec6RlxQtWfACNMnZ_1P@mail.gmail.com
   
