@@ -1089,17 +1089,17 @@ end;
 
 function PG2SmallInt(P: Pointer): SmallInt;
 begin
+{$IFNDEF ENDIAN_BIG}
+  Result := SmallInt((PWord(P)^ shl 8) or (PWord(P)^ shr 8));
+{$ELSE}
   Result := PSmallInt(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$IFNDEF ENDIAN_BIG}
-var W: Word absolute Value;
 begin
-  if Value = 0
-  then PWord(Buf)^ := 0
-  else PWord(Buf)^ := ((W and $00FF) shl 8) or ((W and $FF00) shr 8);
+  PWord(Buf)^ := ((Word(Value) shl 8) or ((Word(Value) shr 8)));
 {$ELSE}
 begin
   PSmallInt(Buf)^ := Value;
@@ -1108,16 +1108,17 @@ end;
 
 function PG2Word(P: Pointer): Word;
 begin
+{$IFNDEF ENDIAN_BIG}
+  Result := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
+{$ELSE}
   Result := PWord(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
 procedure Word2PG(Value: Word; Buf: Pointer);
 begin
 {$IFNDEF ENDIAN_BIG}
-  if Value = 0
-  then PWord(Buf)^ := 0
-  else PWord(Buf)^ := ((Value and $00FF) shl 8) or ((Value and $FF00) shr 8);
+  PWord(Buf)^ := (Value shl 8) or (Value shr 8);
 {$ELSE}
   PWord(Buf)^ := Value;
 {$ENDIF}
