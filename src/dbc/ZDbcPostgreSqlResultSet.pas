@@ -284,7 +284,8 @@ var
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
   BCD: TBCD;
-  TS: TZTimeStamp;
+  TS: TZTimeStamp absolute BCD;
+  UUID: TGUID absolute BCD;
 label ProcBts;
 begin
   RNo := RowNo - 1;
@@ -334,7 +335,11 @@ begin
                             end;
             stGUID        : begin
                               JSONWriter.Add('"');
-                              JSONWriter.Add(PGUID(P)^);//
+                              UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a sh...ttt! swapped digits!
+                              UUID.D2 := PG2Word(@PGUID(P).D2);
+                              UUID.D3 := PG2Word(@PGUID(P).D3);
+                              PInt64(@UUID.D4)^ := PInt64(@PGUID(Result).D4)^;
+                              JSONWriter.Add(UUID);//
                               JSONWriter.Add('"');
                             end;
             stDate        : begin
@@ -746,14 +751,17 @@ function TZAbstractPostgreSQLStringResultSet.GetPAnsiChar(ColumnIndex: Integer; 
 var L: LongWord;
   PEnd: PAnsiChar;
   BCD: TBCD;
-  TS: TZTimeStamp;
+  TS: TZTimeStamp absolute BCD;
+  UUID: TGUID absolute BCD;
+  DT: TDateTime absolute BCD;
+  MS: Word;
   function FromOIDLob(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
   begin
     FRawTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetString;
     Result := Pointer(FRawTemp);
     Len := Length(FRawTemp);
   end;
-label JmpPEndTinyBuf;
+label JmpPEndTinyBuf, JmpStr, jmpTime, jmpDate, jmpTS;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -809,7 +817,7 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                     end;
         stDate:     begin
                       PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
-                      Result := @fTinyBuffer[0];
+jmpDate:              Result := @fTinyBuffer[0];
                       Len := ZSysUtils.DateTimeToRawSQLDate(TS.Year, TS.Month, TS.Day,
                         Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
                     end;
@@ -817,7 +825,7 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                       if Finteger_datetimes
                       then dt2time(PG2Int64(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else dt2time(PG2Double(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
-                      Result := @fTinyBuffer[0];
+jmpTime:              Result := @fTinyBuffer[0];
                       Len := ZSysUtils.DateTimeToRawSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                         Result, ConSettings.DisplayFormatSettings.TimeFormat, False);
                     end;
@@ -825,13 +833,20 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                       if Finteger_datetimes
                       then PG2DateTime(PInt64(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
-                      Result := @fTinyBuffer[0];
+jmpTS:                Result := @fTinyBuffer[0];
                       Len := ZSysUtils.DateTimeToRawSQLTimeStamp(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
                     end;
         stGUID:     begin
-                      ZSysUtils.GUIDToBuffer(Result, PAnsiChar(@fTinyBuffer[0]), [guidWithBrackets]);
+                      UUID.D1 := PG2Cardinal(@PGUID(Result).D1); //what a sh...ttt! swapped digits!
+                      UUID.D2 := PG2Word(@PGUID(Result).D2);
+                      UUID.D3 := PG2Word(@PGUID(Result).D3);
+                      PInt64(@UUID.D4)^ := PInt64(@PGUID(Result).D4)^;
+                      ZSysUtils.GUIDToBuffer(@UUID.D1, PAnsiChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      for ColumnIndex := 0 to 35 do
+                        fTinyBuffer[ColumnIndex] := fTinyBuffer[ColumnIndex] or $20;
                       Result := @fTinyBuffer[0];
+                      Len := 36;
                     end;
         stString,
         stUnicodeString: if (ColumnOID = MACADDROID) then begin
@@ -840,11 +855,24 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                   end else if (ColumnOID = INETOID) then begin
                     Len := PGInetAddr2Raw(Result, @FTinyBuffer[0]);
                     Result := @fTinyBuffer[0];
-                  end else begin
-                    Len := ZFastCode.StrLen(Result);
-                    if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID) then
-                      Len := GetAbsorbedTrailingSpacesLen(Result, Len);
-                  end;
+                    end else if ColumnOID = INTERVALOID then begin
+                      if Finteger_datetimes
+                      then DT := PG2DateTime(PInt64(Result)^)
+                      else DT := PG2DateTime(PDouble(Result)^);
+                      DT := DT + (PG2Integer(Result+8)-102) * SecsPerDay + PG2Integer(Result+12) * SecsPerDay * 30;
+                      if Frac(DT) = 0 then begin
+                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                        Ts.Fractions := 0;
+                        goto jmpTime
+                      end else if Int(DT) = 0 then begin
+                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                        goto jmpDate;
+                      end;
+                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                      Ts.Fractions := 0;
+                      goto jmpTS;
+                    end else goto jmpStr;
         stAsciiStream,
         stUnicodeStream:Len := ZFastCode.StrLen(Result);
         stBytes:        Len := FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex);
@@ -886,7 +914,7 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                    For text data format this is the same as strlen().
                    For binary format this is essential information.
                    Note that one should not rely on PQfsize to obtain the actual data length.}
-                  Len := ZFastCode.StrLen(Result);
+JmpStr:           Len := ZFastCode.StrLen(Result);
                   if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID) then
                     Len := GetAbsorbedTrailingSpacesLen(Result, Len);
                 end;
@@ -897,19 +925,166 @@ end;
 function TZAbstractPostgreSQLStringResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var P: PAnsiChar;
+  PEnd: PWideChar;
+  BCD: TBCD;
+  TS: TZTimeStamp absolute BCD;
+  UUID: TGUID absolute BCD;
+  DT: TDateTime absolute BCD;
+  MS: Word;
+  procedure FromOIDLob(ColumnIndex: Integer);
+  var Lob: IZBlob;
+  begin
+    Lob := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    FUniTemp := Ascii7ToUnicodeString(Lob.GetBuffer, Lob.Length);
+  end;
+label JmpPEndTinyBuf, JmpUni, jmpStr, jmpTxt, jmpRaw, jmpBin, jmpLen, jmpTime, jmpDate, jmpTS;
 begin
-  P := GetPAnsiChar(ColumnIndex, Len);
-  if LastWasNull then
-    Result := nil
-  else begin
-    if (TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in
-        [stString,stUnicodeString,stAsciiStream,stUnicodeStream])
-    then FUniTemp := PRawToUnicode(P, Len, FClientCP)
-    else FUniTemp := Ascii7ToUnicodeString(P,Len);
-    Len := Length(FUniTemp);
-    if (Len <> 0)
-    then Result := Pointer(FUniTemp)
-    else Result := PEmptyUnicodeString;
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, PGRowNo, ColumnIndex) <> 0;
+  if LastWasNull then begin
+    Result := nil;
+    Len := 0;
+  end else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    p := FPlainDriver.PQgetvalue(Fres, PGRowNo, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:  if PByte(P)^ = 0 then begin
+                      Result := Pointer(BoolStrsW[True]);
+                      Len := 4
+                    end else begin
+                      Result := Pointer(BoolStrsW[False]);
+                      Len := 5;
+                    end;
+        stSmall:    begin
+                      IntToUnicode(PG2SmallInt(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stLongWord: begin
+                      IntToUnicode(PG2Cardinal(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stInteger:  begin
+                      IntToUnicode(PG2Integer(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stLong:     begin
+                      IntToUnicode(PG2int64(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stFloat:    begin
+                      Len := FloatToSqlUnicode(PG2Single(P), @fTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end;
+        stDouble:   begin
+                      Len := FloatToSqlUnicode(PG2Double(P), @fTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end;
+        stCurrency: begin
+                      CurrToUnicode(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), @fTinyBuffer[0], @PEnd);
+JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
+                      Len := PEnd - Result;
+                    end;
+        stBigDecimal: begin
+                      PGNumeric2BCD(P, BCD);
+                      Result := @fTinyBuffer[0];
+                      Len := BCDToUni(BCD, @fTinyBuffer[0], '.');
+                    end;
+        stDate:     begin
+                      PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
+jmpDate:              Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToUnicodeSQLDate(TS.Year, TS.Month, TS.Day,
+                        Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
+                    end;
+        stTime:     begin
+                      if Finteger_datetimes
+                      then dt2time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else dt2time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+jmpTime:              Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToUnicodeSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False);
+                    end;
+        stTimestamp:begin
+                      if Finteger_datetimes
+                      then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+jmpTS:                Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+                        TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
+                    end;
+        stGUID:     begin
+                      UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a sh...ttt! swapped digits!
+                      UUID.D2 := PG2Word(@PGUID(P).D2);
+                      UUID.D3 := PG2Word(@PGUID(P).D3);
+                      PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
+                      ZSysUtils.GUIDToBuffer(@UUID.D1, PWideChar(@fTinyBuffer[0]), []);
+                      for ColumnIndex := 0 to 35 do //to lowercase
+                        PWord(@fTinyBuffer[ColumnIndex shl 1])^ := PWord(@fTinyBuffer[ColumnIndex shl 1])^ or $20;
+                      Result := @fTinyBuffer[0];
+                      Len := 36;
+                    end;
+        stUnicodeString,
+        stString:   if (ColumnOID = MACADDROID) then begin
+                      Len := PGMacAddr2Uni(P, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end else if (ColumnOID = INETOID) then begin
+                      Len := PGInetAddr2Uni(P, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end else if ColumnOID = INTERVALOID then begin
+                      if Finteger_datetimes
+                      then DT := PG2DateTime(PInt64(P)^)
+                      else DT := PG2DateTime(PDouble(P)^);
+                      DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
+                      if Frac(DT) = 0 then begin
+                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                        Ts.Fractions := 0;
+                        goto jmpTime
+                      end else if Int(DT) = 0 then begin
+                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                        goto jmpDate;
+                      end;
+                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                      Ts.Fractions := 0;
+                      goto jmpTS;
+                    end else goto jmpStr;
+        stUnicodeStream,
+        stAsciiStream: goto JmpTxt;
+        stBytes:        begin
+jmpBin:                   Len := FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex);
+                          goto jmpRaw;
+                        end;
+        stBinaryStream: if ColumnOID = OIDOID then begin
+                          FromOIDLob(ColumnIndex);
+                          goto jmpLen;
+                        end else
+                          goto jmpBin;
+        else            begin
+                          Result := PEmptyUnicodeString;
+                          Len := 0;
+                        end;
+      end
+    else begin
+      if ColumnType in [stString,stUnicodeString] then
+jmpStr: if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID) then begin
+          Len := GetAbsorbedTrailingSpacesLen(P, ZFastCode.StrLen(P));
+          goto JmpUni;
+        end else
+          goto jmpTxt
+      else if (ColumnType in [stAsciiStream,stUnicodeStream]) then begin
+jmpTxt: Len := ZFastCode.StrLen(P);
+JmpUni: FUniTemp := PRawToUnicode(P, Len, FClientCP);
+      end else begin
+         Len := ZFastCode.StrLen(P);
+jmpRaw:  FUniTemp := Ascii7ToUnicodeString(P,Len);
+      end;
+jmpLen:
+      Len := Length(FUniTemp);
+      if (Len > 0)
+      then Result := Pointer(FUniTemp)
+      else Result := PEmptyUnicodeString;
+    end;
   end;
 end;
 
@@ -1007,9 +1182,11 @@ begin
                                       else Result := Trunc(PG2Double(P));
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
-        stString, stUnicodeString:    Result := RawToIntDef(P, 0)
+        stString, stUnicodeString:    Result := RawToIntDef(P, 0);
         //stBytes: ;
-        //stBinaryStream: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
         else Result := 0;
       end
     else Result := RawToIntDef(P, 0);
@@ -1060,9 +1237,11 @@ begin
                                       else Result := Trunc(PG2Double(P));
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
-        stString, stUnicodeString:    RawToInt64Def(P, 0)
+        stString, stUnicodeString:    Result := RawToInt64Def(P, 0);
         //stBytes: ;
-        //stBinaryStream: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
         else Result := 0;
       end
     else Result := RawToInt64Def(P, 0);
@@ -1120,9 +1299,11 @@ begin
                                       else Result := Trunc(PG2Double(P));
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
-        stString, stUnicodeString:    RawToUInt64Def(P, 0)
+        stString, stUnicodeString:    Result := RawToUInt64Def(P, 0);
         //stBytes: ;
-        //stBinaryStream: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
         else Result := 0;
       end
     else Result := RawToUInt64Def(P, 0);
@@ -1175,9 +1356,11 @@ begin
                                       else Result := PG2DateTime(PDouble(P)^);
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
-        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0)
+        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
         //stBytes: ;
-        //stBinaryStream: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
         else Result := 0;
       end
     else pgSQLStrToFloatDef(P, 0, Result);
@@ -1229,9 +1412,11 @@ begin
                                       else Result := PG2DateTime(PDouble(P)^);
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
-        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0)
+        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
         //stBytes: ;
-        //stBinaryStream: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
         else Result := 0;
       end
     else pgSQLStrToFloatDef(P, 0, Result);
@@ -1304,7 +1489,9 @@ begin
                                         SQLStrToFloatDef(P, 0, Result);
                                         {$ENDIF}
         //stBytes: ;
-        //stBinaryStream: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then {$IFDEF BCD_TEST}ScaledOrdinal2BCD(PG2Cardinal(P), 0, Result, False){$ELSE}Result := PG2Cardinal(P){$ENDIF}
+                        else Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF};
         else Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF};
       end
     else {$IFDEF BCD_TEST}
@@ -1330,6 +1517,8 @@ var
   Buffer, pgBuff: PAnsiChar;
   Len: cardinal;
   TempLob: IZBLob;
+  ResUUID: PGUID absolute Result;
+  SrcUUID: PGUID absolute Buffer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -1338,10 +1527,12 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
-  if not LastWasNull then begin
+  if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BYTEAOID {bytea} then begin
-      if FIs_bytea_output_hex then begin
+    if ColumnOID = BYTEAOID {bytea} then begin
+      if FBinaryValues then
+        Result := BufferToBytes(Buffer, FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex))
+      else if FIs_bytea_output_hex then begin
         {skip trailing /x}
         SetLength(Result, (ZFastCode.StrLen(Buffer)-2) shr 1);
         if Assigned(Result) then
@@ -1355,16 +1546,25 @@ begin
         SetLength(Result, Len);
         SetLength(Result, DecodeCString(Len, Buffer, Pointer(Result)));
       end;
-    end else if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = UUIDOID { uuid } then begin
+    end else if ColumnOID = UUIDOID { uuid } then begin
       SetLength(FUUIDOIDOutBuff, 16); //take care we've a unique dyn-array if so then this alloc happens once
       Result := FUUIDOIDOutBuff;
-      ValidGUIDToBinary(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), Pointer(Result));
-    end else if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = OIDOID { oid } then begin
+      if FBinaryValues then begin
+        ResUUID.D1 := PG2Cardinal(@SrcUUID.D1);
+        ResUUID.D2 := PG2Word(@SrcUUID.D2);
+        ResUUID.D3 := PG2Word(@SrcUUID.D3);
+        PInt64(@ResUUID.D4)^ := PInt64(@SrcUUID.D4)^;
+      end else ValidGUIDToBinary(Buffer, Pointer(Result));
+    end else if ColumnOID = OIDOID { oid } then begin
+      if FBinaryValues
+      then Len := PG2Cardinal(Buffer)
+      else Len := RawToIntDef(Buffer, 0);
       TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
-        RawToIntDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0), FChunk_Size);
+        Len, FChunk_Size);
       Result := TempLob.GetBytes
-    end else
-      Result := BufferToBytes(Buffer, ZFastCode.StrLen(Buffer))
+    end else if FBinaryValues then
+
+    else Result := BufferToBytes(Buffer, ZFastCode.StrLen(Buffer))
   end else Result := nil;
 end;
 
@@ -1407,9 +1607,11 @@ begin
                                       end;
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
-        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0)
+        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
         //stBytes: ;
-        //stBinaryStream: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
         else Result := 0;
       end
     else SQLStrToFloatDef(P, 0, Result);
