@@ -523,6 +523,14 @@ type
     digits:       array[0..NUMERIC_MAX_PRECISION-1] of SmallInt; //no fix size -> aligned against scale or digits
   end;
 
+  PInetRec = ^TInetRec;
+  TInetRec = packed record
+    family : byte;
+    bits   : byte;
+    is_cidr: byte;
+    nb     : byte;
+    ipaddr : array[0..15] of byte;
+  end;
 { ****************** Plain API Types definition ***************** }
 
 type

@@ -162,7 +162,8 @@ procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
 function PG2Time(Value: Double): TDateTime; overload;
 function PG2Time(Value: Int64): TDateTime; overload;
 
-function PG2Date(Value: Integer): TDateTime;
+function PG2Date(Value: Integer): TDateTime; overload;
+procedure PG2Date(Value: Integer; out Year, Month, Day: Word); overload;
 
 function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -194,6 +195,12 @@ procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$E
 function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+function PGInetAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+
+function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
+function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
+
 {$IFNDEF ENDIAN_BIG}
 procedure Reverse2Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -213,9 +220,12 @@ function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
 function ARR_DATA_OFFSET(a: PArrayType): Int32;
 function ARR_DATA_PTR(a: PArrayType): Pointer;
 
-const MinPGNumSize = (1{ndigits}+1{weight}+1{sign}+1{dscale})*SizeOf(Word);
-const MaxCurr2NumSize = MinPGNumSize+(5{max 5 NBASE ndigits}*SizeOf(Word));
-const MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 16 NBASE ndigits}*SizeOf(Word));
+const
+  MinPGNumSize = (1{ndigits}+1{weight}+1{sign}+1{dscale})*SizeOf(Word);
+  MaxCurr2NumSize = MinPGNumSize+(5{max 5 NBASE ndigits}*SizeOf(Word));
+  MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 16 NBASE ndigits}*SizeOf(Word));
+  ParamFormatBin = 1;
+  ParamFormatStr = 0;
 
 const ZSQLType2PGBindSizes: array[stUnknown..stGUID] of Integer = (-1,
     SizeOf(Byte){stBoolean},
@@ -357,13 +367,9 @@ begin
         else
           Result := stString;
     TEXTOID: Result := stAsciiStream; { text }
-    OIDOID: { oid }
-      begin
-        if OidAsBlob then
-          Result := stBinaryStream
-        else
-          Result := stInteger;
-      end;
+    OIDOID: if OidAsBlob
+            then Result := stBinaryStream
+            else Result := stLongWord;
     NAMEOID: Result := stString; { name }
     INT2OID: Result := stSmall; { int2 }
     INT4OID: Result := stInteger; { int4 }
@@ -1071,6 +1077,14 @@ begin
     Result := 0;
 end;
 
+procedure PG2Date(Value: Integer; out Year, Month, Day: Word);
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse4Bytes(@Value);
+  {$ENDIF}
+  j2date(Value+POSTGRES_EPOCH_JDATE, Year, Month, Day);
+end;
+
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 begin
   { adjust byte order of host to network  }
@@ -1088,18 +1102,29 @@ begin
 end;
 
 function PG2SmallInt(P: Pointer): SmallInt;
-begin
 {$IFNDEF ENDIAN_BIG}
-  Result := SmallInt((PWord(P)^ shl 8) or (PWord(P)^ shr 8));
+var W: Word absolute Result;
+begin
+  {$IFOPT R+}
+  W := ((PWord(W)^ and $00FF) shl 8) or ((PWord(W)^ and $FF00) shr 8);
+  {$ELSE}
+  W := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
+  {$ENDIF}
 {$ELSE}
+begin
   Result := PSmallInt(P)^;
 {$ENDIF}
 end;
 
-procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$IFNDEF ENDIAN_BIG}
+var W: Word absolute Value;
 begin
-  PWord(Buf)^ := ((Word(Value) shl 8) or ((Word(Value) shr 8)));
+  {$IFOPT R+}
+  PWord(Buf)^ := ((W and $00FF) shl 8) or ((W and $FF00) shr 8);
+  {$ELSE}
+  PWord(Buf)^ := ((W shl 8) or ((W shr 8)));
+  {$ENDIF}
 {$ELSE}
 begin
   PSmallInt(Buf)^ := Value;
@@ -1109,7 +1134,11 @@ end;
 function PG2Word(P: Pointer): Word;
 begin
 {$IFNDEF ENDIAN_BIG}
+  {$IFOPT R+}
+  Result := ((PWord(P)^ and $00FF) shl 8) or ((PWord(P)^ and $FF00) shr 8);
+  {$ELSE}
   Result := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
+  {$ENDIF}
 {$ELSE}
   Result := PWord(P)^;
 {$ENDIF}
@@ -1118,44 +1147,87 @@ end;
 procedure Word2PG(Value: Word; Buf: Pointer);
 begin
 {$IFNDEF ENDIAN_BIG}
+  {$IFOPT R+}
+  PWord(Buf)^ := ((Value and $00FF) shl 8) or ((Value and $FF00) shr 8);
+  {$ELSE}
   PWord(Buf)^ := (Value shl 8) or (Value shr 8);
+  {$ENDIF}
 {$ELSE}
   PWord(Buf)^ := Value;
 {$ENDIF}
 end;
 
 function PG2Integer(P: Pointer): Integer;
+{$IFNDEF ENDIAN_BIG}
+var C: Cardinal absolute Result;
 begin
-  Result := PInteger(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+  {$IFOPT R+}
+  C :=  ((PCardinal(P)^ and $000000FF) shl 24) or
+        ((PCardinal(P)^ and $0000FF00) shl 8) or
+        ((PCardinal(P)^ and $00FF0000) shr 8 ) or
+        ((PCardinal(P)^ and $FF000000) shr 24)
+  {$ELSE}
+  C := ((PCardinal(P)^ shl 8) and $FF00FF00) or ((PCardinal(P)^ shr 8) and $00FF00FF);
+  C := (C shl 16) or (C shr 16);
+  {$ENDIF}
+{$ELSE}
+begin
+  Result := PCardinal(P)^;
+{$ENDIF}
 end;
 
 procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$IFNDEF ENDIAN_BIG}
 var C: Cardinal absolute Value;
 begin
-  if Value <> 0 then
-    PCardinal(Buf)^ :=((c and $000000FF) shl 24) or
-                    ((c and $0000FF00) shl 8) or
-                    ((c and $00FF0000) shr 8 ) or
-                    ((c and $FF000000) shr 24)
-  else PInteger(Buf)^ := 0;
+  {$IFOPT R+}
+  PCardinal(Buf)^ :=  ((c and $000000FF) shl 24) or
+                      ((C and $0000FF00) shl 8) or
+                      ((C and $00FF0000) shr 8 ) or
+                      ((C and $FF000000) shr 24)
+  {$ELSE}
+  C := ((C shl 8) and $FF00FF00) or ((C shr 8) and $00FF00FF);
+  PCardinal(Buf)^ := (C shl 16) or (C shr 16);
+  {$ENDIF}
 {$ELSE}
 begin
-  PInteger(Buf)^ := Value;
+  PInteger(Buf)^ :=  Value;
 {$ENDIF}
 end;
 
 function PG2Cardinal(P: Pointer): Cardinal;
 begin
+{$IFNDEF ENDIAN_BIG}
+  {$IFOPT R+}
+  Result := ((PCardinal(P)^ and $000000FF) shl 24) or
+            ((PCardinal(P)^ and $0000FF00) shl 8) or
+            ((PCardinal(P)^ and $00FF0000) shr 8 ) or
+            ((PCardinal(P)^ and $FF000000) shr 24)
+  {$ELSE}
+  Result := ((PCardinal(P)^ shl 8) and $FF00FF00) or ((PCardinal(P)^ shr 8) and $00FF00FF);
+  Result := (Result shl 16) or (Result shr 16);
+  {$ENDIF}
+{$ELSE}
   Result := PCardinal(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
 procedure Cardinal2PG(Value: Cardinal; Buf: Pointer);
+{$IFNDEF ENDIAN_BIG}
 begin
-  PCardinal(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+  {$IFOPT R+}
+  PCardinal(Buf)^ :=  ((Value and $000000FF) shl 24) or
+                      ((Value and $0000FF00) shl 8) or
+                      ((Value and $00FF0000) shr 8 ) or
+                      ((Value and $FF000000) shr 24)
+  {$ELSE}
+  Value := ((Value shl 8) and $FF00FF00) or ((Value shr 8) and $00FF00FF);
+  PCardinal(Buf)^ := (Value shl 16) or (Value shr 16);
+  {$ENDIF}
+{$ELSE}
+begin
+  Reverse4Bytes(Buf)
+{$ENDIF}
 end;
 
 function PG2Int64(P: Pointer): Int64;
@@ -1513,6 +1585,60 @@ procedure Double2PG(const Value: Double; Buf: Pointer);
 begin
   PDouble(Buf)^ := Value;
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+end;
+
+function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+begin
+  PWord(Dest    )^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+0)^]; //a
+  PByte(Dest  +2)^ := Ord(':');
+  PWord(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+1)^]; //b
+  PByte(Dest  +5)^ := Ord(':');
+  PWord(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+2)^]; //c
+  PByte(Dest  +8)^ := Ord(':');
+  PWord(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+3)^]; //d
+  PByte(Dest +11)^ := Ord(':');
+  PWord(Dest +12)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+5)^]; //e
+  PByte(Dest +14)^ := Ord(':');
+  PWord(Dest +15)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+6)^]; //f
+  //PByte(Dest +17)^ := Ord(#0);
+  Result := 17;
+end;
+
+function PGInetAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+var todoremainder: Boolean;
+begin
+  if PInetRec(Src).nb = 4 then begin
+    Result := 9
+  end else begin
+    Result := 9
+  end;
+end;
+
+function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
+begin
+  PCardinal(Dest    )^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+0)^]; //a
+  PWord(Dest      +2)^ := Ord(':');
+  PCardinal(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+1)^]; //b
+  PWord(Dest      +5)^ := Ord(':');
+  PCardinal(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+2)^]; //c
+  PWord(Dest      +8)^ := Ord(':');
+  PCardinal(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+3)^]; //d
+  PWord(Dest     +11)^ := Ord(':');
+  PCardinal(Dest +12)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+5)^]; //e
+  PWord(Dest     +14)^ := Ord(':');
+  PCardinal(Dest +15)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+6)^]; //f
+  //PWord(Dest     +17)^ := Ord(#0);
+  Result := 17;
+end;
+
+function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
+var todoremainder: Boolean;
+begin
+  if PInetRec(Src).nb = 4 then begin
+    Result := 9
+  end else begin
+    Result := 9
+  end;
 end;
 
 function  ARR_NDIM(a: PArrayType): PInteger;
