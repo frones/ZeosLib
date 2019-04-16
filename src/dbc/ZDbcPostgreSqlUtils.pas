@@ -1459,7 +1459,7 @@ var
   i, NBASEDigitsCount, Weight, Precision, Scale: Integer;
   NBASEDigit, FirstNibbleDigit: Word;
   pNibble, pLastNibble: PAnsiChar;
-label DecOne, ZeroBCD, FourNibbles;
+label DecOne, ZeroBCD, FourNibbles, Loop, Done;
 begin
   FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
   NBASEDigitsCount := PG2Word(Src);
@@ -1500,30 +1500,37 @@ ZeroBCD:
   NBASEDigit := PG2Word(Src); //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
   if FirstNibbleDigit > 0 then begin
-    I := 0; //tested in loop
+    I := 0;
     goto FourNibbles;
   end else begin
     PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
     Inc(Precision, 2);
     if 0 > Weight then Inc(Scale, 2);
-    Inc(pNibble, Ord(NBASEDigitsCount > 0));
+    if NBASEDigitsCount > 1
+    then Inc(pNibble)
+    else goto done;
+    I := 1;
   end;
-  for i := 1 to NBASEDigitsCount - 1 do begin
-    NBASEDigit := PG2Word(Src+i*SizeOf(Word)); //each digit is a base 10000 digit -> 0..9999
-    FirstNibbleDigit := NBASEDigit div 100;
+Loop:
+  NBASEDigit := PG2Word(Src+i*SizeOf(Word)); //each digit is a base 10000 digit -> 0..9999
+  FirstNibbleDigit := NBASEDigit div 100;
 FourNibbles:
-    PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
-    PByte(pNibble+1)^ := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)];
-    Inc(Precision, BASE1000Digits);
-    if i > Weight then //if weight is negative or offset reached Weight +1
-      Inc(Scale, BASE1000Digits);
-    if pNibble < pLastNibble
-    then Inc(pNibble, Ord(I<NBASEDigitsCount-1) shl 1) //keep offset of pNibble to lastnibble if loop end reached
-    else begin
-      pNibble := pLastNibble +1;
-      break; //overflow -> raise BCDOverflow?
-    end;
+  PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+  PByte(pNibble+1)^ := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)];
+  Inc(Precision, BASE1000Digits);
+  if i > Weight then //if weight is negative or offset reached Weight +1
+    Inc(Scale, BASE1000Digits);
+  if pNibble < pLastNibble
+  then Inc(pNibble, 1+Ord(I<NBASEDigitsCount-1)) //keep offset of pNibble to lastnibble if loop end reached
+  else begin
+    pNibble := pLastNibble +1;
+    goto Done; //overflow -> raise BCDOverflow?
   end;
+  Inc(I);
+  if I >= NBASEDigitsCount
+  then goto Done
+  else goto Loop;
+Done:
   if (Scale > 0) then begin
     if (pNibble <= pLastNibble) then begin
       pLastNibble := pNibble;
@@ -1536,7 +1543,7 @@ FourNibbles:
           end else
             goto DecOne;
           Dec(pLastNibble);
-        end else if PByte(pLastNibble)^ shr 4 = 0 then begin
+        end else if (PByte(pLastNibble)^ and $0F) = 0 then begin
   DecOne: Dec(Precision);
           Dec(Scale);
           Break;
@@ -1548,18 +1555,18 @@ FourNibbles:
       then Dst.SignSpecialPlaces := Scale or $80
       else Dst.SignSpecialPlaces := Scale;
   end;
-  Dst.Precision := Min(Precision, 1);
+  Dst.Precision := Max(Precision, 1);
 end;
 
 function PGCash2Currency(P: Pointer): Currency;
 begin
   Int642PG(PInt64(P)^, @Result);
-  Result {%H-}:= PInt64(@Result)^ div 100;
+  PInt64(@Result)^ {%H-}:= PInt64(@Result)^ * 100;
 end;
 
 procedure Currency2PGCash(const Value: Currency; Buf: Pointer);
 begin
-  PInt64(Buf)^ := PInt64(@Value)^*100; //PGmoney as a scale of two but we've a scale of 4
+  PInt64(Buf)^ := PInt64(@Value)^ div 100; //PGmoney as a scale of two but we've a scale of 4
   {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
 end;
 
