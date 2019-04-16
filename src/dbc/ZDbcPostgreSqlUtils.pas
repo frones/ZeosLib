@@ -369,7 +369,7 @@ begin
     TEXTOID: Result := stAsciiStream; { text }
     OIDOID: if OidAsBlob
             then Result := stBinaryStream
-            else Result := stLongWord;
+            else Result := stInteger;//stLongWord;
     NAMEOID: Result := stString; { name }
     INT2OID: Result := stSmall; { int2 }
     INT4OID: Result := stInteger; { int4 }
@@ -1106,7 +1106,7 @@ function PG2SmallInt(P: Pointer): SmallInt;
 var W: Word absolute Result;
 begin
   {$IFOPT R+}
-  W := ((PWord(W)^ and $00FF) shl 8) or ((PWord(W)^ and $FF00) shr 8);
+  W := ((PWord(P)^ and $00FF) shl 8) or ((PWord(P)^ and $FF00) shr 8);
   {$ELSE}
   W := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
   {$ENDIF}
