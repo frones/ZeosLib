@@ -6846,10 +6846,12 @@ zero:
     Inc(Buf);
   end;
   Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
-  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 +Ord(not GetFirstBCDHalfByte) to Precision do begin
+  Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
+  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
     if I = DecimalPos then begin
-      PByte(Buf+1)^ := Ord(DecimalSep);
-      Inc(Buf, 2);
+      Inc(Buf, Ord((Buf = pBuf)));
+      PByte(Buf)^ := Ord(DecimalSep);
+      Inc(Buf);
     end;
     if GetFirstBCDHalfByte
     then PByte(Buf)^ := Ord('0') + (PByte(pNibble)^ shr 4)
@@ -6860,6 +6862,7 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
+  Dec(Buf, Ord((PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))));
   Result := Buf-PBuf;
 end;
 
@@ -6882,7 +6885,6 @@ begin
   PNibble := @Bcd.Fraction[0];
   PLastNibble := PNibble + ((Precision -1) shr 1);
   PBuf        := Pointer(PNibble + ((DecimalPos-1) shr 1));
-
   while (PLastNibble > PAnsiChar(PBuf)) and (PByte(PLastNibble)^ = 0) do begin//skip trailing zeroes
     Dec(PLastNibble);
     Dec(Precision, 2);
@@ -6901,10 +6903,12 @@ zero:
     Inc(Buf);
   end;
   Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
-  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 +Ord(not GetFirstBCDHalfByte) to Precision do begin
+  Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
+  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
     if I = DecimalPos then begin
-      PWord(Buf+1)^ := Ord(DecimalSep);
-      Inc(Buf, 2);
+      Inc(Buf, Ord((Buf = pBuf)));
+      PWord(Buf)^ := Ord(DecimalSep);
+      Inc(Buf);
     end;
     if GetFirstBCDHalfByte
     then PWord(Buf)^ := Ord('0') + (PByte(pNibble)^ shr 4)
@@ -6915,7 +6919,8 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
-  Result := Buf-PBuf;
+  Dec(Buf, Ord((PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))));
+  Result := (Buf-PBuf);
 end;
 
 function RawToBCD(Value: PAnsiChar; Len: LengthInt): TBCD;
