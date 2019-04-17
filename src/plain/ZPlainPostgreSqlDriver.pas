@@ -531,6 +531,13 @@ type
     nb     : byte;
     ipaddr : array[0..15] of byte;
   end;
+
+  PPGInterval = ^TPGInterval;
+  TPGInterval = packed record
+     time  : int64;
+     day   : longint;
+     month : longint;
+   end;
 { ****************** Plain API Types definition ***************** }
 
 type

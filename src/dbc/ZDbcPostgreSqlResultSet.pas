@@ -286,7 +286,8 @@ var
   BCD: TBCD;
   TS: TZTimeStamp absolute BCD;
   UUID: TGUID absolute BCD;
-label ProcBts;
+  DT: TDateTime absolute BCD;
+label ProcBts, jmpDate, jmpTime, jmpTS;
 begin
   RNo := RowNo - 1;
   if JSONWriter.Expand then
@@ -338,12 +339,12 @@ begin
                               UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a sh...ttt! swapped digits!
                               UUID.D2 := PG2Word(@PGUID(P).D2);
                               UUID.D3 := PG2Word(@PGUID(P).D3);
-                              PInt64(@UUID.D4)^ := PInt64(@PGUID(Result).D4)^;
+                              PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
                               JSONWriter.Add(UUID);//
                               JSONWriter.Add('"');
                             end;
             stDate        : begin
-                              if jcoMongoISODate in JSONComposeOptions
+jmpDate:                      if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
@@ -355,7 +356,7 @@ begin
                               else JSONWriter.Add('"');
                             end;
             stTime        : begin
-                              if jcoMongoISODate in JSONComposeOptions
+jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("0000-00-00')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
@@ -370,7 +371,7 @@ begin
                               else JSONWriter.Add('"');
                             end;
             stTimestamp   : begin
-                              if jcoMongoISODate in JSONComposeOptions
+jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
@@ -386,7 +387,33 @@ begin
                               else JSONWriter.Add('"');
                             end;
             stString,
-            stUnicodeString:begin
+            stUnicodeString:if (ColumnOID = MACADDROID) then begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGMacAddr2Raw(P, @FTinyBuffer[0]));
+                              JSONWriter.Add('"');
+                            end else if (ColumnOID = INETOID) then begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGInetAddr2Raw(P, @FTinyBuffer[0]));
+                              JSONWriter.Add('"');
+                            end else if ColumnOID = INTERVALOID then begin
+                              if Finteger_datetimes
+                              then DT := PG2DateTime(PInt64(P)^)
+                              else DT := PG2DateTime(PDouble(P)^);
+                              DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
+                              P := @fTinyBuffer[0];
+                              if Int(DT) = 0 then begin
+                                DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                                Date2PG(DT, PInteger(P)^);
+                                goto jmpDate;
+                              end else begin
+                                if Finteger_datetimes
+                                then DateTime2PG(DT, PInt64(P)^)
+                                else DateTime2PG(DT, PDouble(P)^);
+                                if Frac(DT) = 0
+                                then goto jmpTime
+                                else goto jmpTS;
+                              end;
+                            end else begin
                               JSONWriter.Add('"');
                               if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID)
                               then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
@@ -850,11 +877,11 @@ jmpTS:                Result := @fTinyBuffer[0];
                     end;
         stString,
         stUnicodeString: if (ColumnOID = MACADDROID) then begin
-                    Len := PGMacAddr2Raw(Result, @FTinyBuffer[0]);
-                    Result := @fTinyBuffer[0];
-                  end else if (ColumnOID = INETOID) then begin
-                    Len := PGInetAddr2Raw(Result, @FTinyBuffer[0]);
-                    Result := @fTinyBuffer[0];
+                      Len := PGMacAddr2Raw(Result, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end else if (ColumnOID = INETOID) then begin
+                      Len := PGInetAddr2Raw(Result, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
                     end else if ColumnOID = INTERVALOID then begin
                       if Finteger_datetimes
                       then DT := PG2DateTime(PInt64(Result)^)

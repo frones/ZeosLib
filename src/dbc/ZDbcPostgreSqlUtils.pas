@@ -177,8 +177,8 @@ procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{
 function PG2Cardinal(P: Pointer): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Int64(P: Pointer): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2Int64(P: Pointer): Int64; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
 function PGNumeric2Currency(P: Pointer): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -186,8 +186,8 @@ procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Inte
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 
-function PGCash2Currency(P: Pointer): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PGCash2Currency(P: Pointer): Currency; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
 function PG2Single(P: Pointer): Single; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -1231,54 +1231,57 @@ begin
 end;
 
 function PG2Int64(P: Pointer): Int64;
+{$IFNDEF ENDIAN_BIG}
+var {$IFNDEF CPU64}
+    D64:  Int64Rec absolute Result;
+    S64: PInt64Rec absolute P;
+    {$ELSE}
+    S64: PInt64    absolute P;
+    {$ENDIF}
+begin
+  {$R-}
+  {$IFNDEF CPU64}
+  D64.Lo := ((S64.Hi shl 8) and $FF00FF00) or ((S64.Hi shr 8) and $00FF00FF);
+  D64.Lo :=  (D64.Lo shl 16) or (D64.Lo shr 16);
+  D64.Hi := ((S64.Lo shl 8) and $FF00FF00) or ((S64.Lo shr 8) and $00FF00FF);
+  D64.Hi :=  (D64.Hi shl 16) or (D64.Hi shr 16);
+  {$ELSE}
+  Result := ((S64^   shl 8 ) and $FF00FF00FF00FF00) or ((S64^   shr 8 ) and $00FF00FF00FF00FF);
+  Result := ((Result shl 16) and $FFFF0000FFFF0000) or ((Result shr 16) and $0000FFFF0000FFFF);
+  Result :=  (Result shl 32) or ((Result shr 32));
+  {$ENDIF}
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+{$ELSE}
 begin
   Result := PInt64(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
-procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-
-{$IFDEF ENDIAN_BIG}
+procedure Int642PG(const Value: Int64; Buf: Pointer);
+{$IFNDEF ENDIAN_BIG}
+var {$IFNDEF CPU64}
+    S64:  Int64Rec absolute Value;
+    D64: PInt64Rec absolute Buf;
+    {$ELSE}
+    D64: PInt64    absolute Buf;
+    {$ENDIF}
+begin
+  {$R-}
+  {$IFNDEF CPU64}
+  D64.Lo := ((S64.Hi shl 8) and $FF00FF00) or ((S64.Hi shr 8) and $00FF00FF);
+  D64.Lo :=  (D64.Lo shl 16) or (D64.Lo shr 16);
+  D64.Hi := ((S64.Lo shl 8) and $FF00FF00) or ((S64.Lo shr 8) and $00FF00FF);
+  D64.Hi :=  (D64.Hi shl 16) or (D64.Hi shr 16);
+  {$ELSE}
+  D64^ := ((Value shl 8 ) and $FF00FF00FF00FF00) or ((Value shr 8 ) and $00FF00FF00FF00FF);
+  D64^ := ((D64^  shl 16) and $FFFF0000FFFF0000) or ((D64^  shr 16) and $0000FFFF0000FFFF);
+  D64^ :=  (D64^  shl 32) or ((D64^ shr 32));
+  {$ENDIF}
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+{$ELSE}
 begin
   PInt64(Buf)^ := Value;
-{$ELSE !ENDIAN_BIG}
-{$IFNDEF CPU64}
-var
-  S64: Int64Rec absolute Value;
-  D64: PInt64Rec absolute Buf;
-begin
-  {$IFDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //EH: my endian swaps kill some Compilers such as d2009
-  PInt64(Buf)^ := Value;
-  if Value <> 0 then Reverse8Bytes(Buf);
-  {$ELSE !WITH_C5242_OR_C4963_INTERNAL_ERROR}
-  if S64.Hi <> 0 then
-    D64.Lo := ((S64.Hi and $000000FF) shl 24) or
-              ((S64.Hi and $0000FF00) shl 8) or
-              ((S64.Hi and $00FF0000) shr 8 ) or
-              ((S64.Hi and $FF000000) shr 24)
-  else D64.Lo := 0;
-  if S64.Lo <> 0 then
-    D64.Hi := ((S64.Lo and $000000FF) shl 24) or
-              ((S64.Lo and $0000FF00) shl 8) or
-              ((S64.Lo and $00FF0000) shr 8 ) or
-              ((S64.Lo and $FF000000) shr 24)
-  else D64.Hi := 0;
-  {$ENDIF !WITH_C5242_OR_C4963_INTERNAL_ERROR}
-{$ELSE !CPU64}
-var u64: Uint64 absolute Value;
-begin
-  if Value = 0
-  then PUInt64(Buf)^ := 0
-  else PUInt64(Buf)^ := ((u64 and $00000000000000FF) shl 56) or
-                        ((u64 and $000000000000FF00) shl 40) or
-                        ((u64 and $0000000000FF0000) shl 24) or
-                        ((u64 and $00000000FF000000) shl 8 ) or
-                        ((u64 and $000000FF00000000) shr 8 ) or
-                        ((u64 and $0000FF0000000000) shr 24) or
-                        ((u64 and $00FF000000000000) shr 40) or
-                        ((u64 and $FF00000000000000) shr 56);
-{$ENDIF !CPU64}
-{$ENDIF !ENDIAN_BIG}
+{$ENDIF}
 end;
 
 function PGNumeric2Currency(P: Pointer): Currency;
@@ -1559,15 +1562,15 @@ Done:
 end;
 
 function PGCash2Currency(P: Pointer): Currency;
+var i64: Int64 absolute Result;
 begin
-  Int642PG(PInt64(P)^, @Result);
-  PInt64(@Result)^ {%H-}:= PInt64(@Result)^ * 100;
+  i64 := PG2Int64(P) * 100; //PGmoney as a scale of two but we've a scale of 4
 end;
 
 procedure Currency2PGCash(const Value: Currency; Buf: Pointer);
+var i64: Int64 absolute Value;
 begin
-  PInt64(Buf)^ := PInt64(@Value)^ div 100; //PGmoney as a scale of two but we've a scale of 4
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+  Int642PG(i64 div 100, Buf); //PGmoney as a scale of two but we've a scale of 4
 end;
 
 function PG2Single(P: Pointer): Single;
@@ -1583,15 +1586,25 @@ begin
 end;
 
 function PG2Double(P: Pointer): Double;
+{$IFNDEF ENDIAN_BIG}
+var i64: Int64 absolute Result;
+begin
+  i64 := PG2Int64(P);
+{$ELSE}
 begin
   Result := PDouble(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
 procedure Double2PG(const Value: Double; Buf: Pointer);
+{$IFNDEF ENDIAN_BIG}
+var i64: Int64 absolute Value;
+begin
+  Int642PG(i64, Buf);
+{$ELSE}
 begin
   PDouble(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+{$ENDIF}
 end;
 
 function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
