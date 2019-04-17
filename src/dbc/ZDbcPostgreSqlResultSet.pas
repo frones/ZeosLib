@@ -391,7 +391,7 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.Add('"');
                               JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGMacAddr2Raw(P, @FTinyBuffer[0]));
                               JSONWriter.Add('"');
-                            end else if (ColumnOID = INETOID) then begin
+                            end else if (ColumnOID = INETOID) or (ColumnOID = CIDROID) then begin
                               JSONWriter.Add('"');
                               JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGInetAddr2Raw(P, @FTinyBuffer[0]));
                               JSONWriter.Add('"');
@@ -879,7 +879,7 @@ jmpTS:                Result := @fTinyBuffer[0];
         stUnicodeString: if (ColumnOID = MACADDROID) then begin
                       Len := PGMacAddr2Raw(Result, @FTinyBuffer[0]);
                       Result := @fTinyBuffer[0];
-                    end else if (ColumnOID = INETOID) then begin
+                    end else if (ColumnOID = INETOID) or (ColumnOID = CIDROID) then begin
                       Len := PGInetAddr2Raw(Result, @FTinyBuffer[0]);
                       Result := @fTinyBuffer[0];
                     end else if ColumnOID = INTERVALOID then begin
@@ -1055,7 +1055,7 @@ jmpTS:                Result := @fTinyBuffer[0];
         stString:   if (ColumnOID = MACADDROID) then begin
                       Len := PGMacAddr2Uni(P, @FTinyBuffer[0]);
                       Result := @fTinyBuffer[0];
-                    end else if (ColumnOID = INETOID) then begin
+                    end else if (ColumnOID = INETOID) or (ColumnOID = CIDROID) then begin
                       Len := PGInetAddr2Uni(P, @FTinyBuffer[0]);
                       Result := @fTinyBuffer[0];
                     end else if ColumnOID = INTERVALOID then begin

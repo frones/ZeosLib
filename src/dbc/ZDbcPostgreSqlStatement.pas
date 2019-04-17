@@ -788,7 +788,9 @@ begin
     StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
   Findeterminate_datatype := FUseEmulatedStmtsOnly;
   Finteger_datetimes := Connection.integer_datetimes;
-  FPQResultFormat := ParamFormatStr;
+  if Assigned(FPlainDriver.PQexecParams) and StrToBoolEx(DefineStatementParameter(Self, DSProps_BinaryWireResultMode, 'False'))
+  then FPQResultFormat := ParamFormatBin
+  else FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
   //JDBC prepares after 4th execution
   if not FUseEmulatedStmtsOnly

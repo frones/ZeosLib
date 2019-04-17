@@ -180,8 +180,21 @@ procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline
 function PG2Int64(P: Pointer): Int64; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
-function PGNumeric2Currency(P: Pointer): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+{** written by EgonHugeist
+  converts a postgres numeric into a native currenncy value
+   @param P is a pointer to a valid numeric value
+   @return a converted currency value
+}
+function PGNumeric2Currency(P: Pointer): Currency;
+
+{** written by EgonHugeist
+  converts a native currenncy value into a postgres numeric value
+  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
+   @param Value the value which should be converted
+   @param buf the numeric buffrr we write into
+   @param size return the number of bytes we finally used
+}
+procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
 
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
@@ -1284,20 +1297,22 @@ begin
 {$ENDIF}
 end;
 
+const CurrMulTbl: array[0..4] of Int64 = (1, 10000, 100000000, 1000000000000, 10000000000000000) ;
 function PGNumeric2Currency(P: Pointer): Currency;
 var
   Numeric_External: PPGNumeric_External absolute P;
-  {Scale, }Sign: Word;
-  NBASEDigits, Weight, I: SmallInt;
+  NBASEDigits, Sign: Word;
+  Weight, I: SmallInt;
+  i64: Int64 absolute Result;
 begin
-  Result := 0;
   Sign := PG2Word(@Numeric_External.sign);
   NBASEDigits := PG2Word(@Numeric_External.NBASEDigits);
+  Result := 0;
   if (NBASEDigits = 0) or (Sign = NUMERIC_NAN) or (Sign = NUMERIC_NULL) then
     Exit;
-  Weight := PG2SmallInt(@Numeric_External.weight);
-  for I := 0 to NBASEDigits -1 do
-    Result := Result + PG2SmallInt(@Numeric_External.digits[i]) * IntPower(NBASE, Weight-i);
+  Weight := PG2SmallInt(@Numeric_External.weight)+1;
+  for I := 0 to (NBASEDigits-1) do
+    I64 := I64 + PG2SmallInt(@Numeric_External.digits[i]) * CurrMulTbl[weight-i];
   if Sign <> NUMERIC_POS then
     Result := -Result;
 end;
@@ -1527,7 +1542,7 @@ FourNibbles:
   then Inc(pNibble, 1+Ord(I<NBASEDigitsCount-1)) //keep offset of pNibble to lastnibble if loop end reached
   else begin
     pNibble := pLastNibble +1;
-    goto Done; //overflow -> raise BCDOverflow?
+    goto Done; //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
   end;
   Inc(I);
   if I >= NBASEDigitsCount
@@ -1609,56 +1624,132 @@ end;
 
 function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
 begin
-  PWord(Dest    )^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+0)^]; //a
+  PWord(Dest    )^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+0)^] or $2020;; //a
   PByte(Dest  +2)^ := Ord(':');
-  PWord(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+1)^]; //b
+  PWord(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+1)^] or $2020;; //b
   PByte(Dest  +5)^ := Ord(':');
-  PWord(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+2)^]; //c
+  PWord(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+2)^ ]or $2020;; //c
   PByte(Dest  +8)^ := Ord(':');
-  PWord(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+3)^]; //d
+  PWord(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+3)^] or $2020;; //d
   PByte(Dest +11)^ := Ord(':');
-  PWord(Dest +12)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+5)^]; //e
+  PWord(Dest +12)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+4)^] or $2020;; //e
   PByte(Dest +14)^ := Ord(':');
-  PWord(Dest +15)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+6)^]; //f
-  //PByte(Dest +17)^ := Ord(#0);
+  PWord(Dest +15)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+5)^] or $2020;; //f
+  PByte(Dest +17)^ := 0;
   Result := 17;
 end;
 
 function PGInetAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
-var todoremainder: Boolean;
+var Inet: PInetRec absolute Src;
+  P: PAnsiChar;
+  i, digits: Byte;
+  w: word;
 begin
-  if PInetRec(Src).nb = 4 then begin
-    Result := 9
-  end else begin
-    Result := 9
+  P := Dest;
+  if Inet.nb = 4 then
+    for I := 0 to 3 do begin
+      digits := GetOrdinalDigits(Inet.ipaddr[i]);
+      IntToRaw(Inet.ipaddr[i], P, digits);
+      PByte(P+digits)^ := Ord('.');
+      Inc(P, digits+1);
+    end
+  else for I := 0 to 7 do begin
+    PWord(P)^ := ZSysUtils.TwoDigitLookupHexW[Inet.ipaddr[i shl 1]] or $2020;;
+    W         := ZSysUtils.TwoDigitLookupHexW[Inet.ipaddr[i shl 1 + 1]] or $2020;
+    if PByte(P)^ = Ord('0') then begin
+      if PByte(P+1)^ <> Ord('0') then begin
+        PByte(P)^ := PByte(P+1)^;
+        PWord(P+1)^ := W;
+        Inc(P, 3);
+      end else begin
+        PWord(P)^ := W;
+        if PByte(P)^ = Ord('0') then begin
+          PByte(P)^ := PByte(P+1)^;
+          Inc(P);
+        end else
+          Inc(P,2);
+      end;
+    end else begin
+      PWord(P+2)^ := W;
+      Inc(P, 4);
+    end;
+    PByte(P)^ := Ord(':');
+    Inc(P);
   end;
+  if (Inet.nb = 4) or (Inet.is_cidr <> 0) then begin
+    PByte(P-1)^ := Ord('/');
+    digits := GetOrdinalDigits(Inet.bits);
+    IntToRaw(Inet.bits, P, digits);
+    Inc(P, digits);
+  end else
+    Dec(P);
+  PByte(P)^ := 0;
+  Result := P - Dest;
 end;
 
 function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 begin
-  PCardinal(Dest    )^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+0)^]; //a
+  PCardinal(Dest    )^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+0)^] or $00200020; //a
   PWord(Dest      +2)^ := Ord(':');
-  PCardinal(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+1)^]; //b
+  PCardinal(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+1)^] or $00200020; //b
   PWord(Dest      +5)^ := Ord(':');
-  PCardinal(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+2)^]; //c
+  PCardinal(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+2)^] or $00200020; //c
   PWord(Dest      +8)^ := Ord(':');
-  PCardinal(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+3)^]; //d
+  PCardinal(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+3)^] or $00200020; //d
   PWord(Dest     +11)^ := Ord(':');
-  PCardinal(Dest +12)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+5)^]; //e
+  PCardinal(Dest +12)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+4)^] or $00200020; //e
   PWord(Dest     +14)^ := Ord(':');
-  PCardinal(Dest +15)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+6)^]; //f
-  //PWord(Dest     +17)^ := Ord(#0);
+  PCardinal(Dest +15)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+5)^] or $00200020; //f
+  PWord(Dest     +17)^ := 0;
   Result := 17;
 end;
 
 function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
-var todoremainder: Boolean;
+var Inet: PInetRec absolute Src;
+  P: PWideChar;
+  i, digits: Byte;
+  C: Cardinal;
 begin
-  if PInetRec(Src).nb = 4 then begin
-    Result := 9
-  end else begin
-    Result := 9
+  P := Dest;
+  if Inet.nb = 4 then
+    for I := 0 to 3 do begin
+      digits := GetOrdinalDigits(Inet.ipaddr[i]);
+      IntToUnicode(Inet.ipaddr[i], P, digits);
+      PWord(P+digits)^ := Ord('.');
+      Inc(P, digits+1);
+    end
+  else for I := 0 to 7 do begin
+    PCardinal(P)^ := ZSysUtils.TwoDigitLookupHexLW[Inet.ipaddr[i shl 1]] or $00200020;
+    c             := ZSysUtils.TwoDigitLookupHexLW[Inet.ipaddr[i shl 1 + 1]] or $00200020;
+    if PWord(P)^ = Ord('0') then begin
+      if PWord(P+1)^ <> Ord('0') then begin
+        PWord(P)^ := PWord(P+1)^;
+        PCardinal(P+1)^ := C;
+        Inc(P, 3);
+      end else begin
+        PCardinal(P)^ := C;
+        if PWord(P)^ = Ord('0') then begin
+          PWord(P)^ := PWord(P+1)^;
+          Inc(P);
+        end else
+          Inc(P,2);
+      end;
+    end else begin
+      PCardinal(P+2)^ := C;
+      Inc(P, 4);
+    end;
+    PWord(P)^ := Ord(':');
+    Inc(P);
   end;
+  if (Inet.nb = 4) or (Inet.is_cidr <> 0) then begin
+    PWord(P-1)^ := Ord('/');
+    digits := GetOrdinalDigits(Inet.bits);
+    IntToUnicode(Inet.bits, P, digits);
+    Inc(P, digits);
+  end else
+    Dec(P);
+  PWord(P)^ := 0;
+  Result := P - Dest;
 end;
 
 function  ARR_NDIM(a: PArrayType): PInteger;

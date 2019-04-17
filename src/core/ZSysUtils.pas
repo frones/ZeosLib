@@ -6797,16 +6797,10 @@ begin
 end;*)
 
 function BcdToSQLRaw(const Value: TBCD): RawByteString;
-{$IFNDEF HAVE_BCDTOSTR_FORMATSETTINGS}var OldDecSep: Char;{$ENDIF}
+var Digits: array[0..MaxFMTBcdFractionSize-1+1{sign}+1{dot}] of AnsiChar;
 begin
-  {$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}
-  Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
-  {$ELSE}
-  OldDecSep := DecimalSeparator;
-  DecimalSeparator := '.';
-  Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value));
-  DecimalSeparator := OldDecSep;
-  {$ENDIF}
+  {$IFDEF FPC}Result := '';{$ENDIF}
+  ZSetString(PAnsiChar(@Digits[0]), BcdToRaw(Value, @Digits[0], '.'),Result)
 end;
 
 function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt;
@@ -6821,12 +6815,12 @@ begin
   if Precision = 0 then
     goto zero;
   DecimalPos := Bcd.SignSpecialPlaces and $3F;
-  if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision) then
-    raise EBcdOverflowException.Create(SBcdOverflow)
+  if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision)
+  then raise EBcdOverflowException.Create(SBcdOverflow)
   else DecimalPos := Precision - DecimalPos;
   PNibble := @Bcd.Fraction[0];
   PLastNibble := PNibble + ((Precision -1) shr 1);
-  PBuf        := PNibble + ((DecimalPos-1) shr 1);
+  PBuf        := PNibble + (DecimalPos shr 1);
 
   while (PLastNibble > PBuf) and (PByte(PLastNibble)^ = 0) do begin//skip trailing zeroes
     Dec(PLastNibble);
@@ -6862,7 +6856,7 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
-  Dec(Buf, Ord((PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))));
+  Dec(Buf, Ord((Precision > DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))));
   Result := Buf-PBuf;
 end;
 
@@ -6884,7 +6878,7 @@ begin
   else DecimalPos := Precision - DecimalPos;
   PNibble := @Bcd.Fraction[0];
   PLastNibble := PNibble + ((Precision -1) shr 1);
-  PBuf        := Pointer(PNibble + ((DecimalPos-1) shr 1));
+  PBuf        := Pointer(PNibble + (DecimalPos shr 1));
   while (PLastNibble > PAnsiChar(PBuf)) and (PByte(PLastNibble)^ = 0) do begin//skip trailing zeroes
     Dec(PLastNibble);
     Dec(Precision, 2);
@@ -6919,7 +6913,7 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
-  Dec(Buf, Ord((PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))));
+  Dec(Buf, Ord((Precision > DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))));
   Result := (Buf-PBuf);
 end;
 
@@ -6942,16 +6936,10 @@ begin
 end;
 
 function BcdToSQLUni(const Value: TBCD): ZWideString;
-{$IFNDEF HAVE_BCDTOSTR_FORMATSETTINGS}var OldDecSep: Char;{$ENDIF}
+var Digits: array[0..MaxFMTBcdFractionSize-1+1{sign}+1{dot}] of WideChar;
 begin
-  {$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}
-  Result := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(BCDToStr(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
-  {$ELSE}
-  OldDecSep := DecimalSeparator;
-  DecimalSeparator := '.';
-  Result := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(BCDToStr(Value));
-  DecimalSeparator := OldDecSep;
-  {$ENDIF}
+  {$IFDEF FPC}Result := '';{$ENDIF}
+  System.SetString(Result, PWideChar(@Digits[0]), BcdToUni(Value, @Digits[0], '.'));
 end;
 
 function UniToBCD(Value: PWideChar; Len: LengthInt): TBCD;
