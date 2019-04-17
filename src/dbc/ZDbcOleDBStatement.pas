@@ -1630,7 +1630,7 @@ begin
       DBTYPE_NUMERIC:   BCD2OleDBNumeric(Value, PDB_Numeric(Data));
       DBTYPE_NULL:      PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
       {$IFDEF CPU64}
-      DBTYPE_I1, DBTYPE_I2, DBTYPE_I4, DBTYPE_I8: InternalBindSInt(Index, stLong, Value: BCD2Int64(Value));
+      DBTYPE_I1, DBTYPE_I2, DBTYPE_I4, DBTYPE_I8: InternalBindSInt(Index, stLong, BCD2Int64(Value));
       DBTYPE_UI1, DBTYPE_UI2, DBTYPE_UI4, DBTYPE_UI8: InternalBindUInt(Index, stULong, BCD2UInt64(Value));
       {$ELSE}
       DBTYPE_I1, DBTYPE_I2, DBTYPE_I4: InternalBindSInt(Index, stInteger, Integer(BCD2Int64(Value)));
