@@ -150,7 +150,6 @@ begin
   n['type'] := 'TestSuite';
   n['id'] := IntToStr(GetNextId);
   n['name'] := ATestSuite.TestName;
-  n['fullname'] := ATestSuite.TestName;
   n['testcasecount'] := IntToStr(ATestSuite.CountTestCases);
   n['runstate'] := 'Runnable';
   n['result'] := strInconclusive;
@@ -162,6 +161,7 @@ begin
   do FullName := FullName + TDOMElement(FSuitePath[x])['name'] + '.';
   FullName := FullName + ATestSuite.TestName;
   n['classname'] := FullName;
+  n['fullname'] := FullName + '.' + ATestSuite.TestName;  
 
   FSuitePath.Add(n);
 

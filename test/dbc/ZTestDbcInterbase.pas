@@ -116,11 +116,13 @@ type
     procedure TestEmptyStrings;
     procedure TestArrayBindings;
 	procedure TestClientVersionNumber;
+    procedure TestDefaultReadCommittedMode;
   end;
 
 implementation
 
-uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant, ZMessages, DB;
+uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant, ZMessages,
+  ZDbcInterbase6Metadata, DB;
 
 { TZTestDbcInterbaseCase }
 
@@ -1024,6 +1026,49 @@ begin
   Version := Connection.GetClientVersion;
 
   CheckNotEquals(0, Version, 'Expected a client library version of anything but 0.');
+end;
+
+procedure TZTestDbcInterbaseCase.TestDefaultReadCommittedMode;
+const
+  IDX = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  IsFirebird: Boolean;
+  ServerVersion: Integer;
+  IsolationMode: Integer;
+begin
+  Connection.Close;
+  Connection.SetTransactionIsolation(tiReadCommitted);
+  Connection.Open;
+  with (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo) do begin
+    IsFirebird := HostIsFireBird;
+    ServerVersion := GetHostVersion;
+  end;
+
+  if (not IsFirebird) or (ServerVersion < 2001000) then begin
+    Check(true, 'This is a fake and cannot fail because this test can only be executed on Firebird 2.1+');
+  end else begin
+    Statement := Connection.CreateStatement;
+    CheckNotNull(Statement, 'Couldn''t get a valid statement.');
+    Statement.SetResultSetType(rtScrollInsensitive);
+    Statement.SetResultSetConcurrency(rcReadOnly);
+
+    ResultSet := Statement.ExecuteQuery('select T.MON$ISOLATION_MODE from MON$TRANSACTIONS T where T.MON$TRANSACTION_ID = CURRENT_TRANSACTION');
+    CheckNotNull(ResultSet);
+
+    Check(ResultSet.Next, 'Couldn''t move to the first result row.');
+
+    IsolationMode := ResultSet.GetInt(IDX);
+
+    ResultSet.Close;
+    Statement.Close;
+
+    if ServerVersion >= 4000000 then
+      CheckEquals(4, IsolationMode, 'Expected Isolation mode to be READ COMMITTED READ CONSISTENCY (4) but got something else.')
+    else
+      CheckEquals(2, IsolationMode, 'Expected Isolation mode to be READ COMMITTED RECORD VERSION (2) but got something else.');
+  end;
 end;
 
 initialization
