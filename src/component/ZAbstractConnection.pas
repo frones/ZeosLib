@@ -1160,8 +1160,8 @@ begin
   begin
     Current := TZAbstractRODataset(FDatasets[I]);
     try
-      Current.UnPrepare;
       Current.Close;
+      Current.UnPrepare;
     except
       // Ignore.
     end;
