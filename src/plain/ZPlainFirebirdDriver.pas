@@ -369,6 +369,22 @@ type
     function isc_dsql_sql_info(status_vector: PISC_STATUS;
       stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
       buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
+
+    function fb_dsql_set_timeout(status_vector: PISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; milliseconds: ISC_ULONG): ISC_STATUS;
+
+    //this function is commented out in the Firebird 4.0 Beta 1 ibase.h too
+    //fb_get_statement_interface: function(status_vector: PISC_STATUS;
+	  //  api_handle: PFB_API_HANDLE; stmt_interface: Pointer;): ISC_STATUS;
+	  //  {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+	{
+    ISC_STATUS ISC_EXPORT fb_get_statement_interface(ISC_STATUS*,
+                            FB_API_HANDLE*,
+                            void**);
+    }
+
+    { Blob processing routines }
+
     function isc_open_blob2(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
       blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
@@ -613,6 +629,12 @@ end;
 function TZFirebirdBaseDriver.GetUnicodeCodePageName: String;
 begin
   Result := 'UNICODE_FSS';
+end;
+
+function TZFirebirdBaseDriver.fb_dsql_set_timeout(status_vector: PISC_STATUS;
+  stmt_handle: PISC_STMT_HANDLE; milliseconds: ISC_ULONG): ISC_STATUS;
+begin
+  Result := fb_dsql_set_timeout(status_vector, stmt_handle, milliseconds)
 end;
 
 procedure TZFirebirdBaseDriver.FillCodePageArray;
