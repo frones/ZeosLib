@@ -162,7 +162,8 @@ procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
 function PG2Time(Value: Double): TDateTime; overload;
 function PG2Time(Value: Int64): TDateTime; overload;
 
-function PG2Date(Value: Integer): TDateTime;
+function PG2Date(Value: Integer): TDateTime; overload;
+procedure PG2Date(Value: Integer; out Year, Month, Day: Word); overload;
 
 function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -176,23 +177,42 @@ procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{
 function PG2Cardinal(P: Pointer): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Int64(P: Pointer): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2Int64(P: Pointer): Int64; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
-function PGNumeric2Currency(P: Pointer): Currency; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+{** written by EgonHugeist
+  converts a postgres numeric into a native currenncy value
+   @param P is a pointer to a valid numeric value
+   @return a converted currency value
+}
+function PGNumeric2Currency(P: Pointer): Currency;
+
+{** written by EgonHugeist
+  converts a native currenncy value into a postgres numeric value
+  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
+   @param Value the value which should be converted
+   @param buf the numeric buffrr we write into
+   @param size return the number of bytes we finally used
+}
+procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
 
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 
-function PGCash2Currency(P: Pointer): Currency; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PGCash2Currency(P: Pointer): Currency; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
 function PG2Single(P: Pointer): Single; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+function PGInetAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+
+function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
+function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 
 {$IFNDEF ENDIAN_BIG}
 procedure Reverse2Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -213,9 +233,12 @@ function ARR_OVERHEAD_NONULLS(ndims: Integer): Integer;
 function ARR_DATA_OFFSET(a: PArrayType): Int32;
 function ARR_DATA_PTR(a: PArrayType): Pointer;
 
-const MinPGNumSize = (1{ndigits}+1{weight}+1{sign}+1{dscale})*SizeOf(Word);
-const MaxCurr2NumSize = MinPGNumSize+(5{max 5 NBASE ndigits}*SizeOf(Word));
-const MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 16 NBASE ndigits}*SizeOf(Word));
+const
+  MinPGNumSize = (1{ndigits}+1{weight}+1{sign}+1{dscale})*SizeOf(Word);
+  MaxCurr2NumSize = MinPGNumSize+(5{max 5 NBASE ndigits}*SizeOf(Word));
+  MaxBCD2NumSize  = MinPGNumSize+(MaxFMTBcdFractionSize div 4{max 16 NBASE ndigits}*SizeOf(Word));
+  ParamFormatBin = 1;
+  ParamFormatStr = 0;
 
 const ZSQLType2PGBindSizes: array[stUnknown..stGUID] of Integer = (-1,
     SizeOf(Byte){stBoolean},
@@ -245,7 +268,8 @@ const ZSQLType2OID: array[Boolean, stUnknown..stBinaryStream] of OID = (
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
-uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses, ZDbcUtils;
+uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses, ZDbcUtils
+  {$IFDEF WITH_SBCDOVERFLOW}, DBConsts{$ENDIF};
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -356,13 +380,9 @@ begin
         else
           Result := stString;
     TEXTOID: Result := stAsciiStream; { text }
-    OIDOID: { oid }
-      begin
-        if OidAsBlob then
-          Result := stBinaryStream
-        else
-          Result := stInteger;
-      end;
+    OIDOID: if OidAsBlob
+            then Result := stBinaryStream
+            else Result := stInteger;//stLongWord;
     NAMEOID: Result := stString; { name }
     INT2OID: Result := stSmall; { int2 }
     INT4OID: Result := stInteger; { int4 }
@@ -1070,6 +1090,14 @@ begin
     Result := 0;
 end;
 
+procedure PG2Date(Value: Integer; out Year, Month, Day: Word);
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse4Bytes(@Value);
+  {$ENDIF}
+  j2date(Value+POSTGRES_EPOCH_JDATE, Year, Month, Day);
+end;
+
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 begin
   { adjust byte order of host to network  }
@@ -1087,18 +1115,29 @@ begin
 end;
 
 function PG2SmallInt(P: Pointer): SmallInt;
+{$IFNDEF ENDIAN_BIG}
+var W: Word absolute Result;
+begin
+  {$IFOPT R+}
+  W := ((PWord(P)^ and $00FF) shl 8) or ((PWord(P)^ and $FF00) shr 8);
+  {$ELSE}
+  W := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
+  {$ENDIF}
+{$ELSE}
 begin
   Result := PSmallInt(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
-procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$IFNDEF ENDIAN_BIG}
 var W: Word absolute Value;
 begin
-  if Value = 0
-  then PWord(Buf)^ := 0
-  else PWord(Buf)^ := ((W and $00FF) shl 8) or ((W and $FF00) shr 8);
+  {$IFOPT R+}
+  PWord(Buf)^ := ((W and $00FF) shl 8) or ((W and $FF00) shr 8);
+  {$ELSE}
+  PWord(Buf)^ := ((W shl 8) or ((W shr 8)));
+  {$ENDIF}
 {$ELSE}
 begin
   PSmallInt(Buf)^ := Value;
@@ -1107,120 +1146,173 @@ end;
 
 function PG2Word(P: Pointer): Word;
 begin
+{$IFNDEF ENDIAN_BIG}
+  {$IFOPT R+}
+  Result := ((PWord(P)^ and $00FF) shl 8) or ((PWord(P)^ and $FF00) shr 8);
+  {$ELSE}
+  Result := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
+  {$ENDIF}
+{$ELSE}
   Result := PWord(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse2Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
 procedure Word2PG(Value: Word; Buf: Pointer);
 begin
 {$IFNDEF ENDIAN_BIG}
-  if Value = 0
-  then PWord(Buf)^ := 0
-  else PWord(Buf)^ := ((Value and $00FF) shl 8) or ((Value and $FF00) shr 8);
+  {$IFOPT R+}
+  PWord(Buf)^ := ((Value and $00FF) shl 8) or ((Value and $FF00) shr 8);
+  {$ELSE}
+  PWord(Buf)^ := (Value shl 8) or (Value shr 8);
+  {$ENDIF}
 {$ELSE}
   PWord(Buf)^ := Value;
 {$ENDIF}
 end;
 
 function PG2Integer(P: Pointer): Integer;
+{$IFNDEF ENDIAN_BIG}
+var C: Cardinal absolute Result;
 begin
-  Result := PInteger(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+  {$IFOPT R+}
+  C :=  ((PCardinal(P)^ and $000000FF) shl 24) or
+        ((PCardinal(P)^ and $0000FF00) shl 8) or
+        ((PCardinal(P)^ and $00FF0000) shr 8 ) or
+        ((PCardinal(P)^ and $FF000000) shr 24)
+  {$ELSE}
+  C := ((PCardinal(P)^ shl 8) and $FF00FF00) or ((PCardinal(P)^ shr 8) and $00FF00FF);
+  C := (C shl 16) or (C shr 16);
+  {$ENDIF}
+{$ELSE}
+begin
+  Result := PCardinal(P)^;
+{$ENDIF}
 end;
 
 procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$IFNDEF ENDIAN_BIG}
 var C: Cardinal absolute Value;
 begin
-  if Value <> 0 then
-    PCardinal(Buf)^ :=((c and $000000FF) shl 24) or
-                    ((c and $0000FF00) shl 8) or
-                    ((c and $00FF0000) shr 8 ) or
-                    ((c and $FF000000) shr 24)
-  else PInteger(Buf)^ := 0;
+  {$IFOPT R+}
+  PCardinal(Buf)^ :=  ((c and $000000FF) shl 24) or
+                      ((C and $0000FF00) shl 8) or
+                      ((C and $00FF0000) shr 8 ) or
+                      ((C and $FF000000) shr 24)
+  {$ELSE}
+  C := ((C shl 8) and $FF00FF00) or ((C shr 8) and $00FF00FF);
+  PCardinal(Buf)^ := (C shl 16) or (C shr 16);
+  {$ENDIF}
 {$ELSE}
 begin
-  PInteger(Buf)^ := Value;
+  PInteger(Buf)^ :=  Value;
 {$ENDIF}
 end;
 
 function PG2Cardinal(P: Pointer): Cardinal;
 begin
+{$IFNDEF ENDIAN_BIG}
+  {$IFOPT R+}
+  Result := ((PCardinal(P)^ and $000000FF) shl 24) or
+            ((PCardinal(P)^ and $0000FF00) shl 8) or
+            ((PCardinal(P)^ and $00FF0000) shr 8 ) or
+            ((PCardinal(P)^ and $FF000000) shr 24)
+  {$ELSE}
+  Result := ((PCardinal(P)^ shl 8) and $FF00FF00) or ((PCardinal(P)^ shr 8) and $00FF00FF);
+  Result := (Result shl 16) or (Result shr 16);
+  {$ENDIF}
+{$ELSE}
   Result := PCardinal(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
 procedure Cardinal2PG(Value: Cardinal; Buf: Pointer);
+{$IFNDEF ENDIAN_BIG}
 begin
-  PCardinal(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse4Bytes(Buf){$ENDIF}
+  {$IFOPT R+}
+  PCardinal(Buf)^ :=  ((Value and $000000FF) shl 24) or
+                      ((Value and $0000FF00) shl 8) or
+                      ((Value and $00FF0000) shr 8 ) or
+                      ((Value and $FF000000) shr 24)
+  {$ELSE}
+  Value := ((Value shl 8) and $FF00FF00) or ((Value shr 8) and $00FF00FF);
+  PCardinal(Buf)^ := (Value shl 16) or (Value shr 16);
+  {$ENDIF}
+{$ELSE}
+begin
+  Reverse4Bytes(Buf)
+{$ENDIF}
 end;
 
 function PG2Int64(P: Pointer): Int64;
+{$IFNDEF ENDIAN_BIG}
+var {$IFNDEF CPU64}
+    D64:  Int64Rec absolute Result;
+    S64: PInt64Rec absolute P;
+    {$ELSE}
+    S64: PInt64    absolute P;
+    {$ENDIF}
+begin
+  {$R-}
+  {$IFNDEF CPU64}
+  D64.Lo := ((S64.Hi shl 8) and $FF00FF00) or ((S64.Hi shr 8) and $00FF00FF);
+  D64.Lo :=  (D64.Lo shl 16) or (D64.Lo shr 16);
+  D64.Hi := ((S64.Lo shl 8) and $FF00FF00) or ((S64.Lo shr 8) and $00FF00FF);
+  D64.Hi :=  (D64.Hi shl 16) or (D64.Hi shr 16);
+  {$ELSE}
+  Result := ((S64^   shl 8 ) and $FF00FF00FF00FF00) or ((S64^   shr 8 ) and $00FF00FF00FF00FF);
+  Result := ((Result shl 16) and $FFFF0000FFFF0000) or ((Result shr 16) and $0000FFFF0000FFFF);
+  Result :=  (Result shl 32) or ((Result shr 32));
+  {$ENDIF}
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+{$ELSE}
 begin
   Result := PInt64(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
-procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-
-{$IFDEF ENDIAN_BIG}
+procedure Int642PG(const Value: Int64; Buf: Pointer);
+{$IFNDEF ENDIAN_BIG}
+var {$IFNDEF CPU64}
+    S64:  Int64Rec absolute Value;
+    D64: PInt64Rec absolute Buf;
+    {$ELSE}
+    D64: PInt64    absolute Buf;
+    {$ENDIF}
+begin
+  {$R-}
+  {$IFNDEF CPU64}
+  D64.Lo := ((S64.Hi shl 8) and $FF00FF00) or ((S64.Hi shr 8) and $00FF00FF);
+  D64.Lo :=  (D64.Lo shl 16) or (D64.Lo shr 16);
+  D64.Hi := ((S64.Lo shl 8) and $FF00FF00) or ((S64.Lo shr 8) and $00FF00FF);
+  D64.Hi :=  (D64.Hi shl 16) or (D64.Hi shr 16);
+  {$ELSE}
+  D64^ := ((Value shl 8 ) and $FF00FF00FF00FF00) or ((Value shr 8 ) and $00FF00FF00FF00FF);
+  D64^ := ((D64^  shl 16) and $FFFF0000FFFF0000) or ((D64^  shr 16) and $0000FFFF0000FFFF);
+  D64^ :=  (D64^  shl 32) or ((D64^ shr 32));
+  {$ENDIF}
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+{$ELSE}
 begin
   PInt64(Buf)^ := Value;
-{$ELSE !ENDIAN_BIG}
-{$IFNDEF CPU64}
-var
-  S64: Int64Rec absolute Value;
-  D64: PInt64Rec absolute Buf;
-begin
-  {$IFDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //EH: my endian swaps kill some Compilers such as d2009
-  PInt64(Buf)^ := Value;
-  if Value <> 0 then Reverse8Bytes(Buf);
-  {$ELSE !WITH_C5242_OR_C4963_INTERNAL_ERROR}
-  if S64.Hi <> 0 then
-    D64.Lo := ((S64.Hi and $000000FF) shl 24) or
-              ((S64.Hi and $0000FF00) shl 8) or
-              ((S64.Hi and $00FF0000) shr 8 ) or
-              ((S64.Hi and $FF000000) shr 24)
-  else D64.Lo := 0;
-  if S64.Lo <> 0 then
-    D64.Hi := ((S64.Lo and $000000FF) shl 24) or
-              ((S64.Lo and $0000FF00) shl 8) or
-              ((S64.Lo and $00FF0000) shr 8 ) or
-              ((S64.Lo and $FF000000) shr 24)
-  else D64.Hi := 0;
-  {$ENDIF !WITH_C5242_OR_C4963_INTERNAL_ERROR}
-{$ELSE !CPU64}
-var u64: Uint64 absolute Value;
-begin
-  if Value = 0
-  then PUInt64(Buf)^ := 0
-  else PUInt64(Buf)^ := ((u64 and $00000000000000FF) shl 56) or
-                        ((u64 and $000000000000FF00) shl 40) or
-                        ((u64 and $0000000000FF0000) shl 24) or
-                        ((u64 and $00000000FF000000) shl 8 ) or
-                        ((u64 and $000000FF00000000) shr 8 ) or
-                        ((u64 and $0000FF0000000000) shr 24) or
-                        ((u64 and $00FF000000000000) shr 40) or
-                        ((u64 and $FF00000000000000) shr 56);
-{$ENDIF !CPU64}
-{$ENDIF !ENDIAN_BIG}
+{$ENDIF}
 end;
 
+const CurrMulTbl: array[0..4] of Int64 = (1, 10000, 100000000, 1000000000000, 10000000000000000) ;
 function PGNumeric2Currency(P: Pointer): Currency;
 var
   Numeric_External: PPGNumeric_External absolute P;
-  {Scale, }Sign: Word;
-  NBASEDigits, Weight, I: SmallInt;
+  NBASEDigits, Sign: Word;
+  Weight, I: SmallInt;
+  i64: Int64 absolute Result;
 begin
-  Result := 0;
   Sign := PG2Word(@Numeric_External.sign);
   NBASEDigits := PG2Word(@Numeric_External.NBASEDigits);
+  Result := 0;
   if (NBASEDigits = 0) or (Sign = NUMERIC_NAN) or (Sign = NUMERIC_NULL) then
     Exit;
-  Weight := PG2SmallInt(@Numeric_External.weight);
-  for I := 0 to NBASEDigits -1 do
-    Result := Result + PG2SmallInt(@Numeric_External.digits[i]) * IntPower(NBASE, Weight-i);
+  Weight := PG2SmallInt(@Numeric_External.weight)+1;
+  for I := 0 to (NBASEDigits-1) do
+    I64 := I64 + PG2SmallInt(@Numeric_External.digits[i]) * CurrMulTbl[weight-i];
   if Sign <> NUMERIC_POS then
     Result := -Result;
 end;
@@ -1312,6 +1404,7 @@ R1BDigit: Word2PG(Word(Int64Rec(u64).Words[0]), @Numeric_External.digits[0]);
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
+//each postgres num digit is a base 0...9999 digit, so we need to multiply
 const WordFactors: array[0..3] of Integer = (1000, 100, 10, 1);
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 var
@@ -1380,19 +1473,119 @@ Done:
 end;
 
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
+var
+  i, NBASEDigitsCount, Weight, Precision, Scale: Integer;
+  NBASEDigit, FirstNibbleDigit: Word;
+  pNibble, pLastNibble: PAnsiChar;
+label DecOne, ZeroBCD, FourNibbles, Loop, Done;
 begin
+  FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
+  NBASEDigitsCount := PG2Word(Src);
+  NBASEDigit := PG2Word(Src+4); //read sign
+
+  if ((NBASEDigitsCount = 0) and (NBASEDigit = NUMERIC_POS)) or      // zero
+     ((NBASEDigit <> NUMERIC_POS) and (NBASEDigit <> NUMERIC_NEG)) then begin // NaN or NULL
+ZeroBCD:
+    Dst.Precision := 10;
+    Dst.SignSpecialPlaces := 2;
+    Exit;
+  end;
+  if NBASEDigit = NUMERIC_NEG then
+    Dst.SignSpecialPlaces := $80;
+
+  Weight := PG2SmallInt(Src+2); //weight can be less than zero!
+  Inc(Src, 8);
+  pNibble := @Dst.Fraction[0];
+  pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
+  if Weight < 0 then begin {save absolute Weight value to I }
+    I := -Weight;
+    Inc(pNibble, (I - 1) * 2); //set new bcd nibble offset
+    if pNibble > pLastNibble then //overflow -> raise AV ?
+      goto ZeroBCD;
+  end else
+    I := Weight;
+  if NBASEDigitsCount <= I then begin
+    Precision := (I - NBASEDigitsCount + 1) * BASE1000Digits;
+    Scale := Precision * Ord(Weight < 0);
+  end else if Weight < -1 then begin //scale starts with weight -1 nbase digits
+    Precision := (I - 1) * BASE1000Digits;
+    Scale := Precision;
+  end else begin
+    Precision := 0;
+    Scale := 0;
+  end;
+  //process first base-digit -> pack nibbles left  i.e. '0001' will be '01' half nibbles i do ignore @t.moment..
+  NBASEDigit := PG2Word(Src); //each digit is a base 10000 digit -> 0..9999
+  FirstNibbleDigit := NBASEDigit div 100;
+  if FirstNibbleDigit > 0 then begin
+    I := 0;
+    goto FourNibbles;
+  end else begin
+    PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
+    Inc(Precision, 2);
+    if 0 > Weight then Inc(Scale, 2);
+    if NBASEDigitsCount > 1
+    then Inc(pNibble)
+    else goto done;
+    I := 1;
+  end;
+Loop:
+  NBASEDigit := PG2Word(Src+i*SizeOf(Word)); //each digit is a base 10000 digit -> 0..9999
+  FirstNibbleDigit := NBASEDigit div 100;
+FourNibbles:
+  PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+  PByte(pNibble+1)^ := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)];
+  Inc(Precision, BASE1000Digits);
+  if i > Weight then //if weight is negative or offset reached Weight +1
+    Inc(Scale, BASE1000Digits);
+  if pNibble < pLastNibble
+  then Inc(pNibble, 1+Ord(I<NBASEDigitsCount-1)) //keep offset of pNibble to lastnibble if loop end reached
+  else begin
+    pNibble := pLastNibble +1;
+    goto Done; //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
+  end;
+  Inc(I);
+  if I >= NBASEDigitsCount
+  then goto Done
+  else goto Loop;
+Done:
+  if (Scale > 0) then begin
+    if (pNibble <= pLastNibble) then begin
+      pLastNibble := pNibble;
+      pNibble := @Dst.Fraction[0]; // trim trailing zeros
+      while (Scale > 0) and (pLastNibble>=pNibble)  do begin
+        if PByte(pLastNibble)^ = 0 then begin
+          if Scale > 1 then begin
+            Dec(Precision, 2);
+            Dec(Scale, 2)
+          end else
+            goto DecOne;
+          Dec(pLastNibble);
+        end else if (PByte(pLastNibble)^ and $0F) = 0 then begin
+  DecOne: Dec(Precision);
+          Dec(Scale);
+          Break;
+        end else Break;
+      end;
+    end;
+    if Scale > 0 then
+      if Dst.SignSpecialPlaces = $80
+      then Dst.SignSpecialPlaces := Scale or $80
+      else Dst.SignSpecialPlaces := Scale;
+  end;
+  Dst.Precision := Max(Precision, 1);
 end;
 
 function PGCash2Currency(P: Pointer): Currency;
+var i64: Int64 absolute Result;
 begin
-  Int642PG(PInt64(P)^, @Result);
-  Result {%H-}:= PInt64(@Result)^ div 100;
+  i64 := PG2Int64(P) * 100; //PGmoney as a scale of two but we've a scale of 4
 end;
 
 procedure Currency2PGCash(const Value: Currency; Buf: Pointer);
+var i64: Int64 absolute Value;
 begin
-  PInt64(Buf)^ := PInt64(@Value)^*100; //PGmoney as a scale of two but we've a scale of 4
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+  Int642PG(i64 div 100, Buf); //PGmoney as a scale of two but we've a scale of 4
 end;
 
 function PG2Single(P: Pointer): Single;
@@ -1408,15 +1601,155 @@ begin
 end;
 
 function PG2Double(P: Pointer): Double;
+{$IFNDEF ENDIAN_BIG}
+var i64: Int64 absolute Result;
+begin
+  i64 := PG2Int64(P);
+{$ELSE}
 begin
   Result := PDouble(P)^;
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(@Result){$ENDIF}
+{$ENDIF}
 end;
 
 procedure Double2PG(const Value: Double; Buf: Pointer);
+{$IFNDEF ENDIAN_BIG}
+var i64: Int64 absolute Value;
+begin
+  Int642PG(i64, Buf);
+{$ELSE}
 begin
   PDouble(Buf)^ := Value;
-  {$IFNDEF ENDIAN_BIG}Reverse8Bytes(Buf){$ENDIF}
+{$ENDIF}
+end;
+
+function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+begin
+  PWord(Dest    )^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+0)^] or $2020;; //a
+  PByte(Dest  +2)^ := Ord(':');
+  PWord(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+1)^] or $2020;; //b
+  PByte(Dest  +5)^ := Ord(':');
+  PWord(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+2)^ ]or $2020;; //c
+  PByte(Dest  +8)^ := Ord(':');
+  PWord(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+3)^] or $2020;; //d
+  PByte(Dest +11)^ := Ord(':');
+  PWord(Dest +12)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+4)^] or $2020;; //e
+  PByte(Dest +14)^ := Ord(':');
+  PWord(Dest +15)^ := ZSysUtils.TwoDigitLookupHexW[PByte(Src+5)^] or $2020;; //f
+  PByte(Dest +17)^ := 0;
+  Result := 17;
+end;
+
+function PGInetAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
+var Inet: PInetRec absolute Src;
+  P: PAnsiChar;
+  i, digits: Byte;
+  w: word;
+begin
+  P := Dest;
+  if Inet.nb = 4 then
+    for I := 0 to 3 do begin
+      digits := GetOrdinalDigits(Inet.ipaddr[i]);
+      IntToRaw(Inet.ipaddr[i], P, digits);
+      PByte(P+digits)^ := Ord('.');
+      Inc(P, digits+1);
+    end
+  else for I := 0 to 7 do begin
+    PWord(P)^ := ZSysUtils.TwoDigitLookupHexW[Inet.ipaddr[i shl 1]] or $2020;;
+    W         := ZSysUtils.TwoDigitLookupHexW[Inet.ipaddr[i shl 1 + 1]] or $2020;
+    if PByte(P)^ = Ord('0') then begin
+      if PByte(P+1)^ <> Ord('0') then begin
+        PByte(P)^ := PByte(P+1)^;
+        PWord(P+1)^ := W;
+        Inc(P, 3);
+      end else begin
+        PWord(P)^ := W;
+        if PByte(P)^ = Ord('0') then begin
+          PByte(P)^ := PByte(P+1)^;
+          Inc(P);
+        end else
+          Inc(P,2);
+      end;
+    end else begin
+      PWord(P+2)^ := W;
+      Inc(P, 4);
+    end;
+    PByte(P)^ := Ord(':');
+    Inc(P);
+  end;
+  if (Inet.nb = 4) or (Inet.is_cidr <> 0) then begin
+    PByte(P-1)^ := Ord('/');
+    digits := GetOrdinalDigits(Inet.bits);
+    IntToRaw(Inet.bits, P, digits);
+    Inc(P, digits);
+  end else
+    Dec(P);
+  PByte(P)^ := 0;
+  Result := P - Dest;
+end;
+
+function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
+begin
+  PCardinal(Dest    )^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+0)^] or $00200020; //a
+  PWord(Dest      +2)^ := Ord(':');
+  PCardinal(Dest  +3)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+1)^] or $00200020; //b
+  PWord(Dest      +5)^ := Ord(':');
+  PCardinal(Dest  +6)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+2)^] or $00200020; //c
+  PWord(Dest      +8)^ := Ord(':');
+  PCardinal(Dest  +9)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+3)^] or $00200020; //d
+  PWord(Dest     +11)^ := Ord(':');
+  PCardinal(Dest +12)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+4)^] or $00200020; //e
+  PWord(Dest     +14)^ := Ord(':');
+  PCardinal(Dest +15)^ := ZSysUtils.TwoDigitLookupHexLW[PByte(Src+5)^] or $00200020; //f
+  PWord(Dest     +17)^ := 0;
+  Result := 17;
+end;
+
+function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
+var Inet: PInetRec absolute Src;
+  P: PWideChar;
+  i, digits: Byte;
+  C: Cardinal;
+begin
+  P := Dest;
+  if Inet.nb = 4 then
+    for I := 0 to 3 do begin
+      digits := GetOrdinalDigits(Inet.ipaddr[i]);
+      IntToUnicode(Inet.ipaddr[i], P, digits);
+      PWord(P+digits)^ := Ord('.');
+      Inc(P, digits+1);
+    end
+  else for I := 0 to 7 do begin
+    PCardinal(P)^ := ZSysUtils.TwoDigitLookupHexLW[Inet.ipaddr[i shl 1]] or $00200020;
+    c             := ZSysUtils.TwoDigitLookupHexLW[Inet.ipaddr[i shl 1 + 1]] or $00200020;
+    if PWord(P)^ = Ord('0') then begin
+      if PWord(P+1)^ <> Ord('0') then begin
+        PWord(P)^ := PWord(P+1)^;
+        PCardinal(P+1)^ := C;
+        Inc(P, 3);
+      end else begin
+        PCardinal(P)^ := C;
+        if PWord(P)^ = Ord('0') then begin
+          PWord(P)^ := PWord(P+1)^;
+          Inc(P);
+        end else
+          Inc(P,2);
+      end;
+    end else begin
+      PCardinal(P+2)^ := C;
+      Inc(P, 4);
+    end;
+    PWord(P)^ := Ord(':');
+    Inc(P);
+  end;
+  if (Inet.nb = 4) or (Inet.is_cidr <> 0) then begin
+    PWord(P-1)^ := Ord('/');
+    digits := GetOrdinalDigits(Inet.bits);
+    IntToUnicode(Inet.bits, P, digits);
+    Inc(P, digits);
+  end else
+    Dec(P);
+  PWord(P)^ := 0;
+  Result := P - Dest;
 end;
 
 function  ARR_NDIM(a: PArrayType): PInteger;

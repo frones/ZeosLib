@@ -274,6 +274,10 @@ const
   // Type: BOOLEAN
   // fetch row by row from Server -> do not cache the results in libpq
   DSProps_SingleRowMode = 'SingleRowMode';
+  // Type: BOOLEAN
+  // force binary results to be retieved from server. supported since Protocol V3
+  // except libs like pgbouncer which have no pqexecparams/pqexecprepared
+  DSProps_BinaryWireResultMode = 'BinaryWireResultMode';
 {$ENDIF}
 
 {$IFDEF ENABLE_INTERBASE}

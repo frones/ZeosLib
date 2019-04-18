@@ -347,15 +347,19 @@ begin
     FieldSize := F.DefinedSize;
     if FieldSize < 0 then
       FieldSize := 0;
-    if F.Type_ = adGuid then
-      ColumnInfo.ColumnDisplaySize := 38
-    else
-      ColumnInfo.ColumnDisplaySize := FieldSize;
-    ColumnInfo.Precision := FieldSize;
-    ColumnInfo.Currency := ColType = adCurrency;
-    ColumnInfo.Signed := False;
-    if ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adCurrency, adDecimal, adDouble, adNumeric, adSingle] then
-      ColumnInfo.Signed := True;
+    if F.Type_ = adGuid
+    then ColumnInfo.ColumnDisplaySize := 38
+    else ColumnInfo.ColumnDisplaySize := FieldSize;
+    if ColType in [adCurrency, adDecimal, adNumeric] then begin
+      ColumnInfo.Precision := F.Precision;
+      ColumnInfo.Scale := F.NumericScale;
+      ColumnInfo.Currency := ColType = adCurrency;
+      ColumnInfo.Signed := True
+    end else begin
+      ColumnInfo.Precision := FieldSize;
+      if ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adDouble, adSingle] then
+        ColumnInfo.Signed := True;
+    end;
 
     ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0) and (F.Properties.Item['BASECOLUMNNAME'].Value <> null) and not ColumnInfo.AutoIncrement;
     ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0) or ColumnInfo.AutoIncrement;

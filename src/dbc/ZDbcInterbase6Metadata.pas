@@ -1821,7 +1821,7 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength*Get
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(FIELD_SCALE_Index));   //CHAR_OCTET_LENGTH
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(FIELD_POSITION_Index)+ 1);   //ORDINAL_POSITION
       Result.UpdateString(TableColColumnIsNullableIndex, YesNoStrs[IsNull(NULL_FLAG_Index)]);   //IS_NULLABLE
-      Result.UpdateNull(TableColColumnAutoIncIndex); //AUTO_INCREMENT
+     // Result.UpdateNull(TableColColumnAutoIncIndex); //AUTO_INCREMENT
 
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(ColumnName)); //CASE_SENSITIVE
 

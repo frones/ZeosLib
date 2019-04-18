@@ -1800,7 +1800,7 @@ type
   TDB_NUMERIC = record { oledb.h }
     precision:  Byte;
     scale:      Byte;
-    sign:       Byte;
+    sign:       Byte; {1 if positive, 0 if negative }
     val:        array[0..SQL_MAX_NUMERIC_LEN -1] of BYTE; //fixed len
   end;
 

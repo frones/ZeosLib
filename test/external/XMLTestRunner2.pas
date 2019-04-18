@@ -414,7 +414,7 @@ begin
   SuiteN.Attributes['skipped'] := '0';
   SuiteN.Attributes['duration'] := '0';
   SuiteN.Attributes['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', now);
-  SuiteN.Attributes['fullname'] := suite.Name;
+  SuiteN.Attributes['fullname'] := GetCurrentSuiteName + suite.Name;
   if suite.Enabled
   then SuiteN.Attributes['runstate'] := 'Runnable'
   else SuiteN.Attributes['runstate'] := 'Skipped';

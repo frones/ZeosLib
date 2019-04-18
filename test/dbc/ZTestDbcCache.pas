@@ -651,7 +651,7 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorDouble;
 var
   WasNull: Boolean;
-  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
+  {$IFDEF BCD_TEST}BCD, BCD2: TBCD;{$ENDIF}
 begin
   with RowAccessor do
   begin
@@ -665,7 +665,8 @@ begin
     CheckEquals(FDouble, GetDouble(stDoubleIndex, WasNull), 0.001, 'GetDouble');
     {$IFDEF BCD_TEST}
     GetBigDecimal(stDoubleIndex, BCD, WasNull);
-    CheckEquals(0, BCDCompare(DoubleToBCD(FDouble), BCD), 'GetBigDecimal');
+    Double2BCD(FDouble, BCD2);
+    CheckEquals(0, BCDCompare(BCD2, BCD), 'GetBigDecimal');
     {$ELSE}
     CheckEquals(FDouble, GetBigDecimal(stDoubleIndex, WasNull), 0.001, 'GetBigDecimal');
     {$ENDIF}
@@ -691,7 +692,7 @@ end;
 }
 procedure TZTestRowAccessorCase.TestRowAccessorFloat;
 var
-  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
+  {$IFDEF BCD_TEST}BCD, BCD2: TBCD;{$ENDIF}
   WasNull: Boolean;
 begin
   with RowAccessor do
@@ -706,7 +707,8 @@ begin
     CheckEquals(FFloat, GetDouble(stFloatIndex, WasNull), 0.001, 'GetDouble');
     {$IFDEF BCD_TEST}
     GetBigDecimal(stFloatIndex, BCD, WasNull);
-    CheckEquals(0, BCDCompare(DoubleToBCD(FFloat), BCD), 'GetBigDecimal');
+    Double2BCD(FFloat, BCD2);
+    CheckEquals(0, BCDCompare(BCD2, BCD), 'GetBigDecimal');
     {$ELSE}
     CheckEquals(FFloat, GetBigDecimal(stFloatIndex, WasNull), 0.001, 'GetBigDecimal');
     {$ENDIF}

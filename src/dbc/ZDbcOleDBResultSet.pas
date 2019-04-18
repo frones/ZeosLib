@@ -216,7 +216,6 @@ procedure TZAbstractOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var I, C, L, H: Integer;
     P: PAnsiChar;
-    blob: IZBlob;
     MS: Word;
 begin
   //init
@@ -279,8 +278,8 @@ begin
                           end;
         DBTYPE_BYTES:
           if FDBBindingArray[C].cbMaxLen = 0 then begin //streamed
-            blob := TZOleDBBLOB.Create(FRowSet, FLobAccessors[FDBBindingArray[C].obLength], FHROWS^[FCurrentBufRowNo], FChunkSize);
-            JSONWriter.WrBase64(Blob.GetBuffer,Blob.Length,true); // withMagic=true
+            fTempBlob := TZOleDBBLOB.Create(FRowSet, FLobAccessors[FDBBindingArray[C].obLength], FHROWS^[FCurrentBufRowNo], FChunkSize);
+            JSONWriter.WrBase64(fTempBlob.GetBuffer,fTempBlob.Length,true); // withMagic=true
           end else
             JSONWriter.WrBase64(FData,FLength, True);
         DBTYPE_BYTES or DBTYPE_BYREF:
@@ -288,10 +287,10 @@ begin
         DBTYPE_STR: begin
             JSONWriter.Add('"');
             if FDBBindingArray[C].cbMaxLen = 0 then begin
-              blob := TZOleDBCLOB.Create(FRowSet, FLobAccessors[FDBBindingArray[C].obLength],
+              fTempBlob := TZOleDBCLOB.Create(FRowSet, FLobAccessors[FDBBindingArray[C].obLength],
                 DBTYPE_STR, FHROWS^[FCurrentBufRowNo], FChunkSize, ConSettings);
-              P := Pointer(blob.GetPWideChar);
-              JSONWriter.AddJSONEscapeW(Pointer(P), blob.Length shr 1);
+              P := Pointer(fTempBlob.GetPWideChar);
+              JSONWriter.AddJSONEscapeW(Pointer(P), fTempBlob.Length shr 1);
             end else begin
               if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
                 FUniTemp := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
@@ -314,11 +313,11 @@ begin
         DBTYPE_WSTR: begin
             JSONWriter.Add('"');
             if FDBBindingArray[c].cbMaxLen = 0 then begin
-              blob := TZOleDBCLOB.Create(FRowSet,
+              fTempBlob := TZOleDBCLOB.Create(FRowSet,
                 FLobAccessors[FDBBindingArray[C].obLength],
                 DBTYPE_WSTR, FHROWS^[FCurrentBufRowNo], FChunkSize, ConSettings);
-              P := Pointer(blob.GetPWideChar);
-              JSONWriter.AddJSONEscapeW(Pointer(P), blob.Length shr 1);
+              P := Pointer(fTempBlob.GetPWideChar);
+              JSONWriter.AddJSONEscapeW(Pointer(P), fTempBlob.Length shr 1);
             end else if FDBBindingArray[c].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
               JSONWriter.AddJSONEscapeW(FData, FLength shr 1)
             else begin //Fixed width
@@ -334,7 +333,11 @@ begin
             JSONWriter.AddJSONEscapeW(PPointer(FData)^, FLength shr 1);
             JSONWriter.Add('"');
           end;
-        //DBTYPE_NUMERIC  = 131;
+        DBTYPE_NUMERIC: begin
+                          FLength := SQL_MAX_NUMERIC_LEN;
+                          OleDBNumeric2Raw(FData, @fTinyBuffer[0], FLength);
+                          JSONWriter.AddJSONEscape(@fTinyBuffer[0], FLength);
+                        end;
         //DBTYPE_UDT = 132;
         DBTYPE_DBDATE:    begin
                             if jcoMongoISODate in JSONComposeOptions then
@@ -388,7 +391,10 @@ begin
         DBTYPE_HCHAPTER:  JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PCHAPTER(FData)^));
         //DBTYPE_FILETIME = 64;
         //DBTYPE_PROPVARIANT = 138;
-        //DBTYPE_VARNUMERIC = 139;
+        DBTYPE_VARNUMERIC: begin
+                            OleDBNumeric2Raw(FData, @fTinyBuffer[0], FLength);
+                            JSONWriter.AddJSONEscape(@fTinyBuffer[0], FLength);
+                          end;
       end;
       JSONWriter.Add(',');
     end;
@@ -529,7 +535,7 @@ end;
 }
 function TZAbstractOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
-label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref;
+label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref{$IFDEF BCD_TEST}, set_from_num{$ENDIF};
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
@@ -669,11 +675,20 @@ set_from_tmp:         Len := Length(FRawTemp);
                       then Result := PEmptyAnsiString
                       else Result := Pointer(FRawTemp);
                     end;
-    //DBTYPE_NUMERIC	= 131;
+    {$IFDEF BCD_TEST}
+    DBTYPE_NUMERIC: begin
+                      Len := SQL_MAX_NUMERIC_LEN;
+                      goto set_from_num;
+                    end;
+    DBTYPE_VARNUMERIC: begin
+                      Len := FLength;
+set_from_num:         Result := @fTinyBuffer[0];
+                      OleDBNumeric2Raw(fData, @fTinyBuffer[0], Len);
+                    end;
+    {$ENDIF}
     //DBTYPE_UDT	= 132;
     //DBTYPE_FILETIME	= 64;
     //DBTYPE_PROPVARIANT	= 138;
-    //DBTYPE_VARNUMERIC	= 139;
     else begin
       Result := PEmptyAnsiString;
       Len := 0;
@@ -692,7 +707,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
-label set_from_tmp, set_from_buf, set_from_clob;
+label set_from_tmp, set_from_buf, set_from_clob{$IFDEF BCD_TEST}, set_from_num{$ENDIF};
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
@@ -837,18 +852,28 @@ set_from_tmp:     Len := Length(FUniTemp);
     DBTYPE_WSTR or DBTYPE_BYREF: if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
 set_from_clob:    fTempBlob := GetBlob(ColumnIndex); //localize
                   Result := fTempBlob.GetPWideChar;
-                  Len := fTempBlob.Length;
+                  Len := fTempBlob.Length shr 1;
                 end else begin
                   Len := FLength shr 1;
                   if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
                     Len := GetAbsorbedTrailingSpacesLen(ZPPWideChar(FData)^, Len);
                   Result := ZPPWideChar(FData)^;
                 end;
-    //DBTYPE_NUMERIC	= 131;
+    {$IFDEF BCD_TEST}
+    DBTYPE_NUMERIC: begin
+                      Len := SQL_MAX_NUMERIC_LEN;
+                      goto set_from_num;
+                    end;
+    DBTYPE_VARNUMERIC: begin
+                      Len := FLength;
+set_from_num:         Result := @fTinyBuffer[0];
+                      OleDBNumeric2Uni(fData, Result, Len);
+                    end;
+    {$ENDIF}
+
     //DBTYPE_UDT	= 132;
     //DBTYPE_FILETIME	= 64;
     //DBTYPE_PROPVARIANT	= 138;
-    //DBTYPE_VARNUMERIC	= 139;
     else begin
       Result := PEmptyUnicodeString;
       Len := 0;
@@ -1294,7 +1319,8 @@ begin
       DBTYPE_HCHAPTER:  ScaledOrdinal2Bcd(PCHAPTER(FData)^, 0, Result, False);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
-      //DBTYPE_VARNUMERIC	= 139;
+      DBTYPE_NUMERIC:   OleDBNumeric2BCD(FData, Result, SQL_MAX_NUMERIC_LEN);
+      DBTYPE_VARNUMERIC:OleDBNumeric2BCD(FData, Result, FLength);
       else Result := NullBcd;
       {$ELSE}
       DBTYPE_I2:        Result := PSmallInt(FData)^;
@@ -1855,7 +1881,12 @@ begin
                                           FUniTemp := PRawToUnicode(PPAnsiChar(FData^)^, Len, ConSettings^.ClientCodePage^.CP);
                                           RowAccessor.SetPWideChar(I, Pointer(FUniTemp), Len);
                                         end;
-          //DBTYPE_NUMERIC = 131;
+          {$IFDEF BCD_TEST}
+          DBTYPE_NUMERIC              : begin
+                                          OleDBNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, SQL_MAX_NUMERIC_LEN);
+                                          RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
+                                        end;
+          {$ENDIF}
           //DBTYPE_UDT = 132;
           DBTYPE_DBDATE               : RowAccessor.SetDate(I, EncodeDate(Abs(PDBDate(FData^)^.year), PDBDate(FData^)^.month, PDBDate(FData^)^.day));
           DBTYPE_DBTIME               : RowAccessor.SetTime(I, EncodeTime(PDBTime(FData^)^.hour, PDBTime(FData^)^.minute, PDBTime(FData^)^.second, 0));
@@ -1872,7 +1903,12 @@ begin
           //DBTYPE_DBTIMESTAMPOFFSET = 146; // introduced in SQL 2008
           //DBTYPE_FILETIME = 64;
           //DBTYPE_PROPVARIANT = 138;
-          //DBTYPE_VARNUMERIC = 139;
+          {$IFDEF BCD_TEST}
+          DBTYPE_VARNUMERIC           : begin
+                                          OleDBNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, FLength^);
+                                          RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
+                                        end;
+          {$ENDIF}
 
         end;
       end;
@@ -2196,17 +2232,16 @@ begin
       end else if ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] then begin
         ColumnInfo.ColumnDisplaySize := FieldSize;
         ColumnInfo.Precision := FieldSize;
-      end else begin
+      end else if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal{$IFNDEF BCD_TEST},stDouble{$ENDIF}]) then begin
         ColumnInfo.Precision := prgInfo.bPrecision;
-        if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) then
-          if (prgInfo^.wType = DBTYPE_CY)
-          then ColumnInfo.Scale := 4
-          else ColumnInfo.Scale := prgInfo.bScale;
-      end;
-      ColumnInfo.Precision := FieldSize;
-      ColumnInfo.Currency := ColumnInfo.ColumnType = stCurrency;
+        if (prgInfo^.wType = DBTYPE_CY)
+        then ColumnInfo.Scale := 4
+        else ColumnInfo.Scale := prgInfo.bScale;
+      end else
+        ColumnInfo.Precision := FieldSize;
+      ColumnInfo.Currency := prgInfo.wType = DBTYPE_CY;
       ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
-      ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stBigDecimal];
+      ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stCurrency, stBigDecimal];
       ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0);
       ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0);
       ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;

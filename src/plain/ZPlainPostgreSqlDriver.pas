@@ -84,6 +84,8 @@ const
   BLOB_SEEK_CUR     = 1;
   BLOB_SEEK_END     = 2;
 
+
+  BASE1000Digits    = 4;
 { PostgreSQL basic type OIDs. These OIDs are hard coded in PostgreSQL and according to the following mail never change:
   https://www.postgresql.org/message-id/AANLkTimiNjQa7ws1tyR_W6RQPec6RlxQtWfACNMnZ_1P@mail.gmail.com
   
@@ -308,6 +310,7 @@ const
 //some error codes
   indeterminate_datatype: PAnsiChar = '42P18';
   current_transaction_is_aborted: PAnsiChar = '25P02';
+  no_binary_output_function_available_for_type_void: PAnsiChar = '42883';
 //https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
 
 {------------------------------------------------------------------------------------------}
@@ -521,6 +524,21 @@ type
     digits:       array[0..NUMERIC_MAX_PRECISION-1] of SmallInt; //no fix size -> aligned against scale or digits
   end;
 
+  PInetRec = ^TInetRec;
+  TInetRec = packed record
+    family : byte;
+    bits   : byte;
+    is_cidr: byte;
+    nb     : byte;
+    ipaddr : array[0..15] of byte;
+  end;
+
+  PPGInterval = ^TPGInterval;
+  TPGInterval = packed record
+     time  : int64;
+     day   : longint;
+     month : longint;
+   end;
 { ****************** Plain API Types definition ***************** }
 
 type

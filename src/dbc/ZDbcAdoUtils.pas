@@ -259,9 +259,8 @@ begin
     adUnsignedBigInt: Result := stULong;
     adSingle: Result := stFloat;
     adDouble: Result := stDouble;
-    adDecimal: Result := stBigDecimal;
-    adNumeric, adVarNumeric:
-        if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+    adDecimal, adNumeric, adVarNumeric:
+        if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision < sAlignCurrencyScale2Precision[Scale])
         then Result := stCurrency
         else Result := stBigDecimal;
     adCurrency: Result := stCurrency;
@@ -2314,7 +2313,7 @@ var
     //http://msdn.microsoft.com/en-us/library/windows/desktop/ms711251%28v=vs.85%29.aspx
     DBBindingArray[Index].iOrdinal := ParamInfoArray^[Index].iOrdinal;
     DBBindingArray[Index].obLength := DBBindingArray[Index].obStatus + SizeOf(DBSTATUS);
-    DBBindingArray[Index].wType := MapOleTypesToZeos(ParamInfoArray^[Index].wType);
+    DBBindingArray[Index].wType := MapOleTypesToZeos(ParamInfoArray^[Index].wType, ParamInfoArray^[Index].bPrecision, ParamInfoArray^[Index].bScale);
     if (ParamInfoArray^[Index].dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //lob's
     begin
       { cbMaxLen returns max allowed bytes for Lob's which depends to server settings.

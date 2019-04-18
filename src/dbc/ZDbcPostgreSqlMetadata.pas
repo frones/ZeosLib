@@ -1552,8 +1552,8 @@ begin
   Ver73Up := Ver80Up or (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3);
   if Ver80Up then
   begin
-    SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
-      + 'p.proallargtypes,p.proargnames,p.proargmodes,t.typrelid '
+    SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes::text as proargtypes,t.typtype,'
+      + 'p.proallargtypes::text as proallargtypes,p.proargnames::text as proargnames,p.proargmodes::text as proargmodes,t.typrelid '
       + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t '
       + 'WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
     if SchemaPattern <> '' then
@@ -1565,7 +1565,7 @@ begin
   else
   if Ver73Up then
   begin
-    SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
+    SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes::text as proargtypes,t.typtype,'
       + 'NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typrelid '
       + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
       + ' pg_catalog.pg_type t WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
@@ -1577,7 +1577,7 @@ begin
   end
   else
   begin
-    SQL := 'SELECT NULL AS nspname,p.proname,p.prorettype,p.proargtypes,'
+    SQL := 'SELECT NULL AS nspname,p.proname,p.prorettype,p.proargtypes::text as proargtypes,'
       + ' NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typtype,t.typrelid'
       + ' FROM pg_proc p, pg_type t'
       + ' WHERE p.prorettype=t.oid';

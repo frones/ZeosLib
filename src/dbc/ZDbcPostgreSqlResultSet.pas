@@ -60,9 +60,8 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFNDEF FPC}{$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},{$ENDIF}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility;
 
@@ -98,6 +97,8 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
     FClientCP: Word;
+    FResultFormat: PInteger;
+    FBinaryValues, Finteger_datetimes, FIsOidAsBlob: Boolean;
     procedure ClearPGResult;
   protected
     procedure Open; override;
@@ -106,7 +107,7 @@ type
     function PGRowNo: Integer; virtual; abstract;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      connAddress: PPGconn; resAddress: PPGresult;
+      connAddress: PPGconn; resAddress: PPGresult; ResultFormat: PInteger;
       const CachedLob: Boolean; const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 
     procedure ResetCursor; override;
@@ -201,7 +202,8 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
   ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
-  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZClasses, ZDbcUtils;
+  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZClasses, ZDbcUtils, ZDbcProperties,
+  ZVariant;
 
 
 // added for suporting Infinity, -Infinity and NaN.
@@ -281,7 +283,11 @@ var
   C, L: Cardinal;
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
-label ProcBts;
+  BCD: TBCD;
+  TS: TZTimeStamp absolute BCD;
+  UUID: TGUID absolute BCD;
+  DT: TDateTime absolute BCD;
+label ProcBts, jmpDate, jmpTime, jmpTS;
 begin
   RNo := RowNo - 1;
   if JSONWriter.Expand then
@@ -305,103 +311,224 @@ begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[i]);
       P := FPlainDriver.PQgetvalue(Fres, RNo, C);
-      case TZPGColumnInfo(ColumnsInfo[C]).ColumnType of
-        stUnknown     : JSONWriter.AddShort('null');
-        stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = CHAROID) or (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = BPCHAROID))]);
-        stByte..stDouble, stBigDecimal  : JSONWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
-        stCurrency    : JSONWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
-        stBytes,
-        stBinaryStream: if TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = BYTEAOID then begin
-                          pgBuff := nil;
-                          if FIs_bytea_output_hex then begin
-                            {skip trailing /x}
-                            L := (ZFastCode.StrLen(P)-2) shr 1;
-                            try
-                              GetMem(pgBuff, L);
-                              HexToBin(P+2, pgBuff, L);
-                              JSONWriter.WrBase64(pgBuff, L, True);
-                            finally
-                              FreeMem(pgBuff);
+      with TZPGColumnInfo(ColumnsInfo[C]) do begin
+        if FBinaryValues then
+          case ColumnType of
+            stUnknown     : JSONWriter.AddShort('null');
+            stBoolean     : JSONWriter.AddShort(JSONBool[PByte(P)^<>0]);
+            stSmall       : JSONWriter.Add(PG2SmallInt(P));
+            stInteger     : JSONWriter.Add(PG2Integer(P));
+            stLong        : JSONWriter.Add(PG2Int64(P));
+            stCurrency    : JSONWriter.AddCurr64(PGNumeric2Currency(P));
+            stDouble      : JSONWriter.AddDouble(PG2Double(P));
+            stBigDecimal  : begin
+                              PGNumeric2BCD(P, BCD);
+                              JSONWriter.AddNoJSONEscape(@fTinyBuffer[0], BCDToRaw(BCD, @fTinyBuffer[0], '.'));
                             end;
-                          end else if Assigned(FPlainDriver.PQUnescapeBytea) then
-                            try
-                              pgBuff := FPlainDriver.PQUnescapeBytea(P, @L);
-                              JSONWriter.WrBase64(pgBuff, L, True);
-                            finally
-                              FPlainDriver.PQFreemem(pgBuff);
-                            end
-                          else
-                            JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
-                        end else begin
-                          PPointer(@fTinyBuffer[0])^ := nil; //init avoid gpf
-                          PIZlob(@fTinyBuffer[0])^ := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, RawToIntDef(P, 0), FChunk_Size);
-                          JSONWriter.WrBase64(PIZlob(@fTinyBuffer[0])^.GetBuffer, PIZlob(@fTinyBuffer[0])^.Length, True);
-                          PIZlob(@fTinyBuffer[0])^ := nil;
-                        end;
-        stGUID        : begin
-                          JSONWriter.Add('"');
-                          JSONWriter.AddNoJSONEscape(P);//
-                          JSONWriter.Add('"');
-                        end;
-        stDate        : if jcoMongoISODate in JSONComposeOptions then begin
-                          JSONWriter.AddShort('ISODate("');
-                          JSONWriter.AddNoJSONEscape(P, 10);
-                          JSONWriter.AddShort('Z)"');
-                        end else begin
-                          if jcoDATETIME_MAGIC in JSONComposeOptions
-                          then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                          else JSONWriter.Add('"');
-                          JSONWriter.AddNoJSONEscape(P, 10);
-                          JSONWriter.Add('"');
-                        end;
-        stTime        : if jcoMongoISODate in JSONComposeOptions then begin
-                          JSONWriter.AddShort('ISODate("0000-00-00T');
-                          JSONWriter.AddNoJSONEscape(P, 8); //mongo has no milliseconds
-                          JSONWriter.AddShort('Z)"');
-                        end else begin
-                          if jcoDATETIME_MAGIC in JSONComposeOptions
-                          then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                          else JSONWriter.Add('"');
-                          JSONWriter.AddShort('T');
-                          if ((P+8)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions) //time zone ?
-                          then JSONWriter.AddNoJSONEscape(P, 8)
-                          else JSONWriter.AddNoJSONEscape(P, 12);
-                          JSONWriter.Add('"');
-                        end;
-        stTimestamp   : if jcoMongoISODate in JSONComposeOptions then begin
-                          JSONWriter.AddShort('ISODate("');
-                          JSONWriter.AddNoJSONEscape(P, 10);
-                          JSONWriter.Add('T');
-                          JSONWriter.AddNoJSONEscape(P+11, 8);//mongo has no milliseconds
-                          JSONWriter.AddShort('Z)"');
-                        end else begin
-                          if jcoDATETIME_MAGIC in JSONComposeOptions
-                          then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                          else JSONWriter.Add('"');
-                          JSONWriter.AddNoJSONEscape(P, 10);
-                          JSONWriter.Add('T');
-                          if ((P+19)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions)
-                          then JSONWriter.AddNoJSONEscape(P+11, 8)
-                          else JSONWriter.AddNoJSONEscape(P+11, 12);
-                          JSONWriter.Add('"');
-                        end;
-        stString,
-        stUnicodeString:begin
-                          JSONWriter.Add('"');
-                          if (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = CHAROID) or (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = BPCHAROID)
-                          then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
-                          else JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
-                          JSONWriter.Add('"');
-                        end;
-        stAsciiStream,
-        stUnicodeStream:if (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = JSONOID) or (TZPGColumnInfo(ColumnsInfo[C]).ColumnOID = JSONBOID) then
-                          JSONWriter.AddNoJSONEscape(P, SynCommons.StrLen(P))
-                        else begin
-                          JSONWriter.Add('"');
-                          JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
-                          JSONWriter.Add('"');
-                        end;
-        //stArray, stDataSet,
+            stBytes,
+            stBinaryStream: if ColumnOID = BYTEAOID then
+                              JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True)
+                            else begin
+                              PPointer(@fTinyBuffer[0])^ := nil; //init avoid gpf
+                              PIZlob(@fTinyBuffer[0])^ := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, PG2Cardinal(P), FChunk_Size);
+                              JSONWriter.WrBase64(PIZlob(@fTinyBuffer[0])^.GetBuffer, PIZlob(@fTinyBuffer[0])^.Length, True);
+                              PIZlob(@fTinyBuffer[0])^ := nil;
+                            end;
+            stGUID        : begin
+                              JSONWriter.Add('"');
+                              UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a sh...ttt! swapped digits!
+                              UUID.D2 := PG2Word(@PGUID(P).D2);
+                              UUID.D3 := PG2Word(@PGUID(P).D3);
+                              PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
+                              JSONWriter.Add(UUID);//
+                              JSONWriter.Add('"');
+                            end;
+            stDate        : begin
+jmpDate:                      if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('ISODate("')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else JSONWriter.Add('"');
+                              DateToIso8601PChar(@FTinyBuffer[0], True, TS.Year, TS.Month, TS.Day);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], 10);
+                              if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('Z)"')
+                              else JSONWriter.Add('"');
+                            end;
+            stTime        : begin
+jmpTime:                      if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('ISODate("0000-00-00')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else JSONWriter.Add('"');
+                              if Finteger_datetimes
+                              then dt2Time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions)
+                              else dt2Time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions);
+                              TimeToIso8601PChar(@FTinyBuffer[0], True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
+                              if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('Z)"')
+                              else JSONWriter.Add('"');
+                            end;
+            stTimestamp   : begin
+jmpTS:                        if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('ISODate("')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else JSONWriter.Add('"');
+                              if Finteger_datetimes
+                              then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
+                              else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
+                              DateToIso8601PChar(@FTinyBuffer[0], True, TS.Year, TS.Month, TS.Day);
+                              TimeToIso8601PChar(@FTinyBuffer[10], True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
+                              if jcoMongoISODate in JSONComposeOptions
+                              then JSONWriter.AddShort('Z)"')
+                              else JSONWriter.Add('"');
+                            end;
+            stString,
+            stUnicodeString:if (ColumnOID = MACADDROID) then begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGMacAddr2Raw(P, @FTinyBuffer[0]));
+                              JSONWriter.Add('"');
+                            end else if (ColumnOID = INETOID) or (ColumnOID = CIDROID) then begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGInetAddr2Raw(P, @FTinyBuffer[0]));
+                              JSONWriter.Add('"');
+                            end else if ColumnOID = INTERVALOID then begin
+                              if Finteger_datetimes
+                              then DT := PG2DateTime(PInt64(P)^)
+                              else DT := PG2DateTime(PDouble(P)^);
+                              DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
+                              P := @fTinyBuffer[0];
+                              if Int(DT) = 0 then begin
+                                DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                                Date2PG(DT, PInteger(P)^);
+                                goto jmpDate;
+                              end else begin
+                                if Finteger_datetimes
+                                then DateTime2PG(DT, PInt64(P)^)
+                                else DateTime2PG(DT, PDouble(P)^);
+                                if Frac(DT) = 0
+                                then goto jmpTime
+                                else goto jmpTS;
+                              end;
+                            end else begin
+                              JSONWriter.Add('"');
+                              if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID)
+                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
+                              else JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              JSONWriter.Add('"');
+                            end;
+            stAsciiStream,
+            stUnicodeStream:if (ColumnOID = JSONOID) or (ColumnOID = JSONBOID) then
+                              JSONWriter.AddNoJSONEscape(P, SynCommons.StrLen(P))
+                            else begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              JSONWriter.Add('"');
+                            end;
+            //stArray, stDataSet,
+          end
+        else
+          case ColumnType of
+            stUnknown     : JSONWriter.AddShort('null');
+            stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID))]);
+            stByte..stDouble, stBigDecimal  : JSONWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
+            stCurrency    : JSONWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
+            stBytes,
+            stBinaryStream: if ColumnOID = BYTEAOID then begin
+                              pgBuff := nil;
+                              if FIs_bytea_output_hex then begin
+                                {skip trailing /x}
+                                L := (ZFastCode.StrLen(P)-2) shr 1;
+                                try
+                                  GetMem(pgBuff, L);
+                                  HexToBin(P+2, pgBuff, L);
+                                  JSONWriter.WrBase64(pgBuff, L, True);
+                                finally
+                                  FreeMem(pgBuff);
+                                end;
+                              end else if Assigned(FPlainDriver.PQUnescapeBytea) then
+                                try
+                                  pgBuff := FPlainDriver.PQUnescapeBytea(P, @L);
+                                  JSONWriter.WrBase64(pgBuff, L, True);
+                                finally
+                                  FPlainDriver.PQFreemem(pgBuff);
+                                end
+                              else
+                                JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
+                            end else begin
+                              PPointer(@fTinyBuffer[0])^ := nil; //init avoid gpf
+                              PIZlob(@fTinyBuffer[0])^ := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, RawToIntDef(P, 0), FChunk_Size);
+                              JSONWriter.WrBase64(PIZlob(@fTinyBuffer[0])^.GetBuffer, PIZlob(@fTinyBuffer[0])^.Length, True);
+                              PIZlob(@fTinyBuffer[0])^ := nil;
+                            end;
+            stGUID        : begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscape(P);//
+                              JSONWriter.Add('"');
+                            end;
+            stDate        : if jcoMongoISODate in JSONComposeOptions then begin
+                              JSONWriter.AddShort('ISODate("');
+                              JSONWriter.AddNoJSONEscape(P, 10);
+                              JSONWriter.AddShort('Z)"');
+                            end else begin
+                              if jcoDATETIME_MAGIC in JSONComposeOptions
+                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscape(P, 10);
+                              JSONWriter.Add('"');
+                            end;
+            stTime        : if jcoMongoISODate in JSONComposeOptions then begin
+                              JSONWriter.AddShort('ISODate("0000-00-00T');
+                              JSONWriter.AddNoJSONEscape(P, 8); //mongo has no milliseconds
+                              JSONWriter.AddShort('Z)"');
+                            end else begin
+                              if jcoDATETIME_MAGIC in JSONComposeOptions
+                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else JSONWriter.Add('"');
+                              JSONWriter.AddShort('T');
+                              if ((P+8)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions) //time zone ?
+                              then JSONWriter.AddNoJSONEscape(P, 8)
+                              else JSONWriter.AddNoJSONEscape(P, 12);
+                              JSONWriter.Add('"');
+                            end;
+            stTimestamp   : if jcoMongoISODate in JSONComposeOptions then begin
+                              JSONWriter.AddShort('ISODate("');
+                              JSONWriter.AddNoJSONEscape(P, 10);
+                              JSONWriter.Add('T');
+                              JSONWriter.AddNoJSONEscape(P+11, 8);//mongo has no milliseconds
+                              JSONWriter.AddShort('Z)"');
+                            end else begin
+                              if jcoDATETIME_MAGIC in JSONComposeOptions
+                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              else JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscape(P, 10);
+                              JSONWriter.Add('T');
+                              if ((P+19)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions)
+                              then JSONWriter.AddNoJSONEscape(P+11, 8)
+                              else JSONWriter.AddNoJSONEscape(P+11, 12);
+                              JSONWriter.Add('"');
+                            end;
+            stString,
+            stUnicodeString:begin
+                              JSONWriter.Add('"');
+                              if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID)
+                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
+                              else JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              JSONWriter.Add('"');
+                            end;
+            stAsciiStream,
+            stUnicodeStream:if (ColumnOID = JSONOID) or (ColumnOID = JSONBOID) then
+                              JSONWriter.AddNoJSONEscape(P, SynCommons.StrLen(P))
+                            else begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              JSONWriter.Add('"');
+                            end;
+            //stArray, stDataSet,
+          end;
       end;
       JSONWriter.Add(',');
     end;
@@ -423,8 +550,10 @@ end;
   @param Handle a PostgreSQL specific query handle.
 }
 constructor TZAbstractPostgreSQLStringResultSet.Create(const Statement: IZStatement;
-  const SQL: string; connAddress: PPGconn; resAddress: PPGresult; const CachedLob: Boolean;
+  const SQL: string; connAddress: PPGconn; resAddress: PPGresult;
+  ResultFormat: PInteger; const CachedLob: Boolean;
   const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
+var PGCon: IZPostgreSQLConnection;
 begin
   inherited Create(Statement, SQL,
     TZPostgresResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
@@ -436,7 +565,13 @@ begin
   ResultSetConcurrency := rcReadOnly;
   FChunk_Size := Chunk_Size; //size of read/write lob in chunks
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
-  FIs_bytea_output_hex := (Statement.GetConnection as IZPostgreSQLConnection).Is_bytea_output_hex;
+  FIsOidAsBlob := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Statement, DSProps_OidAsBlob, 'False'));
+  Statement.GetConnection.QueryInterface(IZPostgreSQLConnection, PGCon);
+  FIs_bytea_output_hex := PGCon.Is_bytea_output_hex;
+  Finteger_datetimes := PGCon.integer_datetimes;
+  PGCon := nil;
+  FResultFormat := ResultFormat;
+  FBinaryValues := FResultFormat^ = ParamFormatBin;
   FCachedLob := CachedLob;
   FClientCP := ConSettings.ClientCodePage.CP;
   Open;
@@ -470,12 +605,11 @@ begin
   case TypeOid of
     CASHOID: ColumnInfo.Currency := True; { money }
     NAMEOID: if (Connection.GetServerMajorVersion < 7) or
-           ((Connection.GetServerMajorVersion = 7) and (Connection.GetServerMinorVersion < 3)) then
-          ColumnInfo.Precision := 32
-        else
-          ColumnInfo.Precision := 64; { name }
+           ((Connection.GetServerMajorVersion = 7) and (Connection.GetServerMinorVersion < 3))
+        then ColumnInfo.Precision := 32
+        else ColumnInfo.Precision := 64; { name }
     CIDROID: ColumnInfo.Precision := 100; { cidr }
-    INETOID: ColumnInfo.Precision := 100; { inet }
+    INETOID: ColumnInfo.Precision := 100{39}; { inet }
     MACADDROID: ColumnInfo.Precision := 17; { macaddr }
     INTERVALOID: ColumnInfo.Precision := 32; { interval }
     REGPROCOID: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
@@ -642,7 +776,19 @@ end;
 }
 function TZAbstractPostgreSQLStringResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var L: LongWord;
-  ColOID: OID;
+  PEnd: PAnsiChar;
+  BCD: TBCD;
+  TS: TZTimeStamp absolute BCD;
+  UUID: TGUID absolute BCD;
+  DT: TDateTime absolute BCD;
+  MS: Word;
+  function FromOIDLob(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+  begin
+    FRawTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetString;
+    Result := Pointer(FRawTemp);
+    Len := Length(FRawTemp);
+  end;
+label JmpPEndTinyBuf, JmpStr, jmpTime, jmpDate, jmpTS;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -651,10 +797,121 @@ begin
   if LastWasNull then begin
     Result := nil;
     Len := 0;
-  end else begin
+  end else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     Result := FPlainDriver.PQgetvalue(Fres, PGRowNo, ColumnIndex);
-    ColOID := TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID;
-    case ColOID of
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:  if PByte(Result)^ = 0 then begin
+                      Result := Pointer(BoolStrsRaw[True]);
+                      Len := 4
+                    end else begin
+                      Result := Pointer(BoolStrsRaw[False]);
+                      Len := 5;
+                    end;
+        stSmall:    begin
+                      IntToRaw(PG2SmallInt(Result), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stLongWord: begin
+                      IntToRaw(PG2Cardinal(Result), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stInteger:  begin
+                      IntToRaw(PG2Integer(Result), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stLong:     begin
+                      IntToRaw(PG2int64(Result), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stFloat:    begin
+                      Len := FloatToSqlRaw(PG2Single(Result), @fTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end;
+        stDouble:   begin
+                      Len := FloatToSqlRaw(PG2Double(Result), @fTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end;
+        stCurrency: begin
+                      CurrToRaw(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), @fTinyBuffer[0], @PEnd);
+JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
+                      Len := PEnd - Result;
+                    end;
+        stBigDecimal: begin
+                      PGNumeric2BCD(Result, BCD);
+                      Result := @fTinyBuffer[0];
+                      Len := BCDToRaw(BCD, @fTinyBuffer[0], '.');
+                    end;
+        stDate:     begin
+                      PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
+jmpDate:              Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToRawSQLDate(TS.Year, TS.Month, TS.Day,
+                        Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
+                    end;
+        stTime:     begin
+                      if Finteger_datetimes
+                      then dt2time(PG2Int64(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else dt2time(PG2Double(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+jmpTime:              Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToRawSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False);
+                    end;
+        stTimestamp:begin
+                      if Finteger_datetimes
+                      then PG2DateTime(PInt64(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+jmpTS:                Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToRawSQLTimeStamp(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+                        TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
+                    end;
+        stGUID:     begin
+                      UUID.D1 := PG2Cardinal(@PGUID(Result).D1); //what a sh...ttt! swapped digits!
+                      UUID.D2 := PG2Word(@PGUID(Result).D2);
+                      UUID.D3 := PG2Word(@PGUID(Result).D3);
+                      PInt64(@UUID.D4)^ := PInt64(@PGUID(Result).D4)^;
+                      ZSysUtils.GUIDToBuffer(@UUID.D1, PAnsiChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      for ColumnIndex := 0 to 35 do
+                        fTinyBuffer[ColumnIndex] := fTinyBuffer[ColumnIndex] or $20;
+                      Result := @fTinyBuffer[0];
+                      Len := 36;
+                    end;
+        stString,
+        stUnicodeString: if (ColumnOID = MACADDROID) then begin
+                      Len := PGMacAddr2Raw(Result, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end else if (ColumnOID = INETOID) or (ColumnOID = CIDROID) then begin
+                      Len := PGInetAddr2Raw(Result, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end else if ColumnOID = INTERVALOID then begin
+                      if Finteger_datetimes
+                      then DT := PG2DateTime(PInt64(Result)^)
+                      else DT := PG2DateTime(PDouble(Result)^);
+                      DT := DT + (PG2Integer(Result+8)-102) * SecsPerDay + PG2Integer(Result+12) * SecsPerDay * 30;
+                      if Frac(DT) = 0 then begin
+                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                        Ts.Fractions := 0;
+                        goto jmpTime
+                      end else if Int(DT) = 0 then begin
+                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                        goto jmpDate;
+                      end;
+                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                      Ts.Fractions := 0;
+                      goto jmpTS;
+                    end else goto jmpStr;
+        stAsciiStream,
+        stUnicodeStream:Len := ZFastCode.StrLen(Result);
+        stBytes:        Len := FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex);
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := FromOIDLob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Len)
+                        else Len := FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex);
+        else            begin
+                          Result := PEmptyAnsiString;
+                          Len := 0;
+                        end;
+      end
+    else case ColumnOID of
       BYTEAOID: if FIs_bytea_output_hex then begin
                   {skip trailing /x}
                   SetLength(FRawTemp, (ZFastCode.StrLen(Result)-2) shr 1);
@@ -684,8 +941,8 @@ begin
                    For text data format this is the same as strlen().
                    For binary format this is essential information.
                    Note that one should not rely on PQfsize to obtain the actual data length.}
-                  Len := ZFastCode.StrLen(Result);
-                  if (ColOID = CHAROID) or (ColOID = BPCHAROID) then
+JmpStr:           Len := ZFastCode.StrLen(Result);
+                  if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID) then
                     Len := GetAbsorbedTrailingSpacesLen(Result, Len);
                 end;
     end;
@@ -695,19 +952,166 @@ end;
 function TZAbstractPostgreSQLStringResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var P: PAnsiChar;
+  PEnd: PWideChar;
+  BCD: TBCD;
+  TS: TZTimeStamp absolute BCD;
+  UUID: TGUID absolute BCD;
+  DT: TDateTime absolute BCD;
+  MS: Word;
+  procedure FromOIDLob(ColumnIndex: Integer);
+  var Lob: IZBlob;
+  begin
+    Lob := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    FUniTemp := Ascii7ToUnicodeString(Lob.GetBuffer, Lob.Length);
+  end;
+label JmpPEndTinyBuf, JmpUni, jmpStr, jmpTxt, jmpRaw, jmpBin, jmpLen, jmpTime, jmpDate, jmpTS;
 begin
-  P := GetPAnsiChar(ColumnIndex, Len);
-  if LastWasNull then
-    Result := nil
-  else begin
-    if (TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in
-        [stString,stUnicodeString,stAsciiStream,stUnicodeStream])
-    then FUniTemp := PRawToUnicode(P, Len, FClientCP)
-    else FUniTemp := Ascii7ToUnicodeString(P,Len);
-    Len := Length(FUniTemp);
-    if (Len <> 0)
-    then Result := Pointer(FUniTemp)
-    else Result := PEmptyUnicodeString;
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, PGRowNo, ColumnIndex) <> 0;
+  if LastWasNull then begin
+    Result := nil;
+    Len := 0;
+  end else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    p := FPlainDriver.PQgetvalue(Fres, PGRowNo, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:  if PByte(P)^ = 0 then begin
+                      Result := Pointer(BoolStrsW[True]);
+                      Len := 4
+                    end else begin
+                      Result := Pointer(BoolStrsW[False]);
+                      Len := 5;
+                    end;
+        stSmall:    begin
+                      IntToUnicode(PG2SmallInt(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stLongWord: begin
+                      IntToUnicode(PG2Cardinal(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stInteger:  begin
+                      IntToUnicode(PG2Integer(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stLong:     begin
+                      IntToUnicode(PG2int64(P), @fTinyBuffer[0], @PEnd);
+                      goto JmpPEndTinyBuf;
+                    end;
+        stFloat:    begin
+                      Len := FloatToSqlUnicode(PG2Single(P), @fTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end;
+        stDouble:   begin
+                      Len := FloatToSqlUnicode(PG2Double(P), @fTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end;
+        stCurrency: begin
+                      CurrToUnicode(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), @fTinyBuffer[0], @PEnd);
+JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
+                      Len := PEnd - Result;
+                    end;
+        stBigDecimal: begin
+                      PGNumeric2BCD(P, BCD);
+                      Result := @fTinyBuffer[0];
+                      Len := BCDToUni(BCD, @fTinyBuffer[0], '.');
+                    end;
+        stDate:     begin
+                      PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
+jmpDate:              Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToUnicodeSQLDate(TS.Year, TS.Month, TS.Day,
+                        Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
+                    end;
+        stTime:     begin
+                      if Finteger_datetimes
+                      then dt2time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else dt2time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+jmpTime:              Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToUnicodeSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False);
+                    end;
+        stTimestamp:begin
+                      if Finteger_datetimes
+                      then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+jmpTS:                Result := @fTinyBuffer[0];
+                      Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+                        TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
+                    end;
+        stGUID:     begin
+                      UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a sh...ttt! swapped digits!
+                      UUID.D2 := PG2Word(@PGUID(P).D2);
+                      UUID.D3 := PG2Word(@PGUID(P).D3);
+                      PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
+                      ZSysUtils.GUIDToBuffer(@UUID.D1, PWideChar(@fTinyBuffer[0]), []);
+                      for ColumnIndex := 0 to 35 do //to lowercase
+                        PWord(@fTinyBuffer[ColumnIndex shl 1])^ := PWord(@fTinyBuffer[ColumnIndex shl 1])^ or $20;
+                      Result := @fTinyBuffer[0];
+                      Len := 36;
+                    end;
+        stUnicodeString,
+        stString:   if (ColumnOID = MACADDROID) then begin
+                      Len := PGMacAddr2Uni(P, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end else if (ColumnOID = INETOID) or (ColumnOID = CIDROID) then begin
+                      Len := PGInetAddr2Uni(P, @FTinyBuffer[0]);
+                      Result := @fTinyBuffer[0];
+                    end else if ColumnOID = INTERVALOID then begin
+                      if Finteger_datetimes
+                      then DT := PG2DateTime(PInt64(P)^)
+                      else DT := PG2DateTime(PDouble(P)^);
+                      DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
+                      if Frac(DT) = 0 then begin
+                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                        Ts.Fractions := 0;
+                        goto jmpTime
+                      end else if Int(DT) = 0 then begin
+                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                        goto jmpDate;
+                      end;
+                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
+                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
+                      Ts.Fractions := 0;
+                      goto jmpTS;
+                    end else goto jmpStr;
+        stUnicodeStream,
+        stAsciiStream: goto JmpTxt;
+        stBytes:        begin
+jmpBin:                   Len := FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex);
+                          goto jmpRaw;
+                        end;
+        stBinaryStream: if ColumnOID = OIDOID then begin
+                          FromOIDLob(ColumnIndex);
+                          goto jmpLen;
+                        end else
+                          goto jmpBin;
+        else            begin
+                          Result := PEmptyUnicodeString;
+                          Len := 0;
+                        end;
+      end
+    else begin
+      if ColumnType in [stString,stUnicodeString] then
+jmpStr: if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID) then begin
+          Len := GetAbsorbedTrailingSpacesLen(P, ZFastCode.StrLen(P));
+          goto JmpUni;
+        end else
+          goto jmpTxt
+      else if (ColumnType in [stAsciiStream,stUnicodeStream]) then begin
+jmpTxt: Len := ZFastCode.StrLen(P);
+JmpUni: FUniTemp := PRawToUnicode(P, Len, FClientCP);
+      end else begin
+         Len := ZFastCode.StrLen(P);
+jmpRaw:  FUniTemp := Ascii7ToUnicodeString(P,Len);
+      end;
+jmpLen:
+      Len := Length(FUniTemp);
+      if (Len > 0)
+      then Result := Pointer(FUniTemp)
+      else Result := PEmptyUnicodeString;
+    end;
   end;
 end;
 
@@ -721,6 +1125,7 @@ end;
     value returned is <code>false</code>
 }
 function TZAbstractPostgreSQLStringResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -731,10 +1136,33 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull then
     Result := False
-  else
-    Result := StrToBoolEx(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), True,
-      (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = CHAROID) or
-      (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BPCHAROID)  { char/bpchar });
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:                    Result := PByte(P)^ <> 0;
+        stSmall:                      Result := PWord(P)^ <> 0;
+        stLongWord, stInteger, stDate:Result := PCardinal(P)^ <> 0;
+        stULong, stLong:              Result := PUint64(P)^ <> 0;
+        stFloat:                      Result := PSingle(P)^ <> 0;
+        stDouble:                     Result := PDouble(P)^ <> 0;
+        stCurrency:                   if ColumnOID = CASHOID
+                                      then Result := PInt64(P)^ <> 0
+                                      else Result := (PG2Word(P) > 0);//read nbasedigit count
+        stBigDecimal:                 Result := PG2Word(P) > 0;//read nbasedigit count
+        stTime, stTimestamp:          if Finteger_datetimes
+                                      then Result := PInt64(P)^ <> 0
+                                      else Result := PDouble(P)^ <> 0;
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    Result := StrToBoolEx(P, True, (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID));
+        //stBytes: ;
+        //stBinaryStream: ;
+        else Result := False;
+      end
+    else
+      Result := StrToBoolEx(P, True, (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID));
+  end;
 end;
 
 {**
@@ -747,6 +1175,7 @@ end;
     value returned is <code>0</code>
 }
 function TZAbstractPostgreSQLStringResultSet.GetInt(ColumnIndex: Integer): Integer;
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -757,7 +1186,38 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
-  else Result := RawToIntDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0);
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:                    Result := PByte(P)^;
+        stSmall:                      Result := PG2SmallInt(P);
+        stInteger, stDate:            Result := PG2Integer(P);
+        stLong:                       Result := PG2Int64(P);
+        stFloat:                      Result := Trunc(PG2Single(P));
+        stDouble:                     Result := Trunc(PG2Double(P));
+        stCurrency:                   begin
+                                        PCurrency(@fTinyBuffer[0])^ := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                                        Result := PInt64(@fTinyBuffer[0])^ div 10000;
+                                      end;
+        stBigDecimal:                 begin
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        Result := BCD2Int64(PBCD(@fTinyBuffer[0])^);
+                                      end;
+        stTime, stTimestamp:          if Finteger_datetimes
+                                      then Result := PG2Int64(P)
+                                      else Result := Trunc(PG2Double(P));
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    Result := RawToIntDef(P, 0);
+        //stBytes: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
+        else Result := 0;
+      end
+    else Result := RawToIntDef(P, 0);
+  end;
 end;
 
 {**
@@ -770,6 +1230,7 @@ end;
     value returned is <code>0</code>
 }
 function TZAbstractPostgreSQLStringResultSet.GetLong(ColumnIndex: Integer): Int64;
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -780,7 +1241,38 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
-  else Result := RawToInt64Def(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0);
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:                    Result := PByte(P)^;
+        stSmall:                      Result := PG2SmallInt(P);
+        stInteger, stDate:            Result := PG2Integer(P);
+        stLong:                       Result := PG2Int64(P);
+        stFloat:                      Result := Trunc(PG2Single(P));
+        stDouble:                     Result := Trunc(PG2Double(P));
+        stCurrency:                   begin
+                                        PCurrency(Result)^ := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                                        Result := Result div 10000;
+                                      end;
+        stBigDecimal:                 begin
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        BCD2Int64(PBCD(@fTinyBuffer[0])^, Result);
+                                      end;
+        stTime, stTimestamp:          if Finteger_datetimes
+                                      then Result := PG2Int64(P)
+                                      else Result := Trunc(PG2Double(P));
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    Result := RawToInt64Def(P, 0);
+        //stBytes: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
+        else Result := 0;
+      end
+    else Result := RawToInt64Def(P, 0);
+  end;
 end;
 
 {**
@@ -800,6 +1292,7 @@ begin
 end;
 
 function TZAbstractPostgreSQLStringResultSet.GetULong(ColumnIndex: Integer): UInt64;
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
@@ -810,7 +1303,39 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
-  else Result := RawToUInt64Def(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0);
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:                    Result := PByte(P)^;
+        stSmall:                      Result := PG2SmallInt(P);
+        stInteger, stDate:            Result := PG2Integer(P);
+        stLong:                       Result := PG2Int64(P);
+        stFloat:                      Result := Trunc(PG2Single(P));
+        stDouble:                     Result := Trunc(PG2Double(P));
+        stCurrency:                   begin
+                                        PCurrency(Result)^ := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                                        Result := PInt64(@Result)^ div 10000;
+                                      end;
+        stBigDecimal:                 begin
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        BCD2UInt64(PBCD(@fTinyBuffer[0])^, Result);
+                                      end;
+        stTime, stTimestamp:          if Finteger_datetimes
+                                      then Result := PG2Int64(P)
+                                      else Result := Trunc(PG2Double(P));
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    Result := RawToUInt64Def(P, 0);
+        //stBytes: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
+        else Result := 0;
+      end
+    else Result := RawToUInt64Def(P, 0);
+  end;
+
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
@@ -824,9 +1349,10 @@ end;
     value returned is <code>0</code>
 }
 function TZAbstractPostgreSQLStringResultSet.GetFloat(ColumnIndex: Integer): Single;
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stDouble);
+  CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -834,8 +1360,38 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull then
     Result := 0
-  else
-    pgSQLStrToFloatDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0, Result);
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:                    Result := PByte(P)^;
+        stSmall:                      Result := PG2SmallInt(P);
+        stInteger, stDate:            Result := PG2Integer(P);
+        stLong:                       Result := PG2Int64(P);
+        stFloat:                      Result := PG2Single(P);
+        stDouble:                     Result := PG2Double(P);
+        stCurrency:                   Result := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stBigDecimal:                 begin
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        Result := BCDToDouble(PBCD(@fTinyBuffer[0])^);
+                                      end;
+        stTime:                       if Finteger_datetimes
+                                      then Result := PG2Time(PInt64(P)^)
+                                      else Result := PG2Time(PDouble(P)^);
+         stTimestamp:                 if Finteger_datetimes
+                                      then Result := PG2DateTime(PInt64(P)^)
+                                      else Result := PG2DateTime(PDouble(P)^);
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
+        //stBytes: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
+        else Result := 0;
+      end
+    else pgSQLStrToFloatDef(P, 0, Result);
+  end;
 end;
 
 {**
@@ -848,6 +1404,7 @@ end;
     value returned is <code>0</code>
 }
 function TZAbstractPostgreSQLStringResultSet.GetDouble(ColumnIndex: Integer): Double;
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -858,8 +1415,39 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull then
     Result := 0
-  else
-    pgSQLStrToFloatDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0, Result);
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean:                    Result := PByte(P)^;
+        stSmall:                      Result := PG2SmallInt(P);
+        stInteger:                    Result := PG2Integer(P);
+        stLong:                       Result := PG2Int64(P);
+        stFloat:                      Result := PG2Single(P);
+        stDouble:                     Result := PG2Double(P);
+        stCurrency:                   Result := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stBigDecimal:                 begin
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        Result := BCDToDouble(PBCD(@fTinyBuffer[0])^);
+                                      end;
+        stDate:                       Result := PG2Date(Pinteger(P)^);
+        stTime:                       if Finteger_datetimes
+                                      then Result := PG2Time(PInt64(P)^)
+                                      else Result := PG2Time(PDouble(P)^);
+        stTimestamp:                  if Finteger_datetimes
+                                      then Result := PG2DateTime(PInt64(P)^)
+                                      else Result := PG2DateTime(PDouble(P)^);
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
+        //stBytes: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
+        else Result := 0;
+      end
+    else pgSQLStrToFloatDef(P, 0, Result);
+  end;
 end;
 
 {**
@@ -874,10 +1462,10 @@ end;
 }
 {$IFDEF BCD_TEST}
 procedure TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-var P: PAnsiChar;
 {$ELSE}
 function TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 {$ENDIF}
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -887,16 +1475,58 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
-  {$IFDEF BCD_TEST}
-  then Result := NullBCD
-  else begin
+  then Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF}
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    LastWasNull := (P = nil) or not TryRawToBCD(P, StrLen(P), Result, '.');
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean, stSmall,
+        stInteger, stLong:            {$IFDEF BCD_TEST}
+                                      ScaledOrdinal2BCD(GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), 0, Result);
+                                      {$ELSE}
+                                      Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                                      {$ENDIF}
+        stFloat, stDouble,
+        stDate, stTime, stTimeStamp:  {$IFDEF BCD_TEST}
+                                      Double2Bcd(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
+                                      {$ELSE}
+                                      Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                                      {$ENDIF}
+        stCurrency:                   if ColumnOID = NUMERICOID
+                                      {$IFDEF BCD_TEST}
+                                      then PGNumeric2BCD(P, Result)
+                                      else ScaledOrdinal2BCD(PG2Int64(P), 2, Result);
+                                      {$ELSE}
+                                      then Result := PGNumeric2Currency(P)
+                                      else Result := PGCash2Currency(P);
+                                      {$ENDIF}
+        stBigDecimal:                 {$IFDEF BCD_TEST}
+                                      PGNumeric2BCD(P, Result);
+                                      {$ELSE}
+                                      begin
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        Result := BCDToDouble(PBCD(@fTinyBuffer[0])^);
+                                      end;
+                                      {$ENDIF}
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    {$IFDEF BCD_TEST}
+                                        LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
+                                        {$ELSE}
+                                        SQLStrToFloatDef(P, 0, Result);
+                                        {$ENDIF}
+        //stBytes: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then {$IFDEF BCD_TEST}ScaledOrdinal2BCD(PG2Cardinal(P), 0, Result, False){$ELSE}Result := PG2Cardinal(P){$ENDIF}
+                        else Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF};
+        else Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF};
+      end
+    else {$IFDEF BCD_TEST}
+      LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
+      {$ELSE}
+      SQLStrToFloatDef(P, 0, Result);
+      {$ENDIF}
   end;
-  {$ELSE}
-  then Result := 0
-  else pgSQLStrToFloatDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0, Result);
-  {$ENDIF}
 end;
 
 {**
@@ -914,6 +1544,8 @@ var
   Buffer, pgBuff: PAnsiChar;
   Len: cardinal;
   TempLob: IZBLob;
+  ResUUID: PGUID absolute Result;
+  SrcUUID: PGUID absolute Buffer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -922,10 +1554,12 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
-  if not LastWasNull then begin
+  if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BYTEAOID {bytea} then begin
-      if FIs_bytea_output_hex then begin
+    if ColumnOID = BYTEAOID {bytea} then begin
+      if FBinaryValues then
+        Result := BufferToBytes(Buffer, FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex))
+      else if FIs_bytea_output_hex then begin
         {skip trailing /x}
         SetLength(Result, (ZFastCode.StrLen(Buffer)-2) shr 1);
         if Assigned(Result) then
@@ -939,16 +1573,25 @@ begin
         SetLength(Result, Len);
         SetLength(Result, DecodeCString(Len, Buffer, Pointer(Result)));
       end;
-    end else if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = UUIDOID { uuid } then begin
+    end else if ColumnOID = UUIDOID { uuid } then begin
       SetLength(FUUIDOIDOutBuff, 16); //take care we've a unique dyn-array if so then this alloc happens once
       Result := FUUIDOIDOutBuff;
-      ValidGUIDToBinary(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), Pointer(Result));
-    end else if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = OIDOID { oid } then begin
+      if FBinaryValues then begin
+        ResUUID.D1 := PG2Cardinal(@SrcUUID.D1);
+        ResUUID.D2 := PG2Word(@SrcUUID.D2);
+        ResUUID.D3 := PG2Word(@SrcUUID.D3);
+        PInt64(@ResUUID.D4)^ := PInt64(@SrcUUID.D4)^;
+      end else ValidGUIDToBinary(Buffer, Pointer(Result));
+    end else if ColumnOID = OIDOID { oid } then begin
+      if FBinaryValues
+      then Len := PG2Cardinal(Buffer)
+      else Len := RawToIntDef(Buffer, 0);
       TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
-        RawToIntDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0), FChunk_Size);
+        Len, FChunk_Size);
       Result := TempLob.GetBytes
-    end else
-      Result := BufferToBytes(Buffer, ZFastCode.StrLen(Buffer))
+    end else if FBinaryValues then
+
+    else Result := BufferToBytes(Buffer, ZFastCode.StrLen(Buffer))
   end else Result := nil;
 end;
 
@@ -963,6 +1606,7 @@ end;
 }
 function TZAbstractPostgreSQLStringResultSet.GetCurrency(
   ColumnIndex: Integer): Currency;
+var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stCurrency);
@@ -973,7 +1617,32 @@ begin
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
-  else ZSysUtils.SQLStrToFloatDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0, Result);
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean, stSmall,
+        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stFloat, stDouble,
+        stDate, stTime, stTimeStamp:  Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stCurrency:                   if ColumnOID = NUMERICOID
+                                      then Result := PGNumeric2Currency(P)
+                                      else Result := PGCash2Currency(P);
+        stBigDecimal:                 begin
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        BCDToCurr(PBCD(@fTinyBuffer[0])^, Result);
+                                      end;
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
+        //stBytes: ;
+        stBinaryStream: if ColumnOID = OIDOID
+                        then Result := PG2Cardinal(P)
+                        else Result := 0;
+        else Result := 0;
+      end
+    else SQLStrToFloatDef(P, 0, Result);
+  end;
 end;
 
 {**
@@ -988,21 +1657,49 @@ end;
 function TZAbstractPostgreSQLStringResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
   Len: NativeUInt;
-  Buffer: PAnsiChar;
+  P: PAnsiChar;
   Failed: Boolean;
+label from_str;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Buffer := GetPAnsiChar(ColumnIndex, Len);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
-  else begin
-    if Len = ConSettings^.ReadFormatSettings.DateFormatLen
-    then Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
-    else Result := Int(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
-    LastWasNull := Failed;
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean, stSmall,
+        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stDate:                       Result := PG2Date(Pinteger(P)^);
+        //stTime:                       Result := 0;
+        stTimestamp:                  if Finteger_datetimes
+                                      then Result := Int(PG2DateTime(PInt64(P)^))
+                                      else Result := Int(PG2DateTime(PDouble(P)^));
+        stFloat, stDouble,
+        stCurrency, stBigDecimal:     Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    goto from_str;
+        //stBytes: ;
+        //stBinaryStream: ;
+        else Result := 0;
+      end
+    else begin
+from_str:
+      Len := ZFastCode.StrLen(P);
+      if Len = ConSettings^.ReadFormatSettings.DateFormatLen
+      then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
+      else Result := Int(RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
+      LastWasNull := Failed;
+    end;
   end;
+
 end;
 
 {**
@@ -1017,20 +1714,49 @@ end;
 function TZAbstractPostgreSQLStringResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
   Len: NativeUInt;
-  Buffer: PAnsiChar;
+  P: PAnsiChar;
   Failed: Boolean;
+label from_str;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Buffer := GetPAnsiChar(ColumnIndex, Len);
-  if LastWasNull then
-    Result := 0
-  else begin
-    if not (Len > ConSettings^.ReadFormatSettings.TimeFormatLen) and ( ( ConSettings^.ReadFormatSettings.TimeFormatLen - Len) <= 4 )
-    then Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
-    else Result := Frac(RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
-    LastWasNull := Failed;
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
+  if LastWasNull
+  then Result := 0
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean, stSmall,
+        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        //stDate:                       Result := 0;
+        stTime:                       if Finteger_datetimes
+                                      then Result := PG2Time(PInt64(P)^)
+                                      else Result := PG2Time(PDouble(P)^);
+        stTimestamp:                  if Finteger_datetimes
+                                      then Result := Frac(PG2DateTime(PInt64(P)^))
+                                      else Result := Frac(PG2DateTime(PDouble(P)^));
+        stFloat, stDouble,
+        stCurrency, stBigDecimal:     Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    goto from_str;
+        //stBytes: ;
+        //stBinaryStream: ;
+        else Result := 0;
+      end
+    else begin
+from_str:
+      Len := ZFastCode.StrLen(P);
+      if not (Len > ConSettings^.ReadFormatSettings.TimeFormatLen) and ( ( ConSettings^.ReadFormatSettings.TimeFormatLen - Len) <= 4 )
+      then Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
+      else Result := Frac(RawSQLTimeStampToDateTime(P,  Len, ConSettings^.ReadFormatSettings, Failed));
+      LastWasNull := Failed;
+    end;
   end;
 end;
 
@@ -1046,20 +1772,44 @@ end;
 }
 function TZAbstractPostgreSQLStringResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  Buffer: PAnsiChar;
+  P: PAnsiChar;
   Failed: Boolean;
+label from_str;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTimestamp);
+  CheckColumnConvertion(ColumnIndex, stTimeStamp);
 {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  Result := 0;
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
-  if not LastWasNull then begin
-    Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed);
+  if LastWasNull
+  then Result := 0
+  else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if FBinaryValues then
+      case ColumnType of
+        stBoolean, stSmall,
+        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stDate:                       Result := PG2Date(Pinteger(P)^);
+        stTime:                       if Finteger_datetimes
+                                      then Result := PG2Time(PInt64(P)^)
+                                      else Result := PG2Time(PDouble(P)^);
+        stTimestamp:                  if Finteger_datetimes
+                                      then Result := PG2DateTime(PInt64(P)^)
+                                      else Result := PG2DateTime(PDouble(P)^);
+        stFloat, stDouble,
+        stCurrency, stBigDecimal:     Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        //stGUID: ;
+        stAsciiStream, stUnicodeStream,
+        stString, stUnicodeString:    goto from_str;
+        //stBytes: ;
+        //stBinaryStream: ;
+        else Result := 0;
+      end
+    else
+from_str:
+      Result := RawSQLTimeStampToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed);
   end;
 end;
 
@@ -1074,8 +1824,8 @@ end;
 }
 function TZAbstractPostgreSQLStringResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  Buffer: PAnsiChar;
-  Len: Cardinal;
+  P: PAnsiChar;
+  Len: NativeUint;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -1089,31 +1839,42 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   Result := nil;
-
-  if (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = OIDOID) { oid } and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+  with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     if LastWasNull then
-      Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, 0, FChunk_Size)
-    else
-      Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
-        RawToIntDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0), FChunk_Size)
-  else if not LastWasNull then
-    if TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BYTEAOID{bytea} then begin
-      Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-      if FIs_bytea_output_hex then
-        Result := TZPostgreSQLByteaHexBlob.Create(Buffer)
-      else if Assigned(FPlainDriver.PQUnescapeBytea) then
-        Result := TZPostgreSQLByteaEscapedBlob.Create(FPlainDriver, Buffer)
-      else
-        Result := TZAbstractBlob.CreateWithData(Buffer,
-          FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex));
-    end else begin
-      Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-      Len := ZFastCode.StrLen(Buffer);
-      if (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = CHAROID) or
-         (TZPGColumnInfo(ColumnsInfo[ColumnIndex]).ColumnOID = BPCHAROID)  then
-        Len := GetAbsorbedTrailingSpacesLen(Buffer, Len);
-      Result := TZAbstractCLob.CreateWithData(Buffer, Len, FClientCP, ConSettings);
+      if (ColumnOID = OIDOID) and FIsOidAsBlob
+      then Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, 0, FChunk_Size)
+      else Result := nil
+    else case ColumnType of
+      stBoolean, stSmall, stInteger, stLong,
+      stDate, stTime, stTimestamp,
+      stFloat, stDouble,
+      stCurrency, stBigDecimal,
+      stGUID,
+      stString, stUnicodeString: begin
+                                  P := GetPAnsiChar(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Len);
+                                  Result := TZAbstractCLob.CreateWithData(P, Len, FClientCP, ConSettings);
+                                end;
+      stAsciiStream,
+      stUnicodeStream:  begin
+                          P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+                          Result := TZAbstractCLob.CreateWithData(P, ZFastCode.StrLen(P), FClientCP, ConSettings);
+                        end;
+      stBytes,
+      stBinaryStream: if (ColumnOID = OIDOID) and FIsOidAsBlob then
+                        if FBinaryValues
+                        then Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
+                          PG2Cardinal(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex)), FChunk_Size)
+                        else Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
+                          RawToIntDef(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex), 0), FChunk_Size)
+                      else if FBinaryValues or (not FIs_bytea_output_hex and not Assigned(FPlainDriver.PQUnescapeBytea))
+                        then Result := TZAbstractBlob.CreateWithData(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex),
+                          FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex))
+                        else if FIs_bytea_output_hex then
+                          Result := TZPostgreSQLByteaHexBlob.Create(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex))
+                        else
+                          Result := TZPostgreSQLByteaEscapedBlob.Create(FPlainDriver, FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex))
     end;
+  end;
 end;
 
 function TZAbstractPostgreSQLStringResultSet.MoveAbsolute(Row: Integer): Boolean;

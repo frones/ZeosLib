@@ -1157,6 +1157,7 @@ begin
     {$IFDEF UNICODE}
     Temp := ZSysUtils.ASCII7ToUnicodeString(P, ZFastCode.StrLen(P));
     {$ELSE}
+    Temp := '';
     ZSetString(P, ZFastCode.StrLen(P), Temp);
     {$ENDIF}
     FPlainDriver.PQclear(QueryHandle);
@@ -1340,6 +1341,7 @@ begin
     {$IFDEF UNICODE}
     Result := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
     {$ELSE}
+    Result := '';
     ZSetString(P, ZFastCode.StrLen(P), Result);
     {$ENDIF}
     FPlainDriver.PQclear(QueryHandle);

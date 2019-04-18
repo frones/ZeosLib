@@ -109,7 +109,13 @@ cCodePage = 20127; {US-ASCII (7-bit)}
 resourcestring
 
   {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
-    SInvalidGuidArray = 'Byte-Array or Buffer for GUID must have exact %s Bytes';
+    cInvalidGuidArray = 'Byte-Array or Buffer for GUID must have exact %s Bytes';
+  {$ENDIF}
+  {$IFNDEF WITH_SBCDOVERFLOW}
+    cBcdOverflow = 'BCD-Overflow';
+  {$ENDIF}
+  {$IFNDEF WITH_SInvalidBcdValue}
+    cInvalidBcdValue = '%s is not a valid BCD-Value';
   {$ENDIF}
   cSLibraryNotCompatible = 'Client-Library %s found but could not be loaded. Check compile-target and library compatibility!';
 //--- added by Serge Girard --------------------------------------------------------
@@ -1972,7 +1978,18 @@ type
   TMessageToRaw = function(const AMessage: String; Const RawCP: Word): RawByteString;
 
 var
-  MessageCodePage: Word;
+  SMessageCodePage: Word;
+
+  {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
+  SInvalidGuidArray: String;
+  {$ENDIF}
+  {$IFNDEF WITH_SBCDOVERFLOW}
+  SBcdOverflow: String;
+  {$ENDIF}
+  {$IFNDEF WITH_SInvalidBcdValue}
+  SInvalidBcdValue: String;
+  {$ENDIF}
+
   SSQLError1: String;
   SSQLError2: String;
   SSQLError3: String;
@@ -2142,7 +2159,17 @@ implementation
 
 procedure loadmessages;
 begin
-  MessageCodePage := cCodePage;
+  SMessageCodePage := cCodePage;
+
+  {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
+  SInvalidGuidArray := cInvalidGuidArray;
+  {$ENDIF}
+  {$IFNDEF WITH_SBCDOVERFLOW}
+  SBcdOverflow := cBcdOverflow;
+  {$ENDIF}
+  {$IFNDEF WITH_SInvalidBcdValue}
+  SInvalidBcdValue := cInvalidBcdValue;
+  {$ENDIF}
 
   SSQLError1 := cSSQLError1;
   SSQLError2 := cSSQLError2;

@@ -230,9 +230,6 @@ uses
 
 var
   PGPreparableTokens: TPreparablePrefixTokens;
-const
-  ParamFormatBin = 1;
-  ParamFormatStr = 0;
 
 { TZAbstractPostgreSQLPreparedStatementV3 }
 
@@ -791,7 +788,9 @@ begin
     StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
   Findeterminate_datatype := FUseEmulatedStmtsOnly;
   Finteger_datetimes := Connection.integer_datetimes;
-  FPQResultFormat := ParamFormatStr;
+  if Assigned(FPlainDriver.PQexecParams) and StrToBoolEx(DefineStatementParameter(Self, DSProps_BinaryWireResultMode, 'TRUE'))
+  then FPQResultFormat := ParamFormatBin
+  else FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
   //JDBC prepares after 4th execution
   if not FUseEmulatedStmtsOnly
@@ -811,9 +810,9 @@ var
 begin
   if fServerCursor
   then NativeResultSet := TZServerCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
-      @Fres, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength)
+      @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength)
   else NativeResultSet := TZClientCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
-      @Fres, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
+      @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (GetResultSetConcurrency = rcUpdatable) or fServerCursor then
@@ -999,6 +998,7 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.PGExecute: TPGresult;
 var
   PError: PAnsiChar;
+  label ExecWithParams;
   function ExecEmulated: TPGresult;
   var TmpSQL: RawByteString;
     I, N: Integer;
@@ -1037,6 +1037,7 @@ begin
   end else begin
     if (BindList.Capacity > 0) then begin
       if not Findeterminate_datatype then begin
+ExecWithParams:
         Result := FPlainDriver.PQexecParams(FconnAddress^, Pointer(FASQL),
           BindList.Count-FOutParamCount, Pointer(FPQParamOIDs), Pointer(FPQparamValues),
           Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
@@ -1045,10 +1046,15 @@ begin
         else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
         if (PError <> nil) and (PError^ <> #0) then begin
           { check for indermine datatype error}
-          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) = 0) then begin
+          if Assigned(FPlainDriver.PQresultErrorField) and CompareMem(PError, indeterminate_datatype, 5) then begin
             FPlainDriver.PQclear(Result);
             Findeterminate_datatype := True;
             Result := ExecEmulated;
+          end else if Assigned(FPlainDriver.PQresultErrorField) and (FPQResultFormat = ParamFormatBin) and
+            CompareMem(PError, no_binary_output_function_available_for_type_void, 5) then begin
+            FPlainDriver.PQclear(Result);
+            FPQResultFormat := ParamFormatStr; //fall back to string format
+            goto ExecWithParams;
           end;
         end else begin
           Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
@@ -1056,8 +1062,9 @@ begin
         end;
       end else
         Result := ExecEmulated;
-    end else
-      Result := FPlainDriver.PQExec(FconnAddress^, Pointer(FASQL));
+    end else if FPQResultFormat = ParamFormatStr
+      then Result := FPlainDriver.PQExec(FconnAddress^, Pointer(FASQL))
+      else goto ExecWithParams;
     if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
       HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
         lcExecute, ASQL, Result);
@@ -1449,6 +1456,8 @@ begin
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.PGExecutePrepared: TPGresult;
+var PError: PAnsiChar;
+label ReExecuteStr;
 begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
@@ -1464,9 +1473,19 @@ begin
       FPlainDriver.PQsetSingleRowMode(FconnAddress^);
     Result := FPlainDriver.PQgetResult(FconnAddress^); //obtain the first result
   end else begin
+ReExecuteStr:
     Result := FPlainDriver.PQexecPrepared(FconnAddress^,
       Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
       Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
+    if Assigned(FPlainDriver.PQresultErrorField)
+    then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
+    else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
+    if (PError <> nil) and (PError^ <> #0) and Assigned(FPlainDriver.PQresultErrorField) and
+       (FPQResultFormat = ParamFormatBin) and CompareMem(PError, no_binary_output_function_available_for_type_void, 5) then begin
+      FPlainDriver.PQclear(Result);
+      FPQResultFormat := ParamFormatStr; //fall back to string format
+      goto ReExecuteStr;
+    end;
     if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
       HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
         lcExecPrepStmt, ASQL, Result);
@@ -1693,17 +1712,17 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   Buf: PAnsiChar; Len: LengthInt);
 begin
-  inherited BindRawStr(Index, Buf, Len);
-  LinkTxtParam2PG(Index, Buf, Len);
+    inherited BindRawStr(Index, Buf, Len);
+    LinkTxtParam2PG(Index, Buf, Len);
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   const Value: RawByteString);
 begin
-  inherited BindRawStr(Index, Value); //localize
-  LinkTxtParam2PG(Index, Pointer(Value), Length(Value));
-  if Pointer(Value) = nil then
-    FPQparamValues[Index] := PEmptyAnsiString;
+    inherited BindRawStr(Index, Value); //localize
+    LinkTxtParam2PG(Index, Pointer(Value), Length(Value));
+    if Pointer(Value) = nil then
+      FPQparamValues[Index] := PEmptyAnsiString;
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.ClearParameters;
@@ -1733,6 +1752,12 @@ var PGSQLType: TZSQLType;
 begin
   PGSQLType := OIDToSQLType(Index, SQLType);
   if PGSQLType in [stCurrency, stBigDecimal] then
+    {$IFDEF BCD_TEST}
+    if PGSQLType = stBigDecimal then begin
+      Double2BCD(Value, PBCD(@fABuffer[0])^);
+      SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
+    end else
+    {$ENDIF}
     SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
   else if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
     if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
@@ -1756,7 +1781,7 @@ begin
       stTimeStamp:  if Finteger_datetimes
                     then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
                     else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
-    end;
+                    end;
   end else SetAsRaw;
 end;
 
@@ -1788,6 +1813,12 @@ begin
       stLong:     Int642PG(Value, FPQparamValues[Index]);
       stDouble:   Double2PG(Value, FPQparamValues[Index]);
       stCurrency: Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+      {$IFDEF BCD_TEST}
+      stBigDecimal: Begin
+                      ScaledOrdinal2BCD(Value, 0, PBCD(@fABuffer[0])^);
+                      BCD2PGNumeric(PBCD(@fABuffer[0])^, FPQparamValues[Index], FPQparamLengths[Index]);
+                    end;
+      {$ENDIF}
     end;
   end else SetAsRaw;
 end;
@@ -1800,6 +1831,7 @@ var
   res: TPGresult;
   I: Integer;
   pgOID, zOID: OID;
+  NewSQLType: TZSQLType;
 begin
   if (fRawPlanName <> '') and not (Findeterminate_datatype) and (BindList.Capacity > 0) then begin
     if Assigned(FPlainDriver.PQdescribePrepared) then begin
@@ -1808,11 +1840,18 @@ begin
         BindList.SetCount(FplainDriver.PQnparams(res)+FOutParamCount);
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
-          if (pgOID <> FPQParamOIDs[i]) then begin
-            zOID := FPQParamOIDs[i];
+          NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
+          zOID := FPQParamOIDs[i];
+          FPQParamOIDs[i] := pgOID;
+          if NewSQLType in [stUnicodeString, stUnicodeStream]
+          then NewSQLType := TZSQLType(Ord(NewSQLType) -1)
+          else if (NewSQLType = stBigDecimal) and (BindList.SQLTypes[i] = stCurrency)
+            then NewSQLType := stCurrency;
+          if (NewSQLType <> BindList.SQLTypes[i]) and (FPQparamValues[I] <> nil) then
+          {if (pgOID <> FPQParamOIDs[i]) then begin
+            zOID := FPQParamOIDs[i];}
             //bind bin again or switch to string format if we do not support the PG Types -> else Error
-            FPQParamOIDs[i] := pgOID;
-            if (FPQparamValues[I] <> nil) then
+            //if (FPQparamValues[I] <> nil) then
               case BindList.SQLTypes[i] of
                 stBoolean:  SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Boolean(PByte(FPQparamValues[i])^));
                 stSmall:    SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2SmallInt(FPQparamValues[i]));
@@ -1840,7 +1879,7 @@ begin
                             then SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},PG2DateTime(PInt64(FPQparamValues[i])^))
                             else SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},PG2DateTime(PDouble(FPQparamValues[i])^));
               end;
-          end;
+          //end;
         end;
       finally
         FPlainDriver.PQclear(res);
