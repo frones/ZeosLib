@@ -1502,9 +1502,9 @@ begin
             // Could this be a sort order marker?
             if PrevTokenWasField then
             begin
-              if SameText(TokenValue, 'DESC') then
+              if SysUtils.SameText(TokenValue, 'DESC') then
                 CompareKinds[FieldCount - 1] := ckDescending
-              else if SameText(TokenValue, 'ASC') then
+              else if SysUtils.SameText(TokenValue, 'ASC') then
                 CompareKinds[FieldCount - 1] := ckAscending
               else
                 raise EZDatabaseError.CreateFmt(SIncorrectSymbol, [TokenValue]);
