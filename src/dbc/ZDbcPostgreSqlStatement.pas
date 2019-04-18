@@ -1054,7 +1054,6 @@ ExecWithParams:
             CompareMem(PError, no_binary_output_function_available_for_type_void, 5) then begin
             FPlainDriver.PQclear(Result);
             FPQResultFormat := ParamFormatStr; //fall back to string format
-            PError := nil;
             goto ExecWithParams;
           end;
         end else begin
