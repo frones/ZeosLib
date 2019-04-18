@@ -957,11 +957,16 @@ function SQLDequotedStr(const S: string; QuoteChar: Char): string; overload;
 function SQLDequotedStr(Src: PChar; Len: LengthInt; QuoteChar: Char): string; overload;
 function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload;
 
+function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean; overload;
+function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean; overload;
+
 function Trim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
 function Trim(P: PAnsiChar): RawByteString; overload;
 function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
 {$IF defined(UNICODE) and not defined(WITH_UNITANSISTRINGS)}
 function Trim(const Value: RawByteString): RawByteString; overload;
+function LowerCase(const Value: RawByteString): RawByteString; overload;
+function UpperCase(const Value: RawByteString): RawByteString; overload;
 {$IFEND}
 {$IFNDEF UNICODE}
 function Trim(const Value: ZWideString): ZWideString; overload;
@@ -970,7 +975,6 @@ function Trim(const Value: ZWideString): ZWideString; overload;
 {$IFDEF NO_RAW_HEXTOBIN}
 function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
 {$ENDIF}
-
 {**
    Creates a memory stream with copy of data in buffer.
    If buffer contains no data, creates an empty stream.
@@ -982,6 +986,8 @@ function StreamFromData(const Bytes: TBytes): TMemoryStream; overload; {$IFDEF W
 function StreamFromData(const AString: RawByteString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$ENDIF}
 
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString; overload;
 const
   // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
   FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: {%H-}'.' );
@@ -1046,7 +1052,7 @@ begin
         Inc(PDStart);
     PDStart := Pointer(Delimiters);
     Dec(PEnd);
-    end;
+  end;
 end;
 
 {**
@@ -1140,7 +1146,7 @@ begin
   if SubStr = EmptyRaw
   then Result := True
   else begin
-  LenSubStr := Length(SubStr);
+    LenSubStr := Length(SubStr);
     if LenSubStr <= Length(Str)
     then Result := MemLCompAnsi(PAnsiChar(Str), PAnsiChar(SubStr), LenSubStr)
     else Result := False;
@@ -1160,7 +1166,7 @@ begin
   if SubStr = ''
   then Result := True
   else begin
-  LenSubStr := Length(SubStr);
+    LenSubStr := Length(SubStr);
     if LenSubStr <= Length(Str)
     then Result := MemLCompUnicode(PWideChar(Str), PWideChar(SubStr), LenSubStr)
     else Result := False;
@@ -1724,7 +1730,7 @@ begin
           else if (PByte(Str+4)^ = Ord(' ')) and IgnoreTrailingSaces then begin
             Inc(Str,4);
             goto SkipSpaces;
-                            end;
+          end;
       Ord('y'): //Check mixed case of 'Yes' or 'y' string
         if PByte(Str+1)^ = Ord(#0) then
           Result := True
@@ -1738,7 +1744,7 @@ begin
             Inc(Str,3);
 SkipSpaces: while PByte(Str)^ = Ord(' ') do Inc(Str);
             Result := PByte(Str)^ = Ord(#0);
-                      end;
+          end;
       Ord('o'): //Check mixed case of 'ON' or 'on' string
         if PByte(Str+1)^ or $20 = Ord('n') then
           if PByte(Str+2)^ = Ord(#0) then
@@ -1746,7 +1752,7 @@ SkipSpaces: while PByte(Str)^ = Ord(' ') do Inc(Str);
           else if (PByte(Str+2)^ = Ord(' ')) and IgnoreTrailingSaces then begin
             Inc(Str,2);
             goto SkipSpaces;
-                    end;
+          end;
       else
         Result := CheckInt and (RawToIntDef(Str, 0) <> 0);
     end;
@@ -1789,7 +1795,7 @@ begin
           else if (PWord(Str+4)^ = Ord(' ')) and IgnoreTrailingSaces then begin
             Inc(Str,4);
             goto SkipSpaces;
-                            end;
+          end;
       Ord('y'): //Check mixed case of 'Yes' or 'y' string
         if PWord(Str+1)^ = Ord(#0) then
           Result := True
@@ -1803,7 +1809,7 @@ begin
             Inc(Str,3);
 SkipSpaces: while PWord(Str)^ = Ord(' ') do Inc(Str);
             Result := PWord(Str)^ = Ord(#0);
-                      end;
+          end;
       Ord('o'): //Check mixed case of 'ON' or 'on' string
         if PWord(Str+1)^ or $20 = Ord('n') then
           if PWord(Str+2)^ = Ord(#0) then
@@ -1811,7 +1817,7 @@ SkipSpaces: while PWord(Str)^ = Ord(' ') do Inc(Str);
           else if (PWord(Str+2)^ = Ord(' ')) and IgnoreTrailingSaces then begin
             Inc(Str,2);
             goto SkipSpaces;
-                    end;
+          end;
       else
         Result := CheckInt and (UnicodeToIntDef(Str, 0) <> 0);
     end;
@@ -2040,7 +2046,7 @@ end;
 }
 procedure SplitToStringListEx(List: TStrings; const Str, Delimiter: string);
 var P: PChar absolute Str;
-   temp: string;
+  temp: string;
   i, OffSet: integer;
   PD: PChar;
   L, LD: LengthInt;
@@ -2287,7 +2293,7 @@ var
     //if the dot are found, milliseconds are present.
     if dotPos > 0 then
       MSec := StrToIntDef(LeftStr(RightStr(AString,Length(AString)-dotPos)+'000',3),0);
-    end;
+  end;
 begin
   Temp := Value;
   Result := 0;
@@ -2394,8 +2400,8 @@ var
         if I+1 = vallen then Break;
       end;
       Failed := not TryEncodeDate(Year, Month, Day, Result);
-        end;
     end;
+  end;
 
   procedure TryExtractDateFromUnknownSize;
   var
@@ -2469,7 +2475,7 @@ var
         if Failed
         then Result := 0
         else Result := Int(FltVal);
-        end;
+      end;
     end;
   end;
 begin
@@ -4333,7 +4339,7 @@ begin
     else case PWord(SrcBuffer)^ of
       Ord('"'), Ord(''''), Ord('\'):
        Inc(DestLength, 2)
-    else
+      else
        Inc(DestLength);
     end;
     Inc(SrcBuffer);
@@ -4813,14 +4819,14 @@ var
   I: Integer;
 {$ENDIF}
 begin
-    {$IFDEF NEXTGEN}
+  {$IFDEF NEXTGEN}
   Result := FloatToText(PWideChar(@Buffer[0]), Value, fvExtended, ffGeneral, 15, 0);
   for I := 0 to Result -1 do
     PByte(Buf+I)^ := Ord(Buffer[i]);
-    {$ELSE}
+  {$ELSE}
   Result := {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(
     Buf, Value, {$IFNDEF FPC}fvExtended, {$ENDIF}ffGeneral, 15, 0);
-    {$ENDIF}
+  {$ENDIF}
 end;
 
 function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString;
@@ -4838,14 +4844,14 @@ var
   I: Integer;
 {$ENDIF}
 begin
-    {$IFDEF NEXTGEN}
+  {$IFDEF NEXTGEN}
   Result := FloatToText(PWideChar(@Buffer[0]), Value, fvExtended, ffGeneral, 15, 0, FmtSettFloatDot);
   for I := 0 to Result -1 do
     PByte(Buf+I)^ := Ord(Buffer[i]);
-    {$ELSE}
+  {$ELSE}
   Result := {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(
     Buf, Value, {$IFNDEF FPC}fvExtended, {$ENDIF}ffGeneral, 15, 0, FmtSettFloatDot);
-    {$ENDIF}
+  {$ENDIF}
 end;
 
 function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString;
@@ -5060,22 +5066,22 @@ begin
     if D1 > 0 then D1 := D1 shr 8;
   end;
   Inc(Dest, 8);
-  Dest^ := '-';
+  PWord(Dest)^ := Ord('-');
   W := PWord(PAnsiChar(Source)+4)^; //Process D2
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
   Inc(Dest, 5);
-  Dest^ := '-';
+  PWord(Dest)^ := Ord('-');
   W := PWord(PAnsiChar(Source)+6)^; //Process D3
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
   Inc(Dest, 5);
-  Dest^ := '-'; //Process D4
+  PWord(Dest)^ := Ord('-'); //Process D4
   PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+8)^];
   PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+9)^];
-  (Dest+5)^ := '-';
+  PWord(Dest+5)^ := Ord('-');
   Inc(Dest, 6);
   for i := 0 to 5 do
     PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(PAnsiChar(Source)+10+i)^];
@@ -5639,6 +5645,80 @@ begin
   end;
 end;
 
+{$Q-}
+{$R-}
+function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean;
+var  PEnd: PAnsiChar;
+  B: Byte;
+begin
+  Result := (Len = 0) or (Val1 = Val2);
+  if Result then
+    Exit;
+  PEnd := Val1 + Len -4;
+  while Val1 < PEnd do begin//compare 4 Bytes per loop
+    if (PCardinal(Val1)^ <> PCardinal(Val2)^) then //equal?
+      if PCardinal(Val1)^ and $80808080<>0 then begin //no Ascii quad?
+        for B := 0 to 3 do
+          if PByteArray(Val1)[B] <> PByteArray(Val2)[B] then
+            if (PByteArray(Val1)[B] or $80 <> 0) or (PByteArray(Val2)[B] or $80 <> 0) then //one of both not in ascii range?
+              Exit
+            else if (PByteArray(Val1)[B] or $20) <> (PByteArray(Val2)[B] or $20) then
+              Exit;
+      end else if PCardinal(Val1)^ or $20202020 <> PCardinal(Val2)^ or $20202020 then
+          Exit;
+    Inc(Val1, 4);
+    Inc(Val2, 4);
+  end;
+  Inc(PEnd, 4);
+  while Val1 < PEnd do begin
+    if (PByte(Val1)^ <> PByte(Val2)^) then //equal binary?
+      if (PByte(Val1)^ and $80 <> 0) or (PByte(Val2)^ and $80 <> 0) then //no Ascii byte?
+        Exit
+      else if PByte(Val1)^ or $20 <> PByte(Val2)^ or $20 then
+        Exit;
+    Inc(Val1);
+    Inc(Val2);
+  end;
+  Result := True;
+end;
+
+function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean;
+var  PEnd: PWideChar;
+  B: Boolean;
+begin
+  Result := (Len = 0) or (Val1 = Val2);
+  if Result then
+    Exit;
+  PEnd := Val1 + Len -2;
+  while Val1 < PEnd do begin//compare 4 Bytes per loop
+    if (PCardinal(Val1)^ <> PCardinal(Val2)^) then //equal binary?
+      if PCardinal(Val1)^ and $00800080<>0 then begin//no Ascii pair?
+        for B := False to True do
+          if PWordArray(Val1)[Ord(B)] <> PWordArray(Val2)[Ord(B)] then
+            if (PWordArray(Val1)[Ord(B)] or $0080 <> 0) or (PWordArray(Val2)[Ord(B)] or $0080 <> 0) then //one of both not in ascii range?
+              Exit
+            else if (PWordArray(Val1)[Ord(B)] or $0020) <> (PWordArray(Val2)[Ord(B)] or $0020) then
+              Exit;
+      end else if PCardinal(Val1)^ or $00200020 <> PCardinal(Val2)^ or $00200020 then
+        Exit;
+    Inc(Val1, 2);
+    Inc(Val2, 2);
+  end;
+  Inc(PEnd, 2);
+  while Val1 < PEnd do begin
+    if (PWord(Val1)^ <> PWord(Val2)^) then //equal?
+      if (PWord(Val1)^ and $0080 <> 0) or (PWord(Val2)^ and $0080 <> 0) then //no Ascii char?
+        Exit
+      else if PWord(Val1)^ or $0020 <> PWord(Val2)^ or $0020 then
+        Exit;
+    Inc(Val1);
+    Inc(Val2);
+  end;
+  Result := True;
+end;
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+
 function Trim(P: PAnsiChar; L: LengthInt): RawByteString;
 var PEnd: PAnsiChar;
 begin
@@ -5647,6 +5727,7 @@ begin
     Inc(P);
   while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
     Dec(PEnd);
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(P, PEnd-P+1, Result);
 end;
 
@@ -5686,6 +5767,51 @@ begin
     ZSetString(P, PEnd-P+1, Result);
   end;
 end;
+
+function LowerCase(const Value: RawByteString): RawByteString;
+var Len: Integer;
+  Dst, Src, PEnd: PByte;
+  Ch: Byte;
+begin
+  Len := Length(Value);
+  SetLength(Result, Len);
+  if Len > 0 then begin
+    Dst := Pointer(Result);
+    Src := Pointer(Value);
+    PEnd := Dst+Len;
+    while Dst < Pend do begin
+      Ch := PByte(Src)^;
+      if (ch >= Ord('A')) and (ch <= Ord('Z')) then
+        Ch := Ch or $20;
+      Dst^ := Ch;
+      Inc(Dst);
+      Inc(Src);
+    end;
+  end;
+end;
+
+function UpperCase(const Value: RawByteString): RawByteString;
+var Len: Integer;
+  Dst, Src, PEnd: PByte;
+  Ch: Byte;
+begin
+  Len := Length(Value);
+  SetLength(Result, Len);
+  if Len > 0 then begin
+    Dst := Pointer(Result);
+    Src := Pointer(Value);
+    PEnd := Dst+Len;
+    while Dst < Pend do begin
+      Ch := PByte(Src)^;
+      if (ch >= Ord('a')) and (ch <= Ord('z')) then
+        Ch := Ch xor $20;
+      Dst^ := Ch;
+      Inc(Dst);
+      Inc(Src);
+    end;
+  end;
+end;
+
 {$IFEND}
 
 {$IFNDEF UNICODE}
@@ -5770,6 +5896,86 @@ begin
     inc(v);
   end;
   {$ENDIF}
+end;
+
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString;
+var PSrc, PEnd: PAnsiChar;
+  POld: PAnsiChar absolute OldPattern;
+  PNew: PAnsiChar absolute NewPattern;
+  PRes, PResEnd: PAnsiChar;
+  L, iPos, LOld, LNew: Integer;
+begin
+  L := Length(Source);
+  LOld := Length(OldPattern);
+  PSrc := Pointer(Source);
+  iPos := PosEx(POld, PSrc, LOld, L, 1);
+  if iPos = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  PEnd := PSrc+L-1;
+  if PNew = nil
+  then LNew := 0
+  else LNew := Length(NewPattern);
+  Assert(LNew <= LOld);
+  SetLength(Result, L);
+  PRes := Pointer(Result);
+  PResEnd := PRes+L;
+  repeat
+    Move(PSrc^, PRes^, iPos-LOld+1);
+    Inc(PRes, (iPos-LOld+1));
+    if LNew > 0 then begin
+      Move(PNew^, PRes^, LNew);
+      Inc(PRes, LNew);
+    end;
+    Inc(PSrc, (iPos-1+LOld));
+    IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
+  until IPos = 0;
+  if (PSrc <= PEnd) then begin
+    Move(PSrc^, PRes^, (PEnd-PSrc+1));
+    Inc(Pres, (PEnd-PSrc+1));
+  end;
+  SetLength(Result, L-(PResEnd-PRes));
+end;
+
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString;
+var PSrc, PEnd: PWideChar;
+  POld: PWideChar absolute OldPattern;
+  PNew: PWideChar absolute NewPattern;
+  PRes, PResEnd: PWideChar;
+  L, iPos, LOld, LNew: Integer;
+begin
+  L := Length(Source);
+  LOld := Length(OldPattern);
+  PSrc := Pointer(Source);
+  iPos := PosEx(POld, PSrc, LOld, L, 1);
+  if iPos = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  PEnd := PSrc+L-1;
+  if PNew = nil
+  then LNew := 0
+  else LNew := Length(NewPattern);
+  Assert(LNew <= LOld);
+  SetLength(Result, L);
+  PRes := Pointer(Result);
+  PResEnd := PRes+L;
+  repeat
+    Move(PSrc^, PRes^, (iPos-LOld+1) shl 1);
+    Inc(PRes, (iPos-LOld+1));
+    if LNew > 0 then begin
+      Move(PNew^, PRes^, LNew shl 1);
+      Inc(PRes, LNew);
+    end;
+    Inc(PSrc, (iPos-1+LOld));
+    IPos := PosEx(POld, PSrc, LOld, (PEnd-PSrc)+1, 1);
+  until IPos = 0;
+  if (PSrc <= PEnd) then begin
+    Move(PSrc^, PRes^, (PAnsiChar(PEnd)-PAnsiChar(PSrc)+2));
+    Inc(Pres, (PEnd-PSrc+1));
+  end;
+  SetLength(Result, L-(PResEnd-PRes));
 end;
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

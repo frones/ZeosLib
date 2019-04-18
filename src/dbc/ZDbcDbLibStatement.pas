@@ -259,7 +259,7 @@ begin
     Ansi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(SQL, '\'#13, '\\'#13, [rfReplaceAll])
   else
     //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
-    Ansi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(SQL, ' AND NULL IS NULL', '', [rfReplaceAll]);
+    Ansi := StringReplaceAll_CS_LToEQ(SQL, RawByteString(' AND NULL IS NULL'), EmptyRaw);
 
   FHandle := FDBLibConnection.GetConnectionHandle;
   FPlainDriver := FDBLibConnection.GetPlainDriver;
