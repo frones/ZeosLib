@@ -57,7 +57,7 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
   ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
 
 type
@@ -71,6 +71,8 @@ type
   published
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;
+    procedure TestLastDelimiter;
+    procedure TestPutSplitStringEx;
     {$IFDEF ENABLE_POSTGRESQL}
     procedure TestIsIpAddr;
     {$ENDIF}
@@ -94,7 +96,7 @@ type
     procedure TestDateTimeToUnicodeSQLTime;
     procedure TestDateTimeToRawSQLTimeStamp;
     procedure TestDateTimeToUnicodeSQLTimeStamp;
-    {$IFDEF BENCHMARK}
+  {$IFDEF BENCHMARK}
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     procedure TestAnsiToUnicodePerformance;
     procedure TestUTF8ToUnicodePerformance;
@@ -127,7 +129,7 @@ type
     procedure BenchTestDateTimeToUnicodeSQLTimeStamp;
     procedure BenchBinToHexUnicode;
     procedure BenchBinToHexRaw;
-    {$ENDIF}
+  {$ENDIF}
   end;
 
 implementation
@@ -182,6 +184,63 @@ begin
   DelimiterStr := '';
   SourceStr := '';
   CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 3');
+end;
+
+procedure TZTestSysUtilsCase.TestLastDelimiter;
+var
+  SourceStr: string;
+  DelimiterStr: string;
+begin
+  { Position should exist }
+  DelimiterStr := '098g';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(17, LastDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 1');
+
+  { Position should not exist }
+  DelimiterStr := 'klmn';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 2');
+
+  { Check with empty string }
+  DelimiterStr := '';
+  SourceStr := '';
+  CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 3');
+
+  { Position should exist }
+  DelimiterStr := 'gac';
+  SourceStr := 'abcdefg1234567890';
+  CheckEquals(7, LastDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 4');
+end;
+
+procedure TZTestSysUtilsCase.TestPutSplitStringEx;
+var SL: TStrings;
+  SourceStr: string;
+  DelimiterStr: string;
+  I: Integer;
+begin
+  SL := TStringList.Create;
+  Check(SL <> nil);
+  try
+    SourceStr := 'aaaggaaaggaaaggaaagg';
+    DelimiterStr := 'gg';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(4, SL.Count, 'split count 1');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('aaa', SL[i], '1. Splitted String');
+    SourceStr := 'aaaggaaaggaaaggaaa';
+    DelimiterStr := 'gg';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(4, SL.Count, 'split count 2');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('aaa', SL[i], '2. Splitted String');
+    DelimiterStr := 'aaa';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(3, SL.Count, 'split count 3');
+    for I := 0 to SL.Count -1 do
+      CheckEquals('gg', SL[i], '2. Splitted String');
+  finally
+    SL.Free;
+  end;
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}
