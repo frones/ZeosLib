@@ -3409,7 +3409,8 @@ Inc_dbl:          Inc(Buf, 2);
                   Continue;
                 end else
                   PByte(Buf)^ := Ord('0') + Hour;
-      Ord('n'): if EQ2 or (Minute >= 10) then begin
+      Ord('n'),
+      Ord('m'): if EQ2 or (Minute >= 10) then begin
                   PWord(Buf)^ := TwoDigitLookupW[Minute];
                   goto Inc_dbl;
                 end else
@@ -3539,6 +3540,7 @@ Inc_dbl:          Inc(Buf, 2);
                   continue;
                 end else
                   PWord(Buf)^ := Ord('0') + Hour;
+      Ord('m'),
       Ord('n'): if EQ2 or (Minute >= 10) then begin
                   PLongWord(Buf)^ := TwoDigitLookupLW[Minute];
                   goto Inc_dbl;

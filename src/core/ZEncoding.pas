@@ -1573,11 +1573,11 @@ next: c := cardinal(Source^);
       inc(Source);
       case c of
         0..$7f: begin
-            PWord(Dest)^ := Byte(c);
+            PByte(Dest)^ := Byte(c);
             inc(Dest);
             //if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
             if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) //test if end is reached
-            then if PWord(Source+1)^ > $7f //next no ascii?
+            then if PByte(Source+1)^ > $7f //next no ascii?
               then goto next
               else goto loop_ascii_pairs
             else goto done;
@@ -1585,10 +1585,10 @@ next: c := cardinal(Source^);
         UTF16_HISURROGATE_MIN..UTF16_HISURROGATE_MAX:
           if (NativeUint(Source)>=SourceLen) or
              ((cardinal(Source^)<UTF16_LOSURROGATE_MIN) or (cardinal(Source^)>UTF16_LOSURROGATE_MAX)) then begin
-unmatch:    if (NativeUint(@Dest[3])>DestLen) or not (ccfReplacementCharacterForUnmatchedSurrogate in Flags)
+unmatch:    if (NativeUint(Dest+3)>DestLen) or not (ccfReplacementCharacterForUnmatchedSurrogate in Flags)
             then goto Done;//break;
             PWord(Dest)^ := $BFEF;
-            PWord(Dest+2)^ := $BD;
+            PByte(Dest+2)^ := $BD;
             inc(Dest,3);
             goto loop_ascii_pairs;//if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
           end else begin
@@ -1614,10 +1614,10 @@ unmatch:    if (NativeUint(@Dest[3])>DestLen) or not (ccfReplacementCharacterFor
       if NativeUint(Dest)+i>DestLen then
         goto Done;//break;
       for j := i-1 downto 1 do begin
-        PWord(Dest+j)^ := Word((c and $3f)+$80);
+        PByte(Dest+j)^ := Byte((c and $3f)+$80);
         c := c shr 6;
       end;
-      PWord(Dest)^ := Byte(Byte(c) or UTF8_FIRSTBYTE[i]);
+      PByte(Dest)^ := Byte(Byte(c) or UTF8_FIRSTBYTE[i]);
       inc(Dest,i);
       goto loop_ascii_pairs;//if (NativeUint(Dest)<DestLen) and (NativeUint(Source)<SourceLen) then continue else break;
     end; //until false;

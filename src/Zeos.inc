@@ -76,6 +76,9 @@
 {$IFDEF FPC}
   {$I ZeosLazarus.inc}
 {$ELSE}
+  {$IF not defined(CPU64) and (defined(CPUX64) or defined(CPU64BITS) or defined(CPUARM64) or defined(CPU64BITS))}
+    {$DEFINE CPU64}
+  {$IFEND}
   {$IF CompilerVersion >= 27}
     {$LEGACYIFEND ON}
   {$IFEND}
