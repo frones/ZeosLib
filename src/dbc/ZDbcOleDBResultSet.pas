@@ -852,7 +852,7 @@ set_from_tmp:     Len := Length(FUniTemp);
     DBTYPE_WSTR or DBTYPE_BYREF: if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
 set_from_clob:    fTempBlob := GetBlob(ColumnIndex); //localize
                   Result := fTempBlob.GetPWideChar;
-                  Len := fTempBlob.Length;
+                  Len := fTempBlob.Length shr 1;
                 end else begin
                   Len := FLength shr 1;
                   if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
