@@ -1207,16 +1207,16 @@ end;
 
 function TZASADatabaseMetadata.ConvertEscapes(const Pattern: String): String;
 var
-  EscapeChar: Char;
+  EscapeChar: PChar;
   P: PChar;
 begin
   Result := '';
-  if Length(Pattern) = 0 then Exit;
-  EscapeChar := GetDatabaseInfo.GetSearchStringEscape[1];
+  if Pattern = '' then Exit;
+  EscapeChar := Pointer(GetDatabaseInfo.GetSearchStringEscape);
   P := Pointer(Pattern);
   ClearBuf;
   while P^ <> #0 do begin
-    if (P^ = EscapeChar) and (((P+1)^ = WildcardsArray[0]) or ((P+1)^=WildcardsArray[1])) then begin
+    if (P^ = EscapeChar^) and (((P+1)^ = WildcardsArray[0]) or ((P+1)^=WildcardsArray[1])) then begin
       ToBuf('[', Result);
       Inc(P);
       ToBuf(P^, Result);

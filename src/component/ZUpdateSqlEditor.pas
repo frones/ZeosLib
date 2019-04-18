@@ -377,7 +377,7 @@ end;
 
 function TSQLParser.NextToken: TSQLToken;
 var
-  P, TokenStart: PChar;
+  P, P2, TokenStart: PChar;
   IsParam: Boolean;
 
   {$IFNDEF FPC}
@@ -456,34 +456,34 @@ begin
       end;
     #0:
       FToken := stEnd;
-  else
-    if P^ = FQuoteString[1] then
-    begin
-      Inc(P);
-      IsParam := P^ = ':';
-      if IsParam then Inc(P);
-      TokenStart := P;
-      while not CharInSet(P^, [FQuoteString[2], #0]) do Inc(P);
-      SetString(FTokenString, TokenStart, P - TokenStart);
-      Inc(P);
-      if P^ = '.' then
+  else begin
+      P2 := Pointer(FQuoteString);
+      if P^ = P2^ then
       begin
-        FTokenString := FTokenString + '.';
+        Inc(P);
+        IsParam := P^ = ':';
+        if IsParam then Inc(P);
+        TokenStart := P;
+        while not CharInSet(P^, [(P2+1)^, #0]) do Inc(P);
+        SetString(FTokenString, TokenStart, P - TokenStart);
+        Inc(P);
+        if P^ = '.' then begin
+          FTokenString := FTokenString + '.';
+          Inc(P);
+        end;
+        Trim(FTokenString);
+        FToken := stSymbol;
+        FSymbolQuoted := True;
+      end else begin
+        FToken := stOther;
         Inc(P);
       end;
-      Trim(FTokenString);
-      FToken := stSymbol;
-      FSymbolQuoted := True;
-    end
-    else
-    begin
-      FToken := stOther;
-      Inc(P);
     end;
   end;
   FSourcePtr := P;
-  if (FToken = stSymbol) and
-    (FTokenString[Length(FTokenString)] = '.') then FToken := stAlias;
+  P2 := Pointer(FTokenString);
+  if (FToken = stSymbol) and ((P2+Length(FTokenString)-1)^ = '.') then
+    FToken := stAlias;
   Result := FToken;
 end;
 
@@ -804,13 +804,14 @@ begin
 end;
 
 function TZUpdateSQLEditForm.QuoteIfChecked(const Ident: string): string;
+var P: PChar;
 begin
   Result := Ident;
-  if QuoteFields.Checked then
-  begin
+  if QuoteFields.Checked then begin
+    P := Pointer(QuoteChar);
     case Length(QuoteChar) of
-      1: Result := QuoteChar[1] + Result + QuoteChar[1];
-      2: Result := QuoteChar[1] + Result + QuoteChar[2];
+      1: Result := P^ + Result + P^;
+      2: Result := P^ + Result + (P+1)^;
     end;
   end;
 end;

@@ -199,8 +199,8 @@ end;
 function TZDBLibPreparedStatementEmulated.GetParamAsString(
   ParamIndex: Integer): RawByteString;
 var
-  Connection: IZDBLibConnection;
   Len: Integer;
+  P: PAnsiChar;
 begin
   // Todo: Talk with EgonHugeist wether this requiresmodifications for his Mextgen effort
   if InParamCount <= ParamIndex
@@ -208,9 +208,9 @@ begin
   else Result := PrepareSQLParameter(InParamValues[ParamIndex],
       InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
   Len := Length(Result);
-  if (Len > 0) and (Result[1] = '''') and (Result[Len] = '''') then begin
-    Connection := GetConnection as IZDBLibConnection;
-    if (Connection.GetProvider = dpMsSQL) and Connection.FreeTDS then
+  P := Pointer(Result);
+  if (Len > 0) and (P^ = '''') and ((P+Len-1)^ = '''') and not IsNCharIndex[ParamIndex] then begin
+    if (FDBLibConnection.GetProvider = dpMsSQL) and FDBLibConnection.FreeTDS then
       Result := 'N' + Result;
   end;
 end;

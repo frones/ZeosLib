@@ -789,12 +789,9 @@ var
   I: Integer;
 begin
   for I := 0 to 255 do
-  begin
-    if FChildren[I] <> nil then
-      FChildren[I].Free
-    else
-      Break;
-  end;
+    if FChildren[I] <> nil
+    then FreeAndNil(FChildren[I])
+    else Break;
   SetLength(FChildren, 0);
   FParent := nil;
   inherited Destroy;
@@ -806,10 +803,10 @@ end;
 procedure TZSymbolNode.AddDescendantLine(const Value: string);
 var
   Node: TZSymbolNode;
+  P: PChar absolute Value;
 begin
-  if Length(Value) > 0 then
-  begin
-    Node := EnsureChildWithChar(Value[1]);
+  if P <> nil then begin
+    Node := EnsureChildWithChar(P^);
     Node.AddDescendantLine(Copy(Value, 2, Length(Value) - 1));
   end;
 end;
@@ -894,11 +891,11 @@ end;
 function TZSymbolNode.FindDescendant(const Value: string): TZSymbolNode;
 var
   TempChar: Char;
+  P: PChar absolute Value;
 begin
-  if Length(Value) > 0 then
-    TempChar := Value[1]
-  else
-    TempChar := #0;
+  if P <> nil
+  then TempChar := P^
+  else TempChar := #0;
   Result := FindChildWithChar(TempChar);
   if (Length(Value) > 1) and (Result <> nil) then
     Result := Result.FindDescendant(Copy(Value, 2, Length(Value) - 1));
@@ -946,11 +943,11 @@ procedure TZSymbolRootNode.Add(const Value: string);
 var
   TempChar: Char;
   Node: TZSymbolNode;
+  P: PChar absolute Value;
 begin
-  if Length(Value) > 0 then
-    TempChar := Value[1]
-  else
-     TempChar := #0;
+  if P <> nil
+  then TempChar := P^
+  else TempChar := #0;
   Node := EnsureChildWithChar(TempChar);
   Node.AddDescendantLine(Copy(Value, 2, Length(Value) - 1));
   FindDescendant(Value).Valid := True;

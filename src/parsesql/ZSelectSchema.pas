@@ -210,11 +210,16 @@ end;
   @return a full database table name.
 }
 function TZTableRef.FullName: string;
+var P: PChar absolute Result;
+  I: Integer;
 begin
   Result := FCatalog + '.' + FSchema + '.' + FTable;
-  
-  while (Result <> '') and (Result[1] = '.') do
-    Delete(Result, 1, 1);
+  if P^ = '.' then begin
+    if (P+1)^ = '.'
+    then I := 2
+    else I := 1;
+    Result := Copy(Result, I+1, Length(Result)-I);
+  end;
 end;
 
 { TZFieldRef }
