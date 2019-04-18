@@ -788,7 +788,7 @@ begin
     StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
   Findeterminate_datatype := FUseEmulatedStmtsOnly;
   Finteger_datetimes := Connection.integer_datetimes;
-  if Assigned(FPlainDriver.PQexecParams) and StrToBoolEx(DefineStatementParameter(Self, DSProps_BinaryWireResultMode, 'False'))
+  if Assigned(FPlainDriver.PQexecParams) and StrToBoolEx(DefineStatementParameter(Self, DSProps_BinaryWireResultMode, 'TRUE'))
   then FPQResultFormat := ParamFormatBin
   else FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
