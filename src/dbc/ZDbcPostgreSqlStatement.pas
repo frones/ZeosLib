@@ -998,6 +998,7 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.PGExecute: TPGresult;
 var
   PError: PAnsiChar;
+  label ExecWithParams;
   function ExecEmulated: TPGresult;
   var TmpSQL: RawByteString;
     I, N: Integer;
@@ -1036,6 +1037,7 @@ begin
   end else begin
     if (BindList.Capacity > 0) then begin
       if not Findeterminate_datatype then begin
+ExecWithParams:
         Result := FPlainDriver.PQexecParams(FconnAddress^, Pointer(FASQL),
           BindList.Count-FOutParamCount, Pointer(FPQParamOIDs), Pointer(FPQparamValues),
           Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
@@ -1044,10 +1046,16 @@ begin
         else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
         if (PError <> nil) and (PError^ <> #0) then begin
           { check for indermine datatype error}
-          if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) = 0) then begin
+          if Assigned(FPlainDriver.PQresultErrorField) and CompareMem(PError, indeterminate_datatype, 5) then begin
             FPlainDriver.PQclear(Result);
             Findeterminate_datatype := True;
             Result := ExecEmulated;
+          end else if Assigned(FPlainDriver.PQresultErrorField) and (FPQResultFormat = ParamFormatBin) and
+            CompareMem(PError, no_binary_output_function_available_for_type_void, 5) then begin
+            FPlainDriver.PQclear(Result);
+            FPQResultFormat := ParamFormatStr; //fall back to string format
+            PError := nil;
+            goto ExecWithParams;
           end;
         end else begin
           Inc(FExecCount, Ord((FMinExecCount2Prepare > 0) and (FExecCount < FMinExecCount2Prepare)));
@@ -1057,8 +1065,7 @@ begin
         Result := ExecEmulated;
     end else if FPQResultFormat = ParamFormatStr
       then Result := FPlainDriver.PQExec(FconnAddress^, Pointer(FASQL))
-      else Result := FPlainDriver.PQexecParams(FconnAddress^, Pointer(FASQL),
-          0, nil, nil, nil, nil, FPQResultFormat);
+      else goto ExecWithParams;
     if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
       HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
         lcExecute, ASQL, Result);
@@ -1450,6 +1457,8 @@ begin
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.PGExecutePrepared: TPGresult;
+var PError: PAnsiChar;
+label ReExecuteStr;
 begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
@@ -1465,9 +1474,20 @@ begin
       FPlainDriver.PQsetSingleRowMode(FconnAddress^);
     Result := FPlainDriver.PQgetResult(FconnAddress^); //obtain the first result
   end else begin
+ReExecuteStr:
     Result := FPlainDriver.PQexecPrepared(FconnAddress^,
       Pointer(FRawPlanName), BindList.Count-FOutParamCount, Pointer(FPQparamValues),
       Pointer(FPQparamLengths), Pointer(FPQparamFormats), FPQResultFormat);
+    if Assigned(FPlainDriver.PQresultErrorField)
+    then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
+    else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
+    if (PError <> nil) and (PError^ <> #0) and Assigned(FPlainDriver.PQresultErrorField) and
+       (FPQResultFormat = ParamFormatBin) and CompareMem(PError, no_binary_output_function_available_for_type_void, 5) then begin
+      FPlainDriver.PQclear(Result);
+      FPQResultFormat := ParamFormatStr; //fall back to string format
+      PError := nil;
+      goto ReExecuteStr;
+    end;
     if not PGSucceeded(FPlainDriver.PQerrorMessage(FconnAddress^)) then
       HandlePostgreSQLError(Self, FPlainDriver, FconnAddress^,
         lcExecPrepStmt, ASQL, Result);

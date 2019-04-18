@@ -310,6 +310,7 @@ const
 //some error codes
   indeterminate_datatype: PAnsiChar = '42P18';
   current_transaction_is_aborted: PAnsiChar = '25P02';
+  no_binary_output_function_available_for_type_void: PAnsiChar = '42883';
 //https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
 
 {------------------------------------------------------------------------------------------}
