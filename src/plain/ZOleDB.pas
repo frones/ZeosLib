@@ -1812,6 +1812,21 @@ type
     val:        array[0..0] of BYTE; //just taken from oledb.h iiuc it's and array[precision] of Byte
   end;
 
+  TDECIMAL = packed record
+    wReserved: Word;
+    signscale: packed record
+        case Boolean of
+          False:  (Scale, sign: Byte);
+          True:   (signscale: word);
+        end;
+    Hi32: Cardinal;
+    Lo64: packed record
+        case Boolean of
+          False:  ({$IFDEF DARWIN}Mid32, Lo32{$ELSE}Lo32, Mid32{$ENDIF}: Cardinal);
+          True:   (Lo64: UInt64);
+        end;
+  end;
+
 
 {end:-----------------------used by zeos---------------------------------------}
 (*
