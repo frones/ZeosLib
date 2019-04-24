@@ -713,12 +713,19 @@ begin
     end;
     NextDigit := PByte(pNumDigit)^ + Remainder;
     PByte(pNumDigit)^ := NextDigit div 100;
+    Remainder := ZBase100Byte2BcdNibbleLookup[NextDigit - (PByte(pNumDigit)^ * 100){mod 100}];
+    if OddPrecision then begin //my new lookup version with bool algebra only
+      PByte(pNibble+1)^ := PByte(pNibble+1)^ or (Byte(Remainder) and $0F);
+      PByte(pNibble)^   := (Byte(Remainder) and $F0);
+    end else
+      PByte(pNibble)^   := Byte(Remainder);
+    (* //my old div/mod 10 version:
     Remainder := NextDigit - (PByte(pNumDigit)^ * 100); //mod 100
     if OddPrecision then begin
       PByte(pNibble+1)^ := PByte(pNibble+1)^  + (Remainder mod 10) shl 4;
       PByte(pNibble)^   := (Remainder div 10);
     end else
-      PByte(pNibble)^   := (Remainder mod 10) + (Remainder div 10) shl 4;
+      PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[Remainder]; //*)
     if pNibble > pFirstNibble //overflow save
     then Dec(pNibble)
     else goto Done; //ready....? Should not happen
@@ -1008,7 +1015,28 @@ begin
   end;
 end;
 
+const
+    testNum: TDB_NUMERIC = (Precision: 18; Scale: 1; Sign: 1;
+      val: (78, 243, 48, 166, 75, 155, 182, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+procedure X;
+var Num1, Num2: TDB_NUMERIC;
+  var BCD: TBCD;
+  S: String;
+label again;
+begin
+  OleDBNumeric2BCD(@testNum, BCD, 16);
+again:
+  FillChar(Num2, SizeOf(TDB_NUMERIC), #0);
+  S := BCDToStr(BCD);
+  Assert(S <> '');
+  BCD2OleDBNumeric(BCD, @Num2);
+  if not CompareMem(@testnum, @num2, SizeOf(TDB_NUMERIC)) then
+    goto again;
+end;
+
+
 initialization
   OleDBMultiplyLookupFiller;
+  X;
 {$ENDIF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 end.
