@@ -895,7 +895,7 @@ W_Len:                if PLen^ > MaxL then
                       then PWordBool(Data)^   := TBooleanDynArray(ZData)[j]
                       else PWordBool(Data)^   := ArrayValueToBoolean(ZArray, j);
         DBTYPE_NUMERIC: if Native
-                      then BCD2OleDBNumeric(TBCDDynArray(ZData)[j], PDB_NUMERIC(Data))
+                      then BCD2SQLNumeric(TBCDDynArray(ZData)[j], PDB_NUMERIC(Data))
                       else RaiseUnsupportedException;
         DBTYPE_DATE, DBTYPE_DBDATE, DBTYPE_DBTIME, DBTYPE_DBTIME2, DBTYPE_DBTIMESTAMP:  begin
             case SQLType of
@@ -1304,8 +1304,8 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
         end;
       {$IFDEF BCD_TEST}
       DBTYPE_NUMERIC: begin
-                        Double2BCD(Value, PBCD(@fABuffer[0])^);
-                        BCD2OleDBNumeric(PBCD(@fABuffer[0])^, PDB_NUMERIC(Data));
+                        Double2BCD(Value, PBCD(@fWBuffer[0])^);
+                        BCD2SQLNumeric(PBCD(@fWBuffer[0])^, PDB_NUMERIC(Data));
                       end;
       {$ENDIF}
       //DBTYPE_VARNUMERIC:;
@@ -1627,7 +1627,7 @@ begin
     PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
     Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
     case Bind.wType of
-      DBTYPE_NUMERIC:   BCD2OleDBNumeric(Value, PDB_Numeric(Data));
+      DBTYPE_NUMERIC:   BCD2SQLNumeric(Value, PDB_Numeric(Data));
       DBTYPE_NULL:      PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
       {$IFDEF CPU64}
       DBTYPE_I1, DBTYPE_I2, DBTYPE_I4, DBTYPE_I8: InternalBindSInt(Index, stLong, BCD2Int64(Value));
@@ -2289,8 +2289,8 @@ begin
       (DBTYPE_GUID or DBTYPE_BYREF): if Len = SizeOf(TGUID) then
                           PPointer(Data)^ := Value
                         else begin
-                          ValidGUIDToBinary(Value, @FABuffer[0]);
-                          BindList.Put(Index, PGUID(@FABuffer[0])^);
+                          ValidGUIDToBinary(Value, @fWBuffer[0]);
+                          BindList.Put(Index, PGUID(@fWBuffer[0])^);
                           PPointer(Data)^ := BindList[Index].Value;
                         end;
       DBTYPE_BYTES,
@@ -2380,8 +2380,8 @@ begin
       DBTYPE_I8:        PInt64(Data)^   := UnicodeToInt64Def(Value, Value+Len, 0);
       DBTYPE_GUID:      ValidGUIDToBinary(Value, Data);
       DBTYPE_GUID or DBTYPE_BYREF: begin
-                          ValidGUIDToBinary(Value, @FABuffer[0]);
-                          BindList.Put(Index, PGUID(@FABuffer[0])^);
+                          ValidGUIDToBinary(Value, @fWBuffer[0]);
+                          BindList.Put(Index, PGUID(@fWBuffer[0])^);
                           PPointer(Data)^ := BindList[Index].Value;
                         end;
       DBTYPE_BYTES, (DBTYPE_BYTES or DBTYPE_BYREF): begin
