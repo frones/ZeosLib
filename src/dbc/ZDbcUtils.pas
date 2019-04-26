@@ -89,6 +89,7 @@ type
     val:        array[0..SQL_MAX_NUMERIC_LEN -1] of BYTE; //fixed len
   end;
 
+  TZVariantTypes = set of TZVariantType;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -256,6 +257,7 @@ function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings:
 function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
 function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
 procedure ArrayValueToGUID(ZArray: PZArray; Index: Integer; GUID: PGUID);
+procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
 
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray; var MaxLen: LengthInt): TUnicodeStringDynArray; overload;
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeStringDynArray; overload;
@@ -278,6 +280,17 @@ const
     //finally the object types
     0,0//stArray, stDataSet
     );
+  NativeArrayValueTypes: array[TZSQLType] of TZVariantTypes = ([],
+    [vtNull, vtBoolean],
+    [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger],  //ordinals
+    [vtNull], [vtNull, {$IFDEF BCD_TEST}vtDouble{$ELSE}vtFloat{$ENDIF}], [vtNull, {$IFDEF BCD_TEST}vtCurrency{$ELSE}vtFloat{$ENDIF}], [vtNull, {$IFDEF BCD_TEST}vtBigDecimal{$ELSE}vtFloat{$ENDIF}], //floats
+    [vtNull, vtDateTime], [vtNull, vtDateTime], [vtNull, vtDateTime],
+    [vtNull, {$IFDEF BCD_TEST}vtGUID{$ELSE}vtBytes{$ENDIF}],
+    //now varying size types in equal order
+    [], [], [vtNull, vtBytes],
+    [vtNull, vtInterface], [vtNull, vtInterface], [vtNull, vtInterface],
+    //finally the object types
+    [], []);
 
 implementation
 
@@ -2378,8 +2391,8 @@ A_Conv: ZSysUtils.ValidGUIDToBinary(PAnsiChar(P), @GUID.D1);
       end;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: begin
-        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
-W_Conv: ZSysUtils.ValidGUIDToBinary(PAnsiChar(P), @GUID.D1);
+        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+W_Conv: ZSysUtils.ValidGUIDToBinary(PWideChar(P), @GUID.D1);
       end;
     vtBytes: case TZSQLType(ZArray.VArrayType) of
         stGUID: begin
@@ -2392,6 +2405,59 @@ W_Conv: ZSysUtils.ValidGUIDToBinary(PAnsiChar(P), @GUID.D1);
         stGUID:  GUID^ := TGUIDDynArray(ZArray.VArray)[Index];
         else goto DoRaise;
       end;
+    else
+DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+  end;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+end;
+
+procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
+var P: Pointer;
+  L: Integer;
+label W_Conv, A_Conv, DoRaise;
+begin
+  {$R-}
+  case ZArray.VArrayVariantType of
+    vtCharRec: begin
+        P := TZCharRecDynArray(ZArray.VArray)[Index].P;
+        L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
+        if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+        then goto W_Conv
+        else goto A_Conv;
+      end;
+    {$IFNDEF UNICODE}vtString,{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+    {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    vtRawByteString: begin
+        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
+A_Conv: Assert(ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.'), 'wrong bcd value');
+      end;
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString: begin
+        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd value');
+      end;
+    {$IFDEF BCD_TEST}vtBigDecimal, vtCurrency, vtDouble, {$ENDIF}
+    vtInteger, vtUInteger,
+    vtNull: case TZSQLType(ZArray.VArrayType) of
+              stBoolean:    ScaledOrdinal2BCD(Word(Ord(TBooleanDynArray(ZArray.VArray)[Index])), 0, BCD);
+              stByte:       ScaledOrdinal2BCD(Word(TByteDynArray(ZArray.VArray)[Index]), 0, BCD);
+              stShort:      ScaledOrdinal2BCD(SmallInt(TShortIntDynArray(ZArray.VArray)[Index]), 0, BCD);
+              stWord:       ScaledOrdinal2BCD(TWordDynArray(ZArray.VArray)[Index], 0, BCD);
+              stSmall:      ScaledOrdinal2BCD(TSmallIntDynArray(ZArray.VArray)[Index], 0, BCD);
+              stLongWord:   ScaledOrdinal2BCD(TCardinalDynArray(ZArray.VArray)[Index], 0, BCD);
+              stInteger:    ScaledOrdinal2BCD(TIntegerDynArray(ZArray.VArray)[Index], 0, BCD);
+              stLong:       ScaledOrdinal2BCD(TInt64DynArray(ZArray.VArray)[Index], 0, BCD);
+              stULong:      ScaledOrdinal2BCD(TUInt64DynArray(ZArray.VArray)[Index], 0, BCD);
+              stFloat:      DoubleToBCD(TSingleDynArray(ZArray.VArray)[Index], BCD);
+              stTime, stDate, stTimeStamp,
+              stDouble:     DoubleToBCD(TDoubleDynArray(ZArray.VArray)[Index], BCD);
+              stCurrency:   Currency2BCD(TCurrencyDynArray(ZArray.VArray)[Index], BCD);
+              stBigDecimal: BCD := TBcdDynArray(ZArray.VArray)[Index];
+              else goto DoRaise;
+            end;
     else
 DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;

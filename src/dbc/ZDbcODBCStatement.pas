@@ -837,7 +837,8 @@ begin
                       end;
       stBigDecimal:   {$IFDEF BCD_TEST}
                       for I := 0 to ArrayLen -1 do begin
-                        Curr2ODBCNumeric(ArrayValueToCurrency(Arr, I), PSQL_NUMERIC_STRUCT(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
+                        ArrayValueToBCD(Arr, i, PBCD(@fWBuffer[0])^);
+                        BCD2SQLNumeric(PBCD(@fWBuffer[0])^, Pointer(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
                         N[I] := NullInd[IsNullFromArray(Arr, I)];
                       end;
                       {$ELSE}
