@@ -245,7 +245,8 @@ begin
     else
       FMetadata := nil;
   FFreeTDS := ZFastCode.Pos('FreeTDS', Url.Protocol) > 0;
-
+  if FreeTDS and (Info.Values[ConnProps_CodePage] = '') then
+    Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
   FHandle := nil;
 end;
 
