@@ -2443,14 +2443,14 @@ W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd valu
     vtInteger, vtUInteger,
     vtNull: case TZSQLType(ZArray.VArrayType) of
               stBoolean:    ScaledOrdinal2BCD(Word(Ord(TBooleanDynArray(ZArray.VArray)[Index])), 0, BCD);
-              stByte:       ScaledOrdinal2BCD(Word(TByteDynArray(ZArray.VArray)[Index]), 0, BCD);
+              stByte:       ScaledOrdinal2BCD(Word(TByteDynArray(ZArray.VArray)[Index]), 0, BCD, False);
               stShort:      ScaledOrdinal2BCD(SmallInt(TShortIntDynArray(ZArray.VArray)[Index]), 0, BCD);
-              stWord:       ScaledOrdinal2BCD(TWordDynArray(ZArray.VArray)[Index], 0, BCD);
+              stWord:       ScaledOrdinal2BCD(TWordDynArray(ZArray.VArray)[Index], 0, BCD, False);
               stSmall:      ScaledOrdinal2BCD(TSmallIntDynArray(ZArray.VArray)[Index], 0, BCD);
-              stLongWord:   ScaledOrdinal2BCD(TCardinalDynArray(ZArray.VArray)[Index], 0, BCD);
+              stLongWord:   ScaledOrdinal2BCD(TCardinalDynArray(ZArray.VArray)[Index], 0, BCD, False);
               stInteger:    ScaledOrdinal2BCD(TIntegerDynArray(ZArray.VArray)[Index], 0, BCD);
               stLong:       ScaledOrdinal2BCD(TInt64DynArray(ZArray.VArray)[Index], 0, BCD);
-              stULong:      ScaledOrdinal2BCD(TUInt64DynArray(ZArray.VArray)[Index], 0, BCD);
+              stULong:      ScaledOrdinal2BCD(TUInt64DynArray(ZArray.VArray)[Index], 0, BCD, False);
               stFloat:      DoubleToBCD(TSingleDynArray(ZArray.VArray)[Index], BCD);
               stTime, stDate, stTimeStamp,
               stDouble:     DoubleToBCD(TDoubleDynArray(ZArray.VArray)[Index], BCD);
