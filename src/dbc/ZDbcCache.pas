@@ -2366,12 +2366,6 @@ end;
 function TZRowAccessor.GetPWideChar(ColumnIndex: Integer;
   out IsNull: Boolean; out Len: NativeUInt): PWideChar;
 var Data: PPointer;
-{$IFDEF BCD_TEST}
-procedure BCDToUni;
-begin
-  fUniTemp := BcdToSQLUni(PBCD(Data)^);
-end;
-{$ENDIF}
 label Set_Results, SetEmpty, Set_From_Temp;
 begin
   {$R-}
@@ -2434,8 +2428,8 @@ Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
                   end;
       stBigDecimal: begin
                     {$IFDEF BCD_TEST}
-                    BCDToUni; Result := Pointer(fUniTemp);
-                    Len := Length(fUniTemp);
+                    fUniTemp := BcdToSQLUni(PBCD(Data)^);
+                    goto Set_From_Temp;
                     {$ELSE}
                     Len := FloatToSqlUnicode(PExtended(Data)^, @TinyBuffer[0]);
                     Result := @TinyBuffer[0];

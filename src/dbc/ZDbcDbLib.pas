@@ -433,7 +433,6 @@ begin
     InternalExecuteStatement('begin transaction');
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
-
   if (FProvider = dpMsSQL) and (not FreeTDS) then
   begin
   {note: this is a hack from a user-request of synopse project!

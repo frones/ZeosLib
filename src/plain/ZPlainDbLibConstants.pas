@@ -864,21 +864,21 @@ type
     {$PACKRECORDS C}
   {$ENDIF}
 type
-  DBNUMERIC = packed record
+  TDBNUMERIC = packed record
     Precision:  Byte;
     Scale:      Byte;
     Sign:       Byte; { 1 = Positive, 0 = Negative }
     Val:        array[0..MAXNUMERICLEN-1] of Byte;
   end;
-  DBDECIMAL = DBNUMERIC;
+  TDBDECIMAL = TDBNUMERIC;
 
-  TDSDBNUMERIC = packed record
+  PTDSDBNUMERIC = ^TTDSDBNUMERIC;
+  TTDSDBNUMERIC = packed record
     Precision:  Byte;
     Scale:      Byte;
-    Sign:       Byte; { 1 = Positive, 0 = Negative }
-    Val:        array[0..MAXNUMERICLEN] of Byte;
+    Val:        array[0..32] of Byte;
   end;
-  TDSDBDECIMAL = TDSDBNUMERIC;
+  TTDSDBDECIMAL = TTDSDBNUMERIC;
 
   DBVARYCHAR = packed record
     Len: DBSMALLINT;
