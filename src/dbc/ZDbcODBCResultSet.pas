@@ -466,13 +466,13 @@ begin
   with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     case ColumnType of
       stBoolean,
-      stByte:       ScaledOrdinal2BCD(Word(PByte(fColDataPtr)^), 0, Result);
+      stByte:       ScaledOrdinal2BCD(Word(PByte(fColDataPtr)^), 0, Result, False);
       stShort:      ScaledOrdinal2BCD(SmallInt(PShortInt(fColDataPtr)^), 0, Result);
-      stWord:       ScaledOrdinal2BCD(PWord(fColDataPtr)^, 0, Result);
+      stWord:       ScaledOrdinal2BCD(PWord(fColDataPtr)^, 0, Result, False);
       stSmall:      ScaledOrdinal2BCD(PSmallInt(fColDataPtr)^, 0, Result);
-      stLongWord:   ScaledOrdinal2BCD(PCardinal(fColDataPtr)^, 0, Result);
+      stLongWord:   ScaledOrdinal2BCD(PCardinal(fColDataPtr)^, 0, Result, False);
       stInteger:    ScaledOrdinal2BCD(PInteger(fColDataPtr)^, 0, Result);
-      stULong:      ScaledOrdinal2BCD(PUInt64(fColDataPtr)^, 0, Result);
+      stULong:      ScaledOrdinal2BCD(PUInt64(fColDataPtr)^, 0, Result, False);
       stLong:       ScaledOrdinal2BCD(PInt64(fColDataPtr)^, 0, Result);
       stDate, stTime, stTimeStamp, stFloat,
       stDouble:     DoubleToBCD(GetDouble(ColumnIndex), Result);
