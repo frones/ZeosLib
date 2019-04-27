@@ -99,6 +99,7 @@ type
     FClientCP: Word;
     FResultFormat: PInteger;
     FBinaryValues, Finteger_datetimes, FIsOidAsBlob: Boolean;
+    FDecimalSeps: array[Boolean] of Char;
     procedure ClearPGResult;
   protected
     procedure Open; override;
@@ -1641,7 +1642,7 @@ begin
                         else Result := 0;
         else Result := 0;
       end
-    else SQLStrToFloatDef(P, 0, Result);
+    else SQLStrToFloatDef(P, 0, FDecimalSeps[ColumnOID = CASHOID], Result);
   end;
 end;
 
