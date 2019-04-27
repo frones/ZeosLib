@@ -6879,8 +6879,8 @@ zero:
     PWord(Buf)^ := Ord('-')+Ord('0') shl 8;
     Inc(Buf);
   end;
-  Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
   Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
+  Dec(Precision, Ord((Precision > DecimalPos) and (PByte(PLastNibble)^ and $0f = 0)));
   for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
     if I = DecimalPos then begin
       Inc(Buf, Ord((Buf = pBuf)));
@@ -6896,7 +6896,8 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
-  Dec(Buf, Ord((Precision > DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))));
+  while ((Precision > DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))) do Dec(Buf);
+  if ((Precision >= DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ = Ord(DecimalSep))) then Dec(Buf, 2);
   Result := Buf-PBuf;
 end;
 
@@ -6936,8 +6937,8 @@ zero:
     PCardinal(Buf)^ := Ord('-')+Ord('0') shl 16;
     Inc(Buf);
   end;
-  Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
   Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
+  Dec(Precision, Ord((Precision >= DecimalPos) and (PByte(PLastNibble)^ and $0f = 0)));
   for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
     if I = DecimalPos then begin
       Inc(Buf, Ord((Buf = pBuf)));
@@ -6953,7 +6954,8 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
-  Dec(Buf, Ord((Precision > DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))));
+  while ((Precision > DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))) do Dec(Buf);
+  if ((Precision >= DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ = Ord(DecimalSep))) then Dec(Buf, 2);
   Result := (Buf-PBuf);
 end;
 
