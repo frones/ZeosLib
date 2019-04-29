@@ -317,12 +317,8 @@ begin
                         Result := stCurrency;
                         ODBCCType := SQL_C_NUMERIC;
                       end else begin
-                        {$IFDEF BCD_TEST}
                         Result := stBigDecimal;
-                        ODBCCType := SQL_C_NUMERIC;
-                        {$ELSE}
-                        goto Dbl;
-                        {$ENDIF}
+                        ODBCCType := {$IFDEF BCD_TEST}SQL_C_NUMERIC{$ELSE}SQL_C_DOUBLE{$ENDIF};
                       end;
     SQL_INTEGER:      if UnSigned then begin
                         Result := stLongWord;
@@ -600,8 +596,8 @@ begin
     stBoolean, stByte, stShort:                         Result := 1;
     stWord, stSmall:                                    Result := 2;
     stLongWord, stInteger,stFloat:                      Result := 4;
-    stULong, stLong, stDouble:                          Result := 8;
-    stCurrency, stBigDecimal:                           Result := SizeOf(TSQL_NUMERIC_STRUCT);
+    stULong, stLong, stDouble{$IFNDEF BCD_TEST}, stBigDecimal{$ENDIF}: Result := 8;
+    stCurrency{$IFDEF BCD_TEST}, stBigDecimal{$ENDIF}:  Result := SizeOf(TSQL_NUMERIC_STRUCT);
     stString,
     stUnicodeString:            if ClientCodePage^.Encoding >= ceUTF16
                                 then Result := (Result +1) shl 1

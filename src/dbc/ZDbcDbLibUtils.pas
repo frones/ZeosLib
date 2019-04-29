@@ -209,13 +209,9 @@ begin
     tdsFlt8:
       Result := stDouble;
     tdsDecimal, tdsNumeric:
-      {$IFDEF BCD_TEST}
       if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
       then Result := stCurrency
       else Result := stBigDecimal;
-      {$ELSE}
-      Result := stDouble;
-      {$ENDIF}
     //tdsVariant: {from tds.h -> sybase only -> na't test it}
     tdsInt8:
       Result := stLong;

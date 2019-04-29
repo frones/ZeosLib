@@ -146,7 +146,7 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    procedure Test;
+    procedure TestGUIDs;
   end;
   {$ENDIF}
 
@@ -2879,7 +2879,7 @@ begin
   {$ENDIF}
 end;
 
-procedure TZInterbaseTestGUIDS.Test;
+procedure TZInterbaseTestGUIDS.TestGUIDs;
 var GuidHex: string;
 begin
   // Init variables
