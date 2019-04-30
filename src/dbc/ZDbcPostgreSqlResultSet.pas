@@ -321,6 +321,7 @@ begin
             stInteger     : JSONWriter.Add(PG2Integer(P));
             stLong        : JSONWriter.Add(PG2Int64(P));
             stCurrency    : JSONWriter.AddCurr64(PGNumeric2Currency(P));
+            stFloat       : JSONWriter.AddSingle(PG2Single(P));
             stDouble      : JSONWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
                               PGNumeric2BCD(P, BCD);
@@ -350,6 +351,7 @@ jmpDate:                      if jcoMongoISODate in JSONComposeOptions
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 else JSONWriter.Add('"');
+                              PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
                               DateToIso8601PChar(@FTinyBuffer[0], True, TS.Year, TS.Month, TS.Day);
                               JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], 10);
                               if jcoMongoISODate in JSONComposeOptions
