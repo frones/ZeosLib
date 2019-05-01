@@ -1247,7 +1247,9 @@ begin
     @SybaseAPI.dbclropt              := GetAddress('dbclropt');
     @SybaseAPI.dbcmd                 := GetAddress('dbcmd');
     @SybaseAPI.dbfcmd                := GetAddress('dbfcmd');
-    @SybaseAPI.dbcmdrow              := GetAddress('dbcmdrow');
+    @SybaseAPI.dbcmdrow              := GetAddress('DBCMDROW'); //Syb use uppercase name!!
+    if not Assigned(SybaseAPI.dbcmdrow) then //test if renamed
+      @SybaseAPI.dbcmdrow            := GetAddress('dbcmdrow');
     @SybaseAPI.dbcolbrowse           := GetAddress('dbcolbrowse');
     @SybaseAPI.dbcollen              := GetAddress('dbcollen');
     @SybaseAPI.dbcolinfo             := GetAddress('dbcolinfo');
@@ -1257,8 +1259,12 @@ begin
     @SybaseAPI.dbcoltype             := GetAddress('dbcoltype');
     @SybaseAPI.dbcolutype            := GetAddress('dbcolutype');
     @SybaseAPI.dbconvert             := GetAddress('dbconvert');
-    @SybaseAPI.dbcount               := GetAddress('dbcount');
-    @SybaseAPI.dbcurcmd              := GetAddress('dbcurcmd');
+    @SybaseAPI.dbcount               := GetAddress('DBCOUNT'); //Syb use uppercase name!!
+    if not Assigned(SybaseAPI.dbcount) then //test if renamed
+      @SybaseAPI.dbcount            := GetAddress('dbcount');
+    @SybaseAPI.dbcurcmd              := GetAddress('DBCURCMD'); //Syb use uppercase name!!
+    if not Assigned(SybaseAPI.dbcurcmd) then //test if renamed
+      @SybaseAPI.dbcurcmd            := GetAddress('dbcurcmd');
     @SybaseAPI.dbcurrow              := GetAddress('dbcurrow');
     @SybaseAPI.dbcursor              := GetAddress('dbcursor');
     @SybaseAPI.dbcursorbind          := GetAddress('dbcursorbind');
@@ -1270,7 +1276,9 @@ begin
     @SybaseAPI.dbdata                := GetAddress('dbdata');
     @SybaseAPI.dbdatecrack           := GetAddress('dbdatecrack');
     @SybaseAPI.dbdatlen              := GetAddress('dbdatlen');
-    @SybaseAPI.dbdead                := GetAddress('dbdead');
+    @SybaseAPI.dbdead                := GetAddress('DBDEAD');//Syb use uppercase name!!
+    if not Assigned(SybaseAPI.dbdead) then //test if renamed
+      @SybaseAPI.dbdead              := GetAddress('dbdead');
     @SybaseAPI.dbexit                := GetAddress('dbexit');
     @SybaseAPI.dbfcmd                := GetAddress('dbfcmd');
     @SybaseAPI.dbfirstrow            := GetAddress('dbfirstrow');
