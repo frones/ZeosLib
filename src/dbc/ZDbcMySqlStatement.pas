@@ -1664,6 +1664,7 @@ begin
 
   bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffSets.decimals)^;
   case bind^.buffer_type of
+    FIELD_TYPE_NULL: bind^.Length := 0;
     FIELD_TYPE_BIT: case PULong(NativeUInt(MYSQL_FIELD)+FieldOffSets.length)^ of
                       0..8  : bind^.Length := SizeOf(Byte);
                       9..16 : bind^.Length := SizeOf(Word);

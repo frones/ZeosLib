@@ -70,6 +70,7 @@ type
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
     FLastOptainedRS: IZResultSet;
+    FClientCP: Word;
   protected
     procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure FetchResults;
@@ -159,6 +160,7 @@ begin
   else
     Self.FUserEncoding := ceDefault;
   FNeedNCharDetection := True;
+  FClientCP := ConSettings.ClientCodePage.CP;
 end;
 
 {**
@@ -198,21 +200,18 @@ end;
 
 function TZDBLibPreparedStatementEmulated.GetParamAsString(
   ParamIndex: Integer): RawByteString;
-var
-  Len: Integer;
-  P: PAnsiChar;
+var P: PAnsiChar;
 begin
   // Todo: Talk with EgonHugeist wether this requiresmodifications for his Mextgen effort
   if InParamCount <= ParamIndex
   then Result := 'NULL'
   else Result := PrepareSQLParameter(InParamValues[ParamIndex],
       InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
-  Len := Length(Result);
   P := Pointer(Result);
-  if (Len > 0) and (P^ = '''') and ((P+Len-1)^ = '''') and not IsNCharIndex[ParamIndex] then begin
-    if (FDBLibConnection.GetProvider = dpMsSQL) and FDBLibConnection.FreeTDS then
-      Result := 'N' + Result;
-  end;
+  if (P <> nil) and (PByte(P)^ = Ord(#39)) and not IsNCharIndex[ParamIndex] and
+     (FDBLibConnection.GetProvider = dpMsSQL) and FDBLibConnection.FreeTDS and
+     (PByte(P+Length(Result)-1)^ = Ord(#39)) and (FClientCP = zCP_UTF8)
+  then Result := 'N' + Result;
 end;
 
 {**
