@@ -70,6 +70,7 @@ type
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
     FLastOptainedRS: IZResultSet;
+    FClientCP: Word;
   protected
     procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure FetchResults;
@@ -159,6 +160,7 @@ begin
   else
     Self.FUserEncoding := ceDefault;
   FNeedNCharDetection := True;
+  FClientCP := ConSettings.ClientCodePage.CP;
 end;
 
 {**
@@ -207,7 +209,7 @@ begin
       InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
   if (P <> nil) and (PByte(P)^ = Ord(#39)) and not IsNCharIndex[ParamIndex] and
      (FDBLibConnection.GetProvider = dpMsSQL) and FDBLibConnection.FreeTDS and
-     (PByte(P+Length(Result)-1)^ = Ord(#39))
+     (PByte(P+Length(Result)-1)^ = Ord(#39)) and (FClientCP = zCP_UTF8)
   then Result := 'N' + Result;
 end;
 

@@ -1566,7 +1566,8 @@ begin
           Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
         Result.UpdateSmall(ProcColDataTypeIndex,
-          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'),
+            GetSmallByName('SCALE'), ConSettings.CPType)));
         Result.UpdateString(ProcColTypeNameIndex, GetStringByName('TYPE_NAME'));
         Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('PRECISION'));
         Result.UpdateInt(ProcColLengthIndex, GetIntByName('LENGTH'));
@@ -1817,7 +1818,8 @@ begin
       Result.UpdateString(ColumnNameIndex, tmp);
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(tmp));
       //The value in the resultset will be used
-      SQLType := ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType);
+      SQLType := ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'),
+        GetIntByName('SCALE'), ConSettings.CPType);
       tmp := UpperCase(GetStringByName('TYPE_NAME'));
       if SQLType = stUnknown then
         Result.UpdateNull(TableColColumnTypeIndex)
@@ -1830,7 +1832,9 @@ begin
       else
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
       Result.UpdateString(TableColColumnTypeNameIndex, tmp);
-      Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('LENGTH'));
+      if SQLType in [stCurrency, stBigDecimal]
+      then Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('PRECISION'))
+      else Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('LENGTH'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('LENGTH'));
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('SCALE'));
       Result.UpdateSmall(TableColColumnNumPrecRadixIndex, GetSmallByName('RADIX'));
@@ -2064,7 +2068,7 @@ begin
       Result.UpdateSmall(TableColVerScopeIndex, GetSmallByName('SCOPE'));
       Result.UpdateString(TableColVerColNameIndex, GetStringByName('COLUMN_NAME'));
       Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertODBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'), GetIntByName('LENGTH'), GetIntByName('SCALE'), ConSettings.CPType)));
       Result.UpdateString(TableColVerTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('LENGTH'));
       Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('LENGTH'));
@@ -2363,7 +2367,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdateString(TypeInfoTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertODBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'), GetSmallByName('MAXIMUM_SCALE'), ConSettings.CPType)));
       Result.UpdateInt(TypeInfoPecisionIndex, GetIntByName('PRECISION'));
       Result.UpdateString(TypeInfoLiteralPrefixIndex, GetStringByName('LITERAL_PREFIX'));
       Result.UpdateString(TypeInfoLiteralSuffixIndex, GetStringByName('LITERAL_SUFFIX'));
@@ -2636,7 +2640,7 @@ begin
         Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
       end;
       Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertODBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'), GetSmallByName('SCALE'), ConSettings.CPType)));
       Result.UpdateString(ProcColTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('PRECISION'));
       Result.UpdateInt(ProcColLengthIndex, GetIntByName('LENGTH'));
@@ -2918,7 +2922,7 @@ begin
       Result.UpdateString(ColumnNameIndex, GetStringByName('COLUMN_NAME'));
 //The value in the resultset will be used
       Result.UpdateSmall(TableColColumnTypeIndex,
-        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), GetIntByName('COLUMN_SIZE'), GetIntByName('DECIMAL_DIGITS'), ConSettings.CPType)));
       Result.UpdateString(TableColColumnTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('BUFFER_LENGTH'));
@@ -3120,7 +3124,7 @@ begin
       Result.UpdateSmall(TableColVerScopeIndex, GetSmallByName('SCOPE'));
       Result.UpdateString(TableColVerColNameIndex, GetStringByName('COLUMN_NAME'));
       Result.UpdateSmall(TableColVerDataTypeIndex,
-        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), GetIntByName('COLUMN_SIZE'), GetIntByName('DECIMAL_DIGITS'), ConSettings.CPType)));
       Result.UpdateString(TableColVerTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('BUFFER_LENGTH'));
@@ -3571,7 +3575,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdateString(TypeInfoTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateSmall(TypeInfoDataTypeIndex,
-        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'), GetSmallByName('MAXIMUM_SCALE'), ConSettings.CPType)));
       Result.UpdateInt(TypeInfoPecisionIndex, GetIntByName('PRECISION'));
       Result.UpdateString(TypeInfoLiteralPrefixIndex, GetStringByName('LITERAL_PREFIX'));
       Result.UpdateString(TypeInfoLiteralSuffixIndex, GetStringByName('LITERAL_SUFFIX'));
@@ -3743,7 +3747,7 @@ begin
       Result.UpdateString(UDTColTypeNameIndex, GetStringByName('TYPE_NAME'));
       Result.UpdateString(UDTColClassNameIndex, GetStringByName('JAVA_CLASS'));
       Result.UpdateSmall(UDTColDataTypeIndex, Ord(ConvertODBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'), 0, 0, ConSettings.CPType)));
       Result.UpdateString(UDTColRemarksIndex, GetStringByName('REMARKS'));
       Result.InsertRow;
     end;

@@ -210,6 +210,7 @@ function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
 function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; out Result: Currency; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: Integer = 0); overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
 {$IFEND}
@@ -225,6 +226,7 @@ procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; out Result: Sing
 function SQLStrToFloatDef(Value: PWideChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; out Result: Currency; Len: Integer = 0); overload;
+procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: Integer = 0); overload;
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
 {$IFEND}
@@ -1444,36 +1446,53 @@ end;
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency;
   out Result: Currency; Len: Integer);
-var
-  InvalidPos: Integer;
-  DynBuf: TBytes;
-  StatBuf: Array[0..32] of Byte;
-  PBuf: PByteArray;
+var InvalidPos: Integer;
 begin
   Result := Def;
-  if Assigned(Value) then
-  begin
-    Result := ValRawDbl(Pointer(Value), AnsiChar('.'), InvalidPos);
-    if InvalidPos <> 0 then //posible MoneyType
-      if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
-        RawToFloatDef(Value, AnsiChar(','), Def, Result)
-      else
-      begin
-        if Len = 0 then
-          Len := ZFastCode.StrLen(Value);
-        if (InvalidPos > 1) and (Ord((Value+InvalidPos-1)^) = Ord(' ')) then
-          Exit;//fixed width str
-        if Len > SizeOf(StatBuf)-1 then begin
-          SetLength(DynBuf, Len+1);
-          PBuf := Pointer(DynBuf);
-        end else
-          PBuf := @StatBuf[0];
-        if CurrToRawBuff(Value, PBuf, Len) then
-          RawToFloatDef(PAnsiChar(PBuf), AnsiChar('.'), Def, Result)
-        else
-          Result := Def;
-      end;
+  if Assigned(Value) then begin
+    if Len = 0 then
+      Len := ZFastCode.StrLen(Value);
+    InvalidPos := Len;
+    Result := ValRawCurr(PByteArray(Value), '.', InvalidPos);
+    if InvalidPos = Len then Exit;
+    if InvalidPos < Len then begin//posible MoneyType
+      if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+InvalidPos)^) in [Ord('0')..Ord('9')]) then begin //nope no money. Just a comma instead of dot.
+        InvalidPos := Len;
+        Result := ValRawCurr(PByteArray(Value), ',', InvalidPos);
+        if InvalidPos = Len then
+          Exit;
+      end
+    end;
+    if Ord((Value+InvalidPos-1)^) = Ord(' ') then Exit;
   end;
+  Result := Def;
+end;
+
+procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: Integer = 0); overload;
+var InvalidPos: Integer;
+begin
+  if Assigned(Value) then begin
+    if Len = 0 then
+      Len := ZFastCode.StrLen(Value);
+    if DecimalSep = #0 then
+      DecimalSep := '.';
+    InvalidPos := Len;
+    Result := ValRawCurr(PByteArray(Value), DecimalSep, InvalidPos);
+    if InvalidPos = Len then Exit;
+    if InvalidPos < Len then begin //posible MoneyType
+      if (Ord((Value+InvalidPos-1)^) in [Ord('.'), Ord(',')]) and (Ord((Value+InvalidPos-1)^) <> Ord(DecimalSep)) and (Ord((Value+InvalidPos)^) in [Ord('0')..Ord('9')]) then begin //nope no money. Just a comma instead of dot.
+        InvalidPos := Len;
+        if DecimalSep = '.'
+        then DecimalSep := ','
+        else DecimalSep := '.';
+        Result := ValRawCurr(PByteArray(Value), DecimalSep, InvalidPos);
+        if InvalidPos = Len then
+          Exit;
+      end;
+      if Ord((Value+InvalidPos-1)^) = Ord(' ') then Exit;
+    end;
+  end;
+  Result := Def;
 end;
 
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
@@ -1669,41 +1688,62 @@ begin
 end;
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency;
-  out Result: Currency; Len: Integer = 0);
-var
-  InvalidPos: Integer;
-  DynBuf: TWordDynArray;
-  StatBuf: Array[0..32] of Word;
-  PBuf: PWordArray;
+  out Result: Currency; Len: Integer);
+var InvalidPos: Integer;
 begin
-  Result := Def;
-  if Assigned(Value) then
-  begin
-    Result := ValUnicodeDbl(PWordArray(Value), WideChar('.'), InvalidPos);
-    if InvalidPos <> 0 then //posible MoneyType
-      if ((Value+InvalidPos-1)^ = ',') and (Ord((Value+Len*Ord(Len>0)-1)^) in [Ord('0')..Ord('9')]) then  //nope no money. Just a comma instead of dot.
-        UnicodeToFloatDef(Value, WideChar(','), Def, Result)
-      else
-      begin
-        if Len = 0 then
-          {$IFDEF WITH_PWIDECHAR_STRLEN}
-          Len := SysUtils.StrLen(Value);
-          {$ELSE}
-          Len := Length(Value);
-          {$ENDIF}
-        if (InvalidPos > 1) and ((Value+InvalidPos-1)^ = ' ') then
-          Exit;//fixed width str
-        if Len > SizeOf(StatBuf)-1 then begin
-          SetLength(DynBuf, Len+1);
-          PBuf := Pointer(DynBuf);
-        end else
-          PBuf := @StatBuf[0];
-        if CurrToUnicodeBuf(Value, PBuf, Len) then
-          UnicodeToFloatDef(PWideChar(PBuf), WideChar('.'), Def, Result)
-        else
-          Result := Def;
+  if Assigned(Value) then begin
+    if Len = 0 then
+      {$IFDEF WITH_PWIDECHAR_STRLEN}
+      Len := SysUtils.StrLen(Value);
+      {$ELSE}
+      Len := Length(Value);
+      {$ENDIF}
+    InvalidPos := Len;
+    Result := ValUnicodeCurr(PWordArray(Value), '.', InvalidPos);
+    if InvalidPos = Len then Exit;
+    if InvalidPos < Len then begin//posible MoneyType
+      if (Ord((Value+InvalidPos-1)^) = Ord(',')) and (Ord((Value+InvalidPos)^) in [Ord('0')..Ord('9')]) then begin //nope no money. Just a comma instead of dot.
+        InvalidPos := Len;
+        Result := ValUnicodeCurr(PWordArray(Value), ',', InvalidPos);
+        if InvalidPos = Len then
+          Exit;
       end;
+      if Ord((Value+InvalidPos-1)^) = Ord(' ') then Exit;
+    end;
   end;
+  Result := Def;
+end;
+
+procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; Var DecimalSep: Char;
+  out Result: Currency; Len: Integer); overload;
+var InvalidPos: Integer;
+begin
+  if Assigned(Value) then begin
+    if Len = 0 then
+      {$IFDEF WITH_PWIDECHAR_STRLEN}
+      Len := SysUtils.StrLen(Value);
+      {$ELSE}
+      Len := Length(Value);
+      {$ENDIF}
+    if DecimalSep = #0 then
+      DecimalSep := '.';
+    InvalidPos := Len;
+    Result := ValUnicodeCurr(PWordArray(Value), DecimalSep, InvalidPos);
+    if InvalidPos = Len then Exit;
+    if InvalidPos < Len then begin//posible MoneyType
+      if (Ord((Value+InvalidPos-1)^) in [Ord('.'), Ord(',')]) and (Ord((Value+InvalidPos-1)^) <> Ord(DecimalSep)) and
+         (Ord((Value+InvalidPos)^) in [Ord('0')..Ord('9')]) then begin //nope no money. Just a comma instead of dot.
+        InvalidPos := Len;
+        if DecimalSep = '.'
+        then DecimalSep := ','
+        else DecimalSep := '.';
+        Result := ValUnicodeCurr(PWordArray(Value), DecimalSep, InvalidPos);
+        if InvalidPos = Len then Exit;
+      end;
+      if Ord((Value+InvalidPos-1)^) = Ord(' ') then Exit;
+    end;
+  end;
+  Result := Def;
 end;
 
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
@@ -6839,8 +6879,8 @@ zero:
     PWord(Buf)^ := Ord('-')+Ord('0') shl 8;
     Inc(Buf);
   end;
-  Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
   Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
+  Dec(Precision, Ord((Precision > DecimalPos) and (PByte(PLastNibble)^ and $0f = 0)));
   for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
     if I = DecimalPos then begin
       Inc(Buf, Ord((Buf = pBuf)));
@@ -6856,7 +6896,8 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
-  Dec(Buf, Ord((Precision > DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))));
+  while ((Precision > DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))) do Dec(Buf);
+  if ((Precision >= DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ = Ord(DecimalSep))) then Dec(Buf, 2);
   Result := Buf-PBuf;
 end;
 
@@ -6896,8 +6937,8 @@ zero:
     PCardinal(Buf)^ := Ord('-')+Ord('0') shl 16;
     Inc(Buf);
   end;
-  Dec(Precision, 1 + Ord((DecimalPos+1 = Precision) and (PByte(PLastNibble)^ and $0f = 0)));
   Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
+  Dec(Precision, Ord((Precision >= DecimalPos) and (PByte(PLastNibble)^ and $0f = 0)));
   for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
     if I = DecimalPos then begin
       Inc(Buf, Ord((Buf = pBuf)));
@@ -6913,7 +6954,8 @@ zero:
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     Inc(Buf);
   end;
-  Dec(Buf, Ord((Precision > DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))));
+  while ((Precision > DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))) do Dec(Buf);
+  if ((Precision >= DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ = Ord(DecimalSep))) then Dec(Buf, 2);
   Result := (Buf-PBuf);
 end;
 

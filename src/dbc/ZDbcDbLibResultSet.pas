@@ -123,15 +123,19 @@ type
 
   end;
 
+  TZDBLIBColumnInfo = class(TZColumnInfo)
+  public
+    TDSType: TTDSType;
+  end;
   {** Implements DBLib ResultSet. }
   TZDBLibResultSet = class(TZSimpleResultSet)
   private
     FSQL: string;
     FCheckDBDead: Boolean;
     FHandle: PDBPROCESS;
-    DBLibColTypeCache: Array of TTDSType;
     DBLibColumnCount: Integer;
     FUserEncoding: TZCharEncoding;
+    FDecimalSep: Char;
     procedure CheckColumnIndex(ColumnIndex: Integer);
   protected
     FDBLibConnection: IZDBLibConnection;
@@ -154,6 +158,7 @@ type
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    function GetCurrency(ColumnIndex: Integer): Currency; override;
     {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
     {$ELSE !BCD_TEST}
@@ -183,7 +188,8 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
-uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode, ZClasses
+uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode,
+  ZClasses, ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZAbstractDblibDataProvider.Create(Connection: IZDBLibConnection);
@@ -345,31 +351,39 @@ end;
 }
 procedure TZDBLibResultSet.Open;
 var
-  ColumnInfo: TZColumnInfo;
+  ColumnInfo: TZDBLIBColumnInfo;
   I: Integer;
   ColInfo: DBCOL;
   tdsColInfo: TTDSDBCOL;
   NeedsLoading: Boolean;
 label AssignGeneric;
-  procedure AssignGenericColumnInfoFromZDBCOL(ArrayIndex: Integer; ColInfo: ZDBCOL);
+  procedure AssignGenericColumnInfoFromZDBCOL(ColumnInfo: TZDBLIBColumnInfo; ColInfo: ZDBCOL);
   begin
-    DBLibColTypeCache[ArrayIndex] := TTDSType(ColInfo.Typ);
-    ColumnInfo.ColumnType := ConvertTDSTypeToSqlType(DBLibColTypeCache[ArrayIndex], ConSettings.CPType);
-    if ColumnInfo.ColumnType = stUnknown
-    then NeedsLoading := true;
-    if DBLibColTypeCache[ArrayIndex] in [tdsNumeric, tdsDecimal] then
-      ColumnInfo.Scale := ColInfo.Scale
-    else
-      ColumnInfo.Scale := 0;
-    ColumnInfo.Precision := ColInfo.MaxLength;
-    if (DBLibColTypeCache[ArrayIndex] = tdsNumeric) and (colinfo.Scale = 0) and (ColInfo.Precision = 19)
-    then NeedsLoading := true; // we cannot be sure if it is bigint or numeric - let somebody else deal with this...
-    ColumnInfo.CaseSensitive := ColInfo.CaseSensitive = 1;
-    ColumnInfo.Nullable := TZColumnNullableType(ColInfo.Null);
-    ColumnInfo.ReadOnly := not (ColInfo.Updatable = 1);
-    ColumnInfo.Writable := ColInfo.Updatable = 1;
-    ColumnInfo.AutoIncrement := ColInfo.Identity;
-    ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong];
+    with ColumnInfo do begin
+      TDSType := TTDSType(ColInfo.Typ);
+      if TDSType in [tdsNumeric, tdsDecimal] then begin
+        Scale := ColInfo.Scale;
+        Precision := ColInfo.Precision;
+      end else if TDSType = tdsMoney then begin
+        Scale := 4;
+        Precision := 19;
+        Currency := True;
+      end else begin
+        Scale := 0;
+        Precision := ColInfo.MaxLength;
+      end;
+      ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale, ConSettings.CPType);
+      if ColumnType = stUnknown
+      then NeedsLoading := true;
+      if (TDSType = tdsNumeric) and (Scale = 0) and (Precision = 19)
+      then NeedsLoading := true; // we cannot be sure if it is bigint or numeric - let somebody else deal with this...
+      CaseSensitive := ColInfo.CaseSensitive = 1;
+      Nullable := TZColumnNullableType(ColInfo.Null);
+      ReadOnly := not (ColInfo.Updatable = 1);
+      Writable := ColInfo.Updatable = 1;
+      AutoIncrement := ColInfo.Identity;
+      Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stCurrency, stDouble, stBigDecimal];
+    end;
   end;
   function ValueToString(P: PAnsiChar): String;
   begin
@@ -390,12 +404,10 @@ begin
   { Fills the column info }
   ColumnsInfo.Clear;
   DBLibColumnCount := FPlainDriver.dbnumcols(FHandle);
-  SetLength(DBLibColTypeCache, DBLibColumnCount);
   for i := 1 to DBLibColumnCount do
   begin
-    ColumnInfo := TZColumnInfo.Create;
-    if FDBLibConnection.FreeTDS then
-    begin
+    ColumnInfo := TZDBLIBColumnInfo.Create;
+    if FDBLibConnection.FreeTDS then begin
       tdsColInfo.SizeOfStruct := SizeOf(TTDSDBCOL);
       FillChar(tdsColInfo.Name[0], tdsColInfo.SizeOfStruct- SizeOf(DBInt), #0);
       if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @tdsColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
@@ -407,7 +419,7 @@ begin
         ColumnInfo.ColumnLabel := ValueToString(@tdsColInfo.ActualName[0]);
       if Byte(tdsColInfo.TableName[0]) <> Ord(#0) then
         ColumnInfo.TableName := ValueToString(@tdsColInfo.TableName[0]);
-      AssignGenericColumnInfoFromZDBCOL(I-1, tdsColInfo.ColInfo);
+      AssignGenericColumnInfoFromZDBCOL(ColumnInfo, tdsColInfo.ColInfo);
     end else if FDBLibConnection.GetProvider = dpMsSQL then begin
       ColInfo.SizeOfStruct := SizeOf(DBCOL); //before execute dbcolinfo we need to set the record size -> 122 Byte or we fail
       if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @ColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
@@ -419,21 +431,19 @@ begin
         ColumnInfo.ColumnLabel := ValueToString(@ColInfo.ActualName[0]);
       if (Byte(ColInfo.TableName[0]) <> Ord(#0)) then
         ColumnInfo.TableName := ValueToString(@ColInfo.TableName[0]);
-      AssignGenericColumnInfoFromZDBCOL(I-1, ColInfo.ColInfo);
-    end
-    else
-    begin
+      AssignGenericColumnInfoFromZDBCOL(ColumnInfo, ColInfo.ColInfo);
+    end else with ColumnInfo do begin
 AssignGeneric:  {this is the old way we did determine the ColumnInformations}
-      ColumnInfo.ColumnName := ValueToString(FPlainDriver.dbColSource(FHandle, I));
-      ColumnInfo.ColumnLabel := ValueToString(FPlainDriver.dbColName(FHandle, I));
-      DBLibColTypeCache[I-1] := TTDSType(FPlainDriver.dbColtype(FHandle, I));
-      ColumnInfo.ColumnType := ConvertTDSTypeToSqlType(DBLibColTypeCache[I-1], ConSettings.CPType);
+      ColumnName := ValueToString(FPlainDriver.dbColSource(FHandle, I));
+      ColumnLabel := ValueToString(FPlainDriver.dbColName(FHandle, I));
+      TDSType := TTDSType(FPlainDriver.dbColtype(FHandle, I));
+      Precision := FPlainDriver.dbCollen(FHandle, I);
+      Scale := 0;
+      ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale, ConSettings.CPType);
       if ColumnInfo.ColumnType = stUnknown
       then NeedsLoading := true;
-      ColumnInfo.Currency := DBLibColTypeCache[I-1] in [tdsMoney, tdsMoney4, tdsMoneyN];
-      ColumnInfo.Precision := FPlainDriver.dbCollen(FHandle, I);
-      ColumnInfo.Scale := 0;
-      ColumnInfo.Signed := not (DBLibColTypeCache[I-1] = tdsInt1);
+      Currency := TDSType in [tdsMoney, tdsMoney4, tdsMoneyN];
+      Signed := not (TDSType = tdsInt1);
     end;
     if (ColumnInfo.ColumnType in [stString, stUnicodeString]) then begin
       if (ConSettings.ClientCodepage^.IsStringFieldCPConsistent) then
@@ -522,52 +532,40 @@ end;
 }
 function TZDBLibResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
-  DT: TTDSType;
   dbData: Pointer;
   dbDatLen: Integer;
   label Convert{, DecLenByTrailingSpaces, AssignFromFRawTemp};
 begin
   Len := 0;
-  DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF GENERIC_INDEX}
-  //DBLib -----> Col/Param starts whith index 1
-  ColumnIndex := ColumnIndex +1;
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, dbData, dbDatLen);
-  Result := dbData;
-  LastWasNull := Result = nil;
-  if not LastWasNull then
-    if (DT = tdsChar) or (DT = tdsText) then
-    begin
-      Len := NativeUInt(dbDatLen);
-      while (Len > 0) and (AnsiChar((Result+Len -1)^) = AnsiChar(' ')) do Dec(Len);
-      if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage = zCP_NONE then
-        case ZDetectUTF8Encoding(Result, Len) of
-          etUTF8: TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage := zCP_UTF8;
-          etAnsi: TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-          else
-            ;
-        end;
-    end
-    else
-    if DT = tdsUnique then
-    begin
-      FRawTemp := GUIDToRaw(PGUID(Result)^);
-      Result := Pointer(FRawTemp);
-      Len := 38;
-    end
-    else
-    if (DT = tdsImage) then
-      Len := NativeUInt(dbDatLen)
-    else
-    begin
-      Convert:
-      SetLength(FRawTemp, 4001);
-      Len := FPlainDriver.dbconvert(FHandle, Ord(DT), dbData,
-        Len, Ord(tdsChar), Pointer(FRawTemp), 4001);
-      while (Len > 0) and (AnsiChar((Result+Len -1)^) = AnsiChar(' ')) do Dec(Len);
-      Result := Pointer(FRawTemp);
-    end;
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, dbData, dbDatLen);
+    Result := dbData;
+    LastWasNull := Result = nil;
+    if not LastWasNull then
+      if (TdsType = tdsChar) or (TdsType = tdsText) then begin
+        Len := NativeUInt(dbDatLen);
+        while (Len > 0) and (AnsiChar((Result+Len -1)^) = AnsiChar(' ')) do Dec(Len);
+        if ColumnCodePage = zCP_NONE then
+          case ZDetectUTF8Encoding(Result, Len) of
+            etUTF8: ColumnCodePage := zCP_UTF8;
+            etAnsi: ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+            else  ;
+          end;
+      end else if tdsType = tdsUnique then begin
+        Result := @fTinyBuffer[0];
+        GUIDToBuffer(dbData, Result, True, True);
+        Len := 38;
+      end else if (TDSType = tdsImage) then
+        Len := NativeUInt(dbDatLen)
+      else begin
+        Convert:
+        SetLength(FRawTemp, 4001);
+        Len := FPlainDriver.dbconvert(FHandle, Ord(TDSType), dbData, Len, Ord(tdsChar), Pointer(FRawTemp), 4001);
+        while (Len > 0) and (AnsiChar((Result+Len -1)^) = AnsiChar(' ')) do Dec(Len);
+        Result := Pointer(FRawTemp);
+      end;
+  end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
 end;
 
@@ -582,73 +580,64 @@ end;
 }
 function TZDBLibResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 var
-  DT: TTDSType;
   Tmp: RawByteString;
   P: PAnsiChar;
   Len: LengthInt;
   DatLen: Integer;
 begin
-  {$IFDEF GENERIC_INDEX}
-  //DBLib -----> Col/Param starts whith index 1
-  FDataProvider.GetColData(ColumnIndex+1, Pointer(P), DatLen); //hint DBLib isn't #0 terminated @all
-  {$ELSE}
-  FDataProvider.GetColData(ColumnIndex, Pointer(P), DatLen); //hint DBLib isn't #0 terminated @all
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  Len := DatLen;
-  DT := DBLibColTypeCache[ColumnIndex];
-  LastWasNull := P = nil;
-  if LastWasNull then
-    Result := ''
-  else
-    if (DT = tdsChar) or (DT = tdsText) then
-    begin
-      while (Len > 0) and (AnsiChar((P+Len -1)^) = AnsiChar(' ')) do Dec(Len);
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Pointer(P), DatLen); //hint DBLib isn't #0 terminated @all
+    Len := DatLen;
+    LastWasNull := P = nil;
+    if LastWasNull then
+      Result := ''
+    else if (TDSType = tdsChar) or (TDSType = tdsText) then begin
+      Len := GetAbsorbedTrailingSpacesLen(P, Len);
       if Len = 0 then
         Result := ''
       else
       {TDS protocol issue: we dont't know if UTF8(NCHAR) or ANSI(CHAR) fields are coming in: no idea about encoding..
-       So selt's test encoding until we know it -----> bad for ASCII7 only }
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
+       So let's test encoding until we know it -----> bad for ASCII7 only }
+        case ColumnType of
           stAsciiStream, stUnicodeStream:  //DBlib doesn't convert NTEXT so in all cases we've ansi-Encoding
             Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP);
           else//stString, stUnicodeString:
-            if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage = zCP_NONE then
+            if ColumnCodePage = zCP_NONE then
               case ZDetectUTF8Encoding(P, Len) of
-                etUTF8:
-                  begin
-                    TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
+                etUTF8: begin
+                    ColumnCodePage := zCP_UTF8;
                     Result := PRawToUnicode(P, Len, zCP_UTF8);
                   end;
-                etAnsi:
-                  begin
-                    TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+                etAnsi: begin
+                    ColumnCodePage := ConSettings^.ClientCodePage^.CP;
                     Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP);
                   end;
                 else //ASCII7
                   Result := USASCII7ToUnicodeString(P, Len);
               end
             else
-              Result := PRawToUnicode(P, Len, TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage)
+              Result := PRawToUnicode(P, Len, ColumnCodePage)
         end
-    end else
-    if DT = tdsUnique then
-      Result := GUIDToUnicode(PGUID(P)^)
-    else if DT = tdsSybaseLongBinary then begin
-      SetLength(Result, Len div 2);
-      Move(P^, Pointer(Result)^, Len);
-    end else if (DT = tdsImage) then
-      ZSetString(P, Len, Result)
-    else
-    begin
-      SetLength(Tmp, 4001);
-      Len := FPlainDriver.dbconvert(FHandle, Ord(DT), Pointer(P), Len,
-        Ord(tdsChar), Pointer(tmp), 4001);
-      FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
-      while (Len > 0) and (tmp[Len] = ' ') do Dec(Len);
-      Result := USASCII7ToUnicodeString(Pointer(tmp), Len);
-    end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
+      end else
+      if TDSType = tdsUnique then
+        Result := GUIDToUnicode(PGUID(P)^)
+      else if TDSType = tdsSybaseLongBinary then begin
+        SetLength(Result, Len div 2);
+        Move(P^, Pointer(Result)^, Len);
+      end else if (TDSType = tdsImage) then
+        ZSetString(P, Len, Result)
+      else
+      begin
+        SetLength(Tmp, 4001);
+        Len := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Pointer(P), Len,
+          Ord(tdsChar), Pointer(tmp), 4001);
+        FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
+        while (Len > 0) and (tmp[Len] = ' ') do Dec(Len);
+        Result := USASCII7ToUnicodeString(Pointer(tmp), Len);
+      end;
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
+  end;
 end;
 
 {**
@@ -664,51 +653,30 @@ function TZDBLibResultSet.InternalGetString(ColumnIndex: Integer): RawByteString
 var
   DL: Integer;
   Data: Pointer;
-  DT: TTDSType;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
-
-  {$IFDEF GENERIC_INDEX}
-  //DBLib -----> Col/Param starts whith index 1
-  FDataProvider.GetColData(ColumnIndex+1, Data, DL); //hint DBLib isn't #0 terminated @all
-  {$ELSE}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  DT := DBLibColTypeCache[ColumnIndex];
-  LastWasNull := Data = nil;
-  if LastWasNull then
-    Result := ''
-  else
-  begin
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
     Result := '';
-    if (DT = tdsChar) or (DT = tdsText) then
-    begin
-      while (DL > 0) and (AnsiChar((PAnsiChar(Data)-DL - 1)^) = AnsiChar(' ')) do
-              Dec(DL);
-      if DL > 0 then
-      begin
-        SetLength(Result, DL);
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, Pointer(Result)^, DL);
+    if not LastWasNull then
+      if (TDSType = tdsChar) or (TDSType = tdsText) then begin
+        DL := ZDBCUtils.GetAbsorbedTrailingSpacesLen(PAnsiChar(Data), DL);
+        if DL > 0 then
+          ZSetString(PAnsiChar(Data), DL, Result);
+      end else if TDSType = tdsUnique then
+        Result := GUIDToRaw(PGUID(Data)^)
+      else if (TDSType = tdsImage) then
+        ZSetString(Data, DL, Result)
+      else begin
+        SetLength(Result, 4001);
+        SetLength(Result, FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL,
+          Ord(tdsVarChar), Pointer(Result), 4001));
       end;
-    end else
-    if DT = tdsUnique then
-      FRawTemp := GUIDToRaw(PGUID(Data)^)
-    else
-    if (DT = tdsImage) then
-      ZSetString(Data, DL, Result)
-    else
-    begin
-      SetLength(Result, 4001);
-      DL := FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL,
-        Ord(tdsChar), Pointer(Result), Length(Result));
-      while (DL > 0) and (Result[DL] = ' ') do
-          Dec(DL);
-      SetLength(Result, DL);
-    end;
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
 end;
 
 {**
@@ -724,25 +692,19 @@ function TZDBLibResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var
   DL: Integer;
   Data: Pointer;
-  DT: TTDSType;
 begin
-  DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  LastWasNull := Data = nil;
-
-  Result := False;
-  if Data <> nil then
-  begin
-    if DT = tdsBit then
-      Result := System.PBoolean(Data)^
-    else
-      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsBit),
-        @Result, SizeOf(Result));
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
+    Result := False;
+    if not LastWasNull then
+      if TDSType = tdsBit
+      then Result := System.PByte(Data)^ <> 0
+      else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsBit),
+          @Result, SizeOf(Result));
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETBOOLEAN');
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETBOOLEAN');
 end;
 
 {**
@@ -758,23 +720,19 @@ function TZDBLibResultSet.GetInt(ColumnIndex: Integer): Integer;
 var
   DL: Integer;
   Data: Pointer;
-  DT: TTDSType;
 begin
-  DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  LastWasNull := Data = nil;
-
-  Result := 0;
-  if Data <> nil then
-    if DT = tdsInt4 then
-      Result := PInteger(Data)^
-    else
-      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsInt4),
-        @Result, SizeOf(Result));
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETINT');
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
+    Result := 0;
+    if Data <> nil then
+      if TDSType = tdsInt4
+      then Result := PInteger(Data)^
+      else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsInt4),
+          @Result, SizeOf(Result));
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETINT');
+  end;
 end;
 
 {**
@@ -790,26 +748,24 @@ function TZDBLibResultSet.GetLong(ColumnIndex: Integer): Int64;
 var
   DL: Integer;
   Data: Pointer;
-  DT: TTDSType;
 begin
-  DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  LastWasNull := Data = nil;
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
 
-  Result := 0;
-  if Data <> nil then
-    case DT of
-      tdsInt1: Result := PByte(Data)^;
-      tdsInt2: Result := PSmallInt(Data)^;
-      tdsInt4: Result := PInteger(Data)^;
-      tdsInt8: Result := PInt64(Data)^;
-      else FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsInt8),
-        @Result, SizeOf(Int64));
-    end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETLONG');
+    Result := 0;
+    if Data <> nil then
+      case TDSType of
+        tdsInt1: Result := PByte(Data)^;
+        tdsInt2: Result := PSmallInt(Data)^;
+        tdsInt4: Result := PInteger(Data)^;
+        tdsInt8: Result := PInt64(Data)^;
+        else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsInt8),
+          @Result, SizeOf(Int64));
+      end;
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETLONG');
+  end;
 end;
 
 {**
@@ -825,25 +781,20 @@ function TZDBLibResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
   DL: Integer;
   Data: Pointer;
-  DT: TTDSType;
 begin
-  DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  LastWasNull := Data = nil;
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
 
-  Result := 0;
-  if Data <> nil then
-  begin
-    if DT = tdsFlt4 then
-      Result := PSingle(Data)^
-    else
-      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsFlt4),
-        @Result, SizeOf(Result));
+    if Data <> nil then
+      if TDSType = tdsFlt4
+      then Result := PSingle(Data)^
+      else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsFlt4),
+          @Result, SizeOf(Result))
+    else Result := 0;
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETFLOAT');
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETFLOAT');
 end;
 
 {**
@@ -859,25 +810,19 @@ function TZDBLibResultSet.GetDouble(ColumnIndex: Integer): Double;
 var
   DL: Integer;
   Data: Pointer;
-  DT: TTDSType;
 begin
-  DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  LastWasNull := Data = nil;
-
-  Result := 0;
-  if Data <> nil then
-  begin
-    if DT = tdsFlt8 then
-      Result := PDouble(Data)^
-    else
-      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsFlt8),
-        @Result, SizeOf(Result));
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
+    if Data <> nil then
+      if TDStype = tdsFlt8
+      then Result := PDouble(Data)^
+      else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsFlt8),
+          @Result, SizeOf(Result))
+    else Result := 0;
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETDOUBLE');
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETDOUBLE');
 end;
 
 {**
@@ -892,8 +837,28 @@ end;
 }
 {$IFDEF BCD_TEST}
 procedure TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+var
+  DL: Integer;
+  Data: Pointer;
 begin
-  Double2BCD(GetDouble(ColumnIndex), Result);
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    {EH: we can link against ntwdblib/FreeTDS-dblib and sysdblib
+      we've a different record definition for the numeric records.
+      The more sql-server + ntwdblib uses endian little but using the
+      other two libs we've big endians. Common way is using the string conversions }
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
+    if Data <> nil then begin
+      if TDStype <> tdsVarChar then begin
+        DL := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsVarchar),
+            @fTinyBuffer[0], SizeOf(fTinyBuffer));
+        if DL = -1 then
+          FDBLibConnection.CheckDBLibError(lcOther, 'GETBIGDECIMAL');
+      end;
+      LastWasNull := not TryRawToBCD(PAnsiChar(@fTinyBuffer[0]), DL, Result, '.');
+    end else Result := NullBCD;
+  end;
 {$ELSE !BCD_TEST}
 function TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
@@ -916,15 +881,45 @@ var
   DL: Integer;
   Data: Pointer;
 begin
-  {$IFDEF GENERIC_INDEX}
   //DBLib -----> Col/Param starts whith index 1
-  Inc(ColumnIndex);
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
+  FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
   FDBLibConnection.CheckDBLibError(lcOther, 'GETBYTES');
   LastWasNull := Data = nil;
 
   Result := BufferToBytes(Data, DL);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>currency</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZDBLibResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+var
+  DL: Integer;
+  Data: Pointer;
+begin
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    {EH: we can link against ntwdblib/FreeTDS-dblib and sysdblib
+      we've a different record definition for the numeric records.
+      The more sql-server + ntwdblib uses endian little but using the
+      other two libs we've big endians
+      also conversion/using to tdsMoney fails using FreeTDS ->
+      using the varychars was the only save way i found}
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
+    if Data <> nil then begin
+      DL := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsVarchar),
+          @fTinyBuffer[0], SizeOf(fTinyBuffer));
+      SQLStrToFloatDef(PAnsiChar(@fTinyBuffer[0]), 0, FDecimalSep, Result, DL);
+    end else Result := 0;
+    //FDBLibConnection.CheckDBLibError(lcOther, 'GETCURRENCY');
+  end;
 end;
 
 {**
@@ -969,49 +964,41 @@ function TZDBLibResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
   DL: Integer;
   Data: Pointer;
-  DT: TTDSType;
   TempDate: DBDATETIME;
   tdsTempDate: TTDSDBDATETIME;
   Failed: Boolean;
 begin
-  DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
-  {$ENDIF}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  LastWasNull := Data = nil;
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
 
-  Result := 0;
-  if Data <> nil then
-  begin
-    //Perfect conversion no need to crack and reencode the date.
-    if DT = tdsDateTime then
-      if FDBLibConnection.FreeTDS then //type diff
-        Result := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
-      else
-        Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
-    else if (DT in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then
-      if AnsiChar((PAnsiChar(Data)+2)^) = AnsiChar(':') then
-        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
-      else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Word(DL)) <= 4 then
-          Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
-      else
-        Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
-    else
-      if FDBLibConnection.FreeTDS then //type diff
-      begin
-        FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsDateTime),
+    Result := 0;
+    if Data <> nil then
+    begin
+      //Perfect conversion no need to crack and reencode the date.
+      if TDSType = tdsDateTime then
+        if FDBLibConnection.FreeTDS //type diff
+        then Result := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
+        else Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
+      else if (TDSType in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then
+        if PByte(PAnsiChar(Data)+2)^ = Ord(':') then
+          Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
+        else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Word(DL)) <= 4
+          then Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
+          else Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
+      else if FDBLibConnection.FreeTDS then begin//type diff
+        FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsDateTime),
           @tdsTempDate, SizeOf(tdsTempDate));
         Result := tdsTempDate.dtdays + 2 + (tdsTempDate.dttime / 25920000);
-      end
-      else
-      begin
-        FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsDateTime),
+      end else begin
+        FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsDateTime),
           @TempDate, SizeOf(TempDate));
         Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);
       end;
+    end;
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP');
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP');
 end;
 
 {**
@@ -1027,54 +1014,44 @@ function TZDBLibResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   DL: Integer;
   Data: Pointer;
-  TempAnsi: RawByteString;
 begin
-  {$IFDEF GENERIC_INDEX}
-  //DBLib -----> Col/Param starts whith index 1
-  FDataProvider.GetColData(ColumnIndex+1, Data, DL); //hint DBLib isn't #0 terminated @all
-  {$ELSE}
-  FDataProvider.GetColData(ColumnIndex, Data, DL); //hint DBLib isn't #0 terminated @all
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  LastWasNull := Data = nil;
+  with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    //DBLib -----> Col/Param starts whith index 1
+    FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
+    LastWasNull := Data = nil;
 
-  Result := nil;
-  if not LastWasNull then
-    case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-      stBytes, stBinaryStream:
-        Result := TZAbstractBlob.CreateWithData(Data, DL);
-      stAsciiStream, stUnicodeStream:
-        begin
-          if (DL = 1) and (AnsiChar(PAnsiChar(Data)^) = AnsiChar(' ')) then DL := 0; //improve empty lobs, where len = 1 but string should be ''
-          Result := TZAbstractClob.CreateWithData(Data, DL,
-            FDBLibConnection.GetServerAnsiCodePage, ConSettings);
+    Result := nil;
+    if Data <> nil then
+      case ColumnType of
+        stBytes, stBinaryStream:
+          Result := TZAbstractBlob.CreateWithData(Data, DL);
+        stAsciiStream, stUnicodeStream: begin
+            if (DL = 1) and (PByte(Data)^ = Ord(' ')) then DL := 0; //improve empty lobs, where len = 1 but string should be ''
+            Result := TZAbstractClob.CreateWithData(Data, DL,
+              FDBLibConnection.GetServerAnsiCodePage, ConSettings);
+          end;
+        stString, stUnicodeString: if ColumnCodePage = zCP_NONE then
+            case ZDetectUTF8Encoding(Data, DL) of
+              etUTF8: begin
+                  ColumnCodePage := zCP_UTF8;
+                  Result := TZAbstractClob.CreateWithData(Data, DL, zCP_UTF8, ConSettings);
+                end;
+              etAnsi: begin
+                  ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+                  Result := TZAbstractClob.CreateWithData(Data, DL, ConSettings^.ClientCodePage^.CP, ConSettings);
+                end;
+              else //ASCII7
+                Result := TZAbstractClob.CreateWithData(Data, DL, zCP_us_ascii, ConSettings);
+            end
+          else Result := TZAbstractClob.CreateWithData(Data, DL,
+              TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, ConSettings);
+        else begin
+          FRawTemp := InternalGetString(ColumnIndex);
+          Result := TZAbstractClob.CreateWithData(Pointer(FRawTemp),
+            Length(FRawTemp), ConSettings^.ClientCodePage^.CP, ConSettings);
         end;
-      stString, stUnicodeString:
-        if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage = zCP_NONE then
-          case ZDetectUTF8Encoding(Data, DL) of
-            etUTF8:
-              begin
-                TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
-                Result := TZAbstractClob.CreateWithData(Data, DL, zCP_UTF8, ConSettings);
-              end;
-            etAnsi:
-              begin
-                TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-                Result := TZAbstractClob.CreateWithData(Data, DL, ConSettings^.ClientCodePage^.CP, ConSettings);
-              end;
-            else //ASCII7
-              Result := TZAbstractClob.CreateWithData(Data, DL, zCP_us_ascii, ConSettings);
-          end
-        else
-          Result := TZAbstractClob.CreateWithData(Data, DL,
-            TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, ConSettings);
-      else
-      begin
-        TempAnsi := InternalGetString(ColumnIndex);
-        Result := TZAbstractClob.CreateWithData(PAnsiChar(TempAnsi),
-          Length(TempAnsi), ConSettings^.ClientCodePage^.CP, ConSettings);
       end;
-    end;
+  end;
 end;
 
 {**

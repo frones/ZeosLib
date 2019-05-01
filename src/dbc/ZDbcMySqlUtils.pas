@@ -281,13 +281,9 @@ begin
               Result := stSmall
             else if PrecOrLen <= 9 then
               Result := stInteger
-            {$IFDEF BCD_TEST}
             else if PrecOrLen <= 18 then
               Result := stLong
             else Result := stBigDecimal;
-            {$ELSE}
-            else Result := stLong;
-            {$ENDIF}
           end else begin
             if PrecOrLen <= 3 then
               Result := stByte
@@ -295,20 +291,16 @@ begin
               Result := stWord
             else if PrecOrLen <= 10 then
               Result := stLongWord
-            {$IFDEF BCD_TEST}
             else if PrecOrLen <= 19 then
               Result := stULong
             else Result := stBigDecimal;
-            {$ELSE}
-            else Result := stULong;
-            {$ENDIF}
           end
         else begin
           Dec(PrecOrLen, 1+ORd(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0)); //one digit for the decimal sep and one for the sign
           if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ <= 4) and
              (PrecOrLen < ULong(sAlignCurrencyScale2Precision[PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^]))
             then Result := stCurrency
-            else Result := {$IFDEF BCD_TEST}stBigDecimal{$ELSE}stDouble{$ENDIF}
+            else Result := stBigDecimal
           end;
       end else
         Result := stDouble;
@@ -683,14 +675,7 @@ lLong:
         else goto lLongLong
       else if (Scale <= 4) and (ColumnSize < sAlignCurrencyScale2Precision[Scale])
         then FieldType := stCurrency
-      {$IFDEF BCD_TEST}
         else FieldType := stBigDecimal
-      {$ELSE}
-        else begin
-          FieldType := stDouble;
-          ColumnSize := 22;
-        end;
-      {$ENDIF}
     end
   end else if (TypeName = 'float') or StartsWith(TypeName, RawByteString('double')) then begin
     FieldType := stDouble;

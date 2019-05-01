@@ -2315,9 +2315,8 @@ end;
 procedure TZFreeTDSBasePlainDriver.LoadCodePages;
 begin
   AddCodePage('UTF-8', 1, ceUTF8, zCP_UTF8,  '', 4, True);
-  AddCodePage('ISO-8859-1', 2, ceAnsi, zCP_L1_ISO_8859_1, '', 1, True);
-  AddCodePage('ASCII', 3, ceAnsi, zCP_us_ascii, '', 1, True);
-  //AddCodePage('UTF-16', 4, ceUTF16, zCP_UTF16, '', 2, True);
+  AddCodePage('ISO-8859-1', 2, ceAnsi, zCP_L1_ISO_8859_1, '', 1, False);
+  AddCodePage('ASCII', 3, ceAnsi, zCP_us_ascii, '', 1, False);
 end;
 
 { TZFreeTDS42MsSQLPlainDriver }

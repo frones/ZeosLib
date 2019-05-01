@@ -335,7 +335,7 @@ begin
           end;
         DBTYPE_NUMERIC: begin
                           FLength := SQL_MAX_NUMERIC_LEN;
-                          OleDBNumeric2Raw(FData, @fTinyBuffer[0], FLength);
+                          SQLNumeric2Raw(FData, @fTinyBuffer[0], FLength);
                           JSONWriter.AddJSONEscape(@fTinyBuffer[0], FLength);
                         end;
         //DBTYPE_UDT = 132;
@@ -392,7 +392,7 @@ begin
         //DBTYPE_FILETIME = 64;
         //DBTYPE_PROPVARIANT = 138;
         DBTYPE_VARNUMERIC: begin
-                            OleDBNumeric2Raw(FData, @fTinyBuffer[0], FLength);
+                            SQLNumeric2Raw(FData, @fTinyBuffer[0], FLength);
                             JSONWriter.AddJSONEscape(@fTinyBuffer[0], FLength);
                           end;
       end;
@@ -683,7 +683,7 @@ set_from_tmp:         Len := Length(FRawTemp);
     DBTYPE_VARNUMERIC: begin
                       Len := FLength;
 set_from_num:         Result := @fTinyBuffer[0];
-                      OleDBNumeric2Raw(fData, @fTinyBuffer[0], Len);
+                      SQLNumeric2Raw(fData, @fTinyBuffer[0], Len);
                     end;
     {$ENDIF}
     //DBTYPE_UDT	= 132;
@@ -867,7 +867,7 @@ set_from_clob:    fTempBlob := GetBlob(ColumnIndex); //localize
     DBTYPE_VARNUMERIC: begin
                       Len := FLength;
 set_from_num:         Result := @fTinyBuffer[0];
-                      OleDBNumeric2Uni(fData, Result, Len);
+                      SQLNumeric2Uni(fData, Result, Len);
                     end;
     {$ENDIF}
 
@@ -1319,8 +1319,8 @@ begin
       DBTYPE_HCHAPTER:  ScaledOrdinal2Bcd(PCHAPTER(FData)^, 0, Result, False);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
-      DBTYPE_NUMERIC:   OleDBNumeric2BCD(FData, Result, SQL_MAX_NUMERIC_LEN);
-      DBTYPE_VARNUMERIC:OleDBNumeric2BCD(FData, Result, FLength);
+      DBTYPE_NUMERIC:   SQLNumeric2BCD(FData, Result, SQL_MAX_NUMERIC_LEN);
+      DBTYPE_VARNUMERIC:SQLNumeric2BCD(FData, Result, FLength);
       else Result := NullBcd;
       {$ELSE}
       DBTYPE_I2:        Result := PSmallInt(FData)^;
@@ -1883,7 +1883,7 @@ begin
                                         end;
           {$IFDEF BCD_TEST}
           DBTYPE_NUMERIC              : begin
-                                          OleDBNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, SQL_MAX_NUMERIC_LEN);
+                                          SQLNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, SQL_MAX_NUMERIC_LEN);
                                           RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                                         end;
           {$ENDIF}
@@ -1905,7 +1905,7 @@ begin
           //DBTYPE_PROPVARIANT = 138;
           {$IFDEF BCD_TEST}
           DBTYPE_VARNUMERIC           : begin
-                                          OleDBNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, FLength^);
+                                          SQLNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, FLength^);
                                           RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                                         end;
           {$ENDIF}

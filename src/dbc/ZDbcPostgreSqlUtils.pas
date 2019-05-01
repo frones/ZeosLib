@@ -1490,8 +1490,9 @@ ZeroBCD:
     Dst.SignSpecialPlaces := 2;
     Exit;
   end;
-  if NBASEDigit = NUMERIC_NEG then
-    Dst.SignSpecialPlaces := $80;
+  if NBASEDigit = NUMERIC_NEG
+  then Dst.SignSpecialPlaces := $80
+  else Dst.SignSpecialPlaces := 0;
 
   Weight := PG2SmallInt(Src+2); //weight can be less than zero!
   Inc(Src, 8);

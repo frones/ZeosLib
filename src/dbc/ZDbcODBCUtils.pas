@@ -305,47 +305,38 @@ begin
   end;
 end;
 
+const ODBC_Str_C_Type: Array[Boolean] of SQLSMALLINT = (SQL_C_CHAR, SQL_C_WCHAR);
 function ConvertODBCTypeToSQLType(ODBCType, Scale: SQLSMALLINT; Precision: Integer; UnSigned: Boolean;
   ConSettings: PZConSettings; ODBC_CType: PSQLSMALLINT): TZSQLType;
 label Dbl, Sngl;
+var ODBCCType: SQLSMALLINT;
 begin
   case ODBCType of
     SQL_NUMERIC,
     SQL_DECIMAL:      if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then begin
                         Result := stCurrency;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_NUMERIC;
+                        ODBCCType := SQL_C_NUMERIC;
                       end else begin
-                        {$IFDEF BCD_TEST}
                         Result := stBigDecimal;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_NUMERIC;
-                        {$ELSE}
-                        goto Dbl;
-                        {$ENDIF}
+                        ODBCCType := {$IFDEF BCD_TEST}SQL_C_NUMERIC{$ELSE}SQL_C_DOUBLE{$ENDIF};
                       end;
     SQL_INTEGER:      if UnSigned then begin
                         Result := stLongWord;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_ULONG;
+                        ODBCCType := SQL_C_ULONG;
                       end else begin
                         Result := stInteger;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_SLONG;
+                        ODBCCType := SQL_C_SLONG;
                       end;
     SQL_SMALLINT:     if UnSigned then begin
                         Result := stWord;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_USHORT;
+                        ODBCCType := SQL_C_USHORT;
                       end else begin
                         Result := stSmall;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_SSHORT;
+                        ODBCCType := SQL_C_SSHORT;
                       end;
     SQL_REAL:         begin
 Sngl:                   Result := stFloat;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_FLOAT;
+                        ODBCCType := SQL_C_FLOAT;
                       end;
     SQL_FLOAT:        if Precision <= 24
                       then goto sngl
@@ -353,8 +344,7 @@ Sngl:                   Result := stFloat;
 
     SQL_DOUBLE:       begin
 Dbl:                    Result := stDouble;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_DOUBLE;
+                        ODBCCType := SQL_C_DOUBLE;
                       end;
     SQL_CHAR,
     SQL_VARCHAR,
@@ -365,20 +355,14 @@ Dbl:                    Result := stDouble;
                         else Result := stString;
                         if Precision = 0 then
                           Result := TZSQLType(Ord(Result)+3);
-                        if ODBC_CType <> nil then
-                          if ConSettings.ClientCodePage^.Encoding = ceUTF16
-                          then ODBC_CType^ := SQL_C_WCHAR
-                          else ODBC_CType^ := SQL_C_CHAR;
+                        ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
                       end;
     SQL_LONGVARCHAR,
     SQL_WLONGVARCHAR: begin
                         if ConSettings^.CPType = cCP_UTF16
                         then Result := stUnicodeStream
                         else Result := stAsciiStream;
-                        if ODBC_CType <> nil then
-                          if ConSettings.ClientCodePage^.Encoding = ceUTF16
-                          then ODBC_CType^ := SQL_C_WCHAR
-                          else ODBC_CType^ := SQL_C_CHAR;
+                        ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
                       end;
     SQL_DATETIME,
     SQL_INTERVAL,
@@ -386,73 +370,60 @@ Dbl:                    Result := stDouble;
     SQL_SS_TIMESTAMPOFFSET,
     SQL_TIMESTAMP:    begin
                         Result := stTimeStamp;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_TYPE_TIMESTAMP;
+                        ODBCCType := SQL_C_TYPE_TIMESTAMP;
                       end;
     SQL_BINARY,
     SQL_VARBINARY:    begin
                         if Precision = 0
                         then Result := stBinaryStream
                         else Result := stBytes;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_BINARY;
+                        ODBCCType := SQL_C_BINARY;
                       end;
     SQL_LONGVARBINARY:begin
                         Result := stBinaryStream;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_BINARY;
+                        ODBCCType := SQL_C_BINARY;
                       end;
     SQL_BIGINT:       if UnSigned then begin
                         Result := stULong;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_UBIGINT;
+                        ODBCCType := SQL_C_UBIGINT;
                       end else begin
                         Result := stLong;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_SBIGINT;
+                        ODBCCType := SQL_C_SBIGINT;
                       end;
     SQL_TINYINT:      if UnSigned then begin
                         Result := stByte;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_UTINYINT;
+                        ODBCCType := SQL_C_UTINYINT;
                       end else begin
                         Result := stShort;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_STINYINT;
+                        ODBCCType := SQL_C_STINYINT;
                       end;
     SQL_BIT:          begin
                         Result := stBoolean;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_BIT;
+                        ODBCCType := SQL_C_BIT;
                       end;
     SQL_GUID:         begin
                         Result := stGUID;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_GUID;
+                        ODBCCType := SQL_C_GUID;
                       end;
     SQL_TYPE_DATE:    begin
                         Result := stDate;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_TYPE_DATE;
+                        ODBCCType := SQL_C_TYPE_DATE;
                       end;
     SQL_TYPE_TIME:    begin
                         Result := stTime;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_TYPE_TIME;
+                        ODBCCType := SQL_C_TYPE_TIME;
                       end;
     SQL_SS_TIME2:     begin
                         Result := stTime;
-                        if ODBC_CType <> nil then
-                          ODBC_CType^ := SQL_C_SS_TIME2;
+                        ODBCCType := SQL_C_SS_TIME2;
                       end;
     else              begin
                         Result := stString;
-                        if ODBC_CType <> nil then
-                          if ConSettings.ClientCodePage^.Encoding = ceUTF16
-                          then ODBC_CType^ := SQL_C_WCHAR
-                          else ODBC_CType^ := SQL_C_CHAR;
+                        ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
                       end;
   end;
+  if ODBC_CType <> nil then
+    ODBC_CType^ := ODBCCType;
 end;
 
 function ConvertODBC_CTypeToODBCType(ODBC_CType: SQLSMALLINT; out Signed: Boolean): SQLSMALLINT;
@@ -625,8 +596,8 @@ begin
     stBoolean, stByte, stShort:                         Result := 1;
     stWord, stSmall:                                    Result := 2;
     stLongWord, stInteger,stFloat:                      Result := 4;
-    stULong, stLong, stDouble:                          Result := 8;
-    stCurrency, stBigDecimal:                           Result := SizeOf(TSQL_NUMERIC_STRUCT);
+    stULong, stLong, stDouble{$IFNDEF BCD_TEST}, stBigDecimal{$ENDIF}: Result := 8;
+    stCurrency{$IFDEF BCD_TEST}, stBigDecimal{$ENDIF}:  Result := SizeOf(TSQL_NUMERIC_STRUCT);
     stString,
     stUnicodeString:            if ClientCodePage^.Encoding >= ceUTF16
                                 then Result := (Result +1) shl 1

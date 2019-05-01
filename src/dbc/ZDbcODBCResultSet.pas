@@ -460,8 +460,39 @@ end;
 
 {$IFDEF BCD_TEST}
 procedure TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+var L: LengthInt;
 begin
-  Double2BCD(GetDouble(ColumnIndex), Result);
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    case ColumnType of
+      stBoolean,
+      stByte:       ScaledOrdinal2BCD(Word(PByte(fColDataPtr)^), 0, Result, False);
+      stShort:      ScaledOrdinal2BCD(SmallInt(PShortInt(fColDataPtr)^), 0, Result);
+      stWord:       ScaledOrdinal2BCD(PWord(fColDataPtr)^, 0, Result, False);
+      stSmall:      ScaledOrdinal2BCD(PSmallInt(fColDataPtr)^, 0, Result);
+      stLongWord:   ScaledOrdinal2BCD(PCardinal(fColDataPtr)^, 0, Result, False);
+      stInteger:    ScaledOrdinal2BCD(PInteger(fColDataPtr)^, 0, Result);
+      stULong:      ScaledOrdinal2BCD(PUInt64(fColDataPtr)^, 0, Result, False);
+      stLong:       ScaledOrdinal2BCD(PInt64(fColDataPtr)^, 0, Result);
+      stDate, stTime, stTimeStamp, stFloat,
+      stDouble:     DoubleToBCD(GetDouble(ColumnIndex), Result);
+      stCurrency:   SQLNumeric2BCD(fColDataPtr, Result, SizeOf(Int64));
+      stBigDecimal: SQLNumeric2BCD(fColDataPtr, Result, SQL_MAX_NUMERIC_LEN);
+      stString, stUnicodeString: if fIsUnicodeDriver then begin
+                  L := fStrLen_or_Ind shr 1;
+                  if FixedWidth then
+                    L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
+                  LastWasNull := not TryUniToBCD(PWideChar(fColDataPtr), L, Result, '.');
+                end else begin
+                  L := fStrLen_or_Ind;
+                  if FixedWidth then
+                    L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
+                  LastWasNull := not TryRawToBCD(PAnsiChar(fColDataPtr), L, Result, '.');
+                end;
+      //stAsciiStream, stUnicodeStream, stBinaryStream:
+      else Result := NullBCD;
+    end;
+  end else Result := NullBCD;
 {$ELSE}
 function TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
@@ -907,8 +938,13 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       CurrToRaw(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
                       Len := Result-PPAnsiChar(@FTinyBuffer[0])^;
                     end;
-      stDouble,
-      stBigDecimal: begin
+      stBigDecimal{$IFDEF BCD_TEST}: begin
+                      Result := @FTinyBuffer[0];
+                      Len := SQL_MAX_NUMERIC_LEN;
+                      SQLNumeric2Raw(fColDataPtr, Result, Len);
+                    end;
+      {$ELSE},{$ENDIF}
+      stDouble: begin
                       Len := FloatToSqlRaw(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
@@ -1041,10 +1077,17 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
       stCurrency:   begin
                       Result := @FTinyBuffer[SizeOf(Pointer)];
                       CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
-                      Len := Result-ZPPWideChar(@FTinyBuffer[0])^;
+                      Len := ZPPWideChar(@FTinyBuffer[0])^-Result;
                     end;
-      stDouble,
-      stBigDecimal: begin
+
+      stBigDecimal{$IFDEF BCD_TEST}: begin
+                      Result := @FTinyBuffer[0];
+                      Len := SQL_MAX_NUMERIC_LEN;
+                      SQLNumeric2Uni(fColDataPtr, Result, Len);
+                    end;
+      {$ELSE},
+      {$ENDIF}
+      stDouble: begin
                       Len := FloatToSqlUnicode(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;

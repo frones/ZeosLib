@@ -245,7 +245,8 @@ begin
     else
       FMetadata := nil;
   FFreeTDS := ZFastCode.Pos('FreeTDS', Url.Protocol) > 0;
-
+  if FreeTDS and (Info.Values[ConnProps_CodePage] = '') then
+    Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
   FHandle := nil;
 end;
 
@@ -432,7 +433,6 @@ begin
     InternalExecuteStatement('begin transaction');
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
-
   if (FProvider = dpMsSQL) and (not FreeTDS) then
   begin
   {note: this is a hack from a user-request of synopse project!
@@ -453,18 +453,13 @@ begin
       ConSettings^.ClientCodePage^.CP := zCP_UTF8;
       ConSettings^.ClientCodePage^.Encoding := ceUTF8;
       ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
-    end
-    else
-    begin
+    end else begin
       ConSettings^.ClientCodePage^.CP := FServerAnsiCodePage;
       ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
     end;
     ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
     SetConvertFunctions(ConSettings);
-    DetermineMSDateFormat;
-  end
-  else
-  begin
+  end else begin
     if (FProvider = dpSybase) and (not FreeTDS)
     then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
     FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
@@ -475,8 +470,9 @@ begin
   http://technet.microsoft.com/en-us/library/ms180878%28v=sql.105%29.aspx
    Using DATE and DATETIME in ISO 8601 format is multi-language supported:
    DATE Un-separated
-   DATETIME as YYYY-MM-DDTHH:NN:SS
-  }
+   DATETIME as YYYY-MM-DDTHH:NN:SS }
+  if (FProvider = dpMsSQL) then
+    DetermineMSDateFormat;
   ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';
   ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS';
   SetDateTimeFormatProperties(False);

@@ -2785,7 +2785,9 @@ var
         ZPrecision := -1;
         ZScale := -1;
       end else begin
-        ZType := Ord(stDouble);
+        if (MySqlScale <= 4) and (MysqlPrecision < sAlignCurrencyScale2Precision[MySqlScale])
+        then ZType := Ord(stCurrency)
+        else ZType := Ord(stBigDecimal);
         ZPrecision := MysqlPrecision;
         ZScale := MySqlScale;
       end;
@@ -2795,7 +2797,9 @@ var
         ZPrecision := -1;
         ZScale := -1;
       end else begin
-        ZType := Ord(stDouble);
+        if (MySqlScale <= 4) and (MysqlPrecision < sAlignCurrencyScale2Precision[MySqlScale])
+        then ZType := Ord(stCurrency)
+        else ZType := Ord(stBigDecimal);
         ZPrecision := MysqlPrecision;
         ZScale := MySqlScale;
       end;

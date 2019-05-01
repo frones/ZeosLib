@@ -99,6 +99,7 @@ type
     FClientCP: Word;
     FResultFormat: PInteger;
     FBinaryValues, Finteger_datetimes, FIsOidAsBlob: Boolean;
+    FDecimalSeps: array[Boolean] of Char;
     procedure ClearPGResult;
   protected
     procedure Open; override;
@@ -320,6 +321,7 @@ begin
             stInteger     : JSONWriter.Add(PG2Integer(P));
             stLong        : JSONWriter.Add(PG2Int64(P));
             stCurrency    : JSONWriter.AddCurr64(PGNumeric2Currency(P));
+            stFloat       : JSONWriter.AddSingle(PG2Single(P));
             stDouble      : JSONWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
                               PGNumeric2BCD(P, BCD);
@@ -349,6 +351,7 @@ jmpDate:                      if jcoMongoISODate in JSONComposeOptions
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 else JSONWriter.Add('"');
+                              PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
                               DateToIso8601PChar(@FTinyBuffer[0], True, TS.Year, TS.Month, TS.Day);
                               JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], 10);
                               if jcoMongoISODate in JSONComposeOptions
@@ -1641,7 +1644,7 @@ begin
                         else Result := 0;
         else Result := 0;
       end
-    else SQLStrToFloatDef(P, 0, Result);
+    else SQLStrToFloatDef(P, 0, FDecimalSeps[ColumnOID = CASHOID], Result);
   end;
 end;
 

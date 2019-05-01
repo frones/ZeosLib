@@ -1655,12 +1655,15 @@ end;
 function ConvertConnRawToStringWithOpt(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string;
 begin
   {$IFDEF UNICODE}
-  Result := PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP);
+  if ConSettings^.ClientCodePage^.ID = CS_NONE
+  then Result := PRawToUnicode(Buffer, BufLen, zCP_UTF8)
+  else Result := PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
     if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
       SetString(Result, PChar(Buffer), BufLen)
-    else
-      Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+    else if ConSettings^.ClientCodePage^.ID = CS_NONE
+      then Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), zCP_UTF8)
+      else Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
   {$ENDIF}
 end;
 

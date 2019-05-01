@@ -59,6 +59,7 @@ uses
   {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF}, TypInfo, FmtBcd,
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
+const SQL_MAX_NUMERIC_LEN = 16;
 type
   TPreparablePrefixToken = Record
     MatchingGroup: String;
@@ -67,6 +68,7 @@ type
   PPreparablePrefixTokens = ^TPreparablePrefixTokens;
   TPreparablePrefixTokens = array of TPreparablePrefixToken;
 
+  PRawBuff = ^TRawBuff;
   TRawBuff = record
     Pos: Word;
     Buf: array[Byte] of AnsiChar;
@@ -78,6 +80,16 @@ type
   end;
 
   TBCDDynArray = array of TBCD;
+
+  PDB_NUMERIC = ^TDB_NUMERIC;
+  TDB_NUMERIC = record { oledb.h }
+    precision:  Byte;
+    scale:      Byte;
+    sign:       Byte; {1 if positive, 0 if negative }
+    val:        array[0..SQL_MAX_NUMERIC_LEN -1] of BYTE; //fixed len
+  end;
+
+  TZVariantTypes = set of TZVariantType;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -149,6 +161,25 @@ function ToLikeString(const Value: string): string;
 function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
+
+{$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+(** written by EgonHugeist
+  converts a sql numeric value into a <code>java.math.BigDecimal</code>
+  @param Src the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Dest the <code>java.math.BigDecimal</code> value which should be filled
+  @param NumericLen the count of value digits of the numeric
+*)
+procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
+(** written by EgonHugeist
+  converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
+  @param Dest the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Src the <code>java.math.BigDecimal</code> value which should be filled
+*)
+procedure BCD2SQLNumeric(const Src: TBCD; Dest: PDB_NUMERIC);
+
+procedure SQLNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: NativeUint);
+procedure SQLNumeric2Uni(Src: PDB_NUMERIC; Dest: PWideChar; var NumericLen: NativeUint);
+{$IFEND}
 
 function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
@@ -226,6 +257,7 @@ function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings:
 function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
 function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
 procedure ArrayValueToGUID(ZArray: PZArray; Index: Integer; GUID: PGUID);
+procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
 
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray; var MaxLen: LengthInt): TUnicodeStringDynArray; overload;
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeStringDynArray; overload;
@@ -248,6 +280,17 @@ const
     //finally the object types
     0,0//stArray, stDataSet
     );
+  NativeArrayValueTypes: array[TZSQLType] of TZVariantTypes = ([],
+    [vtNull, vtBoolean],
+    [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger],  //ordinals
+    [vtNull], [vtNull, {$IFDEF BCD_TEST}vtDouble{$ELSE}vtFloat{$ENDIF}], [vtNull, {$IFDEF BCD_TEST}vtCurrency{$ELSE}vtFloat{$ENDIF}], [vtNull, {$IFDEF BCD_TEST}vtBigDecimal{$ELSE}vtFloat{$ENDIF}], //floats
+    [vtNull, vtDateTime], [vtNull, vtDateTime], [vtNull, vtDateTime],
+    [vtNull, {$IFDEF BCD_TEST}vtGUID{$ELSE}vtBytes{$ENDIF}],
+    //now varying size types in equal order
+    [], [], [vtNull, vtBytes],
+    [vtNull, vtInterface], [vtNull, vtInterface], [vtNull, vtInterface],
+    //finally the object types
+    [], []);
 
 implementation
 
@@ -535,6 +578,377 @@ begin
   Result := GetSQLHexAnsiString(Value, Len, ODBC);
   {$ENDIF}
 end;
+
+{$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+(** EgonHugeist prolog:
+  i didn't found any description/documentation how to work the the ole numerics.
+  After some tests like PUInt64(@TestNum.Val[0])^:
+    testNum: TDB_NUMERIC = (Precision: 18; Scale: 1; Sign: 1;
+      val: (78, 243, 48, 166, 75, 155, 182, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+  i found out all byte are a multiple of 16 starting with 1. Byte order
+  is Endian_little. Same as ordinals are stored on a Win-OS.
+  But we've more than 8 Bytes. Encode it into the BCD is messy and not fast.
+  Each byte need to be recalculated again because we need the modula of 100 for the nibbles.
+  So i need a local copy of the bytes first.
+  Also is there no precise Nibble position possible -> which means i'd to start
+  from last nibble down to first niblle and move all data afterwards.
+  If someone finds a faster way ... please let me know it!
+
+  converts a oledb DB_(VAR)NUMERIC value into a <code>java.math.BigDecimal</code>
+  @param Src the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Dest the <code>java.math.BigDecimal</code> value which should be filled
+  @param NumericLen the count of value digits of the numeric
+*)
+procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
+var
+  Remainder, NextDigit: Word;
+  NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
+  pDigitCopy, pNumDigit, pNibble, pFirstNibble: PAnsiChar;
+  OddPrecision: Boolean;
+label Done, Fill;
+begin
+  // check for zero value and padd trailing zeroes away to reduce the main loop
+  pNumDigit := @Src.val[0];
+  pNibble := pNumDigit + (NumericLen -1);
+  pFirstNibble := @Dest.Fraction[0];
+  Remainder := 0;
+
+  while (pNibble >= pNumDigit) and (PByte(pNibble)^ = 0) do
+    Dec(pNibble);
+  if pNibble < pNumDigit then begin
+    Dest.Precision := 10;
+    Dest.SignSpecialPlaces := 2;
+    OddPrecision := False;
+    goto Fill;
+  end;
+  if Src.sign <> 0 //positive ?
+  then Dest.SignSpecialPlaces := Src.scale
+  else Dest.SignSpecialPlaces := (1 shl 7) + Src.scale;
+  { prepare local buffer }
+  NumericLen := (pNibble - pNumDigit);
+  if NumericLen >= SQL_MAX_NUMERIC_LEN
+  then GetMem(pDigitCopy, NumericLen+1)
+  else pDigitCopy := @NumericVal[0];
+  Move(pNumDigit^, pDigitCopy^, NumericLen+1); //localize all bytes for next calculation loop.
+  { calcutate precision }
+  if Src.scale > Src.precision //normalize precision
+  then Dest.Precision := Src.precision + (Src.scale - Src.precision)
+  else Dest.Precision := Src.precision;
+  OddPrecision := Dest.Precision and 1 = 1;
+  { address last bcd nibble }
+  pNibble := pFirstNibble + (MaxFMTBcdDigits-1);
+  if OddPrecision then begin
+    PByte(pNibble)^ := 0; //clear last nibble
+    Dec(pNibble);
+  end;
+
+  while NumericLen >= 0 do begin //outer bcd filler loop
+    pNumDigit := pDigitCopy+Cardinal(NumericLen);
+    while pNumDigit > pDigitCopy do begin //inner digit calc loop
+      NextDigit := PByte(pNumDigit)^ + Remainder;
+      PByte(pNumDigit)^ := NextDigit div 100;
+      Remainder := (NextDigit - (PByte(pNumDigit)^ * 100) {mod 100}) shl 8;
+      Dec(pNumDigit);
+    end;
+    NextDigit := PByte(pNumDigit)^ + Remainder;
+    PByte(pNumDigit)^ := NextDigit div 100;
+    Remainder := ZBase100Byte2BcdNibbleLookup[NextDigit - (PByte(pNumDigit)^ * 100){mod 100}];
+    if OddPrecision then begin //my new lookup version with bool algebra only
+      PByte(pNibble+1)^ := PByte(pNibble+1)^ or ((Byte(Remainder) and $0F) shl 4);
+      PByte(pNibble)^   := (Byte(Remainder) shr 4);
+    end else
+      PByte(pNibble)^   := Byte(Remainder); //*)
+    if pNibble > pFirstNibble //overflow save
+    then Dec(pNibble)
+    else goto Done; //ready....? Should not happen
+    Dec(NumericLen, Ord(PByte(pDigitCopy+NumericLen)^ = 0)); //as long we've no zero we've to loop again
+    Remainder := 0;
+  end;
+  if OddPrecision and (PByte(PNibble+1)^ = 0) then
+    Inc(PNibble);
+  Remainder := PAnsiChar(@Dest.Fraction[MaxFMTBcdDigits-1])-PNibble;
+  Move((PNibble+1)^, pFirstNibble^, Remainder);
+Done: //free possibly allocated mem
+  if Pointer(pDigitCopy) <> Pointer(@NumericVal[0]) then
+    FreeMem(pDigitCopy);
+Fill: //clear all nibbles after new offset
+  FillChar((pFirstNibble+Remainder)^, MaxFMTBcdDigits-Remainder-Ord(OddPrecision), #0);
+end;
+
+Type
+  TSQLDigit = {$IFDEF CPU64}Cardinal{$ELSE}Word{$ENDIF}; //Byte
+  PSQLDigitArray = ^TSQLDigitArray;
+  TSQLDigitArray = array[0..SQL_MAX_NUMERIC_LEN] of TSQLDigit;
+
+  TDoubleSQLDigit = NativeUInt; //Word
+
+  POleDBMultiplyLookup = ^TOleDBMultiplyLookup;
+  TOleDBMultiplyLookup = record
+    MultiplierCount: TSQLDigit;
+    ByteCount: TSQLDigit;
+    Values: array[0..(MaxFMTBcdDigits div SizeOf(TSQLDigit)) - 1] of TSQLDigit;
+  end;
+const
+  FlushHalfDoubleDigit: TSQLDigit = TSQLDigit(-1);
+  ShrSQLDigit = SizeOf(TSQLDigit) * 8;
+var
+  OleDBMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
+
+(** EH:
+  converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
+  @param Dest the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
+  @param Src the <code>java.math.BigDecimal</code> value which should be filled
+*)
+procedure BCD2SQLNumeric(const Src: TBCD; Dest: PDB_NUMERIC);
+var PNibble, pLastNibble, pFirstNibble: PAnsiChar;
+  Base100Digit, Carry, I: TSQLDigit;
+  NextVal: TDoubleSQLDigit;
+  pValues: PSQLDigitArray;
+  PrecisionIsEven: Boolean;
+  MultiplyLookup: POleDBMultiplyLookup;
+begin
+  pValues := @Dest.val[0];
+  FillChar(pValues^, SQL_MAX_NUMERIC_LEN, #0);
+  Dest.precision := Src.Precision;
+  Dest.scale := Src.SignSpecialPlaces and $3F;
+  Dest.sign := Byte(Src.SignSpecialPlaces and (1 shl 7) = 0);
+
+  pFirstNibble := @Src.Fraction[0];
+  pLastNibble := pFirstNibble+((Src.Precision -1) shr 1);
+  pNibble := pLastNibble-1;
+  { init first byte }
+  if (Src.Precision and 1) = 0 then begin
+    pValues[0] := ZBcdNibble2Base100ByteLookup[PByte(pLastNibble)^];
+    PrecisionIsEven := True;
+  end else begin
+    pValues[0] := PByte(pLastNibble)^ shr 4;
+    PrecisionIsEven := False;
+  end;
+
+  while pNibble >= pFirstNibble do begin
+    Base100Digit := ZSysUtils.ZBcdNibble2Base100ByteLookup[PByte(pNibble)^];
+    Carry := 0;
+    MultiplyLookup := @OleDBMultiplyLookup[PrecisionIsEven][pLastNibble-pNibble];
+    for I := 0 to MultiplyLookup.MultiplierCount - 1 do begin
+      NextVal := pValues[I] + TDoubleSQLDigit(MultiplyLookup.Values[i]) * Base100Digit + Carry;
+      pValues[I] := TSQLDigit(NextVal and FlushHalfDoubleDigit);
+      Carry := NextVal shr ShrSQLDigit;
+    end;
+    if Carry <> 0 then
+      pValues[MultiplyLookup.MultiplierCount] := Carry;
+    Dec(pNibble);
+  end;
+end;
+
+procedure SQLNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: NativeUInt);
+var
+  Remainder, NextDigit: Word;
+  NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
+  pDigit, pDigitCopy, pNumDigit, pLastDigit: PAnsiChar;
+label MainLoop, Done;
+begin
+  pNumDigit := @Src.val[0];
+  pLastDigit := pNumDigit + (NumericLen -1);
+  // check for zero value and padd trailing zeroes away to reduce the main loop
+  while (pLastDigit >= pNumDigit) and (PByte(pLastDigit)^ = 0) do
+    Dec(pLastDigit);
+  if pLastDigit < pNumDigit then begin
+    PByte(Dest)^ := Ord('0');
+    NumericLen := 1;
+    Exit;
+  end;
+
+  { prepare local digit buffer }
+  NumericLen := (pLastDigit - pNumDigit);
+  if NumericLen >= SQL_MAX_NUMERIC_LEN
+  then GetMem(pDigitCopy, NumericLen+1)
+  else pDigitCopy := @NumericVal[0];
+  Move(pNumDigit^, pDigitCopy^, NumericLen+1); //localize all bytes for next calculation loop.
+
+  if Src.scale > Src.precision //normalize precision
+  then pDigit := Dest+(Src.precision +2 + (Src.scale - Src.precision))
+  else pDigit := Dest+ Src.precision +2;
+  pLastDigit := pDigit;
+
+MainLoop: //outer digit filler loop
+  Remainder := 0;
+  pNumDigit := pDigitCopy+NumericLen;
+  while pNumDigit > pDigitCopy do begin //inner digit calc loop
+    NextDigit := PByte(pNumDigit)^ + Remainder;
+    PByte(pNumDigit)^ := NextDigit div 100;
+    Remainder := (NextDigit - (PByte(pNumDigit)^ * 100) {mod 100}) shl 8;
+    Dec(pNumDigit);
+  end;
+  NextDigit := PByte(pNumDigit)^ + Remainder;
+  PByte(pNumDigit)^ := NextDigit div 100;
+  Remainder := NextDigit - (PByte(pNumDigit)^ * 100); //mod 100
+  Dec(pDigit, 2);
+  PWord(pDigit)^ := TwoDigitLookupW[Remainder];
+  { as long we've no zero we've to loop again }
+  if PByte(pDigitCopy+NumericLen)^ = 0 then
+    if NumericLen > 0
+    then Dec(NumericLen)
+    else goto Done;
+  goto MainLoop;
+Done:
+  if Src.scale < Src.Precision then
+    Inc(pDigit, Ord(PByte(pDigit)^ = Ord('0')))
+  else if PByte(pDigit)^ <> Ord('0') then begin
+    Dec(pDigit);
+    PByte(pDigit)^ := Ord('0');
+  end;
+  if Src.sign = 0 then begin//negative ?
+    Dec(pDigit);
+    PByte(pDigit)^ := Ord('-');
+  end;
+  NumericLen := pLastDigit-pDigit;
+  Move(pDigit^, Dest^, (NumericLen-Src.scale));
+  if Src.scale > 0 then begin
+    pByte(Dest+(NumericLen-Src.scale))^ := Ord('.');
+    Move((pLastDigit-Src.scale)^, (Dest+(NumericLen-Src.scale)+1)^,Src.scale);
+    Inc(NumericLen);
+  end;
+  //free possibly allocated mem
+  if Pointer(pDigitCopy) <> Pointer(@NumericVal[0]) then
+    FreeMem(pDigitCopy);
+end;
+
+procedure SQLNumeric2Uni(Src: PDB_NUMERIC; Dest: PWideChar; var NumericLen: NativeUInt);
+var
+  Remainder, NextDigit: Word;
+  NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
+  pDigitCopy, pNumDigit, pLastDigit: PAnsiChar;
+  pDigit: PWideChar;
+label MainLoop, Done;
+begin
+  pNumDigit := @Src.val[0];
+  pLastDigit := pNumDigit + (NumericLen -1);
+  // check for zero value and padd trailing zeroes away to reduce the main loop
+  while (pLastDigit >= pNumDigit) and (PByte(pLastDigit)^ = 0) do
+    Dec(pLastDigit);
+  if pLastDigit < pNumDigit then begin
+    PWord(Dest)^ := Ord('0');
+    NumericLen := 1;
+    Exit;
+  end;
+
+  { prepare local digit buffer }
+  NumericLen := (pLastDigit - pNumDigit);
+  if NumericLen >= SQL_MAX_NUMERIC_LEN
+  then GetMem(pDigitCopy, NumericLen+1)
+  else pDigitCopy := @NumericVal[0];
+  Move(pNumDigit^, pDigitCopy^, NumericLen+1); //localize all bytes for next calculation loop.
+
+  if Src.scale > Src.precision //normalize precision
+  then pDigit := Dest+(Src.precision + 2 + (Src.scale - Src.precision))
+  else pDigit := Dest+ Src.precision + 2;
+  pLastDigit := Pointer(pDigit);
+
+MainLoop: //outer digit filler loop
+  Remainder := 0;
+  pNumDigit := pDigitCopy+NumericLen;
+  while pNumDigit > pDigitCopy do begin //inner digit calc loop
+    NextDigit := PByte(pNumDigit)^ + Remainder;
+    PByte(pNumDigit)^ := NextDigit div 100;
+    Remainder := (NextDigit - (PByte(pNumDigit)^ * 100) {mod 100}) shl 8;
+    Dec(pNumDigit);
+  end;
+  NextDigit := PByte(pNumDigit)^ + Remainder;
+  PByte(pNumDigit)^ := NextDigit div 100;
+  Remainder := NextDigit - (PByte(pNumDigit)^ * 100); //mod 100
+  Dec(pDigit, 2);
+  PCardinal(pDigit)^ := TwoDigitLookupLW[Remainder];
+  { as long we've no zero we've to loop again }
+  if PByte(pDigitCopy+NumericLen)^ = 0 then
+    if NumericLen > 0
+    then Dec(NumericLen)
+    else goto Done;
+  goto MainLoop;
+Done:
+  if Src.scale < Src.Precision then
+    Inc(pDigit, Ord(PWord(pDigit)^ = Ord('0')))
+  else if PWord(pDigit)^ <> Ord('0') then begin
+    Dec(pDigit);
+    PWord(pDigit)^ := Ord('0');
+  end;
+  if Src.sign = 0 then begin//negative ?
+    Dec(pDigit);
+    PWord(pDigit)^ := Ord('-');
+  end;
+  NumericLen := PWideChar(pLastDigit)-pDigit;
+  Move(pDigit^, Dest^, (NumericLen-Src.scale) shl 1);
+  if Src.scale > 0 then begin
+    pWord(Dest+(NumericLen-Src.scale))^ := Ord('.');
+    Move((PWideChar(pLastDigit)-Src.scale)^, (Dest+(NumericLen-Src.scale)+1)^,Src.scale shl 1);
+    Inc(NumericLen);
+  end;
+  //free possibly allocated mem
+  if Pointer(pDigitCopy) <> Pointer(@NumericVal[0]) then
+    FreeMem(pDigitCopy);
+end;
+
+procedure OleDBMultiplyLookupFiller;
+const bL: array[Boolean] of TSQLDigit = (10, 100);
+var B: Boolean;
+  I, j, cnt: Integer;
+  Carry: TSQLDigit;
+  bCarry: Byte;
+  wNextVal: Word;
+  NextVal: TDoubleSQLDigit;
+  pVals: PByteArray;
+  bOleDBMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
+begin
+  { calulate amount of packed multipliers }
+  for b := False to True do begin
+    cnt := 1;
+    FillChar(OleDBMultiplyLookup[b], SizeOf(TOleDBMultiplyLookup), #0);
+    OleDBMultiplyLookup[b][1].MultiplierCount := Cnt;
+    OleDBMultiplyLookup[b][1].Values[0] := bl[b];
+    for I := 2 to MaxFMTBcdDigits-1 do begin
+      Move(OleDBMultiplyLookup[b][I-1], OleDBMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
+      Carry := 0;
+      for J := 0 to Cnt - 1 do begin
+        NextVal := (TDoubleSQLDigit(OleDBMultiplyLookup[b][I].Values[J]) * TDoubleSQLDigit(100)) + Carry;
+        OleDBMultiplyLookup[b][I].Values[J] := NextVal and FlushHalfDoubleDigit;
+        Carry := NextVal shr ShrSQLDigit;
+      end;
+      if Carry <> 0 then begin
+        OleDBMultiplyLookup[b][i].Values[Cnt] := Carry;
+        Inc(Cnt);
+        if Cnt > MaxFMTBcdDigits div SizeOf(TSQLDigit) then
+          Break;
+        OleDBMultiplyLookup[b][i].MultiplierCount := Cnt;
+      end;
+    end;
+  end;
+  { now calculate the amount of bytes for the VAR_NUMERICS }
+  for b := False to True do begin
+    cnt := 1;
+    FillChar(bOleDBMultiplyLookup[b], SizeOf(TOleDBMultiplyLookup), #0);
+    bOleDBMultiplyLookup[b][1].MultiplierCount := Cnt;
+    pByte(@bOleDBMultiplyLookup[b][1].Values[0])^ := bl[b];
+    for I := 2 to MaxFMTBcdDigits-1 do begin
+      Move(bOleDBMultiplyLookup[b][I-1], bOleDBMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
+      pVals := @bOleDBMultiplyLookup[b][I].Values[0];
+      bCarry := 0;
+      for J := 0 to Cnt - 1 do begin
+        wNextVal := (Word(pVals[J]) * Word(100)) + bCarry;
+        pVals[J] := wNextVal and $FF;
+        bCarry := wNextVal shr 8;
+      end;
+      if bCarry <> 0 then begin
+        pVals[Cnt] := bCarry;
+        Inc(Cnt);
+        bOleDBMultiplyLookup[b][i].MultiplierCount := Cnt;
+        OleDBMultiplyLookup[b][i].ByteCount := Cnt;
+        if Cnt > MaxFMTBcdDigits then
+          Break;
+      end else
+        OleDBMultiplyLookup[b][i].ByteCount := Cnt;
+    end;
+  end;
+end;
+{$IFEND}
 
 {**
   Splits a SQL query into a list of sections.
@@ -1977,8 +2391,8 @@ A_Conv: ZSysUtils.ValidGUIDToBinary(PAnsiChar(P), @GUID.D1);
       end;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: begin
-        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
-W_Conv: ZSysUtils.ValidGUIDToBinary(PAnsiChar(P), @GUID.D1);
+        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+W_Conv: ZSysUtils.ValidGUIDToBinary(PWideChar(P), @GUID.D1);
       end;
     vtBytes: case TZSQLType(ZArray.VArrayType) of
         stGUID: begin
@@ -1996,5 +2410,63 @@ DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
+
+procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
+var P: Pointer;
+  L: Integer;
+label W_Conv, A_Conv, DoRaise;
+begin
+  {$R-}
+  case ZArray.VArrayVariantType of
+    vtCharRec: begin
+        P := TZCharRecDynArray(ZArray.VArray)[Index].P;
+        L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
+        if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+        then goto W_Conv
+        else goto A_Conv;
+      end;
+    {$IFNDEF UNICODE}vtString,{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+    {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    vtRawByteString: begin
+        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
+A_Conv: Assert(ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.'), 'wrong bcd value');
+      end;
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString: begin
+        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd value');
+      end;
+    {$IFDEF BCD_TEST}vtBigDecimal, vtCurrency, vtDouble, {$ENDIF}
+    vtInteger, vtUInteger,
+    vtNull: case TZSQLType(ZArray.VArrayType) of
+              stBoolean:    ScaledOrdinal2BCD(Word(Ord(TBooleanDynArray(ZArray.VArray)[Index])), 0, BCD);
+              stByte:       ScaledOrdinal2BCD(Word(TByteDynArray(ZArray.VArray)[Index]), 0, BCD, False);
+              stShort:      ScaledOrdinal2BCD(SmallInt(TShortIntDynArray(ZArray.VArray)[Index]), 0, BCD);
+              stWord:       ScaledOrdinal2BCD(TWordDynArray(ZArray.VArray)[Index], 0, BCD, False);
+              stSmall:      ScaledOrdinal2BCD(TSmallIntDynArray(ZArray.VArray)[Index], 0, BCD);
+              stLongWord:   ScaledOrdinal2BCD(TCardinalDynArray(ZArray.VArray)[Index], 0, BCD, False);
+              stInteger:    ScaledOrdinal2BCD(TIntegerDynArray(ZArray.VArray)[Index], 0, BCD);
+              stLong:       ScaledOrdinal2BCD(TInt64DynArray(ZArray.VArray)[Index], 0, BCD);
+              stULong:      ScaledOrdinal2BCD(TUInt64DynArray(ZArray.VArray)[Index], 0, BCD, False);
+              stFloat:      DoubleToBCD(TSingleDynArray(ZArray.VArray)[Index], BCD);
+              stTime, stDate, stTimeStamp,
+              stDouble:     DoubleToBCD(TDoubleDynArray(ZArray.VArray)[Index], BCD);
+              stCurrency:   Currency2BCD(TCurrencyDynArray(ZArray.VArray)[Index], BCD);
+              stBigDecimal: BCD := TBcdDynArray(ZArray.VArray)[Index];
+              else goto DoRaise;
+            end;
+    else
+DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+  end;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+end;
+
+{$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+initialization
+  OleDBMultiplyLookupFiller;
+{$IFEND}
 
 end.

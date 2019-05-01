@@ -367,6 +367,7 @@ procedure RawToFloatDef(const s: PAnsiChar; const DecimalSep: AnsiChar; const De
 function ValRawExt(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Extended;
 function ValRawDbl(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Double;
 function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Single;
+function ValRawCurr(S: PByteArray; DecimalSep: Char; var Len: Integer): Currency;
 
 function ValRawInt(const s: RawByteString; out code: Integer): Integer; overload;
 function ValRawInt(s: PAnsiChar; out code: Integer): Integer; overload;
@@ -396,6 +397,7 @@ procedure UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; cons
 function ValUnicodeExt(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Extended;
 function ValUnicodeDbl(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Double;
 function ValUnicodeSin(const s: PWordArray; const DecimalSep: WideChar; out code: Integer): Single;
+function ValUnicodeCurr(s: PWordArray; DecimalSep: Char; var Len: Integer): Currency;
 
 {Faster Floating functions ..}
 
@@ -424,6 +426,28 @@ function GetOrdinalDigits(Value: Word): Byte; overload; {$IFDEF WITH_INLINE} inl
 function GetOrdinalDigits(Value: SmallInt; out W: Word; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: Byte): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: ShortInt; out B: Byte; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
+const I64Table: array[0..18] of Int64 = (
+  1,
+  10,
+  100,
+  1000,
+  10000,
+  100000,
+  1000000,
+  10000000,
+  100000000,
+  1000000000,
+  10000000000,
+  100000000000,
+  1000000000000,
+  10000000000000,
+  100000000000000,
+  1000000000000000,
+  10000000000000000,
+  100000000000000000,
+  1000000000000000000
+  );
 
 implementation
 
@@ -5398,6 +5422,66 @@ begin
     code := 0;
 end;
 
+function ValRawCurr(S: PByteArray; DecimalSep: Char; var Len: Integer): Currency;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for varying DecimalSeperator, fixed Len and result is high prec Currency
+var
+  Digits, Code: Integer;
+  Ch: Byte;
+  Neg, Valid: Boolean;
+  i64: Int64 absolute Result;
+begin
+  i64 := 0;
+  Code   := 0;
+  if S = nil then begin
+    Len := 0;
+    Exit;
+  end;
+  Neg    := False;
+  Valid  := False;
+  while S[code] = Ord(' ') do
+    Inc(Code);
+  Ch := S[code];
+  if Ch in [Ord('+'), Ord('-')] then begin
+    inc(Code);
+    Neg := (Ch = Ord('-'));
+  end;
+  while Code < Len do begin
+    Ch := S[code];
+    inc(Code);
+    if (Ch < Ord('0')) or (Ch > Ord('9')) then //if not (Ch in ['0'..'9']) then
+      break;
+    i64 := (i64 * 10) + Ch - Ord('0');
+    Valid := True;
+  end;
+  Digits := 0;
+  if Neg then
+    i64 := -i64;
+  if Ch = Ord(DecimalSep) then
+    while (Code < Len) and (Digits < 4) do begin
+      Ch := S[code];
+      inc(Code);
+      if (Ch < Ord('0')) or (Ch > Ord('9')) then begin //if not (Ch in ['0'..'9']) then
+        if not valid then begin {Starts with '.'}
+          if Ch = 0 then
+            dec(code); {s = '.'}
+        end;
+        break;
+      end;
+      if Neg
+      then i64 := (i64 * 10) {%H-}- (Ch - Ord('0'))
+      else i64 := (i64 * 10) {%H-}+ (Ch - Ord('0'));
+      Inc(Digits);
+      Valid := true;
+    end;
+  if Digits < 4 then
+    i64 := i64 * I64Table[4-Digits];
+  if not Valid or (Code <> Len) then
+    Len := code;
+end;
+
 function ValRawSin(const S: PByteArray; const DecimalSep: AnsiChar; out code: Integer): Single;
 //function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
 //fast pascal from John O'Harrow see:
@@ -6353,6 +6437,66 @@ begin
     Result := -Result;
   if Valid and (W = Ord(#0)) then
     code := 0;
+end;
+
+function ValUnicodeCurr(s: PWordArray; DecimalSep: Char; var Len: Integer): Currency;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Extended;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for varying DecimalSeperator, fixed Len and result is high prec Currency
+var
+  Digits, Code: Integer;
+  Ch: Word;
+  Neg, Valid: Boolean;
+  i64: Int64 absolute Result;
+begin
+  i64 := 0;
+  Code   := 0;
+  if S = nil then begin
+    Len := 0;
+    Exit;
+  end;
+  Neg    := False;
+  Valid  := False;
+  while S[code] = Ord(' ') do
+    Inc(Code);
+  Ch := S[code];
+  if Ch in [Ord('+'), Ord('-')] then begin
+    inc(Code);
+    Neg := (Ch = Ord('-'));
+  end;
+  while Code < Len do begin
+    Ch := S[code];
+    inc(Code);
+    if (Ch < Ord('0')) or (Ch > Ord('9')) then //if not (Ch in ['0'..'9']) then
+      break;
+    i64 := (i64 * 10) + Ch - Ord('0');
+    Valid := True;
+  end;
+  Digits := 0;
+  if Neg then
+    i64 := -i64;
+  if Ch = Ord(DecimalSep) then
+    while (Code < Len) and (Digits < 4) do begin
+      Ch := S[code];
+      inc(Code);
+      if (Ch < Ord('0')) or (Ch > Ord('9')) then begin //if not (Ch in ['0'..'9']) then
+        if not valid then begin {Starts with '.'}
+          if Ch = 0 then
+            dec(code); {s = '.'}
+        end;
+        break;
+      end;
+      if Neg
+      then i64 := (i64 * 10) {%H-}- (Ch - Ord('0'))
+      else i64 := (i64 * 10) {%H-}+ (Ch - Ord('0'));
+      Inc(Digits);
+      Valid := true;
+    end;
+  if Digits < 4 then
+    i64 := i64 * I64Table[4-Digits];
+  if not Valid or (Code <> Len) then
+    Len := code;
 end;
 
 {$IFDEF USE_FAST_TRUNC}

@@ -64,15 +64,16 @@ uses Classes, SysUtils,
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertODBCToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertODBCToSqlType(FieldType: SmallInt; Precision, Scale: Integer;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Converts a DBLib native types into ZDBC SQL types.
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertTDSTypeToSqlType(const FieldType: TTDSType;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Convert string DBLib field type to SqlType
@@ -124,7 +125,7 @@ uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses, ZFastCode
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertODBCToSqlType(FieldType: SmallInt;
+function ConvertODBCToSqlType(FieldType: SmallInt; Precision, Scale: Integer;
   CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
@@ -136,7 +137,11 @@ begin
 //    -6: Result := stSmall;
     5: Result := stSmall;
     4: Result := stInteger;
-    2, 3, 6, 7, 8: Result := stDouble;
+    2{SQL_NUMERIC}, 3{SQL_DECIMAL}:
+      if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
+      then Result := stCurrency
+      else Result := stBigDecimal;
+    6, 7, 8: Result := stDouble;
     11, 93: Result := stTimestamp;
     -1{text}, -10: Result{ntext} := stAsciiStream;
     -4{image}: Result := stBinaryStream;
@@ -158,8 +163,8 @@ end;
   @param CtrlsCPType the string code Page of the IDE Controls
   @return a SQL undepended type.
 }
-function ConvertTDSTypeToSqlType(const FieldType: TTDSType;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
     tdsVoid, tdsUDT:
@@ -204,7 +209,9 @@ begin
     tdsFlt8:
       Result := stDouble;
     tdsDecimal, tdsNumeric:
-      Result := stDouble;
+      if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
+      then Result := stCurrency
+      else Result := stBigDecimal;
     //tdsVariant: {from tds.h -> sybase only -> na't test it}
     tdsInt8:
       Result := stLong;
@@ -403,5 +410,6 @@ begin
       Result := 'NULL';
   end;
 end;
+
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.
