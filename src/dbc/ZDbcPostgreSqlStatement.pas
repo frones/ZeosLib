@@ -1012,7 +1012,10 @@ var
       end else
         ToBuff(FCachedQueryRaw[i], TmpSQL);
       FlushBuff(TmpSQL);
-    Result := FPlainDriver.PQExec(FconnAddress^, Pointer(TmpSQL));
+    if (FPQResultFormat = ParamFormatBin)
+    then Result := FPlainDriver.PQexecParams(FconnAddress^, Pointer(TmpSQL),
+        0, nil, nil, nil, nil, ParamFormatBin)
+    else Result := FPlainDriver.PQExec(FconnAddress^, Pointer(TmpSQL));
   end;
 begin
   Result := nil;
