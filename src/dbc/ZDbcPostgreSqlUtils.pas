@@ -298,7 +298,7 @@ begin
     if Connection.IsOidAsBlob() then
       Result := stBinaryStream
     else
-      Result := stInteger;
+      Result := stLongWord;
   end
   else if TypeNameLo = 'name' then
     Result := stString
@@ -382,7 +382,7 @@ begin
     TEXTOID: Result := stAsciiStream; { text }
     OIDOID: if OidAsBlob
             then Result := stBinaryStream
-            else Result := stInteger;//stLongWord;
+            else Result := stLongWord;
     NAMEOID: Result := stString; { name }
     INT2OID: Result := stSmall; { int2 }
     INT4OID: Result := stInteger; { int4 }

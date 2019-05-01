@@ -1624,7 +1624,7 @@ begin
             Inc(OutParamCount);
 
           // column name
-          ArgOid := {$IFDEF UNICODE}UnicodeToInt{$ELSE}RawToInt{$ENDIF}(ArgTypes.Strings[i]);
+          ArgOid := {$IFDEF UNICODE}UnicodeToInt64{$ELSE}RawToInt64{$ENDIF}(ArgTypes.Strings[i]);
           if ArgNames.Count > I then
             ColumnName := ArgNames.Strings[I]
           else
@@ -3260,7 +3260,8 @@ const
   cnspname_index    = FirstDbcIndex + 10;
 var
   Len: NativeUInt;
-  TypeOid, AttTypMod, Precision: Integer;
+  TypeOid: Cardinal;
+  AttTypMod, Precision: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
   CheckVisibility: Boolean;
@@ -3343,7 +3344,7 @@ begin
     begin
       AttTypMod := GetInt(atttypmod_index);
 
-      TypeOid := GetInt(atttypid_index);
+      TypeOid := GetUInt(atttypid_index);
       PgType := GetPostgreSQLType(TypeOid);
 
       Result.MoveToInsertRow;
