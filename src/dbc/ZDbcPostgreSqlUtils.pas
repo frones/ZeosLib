@@ -920,7 +920,7 @@ begin
   Result := ((Hour * MINS_PER_HOUR + Min) * SECS_PER_MINUTE + Sec) * MSecsPerSec + MSec;
   Result := (Date * MSecsPerDay + Result) * MSecsPerSec;
   {$IFNDEF ENDIAN_BIG}
-  Int642PG(Result, @Result);
+  Reverse8Bytes(@Result);
   {$ENDIF}
 end;
 
@@ -1064,7 +1064,7 @@ begin
   Reverse8Bytes(@Value);
   {$ENDIF}
   dt2Time(Value, Hour, Min, Sec, fsec);
-  if not TryEncodeTime(Hour, Min, Sec, Fsec, Result) then
+  if not TryEncodeTime(Hour, Min, Sec, Fsec div MSecsPerSec, Result) then
     Result := 0;
 end;
 
