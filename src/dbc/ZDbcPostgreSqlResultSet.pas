@@ -1196,6 +1196,7 @@ begin
         stBoolean:                    Result := PByte(P)^;
         stSmall:                      Result := PG2SmallInt(P);
         stInteger, stDate:            Result := PG2Integer(P);
+        stLongWord:                   Result := PG2Cardinal(P);
         stLong:                       Result := PG2Int64(P);
         stFloat:                      Result := Trunc(PG2Single(P));
         stDouble:                     Result := Trunc(PG2Double(P));
@@ -1251,6 +1252,7 @@ begin
         stBoolean:                    Result := PByte(P)^;
         stSmall:                      Result := PG2SmallInt(P);
         stInteger, stDate:            Result := PG2Integer(P);
+        stLongWord:                   Result := PG2Cardinal(P);
         stLong:                       Result := PG2Int64(P);
         stFloat:                      Result := Trunc(PG2Single(P));
         stDouble:                     Result := Trunc(PG2Double(P));
@@ -1313,6 +1315,7 @@ begin
         stBoolean:                    Result := PByte(P)^;
         stSmall:                      Result := PG2SmallInt(P);
         stInteger, stDate:            Result := PG2Integer(P);
+        stLongWord:                   Result := PG2Cardinal(P);
         stLong:                       Result := PG2Int64(P);
         stFloat:                      Result := Trunc(PG2Single(P));
         stDouble:                     Result := Trunc(PG2Double(P));
@@ -1370,6 +1373,7 @@ begin
         stBoolean:                    Result := PByte(P)^;
         stSmall:                      Result := PG2SmallInt(P);
         stInteger, stDate:            Result := PG2Integer(P);
+        stLongWord:                   Result := PG2Cardinal(P);
         stLong:                       Result := PG2Int64(P);
         stFloat:                      Result := PG2Single(P);
         stDouble:                     Result := PG2Double(P);
@@ -1425,6 +1429,7 @@ begin
         stBoolean:                    Result := PByte(P)^;
         stSmall:                      Result := PG2SmallInt(P);
         stInteger:                    Result := PG2Integer(P);
+        stLongWord:                   Result := PG2Cardinal(P);
         stLong:                       Result := PG2Int64(P);
         stFloat:                      Result := PG2Single(P);
         stDouble:                     Result := PG2Double(P);
@@ -1484,7 +1489,7 @@ begin
     if FBinaryValues then
       case ColumnType of
         stBoolean, stSmall,
-        stInteger, stLong:            {$IFDEF BCD_TEST}
+        stInteger, stLong, stLongWord:{$IFDEF BCD_TEST}
                                       ScaledOrdinal2BCD(GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), 0, Result);
                                       {$ELSE}
                                       Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -1625,7 +1630,7 @@ begin
     if FBinaryValues then
       case ColumnType of
         stBoolean, stSmall,
-        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stInteger, stLong, stLongWord:Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         stFloat, stDouble,
         stDate, stTime, stTimeStamp:  Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         stCurrency:                   if ColumnOID = NUMERICOID
@@ -1678,7 +1683,7 @@ begin
     if FBinaryValues then
       case ColumnType of
         stBoolean, stSmall,
-        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stInteger, stLong, stLongWord:Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         stDate:                       Result := PG2Date(Pinteger(P)^);
         //stTime:                       Result := 0;
         stTimestamp:                  if Finteger_datetimes
@@ -1735,7 +1740,7 @@ begin
     if FBinaryValues then
       case ColumnType of
         stBoolean, stSmall,
-        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stInteger, stLong, stLongWord:Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         //stDate:                       Result := 0;
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
@@ -1793,7 +1798,7 @@ begin
     if FBinaryValues then
       case ColumnType of
         stBoolean, stSmall,
-        stInteger, stLong:            Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        stInteger, stLongWord, stLong:Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         stDate:                       Result := PG2Date(Pinteger(P)^);
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
@@ -1848,7 +1853,7 @@ begin
       then Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, 0, FChunk_Size)
       else Result := nil
     else case ColumnType of
-      stBoolean, stSmall, stInteger, stLong,
+      stBoolean, stSmall, stInteger, stLongWord, stLong,
       stDate, stTime, stTimestamp,
       stFloat, stDouble,
       stCurrency, stBigDecimal,
