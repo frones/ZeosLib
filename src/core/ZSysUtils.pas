@@ -7100,21 +7100,8 @@ begin
   end;
 end;
 
-procedure X;
-var BCD: TBCD;
- s1, S2: String;
- i: Integer;
-begin
-  for I := 0 to 10 do begin
-    s1 := ZFastCode.IntToStr(999*I);
-    BCD := IntegerToBCD(999*I);
-    S2 := BCDToSQLUni(BCD);
-    Assert(S1 = S2);
-  end;
-end;
 initialization;
   BcdNibbleLookupFiller;
-  X;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolConstFiller; //build bool consts

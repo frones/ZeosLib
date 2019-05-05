@@ -212,11 +212,6 @@ uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
   ZMessages, ZEncoding, ZClasses, ZDbcUtils;
 
-const sql_fmt: PAnsiChar = ('TM9');
-const sql_fmt_length: ub4 = 3;      //000000000000009.9000
-const sql_nls_params: PAnsiChar = ('NLS_NUMERIC_CHARACTERS=''.,''');
-const sql_nls_p_length: ub4 = 27;
-
 { TZOracleAbstractResultSet_A }
 
 {$IFDEF USE_SYNCOMMONS}
