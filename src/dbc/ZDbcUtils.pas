@@ -981,7 +981,7 @@ begin
   if i64 = 0 then
     Exit;
   {$IFDEF ENDIAN_BIG}
-  for I := 7 to 0 do
+  for I := 7 downto 0 do
     if (Src.val[I] <> 0) and (I >= 1) then begin
       MoveReverseByteOrder(@i64, @i64, i+1);
       Break;
