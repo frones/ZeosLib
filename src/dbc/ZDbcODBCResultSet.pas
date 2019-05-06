@@ -1079,7 +1079,7 @@ begin
                       Result := @FTinyBuffer[0];
                     end;
       stCurrency:   begin
-                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
+                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), @FTinyBuffer[0], @Result);
 Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
