@@ -220,9 +220,6 @@ procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$ENDIF}
 
-procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
-
-
 //ported macros from array.h
 function ARR_NDIM(a: PArrayType): PInteger;
 function ARR_HASNULL(a: PArrayType): Boolean;
@@ -1096,22 +1093,6 @@ begin
   Reverse4Bytes(@Value);
   {$ENDIF}
   j2date(Value+POSTGRES_EPOCH_JDATE, Year, Month, Day);
-end;
-
-procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
-begin
-  { adjust byte order of host to network  }
-  {$IFNDEF ENDIAN_BIG}
-  Dest := Dest+Len-1;
-  while Len > 0 do begin
-    Dest^ := Src^;
-    dec(Dest);
-    Inc(Src);
-    dec(Len);
-  end;
-  {$ELSE}
-  Move(Src^, Dest^, Len);
-  {$ENDIF}
 end;
 
 function PG2SmallInt(P: Pointer): SmallInt;
