@@ -2743,6 +2743,7 @@ var
   SQL: string;
   ProcedureNameCondition, SchemaCondition: string;
   ZType, ZPrecision, ZScale: Integer;
+  Len: NativeUInt;
 
   procedure MysqlTypeToZeos(TypeName: String; const MysqlPrecision, MySqlScale, MysqlCharLength: integer; out ZType, ZPrecision, ZScale: Integer);
   begin
@@ -2927,35 +2928,32 @@ begin
       MysqlTypeToZeos(GetString(myProcColTypeNameIndex), GetInt(myExtraNumericPrecisionIndex), GetInt(myProcColScaleIndex), GetInt(myExtraMaxCharLength), ZType, ZPrecision, ZScale);
 
       Result.MoveToInsertRow;
-      Result.UpdateString(CatalogNameIndex, GetString(CatalogNameIndex));
-      Result.UpdateString(SchemaNameIndex, GetString(SchemaNameIndex));
-      Result.UpdateString(ProcColProcedureNameIndex, GetString(myProcColProcedureNameIndex));
+      if not IsNull(CatalogNameIndex) then
+        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(CatalogNameIndex, Len), Len);
+      if not IsNull(SchemaNameIndex) then
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(SchemaNameIndex, Len), Len);
+      if not IsNull(SchemaNameIndex) then
+        Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(myProcColProcedureNameIndex, Len), Len);
       //ProcColColumnNameIndex
-      if IsNull(myProcColColumnNameIndex)
-      then Result.UpdateNull(ProcColColumnNameIndex)
-      else Result.UpdateString(ProcColColumnNameIndex, GetString(myProcColColumnNameIndex));
+      if not IsNull(myProcColColumnNameIndex) then
+        Result.UpdateString(ProcColColumnNameIndex, GetString(myProcColColumnNameIndex));
       //ProcColColumnTypeIndex
       Result.UpdateShort(ProcColColumnTypeIndex, GetShort(myProcColColumnTypeIndex));
       //ProcColDataTypeIndex
-      if ZType = -1
-      then Result.UpdateNull(ProcColDataTypeIndex)
-      else Result.UpdateInt(ProcColDataTypeIndex, ZType);
+      if ZType <> -1 then
+        Result.UpdateInt(ProcColDataTypeIndex, ZType);
       //ProcColTypeNameIndex
-      if IsNull(myProcColTypeNameIndex)
-      then Result.UpdateNull(ProcColTypeNameIndex)
-      else Result.UpdateString(ProcColTypeNameIndex, GetString(myProcColTypeNameIndex));
+      if not IsNull(myProcColTypeNameIndex) then
+        Result.UpdatePAnsiChar(ProcColTypeNameIndex, GetPAnsiChar(myProcColTypeNameIndex, Len), Len);
       //ProcColPrecisionIndex
-      if ZPrecision = -1
-      then Result.UpdateNull(ProcColPrecisionIndex)
-      else Result.UpdateInt(ProcColPrecisionIndex, ZPrecision);
+      if ZPrecision <> -1 then
+        Result.UpdateInt(ProcColPrecisionIndex, ZPrecision);
       //ProcColLengthIndex
-      if IsNull(myProcColLengthIndex)
-      then Result.UpdateNull(ProcColLengthIndex)
-      else Result.UpdateInt(ProcColLengthIndex, GetInt(myProcColLengthIndex));
+      if not IsNull(myProcColLengthIndex) then
+        Result.UpdateInt(ProcColLengthIndex, GetInt(myProcColLengthIndex));
       //ProcColScaleIndex
-      if IsNull(myProcColScaleIndex)
-      then Result.UpdateNull(ProcColScaleIndex)
-      else Result.UpdateInt(ProcColScaleIndex, GetInt(myProcColScaleIndex));
+      if not IsNull(myProcColScaleIndex) then
+        Result.UpdateInt(ProcColScaleIndex, GetInt(myProcColScaleIndex));
       //ProcColRadixIndex
       Result.UpdateNull(ProcColRadixIndex);
       //ProcColNullableIndex
