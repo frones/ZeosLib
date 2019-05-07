@@ -1069,16 +1069,27 @@ end;
 {$IFEND}
 
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
-var B: Byte; {if Src and dest are equal}
+var B: Byte;
 begin
-  Dest := Dest+Len-1;
-  while Len > 0 do begin
-    B := PByte(Dest)^;
-    Dest^ := Src^;
-    PByte(Dest)^ := B;
-    dec(Dest);
-    Inc(Src);
-    dec(Len);
+  if (Dest = Src) then begin
+    Dest := Src+Len-1;
+    Len := Len shr 1;
+    while Len > 0 do begin
+      B := PByte(Dest)^;
+      Dest^ := Src^;
+      PByte(Src)^ := B;
+      dec(Dest);
+      Inc(Src);
+      dec(Len);
+    end;
+  end else begin
+    Dest := Dest+Len-1;
+    while Len > 0 do begin
+      Dest^ := Src^;
+      dec(Dest);
+      Inc(Src);
+      dec(Len);
+    end;
   end;
 end;
 
