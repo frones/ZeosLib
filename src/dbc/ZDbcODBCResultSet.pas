@@ -244,6 +244,7 @@ procedure TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var C, H, I: Integer;
     P: Pointer;
+    {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
 begin
   //init
   if JSONWriter.Expand then
@@ -278,8 +279,13 @@ begin
         stLong:       JSONWriter.Add(PInt64(fColDataPtr)^);
         stFloat:      JSONWriter.AddSingle(PSingle(fColDataPtr)^);
         stCurrency:   JSONWriter.AddCurr64(ODBCNumeric2Curr(fColDataPtr));
-        stDouble,
-        stBigDecimal: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
+        stBigDecimal{$IFDEF BCD_TEST}:
+                      begin
+                        SQLNumeric2BCD(fColDataPtr, BCD, 16);
+                        JSONWriter.AddNoJSONEscape(@fTinyBuffer[0], BCDToRaw(BCD, @fTinyBuffer[0], '.'));
+                      end;
+                    {$ELSE},{$ENDIF}
+        stDouble: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
         stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
         stGUID:       begin
                         JSONWriter.Add('"');
@@ -926,17 +932,16 @@ begin
                     end;
       stLong:       begin
                       IntToRaw(PInt64(fColDataPtr)^, @FTinyBuffer[0], @Result);
-Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      goto Set_Results;
                     end;
       stFloat:      begin
                       Len := FloatToSqlRaw(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
       stCurrency:   begin
-                      Result := @FTinyBuffer[SizeOf(Pointer)];
-                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
-                      Len := Result-PPAnsiChar(@FTinyBuffer[0])^;
+                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), @FTinyBuffer[0], @Result);
+Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
+                      Result := @FTinyBuffer[0];
                     end;
       stBigDecimal{$IFDEF BCD_TEST}: begin
                       Result := @FTinyBuffer[0];
@@ -1067,17 +1072,16 @@ begin
                     end;
       stLong:       begin
                       IntToUnicode(PInt64(fColDataPtr)^, @FTinyBuffer[0], @Result);
-Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      goto Set_Results;
                     end;
       stFloat:      begin
                       Len := FloatToSqlUnicode(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
       stCurrency:   begin
-                      Result := @FTinyBuffer[SizeOf(Pointer)];
-                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), Result, @FTinyBuffer[0]);
-                      Len := ZPPWideChar(@FTinyBuffer[0])^-Result;
+                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), @FTinyBuffer[0], @Result);
+Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
+                      Result := @FTinyBuffer[0];
                     end;
 
       stBigDecimal{$IFDEF BCD_TEST}: begin

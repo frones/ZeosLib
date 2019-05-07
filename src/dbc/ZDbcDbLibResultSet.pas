@@ -816,10 +816,16 @@ begin
     FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
     LastWasNull := Data = nil;
     if Data <> nil then
-      if TDStype = tdsFlt8
-      then Result := PDouble(Data)^
-      else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsFlt8),
-          @Result, SizeOf(Result))
+      case TDStype of
+        tdsInt1: Result := PByte(Data)^;
+        tdsInt2: Result := PSmallInt(Data)^;
+        tdsInt4: Result := PInteger(Data)^;
+        tdsInt8: Result := PInt64(Data)^;
+        tdsFlt4: Result := PSingle(Data)^;
+        tdsFlt8: Result := PDouble(Data)^;
+        else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsFlt8),
+            @Result, SizeOf(Result));
+      end
     else Result := 0;
     FDBLibConnection.CheckDBLibError(lcOther, 'GETDOUBLE');
   end;

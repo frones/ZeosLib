@@ -179,7 +179,31 @@ procedure BCD2SQLNumeric(const Src: TBCD; Dest: PDB_NUMERIC);
 
 procedure SQLNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: NativeUint);
 procedure SQLNumeric2Uni(Src: PDB_NUMERIC; Dest: PWideChar; var NumericLen: NativeUint);
+
+(** written by EgonHugeist
+  converts a DB_NUMERIC value with litte endian order value into a native currency value
+  @param src the pointer to a valid DB_NUMERIC struct which to be converted
+  @param NumericNegSign the value which represents a negative dbnumeric value
+  @return the converted currency value
+*)
+function DBNumeric2Curr_LE(Src: PDB_NUMERIC; NumericNegSign: Byte): Currency;
+(** written by EgonHugeist
+  converts a DB_NUMERIC value with big endian order value into a native currency value
+  @param src the pointer to a valid DB_NUMERIC struct which to be converted
+  @param NumericNegSign the value which represents a negative dbnumeric value
+  @return the converted currency value
+*)
+function DBNumeric2Curr_BE(Src: PDB_NUMERIC; NumericNegSign: Byte): Currency;
+
+type TNumericSign = array[Boolean] of Byte;  //true represents a negative index
+const ZeroIsNegativeOneIsPositive: TNumericSign = (1, 0);
+const OneIsNegativeZeroIsPositive: TNumericSign = (0, 1);
+
+procedure Curr2DBNumeric_LE(const Src: Currency; Dest: PDB_NUMERIC; const NumericSign: TNumericSign);
+procedure Curr2DBNumeric_BE(const Src: Currency; Dest: PDB_NUMERIC; const NumericSign: TNumericSign);
 {$IFEND}
+
+procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
 function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
@@ -692,7 +716,7 @@ const
   FlushHalfDoubleDigit: TSQLDigit = TSQLDigit(-1);
   ShrSQLDigit = SizeOf(TSQLDigit) * 8;
 var
-  OleDBMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
+  DBNumMultiplyLookup: array[Boolean, 1..MaxFMTBcdDigits-1] of TOleDBMultiplyLookup;
 
 (** EH:
   converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
@@ -728,7 +752,7 @@ begin
   while pNibble >= pFirstNibble do begin
     Base100Digit := ZSysUtils.ZBcdNibble2Base100ByteLookup[PByte(pNibble)^];
     Carry := 0;
-    MultiplyLookup := @OleDBMultiplyLookup[PrecisionIsEven][pLastNibble-pNibble];
+    MultiplyLookup := @DBNumMultiplyLookup[PrecisionIsEven][pLastNibble-pNibble];
     for I := 0 to MultiplyLookup.MultiplierCount - 1 do begin
       NextVal := pValues[I] + TDoubleSQLDigit(MultiplyLookup.Values[i]) * Base100Digit + Carry;
       pValues[I] := TSQLDigit(NextVal and FlushHalfDoubleDigit);
@@ -887,7 +911,7 @@ Done:
     FreeMem(pDigitCopy);
 end;
 
-procedure OleDBMultiplyLookupFiller;
+procedure DBNumMultiplyLookupFiller;
 const bL: array[Boolean] of TSQLDigit = (10, 100);
 var B: Boolean;
   I, j, cnt: Integer;
@@ -901,23 +925,23 @@ begin
   { calulate amount of packed multipliers }
   for b := False to True do begin
     cnt := 1;
-    FillChar(OleDBMultiplyLookup[b], SizeOf(TOleDBMultiplyLookup), #0);
-    OleDBMultiplyLookup[b][1].MultiplierCount := Cnt;
-    OleDBMultiplyLookup[b][1].Values[0] := bl[b];
+    FillChar(DBNumMultiplyLookup[b], SizeOf(TOleDBMultiplyLookup), #0);
+    DBNumMultiplyLookup[b][1].MultiplierCount := Cnt;
+    DBNumMultiplyLookup[b][1].Values[0] := bl[b];
     for I := 2 to MaxFMTBcdDigits-1 do begin
-      Move(OleDBMultiplyLookup[b][I-1], OleDBMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
+      Move(DBNumMultiplyLookup[b][I-1], DBNumMultiplyLookup[b][I], SizeOf(TOleDBMultiplyLookup));
       Carry := 0;
       for J := 0 to Cnt - 1 do begin
-        NextVal := (TDoubleSQLDigit(OleDBMultiplyLookup[b][I].Values[J]) * TDoubleSQLDigit(100)) + Carry;
-        OleDBMultiplyLookup[b][I].Values[J] := NextVal and FlushHalfDoubleDigit;
+        NextVal := (TDoubleSQLDigit(DBNumMultiplyLookup[b][I].Values[J]) * TDoubleSQLDigit(100)) + Carry;
+        DBNumMultiplyLookup[b][I].Values[J] := NextVal and FlushHalfDoubleDigit;
         Carry := NextVal shr ShrSQLDigit;
       end;
       if Carry <> 0 then begin
-        OleDBMultiplyLookup[b][i].Values[Cnt] := Carry;
+        DBNumMultiplyLookup[b][i].Values[Cnt] := Carry;
         Inc(Cnt);
         if Cnt > MaxFMTBcdDigits div SizeOf(TSQLDigit) then
           Break;
-        OleDBMultiplyLookup[b][i].MultiplierCount := Cnt;
+        DBNumMultiplyLookup[b][i].MultiplierCount := Cnt;
       end;
     end;
   end;
@@ -940,15 +964,134 @@ begin
         pVals[Cnt] := bCarry;
         Inc(Cnt);
         bOleDBMultiplyLookup[b][i].MultiplierCount := Cnt;
-        OleDBMultiplyLookup[b][i].ByteCount := Cnt;
+        DBNumMultiplyLookup[b][i].ByteCount := Cnt;
         if Cnt > MaxFMTBcdDigits then
           Break;
       end else
-        OleDBMultiplyLookup[b][i].ByteCount := Cnt;
+        DBNumMultiplyLookup[b][i].ByteCount := Cnt;
     end;
   end;
 end;
+
+function DBNumeric2Curr_LE(Src: PDB_NUMERIC; NumericNegSign: Byte): Currency;
+var i64: Int64 absolute Result;
+{$IFDEF ENDIAN_BIG}I: Integer;{$ENDIF}
+begin
+  i64 := PInt64(@Src.val[0])^;
+  if i64 = 0 then
+    Exit;
+  {$IFDEF ENDIAN_BIG}
+  for I := 7 downto 0 do
+    if (Src.val[I] <> 0) and (I >= 1) then begin
+      MoveReverseByteOrder(@i64, @i64, i+1);
+      Break;
+    end;
+  {$ENDIF}
+  if Src.Scale < 4 then
+    i64 := i64 * ZFastCode.I64Table[4 - Src.scale]
+  else if Src.Scale > 4 then
+    i64 := i64 div ZFastCode.I64Table[Src.scale - 4];
+  if Src.Sign = NumericNegSign then
+    Result := -Result;
+end;
+
+function DBNumeric2Curr_BE(Src: PDB_NUMERIC; NumericNegSign: Byte): Currency;
+var i64: Int64 absolute Result;
+{$IFNDEF ENDIAN_BIG}I: Integer;{$ENDIF}
+begin
+  i64 := PInt64(@Src.val[0])^;
+  if i64 = 0 then
+    Exit;
+  {$IFNDEF ENDIAN_BIG}
+  for I := 7 downto 0 do
+    if (Src.val[I] <> 0) and (I >= 1) then begin
+      MoveReverseByteOrder(@i64, @i64, i+1);
+      Break;
+    end;
+  {$ENDIF}
+  if Src.Scale < 4 then
+    i64 := i64 * ZFastCode.I64Table[4 - Src.scale]
+  else if Src.Scale > 4 then
+    i64 := i64 div ZFastCode.I64Table[Src.scale - 4];
+  if Src.Sign = NumericNegSign then
+    Result := -Result;
+end;
+
+procedure Curr2DBNumeric_LE(const Src: Currency; Dest: PDB_NUMERIC; const NumericSign: TNumericSign);
+var i64: Int64 absolute Src;
+{$IFDEF ENDIAN_BIG}I: Integer;{$ENDIF}
+begin
+  Dest.precision := 19;
+  Dest.scale := 4;
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if Src < 0 then begin
+    Dest.sign := NumericSign[True];
+    PUInt64(@Dest.val[0])^ := -i64;
+  end else begin
+    Dest.sign := not NumericSign[False];
+    PUInt64(@Dest.val[0])^ := i64;
+  end;
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  {$IFDEF ENDIAN_BIG}
+  for I := 7 downto 0 do
+    if (Dest.val[I] <> 0) and (I >= 1) then begin
+      MoveReverseByteOrder(@Dest.val[0], @Dest.val[0], I+1);
+      Break;
+    end;
+  {$ENDIF}
+  PInt64(@Dest.val[SizeOf(Currency)])^ := 0;
+end;
+
+procedure Curr2DBNumeric_BE(const Src: Currency; Dest: PDB_NUMERIC; const NumericSign: TNumericSign);
+var i64: Int64 absolute Src;
+{$IFNDEF ENDIAN_BIG}I: Integer;{$ENDIF}
+begin
+  Dest.precision := 19;
+  Dest.scale := 4;
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if Src < 0 then begin
+    Dest.sign := NumericSign[True];
+    PUInt64(@Dest.val[0])^ := -i64;
+  end else begin
+    Dest.sign := not NumericSign[False];
+    PUInt64(@Dest.val[0])^ := i64;
+  end;
+  {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  {$IFNDEF ENDIAN_BIG}
+  for I := 7 downto 0 do
+    if (Dest.val[I] <> 0) and (I >= 1) then begin
+      MoveReverseByteOrder(@Dest.val[0], @Dest.val[0], I+1);
+      Break;
+    end;
+  {$ENDIF}
+  PInt64(@Dest.val[SizeOf(Currency)])^ := 0;
+end;
 {$IFEND}
+
+procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
+var B: Byte;
+begin
+  if (Dest = Src) then begin
+    Dest := Src+Len-1;
+    Len := Len shr 1;
+    while Len > 0 do begin
+      B := PByte(Dest)^;
+      Dest^ := Src^;
+      PByte(Src)^ := B;
+      dec(Dest);
+      Inc(Src);
+      dec(Len);
+    end;
+  end else begin
+    Dest := Dest+Len-1;
+    while Len > 0 do begin
+      Dest^ := Src^;
+      dec(Dest);
+      Inc(Src);
+      dec(Len);
+    end;
+  end;
+end;
 
 {**
   Splits a SQL query into a list of sections.
@@ -2466,7 +2609,7 @@ end;
 
 {$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
 initialization
-  OleDBMultiplyLookupFiller;
+  DBNumMultiplyLookupFiller;
 {$IFEND}
 
 end.

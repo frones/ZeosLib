@@ -1107,6 +1107,10 @@ uses DateUtils, StrUtils, SysConst{$IFDEF WITH_DBCONSTS}, DBConsts{$ENDIF},
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   ZFastCode;
 
+var
+  ZBcdNibble2DwoDigitLookupW:   array[0..153] of Word;
+  ZBcdNibble2DwoDigitLookupLW:  array[0..153] of Cardinal;
+
 
 {**
   Determines a position of a first delimiter.
@@ -6273,14 +6277,15 @@ end;
    @param Result the slow Delphi result bcd record to be filled
    @param Negative the converted value was negative
 }
+ {$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: UInt64; Scale: Byte; var Result: TBCD; Negative: Boolean);
 var V2: UInt64;
   B: Cardinal; //D7 int overflow -> reason unknown
   Precision, Place: Byte;
 begin
-  {$R-} {$Q-}
   Precision := GetOrdinalDigits(Value);
-  if Odd(Precision) then begin
+  //FillChar(Result.Fraction[0], MaxFMTBcdDigits, #0);
+  if Precision and 1 = 1 then begin
     v2 := Value div 10;
     Result.Precision := Precision+1;
     B := (Value-(V2*10)) shl 4;
@@ -6292,7 +6297,7 @@ begin
     Result.Precision := Precision;
   end;
   if Precision > 1 then begin
-    for Place := (Precision div 2)-1 downto 1 do begin
+    for Place := (Precision shr 1)-1 downto 1 do begin
       v2 := Value div 100;
       B := Value-(V2*100);
       Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
@@ -6300,9 +6305,9 @@ begin
     end;
     Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {** EH:
    Encode a scaled signed long to a TBCD
@@ -6310,15 +6315,15 @@ end;
    @param Scale the scale digits
    @param Result the slow Delphi result bcd record to be filled
 }
+{$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: Integer; Scale: Byte; var Result: TBCD);
 begin
-  {$R-} {$Q-}
   if Value < 0
   then ScaledOrdinal2Bcd(Cardinal(-Value), Scale, Result, True)
   else ScaledOrdinal2Bcd(Cardinal(Value), Scale, Result, False);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {** EH:
    Encode a scaled unsigned long to a TBCD
@@ -6327,12 +6332,13 @@ end;
    @param Result the slow Delphi result bcd record to be filled
    @param Negative the converted value was negative
 }
+{$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: Cardinal; Scale: Byte; var Result: TBCD; Negative: Boolean);
 var V2, B: Cardinal; //B: D7 int overflow -> reason unknown
   Precision, Place: Byte;
 begin
-  {$R-} {$Q-}
   Precision := GetOrdinalDigits(Value);
+  //FillChar(Result.Fraction[0], MaxFMTBcdDigits, #0);
   if Odd(Precision) then begin
     v2 := Value div 10;
     Result.Precision := Precision+1;
@@ -6353,9 +6359,9 @@ begin
     end;
     Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
   end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {** EH:
    Encode a scaled signed short to a TBCD
@@ -6380,12 +6386,13 @@ end;
    @param Result the slow Delphi result bcd record to be filled
    @param Negative the converted value was negative
 }
+{$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean);
 var V2, B: Word;
   Precision: Byte;
 begin
-  {$R-} {$Q-}
   Precision := GetOrdinalDigits(Value);
+  //FillChar(Result.Fraction[0], MaxFMTBcdDigits, #0);
   if Odd(Precision) then begin
     v2 := Value div 10;
     Result.Precision := Precision+1;
@@ -6405,9 +6412,9 @@ begin
       PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
     end else
       Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString;
 var PSrc, PEnd: PAnsiChar;
@@ -6843,119 +6850,187 @@ begin
   ZSetString(PAnsiChar(@Digits[0]), BcdToRaw(Value, @Digits[0], '.'),Result)
 end;
 
+{** Egonhugeist:
+  Each half byte represents one niblle from 0..9 High nibble first means we read
+  big endian order from left to right. First half byte will be left shift by 4,
+  second will be added to first half byte. There are no other knwon rules!
+  All bytes until Precison div 2 must be valid. All trailing bytes are ignored.
+  Loops are done without half byte conversions.
+
+  Human readable examples to show what i mean:
+  Precison: 10 Scale: 8  Value: 12.34567891
+  FN DN       LN
+  12.34 56 78 91 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-nibbles
+  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+  n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
+  0..9                          10 .. 19                      20..29                        30..31<-
+  Precison: 11 Scale: 8  Value: 12.34567891
+  FN  DN          LN
+  01 2.3 45 67 89 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00<-nibbles
+  \/ \/ \/ \/  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+  n0,n1,n2,n3, n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
+  0..9                          10 .. 19                      20..29                        30..31
+  Precison: 11 Scale: 9  Value: 12.34567891
+  FN DN         LN
+  12.34 56 78 91 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-nibbles
+  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+  n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
+  0..9                          10 .. 19                      20..29                        30..31
+  Precison: 17 Scale: 8  Value: 12.34567891
+           FN DN        LN
+  00 00 00 01 2.3 45 67 89 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-nibbles
+  \/ \/ \/ \/  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+  n0,n1,n2,n3, n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
+  0..9                          10 .. 19                      20..29                        30..31
+  Precison: 10 Scale: 0  Value: 1188888888
+  FN                   LN DN
+  11 88 88 88 88 88 88 88 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-nibbles
+  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+  n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
+  0..9                          10 .. 19                      20..29                        30..31
+  Precison: 17 Scale: 0  Value: 1188888888
+                                       DN
+        FN                       LN    Pr
+  00 00 01 18 88 88 88 88 88 88 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-nibbles
+  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+  n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
+  0..9                          10 .. 19                      20..29                        30..31
+
+  FN is the nibble we start with. It's possible 2. half byte written and first half byte is zero.
+  LN is the nibble we end. It's possible 1. half byte written and second half byte is ignored.
+  DN is the decimal pos nibble. If Odd prec it's the nibble where second half byte is after the
+     decimal separator else it's the double nibble after the decimal separator.
+}
 function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt;
 var
-  PBuf, pNibble, pLastNibble: PAnsiChar;
-  DecimalPos, I, Precision: Integer;
-  GetFirstBCDHalfByte: Boolean;
+  PBuf, pCN{current nibble}, pDN{decimal nibble}, pLN{last bibble}, pFN{firts nibble}: PAnsiChar;
+  Scale, Precision, i: Integer;
 label zero;
 begin
   PByte(Buf)^ := Ord('0');
   Precision := Bcd.Precision;
-  if Precision = 0 then
-    goto zero;
-  DecimalPos := Bcd.SignSpecialPlaces and $3F;
-  if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision)
-  then raise EBcdOverflowException.Create(SBcdOverflow)
-  else DecimalPos := Precision - DecimalPos;
-  PNibble := @Bcd.Fraction[0];
-  PLastNibble := PNibble + ((Precision -1) shr 1);
-  PBuf        := PNibble + (DecimalPos shr 1);
-
-  while (PLastNibble > PBuf) and (PByte(PLastNibble)^ = 0) do begin//skip trailing zeroes
-    Dec(PLastNibble);
-    Dec(Precision, 2);
-  end;
-  while (PNibble < PBuf) and (PByte(PNibble)^ = 0) do //skip leading zeroes
-    Inc(PNibble);
-  if PNibble > pLastNibble then begin
-zero:
-    Result := 1;
+  if Precision = 0 then goto zero;
+  Scale := Bcd.SignSpecialPlaces and $3F;
+  if (Precision > MaxFMTBcdFractionSize) or (Scale > Precision) then
+    raise EBcdOverflowException.Create(SBcdOverflow);
+  pCN := @Bcd.Fraction[0]; //set first byte
+  pLN := pCN + ((Precision -1) shr 1); //pin last nibble byte
+  pDN := pLN+1-((Scale+Ord(Scale > 0)+(Precision and 1)) shr 1); //pin middle nibble or after decimal sep
+  while (pLN > pDN) and (PByte(pLN)^ = 0) do Dec(pLN);//skip trailing zeroes
+  while (pCN < pDN) and (PByte(pCN)^ = 0) do Inc(pCN);//skip leading zeroes
+  if (pCN = pLN) and (PByte(pCN)^ = 0) then begin
+zero: Result := 1;
     Exit;
   end;
   PBuf := Buf;
-  GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0;
+  pFN := pCN; //remainder
   if (Bcd.SignSpecialPlaces and $80) = $80 then begin
-    PWord(Buf)^ := Ord('-')+Ord('0') shl 8;
+    pWord(Buf)^ := Ord('-')+Ord('0') shl 8;
     Inc(Buf);
   end;
-  Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
-  Dec(Precision, Ord((Precision > DecimalPos) and (PByte(PLastNibble)^ and $0f = 0)));
-  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
-    if I = DecimalPos then begin
-      Inc(Buf, Ord((Buf = pBuf)));
-      PByte(Buf)^ := Ord(DecimalSep);
+  for i := Ord(Scale = 0) to Ord(pFN < pDN) do begin
+    if (pCN = pDN) then begin //decimal byte in midde or before of next nibbles
+      if (Precision and 1) = (Scale and 1) then begin
+        Inc(Buf, Ord(pCN = pFN));
+        PByte(Buf)^ := Ord(DecimalSep);
+        pWord(Buf+1)^ := ZBcdNibble2DwoDigitLookupW[PByte(pCN)^];
+        Inc(Buf, 3);
+      end else begin
+        pWord(Buf)^ := ZBcdNibble2DwoDigitLookupW[PByte(pCN)^];
+        if (pDN = pLN) and (PByte(Buf+1)^ = Ord('0'))
+        then Inc(Buf)
+        else begin
+          PByte(Buf+2)^ := PByte(Buf+1)^;
+          PByte(Buf+1)^ := Ord(DecimalSep);
+          Inc(Buf, 3);
+        end;
+      end;
+      if (pCN <> pLN)
+      then pDN := pLN+1
+      else Break;
+    end else if (pCN > pFN) or ((PByte(pCN)^ shr 4) <> 0) then begin //regulare double digit
+      pWord(Buf)^ := ZBcdNibble2DwoDigitLookupW[PByte(pCN)^];
+      Inc(Buf, 2);
+    end else begin  // first half nibble
+      PByte(Buf)^ := Ord('0') + (PByte(pCN)^ and $0f);
       Inc(Buf);
     end;
-    if GetFirstBCDHalfByte
-    then PByte(Buf)^ := Ord('0') + (PByte(pNibble)^ shr 4)
-    else begin
-      PByte(Buf)^ := Ord('0') + (PByte(pNibble)^ and $0f);
-      Inc(pNibble);
+    inc(pCN);
+    while (pCN < pDN) do begin
+      pWord(Buf)^ := ZBcdNibble2DwoDigitLookupW[PByte(pCN)^];
+      Inc(Buf, 2);
+      inc(pCN);
     end;
-    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
-    Inc(Buf);
   end;
-  while ((Precision > DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ <> Ord(DecimalSep))) do Dec(Buf);
-  if ((Precision >= DecimalPos) and (PByte(Buf-1)^ = Ord('0')) and (PByte(Buf-2)^ = Ord(DecimalSep))) then Dec(Buf, 2);
-  Result := Buf-PBuf;
+  if (pByte(Buf-1)^ = Ord ('0')) and ((Scale > 0) or ((Precision and 1 = 1) and (PByte(pLN)^ and $0f = 0))) then Dec(Buf);
+  Result := (Buf-PBuf);
 end;
 
+{** Egonhugeist:
+*}
 function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
 var
-  pNibble, pLastNibble: PAnsiChar;
+  pCN{current nibble}, pDN{decimal nibble}, pLN{last bibble}, pFN{firts nibble}: PAnsiChar;
   PBuf: PWideChar;
-  DecimalPos, I, Precision: Integer;
-  GetFirstBCDHalfByte: Boolean;
+  Scale, Precision, i: Integer;
 label zero;
 begin
   PWord(Buf)^ := Ord('0');
   Precision := Bcd.Precision;
-  if Precision = 0 then
-    goto zero;
-  DecimalPos := Bcd.SignSpecialPlaces and $3F;
-  if (Precision > MaxFMTBcdFractionSize) or (DecimalPos > Precision) then
-    raise EBcdOverflowException.Create(SBcdOverflow)
-  else DecimalPos := Precision - DecimalPos;
-  PNibble := @Bcd.Fraction[0];
-  PLastNibble := PNibble + ((Precision -1) shr 1);
-  PBuf        := Pointer(PNibble + (DecimalPos shr 1));
-  while (PLastNibble > PAnsiChar(PBuf)) and (PByte(PLastNibble)^ = 0) do begin//skip trailing zeroes
-    Dec(PLastNibble);
-    Dec(Precision, 2);
-  end;
-  while (PNibble < PAnsiChar(PBuf)) and (PByte(PNibble)^ = 0) do //skip leading zeroes
-    Inc(PNibble);
-  if PNibble > pLastNibble then begin
-zero:
-    Result := 1;
+  if Precision = 0 then goto zero;
+  Scale := Bcd.SignSpecialPlaces and $3F;
+  if (Precision > MaxFMTBcdFractionSize) or (Scale > Precision) then
+    raise EBcdOverflowException.Create(SBcdOverflow);
+  pCN := @Bcd.Fraction[0]; //set first byte
+  pLN := pCN + ((Precision -1) shr 1); //pin last nibble byte
+  pDN := pLN+1-((Scale+Ord(Scale > 0)+(Precision and 1)) shr 1); //pin middle nibble or after decimal sep
+  while (pLN > pDN) and (PByte(pLN)^ = 0) do Dec(pLN);//skip trailing zeroes
+  while (pCN < pDN) and (PByte(pCN)^ = 0) do Inc(pCN);//skip leading zeroes
+  if (pCN = pLN) and (PByte(pCN)^ = 0) then begin
+zero: Result := 1;
     Exit;
   end;
   PBuf := Buf;
-  GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0;
+  pFN := pCN; //remainder
   if (Bcd.SignSpecialPlaces and $80) = $80 then begin
     PCardinal(Buf)^ := Ord('-')+Ord('0') shl 16;
     Inc(Buf);
   end;
-  Dec(DecimalPos, Ord(not GetFirstBCDHalfByte));
-  Dec(Precision, Ord((Precision >= DecimalPos) and (PByte(PLastNibble)^ and $0f = 0)));
-  for I := (pNibble - PAnsiChar(@Bcd.Fraction[0])) shl 1 to Precision do begin
-    if I = DecimalPos then begin
-      Inc(Buf, Ord((Buf = pBuf)));
-      PWord(Buf)^ := Ord(DecimalSep);
+  for i := Ord(Scale = 0) to Ord(pFN < pDN) do begin
+    if (pCN = pDN) then begin //decimal byte in midde or before of next nibbles
+      if (Precision and 1) = (Scale and 1) then begin
+        Inc(Buf, Ord(pCN = pFN));
+        PWord(Buf)^ := Ord(DecimalSep);
+        PCardinal(Buf+1)^ := ZBcdNibble2DwoDigitLookupLW[PByte(pCN)^];
+        Inc(Buf, 3);
+      end else begin
+        PCardinal(Buf)^ := ZBcdNibble2DwoDigitLookupLW[PByte(pCN)^];
+        if (pDN = pLN) and (PWord(Buf+1)^ = Ord('0'))
+        then Inc(Buf)
+        else begin
+          PWord(Buf+2)^ := PWord(Buf+1)^;
+          PWord(Buf+1)^ := Ord(DecimalSep);
+          Inc(Buf, 3);
+        end;
+      end;
+      if (pCN <> pLN)
+      then pDN := pLN+1
+      else Break;
+    end else if (pCN > pFN) or ((PByte(pCN)^ shr 4) <> 0) then begin //regulare double digit
+      PCardinal(Buf)^ := ZBcdNibble2DwoDigitLookupLW[PByte(pCN)^];
+      Inc(Buf, 2);
+    end else begin  // first half nibble
+      PWord(Buf)^ := Ord('0') + (PByte(pCN)^ and $0f);
       Inc(Buf);
     end;
-    if GetFirstBCDHalfByte
-    then PWord(Buf)^ := Ord('0') + (PByte(pNibble)^ shr 4)
-    else begin
-      PWord(Buf)^ := Ord('0') + (PByte(pNibble)^ and $0f);
-      Inc(pNibble);
+    inc(pCN);
+    while (pCN < pDN) do begin
+      PCardinal(Buf)^ := ZBcdNibble2DwoDigitLookupLW[PByte(pCN)^];
+      Inc(Buf, 2);
+      inc(pCN);
     end;
-    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
-    Inc(Buf);
   end;
-  while ((Precision > DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ <> Ord(DecimalSep))) do Dec(Buf);
-  if ((Precision >= DecimalPos) and (PWord(Buf-1)^ = Ord('0')) and (PWord(Buf-2)^ = Ord(DecimalSep))) then Dec(Buf, 2);
+  if (pByte(Buf-1)^ = Ord ('0')) and ((Scale > 0) or ((Precision and 1 = 1) and (PByte(pLN)^ and $0f = 0))) then Dec(Buf);
   Result := (Buf-PBuf);
 end;
 
@@ -7014,11 +7089,14 @@ end;
 {$ENDIF}
 
 procedure BcdNibbleLookupFiller;
-var i: Byte;
+var i, n: Byte;
 begin
   for i := 0 to 99 do begin
-    ZBase100Byte2BcdNibbleLookup[i] := ((i div 10) shl 4) + (i mod 10);
-    ZBcdNibble2Base100ByteLookup[ZBase100Byte2BcdNibbleLookup[i]] := i;
+    N := ((i div 10) shl 4) + (i mod 10);
+    ZBase100Byte2BcdNibbleLookup[i] := N;
+    ZBcdNibble2Base100ByteLookup[N] := i;
+    ZBcdNibble2DwoDigitLookupW[N] := ZFastCode.TwoDigitLookupW[I];
+    ZBcdNibble2DwoDigitLookupLW[N] := ZFastCode.TwoDigitLookupLW[I];
   end;
 end;
 
