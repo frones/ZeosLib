@@ -1317,7 +1317,7 @@ begin
     Query := TZQuery.Create(nil);
     Query.Connection := Connection;
     Connection.ExecuteDirect('insert into bcd_values (id) values (0815)');
-    Query.SQL.Text := 'select id, curr15_2 from bcd_values';
+    Query.SQL.Text := 'select id, curr15_2 from bcd_values where id = 0815';
     Query.Open;
     Query.Edit;
     Query.FieldByName('curr15_2').AsFloat := 274.065;
@@ -1330,6 +1330,7 @@ begin
     CheckEquals(String1, String2, 'Users expect these strings to be equal.');
   finally
     FreeAndNil(Query);
+    Connection.ExecuteDirect('delete from bcd_values where id = 0815');
     Connection.Disconnect;
   end;
 end;
