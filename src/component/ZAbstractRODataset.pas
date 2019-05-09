@@ -3071,6 +3071,9 @@ begin
   {$ENDIF}
 end;
 
+{$IFNDEF CPU64}
+const IntTable: array[0..4] of Cardinal = (1, 10, 100, 1000, 10000);
+{$ENDIF}
 {**
   Stores the column value from the field buffer.
   @param Field an field object to be stored.
@@ -3081,6 +3084,7 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
+  {$IFNDEF CPU64}pi64: PInt64Rec absolute Buffer;{$ENDIF}
 begin
   WasNull := False;
   if not Active then
@@ -3135,8 +3139,18 @@ begin
         {$ENDIF}
         ftCurrency:
           RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
-        ftBCD:
+        ftBCD: begin
+          if (Field.Size < 4) then //right truncation? Using the Tbcd record's behaves equal
+            {$IFNDEF CPU64} //push trunc performance of positive tiny values
+            if pI64.Hi = 0 then begin
+              pI64.Lo := pI64.Lo div IntTable[4-Field.Size];
+              pI64.Lo := pI64.Lo *   IntTable[4-Field.Size];
+            end else {$ENDIF} begin
+              PInt64(Buffer)^ := PInt64(Buffer)^ div ZFastCode.I64Table[4-Field.Size];
+              PInt64(Buffer)^ := PInt64(Buffer)^ *   ZFastCode.I64Table[4-Field.Size];
+            end;
           RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
+        end;
         {$IFDEF WITH_FTEXTENDED}
         ftExtended:
           {$IFDEF BCD_TEST}

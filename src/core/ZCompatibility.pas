@@ -116,7 +116,9 @@ type
   PAnsiChar = MarshaledAString;
   PPAnsiChar = ^PAnsiChar;
   {$IFEND}
-
+  {$IF not declared(PInt64Rec)}
+  PInt64Rec = ^Int64Rec;
+  {$IFEND}
 {$IFDEF FPC}
 {$IFDEF WITH_RAWBYTESTRING}
 Type
