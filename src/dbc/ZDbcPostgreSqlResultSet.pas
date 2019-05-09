@@ -210,7 +210,7 @@ uses
 // added for suporting Infinity, -Infinity and NaN.
 // See https://sourceforge.net/p/zeoslib/tickets/173/
 // maybe this should be pushed into ZSysUtils.SQLStrToFloatDef?
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
+{$IFNDEF CPU64}
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   var Result: Extended); overload;
 begin
@@ -223,7 +223,7 @@ begin
   else
     ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
 end;
-{$IFEND}
+{$ENDIF}
 
 procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   var Result: Single); overload;

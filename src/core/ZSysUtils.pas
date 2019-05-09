@@ -200,36 +200,132 @@ function EndsWith(const Str, SubStr: RawByteString): Boolean; overload;
 }
 function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
 
-{**
+{** EH:
   Converts SQL PAnsiChar into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
-  @param Str an SQL PAnsiChar with comma or dot delimiter.
-  @param Def a default value if the PAnsiChar can not be converted.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
   @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; Len: Integer = 0): Extended; overload;
+function SQLStrToFloatDef(Value: PAnsiChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; overload;
+
+{$IFNDEF CPU64}
+{** EH:
+  Converts SQL PAnsiChar into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
+{$ENDIF}
+
+{** EH:
+  Converts SQL PAnsiChar into currency value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; out Result: Currency; Len: Integer = 0); overload;
+
+{** EH:
+  Converts SQL PAnsiChar into currency value.
+  Possible is SQLFloat, Float, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param DecimalSep a reference to decimal seperator to be used;
+          we will initialize this sep with '.' or replace it if with the Sep we found
+  @param Result return a converted value or Def if conversion did fail.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: Integer = 0); overload;
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
+
+{** EH:
+  Converts SQL PAnsiChar into double precison value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
-{$IFEND}
+
+{** EH:
+  Converts SQL PAnsiChar into single precison value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; out Result: Single; Len: Integer = 0); overload;
 
-{**
-  Converts SQL PWideChar into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
-  @param Str an SQL PWideChar with comma or dot delimiter.
-  @param Def a default value if the string can not be converted.
+{** EH:
+  Converts SQL PWideChar into REAL10 value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to UTF16 data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
   @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Value: PWideChar; const Def: Extended; Len: Integer = 0): Extended; overload;
+function SQLStrToFloatDef(Value: PWideChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; overload;
+
+{** EH:
+  Converts a UTF16 buffer into REAL10 value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to UTF16 data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
+{$IFNDEF CPU64}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
+{$ENDIF}
+
+{** EH:
+  Converts a UTF16 buffer into currency value.
+  Possible is SQLFloat, Float, Money+Suffix
+  @param Value an Pointer to UTF16 data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; out Result: Currency; Len: Integer = 0); overload;
+
+{** EH:
+  Converts a UTF16 buffer into currency value.
+  Possible is SQLFloat, Float, Money+Suffix
+  @param Value an Pointer to UTF16 data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param DecimalSep a reference to decimal seperator to be used;
+          we will initialize this sep with '.' or replace it if with the Sep we found
+  @param Result return a converted value or Def if conversion did fail.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: Integer = 0); overload;
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
+
+{** EH:
+  Converts a UTF16 buffer into double precsion value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to UTF16 data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
-{$IFEND}
+
+{** EH:
+  Converts a UTF16 buffer into single precsion value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to UTF16 data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single; out Result: Single; Len: Integer = 0); overload;
 
 {**
@@ -261,7 +357,7 @@ function BufferToBytes(Buffer: Pointer; Length: Integer): TBytes; {$IFDEF WITH_I
 function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
-  Converts a string into boolean value.
+  Converts a zero terminated raw buffer into boolean value.
   @param Str a PAnsiChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
@@ -269,6 +365,15 @@ function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): 
 }
 function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
+
+{**
+  Converts a raw buffer into boolean value.
+  @param Str a PAnsiChar value.
+  @param PEnd points to the end of the buffer.
+  @param CheckInt Check for "0" char too?
+  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
+}
 function StrToBoolEx(Buf, PEnd: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
@@ -280,7 +385,7 @@ function StrToBoolEx(Buf, PEnd: PAnsiChar; const CheckInt: Boolean = True;
 function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
-  Converts a string into boolean value.
+  Converts a zero terminated UTF16 buffer into boolean value.
   @param Str a PWideChar value.
   @param CheckInt Check for "0" char too?
   @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
@@ -288,6 +393,15 @@ function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Bo
 }
 function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
+
+{**
+  Converts a UTF16 buffer into boolean value.
+  @param Buf a PWideChar value.
+  @param PEnd points to the end of the buffer.
+  @param CheckInt Check for "0" char too?
+  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
+}
 function StrToBoolEx(Buf, PEnd: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
@@ -1093,6 +1207,12 @@ function TryStr2BCD(const Value: String; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORM
 function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): TBCD;
 
 procedure Double2BCD(const Value: Double; var Result: TBCD); overload;
+
+
+Type TCurrRoundToScale = 0..4;
+
+function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;
+
 var
   ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
   ZBcdNibble2Base100ByteLookup: array[0..153] of Byte;
@@ -1332,15 +1452,16 @@ begin
   end;
 end;
 
-{**
-  Converts SQL AnsiString/RawByteString into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
-  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
-  @param Def a default value if the string can not be converted.
-  @return a converted value or Def if conversion was failt.
+{** EH:
+  Converts SQL PAnsiChar into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
-  Len: Integer = 0): Extended;
+function SQLStrToFloatDef(Value: PAnsiChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
+  Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
 begin
   SQLStrToFloatDef(Value, Def, Result, Len);
 end;
@@ -1414,6 +1535,15 @@ Fail:
   Result := False;
 end;
 
+{$IFNDEF CPU64}
+{** EH:
+  Converts SQL PAnsiChar into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix
+  @param Value an Pointer to raw data we want to convert.
+  @param Def a default value if the value can not be converted.
+  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
+  @param Result return a converted value or Def if conversion did fail.
+}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   out Result: Extended; Len: Integer);
 var
@@ -1447,6 +1577,7 @@ begin
       end;
   end;
 end;
+{$ENDIF}
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency;
   out Result: Currency; Len: Integer);
@@ -1499,7 +1630,6 @@ begin
   Result := Def;
 end;
 
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
   out Result: Double; Len: Integer);
 var
@@ -1533,7 +1663,6 @@ begin
       end;
   end;
 end;
-{$IFEND}
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   out Result: Single; Len: Integer);
@@ -1576,8 +1705,8 @@ end;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
-  Len: Integer = 0): Extended;
+function SQLStrToFloatDef(Value: PWideChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
+  Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
 begin
   SQLStrToFloatDef(Value, Def, Result, Len);
 end;
@@ -1653,6 +1782,7 @@ Fail:
   Result := False;
 end;
 
+{$IFNDEF CPU64}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
   out Result: Extended; Len: Integer);
 var
@@ -1690,6 +1820,7 @@ begin
       end;
   end;
 end;
+{$ENDIF}
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency;
   out Result: Currency; Len: Integer);
@@ -1750,7 +1881,6 @@ begin
   Result := Def;
 end;
 
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double;
   out Result: Double; Len: Integer);
 var
@@ -1787,7 +1917,6 @@ begin
       end;
   end;
 end;
-{$IFEND}
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single;
   out Result: Single; Len: Integer);
@@ -7098,6 +7227,39 @@ begin
     ZBcdNibble2DwoDigitLookupW[N] := ZFastCode.TwoDigitLookupW[I];
     ZBcdNibble2DwoDigitLookupLW[N] := ZFastCode.TwoDigitLookupLW[I];
   end;
+end;
+
+{$IFNDEF CPU64}
+const IntTable: array[TCurrRoundToScale] of Cardinal = (1, 10, 100, 1000, 10000);
+{$ENDIF}
+const HalfModulos: array [TCurrRoundToScale] of Integer = (0, 5, 50, 500, 5000);
+function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;
+var Modulo: Integer;
+  {$IFNDEF CPU64}
+  sI64Rec: Int64Rec absolute Value;
+  dI64Rec: Int64Rec absolute Result;
+  {$ENDIF}
+  s64: Int64 absolute Value;
+  d64: Int64 absolute Result;
+begin
+  if Scale > 0 then begin
+    {$IFNDEF CPU64} //push trunc performance of positive tiny values
+    if sI64Rec.Hi = 0 then begin
+      dI64Rec.hi := sI64Rec.Lo div IntTable[Scale];
+      dI64Rec.lo := dI64Rec.hi *   IntTable[Scale];
+      Modulo := sI64Rec.Lo - dI64Rec.lo;
+      dI64Rec.Hi := 0;
+    end else {$ENDIF} begin
+      d64 := s64 div ZFastCode.I64Table[Scale];
+      d64 := d64 *   ZFastCode.I64Table[Scale];
+      Modulo := s64 - d64;
+      if Modulo < 0 then
+        Modulo := -Modulo;
+    end;
+    if Modulo >= HalfModulos[Scale] then
+      d64 := d64 + ZFastCode.I64Table[Scale];
+  end else
+  Result := Value
 end;
 
 initialization;

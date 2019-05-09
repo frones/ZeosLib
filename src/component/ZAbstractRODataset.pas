@@ -3141,14 +3141,7 @@ begin
           RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
         ftBCD: begin
           if (Field.Size < 4) then //right truncation? Using the Tbcd record's behaves equal
-            {$IFNDEF CPU64} //push trunc performance of positive tiny values
-            if pI64.Hi = 0 then begin
-              pI64.Lo := pI64.Lo div IntTable[4-Field.Size];
-              pI64.Lo := pI64.Lo *   IntTable[4-Field.Size];
-            end else {$ENDIF} begin
-              PInt64(Buffer)^ := PInt64(Buffer)^ div ZFastCode.I64Table[4-Field.Size];
-              PInt64(Buffer)^ := PInt64(Buffer)^ *   ZFastCode.I64Table[4-Field.Size];
-            end;
+            PCurrency(Buffer)^ := RoundCurrTo(PCurrency(Buffer)^, 4-Field.Size);
           RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
         end;
         {$IFDEF WITH_FTEXTENDED}
