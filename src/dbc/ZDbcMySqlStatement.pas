@@ -1165,7 +1165,7 @@ function TZAbstractMySQLPreparedStatement.IsOutParamResult: Boolean;
 begin
   Result := False;
   if FPMYSQL^ <> nil then
-    Result := PLongWord(NativeUInt(FPMYSQL^)+GetServerStatusOffset(FClientVersion))^ and SERVER_PS_OUT_PARAMS <> 0;
+    Result := PLongWord(PAnsiChar(FPMYSQL^)+GetServerStatusOffset(FClientVersion))^ and SERVER_PS_OUT_PARAMS <> 0;
 end;
 
 { TZMySQLCallableStatement }
