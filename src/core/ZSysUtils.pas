@@ -7165,20 +7165,13 @@ end;
 
 function RawToBCD(Value: PAnsiChar; Len: LengthInt): TBCD;
 begin
-  {$IFDEF UNICODE}
-  Result := StrToBCD(Ascii7ToUnicodeString(Value, Len){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ELSE}
-  Result := StrToBCD(BufferToStr(Value, Len){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ENDIF}
+  if not TryRawToBCD(Value, Len, Result{%H-}, '.') then
+    raise EBcdException.CreateFmt(SInvalidBcdValue, [Value]);
 end;
 
-function RawToBCD(const Value: RawByteString): TBCD; overload;
+function RawToBCD(const Value: RawByteString): TBCD;
 begin
-  {$IFDEF UNICODE}
-  Result := StrToBCD(Ascii7ToUnicodeString(Value){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ELSE}
-  Result := StrToBCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ENDIF}
+  Result := RawToBCD(Pointer(Value), Length(Value));
 end;
 
 function BcdToSQLUni(const Value: TBCD): ZWideString;
@@ -7190,20 +7183,13 @@ end;
 
 function UniToBCD(Value: PWideChar; Len: LengthInt): TBCD;
 begin
-  {$IFDEF UNICODE}
-  Result := StrToBCD(BufferToStr(Value, Len){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ELSE}
-  Result := StrToBCD(UnicodeStringToAscii7(Value, Len){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ENDIF}
+  if not TryUniToBCD(Value, Len, Result{%H-}, '.') then
+    raise EBcdException.CreateFmt(SInvalidBcdValue, [Value]);
 end;
 
 function UniToBCD(const Value: ZWideString): TBCD;
 begin
-  {$IFDEF UNICODE}
-  Result := StrToBCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ELSE}
-  Result := StrToBCD(UnicodeStringToAscii7(Value){$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-  {$ENDIF}
+  Result := UniToBCD(Pointer(Value), Length(Value));
 end;
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
