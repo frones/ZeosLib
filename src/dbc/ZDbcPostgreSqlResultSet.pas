@@ -129,10 +129,11 @@ type
     {$ELSE}
     function GetBigDecimal(ColumnIndex: Integer): Extended;
     {$ENDIF}
-    function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
     function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
+    function GetBytes(ColumnIndex: Integer): TBytes;
     function GetBlob(ColumnIndex: Integer): IZBlob;
 
     function MoveAbsolute(Row: Integer): Boolean; override;
@@ -1398,6 +1399,53 @@ begin
         else Result := 0;
       end
     else pgSQLStrToFloatDef(P, 0, Result);
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UUID</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>ZERO-UUID</code>
+}
+procedure TZAbstractPostgreSQLStringResultSet.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+var P: PAnsiChar;
+label fail;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDouble);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  if FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) = 0 then begin
+fail: LastWasNull := True;
+    FillChar(Result, SizeOf(TGUID), #0);
+  end else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    LastWasNull := False;
+    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if ColumnOID = OIDOID then
+      if FBinaryValues then begin
+                        {$IFNDEF ENDIAN_BIG}
+                        Result.D1 := PG2Cardinal(@PGUID(P).D1);
+                        Result.D2 := PG2Word(@PGUID(P).D2);
+                        Result.D3 := PG2Word(@PGUID(P).D3);
+                        PInt64(@Result.D4)^ := PInt64(@PGUID(P).D4)^;
+                        {$ELSE}
+                        Result := PGUID(P)^;
+                        {$ENDIF}
+      end else ValidGUIDToBinary(P, @Result.D1)
+    else case ColumnType of
+      stAsciiStream, stUnicodeStream,
+      stString, stUnicodeString:  if ZFastCode.StrLen(P) in [36, 38]
+                                  then ValidGUIDToBinary(P, @Result.D1)
+                                  else goto fail;
+      else Goto Fail;
+    end;
   end;
 end;
 
