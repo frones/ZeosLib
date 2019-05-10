@@ -208,9 +208,9 @@ function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
   @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
   @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Value: PAnsiChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; overload;
+function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 
-{$IFNDEF CPU64}
+
 {** EH:
   Converts SQL PAnsiChar into float value.
   Possible is SQLFloat, Float, Hex, Money+Suffix
@@ -220,7 +220,7 @@ function SQLStrToFloatDef(Value: PAnsiChar; const Def: {$IFNDEF CPU64}Extended{$
   @param Result return a converted value or Def if conversion did fail.
 }
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
-{$ENDIF}
+
 
 {** EH:
   Converts SQL PAnsiChar into currency value.
@@ -243,7 +243,7 @@ procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; out Result: Cu
   @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
 }
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: Integer = 0); overload;
-
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 {** EH:
   Converts SQL PAnsiChar into double precison value.
   Possible is SQLFloat, Float, Hex, Money+Suffix
@@ -253,7 +253,7 @@ procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; Var DecimalSep
   @param Result return a converted value or Def if conversion did fail.
 }
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
-
+{$IFEND}
 {** EH:
   Converts SQL PAnsiChar into single precison value.
   Possible is SQLFloat, Float, Hex, Money+Suffix
@@ -272,7 +272,7 @@ procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; out Result: Sing
   @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
   @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Value: PWideChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF}; overload;
+function SQLStrToFloatDef(Value: PWideChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 
 {** EH:
   Converts a UTF16 buffer into REAL10 value.
@@ -282,9 +282,7 @@ function SQLStrToFloatDef(Value: PWideChar; const Def: {$IFNDEF CPU64}Extended{$
   @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
   @param Result return a converted value or Def if conversion did fail.
 }
-{$IFNDEF CPU64}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended; out Result: Extended; Len: Integer = 0); overload;
-{$ENDIF}
 
 {** EH:
   Converts a UTF16 buffer into currency value.
@@ -307,7 +305,7 @@ procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; out Result: Cu
   @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
 }
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: Integer = 0); overload;
-
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 {** EH:
   Converts a UTF16 buffer into double precsion value.
   Possible is SQLFloat, Float, Hex, Money+Suffix
@@ -317,7 +315,7 @@ procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; Var DecimalSep
   @param Result return a converted value or Def if conversion did fail.
 }
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double; out Result: Double; Len: Integer = 0); overload;
-
+{$IFEND}
 {** EH:
   Converts a UTF16 buffer into single precsion value.
   Possible is SQLFloat, Float, Hex, Money+Suffix
@@ -1211,6 +1209,12 @@ procedure Double2BCD(const Value: Double; var Result: TBCD); overload;
 
 Type TCurrRoundToScale = 0..4;
 
+{** EH:
+   round a currency value half away from zero to it's exact scale digits
+   @param Value the value to be rounded
+   @param Scale the exact scale digt we want to round valid is 0..4. even if 4 is a nop
+   @return a rounded value
+}
 function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;
 
 var
@@ -1460,8 +1464,8 @@ end;
   @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
   @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Value: PAnsiChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
-  Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
+function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
+  Len: Integer = 0): Extended;
 begin
   SQLStrToFloatDef(Value, Def, Result, Len);
 end;
@@ -1535,7 +1539,6 @@ Fail:
   Result := False;
 end;
 
-{$IFNDEF CPU64}
 {** EH:
   Converts SQL PAnsiChar into float value.
   Possible is SQLFloat, Float, Hex, Money+Suffix
@@ -1577,7 +1580,6 @@ begin
       end;
   end;
 end;
-{$ENDIF}
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency;
   out Result: Currency; Len: Integer);
@@ -1630,6 +1632,7 @@ begin
   Result := Def;
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
   out Result: Double; Len: Integer);
 var
@@ -1663,6 +1666,7 @@ begin
       end;
   end;
 end;
+{$IFEND}
 
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
   out Result: Single; Len: Integer);
@@ -1705,8 +1709,8 @@ end;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Value: PWideChar; const Def: {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
-  Len: Integer = 0): {$IFNDEF CPU64}Extended{$ELSE}Double{$ENDIF};
+function SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
+  Len: Integer = 0): Extended;
 begin
   SQLStrToFloatDef(Value, Def, Result, Len);
 end;
@@ -1782,7 +1786,6 @@ Fail:
   Result := False;
 end;
 
-{$IFNDEF CPU64}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
   out Result: Extended; Len: Integer);
 var
@@ -1820,7 +1823,6 @@ begin
       end;
   end;
 end;
-{$ENDIF}
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency;
   out Result: Currency; Len: Integer);
@@ -1881,6 +1883,7 @@ begin
   Result := Def;
 end;
 
+{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double;
   out Result: Double; Len: Integer);
 var
@@ -1917,6 +1920,7 @@ begin
       end;
   end;
 end;
+{$IFEND}
 
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single;
   out Result: Single; Len: Integer);
@@ -7215,10 +7219,20 @@ begin
   end;
 end;
 
+{ for a better code align -> move out of method }
 {$IFNDEF CPU64}
-const IntTable: array[TCurrRoundToScale] of Cardinal = (1, 10, 100, 1000, 10000);
+const CIntTable: array[TCurrRoundToScale] of Cardinal = (10000, 1000, 100, 10, 1);
 {$ENDIF}
-const HalfModulos: array [TCurrRoundToScale] of Integer = (0, 5, 50, 500, 5000);
+const CInt64Table: array[TCurrRoundToScale] of Int64  = (10000, 1000, 100, 10, 1);
+const PosHalfModulos: array [TCurrRoundToScale] of Integer = ( 4445,  445,  45,  5, 0);
+const NegHalfModulos: array [TCurrRoundToScale] of Integer = (-4445, -445, -45, -5, 0);
+
+{** EH:
+   round a currency value half away from zero to it's exact scale digits
+   @param Value the value to be rounded
+   @param Scale the exact scale digt we want to round valid is 0..4. even if 4 is a nop
+   @return a rounded value
+}
 function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;
 var Modulo: Integer;
   {$IFNDEF CPU64}
@@ -7228,24 +7242,26 @@ var Modulo: Integer;
   s64: Int64 absolute Value;
   d64: Int64 absolute Result;
 begin
-  if Scale > 0 then begin
+  if Scale < 4 then begin
     {$IFNDEF CPU64} //push trunc performance of positive tiny values
     if sI64Rec.Hi = 0 then begin
-      dI64Rec.hi := sI64Rec.Lo div IntTable[Scale];
-      dI64Rec.lo := dI64Rec.hi *   IntTable[Scale];
+      dI64Rec.hi := sI64Rec.Lo div CIntTable[Scale];
+      dI64Rec.lo := dI64Rec.hi *   CIntTable[Scale];
       Modulo := sI64Rec.Lo - dI64Rec.lo;
       dI64Rec.Hi := 0;
     end else {$ENDIF} begin
-      d64 := s64 div ZFastCode.I64Table[Scale];
-      d64 := d64 *   ZFastCode.I64Table[Scale];
+      d64 := s64 div CInt64Table[Scale];
+      d64 := d64 *   CInt64Table[Scale];
       Modulo := s64 - d64;
-      if Modulo < 0 then
-        Modulo := -Modulo;
     end;
-    if Modulo >= HalfModulos[Scale] then
-      d64 := d64 + ZFastCode.I64Table[Scale];
+    if Scale > 0 then
+      if Modulo < 0 then begin
+        if Modulo >= NegHalfModulos[Scale] then
+          d64 := d64 - CInt64Table[Scale];
+      end else if Modulo >= PosHalfModulos[Scale] then
+        d64 := d64 + CInt64Table[Scale];
   end else
-  Result := Value
+    Result := Value
 end;
 
 initialization;
