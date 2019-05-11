@@ -118,7 +118,7 @@ type
     procedure Cancel; override;
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
   protected //interface based!
     function CreateResultSet(const RowSet: IRowSet): IZResultSet; virtual;
     function GetInternalBufferSize: Integer;
@@ -172,7 +172,7 @@ type
     procedure Prepare; override;
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
   public //setters
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
@@ -376,9 +376,9 @@ begin
 end;
 
 procedure TZAbstractOleDBStatement.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
   FMultipleResults := nil;
   FCommand := nil;
   SetLength(FDBBINDSTATUSArray, 0);
@@ -1575,12 +1575,12 @@ begin
 end;
 
 procedure TZOleDBPreparedStatement.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FParameterAccessor := nil;
   SetLength(FDBBindingArray, 0);
   SetLength(FParamsBuffer, 0);
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**

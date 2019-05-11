@@ -132,7 +132,7 @@ type
     procedure ResetCursor; virtual;
     function WasNull: Boolean; virtual;
     function IsClosed: Boolean;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost); virtual;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
 
     //======================================================================
     // Methods for accessing results by column index
@@ -3047,7 +3047,7 @@ begin
 end;
 
 procedure TZAbstractResultSet.ReleaseImmediat(const Sender: IImmediatelyReleasable;
-  var Error: EZSQLConnectionLost);
+  var AError: EZSQLConnectionLost);
 var ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   if not FClosed and Assigned(Statement){virtual RS ! } then
@@ -3058,7 +3058,7 @@ begin
     LastWasNull := True;
     if Supports(Statement, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender, Error);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
   end;
 end;
 

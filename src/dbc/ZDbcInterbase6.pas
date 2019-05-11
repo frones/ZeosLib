@@ -194,7 +194,7 @@ type
     function GetServerProvider: TZServerProvider; override;
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -903,11 +903,11 @@ end;
     to avoid circular calls
 }
 procedure TZInterbase6Connection.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FHandle := 0;
   FTrHandle := 0;
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**

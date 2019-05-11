@@ -108,7 +108,7 @@ type
     function ExecutePrepared: Boolean; override;
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   TZInterbase6PreparedStatement = class(TZAbstractInterbase6PreparedStatement, IZPreparedStatement)
@@ -312,14 +312,14 @@ begin
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var B: boolean;
 begin
   FStmtHandle := 0;
   for B := False to True do
     if Assigned(FBatchStmts[b].Obj) then
-      FBatchStmts[b].Obj.ReleaseImmediat(Sender, Error);
-  inherited ReleaseImmediat(Sender, Error);
+      FBatchStmts[b].Obj.ReleaseImmediat(Sender, AError);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 function TZAbstractInterbase6PreparedStatement.AlignParamterIndex2ResultSetIndex(

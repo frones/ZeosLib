@@ -203,7 +203,7 @@ type
     function GetIbSqlSubType(const Index: Word): Smallint;
     function GetIbSqlLen(const Index: Word): Smallint;
 
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
   end;
 
   { parameters interface sqlda}
@@ -1936,10 +1936,10 @@ begin
 end;
 
 procedure TZSQLDA.ReleaseImmediat(const Sender: IImmediatelyReleasable;
-  var Error: EZSQLConnectionLost);
+  var AError: EZSQLConnectionLost);
 begin
   if Sender <> (FConnection as IImmediatelyReleasable) then
-    (FConnection as IImmediatelyReleasable).ReleaseImmediat(Sender, Error);
+    (FConnection as IImmediatelyReleasable).ReleaseImmediat(Sender, AError);
 end;
 
 {**

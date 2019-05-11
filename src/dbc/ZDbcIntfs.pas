@@ -150,7 +150,7 @@ type
   {** Generic connection lost exception. }
   EZSQLConnectionLost = class(EZSQLException);
 
-  TOnConnectionLostError = procedure(var Error: EZSQLConnectionLost) of Object;
+  TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
 
   //TZTimeType = (ttTime, ttDate, ttDateTime, ttInterval);
 
@@ -229,7 +229,7 @@ type
 
   IImmediatelyReleasable = interface(IZInterface)
     ['{7AA5A5DA-5EC7-442E-85B0-CCCC71C13169}']
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     function GetConSettings: PZConSettings;
   end;
 

@@ -205,7 +205,7 @@ type
     property StreamedConnected: Boolean read FStreamedConnected write FStreamedConnected;
 
     procedure SetClientCodePage(Const Value: String); //Egonhugeist
-    procedure ConnectionLost(var Error: EZSQLConnectionLost);
+    procedure ConnectionLost(var AError: EZSQLConnectionLost);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -900,11 +900,11 @@ begin
   end;
 end;
 
-procedure TZAbstractConnection.ConnectionLost(var Error: EZSQLConnectionLost);
+procedure TZAbstractConnection.ConnectionLost(var AError: EZSQLConnectionLost);
 var Err: EZSQLConnectionLost;
 begin
-  Err := Error;
-  Error := nil;
+  Err := AError;
+  AError := nil;
   try
     CloseAllDataSets;
     CloseAllSequences;
@@ -914,7 +914,7 @@ begin
       FOnLost(Self);
   finally
     if Err <> nil then
-      raise Error;
+      raise Err;
   end;
 end;
 
@@ -929,6 +929,7 @@ begin
 
     ShowSqlHourGlass;
     try
+      FConnection.RegisterOnConnectionLostErrorHandler(nil);
       CloseAllDataSets;
       // Modified by cipto 8/2/2007 10:11:02 AM
       CloseAllSequences;

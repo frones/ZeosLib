@@ -141,7 +141,7 @@ type
     procedure Unprepare; override;
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   {** implements a prepared statement for PostgreSQL protocol V3+ }
@@ -1562,10 +1562,10 @@ begin
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var ArrayDMLType: TArrayDMLType;
 begin
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
   Fres := nil;
   FRawPlanName := '';
   fPrepareCnt := 0;
@@ -1573,7 +1573,7 @@ begin
   SetParamCount(0);
   for ArrayDMLType := low(TArrayDMLType) to high(ArrayDMLType) do
     if Assigned(FPGArrayDMLStmts[ArrayDMLType].Intf) then
-      (FPGArrayDMLStmts[ArrayDMLType].Intf as IImmediatelyReleasable).ReleaseImmediat(Sender, Error);
+      (FPGArrayDMLStmts[ArrayDMLType].Intf as IImmediatelyReleasable).ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.Unprepare;

@@ -164,7 +164,7 @@ type
     procedure Open; override;
     procedure InternalClose; override;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
@@ -567,12 +567,12 @@ begin
 end;
 
 procedure TZPostgreSQLConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable;
-  var Error: EZSQLConnectionLost);
+  var AError: EZSQLConnectionLost);
 begin
   if Assigned(FPreparedStatementTrashBin) then
     FPreparedStatementTrashBin.Clear;
   Fconn := nil;
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZPostgreSQLConnection.RegisterTrashPreparedStmtName(const value: String);

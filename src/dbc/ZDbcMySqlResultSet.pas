@@ -133,7 +133,7 @@ type
     procedure BeforeClose; override;
     procedure AfterClose; override;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
 
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
@@ -763,12 +763,12 @@ begin
 end;
 
 procedure TZAbstractMySQLResultSet.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FQueryHandle := nil;
   FRowHandle := nil;
   FMYSQL_STMT := nil;
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZAbstractMySQLResultSet.ResetCursor;

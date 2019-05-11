@@ -121,7 +121,7 @@ type
     constructor Create(const Connection: IZMySQLConnection;
       const SQL: string; Info: TStrings);
   public
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
       {%H-}Scale: LengthInt = 0); override;
@@ -580,13 +580,13 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedStatement.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FPMYSQL^ := nil;
   FMYSQL_STMT := nil;
   FBindAgain := True;
   FStmtHandleIsExecuted := False;
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZAbstractMySQLPreparedStatement.SetBindCapacity(Capacity: Integer);

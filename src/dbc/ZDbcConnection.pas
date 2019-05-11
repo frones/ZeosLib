@@ -213,7 +213,7 @@ type
     procedure Open; virtual;
     procedure Close;
     procedure InternalClose; virtual; abstract;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost); virtual;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
     function IsClosed: Boolean; virtual;
 
     function GetDriver: IZDriver;
@@ -725,23 +725,24 @@ begin
 end;
 
 procedure TZAbstractDbcConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable;
-  var Error: EZSQLConnectionLost);
+  var AError: EZSQLConnectionLost);
 var I: Integer;
   ImmediatelyReleasable: IImmediatelyReleasable;
   FError: EZSQLConnectionLost;
+  WasConnected: Boolean;
 begin
-  fClosed := True;
   FAutoCommit := True;
-  if Assigned(FOnConnectionLostError) then begin
-    FError := Error;
-    Error := nil;
+  if not Closed and Assigned(FOnConnectionLostError) and Assigned(FError) then begin
+    FError := AError;
+    AError := nil;
   end else
     FError := nil; //satisfy compiler
+  fClosed := True;
   for I := fRegisteredStatements.Count-1 downto 0 do
     If Supports(IZStatement(fRegisteredStatements[I]), IImmediatelyReleasable, ImmediatelyReleasable)
       and (Sender <> ImmediatelyReleasable) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender, Error);
-  if Assigned(FOnConnectionLostError) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+  if Assigned(FOnConnectionLostError) and (FError <> nil) then
     FOnConnectionLostError(FError);
 end;
 

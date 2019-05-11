@@ -132,7 +132,7 @@ type
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
   end;
 
 var
@@ -675,10 +675,10 @@ end;
   @see #setAutoCommit
 }
 procedure TZMySQLConnection.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FHandle := nil;
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZMySQLConnection.Rollback;

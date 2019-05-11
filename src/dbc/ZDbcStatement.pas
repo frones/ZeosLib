@@ -162,7 +162,7 @@ type
     procedure Close;
     procedure AfterClose; virtual;
     function IsClosed: Boolean;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost); virtual;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
 
     function GetMaxFieldSize: Integer; virtual;
     procedure SetMaxFieldSize(Value: Integer); virtual;
@@ -384,7 +384,7 @@ type
     function IsPrepared: Boolean; virtual;
     property Prepared: Boolean read IsPrepared;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual; abstract;
 
@@ -607,7 +607,7 @@ type
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   TZAbstractCallableStatement_A = class(TZAbstractCallableStatement2)
@@ -748,7 +748,7 @@ type
     function IsPrepared: Boolean; virtual;
     property Prepared: Boolean read IsPrepared;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
-      var Error: EZSQLConnectionLost); override;
+      var AError: EZSQLConnectionLost); override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual;
 
@@ -1077,20 +1077,20 @@ begin
 end;
 
 procedure TZAbstractStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable;
-  var Error: EZSQLConnectionLost);
+  var AError: EZSQLConnectionLost);
 var ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   if not FClosed then begin
     FClosed := True;
     if (FOpenResultSet <> nil) and Supports(IZResultSet(FOpenResultSet), IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender, Error);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
     if Assigned(FLastResultSet) and Supports(FLastResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender, Error);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
     if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender, Error);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
   end;
 end;
 
@@ -2025,11 +2025,11 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable;
-  var Error: EZSQLConnectionLost);
+  var AError: EZSQLConnectionLost);
 begin
   FPrepared := False;
   FExecCount := 0;
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**
@@ -5218,10 +5218,10 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZAbstractPreparedStatement2.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FPrepared := False;
-  inherited ReleaseImmediat(Sender, Error);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**
@@ -6842,13 +6842,13 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var Error: EZSQLConnectionLost);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var CallExecKind: TZCallExecKind;
 begin
   for CallExecKind := low(TZCallExecKind) to high(TZCallExecKind) do
     if Assigned(FExecStatements[CallExecKind]) then
-      FExecStatements[CallExecKind].ReleaseImmediat(Sender, Error);
-  inherited ReleaseImmediat(Sender, Error);
+      FExecStatements[CallExecKind].ReleaseImmediat(Sender, AError);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**
