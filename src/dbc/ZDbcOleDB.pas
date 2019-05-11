@@ -123,7 +123,8 @@ type
     procedure Open; override;
     procedure InternalClose; override;
 
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
 
     {procedure SetReadOnly(ReadOnly: Boolean); override; }
 
@@ -634,14 +635,15 @@ begin
 end;
 
 procedure TZOleDBConnection.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
 begin
   FpulTransactionLevel := 0;
   fTransaction := nil;
   FMalloc := nil;
   FDBInitialize := nil;
   FDBCreateCommand := nil;
-  inherited ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**

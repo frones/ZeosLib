@@ -193,7 +193,8 @@ type
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetServerProvider: TZServerProvider; override;
 
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -902,11 +903,11 @@ end;
     to avoid circular calls
 }
 procedure TZInterbase6Connection.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FHandle := 0;
   FTrHandle := 0;
-  inherited ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**

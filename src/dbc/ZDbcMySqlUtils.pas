@@ -363,6 +363,7 @@ var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
   ConSettings: PZConSettings;
+  ConnLostError: EZSQLConnectionLost;
 begin
   if Assigned(MYSQL_STMT) then begin
     ErrorCode := PlainDriver.mysql_stmt_errno(MYSQL_STMT);
@@ -371,16 +372,16 @@ begin
     ErrorMessage := ZSysUtils.Trim(PlainDriver.mysql_error(MYSQL));
     ErrorCode := PlainDriver.mysql_errno(MYSQL);
   end;
-  if (ErrorCode <> 0) then
-  begin
+  if (ErrorCode <> 0) then begin
     if (ErrorMessage = '') then
       ErrorMessage := 'unknown error';
     ConSettings := ImmediatelyReleasable.GetConSettings;
     if (ErrorCode = CR_SERVER_GONE_ERROR) or (ErrorCode = CR_SERVER_LOST) then begin
-      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable);
-      raise EZSQLConnectionLost.CreateWithCode(ErrorCode,
+      ConnLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
       Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
         ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable, ConnLostError);
+      if ConnLostError <> nil then raise ConnLostError;
     end else begin
       if SilentMySQLError > 0 then
         raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);

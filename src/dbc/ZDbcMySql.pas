@@ -60,7 +60,6 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver, ZPlainDriver,
   ZURL, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants;
-
 type
 
   {** Implements MySQL Database Driver. }
@@ -132,7 +131,8 @@ type
     function GetServerProvider: TZServerProvider; override;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
   end;
 
 var
@@ -675,10 +675,10 @@ end;
   @see #setAutoCommit
 }
 procedure TZMySQLConnection.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FHandle := nil;
-  inherited ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZMySQLConnection.Rollback;

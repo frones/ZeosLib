@@ -162,7 +162,7 @@ type
     procedure Close;
     procedure AfterClose; virtual;
     function IsClosed: Boolean;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); virtual;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
 
     function GetMaxFieldSize: Integer; virtual;
     procedure SetMaxFieldSize(Value: Integer); virtual;
@@ -383,7 +383,8 @@ type
     procedure Unprepare; virtual;
     function IsPrepared: Boolean; virtual;
     property Prepared: Boolean read IsPrepared;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual; abstract;
 
@@ -605,7 +606,8 @@ type
     constructor Create(const Connection: IZConnection; const StoredProcOrFuncIdentifier: string;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
 
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   TZAbstractCallableStatement_A = class(TZAbstractCallableStatement2)
@@ -745,7 +747,8 @@ type
     procedure Unprepare; virtual;
     function IsPrepared: Boolean; virtual;
     property Prepared: Boolean read IsPrepared;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual;
 
@@ -1073,20 +1076,21 @@ begin
   raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
-procedure TZAbstractStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+procedure TZAbstractStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
 var ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   if not FClosed then begin
     FClosed := True;
     if (FOpenResultSet <> nil) and Supports(IZResultSet(FOpenResultSet), IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
     if Assigned(FLastResultSet) and Supports(FLastResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
     if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
   end;
 end;
 
@@ -2020,11 +2024,12 @@ procedure TZAbstractPreparedStatement.PrepareInParameters;
 begin
 end;
 
-procedure TZAbstractPreparedStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+procedure TZAbstractPreparedStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
 begin
   FPrepared := False;
   FExecCount := 0;
-  inherited ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**
@@ -5213,10 +5218,10 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZAbstractPreparedStatement2.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FPrepared := False;
-  inherited ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**
@@ -6837,13 +6842,13 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var CallExecKind: TZCallExecKind;
 begin
   for CallExecKind := low(TZCallExecKind) to high(TZCallExecKind) do
     if Assigned(FExecStatements[CallExecKind]) then
-      FExecStatements[CallExecKind].ReleaseImmediat(Sender);
-  inherited ReleaseImmediat(Sender);
+      FExecStatements[CallExecKind].ReleaseImmediat(Sender, AError);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 {**

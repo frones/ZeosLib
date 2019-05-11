@@ -132,7 +132,8 @@ type
     destructor Destroy; override;
     procedure BeforeClose; override;
     procedure AfterClose; override;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
 
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
@@ -762,12 +763,12 @@ begin
 end;
 
 procedure TZAbstractMySQLResultSet.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   FQueryHandle := nil;
   FRowHandle := nil;
   FMYSQL_STMT := nil;
-  inherited ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZAbstractMySQLResultSet.ResetCursor;

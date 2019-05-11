@@ -203,7 +203,7 @@ type
     function GetIbSqlSubType(const Index: Word): Smallint;
     function GetIbSqlLen(const Index: Word): Smallint;
 
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
   end;
 
   { parameters interface sqlda}
@@ -1232,6 +1232,7 @@ var
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
   ConSettings: PZConSettings;
+  ConLostError: EZSQLConnectionLost;
 begin
   if not ((StatusVector[0] = 1) and (StatusVector[1] > 0)) then Exit;
   ConSettings := ImmediatelyReleasable.GetConSettings;
@@ -1254,9 +1255,10 @@ begin
       ConvertStringToConnRaw(ConSettings, ErrorMessage), ErrorCode,
       ConvertStringToConnRaw(ConSettings, ErrorSqlMessage));
     if ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection then begin
-      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable);
-      raise EZSQLConnectionLost.CreateWithCode(ErrorCode,
+      ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
       Format(SSQLError1, [sSQL]));
+      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable, ConLostError);
+      if ConLostError <> nil then raise ConLostError;
     end else raise EZIBSQLException.Create(
       Format(SSQLError1, [ErrorMessage]), InterbaseStatusVector, sSQL);
   end;
@@ -1933,10 +1935,11 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
-procedure TZSQLDA.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+procedure TZSQLDA.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
 begin
   if Sender <> (FConnection as IImmediatelyReleasable) then
-    (FConnection as IImmediatelyReleasable).ReleaseImmediat(Sender);
+    (FConnection as IImmediatelyReleasable).ReleaseImmediat(Sender, AError);
 end;
 
 {**

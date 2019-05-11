@@ -134,7 +134,6 @@ function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inli
 }
 function GetMinorVersion(const Value: string): Word;
 
-type PInt64Rec = ^Int64Rec;
 //https://www.postgresql.org/docs/9.1/static/datatype-datetime.html
 
 //macros from datetime.c
@@ -743,6 +742,7 @@ var
    ErrorMessage: PAnsiChar;
    ConSettings: PZConSettings;
    aMessage, aErrorStatus: String;
+   ConLostError: EZSQLConnectionLost;
 begin
   ErrorMessage := PlainDriver.PQerrorMessage(conn);
   if PGSucceeded(ErrorMessage) then Exit;
@@ -785,9 +785,10 @@ begin
   if ResultHandle <> nil then
     PlainDriver.PQclear(ResultHandle);
   if PlainDriver.PQstatus(conn) = CONNECTION_BAD then begin
+    ConLostError := EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
     if Assigned(Sender) then
-      Sender.ReleaseImmediat(Sender);
-    raise EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
+      Sender.ReleaseImmediat(Sender, ConLostError);
+    if ConLostError <> nil then raise ConLostError;
   end else if LogCategory <> lcUnprepStmt then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
     raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage);
 end;

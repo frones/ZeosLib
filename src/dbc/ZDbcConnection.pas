@@ -104,6 +104,7 @@ type
   TZAbstractDbcConnection = class(TZCodePagedObject, IZConnection,
     IImmediatelyReleasable)
   private
+    FOnConnectionLostError: TOnConnectionLostError; //error handle which can be registered
     FDriver: IZDriver;
     FDriverManager: IZDriverManager; //just keep refcount high until last conection is gone e.g. Logging
     FIZPlainDriver: IZPlainDriver;
@@ -146,6 +147,7 @@ type
     procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
     procedure RaiseUnsupportedException;
 
+    procedure RegisterOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
     procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Value: IZStatement);
     procedure CloseRegisteredStatements;
@@ -211,7 +213,7 @@ type
     procedure Open; virtual;
     procedure Close;
     procedure InternalClose; virtual; abstract;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); virtual;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
     function IsClosed: Boolean; virtual;
 
     function GetDriver: IZDriver;
@@ -705,6 +707,16 @@ begin
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
+procedure TZAbstractDbcConnection.RegisterOnConnectionLostErrorHandler(
+  Handler: TOnConnectionLostError);
+begin
+  if Assigned(FOnConnectionLostError) then
+    FOnConnectionLostError := Handler
+  else if Assigned(FOnConnectionLostError) then
+    raise EZSQLException.Create('Error handler registered already!')
+  else FOnConnectionLostError := Handler;
+end;
+
 procedure TZAbstractDbcConnection.RegisterStatement(
   const Value: IZStatement);
 begin
@@ -712,16 +724,25 @@ begin
     fRegisteredStatements.Add(Pointer(Value))
 end;
 
-procedure TZAbstractDbcConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable);
+procedure TZAbstractDbcConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
 var I: Integer;
   ImmediatelyReleasable: IImmediatelyReleasable;
+  FError: EZSQLConnectionLost;
 begin
-  fClosed := True;
   FAutoCommit := True;
+  if not Closed and Assigned(FOnConnectionLostError) and Assigned(FError) then begin
+    FError := AError;
+    AError := nil;
+  end else
+    FError := nil; //satisfy compiler
+  fClosed := True;
   for I := fRegisteredStatements.Count-1 downto 0 do
     If Supports(IZStatement(fRegisteredStatements[I]), IImmediatelyReleasable, ImmediatelyReleasable)
       and (Sender <> ImmediatelyReleasable) then
-      ImmediatelyReleasable.ReleaseImmediat(Sender);
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+  if Assigned(FOnConnectionLostError) and (FError <> nil) then
+    FOnConnectionLostError(FError);
 end;
 
 procedure TZAbstractDbcConnection.ResetCurrentClientCodePage(const Name: String);

@@ -110,6 +110,7 @@ type
     procedure TestSF224;
     procedure TestSF266;
     procedure TestSF274;
+    procedure TestMarsupilami1;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1249,8 +1250,8 @@ procedure TZTestCompPostgreSQLBugReport.TestSF266;
 var
   Query: TZQuery;
 begin
+  Connection.Connect;
   try
-    Connection.Connect;
     Query := TZQuery.Create(nil);
     Query.Connection := Connection;
     Query.SQL.Append('CREATE OR REPLACE FUNCTION pc_chartoint(chartoconvert character varying)');
@@ -1295,8 +1296,8 @@ begin
     Listener.Active := false;
     Check(TestSF274_GotNotified, 'Didn''t get PostgreSQL notification.');
   finally
-    Connection.Disconnect;
     FreeAndNil(Listener);
+    Connection.Disconnect;
   end;
 end;
 
@@ -1304,6 +1305,34 @@ procedure TZTestCompPostgreSQLBugReport.TestSF274_OnNotify(Sender: TObject; Even
         ProcessID: Integer; Payload: string);
 begin
   TestSF274_GotNotified := true;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestMarsupilami1;
+var
+  Query: TZQuery;
+  String1, String2: String;
+begin
+  Connection.Connect;
+  try
+    Query := TZQuery.Create(nil);
+    Query.Connection := Connection;
+    Connection.ExecuteDirect('insert into bcd_values (id) values (0815)');
+    Query.SQL.Text := 'select id, curr15_2 from bcd_values where id = 0815';
+    Query.Open;
+    Query.Edit;
+    Query.FieldByName('curr15_2').AsFloat := 274.065;
+    Query.Post;
+    String1 := Query.FieldByName('curr15_2').AsString;
+    Query.Close;
+    Query.Open;
+    String2 := Query.FieldByName('curr15_2').AsString;
+    Query.Close;
+    CheckEquals(String1, String2, 'Users expect these strings to be equal.');
+  finally
+    FreeAndNil(Query);
+    Connection.ExecuteDirect('delete from bcd_values where id = 0815');
+    Connection.Disconnect;
+  end;
 end;
 
 initialization

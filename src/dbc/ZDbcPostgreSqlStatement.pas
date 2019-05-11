@@ -140,7 +140,8 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
 
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable); override;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   {** implements a prepared statement for PostgreSQL protocol V3+ }
@@ -410,7 +411,7 @@ begin
   SQLType := TZSQLType(Arr.VArrayType);
   D := Arr.VArray;
   P := nil;
-  Native := (Arr.VArrayVariantType = vtNull);
+  Native := Arr.VArrayVariantType in NativeArrayValueTypes[SQLType];
   DynArrayLen := Length(TByteDynArray(D));
   case SQLType of
     stBoolean:    begin
@@ -422,8 +423,9 @@ begin
                         Dec(Stmt.FPQparamLengths[Index]);
                       end else begin
                         Integer2PG(SizeOf(Byte), P);
-                        if Native then
-                        PByte(P+SizeOf(int32))^ := Ord(TBooleanDynArray(D)[j]);
+                        if Native
+                        then PByte(P+SizeOf(int32))^ := Ord(TBooleanDynArray(D)[j])
+                        else PByte(P+SizeOf(int32))^ := Ord(ArrayValueToBoolean(Arr, J));
                         Inc(P,SizeOf(int32)+SizeOf(Byte));
                       end;
                   end;
@@ -1560,10 +1562,10 @@ begin
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var ArrayDMLType: TArrayDMLType;
 begin
-  inherited ReleaseImmediat(Sender);
+  inherited ReleaseImmediat(Sender, AError);
   Fres := nil;
   FRawPlanName := '';
   fPrepareCnt := 0;
@@ -1571,7 +1573,7 @@ begin
   SetParamCount(0);
   for ArrayDMLType := low(TArrayDMLType) to high(ArrayDMLType) do
     if Assigned(FPGArrayDMLStmts[ArrayDMLType].Intf) then
-      (FPGArrayDMLStmts[ArrayDMLType].Intf as IImmediatelyReleasable).ReleaseImmediat(Sender);
+      (FPGArrayDMLStmts[ArrayDMLType].Intf as IImmediatelyReleasable).ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.Unprepare;

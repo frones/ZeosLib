@@ -139,7 +139,7 @@ type
     FBeforeReconnect: TNotifyEvent;
     FAfterReconnect: TNotifyEvent;
     FOnCommit: TNotifyEvent;
-    FOnRollback: TNotifyEvent;
+    FOnRollback, FOnLost: TNotifyEvent;
     FOnStartTransaction: TNotifyEvent;
     //HA 090811 Change Type of FOnLogin to new TZLoginEvent
     //FOnLogin: TLoginEvent;
@@ -205,6 +205,7 @@ type
     property StreamedConnected: Boolean read FStreamedConnected write FStreamedConnected;
 
     procedure SetClientCodePage(Const Value: String); //Egonhugeist
+    procedure ConnectionLost(var AError: EZSQLConnectionLost);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -310,6 +311,7 @@ type
     property OnLogin: TZLoginEvent read FOnLogin write FOnLogin;
     property OnStartTransaction: TNotifyEvent
       read FOnStartTransaction write FOnStartTransaction;
+    property OnLost: TNotifyEvent read FOnLost write FOnLost;
     {$IFDEF ZEOS_TEST_ONLY}
     property TestMode : Byte read FTestMode write FTestMode;
     {$ENDIF}
@@ -874,6 +876,7 @@ begin
         ConstructURL(UserName, Password), FURL.Properties);
       try
         with FConnection do begin
+          RegisterOnConnectionLostErrorHandler(ConnectionLost);
           SetAutoCommit(FAutoCommit);
           SetReadOnly(FReadOnly);
           SetCatalog(FCatalog);
@@ -897,6 +900,24 @@ begin
   end;
 end;
 
+procedure TZAbstractConnection.ConnectionLost(var AError: EZSQLConnectionLost);
+var Err: EZSQLConnectionLost;
+begin
+  Err := AError;
+  AError := nil;
+  try
+    CloseAllDataSets;
+    CloseAllSequences;
+  except end;
+  try
+    if Assigned(FOnLost) then
+      FOnLost(Self);
+  finally
+    if Err <> nil then
+      raise Err;
+  end;
+end;
+
 {**
   Closes and removes the connection with database
 }
@@ -908,6 +929,7 @@ begin
 
     ShowSqlHourGlass;
     try
+      FConnection.RegisterOnConnectionLostErrorHandler(nil);
       CloseAllDataSets;
       // Modified by cipto 8/2/2007 10:11:02 AM
       CloseAllSequences;
