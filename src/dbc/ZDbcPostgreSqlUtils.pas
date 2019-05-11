@@ -742,6 +742,7 @@ var
    ErrorMessage: PAnsiChar;
    ConSettings: PZConSettings;
    aMessage, aErrorStatus: String;
+   ConLostError: EZSQLConnectionLost;
 begin
   ErrorMessage := PlainDriver.PQerrorMessage(conn);
   if PGSucceeded(ErrorMessage) then Exit;
@@ -784,9 +785,10 @@ begin
   if ResultHandle <> nil then
     PlainDriver.PQclear(ResultHandle);
   if PlainDriver.PQstatus(conn) = CONNECTION_BAD then begin
+    ConLostError := EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
     if Assigned(Sender) then
-      Sender.ReleaseImmediat(Sender);
-    raise EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
+      Sender.ReleaseImmediat(Sender, ConLostError);
+    if ConLostError <> nil then raise ConLostError;
   end else if LogCategory <> lcUnprepStmt then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
     raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage);
 end;

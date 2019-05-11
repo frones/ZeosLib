@@ -176,6 +176,8 @@ type
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
 
+    procedure RegisterOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload; virtual;
@@ -631,6 +633,12 @@ end;
 procedure TZDbcPooledConnection.PrepareTransaction(const transactionid: string);
 begin
   GetConnection.PrepareTransaction(transactionid);
+end;
+
+procedure TZDbcPooledConnection.RegisterOnConnectionLostErrorHandler(
+  Handler: TOnConnectionLostError);
+begin
+  GetConnection.RegisterOnConnectionLostErrorHandler(Handler);
 end;
 
 procedure TZDbcPooledConnection.RegisterStatement(const Value: IZStatement);

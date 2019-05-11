@@ -316,7 +316,7 @@ begin
     stBoolean:
       Result := ftBoolean;
     stByte:
-      Result := {$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftSmallInt{$ENDIF}; // ! dangerous - field will get a type with greater size
+      Result := {$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftWord{$ENDIF}; // ! dangerous - field will get a type with greater size
     stShort:
       Result := {$IFDEF WITH_FTSHORTINT}ftShortint{$ELSE}ftSmallInt{$ENDIF}; // !
     stSmall:
