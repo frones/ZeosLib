@@ -243,9 +243,6 @@ type
   {** Generic SQL exception. }
   EZSQLException = class(EZSQLThrowable);
 
-  {** Generic connection lost exception. }
-  EZSQLConnectionLost = class(EZSQLException);
-
   {** Generic SQL warning. }
   EZSQLWarning = class(EZSQLThrowable);
 
