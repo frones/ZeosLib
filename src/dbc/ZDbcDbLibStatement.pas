@@ -61,23 +61,6 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcDbLib, ZPlainDbLibConstants, ZPlainDbLibDriver;
 
 type
-  TZAbstractDBLibStatement = class(TZAbstractPreparedStatement2)
-  private
-    FStmtHandle: Integer;
-    FDBLibConnection: IZDBLibConnection;
-    FResults: IZCollection;
-    FUserEncoding: TZCharEncoding;
-    FLastOptainedRS: IZResultSet;
-    FClientCP: Word;
-    FPLainDriver: TZDBLIBPLainDriver;
-    procedure InternalPrepare; virtual; abstract;
-  end;
-
-  TZDBLibMSSQLStatement = Class(TZAbstractDBLibStatement)
-  protected
-    procedure InternalPrepare; override;
-  End;
-
   {** Implements Prepared SQL Statement for DBLib. With emulation}
   TZDBLibPreparedStatementEmulated = class(TZEmulatedPreparedStatement_A)
   private
@@ -964,11 +947,4 @@ begin
 end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
-{ TZDBLibMSSQLStatement }
-
-procedure TZDBLibMSSQLStatement.InternalPrepare;
-begin
-
-end;
-
 end.

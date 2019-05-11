@@ -729,7 +729,6 @@ procedure TZAbstractDbcConnection.ReleaseImmediat(const Sender: IImmediatelyRele
 var I: Integer;
   ImmediatelyReleasable: IImmediatelyReleasable;
   FError: EZSQLConnectionLost;
-  WasConnected: Boolean;
 begin
   FAutoCommit := True;
   if not Closed and Assigned(FOnConnectionLostError) and Assigned(FError) then begin
