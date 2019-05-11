@@ -731,7 +731,7 @@ var I: Integer;
   FError: EZSQLConnectionLost;
 begin
   FAutoCommit := True;
-  if not Closed and Assigned(FOnConnectionLostError) and Assigned(FError) then begin
+  if not Closed and Assigned(FOnConnectionLostError) and Assigned(AError) then begin
     FError := AError;
     AError := nil;
   end else
