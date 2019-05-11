@@ -3126,7 +3126,7 @@ begin
           RowAccessor.SetCurrency(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
         ftBCD: begin
             if (Field.Size < 4) then //right truncation? Using the Tbcd record's behaves equal
-              PCurrency(Buffer)^ := RoundCurrTo(PCurrency(Buffer)^, 4-Field.Size);
+            PCurrency(Buffer)^ := RoundCurrTo(PCurrency(Buffer)^, Field.Size);
             RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
           end;
         else  { Processes all other fields. }
