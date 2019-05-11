@@ -93,6 +93,7 @@ type
     FCachedLob: boolean;
     FpgOIDTypes: TIntegerDynArray;
     function GetBuffer(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    FDecimalSeps: array[Boolean] of Char;
     procedure ClearPGResult;
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -841,7 +842,7 @@ begin
 
   if LastWasNull
   then Result := 0
-  else ZSysUtils.SQLStrToFloatDef(Buffer, 0, Result);
+  else SQLStrToFloatDef(Buffer, 0, FDecimalSeps[ColumnOID = CASHOID], Result);
 end;
 
 {**
