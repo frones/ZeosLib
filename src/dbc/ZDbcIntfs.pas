@@ -746,7 +746,7 @@ type
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
     {$ENDIF}
-    {$IFDEF WITH UTF8STRING}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     {$ENDIF}
     function GetRawByteStringByName(const ColumnName: string): RawByteString;

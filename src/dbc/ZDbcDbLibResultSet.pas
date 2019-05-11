@@ -935,13 +935,17 @@ begin
 
   Result := 0;
   if Data <> nil then
-  begin
-    if DT = tdsFlt8 then
-      Result := PDouble(Data)^
-    else
-      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsFlt8),
-        @Result, SizeOf(Result));
-  end;
+    case DT of
+      tdsInt1: Result := PByte(Data)^;
+      tdsInt2: Result := PSmallInt(Data)^;
+      tdsInt4: Result := PInteger(Data)^;
+      tdsInt8: Result := PInt64(Data)^;
+      tdsFlt4: Result := PSingle(Data)^;
+      tdsFlt8: Result := PDouble(Data)^;
+      else FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsFlt8),
+          @Result, SizeOf(Result));
+    end
+  else Result := 0;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETDOUBLE');
 end;
 

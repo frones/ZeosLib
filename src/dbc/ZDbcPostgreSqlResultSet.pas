@@ -92,8 +92,8 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
     FpgOIDTypes: TIntegerDynArray;
-    function GetBuffer(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     FDecimalSeps: array[Boolean] of Char;
+    function GetBuffer(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     procedure ClearPGResult;
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -842,7 +842,7 @@ begin
 
   if LastWasNull
   then Result := 0
-  else SQLStrToFloatDef(Buffer, 0, FDecimalSeps[ColumnOID = CASHOID], Result);
+  else SQLStrToFloatDef(Buffer, 0, FDecimalSeps[FpgOIDTypes[ColumnIndex] = CASHOID], Result);
 end;
 
 {**

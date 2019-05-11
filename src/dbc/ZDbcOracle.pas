@@ -591,6 +591,7 @@ var
 begin
   if Closed or not Assigned(PlainDriver) then
     Exit;
+  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
   { Closes started transaction }
   CheckOracleError(GetPlainDriver, FErrorHandle,
     GetPlainDriver.TransRollback(FContextHandle, FErrorHandle, OCI_DEFAULT),
@@ -607,7 +608,6 @@ begin
   CheckOracleError(GetPlainDriver, FErrorHandle,
     GetPlainDriver.ServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
     lcDisconnect, LogMessage, ConSettings);
-  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
 
   { Frees all handlers }
   GetPlainDriver.HandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
