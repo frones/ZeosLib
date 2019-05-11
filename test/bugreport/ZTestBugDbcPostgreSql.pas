@@ -140,7 +140,7 @@ begin
   //  GetConnectionUrl + '?oidasblob=false', UserName, Password);
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select reltype from pg_class');
-  CheckEquals(Ord(stInteger), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
+  CheckEquals(Ord(stLongWord), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
   ResultSet.Close;
   Statement.Close;
 end;
