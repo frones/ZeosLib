@@ -6419,7 +6419,7 @@ begin
   Precision := GetOrdinalDigits(Value);
   //FillChar(Result.Fraction[0], MaxFMTBcdDigits, #0);
   if Precision and 1 = 1 then begin
-    v2 := Value div 10;
+      v2 := Value div 10;
     Result.Precision := Precision+1;
     B := (Value-(V2*10)) shl 4;
     Result.Fraction[Precision div 2] := Byte(B);
@@ -6540,11 +6540,11 @@ begin
   //unrolled version we're comming from a smallInt/word with max precision of 5
   if Precision > 1 then
     if Precision >= 4 then begin
-      v2 := Value div 100;
-      B := Value-(V2*100);
-      PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
-    end else
-      Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+    v2 := Value div 100;
+    B := Value-(V2*100);
+    PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
+  end else
+    Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -6694,7 +6694,10 @@ begin
     if PWord(Buf)^ = Ord(DecimalSep) then begin
       if DecimalPos <> -1 then
         goto Fail;
-      Inc(Pos, Ord(Pos = 0));
+      if Pos = 0 then
+        Inc(Pos)
+      else if (Pos = 1) and (PWord(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
+        Dec(Pos);
       DecimalPos := Pos;
       Inc(Buf);
       if (Buf = PEnd) then
@@ -6707,8 +6710,8 @@ begin
       goto Fail;
     if Pos < 64 then begin
       if (Pos and 1) = 0
-      then Bcd.Fraction[Pos div 2] := Byte(Ord(Buf^) - Ord('0')) * $10
-      else Bcd.Fraction[Pos div 2] := (Bcd.Fraction[Pos div 2] and $F0) + Byte(Ord(Buf^) - Ord('0'));
+      then Bcd.Fraction[Pos shr 1] := Byte(Ord(Buf^) - Ord('0')) * $10
+      else Bcd.Fraction[Pos shr 1] := (Bcd.Fraction[Pos shr 1] and $F0) + Byte(Ord(Buf^) - Ord('0'));
       Inc(Pos);
     end;
     Inc(Buf);
@@ -6758,10 +6761,6 @@ Finalize:
     if DecimalPos = -1
     then Bcd.SignSpecialPlaces := 0
     else Bcd.SignSpecialPlaces := Byte(Pos - DecimalPos);
-    if (Pos and 1) = 1 then begin
-      Inc(Bcd.Precision);
-      Inc(Bcd.SignSpecialPlaces);
-    end;
     if Negative then
       Bcd.SignSpecialPlaces := Bcd.SignSpecialPlaces or $80;
   end;
@@ -6812,7 +6811,10 @@ begin
     if PByte(Buf)^ = Ord(DecimalSep) then begin
       if DecimalPos <> -1 then
         goto Fail;
-      Inc(Pos, Ord(Pos = 0));
+      if Pos = 0 then
+        Inc(Pos)
+      else if (Pos = 1) and (PByte(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
+        Dec(Pos);
       DecimalPos := Pos;
       Inc(Buf);
       if (Buf = PEnd) then
@@ -6825,8 +6827,8 @@ begin
       goto Fail;
     if Pos < 64 then begin
       if (Pos and 1) = 0
-      then Bcd.Fraction[Pos div 2] := (PByte(Buf)^ - Ord('0')) * $10
-      else Bcd.Fraction[Pos div 2] := (Bcd.Fraction[Pos div 2] and $F0) + (PByte(Buf)^ - Ord('0'));
+      then Bcd.Fraction[Pos shr 1] := (PByte(Buf)^ - Ord('0')) * $10
+      else Bcd.Fraction[Pos shr 1] := (Bcd.Fraction[Pos shr 1] and $F0) + (PByte(Buf)^ - Ord('0'));
       Inc(Pos);
     end;
     Inc(Buf);
@@ -6876,10 +6878,6 @@ Finalize:
     if DecimalPos = -1
     then Bcd.SignSpecialPlaces := 0
     else Bcd.SignSpecialPlaces := Pos - DecimalPos;
-    if (Pos and 1) = 1 then begin
-      Inc(Bcd.Precision);
-      Inc(Bcd.SignSpecialPlaces);
-    end;
     if Negative then
       Bcd.SignSpecialPlaces := Bcd.SignSpecialPlaces or $80;
   end;
