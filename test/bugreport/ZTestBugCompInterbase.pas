@@ -92,6 +92,7 @@ type
     procedure Test_Ticket228;
     procedure Test_SF249;
     procedure Test_SF287;
+    procedure Test_Marsupilami2;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -924,6 +925,27 @@ begin
       Query.Close;
       Query.Free;
     end;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.Test_Marsupilami2;
+var
+  Query: TZQuery;
+  ClassName1, ClassName2: String;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT * FROM TABLE1';
+    Query.Open;
+    ClassName1 := Query.FieldByName('PREZZO').ClassName;
+    Query.Close;
+    Query.SQL.Text := 'SELECT PREZZO FROM TABLE1';
+    Query.Open;
+    ClassName2 := Query.FieldByName('PREZZO').ClassName;
+    Query.Close;
+    CheckEquals(ClassName1, ClassName2, 'Users expect to get the same field type at all times.');
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
