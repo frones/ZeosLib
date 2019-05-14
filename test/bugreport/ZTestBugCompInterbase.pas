@@ -92,7 +92,7 @@ type
     procedure Test_Ticket228;
     procedure Test_SF249;
     procedure Test_SF287;
-    procedure Test_Marsupilami2;
+    procedure Test_SF351;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -928,7 +928,7 @@ begin
   end;
 end;
 
-procedure ZTestCompInterbaseBugReport.Test_Marsupilami2;
+procedure ZTestCompInterbaseBugReport.Test_SF351;
 var
   Query: TZQuery;
   ClassName1, ClassName2: String;
