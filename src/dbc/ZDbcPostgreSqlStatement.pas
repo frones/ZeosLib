@@ -989,8 +989,7 @@ function TZPostgreSQLCallableStatement.GetProcedureSql: string;
 var
   InParams: string;
 begin
-  if Length(CachedQueryRaw) = 1 then  //only name in there?
-  begin
+  if Length(CachedQueryRaw) <= 1 then  begin//only name in there?
     Unprepare; //reset cached query
     InParams := GenerateParamsStr(InParamCount);
     Result := Format('SELECT * FROM %s(%s)', [SQL, InParams]);
