@@ -365,7 +365,7 @@ begin
   StoredProc.ExecProc;
   CheckEquals(50, StoredProc.ParamByName('f1').AsInteger);
   CheckEquals(100, StoredProc.ParamByName('f2').AsInteger);
-  StoredProc.Unprepare;
+ // StoredProc.Unprepare;
 
   StoredProc.ParamByName('p1').AsInteger := 20;
   StoredProc.ParamByName('p2').AsInteger := 30;
@@ -393,7 +393,7 @@ begin
   StoredProc.ExecProc;
   CheckEquals(150, StoredProc.ParamByName('p1').AsInteger);
   CheckEquals(5000, StoredProc.ParamByName('p2').AsInteger);
-  StoredProc.Unprepare;
+  //StoredProc.Unprepare;
 
   StoredProc.ParamByName('p2').AsInteger := 20;
   StoredProc.ParamByName('p3').AsInteger := 30;
@@ -420,7 +420,7 @@ begin
   StoredProc.ParamByName('$2').AsInteger := 100;
   StoredProc.ExecProc;
   CheckEquals(150, StoredProc.ParamByName('$3').AsInteger);
-  StoredProc.Unprepare;
+ // StoredProc.Unprepare;
 
   StoredProc.ParamByName('$1').AsInteger := 20;
   StoredProc.ParamByName('$2').AsInteger := 30;
@@ -445,7 +445,7 @@ begin
   StoredProc.Params[1].AsInteger := 100;
   StoredProc.ExecProc;
   CheckEquals(150, StoredProc.Params[2].AsInteger);
-  StoredProc.Unprepare;
+ // StoredProc.Unprepare;
 
   StoredProc.ParamByName('p1').AsInteger := 20;
   StoredProc.Params[1].AsInteger := 30;
@@ -470,7 +470,7 @@ begin
   StoredProc.Params[1].AsInteger := 100;
   StoredProc.ExecProc;
   CheckEquals(150, StoredProc.Params[2].AsInteger);
-  StoredProc.Unprepare;
+ // StoredProc.Unprepare;
 
   StoredProc.ParamByName('p1').AsInteger := 20;
   StoredProc.Params[1].AsInteger := 30;
@@ -489,7 +489,7 @@ begin
 
   StoredProc.ExecProc;
   CheckEquals('Volvo', StoredProc.ParamByName('returnValue').AsString);
-  StoredProc.Unprepare;
+  //StoredProc.Unprepare;
 
   StoredProc.Open;
   CheckEquals('Volvo', StoredProc.ParamByName('returnValue').AsString);
