@@ -868,18 +868,16 @@ end;
 procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
 var bb,size   : byte;
   Exp       : SmallInt;
-  i, Scale, Precision: integer;
+  Scale, Precision: integer;
   Positive, HalfNibbles :Boolean;
   pNibble, pFirstNuDigit, pNuDigits, pNuEndDigit: PAnsiChar;
-label zero, DecPrec;
+label zero;
 begin
   FillChar(bcd, SizeOf(bcd), #0);
   Size := num[0];
   bb := num[1];
-  if (Size=1) and ((bb=$80) or (bb=$c1)) then begin
-zero: bcd.Precision := 1; //fpc zero bcd returns '000.00' if default precision is 10 and scale is 2
-    Exit;
-  end;
+  if (Size=1) and ((bb=$80) or (bb=$c1)) then
+    goto Zero; //fpc zero bcd returns '000.00' if default precision is 10 and scale is 2
   if ((Size=1) and (bb = 0) {neg infinity}) or
      ((Size=2) and (bb = 255) and (num[2] = 101) {pos infinity}) then
     Exit;
@@ -953,8 +951,8 @@ zero: bcd.Precision := 1; //fpc zero bcd returns '000.00' if default precision i
   if Positive
   then Bcd.SignSpecialPlaces := Byte(Scale)
   else Bcd.SignSpecialPlaces := Byte(Scale) or $80;
-  if Precision = 0
-  then Bcd.Precision := 1
+  if Precision = 0 then
+zero: Bcd.Precision := 1
   else Bcd.Precision := Byte(Precision);
 end;
 
