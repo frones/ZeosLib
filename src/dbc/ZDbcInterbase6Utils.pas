@@ -726,8 +726,6 @@ end;
 function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
-  Result := ZDbcIntfs.stUnknown;
-
   case SqlType of
     blr_bool, blr_not_nullable: Result := stBoolean;
     blr_domain_name, blr_domain_name2,
@@ -745,8 +743,9 @@ begin
     blr_float: Result := stFloat;
     blr_double: Result := stDouble;
     blr_blob_id, blr_quad: Result := stLong;
-    blr_int64:
-      case SqlSubType of
+    blr_int64: begin
+      (*case SqlSubType of
+         commented by EH 15.05.2019 see sf.net ticket 351/106
         RDB_NUMBERS_NONE:
           { weired bug! We need to check scale too!
             see: http://sourceforge.net/p/zeoslib/tickets/106/ }
@@ -755,28 +754,33 @@ begin
           else
             Result := stBigDecimal;
         RDB_NUMBERS_NUMERIC: Result := stDouble;
-        RDB_NUMBERS_DECIMAL:
+        RDB_NUMBERS_DECIMAL: *)
           if Scale = 0 then
             Result := stLong
           else
             Result := stBigDecimal;
       end;
-    blr_long:
+    blr_long: begin (* commented by EH 15.05.2019 see sf.net ticket 351/106
       case SqlSubType of
         RDB_NUMBERS_NONE: Result := stInteger;
         RDB_NUMBERS_NUMERIC: Result := stDouble;
-        RDB_NUMBERS_DECIMAL:
+        RDB_NUMBERS_DECIMAL:    *)
           if Scale = 0 then
             Result := stInteger
           else
-            Result := stBigDecimal;
+            Result := stDouble;
       end;
     blr_short:
+          if Scale = 0 then
+            Result := stSmall
+          else
+            Result := stDouble;
+      (*
       case SqlSubType of
         RDB_NUMBERS_NONE: Result := stSmall;
         RDB_NUMBERS_NUMERIC: Result := stDouble;
         RDB_NUMBERS_DECIMAL: Result := stDouble;
-      end;
+      end; *)
     blr_sql_date: Result := stDate;
     blr_sql_time: Result := stTime;
     blr_timestamp: Result := stTimestamp;
@@ -1886,52 +1890,33 @@ begin
   SqlSubType := GetIbSqlSubType(Index);
 
   case GetIbSqlType(Index) of
-    SQL_VARYING, SQL_TEXT:
-      case SqlSubType of
-        1: {Octets} Result := stBytes;
-        else
-          Result := stString;
-      end;
-    SQL_LONG:
-      begin
-        if SqlScale = 0 then
-          Result := stInteger
-        else
-          Result := stDouble;
-      end;
-    SQL_SHORT:
-      begin
-        if SqlScale = 0 then
-          Result := stSmall
-        else
-          Result := stFloat; //Numeric with low precision
-       end;
-    SQL_FLOAT:
-      Result := stFloat;
-    SQL_DOUBLE, SQL_D_FLOAT:
-      Result := stDouble;
-    SQL_BOOLEAN, SQL_BOOLEAN_FB:
-      Result := stBoolean;
-    SQL_DATE: Result := stTimestamp;
-    SQL_TYPE_TIME: Result := stTime;
-    SQL_TYPE_DATE: Result := stDate;
-    SQL_INT64:
-      begin
-        if SqlScale = 0 then
-          Result := stLong
-        else
-          Result := stBigDecimal;
-      end;
-    SQL_QUAD, SQL_BLOB:
-      begin
-        if SqlSubType = isc_blob_text then
-          Result := stAsciiStream
-        else
-          Result := stBinaryStream;
-      end;
-    SQL_ARRAY: Result := stArray;
-  else
-      Result := stString;
+    SQL_VARYING,
+    SQL_TEXT:     if SqlSubType = 1 {Octets}
+                  then Result := stBytes
+                  else Result := stString;
+    SQL_LONG:     if SqlScale = 0
+                  then Result := stInteger
+                  else Result := stDouble;
+    SQL_SHORT:    if SqlScale = 0
+                  then Result := stSmall
+                  else Result := stDouble; //Numeric with low precision
+    SQL_INT64:    if SqlScale = 0
+                  then Result := stLong
+                  else Result := stBigDecimal;
+    SQL_FLOAT:    Result := stFloat;
+    SQL_DOUBLE,
+    SQL_D_FLOAT:  Result := stDouble;
+    SQL_BOOLEAN_FB,
+    SQL_BOOLEAN:  Result := stBoolean;
+    SQL_DATE:     Result := stTimestamp;
+    SQL_TYPE_TIME:Result := stTime;
+    SQL_TYPE_DATE:Result := stDate;
+    SQL_QUAD,
+    SQL_BLOB:     if SqlSubType = isc_blob_text
+                  then Result := stAsciiStream
+                  else Result := stBinaryStream;
+    SQL_ARRAY:    Result := stArray;
+    else Result := stString;
   end;
   if ( ConSettings.CPType = cCP_UTF16 ) then
     case result of
