@@ -313,7 +313,7 @@ var ODBCCType: SQLSMALLINT;
 begin
   case ODBCType of
     SQL_NUMERIC,
-    SQL_DECIMAL:      if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then begin
+    SQL_DECIMAL:      if (Scale <= 4) and (Precision <= 18) then begin
                         Result := stCurrency;
                         ODBCCType := SQL_C_NUMERIC;
                       end else begin

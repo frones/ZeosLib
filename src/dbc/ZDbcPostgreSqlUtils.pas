@@ -403,7 +403,7 @@ begin
       //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
         if TypeModifier <> -1 then begin
           Scale := (TypeModifier - VARHDRSZ) and $FFFF;
-          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF < sAlignCurrencyScale2Precision[Scale]) then
+          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF <= 18) then
             Result := stCurrency
         end;
       end;
@@ -1516,7 +1516,6 @@ ZeroBCD:
   NBASEDigit := PG2Word(Src); //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
   HalfNibbles := False;
-  Digits := 0;
   if FirstNibbleDigit > 0 then begin
     if NBASEDigit > 999 then begin
       I := 0;
@@ -1564,10 +1563,7 @@ FourNibbles:
     end;
   if pNibble < pLastNibble
   then Inc(pNibble, 1+Ord(I<NBASEDigitsCount-1)) //keep offset of pNibble to lastnibble if loop end reached
-  else begin
-    pNibble := pLastNibble +1;
-    goto Done; //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
-  end;
+  else goto Done; //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
   Inc(I);
   if I < NBASEDigitsCount then
     goto Loop;
@@ -1587,7 +1583,9 @@ Done:
       then Dst.SignSpecialPlaces := Scale or $80
       else Dst.SignSpecialPlaces := Scale;
   end;
-  Dst.Precision := Max(Precision, 1);
+  if Precision = 0
+  then Dst.Precision := 1
+  else Dst.Precision := Byte(Precision);
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}

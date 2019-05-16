@@ -297,8 +297,7 @@ begin
           end
         else begin
           Dec(PrecOrLen, 1+ORd(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG = 0)); //one digit for the decimal sep and one for the sign
-          if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ <= 4) and
-             (PrecOrLen < ULong(sAlignCurrencyScale2Precision[PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^]))
+          if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ <= 4) and (PrecOrLen <= 18)
             then Result := stCurrency
             else Result := stBigDecimal
           end;
@@ -674,7 +673,7 @@ lLong:
         if ColumnSize < 10
         then goto lLong
         else goto lLongLong
-      else if (Scale <= 4) and (ColumnSize < sAlignCurrencyScale2Precision[Scale])
+      else if (Scale <= 4) and (ColumnSize <= 18)
         then FieldType := stCurrency
         else FieldType := stBigDecimal
     end

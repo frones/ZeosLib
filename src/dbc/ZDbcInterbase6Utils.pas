@@ -1032,7 +1032,7 @@ begin
           Result := stLong
         else begin
 testBCD:  Scale := Abs(Scale);
-          if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+          if (Scale <= 4) and (Precision <= 18)
           then Result := stCurrency
           else Result := stBigDecimal;
         end;

@@ -2780,25 +2780,13 @@ var
       ZType := Ord(stDouble);
       ZPrecision := -1;
       ZScale := -1;
-    end else if TypeName = 'decimal' then begin
+    end else if (TypeName = 'decimal') or (TypeName = 'numeric') then begin
       if MySqlScale = 0 then begin
         ZType := Ord(stLong);
         ZPrecision := -1;
         ZScale := -1;
       end else begin
-        if (MySqlScale <= 4) and (MysqlPrecision < sAlignCurrencyScale2Precision[MySqlScale])
-        then ZType := Ord(stCurrency)
-        else ZType := Ord(stBigDecimal);
-        ZPrecision := MysqlPrecision;
-        ZScale := MySqlScale;
-      end;
-    end else if TypeName = 'numeric' then begin
-      if MySqlScale = 0 then begin
-        ZType := Ord(stLong);
-        ZPrecision := -1;
-        ZScale := -1;
-      end else begin
-        if (MySqlScale <= 4) and (MysqlPrecision < sAlignCurrencyScale2Precision[MySqlScale])
+        if (MySqlScale <= 4) and (MysqlPrecision <= 18)
         then ZType := Ord(stCurrency)
         else ZType := Ord(stBigDecimal);
         ZPrecision := MysqlPrecision;
