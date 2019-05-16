@@ -258,7 +258,7 @@ begin
     with GetMetadata do
     begin
       CheckEquals(ord(stInteger), Ord(GetColumnType(FLD1_Index)));
-      CheckEquals(ord(stFloat), Ord(GetColumnType(FLD2_Index)));
+      CheckEquals(ord(stDouble), Ord(GetColumnType(FLD2_Index)));
     end;
     CheckEquals(True, Next);
     CheckEquals(1, GetInt(FLD1_Index));
