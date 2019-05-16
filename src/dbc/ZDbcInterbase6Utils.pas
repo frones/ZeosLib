@@ -1791,7 +1791,7 @@ begin
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
     SQL_INT64:
-        https://firebirdsql.org/file/documentation/reference_manuals/fblangref25-en/html/fblangref25-datatypes-fixedtypes.html
+        //https://firebirdsql.org/file/documentation/reference_manuals/fblangref25-en/html/fblangref25-datatypes-fixedtypes.html
         if XSQLVAR.SqlScale = 0 then
           Result := stLong
         else if XSQLVAR.SqlScale >= -4 then //EH firebird supports a max precision of 18 only
