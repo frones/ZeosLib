@@ -105,6 +105,7 @@ type
     FFirstRow: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
     FResetCallBack: TResetCallBack;
+    FCurrDecimalSep: Char;
   protected
     procedure Open; override;
   public
@@ -958,6 +959,7 @@ end;
 procedure TZSQLiteResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var ColType: Integer;
   Buf: PAnsiChar;
+label Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -968,13 +970,16 @@ begin
   ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull or (ColType = SQLITE_BLOB) then begin
-    FillChar(Result, SizeOf(TBCD), #0);
+Fill:FillChar(Result, SizeOf(TBCD), #0);
   end else case ColType of
     SQLITE_INTEGER: ScaledOrdinal2BCD(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex), 0, Result);
     SQLITE_FLOAT:   ZSysUtils.Double2BCD(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex), Result);
-    else {SQLITE_TEXT:}    begin
+    else {SQLITE_TEXT}:    begin
                       Buf := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
-                      TryRawToBcd(Buf, StrLen(Buf), Result, '.');
+                      if not TryRawToBcd(Buf, ZFastCode.StrLen(Buf), Result, '.') then begin
+                        LastWasNull := True;
+                        goto Fill;
+                      end;
                     end;
   end;
 end;
@@ -1021,6 +1026,8 @@ end;
 }
 function TZSQLiteResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 var ColType: Integer;
+  P: PAnsiChar;
+  I64: Int64 absolute Result;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stCurrency);
@@ -1033,9 +1040,12 @@ begin
   if LastWasNull then
     Result := 0
   else case ColType of
-    SQLITE_INTEGER: Result := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex);
+    SQLITE_INTEGER: I64 := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex);
     SQLITE_FLOAT:   Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
-    SQLITE_TEXT:    SQLStrToFloatDef(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), 0, Result);
+    SQLITE_TEXT:    begin
+                      P := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
+                      SQLStrToFloatDef(P, 0, FCurrDecimalSep, Result, ZFastcode.StrLen(P));
+                    end;
     else Result := 0;
   end;
 end;
