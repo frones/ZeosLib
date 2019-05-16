@@ -1791,12 +1791,10 @@ begin
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
     SQL_INT64:
+        https://firebirdsql.org/file/documentation/reference_manuals/fblangref25-en/html/fblangref25-datatypes-fixedtypes.html
         if XSQLVAR.SqlScale = 0 then
           Result := stLong
-          {EH: note if scale > -4 the values may fit too.
-           But we do not have the precision here. Ergo we can't gurantee the I64,
-           like numerc(19,2) will fit into the native currency -> fall back to bigdecimal}
-        else if XSQLVAR.SqlScale = -4 then
+        else if XSQLVAR.SqlScale >= -4 then //EH firebird supports a max precision of 18 only
           Result := stCurrency
         else
           Result := stBigDecimal;
