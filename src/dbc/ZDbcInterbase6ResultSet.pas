@@ -157,6 +157,8 @@ type
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
+    procedure FillColumInfoFromGetColumnsRS(ColumnInfo: TZColumnInfo;
+      const TableColumns: IZResultSet; const FieldName: String); override;
   public
     function GetCatalogName({%H-}ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -1804,6 +1806,17 @@ begin
   ColumnInfo.ReadOnly := True;
   ColumnInfo.Writable := False;
   ColumnInfo.DefinitelyWritable := False;
+end;
+
+procedure TZInterbaseResultSetMetadata.FillColumInfoFromGetColumnsRS(
+  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
+  const FieldName: String);
+begin
+  inherited FillColumInfoFromGetColumnsRS(ColumnInfo, TableColumns, FieldName);
+  //FB native rs can't give use users choosen precision
+  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
+     not TableColumns.IsNull(TableColColumnSizeIndex) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
 end;
 
 {**
