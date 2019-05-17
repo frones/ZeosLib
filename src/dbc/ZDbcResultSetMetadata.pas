@@ -323,8 +323,10 @@ begin
   //do not overwrite the precision until domain columns (pg) are handled correctly
   //by uncachedgetcolumns
   {Scale}
-  if not TableColumns.IsNull(TableColColumnDecimalDigitsIndex) then
-    ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
+  //also do not overwrite the size until domain columns (pg) are handled correctly
+  //by uncachedgetcolumns -> see SF#353
+  //if not TableColumns.IsNull(TableColColumnDecimalDigitsIndex) then
+  //  ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
   {nullable}
   if not TableColumns.IsNull(TableColColumnNullableIndex) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));
