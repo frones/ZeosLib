@@ -758,7 +758,7 @@ begin
       Note: Oracle always returns the significant decimal digits! }
     if (vnuInfo.Scale = 0) and (vnuInfo.Precision <= 19+Ord(Positive)) then
       Result := VNU_NUM_INTState[Positive]
-    else if (vnuInfo.Scale>0) and (vnuInfo.Scale <= 4) and (vnuInfo.Precision <= 18) then
+    else if (vnuInfo.Scale>0) and (vnuInfo.Scale <= 4) and (vnuInfo.Precision <= 19) then
       Result := VNU_NUM_CurState[Positive];
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
