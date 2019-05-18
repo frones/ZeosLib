@@ -565,7 +565,7 @@ begin
   then BindList.Put(ParameterIndex, Value)
   else CheckParameterIndex(ParameterIndex);
   if not FBindLater then begin
-    P := BindList.AquireCustomValue(ParameterIndex, stBigDecimnal, SizeOfTBCD+1{#0});
+    P := BindList.AquireCustomValue(ParameterIndex, stBigDecimal, MaxFmtBCDFractionSize+3{#0});
     L := BCDToRaw(Value, P, '.');
     ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, ParameterIndex+1, P, l, nil);
     if ErrorCode <> SQLITE_OK then CheckBindError(ErrorCode);

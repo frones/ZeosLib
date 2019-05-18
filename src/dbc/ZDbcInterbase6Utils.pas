@@ -1032,7 +1032,7 @@ begin
           Result := stLong
         else begin
 testBCD:  Scale := Abs(Scale);
-          if (Scale <= 4) and (Precision <= 18)
+          if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale])
           then Result := stCurrency
           else Result := stBigDecimal;
         end;
@@ -1794,7 +1794,7 @@ begin
         //https://firebirdsql.org/file/documentation/reference_manuals/fblangref25-en/html/fblangref25-datatypes-fixedtypes.html
         if XSQLVAR.SqlScale = 0 then
           Result := stLong
-        else if XSQLVAR.SqlScale >= -4 then //EH firebird supports a max precision of 18 only
+        else if XSQLVAR.SqlScale = -4 then //EH firebird supports a max precision of 18 only
           Result := stCurrency
         else
           Result := stBigDecimal;

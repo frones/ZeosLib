@@ -1223,7 +1223,18 @@ begin
   StoredProc.ParamByName('P2').AsInteger := 100;
   StoredProc.ParamByName('P3').AsString := 'a';
   StoredProc.ExecProc;
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('P4').DataType = ftFmtBCD) then
+    try
+      CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('600', StoredProc.ParamByName('P4').AsString, 'P4 is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
+  {$ENDIF}
   CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
   CheckEquals(5, StoredProc.Params.Count);
 
@@ -1247,7 +1258,18 @@ begin
     StoredProc.Params[2].AsString:= S;
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
+    {$IFDEF FPC}
+    if (StoredProc.ParamByName('P4').DataType = ftFmtBCD) then
+      try
+        CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
+        Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+      except
+        CheckEquals(IntToStr(I*10+P2), StoredProc.ParamByName('P4').AsString, 'P4 is different');
+      end
+    else
+    {$ELSE}
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
+    {$ENDIF}
     S := S+'a';
     P2 := 100 - I;
   end;
@@ -1313,7 +1335,18 @@ begin
 
   StoredProc.ExecProc;
 
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(1111, StoredProc.ParamByName('ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('1111', StoredProc.ParamByName('ReturnValue').AsString, 'ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(1111, StoredProc.ParamByName('ReturnValue').AsInteger);
+  {$ENDIF}
   CheckEquals(1, StoredProc.Params.Count);
 end;
 
@@ -1327,7 +1360,18 @@ begin
 
   StoredProc.ExecProc;
 
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(2222, StoredProc.ParamByName('ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('2222', StoredProc.ParamByName('ReturnValue').AsString, 'ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(2222, StoredProc.ParamByName('ReturnValue').AsInteger);
+  {$ENDIF}
   CheckEquals(1, StoredProc.Params.Count);
 end;
 
@@ -1377,21 +1421,76 @@ begin
   StoredProc.ParamByName('ABTEST_P2').AsInteger := 100;
   StoredProc.ParamByName('ABTEST_P3').AsString := 'abc';
   StoredProc.ExecProc;
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('ABTEST_P4').DataType = ftFmtBCD) then
+    try
+      CheckEquals(600, StoredProc.ParamByName('ABTEST_P4').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('600', StoredProc.ParamByName('ABTEST_P4').AsString, 'ABTEST_P4 is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(600, StoredProc.ParamByName('ABTEST_P4').AsInteger);
+  {$ENDIF}
   CheckEquals('abcabc', StoredProc.ParamByName('ABTEST_P5').AsString);
   CheckEquals('myfuncInOutReturnoutvalue', StoredProc.ParamByName('myfuncInOutReturn_X').AsString);
   CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn_ReturnValue').AsString);
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('1111', StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsString, 'SIMPLE_FUNC_ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
+  {$ENDIF}
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('2222', StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsString, 'SIMPLEFUNC_ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
+  {$ENDIF}
 
   StoredProc.Open;
 
-  CheckEquals(600, StoredProc.ParamByName('ABTEST_P4').AsInteger);
   CheckEquals('abcabc', StoredProc.ParamByName('ABTEST_P5').AsString);
   CheckEquals('myfuncInOutReturnoutvalueoutvalue', StoredProc.ParamByName('myfuncInOutReturn_X').AsString);
   CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn_ReturnValue').AsString);
+
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('1111', StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsString, 'SIMPLE_FUNC_ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
+  {$ENDIF}
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('2222', StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsString, 'SIMPLESIMPLEFUNC_ReturnValueFUNC_ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
+  {$ENDIF}
 
   StoredProc.Close;
   StoredProc.Open;
@@ -1457,10 +1556,33 @@ begin
   StoredProc.ParamByName('p_MIFARE_ID').AsString := '1a2b3c4d';
   StoredProc.ExecProc;
   CheckEquals('OK', StoredProc.ParamByName('P_MSG').AsString);
+
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(1, StoredProc.ParamByName('ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('1', StoredProc.ParamByName('ReturnValue').AsString, 'ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(1, StoredProc.ParamByName('ReturnValue').AsInteger);
+  {$ENDIF}
   StoredProc.ExecProc;
   CheckEquals('OK', StoredProc.ParamByName('P_MSG').AsString);
+  {$IFDEF FPC}
+  if (StoredProc.ParamByName('ReturnValue').DataType = ftFmtBCD) then
+    try
+      CheckEquals(1, StoredProc.ParamByName('ReturnValue').AsInteger);
+      Fail('New FPC can resolve BCD Variant to Integer! add a Define and mark as resolved!');
+    except
+      CheckEquals('1', StoredProc.ParamByName('ReturnValue').AsString, 'ReturnValue is different');
+    end
+  else
+  {$ELSE}
   CheckEquals(1, StoredProc.ParamByName('ReturnValue').AsInteger);
+  {$ENDIF}
 end;
 
 initialization

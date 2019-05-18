@@ -403,7 +403,7 @@ begin
       //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
         if TypeModifier <> -1 then begin
           Scale := (TypeModifier - VARHDRSZ) and $FFFF;
-          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF <= 18) then
+          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF < sAlignCurrencyScale2Precision[Scale]) then
             Result := stCurrency
         end;
       end;
@@ -1583,9 +1583,7 @@ Done:
       then Dst.SignSpecialPlaces := Scale or $80
       else Dst.SignSpecialPlaces := Scale;
   end;
-  if Precision = 0
-  then Dst.Precision := 1
-  else Dst.Precision := Byte(Precision);
+  Dst.Precision := Max(Precision, 1);
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}

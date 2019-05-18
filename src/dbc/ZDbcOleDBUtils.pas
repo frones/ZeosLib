@@ -147,7 +147,7 @@ begin
     DBTYPE_IUNKNOWN:    Result := stUnknown; //note this could be used to bind IStream for reading/writing data
     DBTYPE_VARNUMERIC,
     DBTYPE_NUMERIC,
-    DBTYPE_DECIMAL:     if (Scale <= 4) and (Precision <= 18)
+    DBTYPE_DECIMAL:     if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
                         then Result := stCurrency
                         else Result := stBigDecimal;
     DBTYPE_UI1:         Result := stByte;
@@ -227,7 +227,7 @@ begin
                         then Scale := SrcRS.GetInt(i)
                         else Scale := 10;
                         I := SrcRS.FindColumn('NUMERIC_PRECISION');
-                        if (i <> InvalidDbcIndex) and (Scale <= 4) and (SrcRS.GetInt(I) <= 18)
+                        if (i <> InvalidDbcIndex) and (Scale <= 4) and (SrcRS.GetInt(I) < sAlignCurrencyScale2Precision[Scale])
                         then Result := stCurrency
                         else Result := stBigDecimal;
                       end;
@@ -417,7 +417,7 @@ begin
     DBTYPE_STR: Result := DBTYPE_WSTR;  //if we would know the server-codepage ... we could decrease mem
     DBTYPE_DECIMAL,
     DBTYPE_NUMERIC,
-    DBTYPE_VARNUMERIC: if (Scale <= 4) and (Precision <= 18)
+    DBTYPE_VARNUMERIC: if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
             then Result := DBTYPE_CY
             else Result := {$IFNDEF BCD_TEST}DBTYPE_R8{$ELSE}DBTYPE_NUMERIC{$ENDIF};
     //DBTYPE_UDT	= 132;

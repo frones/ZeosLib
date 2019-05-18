@@ -758,7 +758,8 @@ begin
       Note: Oracle always returns the significant decimal digits! }
     if (vnuInfo.Scale = 0) and (vnuInfo.Precision <= 19+Ord(Positive)) then
       Result := VNU_NUM_INTState[Positive]
-    else if (vnuInfo.Scale>0) and (vnuInfo.Scale <= 4) and (vnuInfo.Precision <= 19) then
+    else if (vnuInfo.Scale>0) and (vnuInfo.Scale <= 4) and
+            (vnuInfo.Precision <= sAlignCurrencyScale2Precision[vnuInfo.Scale]) then
       Result := VNU_NUM_CurState[Positive];
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -1093,7 +1094,7 @@ begin
         Result := stInteger
       else
         Result := stLong
-    end else if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= 18) then
+    end else if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then
       Result := stCurrency
     else
       Result := stBigDecimal;  { default for number types}
@@ -1176,7 +1177,7 @@ begin
         else begin
           DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
           DataSize := SizeOf(TOCINumber);
-          if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= 18)
+          if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale])
           then Result := stCurrency
           else Result := stBigDecimal;
         end;

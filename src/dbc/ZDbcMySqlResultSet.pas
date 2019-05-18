@@ -1277,7 +1277,7 @@ begin
         //see: http://www.iskm.org/mysql56/libmysql_8c_source.html / setup_one_fetch_function mysql always converts the decimal_t record to a string
         {$ELSE}
         if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ <= 4) and
-           (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^-2 <= 18) then
+           (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^-2 < Cardinal(sAlignCurrencyScale2Precision[PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^])) then
           Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^
         else begin
           //force binary conversion to double values!

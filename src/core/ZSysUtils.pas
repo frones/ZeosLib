@@ -6381,29 +6381,62 @@ end;
  {$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: UInt64; Scale: Byte; var Result: TBCD; Negative: Boolean);
 var V2: UInt64;
-  B: Cardinal; //D7 int overflow -> reason unknown
-  Precision, Place: Byte;
+  B, Precision, Digits, FirstPlace, LastPlace, Place: Cardinal; //D7 int overflow -> reason unknown
+label Done;
 begin
-  Precision := GetOrdinalDigits(Value);
-  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
-  Result.Precision := Precision;
+  Digits := GetOrdinalDigits(Value);
+  if (Digits = 1) and (byte(Value) = 0) then begin
+    Result.Fraction[0] := 0;
+    Result.Precision := 1;
+    Result.SignSpecialPlaces := 0;
+    Exit;
+  end;
+  if Digits < Scale then begin
+    PInt64(@Result.Fraction[0])^ := 0; //clear these nibbles
+    PInt64(@Result.Fraction[7])^ := 0;
+    FirstPlace := (Scale - Digits) shr 1;
+    Precision := Scale;
+  end else begin
+    Precision := Digits;
+    FirstPlace := 0;
+  end;
+  LastPlace := ((Precision - 1) shr 1);
   if Precision and 1 = 1 then
-    if Precision = 1 then begin
-      Result.Fraction[0] := Byte(Value) shl 4;
-      Exit;
+    if Digits = 1 then begin
+      Result.Fraction[LastPlace] := Byte(Value) shl 4;
+      goto Done;
     end else begin
       v2 := Value div 10;
-      B := (Value-(V2*10)) shl 4;
-      Result.Fraction[Precision shr 1] := Byte(B);
+      B := (Value-(V2*10));
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[LastPlace] := Byte(B) shl 4;
       Value := V2;
+      Dec(LastPlace);
     end;
-  for Place := (Precision shr 1)-1 downto 1 do begin
+  for Place := LastPlace downto FirstPlace +1 do begin
     v2 := Value div 100;
     B := Value-(V2*100);
-    Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
+    if (Place = LastPlace) and (B=0) and (Scale >= 2) then begin //special case 4FPC where BCD compare fails
+      Dec(Scale, 2);
+      Dec(Precision, 2);
+      Dec(LastPlace);
+    end else
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
     Value := V2;
   end;
-  Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  Result.Fraction[FirstPlace] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  if (Scale >= 1) and (LastPlace > FirstPlace) and (
+       (Precision and 1 = 1) and ((Result.Fraction[LastPlace] shr 4  ) = 0) or
+       (Precision and 1 = 0) and ((Result.Fraction[LastPlace] and $0F) = 0)) then begin
+      Dec(Scale);
+      Dec(Precision);
+    end;
+Done:
+  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+  Result.Precision := Precision;
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -6433,29 +6466,61 @@ end;
 }
 {$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: Cardinal; Scale: Byte; var Result: TBCD; Negative: Boolean);
-var V2, B: Cardinal; //B: D7 int overflow -> reason unknown
-  Precision, Place: Byte;
+var Precision, V2, B, LastPlace, FirstPlace, Place, Digits: Cardinal; //B: D7 int overflow -> reason unknown
+label Done;
 begin
-  Precision := GetOrdinalDigits(Value);
-  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
-  Result.Precision := Precision;
+  Digits := GetOrdinalDigits(Value);
+  if (Digits = 1) and (byte(Value) = 0) then begin
+    Result.Fraction[0] := 0;
+    Result.Precision := 1;
+    Result.SignSpecialPlaces := 0;
+    Exit;
+  end;
+  if Digits < Scale then begin
+    PInt64(@Result.Fraction[0])^ := 0; //clear these nibbles
+    FirstPlace := (Scale - Digits) shr 1;
+    Precision := Scale;
+  end else begin
+    Precision := Digits;
+    FirstPlace := 0;
+  end;
+  LastPlace := ((Precision - 1) shr 1);
   if Precision and 1 = 1 then
-    if Precision = 1 then begin
-      Result.Fraction[0] := Byte(Value) shl 4;
-      Exit;
+    if Digits = 1 then begin
+      Result.Fraction[LastPlace] := Byte(Value) shl 4;
+      goto done;
     end else begin
       v2 := Value div 10;
       B := Value{%H-}-(V2*10);
-      Result.Fraction[Precision shr 1] := B shl 4;
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[LastPlace] := Byte(B) shl 4;
       Value := V2;
+      Dec(LastPlace);
     end;
-  for Place := (Precision shr 1)-1 downto 1 do begin
+  for Place := LastPlace downto FirstPlace +1 do begin
     v2 := Value div 100;
     B := Value{%H-}-(V2*100);
-    Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
+    if (Place = LastPlace) and (B=0) and (Scale >= 2) then begin //special case 4FPC where BCD compare fails
+      Dec(Scale, 2);
+      Dec(Precision, 2);
+      Dec(LastPlace);
+    end else
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
     Value := V2;
   end;
-  Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  Result.Fraction[FirstPlace] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  if (Scale >= 1) and (LastPlace > FirstPlace) and (
+       (Precision and 1 = 1) and ((Result.Fraction[LastPlace] shr 4  ) = 0) or
+       (Precision and 1 = 0) and ((Result.Fraction[LastPlace] and $0F) = 0)) then begin
+      Dec(Scale);
+      Dec(Precision);
+    end;
+Done:
+  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+  Result.Precision := Precision;
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -6485,20 +6550,74 @@ end;
 }
 {$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean);
-var V2, B: Word;
-  Precision: Byte;
+var Precision, V2, B, LastPlace, FirstPlace, Digits: Word; //B: D7 int overflow -> reason unknown
+label Done;
 begin
-  Precision := GetOrdinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
+  if (Digits = 1) and (byte(Value) = 0) then begin
+    Result.Fraction[0] := 0;
+    Result.Precision := 1;
+    Result.SignSpecialPlaces := 0;
+    Exit;
+  end;
+  if Digits < Scale then begin
+    PCardinal(@Result.Fraction[0])^ := 0; //clear these nibbles
+    FirstPlace := (Scale - Digits) shr 1;
+    Precision := Scale;
+  end else begin
+    Precision := Digits;
+    FirstPlace := 0;
+  end;
+  LastPlace := ((Precision - 1) shr 1);
+  if Precision and 1 = 1 then
+    if Digits = 1 then begin
+      Result.Fraction[LastPlace] := Byte(Value) shl 4;
+      goto done;
+    end else begin
+      v2 := Value div 10;
+      B := Value{%H-}-(V2*10);
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[LastPlace] := Byte(B) shl 4;
+      Value := V2;
+      Dec(LastPlace);
+    end;
+  //unrolled version we're comming from a smallInt/word with max precision of 5
+  if Digits >= 4 then begin
+    v2 := Value div 100;
+    B := Value-(V2*100);
+    PWord(@Result.Fraction[FirstPlace])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
+  end else
+    Result.Fraction[FirstPlace] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  if (Scale >= 1) and (LastPlace > FirstPlace) and (
+       (Precision and 1 = 1) and ((Result.Fraction[LastPlace] shr 4  ) = 0) or
+       (Precision and 1 = 0) and ((Result.Fraction[LastPlace] and $0F) = 0)) then begin
+      Dec(Scale);
+      Dec(Precision);
+    end;
+Done:
   Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
   Result.Precision := Precision;
+
+(*var V2, B: Word;
+  Precision: Byte;
+label Done;
+begin
+  Precision := GetOrdinalDigits(Value);
   if Precision and 1 = 1 then
     if Precision = 1 then begin
       Result.Fraction[0] := Byte(Value) shl 4;
-      Exit;
+      goto Done;
     end else begin
       v2 := Value div 10;
-      B := (Value-(V2*10)) shl 4;
-      Result.Fraction[Precision shr 1] := Byte(B);
+      B := (Value-(V2*10));
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[Precision shr 1] := Byte(B) shl 4;
       Value := V2;
     end;
   //unrolled version we're comming from a smallInt/word with max precision of 5
@@ -6508,6 +6627,9 @@ begin
     PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
   end else
     Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+Done:
+  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+  Result.Precision := Precision;*)
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}

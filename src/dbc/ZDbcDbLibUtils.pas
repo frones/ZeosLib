@@ -138,7 +138,7 @@ begin
     5: Result := stSmall;
     4: Result := stInteger;
     2{SQL_NUMERIC}, 3{SQL_DECIMAL}:
-      if (Scale <= 4) and (Precision <= 18)
+      if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
       then Result := stCurrency
       else Result := stBigDecimal;
     6, 7, 8: Result := stDouble;
@@ -209,7 +209,7 @@ begin
     tdsFlt8:
       Result := stDouble;
     tdsDecimal, tdsNumeric:
-      if (Scale <= 4) and (Precision <= 18)
+      if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
       then Result := stCurrency
       else Result := stBigDecimal;
     //tdsVariant: {from tds.h -> sybase only -> na't test it}

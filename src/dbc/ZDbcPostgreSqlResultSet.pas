@@ -629,7 +629,7 @@ begin
     NUMERICOID: if TypeModifier <> -1 then begin
         ColumnInfo.Precision := (TypeModifier - VARHDRSZ) shr 16 and $FFFF;
         ColumnInfo.Scale     := (TypeModifier - VARHDRSZ)        and $FFFF;
-        if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision <= 18)
+        if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision <= sAlignCurrencyScale2Precision[ColumnInfo.Scale])
         then ColumnInfo.ColumnType := stCurrency
         else ColumnInfo.ColumnType := stBigDecimal;
         Exit;
@@ -1357,7 +1357,6 @@ end;
 }
 function TZAbstractPostgreSQLStringResultSet.GetFloat(ColumnIndex: Integer): Single;
 var P: PAnsiChar;
-BCD: TBCD;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
@@ -1381,8 +1380,8 @@ begin
         stDouble:                     Result := PG2Double(P);
         stCurrency:                   Result := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         stBigDecimal:                 begin
-                                        PGNumeric2BCD(P, BCD);
-                                        ZSysUtils.SQLStrToFloatDef(PAnsiChar(@fTinyBuffer[0]), 9, Result, BcdToRaw(BCD, @fTinyBuffer[0], '.'));
+                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
+                                        Result := BCDToDouble(PBCD(@fTinyBuffer[0])^);
                                       end;
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
