@@ -84,6 +84,9 @@ type
     AdoColumnCount: Integer;
     FFirstFetch: Boolean;
     FAdoRecordSet: ZPlainAdo.RecordSet;
+    FFields: Fields15;
+    FField20: Field20;
+    FColValue: OleVariant;
   protected
     procedure Open; override;
   public
@@ -107,6 +110,7 @@ type
     function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    function GetCurrency(ColumnIndex: Integer): Currency; override;
     {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
     {$ELSE !BCD_TEST}
@@ -140,7 +144,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
+  Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ActiveX,
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses, ZDbcUtils;
 
 {$IFDEF USE_SYNCOMMONS}
@@ -166,57 +170,57 @@ begin
         end;
       end else
         JSONWriter.AddShort('null,');
-    end else begin
+    end else with FAdoRecordSet.Fields.Item[C] do begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[I]);
-  {ADO uses its own DataType-mapping different to System Variant type mapping}
-      case FAdoRecordSet.Fields.Item[C].Type_ of
-        adTinyInt:          JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VShortInt);
-        adSmallInt:         JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VSmallInt);
-        adInteger, adError: JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VInteger);
-        adBigInt:           JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VInt64);
-        adUnsignedTinyInt:  JSONWriter.AddU(TVarData(FAdoRecordSet.Fields.Item[C].Value).VByte);
-        adUnsignedSmallInt: JSONWriter.AddU(TVarData(FAdoRecordSet.Fields.Item[C].Value).VWord);
-        adUnsignedInt:      JSONWriter.AddU(TVarData(FAdoRecordSet.Fields.Item[C].Value).VLongWord);
+      {ADO uses its own DataType-mapping different to System Variant type mapping}
+      case Type_ of
+        adTinyInt:          JSONWriter.Add(TVarData(Value).VShortInt);
+        adSmallInt:         JSONWriter.Add(TVarData(Value).VSmallInt);
+        adInteger, adError: JSONWriter.Add(TVarData(Value).VInteger);
+        adBigInt:           JSONWriter.Add(TVarData(Value).VInt64);
+        adUnsignedTinyInt:  JSONWriter.AddU(TVarData(Value).VByte);
+        adUnsignedSmallInt: JSONWriter.AddU(TVarData(Value).VWord);
+        adUnsignedInt:      JSONWriter.AddU(TVarData(Value).VLongWord);
         {$IFDEF WITH_VARIANT_UINT64}
-        adUnsignedBigInt:   JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(TVarData(FAdoRecordSet.Fields.Item[C].Value).VUInt64));
+        adUnsignedBigInt:   JSONWriter.AddQ(TVarData(Value).VUInt64);
         {$ELSE}
-        adUnsignedBigInt:   JSONWriter.Add(TVarData(FAdoRecordSet.Fields.Item[C].Value).VInt64);
+        adUnsignedBigInt:   JSONWriter.Add(TVarData(Value).VInt64);
         {$ENDIF}
-        adSingle:           JSONWriter.AddSingle(TVarData(FAdoRecordSet.Fields.Item[C].Value).VSingle);
-        adDouble:           JSONWriter.AddDouble(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDouble);
-        adCurrency:         JSONWriter.AddCurr64(TVarData(FAdoRecordSet.Fields.Item[C].Value).VCurrency);
-        adBoolean:          JSONWriter.AddShort(JSONBool[TVarData(FAdoRecordSet.Fields.Item[C].Value).VBoolean]);
-        adGUID:             JSONWriter.AddNoJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), 38);
-        adDBTime:           if (jcoMongoISODate in JSONComposeOptions) and (FAdoRecordSet.Fields.Item[C].Type_ <> adDBTime) then begin
+        adSingle:           JSONWriter.AddSingle(TVarData(Value).VSingle);
+        adDouble:           JSONWriter.AddDouble(TVarData(Value).VDouble);
+        adCurrency:         JSONWriter.AddCurr64(TVarData(Value).VCurrency);
+        adBoolean:          JSONWriter.AddShort(JSONBool[TVarData(Value).VBoolean]);
+        adGUID:             JSONWriter.AddNoJSONEscapeW(Pointer(TVarData(Value).VOleStr), 38);
+        adDBTime:           if (jcoMongoISODate in JSONComposeOptions) and (Type_ <> adDBTime) then begin
                               JSONWriter.AddShort('ISODate("0000-00-00');
-                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddShort('Z")');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.Add('"');
                             end;
         adDate,
         adDBDate,
-        adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) and (FAdoRecordSet.Fields.Item[C].Type_ <> adDBTime) then begin
+        adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) and (Type_ <> adDBTime) then begin
                               JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddShort('Z")');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(TVarData(FAdoRecordSet.Fields.Item[C].Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.Add('"');
                             end;
         adChar:
           begin
             JSONWriter.Add('"');
-            P := TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr;
-            Len := FAdoRecordSet.Fields.Item[C].ActualSize;
+            P := TVarData(Value).VOleStr;
+            Len := ActualSize;
             while (P+Len-1)^ = ' ' do dec(Len);
             JSONWriter.AddJSONEscapeW(Pointer(P), Len);
             JSONWriter.Add('"');
@@ -224,8 +228,8 @@ begin
         adWChar: {fixed char fields}
           begin
             JSONWriter.Add('"');
-            P := TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr;
-            Len := FAdoRecordSet.Fields.Item[C].ActualSize shr 1;
+            P := TVarData(Value).VOleStr;
+            Len := ActualSize shr 1;
             while (P+Len-1)^ = ' ' do dec(Len);
             JSONWriter.AddJSONEscapeW(Pointer(P), Len);
             JSONWriter.Add('"');
@@ -233,19 +237,19 @@ begin
         adVarChar,
         adLongVarChar: begin
             JSONWriter.Add('"');
-            JSONWriter.AddJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), FAdoRecordSet.Fields.Item[C].ActualSize);
+            JSONWriter.AddJSONEscapeW(Pointer(TVarData(Value).VOleStr), ActualSize);
             JSONWriter.Add('"');
           end;
         adVarWChar,
         adLongVarWChar: begin
             JSONWriter.Add('"');
-            JSONWriter.AddJSONEscapeW(Pointer(TVarData(FAdoRecordSet.Fields.Item[C].Value).VOleStr), FAdoRecordSet.Fields.Item[C].ActualSize shr 1);
+            JSONWriter.AddJSONEscapeW(Pointer(TVarData(Value).VOleStr), ActualSize shr 1);
             JSONWriter.Add('"');
           end;
         adBinary,
         adVarBinary,
         adLongVarBinary:
-          JSONWriter.WrBase64(TVarData(FAdoRecordSet.Fields.Item[C].Value).VArray.Data, FAdoRecordSet.Fields.Item[C].ActualSize, True);
+          JSONWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
       end;
       JSONWriter.Add(',');
     end;
@@ -404,6 +408,8 @@ end;
 procedure TZAdoResultSet.ResetCursor;
 begin
   { Resync the Adorecordsets leads to pain with huge collection of Data !!}
+  FFields := nil;
+  FField20 := nil;
 end;
 
 {**
@@ -424,15 +430,16 @@ end;
 function TZAdoResultSet.Next: Boolean;
 begin
   Result := False;
+  FFields := nil;
   if (FAdoRecordSet = nil) or (FAdoRecordSet.BOF and FAdoRecordSet.EOF) then
     Exit;
   if FAdoRecordSet.BOF then
     FAdoRecordSet.MoveFirst
-  else
-    if not FAdoRecordSet.EOF and not FFirstFetch then
-      FAdoRecordSet.MoveNext;
+  else if not FAdoRecordSet.EOF and not FFirstFetch then
+    FAdoRecordSet.MoveNext;
   FFirstFetch := False;
   Result := not FAdoRecordSet.EOF;
+  if Result then FFields := FAdoRecordSet.Fields;
   RowNo := RowNo +1;
   if Result then
     LastRowNo := RowNo;
@@ -467,6 +474,7 @@ end;
 }
 function TZAdoResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
+  FFields := nil;
   if FAdoRecordSet.EOF or FAdoRecordSet.BOF then
      FAdoRecordSet.MoveFirst;
   if Row > 0 then
@@ -474,6 +482,7 @@ begin
   else
     FAdoRecordSet.Move(Abs(Row) - 1, adBookmarkLast);
   Result := not (FAdoRecordSet.EOF or FAdoRecordSet.BOF);
+  if Result then FFields := FAdoRecordSet.Fields;
 end;
 
 {**
@@ -502,7 +511,13 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
-  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
+  if (FFields = nil) then begin
+    Result := True;
+  end else begin
+    FField20 := FFields.Get_Item(ColumnIndex);
+    FColValue := FFields.Get_Item(ColumnIndex).Value;
+    Result := TVarData(FColValue).VType in [varNull, varEmpty];
+  end;
 end;
 
 {**
@@ -1401,6 +1416,7 @@ end;
 }
 {$IFDEF BCD_TEST}
 procedure TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+var PD: PDecimal;
 {$ELSE}
 function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
@@ -1409,35 +1425,39 @@ var
 label ProcessFixedChar;
 {$ENDIF}
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
+  if not IsNull(ColumnIndex) then
+  LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF}
-  else
-    case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
+  else with FField20, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    case Type_ of
       {$IFDEF BCD_TEST}
-      adTinyInt: ScaledOrdinal2Bcd(SmallInt(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt), 0, Result);
-      adSmallInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt, 0, Result);
-      adInteger, adError: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger, 0, Result);
-      adBigInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64, 0, Result);
-      adUnsignedTinyInt: ScaledOrdinal2Bcd(Word(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte), 0, Result);
-      adUnsignedSmallInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord, 0, Result);
-      adUnsignedInt: ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VLongWord, 0, Result);
+      adTinyInt: ScaledOrdinal2Bcd(SmallInt(TVarData(FColValue).VShortInt), 0, Result);
+      adSmallInt: ScaledOrdinal2Bcd(TVarData(FColValue).VSmallInt, 0, Result);
+      adInteger, adError: ScaledOrdinal2Bcd(TVarData(FColValue).VInteger, 0, Result);
+      adBigInt: ScaledOrdinal2Bcd(TVarData(FColValue).VInt64, 0, Result);
+      adUnsignedTinyInt: ScaledOrdinal2Bcd(Word(tagVariant(FColValue).bVal), 0, Result);
+      adUnsignedSmallInt: ScaledOrdinal2Bcd(tagVariant(FColValue).uiVal, 0, Result);
+      adUnsignedInt: ScaledOrdinal2Bcd(TVarData(FColValue).VLongWord, 0, Result);
       {$IFDEF WITH_VARIANT_UINT64}
-      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VUInt64, 0, Result);
+      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FColValue).VUInt64, 0, Result);
       {$ELSE !WITH_VARIANT_UINT64}
-      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64, 0, Result);
+      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FColValue).VInt64, 0, Result);
       {$ENDIF !WITH_VARIANT_UINT64}
-      adSingle: Double2BCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle, Result);
-      adDouble: Double2BCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble, Result);
-      adCurrency: Currency2Bcd(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency, Result);
-      adBoolean: ScaledOrdinal2Bcd(Word(Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean)), 0, Result);
+      adSingle: Double2BCD(TVarData(FColValue).VSingle, Result);
+      adDouble: Double2BCD(TVarData(FColValue).VDouble, Result);
+      adCurrency: Currency2BCD(tagVariant(FColValue).cyVal, Result);
+      adNumeric,
+      adVarNumeric: Result := VarToBCD(FColValue);
+      adDecimal: begin
+                    PD := PDecimal(@FColValue);
+                    ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.scale, Result, PD.sign > 0);
+                 end;
+      adBoolean: ScaledOrdinal2Bcd(Word(Ord(TVarData(FColValue).VBoolean)), 0, Result);
       adDate,
       adDBDate,
       adDBTime,
-      adDBTimeStamp: Double2BCD(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDate, Result);
+      adDBTimeStamp: Double2BCD(TVarData(FColValue).VDate, Result);
       adChar,
       adWChar,
       adVarChar,
@@ -1447,26 +1467,26 @@ begin
       adLongVarWChar: LastWasNull := not TryStrToBCD(GetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
       else Result := NullBCD;
       {$ELSE !BCD_TEST}
-      adTinyInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
-      adSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
-      adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
-      adBigInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
-      adUnsignedTinyInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
-      adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
-      adUnsignedInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VLongWord;
+      adTinyInt: Result := TVarData(FColValue).VShortInt;
+      adSmallInt: Result := TVarData(FColValue).VSmallInt;
+      adInteger, adError: Result := TVarData(FColValue).VInteger;
+      adBigInt: Result := TVarData(FColValue).VInt64;
+      adUnsignedTinyInt: Result := TVarData(FColValue).VByte;
+      adUnsignedSmallInt: Result := TVarData(FColValue).VWord;
+      adUnsignedInt: Result := TVarData(FColValue).VLongWord;
       {$IFDEF WITH_VARIANT_UINT64}
-      adUnsignedBigInt:   Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VUInt64;
+      adUnsignedBigInt:   Result := TVarData(FColValue).VUInt64;
       {$ELSE}
-      adUnsignedBigInt:   Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
+      adUnsignedBigInt:   Result := TVarData(FColValue).VInt64;
       {$ENDIF}
-      adSingle: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle;
-      adDouble: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble;
-      adCurrency: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency;
-      adBoolean: Result := Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
+      adSingle: Result := TVarData(FColValue).VSingle;
+      adDouble: Result := TVarData(FColValue).VDouble;
+      adCurrency: Result := TVarData(FColValue).VCurrency;
+      adBoolean: Result := Ord(TVarData(FColValue).VBoolean);
       adDate,
       adDBDate,
       adDBTime,
-      adDBTimeStamp: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDate;
+      adDBTimeStamp: Result := TVarData(FColValue).VDate;
       adChar:
         begin
           Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
@@ -1476,7 +1496,7 @@ begin
         begin
           Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
   ProcessFixedChar:
-          P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
+          P := TVarData(FColValue).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
           ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
         end;
@@ -1485,15 +1505,16 @@ begin
       adBSTR,
       adVarWChar,
       adLongVarWChar: {varying char fields}
-        Result := UnicodeToFloatDef(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, WideChar('.'), 0);
+        Result := UnicodeToFloatDef(TVarData(FColValue).VOleStr, WideChar('.'), 0);
       else
         try
-          Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+          Result := FColValue;
         except
           Result := 0;
         end;
       {$ENDIF !BCD_TEST}
     end;
+  end;
 end;
 
 {**
@@ -1541,6 +1562,79 @@ begin
           end;
         end;
     end;
+end;
+
+function TZAdoResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+var
+  Len: NativeUint;
+  P: PWideChar;
+  PD: PDecimal;
+  i64: Int64 absolute Result;
+label ProcessFixedChar;
+begin
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else with FField20, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    case Type_ of
+      adTinyInt: Result := TVarData(FColValue).VShortInt;
+      adSmallInt: Result := TVarData(FColValue).VSmallInt;
+      adInteger, adError: Result := TVarData(FColValue).VInteger;
+      adBigInt: Result := TVarData(FColValue).VInt64;
+      adUnsignedTinyInt: Result := TVarData(FColValue).VByte;
+      adUnsignedSmallInt: Result := TVarData(FColValue).VWord;
+      adUnsignedInt: Result := TVarData(FColValue).VLongWord;
+      {$IFDEF WITH_VARIANT_UINT64}
+      adUnsignedBigInt:   Result := TVarData(FColValue).VUInt64;
+      {$ELSE}
+      adUnsignedBigInt:   Result := TVarData(FColValue).VInt64;
+      {$ENDIF}
+      adSingle: Result := TVarData(FColValue).VSingle;
+      adDouble: Result := TVarData(FColValue).VDouble;
+      adCurrency: Result := TVarData(FColValue).VCurrency;
+      adNumeric, adVarNumeric,
+      adDecimal: begin
+                    PD := PDecimal(@FColValue);
+                    i64 := UInt64(PD.Lo64);
+                    if PD.sign > 0 then
+                      i64 := i64 * -1;
+                    if PD.scale < 4 then
+                      i64 := i64 * ZFastCode.I64Table[4-PD.scale]
+                    else if PD.scale > 4 then
+                      i64 := i64 div ZFastCode.I64Table[PD.scale-4];
+                 end;
+      adBoolean: Result := Ord(TVarData(FColValue).VBoolean);
+      adDate,
+      adDBDate,
+      adDBTime,
+      adDBTimeStamp: Result := TVarData(FColValue).VDate;
+      adChar:
+        begin
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          goto ProcessFixedChar;
+        end;
+      adWChar: {fixed char fields}
+        begin
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
+  ProcessFixedChar:
+          P := TVarData(FColValue).VOleStr;
+          while (P+Len-1)^ = ' ' do dec(Len);
+          ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
+        end;
+      adVarChar,
+      adLongVarChar, {varying char fields}
+      adBSTR,
+      adVarWChar,
+      adLongVarWChar: {varying char fields}
+        Result := UnicodeToFloatDef(TVarData(FColValue).VOleStr, WideChar('.'), 0);
+      else
+        try
+          Result := FColValue;
+        except
+          Result := 0;
+        end;
+    end;
+  end;
 end;
 
 {**
@@ -1604,23 +1698,19 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZAdoResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
-var V: Variant;
+var
 Failed: Boolean;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
+  LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := 0
   else
     try
-      V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
-      if VarIsStr(V) then
-        Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
-          Length(V), ConSettings^.ReadFormatSettings, Failed)
+      if VarIsStr(FColValue) then
+        Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(FColValue)),
+          Length(FColValue), ConSettings^.ReadFormatSettings, Failed)
       else
-        Result := V;
+        Result := FColValue;
     except
       Result := 0;
     end;
