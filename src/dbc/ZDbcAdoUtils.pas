@@ -260,7 +260,7 @@ begin
     adSingle: Result := stFloat;
     adDouble: Result := stDouble;
     adDecimal, adNumeric, adVarNumeric:
-        if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision < sAlignCurrencyScale2Precision[Scale])
+        if (Scale >= 0) and (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
         then Result := stCurrency
         else Result := stBigDecimal;
     adCurrency: Result := stCurrency;

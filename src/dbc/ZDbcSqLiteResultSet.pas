@@ -302,6 +302,8 @@ procedure TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
 var
   C, H, I, ColType: Integer;
   P: PAnsiChar;
+  i64: Int64;
+  D: Double absolute i64;
 label ProcBts;
 begin
   if JSONWriter.Expand then
@@ -322,60 +324,67 @@ begin
         end;
       end else
         JSONWriter.AddShort('null,')
-    else begin
+    else with TZColumnInfo(ColumnsInfo[c]) do begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[i]);
       case ColType of
         SQLITE_BLOB: JSONWriter.WrBase64(FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt,C),
                         FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, C), True);
-        SQLITE_INTEGER:
-          case TZColumnInfo(ColumnsInfo[c]).ColumnType of
-            stBoolean: JSONWriter.AddShort(JSONBool[FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C) <> 0]);
-            {stTime, stDate, stTimeStamp:
-              todo: add implementation for unix timestamp
-              JSONWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));}
-            else
-              JSONWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));
-          end;
-        SQLITE_FLOAT:
-          case TZColumnInfo(ColumnsInfo[c]).ColumnType of
-            stBoolean: JSONWriter.AddShort(JSONBool[FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C) <> 0]);
-            stTime: begin
-                if jcoMongoISODate in JSONComposeOptions then
-                  JSONWriter.AddShort('ISODate("0000-00-00')
-                else if jcoDATETIME_MAGIC in JSONComposeOptions then
-                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                else
-                  JSONWriter.Add('"');
-                JSONWriter.AddDateTime(Frac(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C)+JulianEpoch), jcoMilliseconds in JSONComposeOptions);
-                JSONWriter.Add('"');
-              end;
-            stDate: begin
-                if jcoMongoISODate in JSONComposeOptions then
-                  JSONWriter.AddShort('ISODate("')
-                else if jcoDATETIME_MAGIC in JSONComposeOptions then
-                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                else
-                  JSONWriter.Add('"');
-                JSONWriter.AddDateTime(Int(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C)+JulianEpoch));
-                JSONWriter.Add('"');
-              end;
-            stTimeStamp: begin
-                if jcoMongoISODate in JSONComposeOptions then
-                  JSONWriter.AddShort('ISODate("')
-                else if jcoDATETIME_MAGIC in JSONComposeOptions then
-                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                else
-                  JSONWriter.Add('"');
-                JSONWriter.AddDateTime(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C)+JulianEpoch, jcoMilliseconds in JSONComposeOptions);
-                JSONWriter.Add('"');
-              end;
-            else
-              JSONWriter.AddDouble(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C));
-          end;
+        SQLITE_INTEGER: begin
+                        I64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C);
+                        case ColumnType of
+                          stBoolean: JSONWriter.AddShort(JSONBool[I64 <> 0]);
+                          stCurrency: JSONWriter.AddCurr64(i64);
+                          {stTime, stDate, stTimeStamp:
+                            todo: add implementation for unix timestamp
+                            JSONWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));}
+                          else JSONWriter.Add(i64);
+                        end;
+                      end;
+        SQLITE_FLOAT:   begin
+                          D := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C);
+                          case ColumnType of
+                            stBoolean: JSONWriter.AddShort(JSONBool[D <> 0]);
+                            stTime: begin
+                                if jcoMongoISODate in JSONComposeOptions then
+                                  JSONWriter.AddShort('ISODate("0000-00-00')
+                                else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else
+                                  JSONWriter.Add('"');
+                                d := Frac(D+JulianEpoch);
+                                JSONWriter.AddDateTime(D, jcoMilliseconds in JSONComposeOptions);
+                                JSONWriter.Add('"');
+                              end;
+                            stDate: begin
+                                if jcoMongoISODate in JSONComposeOptions then
+                                  JSONWriter.AddShort('ISODate("')
+                                else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else
+                                  JSONWriter.Add('"');
+                                D := Int(D+JulianEpoch);
+                                JSONWriter.AddDateTime(D);
+                                JSONWriter.Add('"');
+                              end;
+                            stTimeStamp: begin
+                                if jcoMongoISODate in JSONComposeOptions then
+                                  JSONWriter.AddShort('ISODate("')
+                                else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else
+                                  JSONWriter.Add('"');
+                                D := D+JulianEpoch;
+                                JSONWriter.AddDateTime(D, jcoMilliseconds in JSONComposeOptions);
+                                JSONWriter.Add('"');
+                              end;
+                            else
+                              JSONWriter.AddDouble(D);
+                          end;
+                        end;
         SQLITE3_TEXT: begin
             P := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, C);
-            case TZColumnInfo(ColumnsInfo[c]).ColumnType of
+            case ColumnType of
               stBoolean: JSONWriter.AddShort(JSONBool[StrToBoolEx(P)]);
               stTime: begin
                   if jcoMongoISODate in JSONComposeOptions then
@@ -597,6 +606,8 @@ end;
 }
 function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var ColType: Integer;
+  I64: Int64;
+  C: Currency absolute i64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -609,12 +620,14 @@ begin
     LastWasNull := True;
     Result := nil;
     Len := 0;
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     LastWasNull := False;
     case ColType of
       SQLITE_INTEGER: begin
-          IntToRaw(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex),
-            @FTinyBuffer[0], @Result);
+          i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
+          if ColumnType = stCurrency
+          then CurrToRaw(C, @FTinyBuffer[0], @Result)
+          else IntToRaw(I64, @FTinyBuffer[0], @Result);
           Len := Result - PAnsiChar(@FTinyBuffer[0]);
           Result := @FTinyBuffer[0];
         end;
@@ -647,7 +660,10 @@ end;
 }
 function TZSQLiteResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
-var ColType: Integer;
+var
+  ColType: Integer;
+  i64: Int64;
+  C: Currency absolute i64;
 label set_From_tmp;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -661,12 +677,14 @@ begin
     LastWasNull := True;
     Result := nil;
     Len := 0;
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     LastWasNull := False;
     case ColType of
       SQLITE_INTEGER: begin
-          IntToUnicode(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex),
-            @FTinyBuffer[0], @Result);
+          i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
+          if ColumnType = stCurrency
+          then CurrToUnicode(C, @FTinyBuffer[0], @Result)
+          else IntToUnicode(I64, @FTinyBuffer[0], @Result);
           Len := Result - PWideChar(@FTinyBuffer[0]);
           Result := @FTinyBuffer[0];
         end;
@@ -776,9 +794,12 @@ begin
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
-  else case ColType of
-    SQLITE_INTEGER:
-      Result := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex);
+  else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do case ColType of
+    SQLITE_INTEGER: begin
+                      Result := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex);
+                      if columnType = stCurrency then
+                        Result := Result div 10000;
+                    end;
     SQLITE_FLOAT:
       Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex));
     SQLITE3_TEXT:
@@ -800,6 +821,7 @@ end;
 function TZSQLiteResultSet.GetLong(ColumnIndex: Integer): Int64;
 var
   ColType: Integer;
+  I64: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -811,9 +833,13 @@ begin
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
-  else case ColType of
-    SQLITE_INTEGER:
-      Result := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
+  else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do case ColType of
+    SQLITE_INTEGER: begin
+                      i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
+                      if ColumnType = stCurrency
+                      then Result := 164 div 10000
+                      else Result := i64;
+                    end;
     SQLITE_FLOAT:
       Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex));
     SQLITE3_TEXT:
@@ -849,6 +875,7 @@ end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZSQLiteResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var ColType: Integer;
+  i64: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -860,9 +887,13 @@ begin
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
-  else case ColType of
-    SQLITE_INTEGER:
-      Result := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
+  else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do case ColType of
+    SQLITE_INTEGER: begin
+                      i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
+                      if ColumnType = stCurrency
+                      then Result := 164 div 10000
+                      else Result := i64;
+                    end;
     SQLITE_FLOAT:
       Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex));
     SQLITE3_TEXT:
@@ -898,6 +929,8 @@ end;
 }
 function TZSQLiteResultSet.GetDouble(ColumnIndex: Integer): Double;
 var ColType: Integer;
+  I64: Int64;
+  C: Currency absolute i64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -909,8 +942,14 @@ begin
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
-  else case ColType of
-    SQLITE_INTEGER: Result := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex);
+  else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do
+    case ColType of
+    SQLITE_INTEGER: begin
+                      i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
+                      if ColumnType = stCurrency
+                      then Result := c
+                      else Result := i64;
+                  end;
     SQLITE_FLOAT:   Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
     SQLITE_TEXT:    SQLStrToFloatDef(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), 0, Result);
     else Result := 0;
@@ -956,8 +995,9 @@ end;
     value returned is <code>null</code>
 }
 {$IFDEF BCD_TEST}
+const BCDScales: array[Boolean] of Byte = (0,4);
 procedure TZSQLiteResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-var ColType: Integer;
+var ColType, l: Integer;
   Buf: PAnsiChar;
 label Fill;
 begin
@@ -969,18 +1009,25 @@ begin
   {$ENDIF}
   ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
   LastWasNull := ColType = SQLITE_NULL;
-  if LastWasNull or (ColType = SQLITE_BLOB) then begin
+  if LastWasNull then begin
 Fill:FillChar(Result, SizeOf(TBCD), #0);
-  end else case ColType of
-    SQLITE_INTEGER: ScaledOrdinal2BCD(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex), 0, Result);
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do case ColType of
+    SQLITE_INTEGER: ScaledOrdinal2BCD(FPlainDriver.sqlite3_column_Int64(Fsqlite3_stmt, ColumnIndex), BCDScales[ColumnType = stCurrency], Result);
     SQLITE_FLOAT:   ZSysUtils.Double2BCD(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex), Result);
-    else {SQLITE_TEXT} begin
+    SQLITE_TEXT:    begin
                       Buf := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
                       if not TryRawToBcd(Buf, ZFastCode.StrLen(Buf), Result, '.') then begin
                         LastWasNull := True;
                         goto Fill;
                       end;
                     end;
+    else begin
+      Buf := FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt, ColumnIndex);
+      L := FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex);
+      if (ColumnType = stBigDecimal) and (L = SizeOf(TBCD))
+      then Move(Buf^, Result, SizeOf(TBCD))
+      else goto Fill;
+    end;
   end;
 end;
 {$ELSE}
@@ -1040,7 +1087,7 @@ begin
   if LastWasNull then
     Result := 0
   else case ColType of
-    SQLITE_INTEGER: I64 := FPlainDriver.sqlite3_column_int(Fsqlite3_stmt, ColumnIndex);
+    SQLITE_INTEGER: I64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
     SQLITE_FLOAT:   Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
     SQLITE_TEXT:    begin
                       P := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
@@ -1077,23 +1124,21 @@ begin
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
-  else
-    case ColType of
-      SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
-      else
-      begin
-        Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
-        Len := ZFastCode.StrLen(Buffer);
+  else case ColType of
+    SQLITE_INTEGER, SQLITE_FLOAT:
+      Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
+    else begin
+      Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
+      Len := ZFastCode.StrLen(Buffer);
 
-        if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
-          Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
-        else
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
-      end;
-      LastWasNull := Result = 0;
+      if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
+        Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
+      else
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+          RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
     end;
+    LastWasNull := Result = 0;
+  end;
 end;
 
 {**

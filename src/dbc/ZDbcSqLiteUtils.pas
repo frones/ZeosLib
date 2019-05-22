@@ -144,7 +144,7 @@ begin
     Result := stBoolean
   else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('INT'), TypeName) > 0 then
     (* EH: This is a hack to use integer affinity for Currency type ranges *)
-    if (Decimals > 0) and (Decimals <= 4) and (Precision >= Decimals) and (Precision <= 18) then
+    if (Decimals > 0) and (Decimals <= 4) and (Precision >= Decimals) and (Precision <= zDbcUtils.sAlignCurrencyScale2Precision[Decimals]) then
       Result := stCurrency
     else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) then
       Result := stShort
