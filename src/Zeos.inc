@@ -195,6 +195,7 @@
               {$DEFINE WITH_INC_PBYTE_SUPPORT}          // Compiler supports incrementing PByte-Pointer
               {$DEFINE WITH_PARAM_ASLARGEINT}           // TParam.AsLargint is supported
               {$DEFINE WITH_VARIANT_UINT64}             // System.TVariant supports UInt64 Values
+              {$DEFINE WITH_tagVARIANT_UINT64}          // ActivX.tagVariant supports UInt64 Values
               {$DEFINE WITH_VARIANT_UNICODESTRING}      // System.TVariant supports UnicodeString Values
 
               {$IF CompilerVersion >= 21} //Delphi 2010+
