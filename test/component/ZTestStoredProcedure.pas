@@ -1232,9 +1232,8 @@ begin
       CheckEquals('600', StoredProc.ParamByName('P4').AsString, 'P4 is different');
     end
   else
-  {$ELSE}
-  CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
   {$ENDIF}
+  CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
   CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
   CheckEquals(5, StoredProc.Params.Count);
 
@@ -1267,9 +1266,8 @@ begin
         CheckEquals(IntToStr(I*10+P2), StoredProc.ParamByName('P4').AsString, 'P4 is different');
       end
     else
-    {$ELSE}
-    CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
     {$ENDIF}
+    CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
     S := S+'a';
     P2 := 100 - I;
   end;
@@ -1344,9 +1342,8 @@ begin
       CheckEquals('1111', StoredProc.ParamByName('ReturnValue').AsString, 'ReturnValue is different');
     end
   else
-  {$ELSE}
-  CheckEquals(1111, StoredProc.ParamByName('ReturnValue').AsInteger);
   {$ENDIF}
+  CheckEquals(1111, StoredProc.ParamByName('ReturnValue').AsInteger);
   CheckEquals(1, StoredProc.Params.Count);
 end;
 
@@ -1369,9 +1366,8 @@ begin
       CheckEquals('2222', StoredProc.ParamByName('ReturnValue').AsString, 'ReturnValue is different');
     end
   else
-  {$ELSE}
-  CheckEquals(2222, StoredProc.ParamByName('ReturnValue').AsInteger);
   {$ENDIF}
+  CheckEquals(2222, StoredProc.ParamByName('ReturnValue').AsInteger);
   CheckEquals(1, StoredProc.Params.Count);
 end;
 
@@ -1430,9 +1426,8 @@ begin
       CheckEquals('600', StoredProc.ParamByName('ABTEST_P4').AsString, 'ABTEST_P4 is different');
     end
   else
-  {$ELSE}
-  CheckEquals(600, StoredProc.ParamByName('ABTEST_P4').AsInteger);
   {$ENDIF}
+  CheckEquals(600, StoredProc.ParamByName('ABTEST_P4').AsInteger);
   CheckEquals('abcabc', StoredProc.ParamByName('ABTEST_P5').AsString);
   CheckEquals('myfuncInOutReturnoutvalue', StoredProc.ParamByName('myfuncInOutReturn_X').AsString);
   CheckEquals('returned string', StoredProc.ParamByName('myfuncInOutReturn_ReturnValue').AsString);
@@ -1445,9 +1440,8 @@ begin
       CheckEquals('1111', StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsString, 'SIMPLE_FUNC_ReturnValue is different');
     end
   else
-  {$ELSE}
-  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
   {$ENDIF}
+  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
   {$IFDEF FPC}
   if (StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').DataType = ftFmtBCD) then
     try
@@ -1457,9 +1451,8 @@ begin
       CheckEquals('2222', StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsString, 'SIMPLEFUNC_ReturnValue is different');
     end
   else
-  {$ELSE}
-  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
   {$ENDIF}
+  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
 
   StoredProc.Open;
 
@@ -1476,9 +1469,8 @@ begin
       CheckEquals('1111', StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsString, 'SIMPLE_FUNC_ReturnValue is different');
     end
   else
-  {$ELSE}
-  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
   {$ENDIF}
+  CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC_ReturnValue').AsInteger);
   {$IFDEF FPC}
   if (StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').DataType = ftFmtBCD) then
     try
@@ -1488,9 +1480,8 @@ begin
       CheckEquals('2222', StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsString, 'SIMPLESIMPLEFUNC_ReturnValueFUNC_ReturnValue is different');
     end
   else
-  {$ELSE}
-  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
   {$ENDIF}
+  CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC_ReturnValue').AsInteger);
 
   StoredProc.Close;
   StoredProc.Open;
