@@ -483,6 +483,9 @@ var RS: IZResultSet;
   begin
     S := RS.GetMetadata.GetColumnLabel(ColumnIndex);
     //firbird can't pass this tests -> missing precision in native RS but with metainformation it should be able to
+    if (ProtocolType = protSQLite) and (SQLType = stBigDecimal) then
+      Exit;
+    RS.GetBigDecimal(ColumnIndex, BCD);
     if not ((ProtocolType = protFirebird) and (RS.GetType = rtForwardOnly)) then
       CheckEquals(Precision, Ord(RS.GetMetadata.GetPrecision(ColumnIndex)), Protocol+': Precision mismatch, for column "'+S+'"');
     if not (((ColumnIndex = BigD18_1_Index) or (ColumnIndex = Curr15_2_Index)) and
