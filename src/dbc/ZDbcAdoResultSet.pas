@@ -85,6 +85,8 @@ type
     FAdoRecordSet: ZPlainAdo.RecordSet;
     FFields: Fields15;
     FField20: Field20;
+    FValueAddr: Pointer;
+    FValueType: Word;
     FColValue: OleVariant;
   protected
     procedure Open; override;
@@ -515,10 +517,25 @@ begin
   {$ENDIF}
   if (FFields = nil) then begin
     Result := True;
+    FValueAddr := nil;
   end else begin
     FField20 := FFields.Get_Item(ColumnIndex);
-    FColValue := FFields.Get_Item(ColumnIndex).Value;
-    Result := TVarData(FColValue).VType in [varNull, varEmpty];
+    FColValue := FField20.Value;
+    FValueType := tagVariant(FColValue).vt;
+    if (FValueType = VT_NULL) or (FValueType = VT_EMPTY) then begin
+      Result := True;
+      FValueAddr := nil;
+    end else begin
+      Result := False;
+      if FValueType and VT_BYREF = VT_BYREF then begin
+        FValueType := FValueType xor VT_BYREF;
+        FValueAddr := tagVariant(FColValue).unkVal;
+      end else if FValueType = VT_DECIMAL
+        then FValueAddr := @FColValue
+        else if (FValueType = VT_BSTR)
+          then FValueAddr := tagVariant(FColValue).bstrVal
+          else FValueAddr := @tagVariant(FColValue).bVal;
+    end;
   end;
 end;
 
@@ -669,7 +686,7 @@ begin
     Len := 0;
   end else with FField20 do begin
     case tagVARIANT(FColValue).vt of
-      VT_BOOL:        if tagVARIANT(FColValue).vbool then begin
+      VT_BOOL:        if PWordBool(FValueAddr)^ then begin
                         Result := Pointer(BoolStrsRaw[True]);
                         Len := 4;
                       end else begin
@@ -685,23 +702,15 @@ begin
                         goto Set_From_Buf;
                       end;
       VT_UI8:         begin
-                        {$IFDEF WITH_tagVARIANT_UINT64}
-                        IntToRaw(tagVARIANT(FColValue).ullVal, @FTinyBuffer[0], @Result);
-                        {$ELSE}
-                        IntToRaw(PUint64(@tagVARIANT(FColValue).cyVal)^, @FTinyBuffer[0], @Result);
-                        {$ENDIF}
+                        IntToRaw(PUInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
                         goto Set_From_Buf;
                       end;
       VT_I8:          begin
-                        {$IFDEF WITH_tagVARIANT_UINT64}
-                        IntToRaw(tagVARIANT(FColValue).llVal, @FTinyBuffer[0], @Result);
-                        {$ELSE}
-                        IntToRaw(Pint64(@tagVARIANT(FColValue).cyVal)^, @FTinyBuffer[0], @Result);
-                        {$ENDIF}
+                        IntToRaw(PInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
                         goto Set_From_Buf;
                       end;
       VT_CY:          begin
-                        CurrToRaw(tagVARIANT(FColValue).cyVal, @FTinyBuffer[0], @Result);
+                        CurrToRaw(PCurrency(FValueAddr)^, @FTinyBuffer[0], @Result);
 Set_From_Buf:           Len := Result - PAnsiChar(@fTinyBuffer[0]);
                         Result := @fTinyBuffer[0];
                       end;
@@ -713,26 +722,26 @@ Set_From_Buf:           Len := Result - PAnsiChar(@fTinyBuffer[0]);
                       end;
       VT_R4:          begin
                         Result := @FTinyBuffer[0];
-                        Len := FloatToSQLRaw(tagVARIANT(FColValue).fltVal, Result);
+                        Len := FloatToSQLRaw(PSingle(FValueAddr)^, Result);
                       end;
       VT_R8:          begin
                         Result := @FTinyBuffer[0];
-                        Len := FloatToSQLRaw(tagVARIANT(FColValue).dblVal, Result);
+                        Len := FloatToSQLRaw(PDouble(FValueAddr)^, Result);
                       end;
       VT_DATE:        case Type_ of
                         adDate, adDBDate: begin
                             Result := @FTinyBuffer[0];
-                            Len := DateTimeToRawSQLDate(TDateTime(tagVARIANT(FColValue).date),
+                            Len := DateTimeToRawSQLDate(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         adDBTime: begin
                             Result := @FTinyBuffer[0];
-                            Len := DateTimeToRawSQLTime(TDateTime(tagVARIANT(FColValue).date),
+                            Len := DateTimeToRawSQLTime(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         else begin
                             Result := @FTinyBuffer[0];
-                            Len := DateTimeToRawSQLTimeStamp(TDateTime(tagVARIANT(FColValue).date),
+                            Len := DateTimeToRawSQLTimeStamp(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                       end;
@@ -765,8 +774,8 @@ begin
     Result := nil;
     Len := 0;
   end else with FField20 do begin
-    case tagVARIANT(FColValue).vt of
-      VT_BOOL:        if tagVARIANT(FColValue).vbool then begin
+    case FValueType of
+      VT_BOOL:        if PWordBool(FValueAddr)^ then begin
                         Result := Pointer(BoolStrsW[True]);
                         Len := 4;
                       end else begin
@@ -781,23 +790,15 @@ begin
                         goto Set_From_Buf;
                       end;
       VT_UI8:         begin
-                        {$IFDEF WITH_tagVARIANT_UINT64}
-                        IntToUnicode(tagVARIANT(FColValue).ullVal, @FTinyBuffer[0], @Result);
-                        {$ELSE}
-                        IntToUnicode(PUInt64(@tagVARIANT(FColValue).cyVal)^, @FTinyBuffer[0], @Result);
-                        {$ENDIF}
+                        IntToUnicode(PUInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
                         goto Set_From_Buf;
                       end;
       VT_I8:          begin
-                        {$IFDEF WITH_tagVARIANT_UINT64}
-                        IntToUnicode(tagVARIANT(FColValue).llVal, @FTinyBuffer[0], @Result);
-                        {$ELSE}
-                        IntToUnicode(PInt64(@tagVARIANT(FColValue).cyVal)^, @FTinyBuffer[0], @Result);
-                        {$ENDIF}
+                        IntToUnicode(PInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
                         goto Set_From_Buf;
                       end;
       VT_CY:          begin
-                        CurrToUnicode(tagVARIANT(FColValue).cyVal, @FTinyBuffer[0], @Result);
+                        CurrToUnicode(PCurrency(FValueAddr)^, @FTinyBuffer[0], @Result);
 Set_From_Buf:           Len := Result - PWideChar(@fTinyBuffer[0]);
                         Result := @fTinyBuffer[0];
                       end;
@@ -809,50 +810,50 @@ Set_From_Buf:           Len := Result - PWideChar(@fTinyBuffer[0]);
                       end;
       VT_R4:          begin
                         Result := @FTinyBuffer[0];
-                        Len := FloatToSQLUnicode(tagVARIANT(FColValue).fltVal, Result);
+                        Len := FloatToSQLUnicode(PSingle(FValueAddr)^, Result);
                       end;
       VT_R8:          begin
                         Result := @FTinyBuffer[0];
-                        Len := FloatToSQLUnicode(tagVARIANT(FColValue).dblVal, Result);
+                        Len := FloatToSQLUnicode(PDouble(FValueAddr)^, Result);
                       end;
       VT_DATE:        case Type_ of
                         adDate, adDBDate: begin
                             Result := @FTinyBuffer[0];
-                            Len := DateTimeToUnicodeSQLDate(TDateTime(tagVARIANT(FColValue).date),
+                            Len := DateTimeToUnicodeSQLDate(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         adDBTime: begin
                             Result := @FTinyBuffer[0];
-                            Len := DateTimeToUnicodeSQLTime(TDateTime(tagVARIANT(FColValue).date),
+                            Len := DateTimeToUnicodeSQLTime(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         else begin
                             Result := @FTinyBuffer[0];
-                            Len := DateTimeToUnicodeSQLTimeStamp(TDateTime(tagVARIANT(FColValue).date),
+                            Len := DateTimeToUnicodeSQLTimeStamp(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                       end;
       else case Type_ of
         adGUID:       begin
-                        Result := tagVARIANT(FColValue).bstrVal;
+                        Result := FValueAddr;
                         Len := 38;
                       end;
         adChar:       begin
-                        Result := tagVARIANT(FColValue).bstrVal;
+                        Result := FValueAddr;
                         Len := ZDbcUtils.GetAbsorbedTrailingSpacesLen(Result, ActualSize);
                       end;
         adVarChar,
         adLongVarChar: begin
-                        Result := tagVARIANT(FColValue).bstrVal;
+                        Result := FValueAddr;
                         Len := ActualSize;
                       end;
         adWChar:      begin
-                        Result := tagVARIANT(FColValue).bstrVal;
+                        Result := FValueAddr;
                         Len := ZDbcUtils.GetAbsorbedTrailingSpacesLen(Result, ActualSize shr 1);
                       end;
         adLongVarWChar,
         adVarWChar:   begin
-                        Result := tagVARIANT(FColValue).bstrVal;
+                        Result := FValueAddr;
                         Len := ActualSize shr 1;
                       end;
         else          try
@@ -907,19 +908,13 @@ begin
   if LastWasNull then begin
     Result := False;
   end else case tagVARIANT(FColValue).vt of
-    VT_BOOL:        Result := tagVARIANT(FColValue).vbool;
+    VT_BOOL:        Result := PWordBool(FValueAddr)^;
     VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex) <> 0;
     VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex) <> 0;
     VT_HRESULT, VT_ERROR:  Result := tagVARIANT(FColValue).scode <> 0;
-    {$IFDEF WITH_tagVARIANT_UINT64}
-    VT_UI8:         Result := tagVARIANT(FColValue).ullVal <> 0;
-    VT_I8:          Result := tagVARIANT(FColValue).llVal <> 0;
-    VT_CY:          Result := tagVARIANT(FColValue).cyVal <> 0;
-    {$ELSE}
-    VT_UI8:         Result := PUInt64(@tagVARIANT(FColValue).ulVal)^ <> 0;
-    VT_I8:          Result := PInt64(@tagVARIANT(FColValue).lVal)^ <> 0;
-    VT_CY:          Result := PInt64(@tagVARIANT(FColValue).cyVal)^ <> 0;
-    {$ENDIF}
+    VT_UI8:         Result := PUInt64(FValueAddr)^ <> 0;
+    VT_I8:          Result := PInt64(FValueAddr)^ <> 0;
+    VT_CY:          Result := PCurrency(FValueAddr)^ <> 0;
     VT_DECIMAL:     Result := PDecimal(@FColValue).Lo64 <> 0;
     VT_R4, VT_R8, VT_DATE: Result := Trunc(GetDouble(ColumnIndex)) <> 0;
     else begin
@@ -946,10 +941,10 @@ begin
   if LastWasNull then begin
     Result := 0;
   end else case tagVARIANT(FColValue).vt of
-    VT_BOOL:        Result := Ord(tagVARIANT(FColValue).vbool);
-    VT_UI1:         Result := tagVARIANT(FColValue).bVal;
-    VT_UI2:         Result := tagVARIANT(FColValue).uiVal;
-    VT_UI4:         Result := tagVARIANT(FColValue).ulVal;
+    VT_BOOL:        Result := Ord(PWord(FValueAddr)^ <> 0);
+    VT_UI1:         Result := PByte(FValueAddr)^;
+    VT_UI2:         Result := PWord(FValueAddr)^;
+    VT_UI4:         Result := PInteger(FValueAddr)^;
     VT_UINT:        Result := tagVARIANT(FColValue).uintVal;
     VT_I1:          Result := ShortInt(tagVARIANT(FColValue).cVal);
     VT_I2:          Result := tagVARIANT(FColValue).iVal;
@@ -988,11 +983,11 @@ begin
       VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex);
       VT_HRESULT, VT_ERROR:  Result := tagVARIANT(FColValue).scode;
       {$IFDEF WITH_tagVARIANT_UINT64}
-      VT_UI8:         Result := tagVARIANT(FColValue).ullVal;
-      VT_I8:          Result := tagVARIANT(FColValue).llVal;
-      VT_CY:          Result := tagVARIANT(FColValue).llVal div 10000;
+      VT_UI8:         Result := PUInt64(FValueAddr)^;
+      VT_I8:          Result := PInt64(FValueAddr)^;
+      VT_CY:          Result := PInt64(FValueAddr)^ div 10000;
       {$ELSE}
-      VT_UI8:         Result := PUInt64(@tagVARIANT(FColValue).ulVal)^;
+      VT_UI8:         Result := PUInt64(@PInteger(FValueAddr)^)^;
       VT_I8:          Result := PInt64(@tagVARIANT(FColValue).lVal)^;
       VT_CY:          Result := PInt64(@tagVARIANT(FColValue).lVal)^ div 10000;
       {$ENDIF}
@@ -1031,10 +1026,10 @@ begin
     Result := 0;
   end else with FField20 do begin
     case tagVARIANT(FColValue).vt of
-      VT_BOOL:        Result := Ord(tagVARIANT(FColValue).vbool);
-      VT_UI1:         Result := tagVARIANT(FColValue).bVal;
-      VT_UI2:         Result := tagVARIANT(FColValue).uiVal;
-      VT_UI4:         Result := tagVARIANT(FColValue).ulVal;
+      VT_BOOL:        Result := Ord(PWord(FValueAddr)^ <> 0);
+      VT_UI1:         Result := PByte(FValueAddr)^;
+      VT_UI2:         Result := PWord(FValueAddr)^;
+      VT_UI4:         Result := PInteger(FValueAddr)^;
       VT_UINT:        Result := tagVARIANT(FColValue).uintVal;
       VT_I1:          Result := ShortInt(tagVARIANT(FColValue).cVal);
       VT_I2:          Result := tagVARIANT(FColValue).iVal;
@@ -1074,15 +1069,9 @@ begin
       VT_BOOL, VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex);
       VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex);
       VT_HRESULT, VT_ERROR:  Result := tagVARIANT(FColValue).scode;
-      {$IFDEF WITH_tagVARIANT_UINT64}
-      VT_UI8:         Result := tagVARIANT(FColValue).ullVal;
-      VT_I8:          Result := tagVARIANT(FColValue).llVal;
-      VT_CY:          Result := tagVARIANT(FColValue).llVal div 10000;
-      {$ELSE}
-      VT_UI8:         Result := PUInt64(@tagVARIANT(FColValue).ulVal)^;
-      VT_I8:          Result := PInt64(@tagVARIANT(FColValue).lVal)^;
-      VT_CY:          Result := PInt64(@tagVARIANT(FColValue).lVal)^ div 10000;
-      {$ENDIF}
+      VT_UI8:         Result := PUInt64(FValueAddr)^;
+      VT_I8:          Result := PInt64(FValueAddr)^;
+      VT_CY:          Result := PInt64(FValueAddr)^ div 10000;
       VT_DECIMAL: begin
                     PD := @FColValue;
                     Result := UInt64(PD.Lo64);
@@ -1131,26 +1120,20 @@ begin
     Result := 0
   else with FField20 do begin
     case tagVARIANT(FColValue).vt of
-      VT_R8:          Result := tagVARIANT(FColValue).dblVal;
-      VT_R4:          Result := tagVARIANT(FColValue).fltVal;
+      VT_R8:          Result := PDouble(FValueAddr)^;
+      VT_R4:          Result := PSingle(FValueAddr)^;
       VT_DECIMAL:     begin
                         PD := @FColValue;
                         Result := Uint64(PDecimal(PD).Lo64) / ZFastCode.I64Table[PD.Scale];
                         if PD.sign > 0 then
                           Result := -Result;
                       end;
-      VT_DATE:        Result := tagVARIANT(FColValue).date;
+      VT_DATE:        Result := PDouble(FValueAddr)^;
       VT_BOOL, VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex);
       VT_I1,  VT_I2,  VT_I4,  VT_INT, VT_HRESULT, VT_ERROR: Result := GetInt(ColumnIndex);
-      {$IFDEF WITH_tagVARIANT_UINT64}
-      VT_UI8:         Result := tagVARIANT(FColValue).ullVal;
-      VT_I8:          Result := tagVARIANT(FColValue).llVal;
-      VT_CY:          Result := tagVARIANT(FColValue).cyVal;
-      {$ELSE}
-      VT_UI8:         Result := PUInt64(@tagVARIANT(FColValue).cyVal)^;
-      VT_I8:          Result := PInt64(@tagVARIANT(FColValue).cyVal)^;
-      VT_CY:          Result := tagVARIANT(FColValue).cyVal;
-      {$ENDIF}
+      VT_UI8:         Result := PUInt64(FValueAddr)^;
+      VT_I8:          Result := PInt64(FValueAddr)^;
+      VT_CY:          Result := PCurrency(FValueAddr)^;
       else  UnicodeToFloatDef(GetPWideChar(ColumnIndex, Len), WideChar('.'), 0, Result)
     end;
   end;
@@ -1168,72 +1151,55 @@ end;
 }
 {$IFDEF BCD_TEST}
 procedure TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-var PD: PDecimal;
 {$ELSE}
 function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+label ProcessFixedChar;
+{$ENDIF}
 var
   Len: NativeUint;
   P: PWideChar;
-label ProcessFixedChar;
-{$ENDIF}
 begin
-  if not IsNull(ColumnIndex) then
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF}
   else with FField20, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
-    case Type_ of
-      {$IFDEF BCD_TEST}
-      adTinyInt: ScaledOrdinal2Bcd(SmallInt(TVarData(FColValue).VShortInt), 0, Result);
-      adSmallInt: ScaledOrdinal2Bcd(TVarData(FColValue).VSmallInt, 0, Result);
-      adInteger, adError: ScaledOrdinal2Bcd(TVarData(FColValue).VInteger, 0, Result);
-      adBigInt: ScaledOrdinal2Bcd(TVarData(FColValue).VInt64, 0, Result);
-      adUnsignedTinyInt: ScaledOrdinal2Bcd(Word(tagVariant(FColValue).bVal), 0, Result);
-      adUnsignedSmallInt: ScaledOrdinal2Bcd(tagVariant(FColValue).uiVal, 0, Result);
-      adUnsignedInt: ScaledOrdinal2Bcd(TVarData(FColValue).VLongWord, 0, Result);
-      {$IFDEF WITH_VARIANT_UINT64}
-      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FColValue).VUInt64, 0, Result);
-      {$ELSE !WITH_VARIANT_UINT64}
-      adUnsignedBigInt:   ScaledOrdinal2Bcd(TVarData(FColValue).VInt64, 0, Result);
-      {$ENDIF !WITH_VARIANT_UINT64}
-      adSingle: Double2BCD(TVarData(FColValue).VSingle, Result);
-      adDouble: Double2BCD(TVarData(FColValue).VDouble, Result);
-      adCurrency: Currency2BCD(tagVariant(FColValue).cyVal, Result);
-      adNumeric,
-      adVarNumeric: Result := VarToBCD(FColValue);
-      adDecimal: begin
-                    PD := PDecimal(@FColValue);
-                    ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.scale, Result, PD.sign > 0);
-                 end;
-      adBoolean: ScaledOrdinal2Bcd(Word(Ord(TVarData(FColValue).VBoolean)), 0, Result);
-      adDate,
-      adDBDate,
-      adDBTime,
-      adDBTimeStamp: Double2BCD(TVarData(FColValue).VDate, Result);
-      adChar,
-      adWChar,
-      adVarChar,
-      adLongVarChar,
-      adBSTR,
-      adVarWChar,
-      adLongVarWChar: LastWasNull := not TryStrToBCD(GetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-      else Result := NullBCD;
+    {$IFDEF BCD_TEST}
+    case FValueType of
+      VT_BOOL:        ScaledOrdinal2Bcd(Word(Ord(PWord(FValueAddr)^ <> 0)), 0, Result);
+      VT_UI1:         ScaledOrdinal2Bcd(Word(PByte(FValueAddr)^), 0, Result, False);
+      VT_UI2:         ScaledOrdinal2Bcd(PWord(FValueAddr)^, 0, Result, False);
+      VT_UI4:         ScaledOrdinal2Bcd(PCardinal(FValueAddr)^, 0, Result, False);
+      VT_UINT:        ScaledOrdinal2Bcd(PLongWord(FValueAddr)^, 0, Result, False);
+      VT_UI8:         ScaledOrdinal2Bcd(PUInt64(FValueAddr)^, 0, Result, False);
+      VT_I1:          ScaledOrdinal2Bcd(SmallInt(PShortInt(FValueAddr)^), 0, Result);
+      VT_I2:          ScaledOrdinal2Bcd(PSmallInt(FValueAddr)^, 0, Result);
+      VT_HRESULT,
+      VT_ERROR,
+      VT_I4:          ScaledOrdinal2Bcd(PInteger(FValueAddr)^, 0, Result);
+      VT_I8:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 0, Result);
+      VT_INT:         ScaledOrdinal2Bcd(PLongInt(FValueAddr)^, 0, Result);
+      VT_CY:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 4, Result);
+      VT_DECIMAL:     ScaledOrdinal2Bcd(UInt64(PDecimal(FValueAddr)^.Lo64), PDecimal(FValueAddr)^.Scale, Result, PDecimal(FValueAddr)^.Sign > 0);
+      VT_R4:          Double2BCD(PSingle(FValueAddr)^, Result);
+      VT_R8, VT_DATE: Double2BCD(PDouble(FValueAddr)^, Result);
+      else begin
+          P := GetPWideChar(ColumnIndex, Len);
+          if not ZSysUtils.TryUniToBcd(P, Len, Result, '.') then
+            Result := NullBCD;
+        end;
       {$ELSE !BCD_TEST}
-      adTinyInt: Result := TVarData(FColValue).VShortInt;
-      adSmallInt: Result := TVarData(FColValue).VSmallInt;
-      adInteger, adError: Result := TVarData(FColValue).VInteger;
-      adBigInt: Result := TVarData(FColValue).VInt64;
-      adUnsignedTinyInt: Result := TVarData(FColValue).VByte;
-      adUnsignedSmallInt: Result := TVarData(FColValue).VWord;
-      adUnsignedInt: Result := TVarData(FColValue).VLongWord;
-      {$IFDEF WITH_VARIANT_UINT64}
-      adUnsignedBigInt:   Result := TVarData(FColValue).VUInt64;
-      {$ELSE}
-      adUnsignedBigInt:   Result := TVarData(FColValue).VInt64;
-      {$ENDIF}
-      adSingle: Result := TVarData(FColValue).VSingle;
-      adDouble: Result := TVarData(FColValue).VDouble;
-      adCurrency: Result := TVarData(FColValue).VCurrency;
+    case Type_ of
+      adTinyInt: Result := PShortInt(FValueAddr)^;
+      adSmallInt: Result := PSmallInt(FValueAddr)^;
+      adInteger, adError: Result := PInteger(FValueAddr)^;
+      adBigInt: Result := PInt64(FValueAddr)^;
+      adUnsignedTinyInt: Result := PByte(FValueAddr)^;
+      adUnsignedSmallInt: Result := PWord(FValueAddr)^;
+      adUnsignedInt: Result := PCardinal(FValueAddr)^;
+      adUnsignedBigInt:   Result := PUInt64(FValueAddr)^;
+      adSingle: Result := PSingle(FValueAddr)^;
+      adDouble: Result := PDouble(FValueAddr)^;
+      adCurrency: Result := PCurrency(FValueAddr)^;
       adBoolean: Result := Ord(TVarData(FColValue).VBoolean);
       adDate,
       adDBDate,
@@ -1324,7 +1290,7 @@ begin
   else case tagVARIANT(FColValue).vt of
     VT_UI1, VT_I1, VT_UI2, VT_I2, VT_UI4, VT_I4, VT_UI8, VT_I8, VT_INT,
     VT_UINT, VT_HRESULT, VT_ERROR, VT_BOOL: Result := GetLong(FirstDbcIndex);
-    VT_CY: Result := tagVARIANT(FColValue).cyVal;
+    VT_CY: Result := PCurrency(FValueAddr)^;
     VT_DECIMAL: begin
                   PD := PDecimal(@FColValue);
                   i64 := UInt64(PD.Lo64);
@@ -1335,8 +1301,8 @@ begin
                   else if PD.scale > 4 then
                     i64 := i64 div ZFastCode.I64Table[PD.scale-4];
                 end;
-    VT_R4:      Result := tagVARIANT(FColValue).fltVal;
-    VT_R8, VT_DATE: Result := tagVARIANT(FColValue).dblVal;
+    VT_R4:      Result := PSingle(FValueAddr)^;
+    VT_R8, VT_DATE: Result := PDouble(FValueAddr)^;
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
                   UnicodeToFloatDef(P, WideChar('.'), Len);
@@ -1367,7 +1333,7 @@ begin
   if LastWasNull then
     Result := 0
   else case tagVARIANT(FColValue).vt of
-    VT_DATE: Result := Int(tagVARIANT(FColValue).dblVal);
+    VT_DATE: Result := Int(PDouble(FValueAddr)^);
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
                   Result := UnicodeSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
@@ -1396,7 +1362,7 @@ begin
   if LastWasNull then
     Result := 0
   else case tagVARIANT(FColValue).vt of
-    VT_DATE: Result := Frac(tagVARIANT(FColValue).dblVal);
+    VT_DATE: Result := Frac(PDouble(FValueAddr)^);
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
                   Result := UnicodeSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
@@ -1426,7 +1392,7 @@ begin
   if LastWasNull then
     Result := 0
   else case tagVARIANT(FColValue).vt of
-    VT_DATE: Result := tagVARIANT(FColValue).dblVal;
+    VT_DATE: Result := PDouble(FValueAddr)^;
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
                   Result := UnicodeSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
