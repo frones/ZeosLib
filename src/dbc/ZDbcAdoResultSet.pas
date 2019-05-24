@@ -77,7 +77,7 @@ type
   end;
 
   {** Implements Ado ResultSet. }
-  TZAdoResultSet = class(TZSimpleResultSet)
+  TZAdoResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
     AdoColTypeCache: TIntegerDynArray;
     AdoColumnCount: Integer;
@@ -98,34 +98,34 @@ type
     function Next: Boolean; override;
     function MoveAbsolute(Row: Integer): Boolean; override;
     function GetRow: NativeInt; override;
-    function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetString(ColumnIndex: Integer): String; override;
-    function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
-    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
-    function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; override;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
-    function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetInt(ColumnIndex: Integer): Integer; override;
-    function GetUInt(ColumnIndex: Integer): Cardinal; override;
-    function GetLong(ColumnIndex: Integer): Int64; override;
-    function GetULong(ColumnIndex: Integer): UInt64; override;
-    function GetFloat(ColumnIndex: Integer): Single; override;
-    function GetDouble(ColumnIndex: Integer): Double; override;
-    function GetCurrency(ColumnIndex: Integer): Currency; override;
+    function IsNull(ColumnIndex: Integer): Boolean;
+    function GetString(ColumnIndex: Integer): String;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
+    function GetBoolean(ColumnIndex: Integer): Boolean;
+    function GetInt(ColumnIndex: Integer): Integer;
+    function GetUInt(ColumnIndex: Integer): Cardinal;
+    function GetLong(ColumnIndex: Integer): Int64;
+    function GetULong(ColumnIndex: Integer): UInt64;
+    function GetFloat(ColumnIndex: Integer): Single;
+    function GetDouble(ColumnIndex: Integer): Double;
+    function GetCurrency(ColumnIndex: Integer): Currency;
     {$IFDEF BCD_TEST}
-    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     {$ELSE !BCD_TEST}
-    function GetBigDecimal(ColumnIndex: Integer): Extended; override;
+    function GetBigDecimal(ColumnIndex: Integer): Extended;
     {$ENDIF !BCD_TEST}
-    function GetBytes(ColumnIndex: Integer): TBytes; override;
-    function GetDate(ColumnIndex: Integer): TDateTime; override;
-    function GetTime(ColumnIndex: Integer): TDateTime; override;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
-    function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetDate(ColumnIndex: Integer): TDateTime;
+    function GetTime(ColumnIndex: Integer): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    function GetBlob(ColumnIndex: Integer): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]); override;
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
     {$ENDIF USE_SYNCOMMONS}
   end;
 
