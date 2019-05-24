@@ -1185,7 +1185,7 @@ begin
         DataType := SQLT_INT;
         case DataSize of
           SizeOf(Int64):    Result := stLong;
-          SizeOf(LongInt):  Result := stInteger;
+          SizeOf(Integer):  Result := stInteger;
           SizeOf(SmallInt): Result := stSmall;
           SizeOf(ShortInt): Result := stShort;
           else begin

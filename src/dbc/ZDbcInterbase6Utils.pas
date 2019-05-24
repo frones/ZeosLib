@@ -270,7 +270,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray, MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: LongWord): RawByteString;
+  const XSQLDAMaxSize: Cardinal): RawByteString;
 
 const
   { Default Interbase blob size for reading }
@@ -435,8 +435,8 @@ const
 
 //ported  from NoThrowTimeStamp.cpp
 
-procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: LongWord);
-procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: LongWord);
+procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
+procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
 procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
 procedure isc_encode_date(out nday: ISC_DATE; year, month, day: Word);
 
@@ -1969,7 +1969,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray,MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: LongWord): RawByteString;
+  const XSQLDAMaxSize: Cardinal): RawByteString;
 var
   IndexName, ArrayName: RawByteString;
   ParamIndex, J: Cardinal;
@@ -2105,8 +2105,8 @@ begin
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := Min((XSQLDAMaxSize div Cardinal(MemPerRow)),     {memory limit of XSQLDA structs}
-        (((32*1024)-LBlockLen) div Cardinal(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
+      MaxRowsPerBatch := Min((XSQLDAMaxSize div Int64(MemPerRow)),     {memory limit of XSQLDA structs}
+        (((32*1024)-LBlockLen) div Int64(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     //we run into XSQLDA !update! count limit of 255 see:
@@ -2148,7 +2148,7 @@ begin
   Inc(PreparedRowsOfArray);
 end;
 
-procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: LongWord);
+procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
 begin
   hours := ntime div (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
   ntime := ntime mod (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
@@ -2159,7 +2159,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.} {$ENDIF} // overflow means error so just disable hint
-procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: LongWord);
+procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
 begin
   ntime := ((hours * MinsPerHour + minutes) * SecsPerMin + seconds) * ISC_TIME_SECONDS_PRECISION + fractions;
 end;

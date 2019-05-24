@@ -139,8 +139,8 @@ function GetMinorVersion(const Value: string): Word;
 //macros from datetime.c
 function date2j(y, m, d: Integer): Integer;
 procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
-procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: LongWord); overload;
-procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: LongWord); overload;
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: Cardinal); overload;
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: Cardinal); overload;
 
 procedure DateTime2PG(const Value: TDateTime; out Result: Int64); overload;
 procedure DateTime2PG(const Value: TDateTime; out Result: Double); overload;
@@ -152,11 +152,11 @@ procedure Time2PG(const Value: TDateTime; out Result: Double); overload;
 
 function PG2DateTime(Value: Double): TDateTime; overload;
 procedure PG2DateTime(Value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord); overload;
+  out fsec: Cardinal); overload;
 
 function PG2DateTime(Value: Int64): TDateTime; overload;
 procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord); overload;
+  out fsec: Cardinal); overload;
 
 function PG2Time(Value: Double): TDateTime; overload;
 function PG2Time(Value: Int64): TDateTime; overload;
@@ -853,7 +853,7 @@ end;
 
 procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
 var
-  julian, quad, extra: LongWord;
+  julian, quad, extra: Cardinal;
   y: Integer;
 begin
   julian := jd;
@@ -900,7 +900,7 @@ end;
 
 {$IFNDEF ENDIAN_BIG}
 procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var W: LongWord;
+var W: Cardinal;
 begin
   W := PLongWord(P)^;
   PByteArray(P)[0] := PByteArray(P)[7];
@@ -946,7 +946,7 @@ end;
 function PG2DateTime(Value: Double): TDateTime;
 var date: TDateTime;
   Year, Month, Day, Hour, Min, Sec: Word;
-  fsec: LongWord;
+  fsec: Cardinal;
 begin
   PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
   TryEncodeDate(Year, Month, Day, date);
@@ -956,7 +956,7 @@ begin
 end;
 
 procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord);
+  out fsec: Cardinal);
 var
   date: Double;
   time: Double;
@@ -982,7 +982,7 @@ end;
 function PG2DateTime(Value: Int64): TDateTime;
 var date: TDateTime;
   Year, Month, Day, Hour, Min, Sec: Word;
-  fsec: LongWord;
+  fsec: Cardinal;
 begin
   PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
   if not TryEncodeDate(Year, Month, Day, date) then
@@ -993,7 +993,7 @@ begin
 end;
 
 procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord);
+  out fsec: Cardinal);
 var date: Int64;
 begin
   {$IFNDEF ENDIAN_BIG}
@@ -1010,7 +1010,7 @@ begin
   dt2time(Value, Hour, Min, Sec, fsec);
 end;
 
-procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: LongWord);
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: Cardinal);
 begin
   Hour := jd div USECS_PER_HOUR;
   jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
@@ -1020,7 +1020,7 @@ begin
   Fsec := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
 end;
 
-procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: LongWord);
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: Cardinal);
 begin
   Hour := Trunc(jd / SECS_PER_HOUR);
   jd := jd - Hour * SECS_PER_HOUR;
@@ -1052,7 +1052,7 @@ begin
 end;
 
 function PG2Time(Value: Double): TDateTime;
-var Hour, Min, Sec: Word; fsec: LongWord;
+var Hour, Min, Sec: Word; fsec: Cardinal;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
@@ -1063,7 +1063,7 @@ begin
 end;
 
 function PG2Time(Value: Int64): TDateTime;
-var Hour, Min, Sec: Word; fsec: LongWord;
+var Hour, Min, Sec: Word; fsec: Cardinal;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);

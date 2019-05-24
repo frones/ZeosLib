@@ -107,7 +107,7 @@ type
     Hour: Word;
     Minute: Word;
     Second: Word;
-    Fractions: LongWord;
+    Fractions: Cardinal;
   end;
   {** Defines a variant structure. }
   TZVariant = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
