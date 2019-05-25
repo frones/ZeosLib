@@ -103,8 +103,8 @@ type
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetInt(ColumnIndex: Integer): Integer;
