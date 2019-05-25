@@ -66,7 +66,6 @@ uses
   ZDbcResultSetMetadata, ZCompatibility;
 
 type
-  PZPGColumnInfo = ^TZPGColumnInfo;
   TZPGColumnInfo = class(TZColumnInfo)
   protected
     fTableOID, FColOID: OID;
@@ -321,7 +320,9 @@ begin
             stSmall       : JSONWriter.Add(PG2SmallInt(P));
             stInteger     : JSONWriter.Add(PG2Integer(P));
             stLong        : JSONWriter.Add(PG2Int64(P));
-            stCurrency    : JSONWriter.AddCurr64(PGNumeric2Currency(P));
+            stCurrency    : if ColumnOID = CASHOID
+                            then JSONWriter.AddCurr64(PGCash2Currency(P))
+                            else JSONWriter.AddCurr64(PGNumeric2Currency(P));
             stFloat       : JSONWriter.AddSingle(PG2Single(P));
             stDouble      : JSONWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin

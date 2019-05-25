@@ -97,7 +97,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZMessages, ZFastCode, ZClasses;
+  ZMessages, ZFastCode, ZClasses, ZDbcUtils;
 
 {**
   Convert string SQLite field type to SQLType
@@ -143,7 +143,10 @@ begin
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BOOL')) then
     Result := stBoolean
   else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('INT'), TypeName) > 0 then
-    if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) then
+    (* EH: This is a hack to use integer affinity for Currency type ranges *)
+    if (Decimals > 0) and (Decimals <= 4) and (Precision >= Decimals) and (Precision <= zDbcUtils.sAlignCurrencyScale2Precision[Decimals]) then
+      Result := stCurrency
+    else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) then
       Result := stShort
     else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALL')) then
       Result := stSmall
@@ -185,7 +188,6 @@ begin
     Result := stAsciiStream
   else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('TEXT'), TypeName) > 0 then
     Result := stAsciiStream;
-
   if (Result = stInteger) and (Precision <> 0) then
   begin
     if Precision <= 2 then

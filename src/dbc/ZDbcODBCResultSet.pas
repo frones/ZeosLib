@@ -133,7 +133,7 @@ type
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
-    function GetUInt(ColumnIndex: Integer): LongWord;
+    function GetUInt(ColumnIndex: Integer): Cardinal;
     function GetInt(ColumnIndex: Integer): Integer;
     function GetULong(ColumnIndex: Integer): UInt64;
     function GetLong(ColumnIndex: Integer): Int64;
@@ -1170,7 +1170,7 @@ Set_From_Temp:          Len := Length(fUniTemp);
   end;
 end;
 
-function TAbstractODBCResultSet.GetUInt(ColumnIndex: Integer): LongWord;
+function TAbstractODBCResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 var L: LengthInt;
 begin
   if not IsNull(ColumnIndex) then

@@ -3004,7 +3004,7 @@ begin
       stLong: ScaledOrdinal2BCD(PInt64(Data)^, 0, Result);
       stFloat: Double2BCD(PSingle(Data)^, Result);
       stDouble: Double2BCD(PDouble(Data)^,Result);
-      stCurrency: CurrToBcd(PCurrency(Data)^, Result);
+      stCurrency: Currency2Bcd(PCurrency(Data)^, Result);
       stBigDecimal: Result := PBCD(Data)^;
       stString, stUnicodeString: if fRaw
           then TryRawToBcd(PAnsiChar(Data^)+PAnsiInc, PLongWord(Data^)^, Result, '.')

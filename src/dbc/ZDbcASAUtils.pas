@@ -1005,11 +1005,11 @@ begin
         begin
           case Self.GetFieldSqlType(Index) of
             stAsciiStream:
-              SetFieldType(TempSQLDA, 0, DT_LONGVARCHAR, Min( BlockSize, Length));
+              SetFieldType(TempSQLDA, 0, DT_LONGVARCHAR, Min( Int64(BlockSize), Int64(Length)));
             stUnicodeStream:
-              SetFieldType(TempSQLDA, 0, DT_LONGNVARCHAR, Min( BlockSize, Length));
+              SetFieldType(TempSQLDA, 0, DT_LONGNVARCHAR, Min( Int64(BlockSize), Int64(Length)));
             stBinaryStream:
-              SetFieldType(TempSQLDA, 0, DT_LONGBINARY, Min( BlockSize, Length));
+              SetFieldType(TempSQLDA, 0, DT_LONGBINARY, Min( Int64(BlockSize), Int64(Length)));
             else
               sqlType := DT_FIXCHAR;
           end;
@@ -1032,7 +1032,7 @@ begin
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
             Inc( Offs, PZASABlobStruct( sqlData)^.stored_len);
-            sqllen := Min( BlockSize, Length-Rd);
+            sqllen := Min( Int64(BlockSize), Int64(Length-Rd));
           end;
           if Rd <> Length then
             CreateException( 'Could''nt complete BLOB-Read');

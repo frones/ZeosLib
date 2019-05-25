@@ -270,7 +270,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray, MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: LongWord): RawByteString;
+  const XSQLDAMaxSize: Cardinal): RawByteString;
 
 const
   { Default Interbase blob size for reading }
@@ -435,8 +435,8 @@ const
 
 //ported  from NoThrowTimeStamp.cpp
 
-procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: LongWord);
-procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: LongWord);
+procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
+procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
 procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
 procedure isc_encode_date(out nday: ISC_DATE; year, month, day: Word);
 
@@ -1791,12 +1791,10 @@ begin
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
     SQL_INT64:
+        //https://firebirdsql.org/file/documentation/reference_manuals/fblangref25-en/html/fblangref25-datatypes-fixedtypes.html
         if XSQLVAR.SqlScale = 0 then
           Result := stLong
-          {EH: note if scale > -4 the values may fit too.
-           But we do not have the precision here. Ergo we can't gurantee the I64,
-           like numerc(19,2) will fit into the native currency -> fall back to bigdecimal}
-        else if XSQLVAR.SqlScale = -4 then
+        else if XSQLVAR.SqlScale = -4 then //EH firebird supports a max precision of 18 only
           Result := stCurrency
         else
           Result := stBigDecimal;
@@ -1971,7 +1969,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray,MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: LongWord): RawByteString;
+  const XSQLDAMaxSize: Cardinal): RawByteString;
 var
   IndexName, ArrayName: RawByteString;
   ParamIndex, J: Cardinal;
@@ -2107,8 +2105,8 @@ begin
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := Min((XSQLDAMaxSize div Cardinal(MemPerRow)),     {memory limit of XSQLDA structs}
-        (((32*1024)-LBlockLen) div Cardinal(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
+      MaxRowsPerBatch := Min((XSQLDAMaxSize div Int64(MemPerRow)),     {memory limit of XSQLDA structs}
+        (((32*1024)-LBlockLen) div Int64(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     //we run into XSQLDA !update! count limit of 255 see:
@@ -2150,7 +2148,7 @@ begin
   Inc(PreparedRowsOfArray);
 end;
 
-procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: LongWord);
+procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
 begin
   hours := ntime div (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
   ntime := ntime mod (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
@@ -2161,7 +2159,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.} {$ENDIF} // overflow means error so just disable hint
-procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: LongWord);
+procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
 begin
   ntime := ((hours * MinsPerHour + minutes) * SecsPerMin + seconds) * ISC_TIME_SECONDS_PRECISION + fractions;
 end;
@@ -2227,38 +2225,38 @@ end;
 
 procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
 var
-  Nibbles, BCDScale, P, I, F: Byte;
+  LastNibbleByteIDX, BCDScale, P, I, F: Byte;
   i64: Int64;
-  Negative, OddPrec: boolean;
+  Negative, LastByteIsHalfByte: boolean;
 begin
-  Nibbles := (Value.Precision+1) div 2;
-  OddPrec := Odd(Value.Precision) and ((Value.Fraction[Nibbles-1] and $0f) = 0);
+  LastNibbleByteIDX := (Value.Precision-1) shr 1;
   F := Value.SignSpecialPlaces;
   BCDScale := (F and 63);
-  Negative := (F and $80) <> 0;
-  P := 1;
+  Negative := (F and $80) = $80;
+  LastByteIsHalfByte := (Value.Precision and 1 = 1) or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
+  P := 0;
+  i64 := 0;
   { scan for leading zeroes to skip them }
-
-  if Nibbles > 0 then begin
-    for I := 0 to MaxFMTBcdDigits -1 do begin
+  if LastNibbleByteIDX > 0 then begin
+    for I := 0 to LastNibbleByteIDX do begin
       F := Value.Fraction[i];
-      if F = 0 then begin
-         Dec(Nibbles);
-         Inc(P);
-      end else begin
-        F := ZBcdNibble2Base100ByteLookup[F];
+      if F = 0
+      then Inc(P)
+      else begin
+        i64 := ZBcdNibble2Base100ByteLookup[F];
         Break;
       end;
     end
-  end else F := 0;
+  end;
   { initialize the Result }
-  i64 := F;
-  if Nibbles > 0 then begin
-    for I := P to Nibbles-1-Ord(OddPrec) do
+  if P < LastNibbleByteIDX then begin
+    for I := P+1 to LastNibbleByteIDX-Ord(LastByteIsHalfByte) do
       i64 := i64 * 100 + ZBcdNibble2Base100ByteLookup[Value.Fraction[i]];
-    if OddPrec then begin
-      i64 := i64 * 10 + Value.Fraction[P+Nibbles-2] shr 4;
-      Dec(BCDScale);
+    { last half nibble byte}
+    if LastByteIsHalfByte then begin
+      i64 := i64 * 10 + Value.Fraction[P+LastNibbleByteIDX] shr 4;
+      if (BCDScale and 1 = 1) and (Value.Precision and 1 = 0) then
+        Dec(BCDScale);
     end;
     if negative then
       i64 := -i64;
@@ -2266,7 +2264,6 @@ begin
       i64 := i64 * IBScaleDivisor[BCDScale-scale]
     else if BCDScale > Scale then
       i64 := i64 div IBScaleDivisor[scale-BCDScale]
-
   end;
   case DestSize of
     8: PInt64(Dest)^ := i64;

@@ -101,7 +101,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
-    function GetUInt(ColumnIndex: Integer): LongWord; override;
+    function GetUInt(ColumnIndex: Integer): Cardinal; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
@@ -515,13 +515,13 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  an <code>LongWord</code> in the Java programming language.
+  an <code>Cardinal</code> in Pascal.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZASAAbstractResultSet.GetUInt(ColumnIndex: Integer): LongWord;
+function TZASAAbstractResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
   CheckClosed;
   LastWasNull := IsNull(ColumnIndex);

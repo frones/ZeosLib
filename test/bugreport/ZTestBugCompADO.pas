@@ -106,7 +106,7 @@ begin
     {$IFDEF WITH_FTBYTE}
     CheckEquals(ord(ftByte), ord(Query.Fields[7].DataType));
     {$ELSE}
-    CheckEquals(ord(ftSmallInt), ord(Query.Fields[7].DataType));
+    CheckEquals(ord(ftWord), ord(Query.Fields[7].DataType));
     {$ENDIF}
     CheckEquals('Vasia Pupkin', Query.Fields[2].AsString);
 
@@ -150,7 +150,7 @@ begin
     {$IFDEF WITH_FTBYTE}
     CheckEquals(ord(ftByte), ord(Query.Fields[7].DataType));
     {$ELSE}
-    CheckEquals(ord(ftSmallInt), ord(Query.Fields[7].DataType));
+    CheckEquals(ord(ftWord), ord(Query.Fields[7].DataType));
     {$ENDIF}
     CheckEquals('Vasia Pupkin', Query.Fields[2].AsString);
 

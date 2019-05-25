@@ -243,6 +243,12 @@ procedure OraWriteLob(const PlainDriver: TZOraclePlainDriver; const BlobData: Po
   @return the length of used bytes
 }
 function BCD2Nvu(const bcd: TBCD; num: POCINumber): SB2;
+
+{** Autor: EgonHugeist (EH)
+  converts a oracle number format into a <code>java.math.BigDecimal</code>;
+  @param num the pointer to a valid oracle number value which to be converted
+  @param bcd the <code>java.math.BigDecimal</code> value
+}
 procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
 
 
@@ -336,26 +342,6 @@ const
   NVUBase100Adjust: array[Boolean] of Byte = (1,101);
   VNU_NUM_INTState: array[Boolean] of TnvuKind = (vnuNegInt, vnuPosInt);
   VNU_NUM_CurState: array[Boolean] of TnvuKind = (vnuNegCurr, vnuPosCurr);
-  sPosScaleFaktor: array[0..18] of Int64 = (
-      1,
-      10,
-      100,
-      1000,
-      10000,
-      100000,
-      1000000,
-      10000000,
-      100000000,
-      1000000000,
-      10000000000,
-      100000000000,
-      1000000000000,
-      10000000000000,
-      100000000000000,
-      1000000000000000,
-      10000000000000000,
-      100000000000000000,
-      1000000000000000000);
   sCurrScaleFaktor: array[0..4] of Integer = (
       1,
       10,
@@ -526,7 +512,7 @@ begin
     Result := Result * 100 - (101 - num[i]);
   I := (vnuInfo.Len-1)*2;
   if I <= vnuInfo.Precision then
-    Result := Result * sPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+    Result := Result * I64Table[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -878,80 +864,96 @@ Done: //job done -> finalize
   num^[0] := Result - 1;
 end;
 
-// Conversions
-// original Autor might be Joost van der Sluis
-// Code is from oracleconnection.pp of FPC
+{** Autor: EgonHugeist (EH) *}
 procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
-var
-  i,j       : integer;
-  bb,size   : byte;
-  exp       : shortint;
-  nibbles   : array [0..MaxFMTBcdFractionSize-1] of byte;
-  scale     : integer;
+var bb,size   : byte;
+  Exp       : SmallInt;
+  Scale, Precision: integer;
+  Positive, HalfNibbles :Boolean;
+  pNibble, pFirstNuDigit, pNuDigits, pNuEndDigit: PAnsiChar;
+label zero;
 begin
-  size := num[0];
-  if (size=1) and (num[1]=$80) then begin// special representation for 0
-    //bcd:=IntegerToBCD(0)
-    FillChar(bcd, SizeOf(bcd), #0);
-    bcd.Precision := 10;
-    bcd.SignSpecialPlaces := 2;
+  FillChar(bcd, SizeOf(bcd), #0);
+  Size := num[0];
+  bb := num[1];
+  if (Size=1) and ((bb=$80) or (bb=$c1)) then
+    goto Zero; //fpc zero bcd returns '000.00' if default precision is 10 and scale is 2
+  if ((Size=1) and (bb = 0) {neg infinity}) or
+     ((Size=2) and (bb = 255) and (num[2] = 101) {pos infinity}) then
     Exit;
+  Positive := (bb and $80)=$80;
+  if Positive
+  then exp := (bb and $7f)-65
+  else begin
+    exp := (not(bb) and $7f)-65;
+    if Num[Size] = 102 then//last byte does not count if 102
+      Dec(Size);
   end;
-  bcd.SignSpecialPlaces := 0; //sign positive, non blank, scale 0
-  //bcd.Precision:=1;         //BCDNegate works only if Precision <>0
-  if (num[1] and $80)=$80 then begin// then the number is positive
-    exp := (num[1] and $7f)-65;
-    for i := 0 to size-2 do begin
-      bb := num[i+2]-1;
-      nibbles[i*2]:=bb div 10;
-      nibbles[i*2+1]:=(bb mod 10);
-    end;
+  if exp < 0 then begin
+    exp := Abs(exp);
+    pNibble := @bcd.Fraction[exp - 1] ;
+    Precision := (exp - 1) shl 1 + (Size - 1) shl 1;
+    Scale := Precision;
   end else begin
-    bcd.SignSpecialPlaces := bcd.SignSpecialPlaces xor $80; //BCDNegate(bcd);
-    exp := (not(num[1]) and $7f)-65;
-    if num[size]=102 then  // last byte doesn't count if = 102
-      dec(Size);//size:=size-1;
-    for i := 0 to size-2 do begin
-      bb := 101-num[i+2];
-      nibbles[i*2] := bb div 10;
-      nibbles[i*2+1] := (bb mod 10);
+    pNibble := @bcd.Fraction[0];
+    if exp >= (Size - 1) then begin //int range ?
+      Precision := (exp + 1) shl 1;
+      Scale := 0;
+    end else begin
+      Precision := (Size - 1) shl 1;
+      Scale := Precision - (exp + 1) shl 1;
     end;
   end;
-  nibbles[(size-1)*2] := 0;
-  bcd.Precision:=(size-1)*2;
-  scale := bcd.Precision-(exp*2+2);
-  if scale>=0 then begin
-    if (scale > bcd.Precision) then begin // need to add leading 0s
-      for i:=0 to (scale-bcd.Precision+1) div 2 do
-        bcd.Fraction[i]:=0;
-      i:=scale-bcd.Precision;
-      bcd.Precision:=scale;
+  HalfNibbles := False;
+  pFirstNuDigit := @num[2];
+  pNuEndDigit := @num[Size];
+  { padd leading double zeroes away }
+  while (Precision > Scale +1) and ( pFirstNuDigit <= pNuEndDigit) and
+        (PByte(pFirstNuDigit)^ =NVUBase100Adjust[Positive]) do begin
+    Dec(Precision, 2);
+    Inc(pFirstNuDigit);
+  end;
+  pNuDigits := pFirstNuDigit;
+  { padd traling double zeroes away }
+  while (Scale > 2 ) and ( pNuDigits <= pNuEndDigit) and
+        (PByte(pNuEndDigit)^ =NVUBase100Adjust[Positive]) do begin
+    Dec(Scale, 2);
+    Dec(pNuEndDigit);
+  end;
+  if pNuDigits > pNuEndDigit then goto zero;
+  { fill the bcd }
+  while (pNuDigits <= pNuEndDigit) do begin
+    if Positive
+    then bb := PByte(pNuDigits)^ - 1
+    else bb := 101 - PByte(pNuDigits)^;
+    bb := ZSysUtils.ZBase100Byte2BcdNibbleLookup[BB];
+    if (pFirstNuDigit = pNuDigits) and (bb shr 4 = 0) then begin //first digit decides if we pack left
+      if (Precision > Scale) then
+        Dec(Precision);
+      PByte(PNibble)^ := (bb and $0f) shl 4;
+      HalfNibbles := True;
+      Inc(pNuDigits);
+      Continue;
+    end;
+    if (pNuDigits = pNuEndDigit) and { padd possible trailing !last! zero away }
+          (Scale > 0) and ((bb and $0F) = 0) then begin
+      Dec(Precision);
+      Dec(Scale);
+    end;
+    if HalfNibbles then begin
+      PByte(PNibble)^ := PByte(PNibble)^ or (bb shr 4);
+      PByte(PNibble+1)^ := (bb and $0f) shl 4;
     end else
-      i:=0;
-    j:=i;
-    if (i=0) and (nibbles[0]=0) then begin// get rid of leading zero received from oci
-      bcd.Precision:=bcd.Precision-1;
-      j:=-1;
-    end;
-    while i<=bcd.Precision do begin// copy nibbles
-      if i mod 2 =0
-      then bcd.Fraction[i div 2]:=nibbles[i-j] shl 4
-      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i-j];
-      Inc(i);//i:=i+1;
-    end;
-    bcd.SignSpecialPlaces:=bcd.SignSpecialPlaces or scale;
-  end else begin // add trailing zeroes, increase precision to take them into account
-    i:=0;
-    while i<=bcd.Precision do begin// copy nibbles
-      if i mod 2 =0
-      then bcd.Fraction[i div 2]:=nibbles[i] shl 4
-      else bcd.Fraction[i div 2]:=bcd.Fraction[i div 2] or nibbles[i];
-      Inc(i);//i:=i+1;
-    end;
-    bcd.Precision:=bcd.Precision-scale;
-    for i := size -1 to High(bcd.Fraction) do
-      bcd.Fraction[i] := 0;
+      PByte(PNibble)^ := bb;
+    Inc(pNuDigits);
+    Inc(pNibble);
   end;
+  if Positive
+  then Bcd.SignSpecialPlaces := Byte(Scale)
+  else Bcd.SignSpecialPlaces := Byte(Scale) or $80;
+  if Precision = 0 then
+zero: Bcd.Precision := 1
+  else Bcd.Precision := Byte(Precision);
 end;
 
 {**
@@ -1183,7 +1185,7 @@ begin
         DataType := SQLT_INT;
         case DataSize of
           SizeOf(Int64):    Result := stLong;
-          SizeOf(LongInt):  Result := stInteger;
+          SizeOf(Integer):  Result := stInteger;
           SizeOf(SmallInt): Result := stSmall;
           SizeOf(ShortInt): Result := stShort;
           else begin

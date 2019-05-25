@@ -2367,6 +2367,8 @@ begin
   end;
 end;
 
+type
+  THackQuery = class(TZAbstractRODataSet);
 // Test if fields got the right types - the simplest method is to try
 // assigning boundary values (range checking must be enabled)
 procedure TZGenericTestDataSet.TestInsertNumbers;
@@ -2430,17 +2432,21 @@ begin
           {$ENDIF}
           ftSmallint:
             begin
-              // If RTL has no 1-byte field types, they will be mapped to SmallInt
-              // so this test will fail on such fields.
-              {$IF DEFINED(WITH_FTSHORTINT) AND DEFINED(WITH_FTBYTE)}
+            if THackQuery(Query).ResultSet.GetMetadata.GetColumnType(FirstDbcIndex +1) = stSmall then begin
               TestSetValue(Low(SmallInt));
               TestSetValue(High(SmallInt));
-              {$IFEND}
+            end else if THackQuery(Query).ResultSet.GetMetadata.GetColumnType(FirstDbcIndex +1) = stByte then begin
+              TestSetValue(Low(ShortInt));
+              TestSetValue(High(ShortInt));
+            end;
             end;
           ftWord:
-            begin
+            if THackQuery(Query).ResultSet.GetMetadata.GetColumnType(FirstDbcIndex +1) = stWord then begin
               TestSetValue(Low(Word));
               TestSetValue(High(Word));
+            end else if THackQuery(Query).ResultSet.GetMetadata.GetColumnType(FirstDbcIndex +1) = stByte then begin
+              TestSetValue(Low(Byte));
+              TestSetValue(High(Byte));
             end;
           ftInteger:
             begin
@@ -2455,9 +2461,12 @@ begin
             end;
           {$ENDIF}
           ftLargeint:
-            begin
+            if THackQuery(Query).ResultSet.GetMetadata.GetColumnType(FirstDbcIndex +1) = stLong then begin
               TestSetValue(Low(Int64));
               TestSetValue(High(Int64));
+            end else if THackQuery(Query).ResultSet.GetMetadata.GetColumnType(FirstDbcIndex +1) = stLongWord then begin
+              TestSetValue(Low(Cardinal));
+              TestSetValue(High(Cardinal));
             end;
         end;
     except on E: Exception do

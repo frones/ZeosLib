@@ -105,6 +105,8 @@ type
   end;
 
   TZSQLiteCAPIPreparedStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZPreparedStatement)
+  private
+    procedure CheckBindError({Index, }ErrorCode: Integer);
   public
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
@@ -283,7 +285,8 @@ begin
                     then Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, BindVal.Value, Length(RawByteString(BindVal.Value)), nil)
                     else Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, PZCharRec(BindVal.Value).P, PZCharRec(BindVal.Value).Len, nil);
         stInteger:  Errorcode := FPlainDriver.sqlite3_bind_int(FStmtHandle, I +1, PInteger(BindList._4Bytes[I])^);
-        stLong:     Errorcode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, I +1, PInt64(BindList._8Bytes[I])^);
+        stLong,
+        stCurrency: Errorcode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, I +1, PInt64(BindList._8Bytes[I])^);
         stDouble:   Errorcode := FPlainDriver.sqlite3_bind_Double(FStmtHandle, I +1, PDouble(BindList._8Bytes[I])^);
         stBytes:    if BindVal.BindType = zbtBytes
                     then Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, I +1, BindVal.Value, Length(TBytes(BindVal.Value)), nil)
@@ -545,14 +548,33 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+procedure TZSQLiteCAPIPreparedStatement.CheckBindError(//Index,
+  ErrorCode: Integer);
+begin
+  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+end;
+
 procedure TZSQLiteCAPIPreparedStatement.SetBigDecimal(ParameterIndex: Integer;
   const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+{$IFDEF BCD_TEST}
+var ErrorCode, L: Integer;
+  P: PAnsiChar;
 begin
-  {$IFDEF BCD_TEST}
-  SetDouble(ParameterIndex, BCDToDouble(Value));
-  {$ELSE}
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  if FBindLater or FHasLoggingListener
+  then BindList.Put(ParameterIndex, Value)
+  else CheckParameterIndex(ParameterIndex);
+  if not FBindLater then begin
+    P := BindList.AquireCustomValue(ParameterIndex, stBigDecimal, MaxFmtBCDFractionSize+3{#0});
+    L := BCDToRaw(Value, P, '.');
+    ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, ParameterIndex+1, P, l, nil);
+    if ErrorCode <> SQLITE_OK then CheckBindError(ErrorCode);
+  end else
+    FLateBound := True;
+{$ELSE}
+begin
   SetDouble(ParameterIndex, Value);
-  {$ENDIF}
+{$ENDIF}
 end;
 
 {**
@@ -595,8 +617,18 @@ end;
 }
 procedure TZSQLiteCAPIPreparedStatement.SetCurrency(ParameterIndex: Integer;
   const Value: Currency);
+var ErrorCode: Integer;
+  i64: Int64 absolute Value;
 begin
-  SetDouble(ParameterIndex, Value);
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  if FBindLater or FHasLoggingListener
+  then BindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value))
+  else CheckParameterIndex(ParameterIndex);
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, ParameterIndex+1, i64);
+    if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
+  end else
+    FLateBound := True;
 end;
 
 {**
@@ -616,8 +648,7 @@ begin
   else CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if ErrorCode <> SQLITE_OK then
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
   end else
     FLateBound := True;
 end;
@@ -652,8 +683,7 @@ begin
   else CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int(FStmtHandle, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if ErrorCode <> SQLITE_OK then
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
   end else
     FLateBound := True;
 end;
@@ -675,8 +705,7 @@ begin
   else CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if ErrorCode <> SQLITE_OK then
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
   end else
     FLateBound := True;
 end;
@@ -698,8 +727,7 @@ begin
   then BindList.SetNull(ParameterIndex, SQLType);
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_null(FStmtHandle, ParameterIndex +1);
-    if ErrorCode <> SQLITE_OK then
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
   end else
     FLateBound := True;
 end;

@@ -139,8 +139,8 @@ function GetMinorVersion(const Value: string): Word;
 //macros from datetime.c
 function date2j(y, m, d: Integer): Integer;
 procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
-procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: LongWord); overload;
-procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: LongWord); overload;
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: Cardinal); overload;
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: Cardinal); overload;
 
 procedure DateTime2PG(const Value: TDateTime; out Result: Int64); overload;
 procedure DateTime2PG(const Value: TDateTime; out Result: Double); overload;
@@ -152,11 +152,11 @@ procedure Time2PG(const Value: TDateTime; out Result: Double); overload;
 
 function PG2DateTime(Value: Double): TDateTime; overload;
 procedure PG2DateTime(Value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord); overload;
+  out fsec: Cardinal); overload;
 
 function PG2DateTime(Value: Int64): TDateTime; overload;
 procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord); overload;
+  out fsec: Cardinal); overload;
 
 function PG2Time(Value: Double): TDateTime; overload;
 function PG2Time(Value: Int64): TDateTime; overload;
@@ -196,6 +196,13 @@ function PGNumeric2Currency(P: Pointer): Currency;
 procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
 
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
+
+{** written by EgonHugeist
+  converts a postgres numeric value into a bigdecimal value
+  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
+  @param Src the pointer to a postgres numeric value
+  @param Dst the result value to be converted
+}
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 
 function PGCash2Currency(P: Pointer): Currency; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
@@ -846,7 +853,7 @@ end;
 
 procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
 var
-  julian, quad, extra: LongWord;
+  julian, quad, extra: Cardinal;
   y: Integer;
 begin
   julian := jd;
@@ -893,7 +900,7 @@ end;
 
 {$IFNDEF ENDIAN_BIG}
 procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-var W: LongWord;
+var W: Cardinal;
 begin
   W := PLongWord(P)^;
   PByteArray(P)[0] := PByteArray(P)[7];
@@ -939,7 +946,7 @@ end;
 function PG2DateTime(Value: Double): TDateTime;
 var date: TDateTime;
   Year, Month, Day, Hour, Min, Sec: Word;
-  fsec: LongWord;
+  fsec: Cardinal;
 begin
   PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
   TryEncodeDate(Year, Month, Day, date);
@@ -949,7 +956,7 @@ begin
 end;
 
 procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord);
+  out fsec: Cardinal);
 var
   date: Double;
   time: Double;
@@ -975,7 +982,7 @@ end;
 function PG2DateTime(Value: Int64): TDateTime;
 var date: TDateTime;
   Year, Month, Day, Hour, Min, Sec: Word;
-  fsec: LongWord;
+  fsec: Cardinal;
 begin
   PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
   if not TryEncodeDate(Year, Month, Day, date) then
@@ -986,7 +993,7 @@ begin
 end;
 
 procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: LongWord);
+  out fsec: Cardinal);
 var date: Int64;
 begin
   {$IFNDEF ENDIAN_BIG}
@@ -1003,7 +1010,7 @@ begin
   dt2time(Value, Hour, Min, Sec, fsec);
 end;
 
-procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: LongWord);
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: Cardinal);
 begin
   Hour := jd div USECS_PER_HOUR;
   jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
@@ -1013,7 +1020,7 @@ begin
   Fsec := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
 end;
 
-procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: LongWord);
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: Cardinal);
 begin
   Hour := Trunc(jd / SECS_PER_HOUR);
   jd := jd - Hour * SECS_PER_HOUR;
@@ -1045,7 +1052,7 @@ begin
 end;
 
 function PG2Time(Value: Double): TDateTime;
-var Hour, Min, Sec: Word; fsec: LongWord;
+var Hour, Min, Sec: Word; fsec: Cardinal;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
@@ -1056,7 +1063,7 @@ begin
 end;
 
 function PG2Time(Value: Int64): TDateTime;
-var Hour, Min, Sec: Word; fsec: LongWord;
+var Hour, Min, Sec: Word; fsec: Cardinal;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
@@ -1454,12 +1461,20 @@ Done:
   Size := (pWords - Dst); //return size in bytes
 end;
 
+{** written by EgonHugeist
+  converts a postgres numeric value into a bigdecimal value
+  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
+  @param Src the pointer to a postgres numeric value
+  @param Dst the result value to be converted
+}
+{$Q-} {$R-} //else my shift fail
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 var
-  i, NBASEDigitsCount, Weight, Precision, Scale: Integer;
+  i, NBASEDigitsCount, Weight, Precision, Scale, Digits: Integer;
   NBASEDigit, FirstNibbleDigit: Word;
   pNibble, pLastNibble: PAnsiChar;
-label DecOne, ZeroBCD, FourNibbles, Loop, Done;
+  HalfNibbles: Boolean; //fpc compare fails in all areas if not strict left padded
+label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3;
 begin
   FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
   NBASEDigitsCount := PG2Word(Src);
@@ -1494,62 +1509,74 @@ ZeroBCD:
     Precision := (I - 1) * BASE1000Digits;
     Scale := Precision;
   end else begin
-    Precision := 0;
-    Scale := 0;
+    Precision := NBASEDigitsCount * BASE1000Digits;
+    Scale := (NBASEDigitsCount-(Weight + 1)) * BASE1000Digits;
   end;
-  //process first base-digit -> pack nibbles left  i.e. '0001' will be '01' half nibbles i do ignore @t.moment..
+  //process first base-digit -> pack nibbles top most left  i.e. '0001' will be '1'
   NBASEDigit := PG2Word(Src); //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
+  HalfNibbles := False;
   if FirstNibbleDigit > 0 then begin
-    I := 0;
-    goto FourNibbles;
-  end else begin
+    if NBASEDigit > 999 then begin
+      I := 0;
+      goto FourNibbles
+    end else begin
+      HalfNibbles := True;
+      NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)]; //mod 100
+      FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+      PByte(pNibble  )^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
+      PByte(pNibble+1)^ := Byte(NBASEDigit) shl 4;
+      Inc(pNibble);
+Final3: Digits := 3;
+    end;
+  end else if NBASEDigit > 9 then begin
     PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
-    Inc(Precision, 2);
-    if 0 > Weight then Inc(Scale, 2);
-    if NBASEDigitsCount > 1
-    then Inc(pNibble)
-    else goto done;
-    I := 1;
+Final2: Digits := 2;
+  end else begin
+    HalfNibbles := True;
+    PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
+    Digits := 1;
   end;
+  Dec(Precision, BASE1000Digits-Digits);
+  if (NBASEDigitsCount = 1) or (pNibble = pLastNibble)
+  then goto done;
+  if not HalfNibbles then Inc(pNibble);
+  I := 1;
 Loop:
-  NBASEDigit := PG2Word(Src+i*SizeOf(Word)); //each digit is a base 10000 digit -> 0..9999
+  NBASEDigit := PG2Word(Src+(i shl 1)); //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
 FourNibbles:
-  PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
-  PByte(pNibble+1)^ := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)];
-  Inc(Precision, BASE1000Digits);
-  if i > Weight then //if weight is negative or offset reached Weight +1
-    Inc(Scale, BASE1000Digits);
+  NBASEDigit := NBASEDigit - (FirstNibbleDigit * 100); //mod 100
+  NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit] {shl 8}; //move lookup 2 half bytes forward
+  FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+  if HalfNibbles then begin
+    PByte(pNibble  )^ := PByte(pNibble)^ or Byte(FirstNibbleDigit shr 4);
+    PByte(pNibble+1)^ := Byte((FirstNibbleDigit) shl 4) or Byte(NBASEDigit shr 4);
+    if pNibble < pLastNibble
+    then PByte(pNibble+2)^ := Byte(NBASEDigit) shl 4
+    else goto Final3;  //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
+  end else if pNibble < pLastNibble
+    then PWord(pNibble)^   := (NBASEDigit shl 8) or FirstNibbleDigit
+    else begin
+      PByte(pNibble)^   := FirstNibbleDigit;
+      goto Final2;  //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
+    end;
   if pNibble < pLastNibble
   then Inc(pNibble, 1+Ord(I<NBASEDigitsCount-1)) //keep offset of pNibble to lastnibble if loop end reached
-  else begin
-    pNibble := pLastNibble +1;
-    goto Done; //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
-  end;
+  else goto Done; //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
   Inc(I);
-  if I >= NBASEDigitsCount
-  then goto Done
-  else goto Loop;
+  if I < NBASEDigitsCount then
+    goto Loop;
 Done:
-  if (Scale > 0) then begin
-    if (pNibble <= pLastNibble) then begin
-      pLastNibble := pNibble;
-      pNibble := @Dst.Fraction[0]; // trim trailing zeros
-      while (Scale > 0) and (pLastNibble>=pNibble)  do begin
-        if PByte(pLastNibble)^ = 0 then begin
-          if Scale > 1 then begin
-            Dec(Precision, 2);
-            Dec(Scale, 2)
-          end else
-            goto DecOne;
-          Dec(pLastNibble);
-        end else if (PByte(pLastNibble)^ and $0F) = 0 then begin
-  DecOne: Dec(Precision);
-          Dec(Scale);
-          Break;
-        end else Break;
-      end;
+  if (Scale > 0) then begin  //padd trailing zeroes away
+    pLastNibble := PAnsiChar(@Dst.Fraction[0])+(Precision shr 1);//  pNibble + Ord(HalfNibbles);
+    for I := Precision downto (Precision-Scale) do begin
+      if (Scale > 0) and ((i and 1 = 1) and (PByte(pLastNibble)^ shr 4 = 0) or (i and 1 = 0) and (PByte(pLastNibble-1)^ and $0F = 0)) then begin
+        Dec(Precision);
+        Dec(Scale);
+      end else Break;
+      if (i and 1 = 0) then
+        Dec(PLastNibble)
     end;
     if Scale > 0 then
       if Dst.SignSpecialPlaces = $80
@@ -1558,6 +1585,8 @@ Done:
   end;
   Dst.Precision := Max(Precision, 1);
 end;
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 function PGCash2Currency(P: Pointer): Currency;
 var i64: Int64 absolute Result;

@@ -162,7 +162,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, Math,
+  Variants, Math, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}{$IFNDEF FPC}Windows{inline},{$ENDIF}
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
@@ -570,6 +570,9 @@ var
   Stream: TStream;
   Temp: OleVariant;
   RC: OleVariant;
+  BD: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+  PD: PDecimal;
+  L: NativeUInt;
 begin
   if Not Prepared then Prepare;
   BindInParameters;
@@ -583,7 +586,7 @@ begin
     Exit;
  // AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
  // LastUpdateCount := RC;
-  
+
   SetLength(IndexAlign, 0);
   ColumnsInfo := TObjectList.Create(True);
   Stream := nil;
@@ -594,12 +597,10 @@ begin
     try
       for I := 0 to FAdoCommand.Parameters.Count -1 do
         if FAdoCommand.Parameters.Item[i].Direction in [adParamOutput,
-          adParamInputOutput, adParamReturnValue] then
-      begin
+          adParamInputOutput, adParamReturnValue] then begin
         SetLength(IndexAlign, Length(IndexAlign)+1);
         ColumnInfo := TZColumnInfo.Create;
-        with ColumnInfo do
-        begin
+        with ColumnInfo do begin
           {$IFNDEF UNICODE}
           ColumnLabel := PUnicodeToString(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
           {$ELSE}
@@ -615,82 +616,73 @@ begin
       end;
 
       RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
-      with RS do
-      begin
+      with RS do begin
         SetType(rtScrollInsensitive);
         SetConcurrency(rcReadOnly);
         RS.MoveToInsertRow;
-        for i := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-        begin
-          Temp := FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value;
-          case TZColumnInfo(ColumnsInfo[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
-            stBoolean:
-              RS.UpdateBoolean(i, Temp);
-            stByte:
-              RS.UpdateByte(i, Temp);
-            stShort:
-              RS.UpdateShort(i, Temp);
-            stWord:
-              RS.UpdateWord(i, Temp);
-            stSmall:
-              RS.UpdateSmall(i, Temp);
-            stLongWord:
-              RS.UpdateUInt(i, Temp);
-            stInteger:
-              RS.UpdateInt(i, Temp);
-            stULong:
-              RS.UpdateULong(i, Temp);
-            stLong:
-              RS.UpdateLong(i, Temp);
-            stFloat, stDouble, stBigDecimal:
-              RS.UpdateFloat(i, Temp);
-            stString:
-              RS.UpdateString(i, Temp);
-            stAsciiStream:
-              begin
-                Stream := TStringStream.Create(AnsiString(Temp));
-                RS.UpdateAsciiStream(I, Stream);
-                FreeAndNil(Stream);
-              end;
-            stUnicodeString:
-              RS.UpdateUnicodeString(i, Temp);
-            stUnicodeStream:
-              begin
-                Stream := StreamFromData(WideString(Temp));
-                RS.UpdateUnicodeStream(I, Stream);
-                FreeAndNil(Stream);
-              end;
-            stBytes:
-              RS.UpdateBytes(i, Temp);
-            stDate:
-              RS.UpdateDate(i, Temp);
-            stTime:
-              RS.UpdateTime(i, Temp);
-            stTimestamp:
-              RS.UpdateTimestamp(i, Temp);
-            stBinaryStream:
-              begin
-                if VarIsStr(Temp) then
-                begin
-                  Stream := TStringStream.Create(AnsiString(Temp));
-                  RS.UpdateBinaryStream(I, Stream);
-                  FreeAndNil(Stream);
-                end
-                else
-                  if VarIsArray(Temp) then
-                  begin
-                    P := VarArrayLock(Temp);
-                    try
-                      Stream := StreamFromData(P, VarArrayHighBound(Temp, 1)+1);
-                      RS.UpdateBinaryStream(I, Stream);
-                      FreeAndNil(Stream);
-                    finally
-                      VarArrayUnLock(Temp);
-                    end;
-                  end;
-              end
-            else
-              RS.UpdateNull(i);
+        for i := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
+          with FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]],
+             TZColumnInfo(ColumnsInfo[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+            Temp := Value;
+            case tagVariant(Temp).vt of
+              VT_NULL, VT_EMPTY: ;
+              VT_BOOL:        RS.UpdateBoolean(i, tagVARIANT(Temp).vbool);
+              VT_UI1:         RS.UpdateByte(i, tagVARIANT(Temp).bVal);
+              VT_UI2:         RS.UpdateWord(i, tagVARIANT(Temp).uiVal);
+              VT_UI4:         RS.UpdateUInt(i, tagVARIANT(Temp).ulVal);
+              VT_UINT:        RS.UpdateUInt(i, tagVARIANT(Temp).uintVal);
+              VT_I1:          RS.UpdateShort(i, ShortInt(tagVARIANT(Temp).cVal));
+              VT_I2:          RS.UpdateSmall(i, tagVARIANT(Temp).iVal);
+              VT_I4:          RS.UpdateInt(i, tagVARIANT(Temp).lVal);
+              VT_INT,
+              VT_HRESULT:     RS.UpdateInt(i, tagVARIANT(Temp).intVal);
+              VT_ERROR:       RS.UpdateInt(i, tagVARIANT(Temp).scode);
+              VT_I8:          RS.UpdateLong(i, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).llVal{$ELSE}PInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
+              VT_UI8:         RS.UpdateULong(i, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).ullVal{$ELSE}PUInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
+              VT_R4:          RS.UpdateFloat(i, tagVARIANT(Temp).fltVal);
+              VT_R8:          RS.UpdateDouble(i, tagVARIANT(Temp).dblVal);
+              VT_CY:          RS.UpdateCurrency(i, tagVARIANT(Temp).cyVal);
+              VT_DATE:        RS.UpdateTimeStamp(i, tagVARIANT(Temp).date);
+              VT_BSTR:        begin
+                                L := PLongInt(PAnsiChar(tagVARIANT(Temp).bstrVal)-SizeOf(LongInt))^ shr 1; //fpc has no SysStringLen -> improve
+                                RS.UpdatePWideChar(i, tagVARIANT(Temp).bstrVal, L);
+                              end;
+              VT_DECIMAL:     begin
+                                PD := @Temp;
+                                if Ord(ColumnType) <= Ord(stULong) then
+                                  if PD.Sign > 0
+                                  then RS.UpdateLong(i, -UInt64(PD.Lo64))
+                                  else RS.UpdateULong(I, UInt64(PD.Lo64))
+                                else begin
+                                  {$IFDEF BCD_TEST}
+                                  ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.Scale, BD, PD.Sign > 0);
+                                  {$ELSE}
+                                  if PD.Scale > 0
+                                  then BD := UInt64(PD.Lo64) / i64Table[Pd.Scale]
+                                  else BD := UInt64(PD.Lo64);
+                                  if PD.Sign > 0 then
+                                    BD := -BD;
+                                  {$ENDIF}
+                                  RS.UpdateBigDecimal(i, BD);
+                                end;
+                              end;
+              else            case Type_ of
+                                adBinary,
+                                adVarBinary: RS.UpdateBytes(i, VarToBytes(Temp));
+                                adLongVarBinary:
+                                    if VarIsArray(Temp) then begin
+                                      P := VarArrayLock(Temp);
+                                      try
+                                        Stream := StreamFromData(P, VarArrayHighBound(Temp, 1)+1);
+                                        RS.UpdateBinaryStream(I, Stream);
+                                        FreeAndNil(Stream);
+                                      finally
+                                        VarArrayUnLock(Temp);
+                                      end;
+                                    end;
+                                else UpdateNull(I); //debug -> not required
+                              end;
+            end;
           end;
         end;
         RS.InsertRow;
@@ -792,71 +784,93 @@ begin
   inherited;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
   Temp: OleVariant;
   P: Pointer;
   TempBlob: IZBLob;
+  PD: PDecimal;
+  L: LengthInt;
 begin
-
   if ParameterIndex > OutParamCount then
     Result := NullVariant
-  else
-  begin
-    Temp := FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-
-    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Type_,
-      FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Precision,
-      FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].NumericScale, ConSettings.CPType) of
-      stBoolean:
-        ClientVarManager.SetAsBoolean(Result, Temp);
-      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
-        ClientVarManager.SetAsInteger(Result, Temp);
-      {$IFDEF BCD_TEST}
-      stFloat, stDouble: ClientVarManager.SetAsDouble(Result, Temp);
-      stCurrency:        ClientVarManager.SetAsCurrency(Result, Temp);
-      stBigDecimal:      ClientVarManager.SetAsDouble(Result, Temp);
-      {$ELSE}
-      stFloat, stDouble, stCurrency, stBigDecimal:
-        ClientVarManager.SetAsFloat(Result, Temp);
-      {$ENDIF}
-      stGUID:
-        ClientVarManager.SetAsString(Result, Temp);
-      stString, stAsciiStream:
-        ClientVarManager.SetAsString(Result, Temp);
-      stUnicodeString, stUnicodeStream:
-        ClientVarManager.SetAsUnicodeString(Result, Temp);
-      stBytes:
-        ClientVarManager.SetAsBytes(Result, VarToBytes(Temp));
-      stDate, stTime, stTimestamp:
-        ClientVarManager.SetAsDateTime(Result, Temp);
-      stBinaryStream:
-        begin
-          if VarIsStr(Temp) then
-          begin
-            TempBlob := TZAbstractBlob.CreateWithStream(nil);
-            TempBlob.SetString(AnsiString(Temp));
-          end
-          else
-            if VarIsArray(Temp) then
-            begin
-              P := VarArrayLock(Temp);
-              try
-                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(Temp, 1)+1);
-              finally
-                VarArrayUnLock(Temp);
-              end;
-            end;
-          ClientVarManager.SetAsInterface(Result, TempBlob);
-          TempBlob := nil;
-        end
-      else
-        ClientVarManager.SetNull(Result);
+  else with FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
+    Temp := Value;
+    case tagVARIANT(Temp).vt of
+      VT_NULL, VT_EMPTY: ClientVarManager.SetNull(Result);
+      VT_BOOL:        ClientVarManager.SetAsBoolean(Result, tagVARIANT(Temp).vbool);
+      VT_UI1:         ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).bVal);
+      VT_UI2:         ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).uiVal);
+      VT_UI4:         ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).ulVal);
+      VT_UINT:        ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).uintVal);
+      VT_I1:          ClientVarManager.SetAsInteger(Result, ShortInt(tagVARIANT(Temp).cVal));
+      VT_I2:          ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).iVal);
+      VT_I4:          ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).lVal);
+      VT_INT,
+      VT_HRESULT:     ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).intVal);
+      VT_ERROR:       ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).scode);
+      VT_I8:          ClientVarManager.SetAsInteger(Result, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).llVal{$ELSE}PInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
+      VT_UI8:         ClientVarManager.SetAsUInteger(Result, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).ullVal{$ELSE}PUInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
+      VT_R4:          ClientVarManager.{$IFDEF BCD_TEST}SetAsDouble{$ELSE}SetAsFloat{$ENDIF}(Result, tagVARIANT(Temp).fltVal);
+      VT_R8:          ClientVarManager.{$IFDEF BCD_TEST}SetAsDouble{$ELSE}SetAsFloat{$ENDIF}(Result, tagVARIANT(Temp).dblVal);
+      VT_CY:          ClientVarManager.{$IFDEF BCD_TEST}SetAsCurrency{$ELSE}SetAsFloat{$ENDIF}(Result, tagVARIANT(Temp).cyVal);
+      VT_DATE:        ClientVarManager.SetAsDateTime(Result, tagVARIANT(Temp).date);
+      VT_BSTR:        begin
+                        ClientVarManager.SetNull(Result);
+                        L := PLongInt(PAnsiChar(tagVARIANT(Temp).bstrVal)-SizeOf(LongInt))^ shr 1; //fpc has no SysStringLen -> improve
+                        case type_ of
+                          adChar, adWChar:       L := ZDbcUtils.GetAbsorbedTrailingSpacesLen(tagVARIANT(Temp).bstrVal, L);
+                        end;
+                        if ConSettings.CPType = cCP_UTF16 then begin
+                          Result.VType := vtUnicodeString;
+                          System.SetString(Result.VUnicodeString, tagVARIANT(Temp).bstrVal, L);
+                        end else if ConSettings.CPType = cCP_UTF8 then begin
+                          Result.VType := vtUTF8String;
+                          Result.VUTF8String := PUnicodeToRaw(tagVARIANT(Temp).bstrVal, L, ConSettings.CTRL_CP);
+                        end else begin
+                          Result.VType := vtAnsiString;
+                          Result.VAnsiString := PUnicodeToRaw(tagVARIANT(Temp).bstrVal, L, ConSettings.CTRL_CP);
+                        end;
+                      end;
+      VT_DECIMAL:     begin
+                        PD := @Temp;
+                        ClientVarManager.SetNull(Result);
+                        {$IFDEF BCD_TEST}
+                        Result.VType := vtBigDecimal;
+                        ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.Scale, Result.VBigDecimal, PD.Sign > 0);
+                        {$ELSE}
+                        Result.VType := vtFloat;
+                        if PD.Scale > 0
+                        then Result.VFloat := UInt64(PD.Lo64) / i64Table[Pd.Scale]
+                        else Result.VFloat := UInt64(PD.Lo64);
+                        if PD.Sign > 0 then
+                          Result.VFloat := -Result.VFloat;
+                        {$ENDIF}
+                      end;
+      else            case Type_ of
+                        adBinary,
+                        adVarBinary: ClientVarManager.SetAsBytes(Result, VarToBytes(Temp));
+                        adLongVarBinary: begin
+                            TempBlob := nil;
+                            if VarIsArray(Temp) then begin
+                              P := VarArrayLock(Temp);
+                              try
+                                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(Temp, 1)+1);
+                              finally
+                                VarArrayUnLock(Temp);
+                              end;
+                            end;
+                            ClientVarManager.SetAsInterface(Result, TempBlob);
+                            TempBlob := nil;
+                          end;
+                        else ClientVarManager.SetNull(Result);
+                      end;
     end;
   end;
-
-  LastWasNull := ClientVarManager.IsNull(Result) or VarIsNull(Temp) or VarIsClear(Temp);
+  LastWasNull := ClientVarManager.IsNull(Result);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZAdoCallableStatement.PrepareInParameters;
 var I: Integer;

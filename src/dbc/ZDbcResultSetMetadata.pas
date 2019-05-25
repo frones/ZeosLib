@@ -140,7 +140,7 @@ type
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
       const SelectSchema: IZSelectSchema); virtual;
     procedure FillColumInfoFromGetColumnsRS(ColumnInfo: TZColumnInfo;
-      const TableColumns: IZResultSet; const FieldName: String);
+      const TableColumns: IZResultSet; const FieldName: String); virtual;
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
     function ReadColumnByName(const FieldName: string; TableRef: TZTableRef;
@@ -320,11 +320,13 @@ begin
   else
     ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
   {Precision or column-size}
-  if not TableColumns.IsNull(TableColColumnSizeIndex) then
-    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+  //do not overwrite the precision until domain columns (pg) are handled correctly
+  //by uncachedgetcolumns
   {Scale}
-  if not TableColumns.IsNull(TableColColumnDecimalDigitsIndex) then
-    ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
+  //also do not overwrite the size until domain columns (pg) are handled correctly
+  //by uncachedgetcolumns -> see SF#353
+  //if not TableColumns.IsNull(TableColColumnDecimalDigitsIndex) then
+  //  ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
   {nullable}
   if not TableColumns.IsNull(TableColColumnNullableIndex) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));

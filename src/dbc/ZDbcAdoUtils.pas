@@ -168,6 +168,10 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
 
 procedure RefreshParameters(const AdoCommand: ZPlainAdo.Command; DirectionTypes: PDirectionTypes = nil);
 
+{$IFDEF BCD_TEST}
+procedure BCD2Decimal(const Value: TBCD; Dest: PDecimal);
+{$ENDIF}
+
 var
 {**
   Required to free memory allocated by oledb
@@ -260,7 +264,7 @@ begin
     adSingle: Result := stFloat;
     adDouble: Result := stDouble;
     adDecimal, adNumeric, adVarNumeric:
-        if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision < sAlignCurrencyScale2Precision[Scale])
+        if (Scale >= 0) and (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
         then Result := stCurrency
         else Result := stBigDecimal;
     adCurrency: Result := stCurrency;
@@ -339,20 +343,16 @@ begin
     varBoolean: Result := adBoolean;
     varVariant: Result := adVariant;
     varUnknown: Result := adIUnknown ;
-{$IFNDEF FPC}
     varShortInt: Result := adTinyInt;
-{$ENDIF}
     varByte: if (VT and varArray) <> 0 then Result := adLongVarBinary else Result := adUnsignedTinyInt;
-{$IFNDEF FPC}
     varWord: Result := adUnsignedSmallInt;
     varLongWord: Result := adUnsignedInt;
     varInt64: Result := adBigInt;
-{$ENDIF}
     varStrArg: Result := adWChar;
     varString: Result := adVarChar;
-{$IFDEF UNICODE}
+    {$IFDEF WITH_varUString}
     varUString: Result := adVarChar;
-{$ENDIF}
+    {$ENDIF}
     varAny: Result := adEmpty;
   else
     Result := adEmpty;
@@ -480,90 +480,88 @@ var
   S: Integer;
   B: IZBlob;
   V: OleVariant;
-  T: Integer;
+  T: DataTypeEnum;
   P: ZPlainAdo.Parameter;
   RetValue: TZVariant;
   TmpSQLType: TZSQLType;
 begin
+  //ActiveX.VariantInit(V);
+  V := null;
   RetValue:= Value;
   TmpSQLType := SQLType;
   if not (RetValue.VType = vtNull) and (RetValue.VType = vtInterface) and
-    (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
-  begin
+    (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then begin
     B := SoftVarManager.GetAsInterface(Value) as IZBlob;
-    if B.IsEmpty then
+    if (B = nil) or (B.IsEmpty) then
       RetValue := NullVariant
-    else
-      case SQLType of
-        stAsciiStream, stUnicodeStream:
-          if B.IsClob then
-          begin
-            SoftVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
-            TmpSQLType := stUnicodeString;
-          end
-          else
-          begin
-            if SQLType = stAsciiStream then
-            begin
-              {$IFDEF UNICODE}
-              SoftVarManager.SetAsString(RetValue, String(B.GetString));
-              {$ELSE}
-              SoftVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, Connection.GetConSettings));
-              {$ENDIF}
-              TmpSQLType := stString;
-            end
-            else
-            begin
-              B := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), 1200{zCP_UTF16}, Connection.GetConSettings);
-              SoftVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
-              TmpSQLType := stUnicodeString;
-            end;
-          end;
-        stBinaryStream:
-          begin
-            if Assigned(B) then
-              SoftVarManager.SetAsBytes(RetValue, B.GetBytes);
-            TmpSQLType := stBytes;
-          end;
-      end;
+    else case SQLType of
+      stAsciiStream, stUnicodeStream:
+        if B.IsClob then begin
+          SoftVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+          TmpSQLType := stUnicodeString;
+        end else if SQLType = stAsciiStream then begin
+          {$IFDEF UNICODE}
+          SoftVarManager.SetAsString(RetValue, String(B.GetString));
+          {$ELSE}
+          SoftVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, Connection.GetConSettings));
+          {$ENDIF}
+          TmpSQLType := stString;
+        end else begin
+          B := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), 1200{zCP_UTF16}, Connection.GetConSettings);
+          SoftVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+          TmpSQLType := stUnicodeString;
+        end;
+      stBinaryStream: begin
+          SoftVarManager.SetAsBytes(RetValue, B.GetBytes);
+          TmpSQLType := stBytes;
+        end;
+    end;
   end;
-
   case RetValue.VType of
-    vtNull: V := Null;
-    vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
+    vtNull: tagVariant(V).vt := VT_NULL;
+    vtBoolean: begin
+                tagVariant(V).vt := VT_BOOL;
+                tagVariant(V).vbool := RetValue.VBoolean;
+              end;
     vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
-    vtInteger: //V := SoftVarManager.GetAsInteger(RetValue);
-      if ParameterIndex <= ParamCount then
-      begin //Hacking the IDE variant: Not all IDE's support
-        P := AdoCommand.Parameters.Item[ParameterIndex - 1];
-        P.Direction := ParamDirection;
-        P.Type_ :=  adBigInt;
-        P.Value := SoftVarManager.GetAsInteger(RetValue);
-        Exit;
-      end
-      else
-        AdoCommand.Parameters.Append(AdoCommand.CreateParameter(
-          'P' + ZFastCode.IntToUnicode(ParameterIndex), adBigInt, ParamDirection,
-            0, SoftVarManager.GetAsInteger(RetValue)));
-    vtUInteger: //V := SoftVarManager.GetAsInteger(RetValue);
-      if ParameterIndex <= ParamCount then
-      begin //Hacking the IDE variant: Not all IDE's support
-        P.Direction := ParamDirection;
-        P.Type_ :=  adUnsignedBigInt;
-        P := AdoCommand.Parameters.Item[ParameterIndex - 1];
-        P.Value := SoftVarManager.GetAsUInteger(RetValue);
-        Exit;
-      end
-      else
-        AdoCommand.Parameters.Append(AdoCommand.CreateParameter(
-          'P' + ZFastCode.IntToUnicode(ParameterIndex), adUnsignedBigInt,
-            ParamDirection, 0, SoftVarManager.GetAsUInteger(RetValue)));
+    vtInteger: begin
+                tagVariant(V).vt := VT_I8;
+                {$IFDEF WITH_tagVARIANT_UINT64}
+                tagVariant(V).llVal := RetValue.VInteger;
+                {$ELSE}
+                PInt64(@tagVariant(V).cyVal)^ := RetValue.VInteger;
+                {$ENDIF}
+              end;
+    vtUInteger: begin
+                tagVariant(V).vt := VT_UI8;
+                {$IFDEF WITH_tagVARIANT_UINT64}
+                tagVariant(V).ullVal := RetValue.VUInteger;
+                {$ELSE}
+                PUInt64(@tagVariant(V).cyVal)^ := RetValue.VUInteger;
+                {$ENDIF}
+              end;
     {$IFDEF BCD_TEST}
-    vtCurrency: V := SoftVarManager.GetAsCurrency(RetValue);
-    vtDouble: V := SoftVarManager.GetAsDouble(RetValue);
-    vtBigDecimal: V := SoftVarManager.GetAsDouble(RetValue);
+    vtCurrency: begin
+                tagVariant(V).vt := VT_CY;
+                tagVariant(V).ullVal := RetValue.VCurrency;
+              end;
+    vtGUID: begin
+                tagVariant(V).vt := VT_CY;
+                tagVariant(V).ullVal := RetValue.VCurrency;
+              end;
+    vtDouble: begin
+                tagVariant(V).vt := VT_R8;
+                tagVariant(V).ullVal := RetValue.VDouble;
+              end;
+    vtBigDecimal: begin
+                tagVariant(V).vt := VT_DECIMAL;
+                BCD2Decimal(RetValue.VBigDecimal, @V);
+              end;
     {$ELSE}
-    vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
+    vtFloat: begin
+                tagVariant(V).vt := VT_R8;
+                tagVariant(V).dblVal := RetValue.VFloat;
+              end;
     {$ENDIF}
     vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
     begin
@@ -577,7 +575,7 @@ begin
   case TmpSQLType of
     stString, stUnicodeString:
       begin
-        S := Length(RetValue.VUnicodeString) shl 1; //strange! Need size in bytes!!
+        S := Length(RetValue.VUnicodeString) shl 1; //Need size in bytes not Words!
         if S = 0 then S := 1;
         //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
       end;
@@ -2456,6 +2454,58 @@ begin
     end;
   end;
 end;
+
+{$IFDEF BCD_TEST}
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure BCD2Decimal(const Value: TBCD; Dest: PDecimal);
+var
+  LastNibbleByteIDX, BCDScale, P, I, F: Byte;
+  i64: UInt64;
+  Negative, LastByteIsHalfByte: boolean;
+begin
+  LastNibbleByteIDX := (Value.Precision-1) shr 1;
+  F := Value.SignSpecialPlaces;
+  BCDScale := (F and 63);
+  Negative := (F and $80) = $80;
+  LastByteIsHalfByte := (Value.Precision and 1 = 1) or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
+  P := 0;
+  i64 := 0;
+  { scan for leading zeroes to skip them }
+  if LastNibbleByteIDX > 0 then begin
+    for I := 0 to LastNibbleByteIDX do begin
+      F := Value.Fraction[i];
+      if F = 0
+      then Inc(P)
+      else begin
+        i64 := ZBcdNibble2Base100ByteLookup[F];
+        Break;
+      end;
+    end
+  end;
+  { initialize the Result }
+  if P < LastNibbleByteIDX then begin
+    for I := P+1 to LastNibbleByteIDX-Ord(LastByteIsHalfByte) do
+      i64 := i64 * 100 + ZBcdNibble2Base100ByteLookup[Value.Fraction[i]];
+    { last half nibble byte}
+    if LastByteIsHalfByte then begin
+      i64 := i64 * 10 + Value.Fraction[P+LastNibbleByteIDX] shr 4;
+      if (BCDScale and 1 = 1) and (Value.Precision and 1 = 0) then
+        Dec(BCDScale);
+    end;
+    if negative then
+      Dest.Sign := 1;
+  end;
+  Desc.Scale := BCDScale;
+
+  UInt64(Dest.
+  {$IFDEF FPC}
+  PD.Lo64 := i64; //correct translated
+  {$else}
+  PUint64(@PD.Lo64)^ := i64;
+  {$ENDIF}
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+{$ENDIF}
 
 initialization
   OleCheck(CoGetMalloc(1, ZAdoMalloc));

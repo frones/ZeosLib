@@ -6323,49 +6323,17 @@ begin
 end;
 {$ENDIF}
 
-procedure HexFiller;
-var
-  I{$IFDEF NO_RAW_HEXTOBIN}, v{$ENDIF}: Byte;
-  Hex: String;
-begin
-  for i := Low(Byte) to High(Byte) do
-  begin
-    Hex := IntToHex(I, 2);
-    {$IFDEF UNICODE}
-    TwoDigitLookupHexLW[i] := PLongWord(Pointer(Hex))^;
-    TwoDigitLookupHexW[i] := PWord(Pointer(RawByteString(Hex)))^;
-    {$ELSE}
-    TwoDigitLookupHexW[i] := PWord(Pointer(Hex))^;
-    TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
-    {$ENDIF}
-  end;
-  {$IFDEF NO_RAW_HEXTOBIN}
-  //copy from Arnaud Bouchez syncommons.pas
-  Fillchar(ConvertHexToBin[0],SizeOf(ConvertHexToBin),255); // all to 255
-  V := 0;
-  for i := ord('0') to ord('9') do begin
-    ConvertHexToBin[i] := v;
-    inc(v);
-  end;
-  for i := ord('A') to ord('F') do begin
-    ConvertHexToBin[i] := v;
-    ConvertHexToBin[i+(ord('a')-ord('A'))] := v;
-    inc(v);
-  end;
-  {$ENDIF}
-end;
-
 {** EH:
    Encode a currency value to a TBCD
    @param value the currency to be converted
    @param Result the slow Delphi result bcd record to be filled
 }
+{$R-} {$Q-}
 procedure Currency2Bcd(const Value: Currency; var Result: TBCD);
 var V2: UInt64;
   iRec: Int64Rec absolute V2;
   Negative: Boolean;
 begin
-  {$R-} {$Q-}
   Negative := Value < 0;
   if Negative
   then V2 := UInt64(-PInt64(@Value)^)
@@ -6373,9 +6341,9 @@ begin
   if IRec.Hi = 0
   then ScaledOrdinal2Bcd(iRec.Lo, 4, Result, Negative)
   else ScaledOrdinal2Bcd(V2,      4, Result, Negative);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 const
   SignSpecialPlacesArr: Array[Boolean] of Byte = ($00, $80);
@@ -6413,31 +6381,62 @@ end;
  {$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: UInt64; Scale: Byte; var Result: TBCD; Negative: Boolean);
 var V2: UInt64;
-  B: Cardinal; //D7 int overflow -> reason unknown
-  Precision, Place: Byte;
+  B, Precision, Digits, FirstPlace, LastPlace, Place: Cardinal; //D7 int overflow -> reason unknown
+label Done;
 begin
-  Precision := GetOrdinalDigits(Value);
-  //FillChar(Result.Fraction[0], MaxFMTBcdDigits, #0);
-  if Precision and 1 = 1 then begin
-    v2 := Value div 10;
-    Result.Precision := Precision+1;
-    B := (Value-(V2*10)) shl 4;
-    Result.Fraction[Precision div 2] := Byte(B);
-    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
-    Value := V2;
+  Digits := GetOrdinalDigits(Value);
+  if (Digits = 1) and (byte(Value) = 0) then begin
+    Result.Fraction[0] := 0;
+    Result.Precision := 1;
+    Result.SignSpecialPlaces := 0;
+    Exit;
+  end;
+  if Digits < Scale then begin
+    PInt64(@Result.Fraction[0])^ := 0; //clear these nibbles
+    PInt64(@Result.Fraction[7])^ := 0;
+    FirstPlace := (Scale - Digits) shr 1;
+    Precision := Scale;
   end else begin
-    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
-    Result.Precision := Precision;
+    Precision := Digits;
+    FirstPlace := 0;
   end;
-  if Precision > 1 then begin
-    for Place := (Precision shr 1)-1 downto 1 do begin
-      v2 := Value div 100;
-      B := Value-(V2*100);
-      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
+  LastPlace := ((Precision - 1) shr 1);
+  if Precision and 1 = 1 then
+    if Digits = 1 then begin
+      Result.Fraction[LastPlace] := Byte(Value) shl 4;
+      goto Done;
+    end else begin
+      v2 := Value div 10;
+      B := (Value-(V2*10));
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[LastPlace] := Byte(B) shl 4;
       Value := V2;
+      Dec(LastPlace);
     end;
-    Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  for Place := LastPlace downto FirstPlace +1 do begin
+    v2 := Value div 100;
+    B := Value-(V2*100);
+    if (Place = LastPlace) and (B=0) and (Scale >= 2) then begin //special case 4FPC where BCD compare fails
+      Dec(Scale, 2);
+      Dec(Precision, 2);
+      Dec(LastPlace);
+    end else
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
+    Value := V2;
   end;
+  Result.Fraction[FirstPlace] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  if (Scale >= 1) and (LastPlace > FirstPlace) and (
+       (Precision and 1 = 1) and ((Result.Fraction[LastPlace] shr 4  ) = 0) or
+       (Precision and 1 = 0) and ((Result.Fraction[LastPlace] and $0F) = 0)) then begin
+      Dec(Scale);
+      Dec(Precision);
+    end;
+Done:
+  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+  Result.Precision := Precision;
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -6467,31 +6466,61 @@ end;
 }
 {$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: Cardinal; Scale: Byte; var Result: TBCD; Negative: Boolean);
-var V2, B: Cardinal; //B: D7 int overflow -> reason unknown
-  Precision, Place: Byte;
+var Precision, V2, B, LastPlace, FirstPlace, Place, Digits: Cardinal; //B: D7 int overflow -> reason unknown
+label Done;
 begin
-  Precision := GetOrdinalDigits(Value);
-  //FillChar(Result.Fraction[0], MaxFMTBcdDigits, #0);
-  if Odd(Precision) then begin
-    v2 := Value div 10;
-    Result.Precision := Precision+1;
-    B := Value{%H-}-(V2*10);
-    Result.Fraction[Precision div 2] := B shl 4;
-    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
-    Value := V2;
+  Digits := GetOrdinalDigits(Value);
+  if (Digits = 1) and (byte(Value) = 0) then begin
+    Result.Fraction[0] := 0;
+    Result.Precision := 1;
+    Result.SignSpecialPlaces := 0;
+    Exit;
+  end;
+  if Digits < Scale then begin
+    PInt64(@Result.Fraction[0])^ := 0; //clear these nibbles
+    FirstPlace := (Scale - Digits) shr 1;
+    Precision := Scale;
   end else begin
-    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
-    Result.Precision := Precision;
+    Precision := Digits;
+    FirstPlace := 0;
   end;
-  if Precision > 1 then begin
-    for Place := (Precision div 2)-1 downto 1 do begin
-      v2 := Value div 100;
-      B := Value{%H-}-(V2*100);
-      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
+  LastPlace := ((Precision - 1) shr 1);
+  if Precision and 1 = 1 then
+    if Digits = 1 then begin
+      Result.Fraction[LastPlace] := Byte(Value) shl 4;
+      goto done;
+    end else begin
+      v2 := Value div 10;
+      B := Value{%H-}-(V2*10);
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[LastPlace] := Byte(B) shl 4;
       Value := V2;
+      Dec(LastPlace);
     end;
-    Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  for Place := LastPlace downto FirstPlace +1 do begin
+    v2 := Value div 100;
+    B := Value{%H-}-(V2*100);
+    if (Place = LastPlace) and (B=0) and (Scale >= 2) then begin //special case 4FPC where BCD compare fails
+      Dec(Scale, 2);
+      Dec(Precision, 2);
+      Dec(LastPlace);
+    end else
+      Result.Fraction[Place] := ZBase100Byte2BcdNibbleLookup[Byte(B)];
+    Value := V2;
   end;
+  Result.Fraction[FirstPlace] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  if (Scale >= 1) and (LastPlace > FirstPlace) and (
+       (Precision and 1 = 1) and ((Result.Fraction[LastPlace] shr 4  ) = 0) or
+       (Precision and 1 = 0) and ((Result.Fraction[LastPlace] and $0F) = 0)) then begin
+      Dec(Scale);
+      Dec(Precision);
+    end;
+Done:
+  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+  Result.Precision := Precision;
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -6521,30 +6550,86 @@ end;
 }
 {$R-} {$Q-}
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean);
-var V2, B: Word;
+var Precision, V2, B, LastPlace, FirstPlace, Digits: Word; //B: D7 int overflow -> reason unknown
+label Done;
+begin
+  Digits := GetOrdinalDigits(Value);
+  if (Digits = 1) and (byte(Value) = 0) then begin
+    Result.Fraction[0] := 0;
+    Result.Precision := 1;
+    Result.SignSpecialPlaces := 0;
+    Exit;
+  end;
+  if Digits < Scale then begin
+    PCardinal(@Result.Fraction[0])^ := 0; //clear these nibbles
+    FirstPlace := (Scale - Digits) shr 1;
+    Precision := Scale;
+  end else begin
+    Precision := Digits;
+    FirstPlace := 0;
+  end;
+  LastPlace := ((Precision - 1) shr 1);
+  if Precision and 1 = 1 then
+    if Digits = 1 then begin
+      Result.Fraction[LastPlace] := Byte(Value) shl 4;
+      goto done;
+    end else begin
+      v2 := Value div 10;
+      B := Value{%H-}-(V2*10);
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[LastPlace] := Byte(B) shl 4;
+      Value := V2;
+      Dec(LastPlace);
+    end;
+  //unrolled version we're comming from a smallInt/word with max precision of 5
+  if Digits >= 4 then begin
+    v2 := Value div 100;
+    B := Value-(V2*100);
+    PWord(@Result.Fraction[FirstPlace])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
+  end else
+    Result.Fraction[FirstPlace] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  if (Scale >= 1) and (LastPlace > FirstPlace) and (
+       (Precision and 1 = 1) and ((Result.Fraction[LastPlace] shr 4  ) = 0) or
+       (Precision and 1 = 0) and ((Result.Fraction[LastPlace] and $0F) = 0)) then begin
+      Dec(Scale);
+      Dec(Precision);
+    end;
+Done:
+  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+  Result.Precision := Precision;
+
+(*var V2, B: Word;
   Precision: Byte;
+label Done;
 begin
   Precision := GetOrdinalDigits(Value);
-  //FillChar(Result.Fraction[0], MaxFMTBcdDigits, #0);
-  if Odd(Precision) then begin
-    v2 := Value div 10;
-    Result.Precision := Precision+1;
-    B := (Value-(V2*10)) shl 4;
-    Result.Fraction[Precision div 2] := Byte(B);
-    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or (Scale +1);
-    Value := V2;
-  end else begin
-    Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
-    Result.Precision := Precision;
-  end;
+  if Precision and 1 = 1 then
+    if Precision = 1 then begin
+      Result.Fraction[0] := Byte(Value) shl 4;
+      goto Done;
+    end else begin
+      v2 := Value div 10;
+      B := (Value-(V2*10));
+      if (Scale > 0) and (B = 0) then begin //special case 4FPC where BCD compare fails
+        Dec(Scale);
+        Dec(Precision);
+      end else
+        Result.Fraction[Precision shr 1] := Byte(B) shl 4;
+      Value := V2;
+    end;
   //unrolled version we're comming from a smallInt/word with max precision of 5
-  if Precision > 1 then
-    if Precision >= 4 then begin
-      v2 := Value div 100;
-      B := Value-(V2*100);
-      PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
-    end else
-      Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+  if Precision >= 4 then begin
+    v2 := Value div 100;
+    B := Value-(V2*100);
+    PWord(@Result.Fraction[0])^ := ZBase100Byte2BcdNibbleLookup[Byte(V2)]+ZBase100Byte2BcdNibbleLookup[Byte(B)] shl 8;
+  end else
+    Result.Fraction[0] := ZBase100Byte2BcdNibbleLookup[Byte(Value)];
+Done:
+  Result.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or Scale;
+  Result.Precision := Precision;*)
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -6694,7 +6779,10 @@ begin
     if PWord(Buf)^ = Ord(DecimalSep) then begin
       if DecimalPos <> -1 then
         goto Fail;
-      Inc(Pos, Ord(Pos = 0));
+      if Pos = 0 then
+        Inc(Pos)
+      else if (Pos = 1) and (PWord(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
+        Dec(Pos);
       DecimalPos := Pos;
       Inc(Buf);
       if (Buf = PEnd) then
@@ -6707,8 +6795,8 @@ begin
       goto Fail;
     if Pos < 64 then begin
       if (Pos and 1) = 0
-      then Bcd.Fraction[Pos div 2] := Byte(Ord(Buf^) - Ord('0')) * $10
-      else Bcd.Fraction[Pos div 2] := (Bcd.Fraction[Pos div 2] and $F0) + Byte(Ord(Buf^) - Ord('0'));
+      then Bcd.Fraction[Pos shr 1] := Byte(Ord(Buf^) - Ord('0')) * $10
+      else Bcd.Fraction[Pos shr 1] := (Bcd.Fraction[Pos shr 1] and $F0) + Byte(Ord(Buf^) - Ord('0'));
       Inc(Pos);
     end;
     Inc(Buf);
@@ -6758,10 +6846,6 @@ Finalize:
     if DecimalPos = -1
     then Bcd.SignSpecialPlaces := 0
     else Bcd.SignSpecialPlaces := Byte(Pos - DecimalPos);
-    if (Pos and 1) = 1 then begin
-      Inc(Bcd.Precision);
-      Inc(Bcd.SignSpecialPlaces);
-    end;
     if Negative then
       Bcd.SignSpecialPlaces := Bcd.SignSpecialPlaces or $80;
   end;
@@ -6812,7 +6896,10 @@ begin
     if PByte(Buf)^ = Ord(DecimalSep) then begin
       if DecimalPos <> -1 then
         goto Fail;
-      Inc(Pos, Ord(Pos = 0));
+      if Pos = 0 then
+        Inc(Pos)
+      else if (Pos = 1) and (PByte(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
+        Dec(Pos);
       DecimalPos := Pos;
       Inc(Buf);
       if (Buf = PEnd) then
@@ -6825,8 +6912,8 @@ begin
       goto Fail;
     if Pos < 64 then begin
       if (Pos and 1) = 0
-      then Bcd.Fraction[Pos div 2] := (PByte(Buf)^ - Ord('0')) * $10
-      else Bcd.Fraction[Pos div 2] := (Bcd.Fraction[Pos div 2] and $F0) + (PByte(Buf)^ - Ord('0'));
+      then Bcd.Fraction[Pos shr 1] := (PByte(Buf)^ - Ord('0')) * $10
+      else Bcd.Fraction[Pos shr 1] := (Bcd.Fraction[Pos shr 1] and $F0) + (PByte(Buf)^ - Ord('0'));
       Inc(Pos);
     end;
     Inc(Buf);
@@ -6876,10 +6963,6 @@ Finalize:
     if DecimalPos = -1
     then Bcd.SignSpecialPlaces := 0
     else Bcd.SignSpecialPlaces := Pos - DecimalPos;
-    if (Pos and 1) = 1 then begin
-      Inc(Bcd.Precision);
-      Inc(Bcd.SignSpecialPlaces);
-    end;
     if Negative then
       Bcd.SignSpecialPlaces := Bcd.SignSpecialPlaces or $80;
   end;
@@ -7196,28 +7279,6 @@ begin
   Result := UniToBCD(Pointer(Value), Length(Value));
 end;
 
-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-procedure BoolConstFiller;
-var B: Boolean;
-begin
-  for B := False to True do begin
-    BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
-    BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
-  end;
-end;
-{$ENDIF}
-
-procedure BcdNibbleLookupFiller;
-var i, n: Byte;
-begin
-  for i := 0 to 99 do begin
-    N := ((i div 10) shl 4) + (i mod 10);
-    ZBase100Byte2BcdNibbleLookup[i] := N;
-    ZBcdNibble2Base100ByteLookup[N] := i;
-    ZBcdNibble2DwoDigitLookupW[N] := ZFastCode.TwoDigitLookupW[I];
-    ZBcdNibble2DwoDigitLookupLW[N] := ZFastCode.TwoDigitLookupLW[I];
-  end;
-end;
 
 { for a better code align -> move out of method }
 {$IFNDEF CPU64}
@@ -7262,6 +7323,61 @@ begin
         d64 := d64 + CInt64Table[Scale];
   end else
     Result := Value
+end;
+
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+procedure BoolConstFiller;
+var B: Boolean;
+begin
+  for B := False to True do begin
+    BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
+    BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
+  end;
+end;
+{$ENDIF}
+
+procedure HexFiller;
+var
+  I{$IFDEF NO_RAW_HEXTOBIN}, v{$ENDIF}: Byte;
+  Hex: String;
+begin
+  for i := Low(Byte) to High(Byte) do
+  begin
+    Hex := IntToHex(I, 2);
+    {$IFDEF UNICODE}
+    TwoDigitLookupHexLW[i] := PLongWord(Pointer(Hex))^;
+    TwoDigitLookupHexW[i] := PWord(Pointer(RawByteString(Hex)))^;
+    {$ELSE}
+    TwoDigitLookupHexW[i] := PWord(Pointer(Hex))^;
+    TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
+    {$ENDIF}
+  end;
+  {$IFDEF NO_RAW_HEXTOBIN}
+  //copy from Arnaud Bouchez syncommons.pas
+  Fillchar(ConvertHexToBin[0],SizeOf(ConvertHexToBin),255); // all to 255
+  V := 0;
+  for i := ord('0') to ord('9') do begin
+    ConvertHexToBin[i] := v;
+    inc(v);
+  end;
+  for i := ord('A') to ord('F') do begin
+    ConvertHexToBin[i] := v;
+    ConvertHexToBin[i+(ord('a')-ord('A'))] := v;
+    inc(v);
+  end;
+  {$ENDIF}
+end;
+
+procedure BcdNibbleLookupFiller;
+var i, n: Byte;
+begin
+  for i := 0 to 99 do begin
+    N := ((i div 10) shl 4) + (i mod 10);
+    ZBase100Byte2BcdNibbleLookup[i] := N;
+    ZBcdNibble2Base100ByteLookup[N] := i;
+    ZBcdNibble2DwoDigitLookupW[N] := ZFastCode.TwoDigitLookupW[I];
+    ZBcdNibble2DwoDigitLookupLW[N] := ZFastCode.TwoDigitLookupLW[I];
+  end;
 end;
 
 initialization;
