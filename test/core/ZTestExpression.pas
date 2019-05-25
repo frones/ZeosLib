@@ -158,17 +158,9 @@ begin
   with Expression do
   begin
     Expression := 'VAL(''  -011'')';
-    {$IFDEF BCD_TEST}
     CheckEquals(-11, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),Expression+' failed, ');
-    {$ELSE}
-    CheckEquals(-11, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
-    {$ENDIF}
     Expression := 'VAL(''  -023.25'')';
-    {$IFDEF BCD_TEST}
     CheckEquals(-23.25, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),Expression+' failed, ');
-    {$ELSE}
-    CheckEquals(-23.25, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
-    {$ENDIF}
 
     Expression := 'DTOS(ENCODEDATE(2009,07,13))';
     CheckEquals('20090713', SoftVarManager.GetAsString(Evaluate),Expression+' failed, ');
@@ -390,14 +382,14 @@ begin
     CheckEquals(0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
 
     Expression := 'INT(1.5)';
-    CheckEquals(1.0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.{$IFDEF BCD_TEST}GetAsDouble{$ELSE}GetAsFloat{$ENDIF}(Evaluate),Expression+' failed, ');
+    CheckEquals(1.0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),Expression+' failed, ');
     Expression := 'FRAC(1.5)';
-    CheckEquals(0.5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.{$IFDEF BCD_TEST}GetAsDouble{$ELSE}GetAsFloat{$ENDIF}(Evaluate),Expression+' failed, ');
+    CheckEquals(0.5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),Expression+' failed, ');
 
     Expression := 'SQR(16)';
-    CheckEquals(4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.{$IFDEF BCD_TEST}GetAsDouble{$ELSE}GetAsFloat{$ENDIF}(Evaluate),Expression+' failed, ');
+    CheckEquals(4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),Expression+' failed, ');
     Expression := 'SQRT(25)';
-    CheckEquals(5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.{$IFDEF BCD_TEST}GetAsDouble{$ELSE}GetAsFloat{$ENDIF}(Evaluate),Expression+' failed, ');
+    CheckEquals(5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),Expression+' failed, ');
   end;
 end;
 
@@ -415,7 +407,7 @@ begin
     CheckEquals(1, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
 
     Expression := 'MAX(2.1,5.3,1.0,10.4,8.9)';
-    CheckEquals(10.4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.{$IFDEF BCD_TEST}GetAsDouble{$ELSE}GetAsFloat{$ENDIF}(Evaluate),{$IFDEF BCD_TEST}FLOAT_COMPARE_PRECISION,{$ENDIF}Expression+' failed, ');
+    CheckEquals(10.4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),FLOAT_COMPARE_PRECISION, Expression+' failed, ');
 
     Expression := 'Sum(''A'',''B'',3)';
     CheckEquals('AB3', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
@@ -436,7 +428,7 @@ begin
     Expression := 'CASEF(1,''V0'',33,22.5)';
     CheckEquals(33, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'CASEF(2,''V0'',33,22.5)';
-    CheckEquals(22.5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.{$IFDEF BCD_TEST}GetAsDouble{$ELSE}GetAsFloat{$ENDIF}(Evaluate),Expression+' failed, ');
+    CheckEquals(22.5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDouble(Evaluate),Expression+' failed, ');
   end;
 end;
 
@@ -699,11 +691,7 @@ begin
   DecimalSeparator := ',';
     Expression := 'A=123.4567890123456';
   try
-    {$IFDEF BCD_TEST}
     DefaultVariables.Values[0] := EncodeDouble(123.4567890123456);
-    {$ELSE}
-    DefaultVariables.Values[0] := EncodeFloat(123.4567890123456);
-    {$ENDIF}
     Temp := Evaluate4(DefaultVariables, DefaultFunctions, Stack);
     CheckEquals(Ord(vtBoolean), Ord(Temp.VType));
     CheckEquals(True, Temp.VBoolean);
@@ -717,11 +705,7 @@ begin
   DecimalSeparator := ',';
     Expression := 'Abs(A - 123.4567890123456)<0.001';
   try
-    {$IFDEF BCD_TEST}
     DefaultVariables.Values[0] := EncodeDouble(123.4567890123456);
-    {$ELSE}
-    DefaultVariables.Values[0] := EncodeFloat(123.4567890123456);
-    {$ENDIF}
     Temp := Evaluate4(DefaultVariables, DefaultFunctions, Stack);
     CheckEquals(Ord(vtBoolean), Ord(Temp.VType));
     CheckEquals(True, Temp.VBoolean);
@@ -734,7 +718,7 @@ begin
     DefaultVariables.Add('A',EncodeDateTime(EncodeDate(1999,10,3)+EncodeTime(22,4,35,88)));
     DefaultVariables.Add('B',EncodeDateTime(Now));
     DefaultVariables.Add('I',EncodeInteger(-1));
-    DefaultVariables.Add('F',{$IFDEF BCD_TEST}EncodeDouble{$ELSE}EncodeFloat{$ENDIF}(-3.4532));
+    DefaultVariables.Add('F',EncodeDouble(-3.4532));
     EvaluateExpression('-I');
     EvaluateExpression('-F');
     EvaluateExpression('ABS(I)');

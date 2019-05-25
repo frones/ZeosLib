@@ -65,7 +65,7 @@ uses
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  FmtBCD,
   ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
   ZPlainDbLibConstants, ZPlainDBLibDriver;
@@ -159,11 +159,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetCurrency(ColumnIndex: Integer): Currency; override;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
-    {$ELSE !BCD_TEST}
-    function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
@@ -841,7 +837,6 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var
   DL: Integer;
@@ -865,11 +860,6 @@ begin
       LastWasNull := not TryRawToBCD(PAnsiChar(@fTinyBuffer[0]), DL, Result, '.');
     end else Result := NullBCD;
   end;
-{$ELSE !BCD_TEST}
-function TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-begin
-  Result := GetDouble(ColumnIndex);
-{$ENDIF !BCD_TEST}
 end;
 
 {**

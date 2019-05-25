@@ -90,7 +90,7 @@ type
 
 implementation
 
-uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils{$IFDEF BCD_TEST},FmtBCD{$ENDIF}
+uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils,FmtBCD
   {$IFDEF EGONHUGEIST}, ZPLainOracleDriver, ZPlainOracleConstants,
   ZDbcOracleUtils, ZFastCode, ZDbcLogging, Math{$ENDIF};
 
@@ -1033,7 +1033,7 @@ const
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
-  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
+  BCD: TBCD;
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -1049,15 +1049,8 @@ begin
   CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
   CheckEquals(Low(LongInt), ResultSet.GetInt(number_values_n_int_Index));
-  {$IFDEF BCD_TEST}
-    ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
-    CheckEquals(IntToStr(Low(Int64)), BcdToStr(BCD));
-  {$ELSE}
-  {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
-  //this needs to be reviewed with true BCD record structs later on (7.3+)
-  CheckEquals(Low(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
-  {$ENDIF !CPU64}
-  {$ENDIF}
+  ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
+  CheckEquals(IntToStr(Low(Int64)), BcdToStr(BCD));
   CheckEquals(Low(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(-99999.9999, ResultSet.GetCurrency(number_values_n_numeric_Index));
@@ -1074,15 +1067,8 @@ begin
   CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
   CheckEquals(Low(LongInt), ResultSet.GetInt(number_values_n_int_Index));
-  {$IFDEF BCD_TEST}
-    ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
-    CheckEquals(IntToStr(Low(Int64)), BCDToStr(BCD));
-  {$ELSE}
-    {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
-    //this needs to be reviewed with true BCD record structs later on (7.3+)
-    CheckEquals(Low(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
-    {$ENDIF !CPU64}
-  {$ENDIF}
+  ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
+  CheckEquals(IntToStr(Low(Int64)), BCDToStr(BCD));
   CheckEquals(Low(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(-11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(-11111.1111, ResultSet.GetCurrency(number_values_n_numeric_Index));
@@ -1096,15 +1082,8 @@ begin
   CheckEquals(0, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(0, ResultSet.GetInt(number_values_n_sint_Index));
   CheckEquals(0, ResultSet.GetInt(number_values_n_int_Index));
-  {$IFDEF BCD_TEST}
-    ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
-    CheckEquals(IntToStr(0), BCDToStr(BCD));
-  {$ELSE}
-    {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
-    //this needs to be reviewed with true BCD record structs later on (7.3+)
-    CheckEquals(0, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
-    {$ENDIF !CPU64}
-  {$ENDIF}
+  ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
+  CheckEquals(IntToStr(0), BCDToStr(BCD));
   CheckEquals(0, ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(0, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(0, ResultSet.GetCurrency(number_values_n_numeric_Index));
@@ -1119,15 +1098,8 @@ begin
   CheckEquals(128, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(32767, ResultSet.GetInt(number_values_n_sint_Index));
   CheckEquals(2147483647, ResultSet.GetInt(number_values_n_int_Index));
-  {$IFDEF BCD_TEST}
-    ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
-    CheckEquals(IntToStr(High(Int64)), BCDToStr(BCD));
-  {$ELSE}
-    {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
-    //this needs to be reviewed with true BCD record structs later on (7.3+)
-    CheckEquals(High(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
-    {$ENDIF !CPU64}
-  {$ENDIF}
+  ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
+  CheckEquals(IntToStr(High(Int64)), BCDToStr(BCD));
   CheckEquals(High(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(11111.1111, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(11111.1111, ResultSet.GetCurrency(number_values_n_numeric_Index));
@@ -1142,15 +1114,8 @@ begin
   CheckEquals(128, ResultSet.GetInt(number_values_n_tint_Index));
   CheckEquals(32767, ResultSet.GetInt(number_values_n_sint_Index));
   CheckEquals(147483647, ResultSet.GetInt(number_values_n_int_Index));
-  {$IFDEF BCD_TEST}
-    ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
-    CheckEquals(IntToStr(High(Int64)), BCDToStr(BCD));
-  {$ELSE}
-    {$IFNDEF CPU64} //EH: FPU 64 does no longer support the 80bit 10byte real-> impossible to resolve!
-    //this needs to be reviewed with true BCD record structs later on (7.3+)
-    CheckEquals(High(Int64), ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
-    {$ENDIF !CPU64}
-  {$ENDIF}
+  ResultSet.GetBigDecimal(number_values_n_bdecimal_Index, BCD);
+  CheckEquals(IntToStr(High(Int64)), BCDToStr(BCD));
   CheckEquals(High(Int64), ResultSet.GetLong(number_values_n_bdecimal_Index));
   CheckEquals(99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(99999.9999, ResultSet.GetCurrency(number_values_n_numeric_Index));

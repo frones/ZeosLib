@@ -104,11 +104,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -1169,15 +1165,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZOracleAbstractResultSet_A.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-{$ELSE}
-function TZOracleAbstractResultSet_A.GetBigDecimal(ColumnIndex: Integer): Extended;
-{$ENDIF}
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
-  {$IFNDEF BCD_TEST}Status: SWord;{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -1187,73 +1178,32 @@ begin
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
-    Result := {$IFDEF BCD_TEST}NullBcd{$ELSE}0{$ENDIF};
+    Result := NullBcd;
   end else begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      {$IFDEF BCD_TEST}
       SQLT_AFC,
       SQLT_VST,
       SQLT_VCS,
       SQLT_LVC,
       SQLT_CLOB: LastWasNull := not TryStrToBCD(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-      {$ELSE}
-      SQLT_AFC: SqlStrToFloatDef(P,0,Result, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz));
-      SQLT_VST: SqlStrToFloatDef(PAnsiChar(@PPOCILong(P)^.data[0]),0,Result, PPOCILong(P)^.Len);
-      SQLT_VCS: SqlStrToFloatDef(PAnsiChar(@POCIVary(P).data[0]), 0, Result, POCIVary(P)^.Len);
-      SQLT_LVC: SqlStrToFloatDef(PAnsiChar(@POCILong(P).data[0]), 0, Result, POCILong(P)^.Len);
-      {$ENDIF}
       { the oracle soft decimal }
-      SQLT_VNU:
-        {$IFDEF BCD_TEST}
-        Nvu2BCD(POCINumber(P), Result);
-        {$ELSE}
-        begin
-          case nvuKind(POCINumber(P), FvnuInfo) of
-            nvu0: Result := 0;
-            {$R-} {$Q-}//fix a pre fpc 3.0 comiler bug
-            nvuNegInf: Result := NegInfinity;
-            nvuPosInf: Result := Infinity;
-            {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-            {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
-            vnuNegInt: Result := NegNvu2Int(POCINumber(P), FvnuInfo);
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-            vnuPosInt: Result := PosNvu2Int(POCINumber(P), FvnuInfo);
-            //vnuPosInt: Result := PosNvu2Int(FvnuInfo.Exponent, POCINumber(P));
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-            vnuPosCurr: Result := PosNvu2Curr(POCINumber(P), FvnuInfo);
-            vnuNegCurr: Result := NegNvu2Curr(POCINumber(P), FvnuInfo);
-            else begin
-                Status := FplainDriver.OCINumberToReal(FErrorHandle, POCINumber(P),
-                  SizeOf(Double), @FTinyBuffer[0]);
-                if Status <> OCI_SUCCESS then
-                  CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther,
-                        'OCINumberToReal', ConSettings);
-                Result := PDouble(@FTinyBuffer[0])^;
-              end;
-          end;
-        end;
-        {$ENDIF}
+      SQLT_VNU: Nvu2BCD(POCINumber(P), Result);
       { the ordinals we yet do support }
-      SQLT_INT:
-        case SQLVarHolder.value_sz of
-          SizeOf(Int64):    {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(PInt64(P)^, 0, Result){$ELSE}Result :=  PInt64(P)^{$ENDIF};
-          SizeOf(Integer):  {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(PInteger(P)^, 0, Result){$ELSE}Result := PInteger(P)^{$ENDIF};
-          SizeOf(SmallInt): {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(PSmallInt(P)^, 0, Result){$ELSE}Result := PSmallInt(P)^{$ENDIF};
-          else              {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(SmallInt(PShortInt(P)^), 0, Result){$ELSE}Result := PShortInt(P)^{$ENDIF};
+      SQLT_INT: case SQLVarHolder.value_sz of
+          SizeOf(Int64):    ScaledOrdinal2Bcd(PInt64(P)^, 0, Result);
+          SizeOf(Integer):  ScaledOrdinal2Bcd(PInteger(P)^, 0, Result);
+          SizeOf(SmallInt): ScaledOrdinal2Bcd(PSmallInt(P)^, 0, Result);
+          else              ScaledOrdinal2Bcd(SmallInt(PShortInt(P)^), 0, Result);
         end;
-      SQLT_UIN:
-          case SQLVarHolder.value_sz of
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-            SizeOf(UInt64):   {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(PUInt64(P)^, 0, Result, False){$ELSE}Result := Int64(PUInt64(P)^){$ENDIF};
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-            SizeOf(Cardinal): {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(PCardinal(P)^, 0, Result, False){$ELSE}Result := PCardinal(P)^{$ENDIF};
-            SizeOf(Word):     {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(PWord(P)^, 0, Result, False){$ELSE}Result := PWord(P)^{$ENDIF};
-            else              {$IFDEF BCD_TEST}ScaledOrdinal2Bcd(Word(PByte(P)^), 0, Result, False){$ELSE}Result := PByte(P)^{$ENDIF};
+      SQLT_UIN: case SQLVarHolder.value_sz of
+            SizeOf(UInt64):   ScaledOrdinal2Bcd(PUInt64(P)^, 0, Result, False);
+            SizeOf(Cardinal): ScaledOrdinal2Bcd(PCardinal(P)^, 0, Result, False);
+            SizeOf(Word):     ScaledOrdinal2Bcd(PWord(P)^, 0, Result, False);
+            else              ScaledOrdinal2Bcd(Word(PByte(P)^), 0, Result, False);
           end;
-      {$IFDEF BCD_TEST}
       { the FPU floats we do support }
       SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
                     then Double2BCD(PDouble(P)^, Result)
@@ -1267,23 +1217,6 @@ begin
         Double2BCD(GetTimeStamp(ColumnIndex), Result);
       else
         Result := NullBCD;
-      {$ELSE}
-      { the FPU floats we do support }
-      SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
-                    then Result := PDouble(P)^
-                    else Result := PSingle(P)^;
-      SQLT_BFLOAT:  Result := PSingle(P)^;
-      SQLT_BDOUBLE: Result := PDouble(P)^;
-      { the binary raw we support }
-      //SQLT_VBI, SQLT_LVB:
-      { the date/time types we support }
-      SQLT_DAT, SQLT_TIMESTAMP:
-        Result := GetTimeStamp(ColumnIndex);
-      SQLT_BLOB, SQLT_CLOB:
-        SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
-      else
-        Result := 0;
-      {$ENDIF}
     end;
   end;
 end;

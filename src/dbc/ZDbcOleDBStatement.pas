@@ -64,9 +64,8 @@ interface
 {$MINENUMSIZE 4}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement,
   ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties;
 
@@ -189,7 +188,7 @@ type
     procedure SetFloat(Index: Integer; Value: Single); reintroduce;
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
@@ -1304,12 +1303,10 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                     end;
             else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
         end;
-      {$IFDEF BCD_TEST}
       DBTYPE_NUMERIC: begin
                         Double2BCD(Value, PBCD(@fWBuffer[0])^);
                         BCD2SQLNumeric(PBCD(@fWBuffer[0])^, PDB_NUMERIC(Data));
                       end;
-      {$ENDIF}
       //DBTYPE_VARNUMERIC:;
       else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
     end;
@@ -1610,13 +1607,12 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IF defined(BCD_TEST) and defined (NO_CONST_ZEROBCD)}
+{$IFDEF NO_CONST_ZEROBCD}
 const ZeroBCDFraction: packed array [0..31] of Byte = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-{$IFEND}
+{$ENDIF}
 procedure TZOleDBPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
-{$IFDEF BCD_TEST}
+  const Value: TBCD);
 var Bind: PDBBINDING;
   Data: PAnsiChar;
 begin
@@ -1666,10 +1662,6 @@ begin
     InitFixedBind(Index, SizeOf(TDB_NUMERIC), DBTYPE_NUMERIC);
     BindList.Put(Index, Value);
   end;
-{$ELSE}
-begin
-  SetDouble(Index, Value);
-  {$ENDIF}
 end;
 
 procedure TZOleDBPreparedStatement.SetBindOffsets;

@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}{$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
+  {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainOracleDriver,
   ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants,
@@ -127,7 +127,7 @@ type
     procedure SetFloat(Index: Integer; Value: Single); reintroduce;
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
     procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
@@ -1148,8 +1148,7 @@ begin
 end;
 
 procedure TZOraclePreparedStatement_A.SetBigDecimal(Index: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
-{$IFDEF BCD_TEST}
+  const Value: TBCD);
 var
   Bind: PZOCIParamBind;
   status: sword;
@@ -1211,10 +1210,6 @@ begin
     else SetRaw;
   end;
   Bind.indp[0] := 0;
-{$ELSE}
-begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, Value);
-{$ENDIF}
 end;
 
 {**
@@ -1509,18 +1504,11 @@ bind_direct:
         if (Bind.dty <> SQLT_VNU) or (Bind.value_sz <> SizeOf(TOCINumber)) or (Bind.curelen <> ArrayLen) then
           //note as long we do not have a Value2OraNumber conversion we'll use the ora double instead!!
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOCINumber));
-        for i := 0 to ArrayLen -1 do begin
-          {$IFDEF BCD_TEST}
+        for i := 0 to ArrayLen -1 do
           {$R-}
           Bind.indp[I] := BCD2Nvu(TBCDDynArray(Value)[i], POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
           {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-          {$ELSE}
-          PDouble(@fABuffer[0])^ := TExtendedDynArray(Value)[i];
-          FplainDriver.OCINumberFromReal(FOCIError, @fABuffer[0], SizeOf(Double),
-            POCINumber(Bind.valuep+I*SizeOf(TOCINumber)));
-          {$ENDIF}
-        end;
-        {$IFDEF BCD_TEST}Exit{$ENDIF};
+        Exit;
       end;
     stDate: begin
         if (Bind.dty <> SQLT_DAT) or (Bind.value_sz <> SizeOf(TOraDate)) or (Bind.curelen <> ArrayLen) then

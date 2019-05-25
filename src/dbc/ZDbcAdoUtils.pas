@@ -61,7 +61,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  Types,
+  Types, FmtBCD,
   ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZOleDB, ZDbcOleDBUtils,
   ZDbcStatement;
 
@@ -168,9 +168,7 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
 
 procedure RefreshParameters(const AdoCommand: ZPlainAdo.Command; DirectionTypes: PDirectionTypes = nil);
 
-{$IFDEF BCD_TEST}
 procedure BCD2Decimal(const Value: TBCD; Dest: PDecimal);
-{$ENDIF}
 
 var
 {**
@@ -540,30 +538,19 @@ begin
                 PUInt64(@tagVariant(V).cyVal)^ := RetValue.VUInteger;
                 {$ENDIF}
               end;
-    {$IFDEF BCD_TEST}
     vtCurrency: begin
                 tagVariant(V).vt := VT_CY;
-                tagVariant(V).ullVal := RetValue.VCurrency;
-              end;
-    vtGUID: begin
-                tagVariant(V).vt := VT_CY;
-                tagVariant(V).ullVal := RetValue.VCurrency;
+                tagVariant(V).cyVal := RetValue.VCurrency;
               end;
     vtDouble: begin
                 tagVariant(V).vt := VT_R8;
-                tagVariant(V).ullVal := RetValue.VDouble;
+                tagVariant(V).dblVal := RetValue.VDouble;
               end;
     vtBigDecimal: begin
                 tagVariant(V).vt := VT_DECIMAL;
                 BCD2Decimal(RetValue.VBigDecimal, @V);
               end;
-    {$ELSE}
-    vtFloat: begin
-                tagVariant(V).vt := VT_R8;
-                tagVariant(V).dblVal := RetValue.VFloat;
-              end;
-    {$ENDIF}
-    vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
+    vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec, vtGUID:
     begin
       RetValue.VUnicodeString := Connection.GetClientVariantManager.GetAsUnicodeString(RetValue);
       V := WideString(RetValue.VUnicodeString);
@@ -639,7 +626,6 @@ var
   ZSingleArray: TSingleDynArray absolute ZData;
   ZDoubleArray: TDoubleDynArray absolute ZData;
   ZCurrencyArray: TCurrencyDynArray absolute ZData;
-  ZExtendedArray: TExtendedDynArray absolute ZData;
   ZDateTimeArray: TDateTimeDynArray absolute ZData;
   ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
   ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
@@ -652,55 +638,6 @@ var
   ZGUIDArray: TGUIDDynArray absolute ZData;
 label ProcString;
 
-  function IsNullFromIndicator: Boolean;
-  begin
-    case TZSQLType(InParamValues[I].VArray.VIsNullArrayType) of
-      stBoolean: Result := ZBooleanArray[J];
-      stByte: Result := ZByteArray[J] <> 0;
-      stShort: Result := ZShortIntArray[J] <> 0;
-      stWord: Result := ZWordArray[J] <> 0;
-      stSmall: Result := ZSmallIntArray[J] <> 0;
-      stLongWord: Result := ZLongWordArray[J] <> 0;
-      stInteger: Result := ZIntegerArray[J] <> 0;
-      stLong: Result := ZInt64Array[J] <> 0;
-      stULong: Result := ZUInt64Array[J] <> 0;
-      stFloat: Result := ZSingleArray[J] <> 0;
-      stDouble: Result := ZDoubleArray[J] <> 0;
-      stCurrency: Result := ZCurrencyArray[J] <> 0;
-      stBigDecimal: Result := ZExtendedArray[J] <> 0;
-      stGUID:
-        Result := True;
-      stString, stUnicodeString:
-        begin
-          case InParamValues[i].VArray.VIsNullArrayVariantType of
-            vtString: Result := StrToBoolEx(ZStringArray[j]);
-            vtAnsiString: Result := StrToBoolEx(ZAnsiStringArray[j]);
-            vtUTF8String: Result := StrToBoolEx(ZUTF8StringArray[j]);
-            vtRawByteString: Result := StrToBoolEx(ZRawByteStringArray[j]);
-            vtUnicodeString: Result := StrToBoolEx(ZUnicodeStringArray[j]);
-            vtCharRec:
-              if ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) then
-                Result := StrToBoolEx(PWideChar(ZCharRecArray[j].P))
-              else
-                Result := StrToBoolEx(PAnsiChar(ZCharRecArray[j].P));
-            vtNull: Result := True;
-            else
-              raise Exception.Create('Unsupported String Variant');
-          end;
-        end;
-      stBytes:
-        Result := ZBytesArray[j] = nil;
-      stDate, stTime, stTimestamp:
-        Result := ZDateTimeArray[j] <> 0;
-      stAsciiStream,
-      stUnicodeStream,
-      stBinaryStream:
-        Result := ZInterfaceArray[j] = nil;
-      else
-        raise EZSQLException.Create(SUnsupportedParameterType);
-    end;
-  end;
-
 begin
   {EH: slight cut down version with OleVatiants}
   Result := 0;
@@ -710,17 +647,11 @@ begin
     begin
       P := AdoCommand.Parameters.Item[i];
       P.Direction := ParamDirection;
-      ZData := InParamValues[I].VArray.VIsNullArray;
-      if (ZData = nil) then
-        IsNull := True
-      else
-        IsNull := IsNullFromIndicator;
-
-      ZData := InParamValues[I].VArray.VArray;
-      if (ZData = nil) or (IsNull) then
+      IsNull := IsNullFromArray(@InParamValues[I].VArray, J);
+      if (IsNull) then
         P.Value := null
-      else
-      begin
+      else begin
+        ZData := InParamValues[I].VArray.VArray;
         SQLType := TZSQLType(InParamValues[I].VArray.VArrayType);
         P.Type_ := ConvertSQLTypeToADO(SQLType);
         case SQLType of
@@ -736,7 +667,7 @@ begin
           stFloat:      P.Value := ZSingleArray[J];
           stDouble:     P.Value := ZDoubleArray[J];
           stCurrency:   P.Value := ZCurrencyArray[J];
-          stBigDecimal: P.Value := ZExtendedArray[J];
+          stBigDecimal: P.Value := BCDToDouble(TBCDDynArray(ZData)[J]);
           stGUID:
             begin
               P.Type_ := adGUID;
@@ -993,15 +924,9 @@ begin
         DBTYPE_NULL:      PDBSTATUS(NativeUInt(DBParams.pData)+DBBindingArray[i].obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
         DBTYPE_I2:        PSmallInt(Data)^ := ClientVarManager.GetAsInteger(InParamValues[i]);
         DBTYPE_I4:        PInteger(Data)^ := ClientVarManager.GetAsInteger(InParamValues[i]);
-        {$IFDEF BCD_TEST}
         DBTYPE_R4:        PSingle(Data)^ := ClientVarManager.GetAsDouble(InParamValues[i]);
         DBTYPE_R8:        PDouble(Data)^ := ClientVarManager.GetAsDouble(InParamValues[i]);
         DBTYPE_CY:        PCurrency(Data)^ := ClientVarManager.GetAsCurrency(InParamValues[i]);
-        {$ELSE}
-        DBTYPE_R4:        PSingle(Data)^ := ClientVarManager.GetAsFloat(InParamValues[i]);
-        DBTYPE_R8:        PDouble(Data)^ := ClientVarManager.GetAsFloat(InParamValues[i]);
-        DBTYPE_CY:        PCurrency(Data)^ := ClientVarManager.GetAsFloat(InParamValues[i]);
-        {$ENDIF}
         DBTYPE_DATE:      PDateTime(Data)^ := ClientVarManager.GetAsDateTime(InParamValues[i]);
         //DBTYPE_IDISPATCH	= 9;
         //DBTYPE_ERROR	= 10;
@@ -1239,7 +1164,6 @@ var
   ZSingleArray: TSingleDynArray absolute ZData;
   ZDoubleArray: TDoubleDynArray absolute ZData;
   ZCurrencyArray: TCurrencyDynArray absolute ZData;
-  ZExtendedArray: TExtendedDynArray absolute ZData;
   ZDateTimeArray: TDateTimeDynArray absolute ZData;
   ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
   ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
@@ -1254,54 +1178,6 @@ var
   Data: NativeUInt;
   PLen: PDBLENGTH;
 
-  function IsNullFromIndicator: Boolean;
-  begin
-    case TZSQLType(InParamValues[I].VArray.VIsNullArrayType) of
-      stBoolean: Result := ZBooleanArray[ArrayOffSet];
-      stByte: Result := ZByteArray[ArrayOffSet] <> 0;
-      stShort: Result := ZShortIntArray[ArrayOffSet] <> 0;
-      stWord: Result := ZWordArray[ArrayOffSet] <> 0;
-      stSmall: Result := ZSmallIntArray[ArrayOffSet] <> 0;
-      stLongWord: Result := ZLongWordArray[ArrayOffSet] <> 0;
-      stInteger: Result := ZIntegerArray[ArrayOffSet] <> 0;
-      stLong: Result := ZInt64Array[ArrayOffSet] <> 0;
-      stULong: Result := ZUInt64Array[ArrayOffSet] <> 0;
-      stFloat: Result := ZSingleArray[ArrayOffSet] <> 0;
-      stDouble: Result := ZDoubleArray[ArrayOffSet] <> 0;
-      stCurrency: Result := ZCurrencyArray[ArrayOffSet] <> 0;
-      stBigDecimal: Result := ZExtendedArray[ArrayOffSet] <> 0;
-      stGUID:
-        Result := True;
-      stString, stUnicodeString:
-        begin
-          case InParamValues[i].VArray.VIsNullArrayVariantType of
-            vtString: Result := StrToBoolEx(ZStringArray[ArrayOffSet]);
-            vtAnsiString: Result := StrToBoolEx(ZAnsiStringArray[ArrayOffSet]);
-            vtUTF8String: Result := StrToBoolEx(ZUTF8StringArray[ArrayOffSet]);
-            vtRawByteString: Result := StrToBoolEx(ZRawByteStringArray[ArrayOffSet]);
-            vtUnicodeString: Result := StrToBoolEx(ZUnicodeStringArray[ArrayOffSet]);
-            vtCharRec:
-              if ZCompatibleCodePages(ZCharRecArray[ArrayOffSet].CP, zCP_UTF16) then
-                Result := StrToBoolEx(PWideChar(ZCharRecArray[ArrayOffSet].P))
-              else
-                Result := StrToBoolEx(PAnsiChar(ZCharRecArray[ArrayOffSet].P));
-            vtNull: Result := True;
-            else
-              raise Exception.Create('Unsupported String Variant');
-          end;
-        end;
-      stBytes:
-        Result := ZBytesArray[ArrayOffSet] = nil;
-      stDate, stTime, stTimestamp:
-        Result := ZDateTimeArray[ArrayOffSet] <> 0;
-      stAsciiStream,
-      stUnicodeStream,
-      stBinaryStream:
-        Result := ZInterfaceArray[ArrayOffSet] = nil;
-      else
-        raise EZSQLException.Create(SUnsupportedParameterType);
-    end;
-  end;
 begin
   BuffOffSet := 0;
   //http://technet.microsoft.com/de-de/library/ms174522%28v=sql.110%29.aspx
@@ -1310,16 +1186,11 @@ begin
     TempLobOffSet := 0;
     for i := 0 to High(InParamValues) do
     begin
-      ZData := InParamValues[I].VArray.VIsNullArray;
-      if (ZData = nil) then
-        IsNull := False
-      else
-        IsNull := IsNullFromIndicator;
-      ZData := InParamValues[I].VArray.VArray;
-      if (ZData = nil) or (IsNull) then
+      IsNull := IsNullFromArray(@InParamValues[I].VArray, j);
+      if (IsNull) then
         PDBSTATUS(NativeUInt(DBParams.pData)+(DBBindingArray[i].obStatus + BuffOffSet))^ := DBSTATUS_S_ISNULL
-      else
-      begin
+      else begin
+        ZData := InParamValues[I].VArray.VArray;
         PDBSTATUS(NativeUInt(DBParams.pData)+(DBBindingArray[i].obStatus + BuffOffSet))^ := DBSTATUS_S_OK;
         SQLType := TZSQLType(InParamValues[I].VArray.VArrayType);
         Data := NativeUInt(DBParams.pData)+(DBBindingArray[i].obValue + BuffOffSet);
@@ -1341,7 +1212,7 @@ begin
               stFloat:      PSmallInt(Data)^ := Trunc(ZSingleArray[ArrayOffSet]);
               stDouble:     PSmallInt(Data)^ := Trunc(ZDoubleArray[ArrayOffSet]);
               stCurrency:   PSmallInt(Data)^ := Trunc(ZCurrencyArray[ArrayOffSet]);
-              stBigDecimal: PSmallInt(Data)^ := Trunc(ZExtendedArray[ArrayOffSet]);
+              stBigDecimal: PSmallInt(Data)^ := BCD2Int64(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:         PSmallInt(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZStringArray[ArrayOffSet], 0);
@@ -1376,7 +1247,7 @@ begin
               stFloat:      PInteger(Data)^ := Trunc(ZSingleArray[ArrayOffSet]);
               stDouble:     PInteger(Data)^ := Trunc(ZDoubleArray[ArrayOffSet]);
               stCurrency:   PInteger(Data)^ := Trunc(ZCurrencyArray[ArrayOffSet]);
-              stBigDecimal: PInteger(Data)^ := Trunc(ZExtendedArray[ArrayOffSet]);
+              stBigDecimal: PInteger(Data)^ := BCD2Int64(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:         PInteger(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZStringArray[ArrayOffSet], 0);
@@ -1411,7 +1282,7 @@ begin
               stFloat:      PSingle(Data)^ := ZSingleArray[ArrayOffSet];
               stDouble:     PSingle(Data)^ := ZDoubleArray[ArrayOffSet];
               stCurrency:   PSingle(Data)^ := ZCurrencyArray[ArrayOffSet];
-              stBigDecimal: PSingle(Data)^ := ZExtendedArray[ArrayOffSet];
+              stBigDecimal: PSingle(Data)^ := BCDToDouble(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   {$IFNDEF UNICODE}vtString,{$ENDIF}
@@ -1446,7 +1317,7 @@ begin
               stFloat:      PDouble(Data)^ := ZSingleArray[ArrayOffSet];
               stDouble:     PDouble(Data)^ := ZDoubleArray[ArrayOffSet];
               stCurrency:   PDouble(Data)^ := ZCurrencyArray[ArrayOffSet];
-              stBigDecimal: PDouble(Data)^ := ZExtendedArray[ArrayOffSet];
+              stBigDecimal: PDouble(Data)^ := BCDToDouble(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   {$IFNDEF UNICODE}vtString,{$ENDIF}
@@ -1481,7 +1352,7 @@ begin
               stFloat:      PCurrency(Data)^ := ZSingleArray[ArrayOffSet];
               stDouble:     PCurrency(Data)^ := ZDoubleArray[ArrayOffSet];
               stCurrency:   PCurrency(Data)^ := ZCurrencyArray[ArrayOffSet];
-              stBigDecimal: PCurrency(Data)^ := ZExtendedArray[ArrayOffSet];
+              stBigDecimal: BCDToCurr(TBCDDynArray(ZData)[ArrayOffSet], PCurrency(Data)^);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   {$IFNDEF UNICODE}vtString,{$ENDIF}
@@ -1516,7 +1387,7 @@ begin
               stFloat:      PDateTime(Data)^ := ZSingleArray[ArrayOffSet];
               stDouble:     PDateTime(Data)^ := ZDoubleArray[ArrayOffSet];
               stCurrency:   PDateTime(Data)^ := ZCurrencyArray[ArrayOffSet];
-              stBigDecimal: PDateTime(Data)^ := ZExtendedArray[ArrayOffSet];
+              stBigDecimal: PDateTime(Data)^ := BCDToDouble(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:
@@ -1553,7 +1424,7 @@ begin
               stFloat:      PWordBool(Data)^ := ZSingleArray[ArrayOffSet] <> 0;
               stDouble:     PWordBool(Data)^ := ZDoubleArray[ArrayOffSet] <> 0;
               stCurrency:   PWordBool(Data)^ := ZCurrencyArray[ArrayOffSet] <> 0;
-              stBigDecimal: PWordBool(Data)^ := ZExtendedArray[ArrayOffSet] <> 0;
+              stBigDecimal: PWordBool(Data)^ := BCDCompare(nullBCD, TBCDDynArray(ZData)[ArrayOffSet]) <> 0;
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   {$IFDEF UNICODE}
@@ -1592,7 +1463,7 @@ begin
               stFloat:      PByte(Data)^ := Trunc(ZSingleArray[ArrayOffSet]);
               stDouble:     PByte(Data)^ := Trunc(ZDoubleArray[ArrayOffSet]);
               stCurrency:   PByte(Data)^ := Trunc(ZCurrencyArray[ArrayOffSet]);
-              stBigDecimal: PByte(Data)^ := Trunc(ZExtendedArray[ArrayOffSet]);
+              stBigDecimal: PByte(Data)^ := BCD2Int64(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:         PByte(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZStringArray[ArrayOffSet], 0);
@@ -1627,7 +1498,7 @@ begin
               stFloat:      PWord(Data)^ := Trunc(ZSingleArray[ArrayOffSet]);
               stDouble:     PWord(Data)^ := Trunc(ZDoubleArray[ArrayOffSet]);
               stCurrency:   PWord(Data)^ := Trunc(ZCurrencyArray[ArrayOffSet]);
-              stBigDecimal: PWord(Data)^ := Trunc(ZExtendedArray[ArrayOffSet]);
+              stBigDecimal: PWord(Data)^ := BCD2Int64(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:         PWord(Data)^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZStringArray[ArrayOffSet], 0);
@@ -1662,7 +1533,7 @@ begin
               stFloat:      PLongWord(Data)^ := Trunc(ZSingleArray[ArrayOffSet]);
               stDouble:     PLongWord(Data)^ := Trunc(ZDoubleArray[ArrayOffSet]);
               stCurrency:   PLongWord(Data)^ := Trunc(ZCurrencyArray[ArrayOffSet]);
-              stBigDecimal: PLongWord(Data)^ := Trunc(ZExtendedArray[ArrayOffSet]);
+              stBigDecimal: PLongWord(Data)^ := BCD2Int64(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:         PLongWord(Data)^ := {$IFDEF UNICODE}UnicodeToUInt64Def{$ELSE}RawToUInt64Def{$ENDIF}(ZStringArray[ArrayOffSet], 0);
@@ -1697,7 +1568,7 @@ begin
               stFloat:      PInt64(Data)^ := Trunc(ZSingleArray[ArrayOffSet]);
               stDouble:     PInt64(Data)^ := Trunc(ZDoubleArray[ArrayOffSet]);
               stCurrency:   PInt64(Data)^ := Trunc(ZCurrencyArray[ArrayOffSet]);
-              stBigDecimal: PInt64(Data)^ := Trunc(ZExtendedArray[ArrayOffSet]);
+              stBigDecimal: PInt64(Data)^ := BCD2Int64(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:         PInt64(Data)^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(ZStringArray[ArrayOffSet], 0);
@@ -1732,7 +1603,7 @@ begin
               stFloat:      PUInt64(Data)^ := Trunc(ZSingleArray[ArrayOffSet]);
               stDouble:     PUInt64(Data)^ := Trunc(ZDoubleArray[ArrayOffSet]);
               stCurrency:   PUInt64(Data)^ := Trunc(ZCurrencyArray[ArrayOffSet]);
-              stBigDecimal: PUInt64(Data)^ := Trunc(ZExtendedArray[ArrayOffSet]);
+              stBigDecimal: PUInt64(Data)^ := BCD2UInt64(TBCDDynArray(ZData)[ArrayOffSet]);
               stString, stUnicodeString:
                 case InParamValues[i].VArray.VArrayVariantType of
                   vtString:         PUInt64(Data)^ := {$IFDEF UNICODE}UnicodeToUInt64Def{$ELSE}RawToUInt64Def{$ENDIF}(ZStringArray[ArrayOffSet], 0);
@@ -1830,7 +1701,7 @@ begin
                 stFloat:        AnsiTemp := FloatToRaw(ZSingleArray[ArrayOffSet]);
                 stDouble:       AnsiTemp := FloatToRaw(ZDoubleArray[ArrayOffSet]);
                 stCurrency:     AnsiTemp := FloatToRaw(ZCurrencyArray[ArrayOffSet]);
-                stBigDecimal:   AnsiTemp := FloatToRaw(ZExtendedArray[ArrayOffSet]);
+                stBigDecimal:   AnsiTemp := BCDToSQLRaw(TBCDDynArray(ZData)[ArrayOffSet]);
                 stTime:         AnsiTemp := DateTimeToRawSQLTime(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stDate:         AnsiTemp := DateTimeToRawSQLDate(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stTimeStamp:    AnsiTemp := DateTimeToRawSQLTimeStamp(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
@@ -1899,7 +1770,7 @@ begin
                 stFloat:        AnsiTemp := FloatToRaw(ZSingleArray[ArrayOffSet]);
                 stDouble:       AnsiTemp := FloatToRaw(ZDoubleArray[ArrayOffSet]);
                 stCurrency:     AnsiTemp := FloatToRaw(ZCurrencyArray[ArrayOffSet]);
-                stBigDecimal:   AnsiTemp := FloatToRaw(ZExtendedArray[ArrayOffSet]);
+                stBigDecimal:   AnsiTemp := BCDToSQLRaw(TBCDDynArray(ZData)[ArrayOffSet]);
                 stTime:         AnsiTemp := DateTimeToRawSQLTime(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stDate:         AnsiTemp := DateTimeToRawSQLDate(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stTimeStamp:    AnsiTemp := DateTimeToRawSQLTimeStamp(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
@@ -1983,7 +1854,7 @@ begin
                 stFloat:        UniTemp := FloatToUnicode(ZSingleArray[ArrayOffSet]);
                 stDouble:       UniTemp := FloatToUnicode(ZDoubleArray[ArrayOffSet]);
                 stCurrency:     UniTemp := FloatToUnicode(ZCurrencyArray[ArrayOffSet]);
-                stBigDecimal:   UniTemp := FloatToUnicode(ZExtendedArray[ArrayOffSet]);
+                stBigDecimal:   UniTemp := BCDToSQLUni(TBCDDynArray(ZData)[ArrayOffSet]);
                 stTime:         UniTemp := DateTimeToUnicodeSQLTime(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stDate:         UniTemp := DateTimeToUnicodeSQLDate(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stTimeStamp:    UniTemp := DateTimeToUnicodeSQLTimeStamp(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
@@ -2050,7 +1921,7 @@ begin
                 stFloat:        UniTemp := FloatToUnicode(ZSingleArray[ArrayOffSet]);
                 stDouble:       UniTemp := FloatToUnicode(ZDoubleArray[ArrayOffSet]);
                 stCurrency:     UniTemp := FloatToUnicode(ZCurrencyArray[ArrayOffSet]);
-                stBigDecimal:   UniTemp := FloatToUnicode(ZExtendedArray[ArrayOffSet]);
+                stBigDecimal:   UniTemp := BCDToSQLUni(TBCDDynArray(ZData)[ArrayOffSet]);
                 stTime:         UniTemp := DateTimeToUnicodeSQLTime(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stDate:         UniTemp := DateTimeToUnicodeSQLDate(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
                 stTimeStamp:    UniTemp := DateTimeToUnicodeSQLTimeStamp(ZDateTimeArray[ArrayOffSet], ConSettings.WriteFormatSettings, False);
@@ -2128,7 +1999,7 @@ begin
                 stFloat:      DateTimeTemp := ZSingleArray[ArrayOffSet];
                 stDouble:     DateTimeTemp := ZDoubleArray[ArrayOffSet];
                 stCurrency:   DateTimeTemp := ZCurrencyArray[ArrayOffSet];
-                stBigDecimal: DateTimeTemp := ZExtendedArray[ArrayOffSet];
+                stBigDecimal: DateTimeTemp := BCDToDouble(TBCDDynArray(ZData)[ArrayOffSet]);
                 stString, stUnicodeString:
                   case InParamValues[i].VArray.VArrayVariantType of
                     vtString:
@@ -2169,7 +2040,7 @@ begin
                 stFloat:      DateTimeTemp := ZSingleArray[ArrayOffSet];
                 stDouble:     DateTimeTemp := ZDoubleArray[ArrayOffSet];
                 stCurrency:   DateTimeTemp := ZCurrencyArray[ArrayOffSet];
-                stBigDecimal: DateTimeTemp := ZExtendedArray[ArrayOffSet];
+                stBigDecimal: DateTimeTemp := BCDToDouble(TBCDDynArray(ZData)[ArrayOffSet]);
                 stString, stUnicodeString:
                   case InParamValues[i].VArray.VArrayVariantType of
                     vtString:
@@ -2209,7 +2080,7 @@ begin
                 stFloat:      DateTimeTemp := ZSingleArray[ArrayOffSet];
                 stDouble:     DateTimeTemp := ZDoubleArray[ArrayOffSet];
                 stCurrency:   DateTimeTemp := ZCurrencyArray[ArrayOffSet];
-                stBigDecimal: DateTimeTemp := ZExtendedArray[ArrayOffSet];
+                stBigDecimal: DateTimeTemp := BCDToDouble(TBCDDynArray(ZData)[ArrayOffSet]);
                 stString, stUnicodeString:
                   case InParamValues[i].VArray.VArrayVariantType of
                     vtString:
@@ -2252,7 +2123,7 @@ begin
                 stFloat:      DateTimeTemp := ZSingleArray[ArrayOffSet];
                 stDouble:     DateTimeTemp := ZDoubleArray[ArrayOffSet];
                 stCurrency:   DateTimeTemp := ZCurrencyArray[ArrayOffSet];
-                stBigDecimal: DateTimeTemp := ZExtendedArray[ArrayOffSet];
+                stBigDecimal: DateTimeTemp := BCDToDouble(TBCDDynArray(ZData)[ArrayOffSet]);
                 stString, stUnicodeString:
                   case InParamValues[i].VArray.VArrayVariantType of
                     vtString:
@@ -2455,7 +2326,6 @@ begin
   end;
 end;
 
-{$IFDEF BCD_TEST}
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure BCD2Decimal(const Value: TBCD; Dest: PDecimal);
 var
@@ -2495,17 +2365,14 @@ begin
     if negative then
       Dest.Sign := 1;
   end;
-  Desc.Scale := BCDScale;
-
-  UInt64(Dest.
+  Dest.Scale := BCDScale;
   {$IFDEF FPC}
-  PD.Lo64 := i64; //correct translated
+  Dest.Lo64 := i64; //correct translated
   {$else}
-  PUint64(@PD.Lo64)^ := i64;
+  PUint64(@Dest.Lo64)^ := i64;
   {$ENDIF}
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-{$ENDIF}
 
 initialization
   OleCheck(CoGetMalloc(1, ZAdoMalloc));

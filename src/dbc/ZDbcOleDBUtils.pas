@@ -108,7 +108,7 @@ function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZ
 const SQLType2OleDBTypeEnum: array[TZSQLType] of DBTYPEENUM = (DBTYPE_NULL,
   DBTYPE_BOOL,
   DBTYPE_UI1, DBTYPE_I1, DBTYPE_UI2, DBTYPE_I2, DBTYPE_UI4, DBTYPE_I4,
-  DBTYPE_UI8, DBTYPE_I8, DBTYPE_R4, DBTYPE_R8, DBTYPE_CY, {$IFDEF BCD_TEST}DBTYPE_NUMERIC{$ELSE}DBTYPE_R8{$ENDIF},
+  DBTYPE_UI8, DBTYPE_I8, DBTYPE_R4, DBTYPE_R8, DBTYPE_CY, DBTYPE_NUMERIC,
   DBTYPE_DBDATE, DBTYPE_DBTIME2, DBTYPE_DATE,
   DBTYPE_GUID, DBTYPE_WSTR, DBTYPE_WSTR, DBTYPE_BYTES,
   DBTYPE_WSTR, DBTYPE_WSTR, DBTYPE_BYTES, DBTYPE_NULL, DBTYPE_TABLE);
@@ -419,7 +419,7 @@ begin
     DBTYPE_NUMERIC,
     DBTYPE_VARNUMERIC: if (Scale <= 4) and (Precision < sAlignCurrencyScale2Precision[Scale])
             then Result := DBTYPE_CY
-            else Result := {$IFNDEF BCD_TEST}DBTYPE_R8{$ELSE}DBTYPE_NUMERIC{$ENDIF};
+            else Result := DBTYPE_NUMERIC;
     //DBTYPE_UDT	= 132;
     //DBTYPE_HCHAPTER	= 136;
     DBTYPE_FILETIME: Result := DBTYPE_DATE;
@@ -553,8 +553,8 @@ var
       if DBBindingArray[Index].wType = DBTYPE_DBTIME2 then
         DBBindingArray[Index].dwFlags := DBCOLUMNINFO^.dwFlags; //keep it!
       if (DBCOLUMNINFO^.wType in [DBTYPE_DECIMAL, DBTYPE_NUMERIC]) and
-        (DBBindingArray[Index].wType = {$IFDEF BCD_TEST}DBTYPE_CY{$ELSE}DBTYPE_R8{$ENDIF})
-      then DBBindingArray[Index].cbMaxLen := SizeOf({$IFDEF BCD_TEST}Currency{$ELSE}Double{$ENDIF})
+        (DBBindingArray[Index].wType = DBTYPE_CY)
+      then DBBindingArray[Index].cbMaxLen := SizeOf(Currency)
       else DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize;
       DBBindingArray[Index].bPrecision := DBCOLUMNINFO^.bPrecision;
       DBBindingArray[Index].bScale := DBCOLUMNINFO^.bScale;

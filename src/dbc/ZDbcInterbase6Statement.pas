@@ -56,8 +56,7 @@ interface
 {$I ZDbc.inc}
 
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
-uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
@@ -148,7 +147,7 @@ type
     procedure SetFloat(Index: Integer; Value: Single); reintroduce;
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
@@ -219,7 +218,7 @@ begin
           stFloat: Stmt.SetFloat(ParamIndex, TSingleDynArray(ZData)[J]);
           stDouble: Stmt.SetDouble(ParamIndex, TDoubleDynArray(ZData)[J]);
           stCurrency: Stmt.SetCurrency(ParamIndex, TCurrencyDynArray(ZData)[J]);
-          stBigDecimal: Stmt.SetBigDecimal(ParamIndex, {$IFDEF BCD_TEST}TBCDDynArray{$ELSE}TExtendedDynArray{$ENDIF}(ZData)[J]);
+          stBigDecimal: Stmt.SetBigDecimal(ParamIndex, TBCDDynArray(ZData)[J]);
           stGUID: Stmt.SetGUID(ParamIndex, TGUIDDynArray(ZData)[j]);
           stString, stUnicodeString:
                 case PZArray(BindList[i].Value).VArrayVariantType of
@@ -829,7 +828,7 @@ end;
   @param x the parameter value
 }
 procedure TZInterbase6PreparedStatement.SetBigDecimal(
-  Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+  Index: Integer; const Value: TBCD);
 var XSQLVAR: PXSQLVAR;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -840,17 +839,11 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
-    {$IFDEF BCD_TEST}
     SQL_LONG      : BCD2ScaledOrdinal(Value, XSQLVAR.sqldata, SizeOf(ISC_LONG), -XSQLVAR.sqlscale);
     SQL_SHORT     : BCD2ScaledOrdinal(Value, XSQLVAR.sqldata, SizeOf(ISC_SHORT), -XSQLVAR.sqlscale);
     SQL_INT64,
     SQL_QUAD      : BCD2ScaledOrdinal(Value, XSQLVAR.sqldata, SizeOf(ISC_INT64), -XSQLVAR.sqlscale);
     else SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCDToDouble(Value));
-    {$ELSE}
-    SQL_TEXT,
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
-    else InternalBindDouble(XSQLVAR, Value);
-    {$ENDIF}
   end;
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;

@@ -41,7 +41,6 @@
 {********************************************************@}
 {.$DEFINE ZEOS_TEST_ONLY}
 {.$DEFINE GENERIC_INDEX}
-{.$DEFINE BCD_TEST}
 //common compilation directives
 {$DEFINE ZEOS72UP}
 {$DEFINE ZEOS73UP}
@@ -302,7 +301,6 @@
                           {$ENDIF}  
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
-                              {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
                               {$IF CompilerVersion >= 29} //Delphi XE8+
                                 {$IF CompilerVersion >= 30} //Delphi Seattle+
@@ -311,6 +309,7 @@
                                       {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField has now a virtual GetAsGUID function 
                                       {$DEFINE WITH_IProviderSupportNG}   //TDataset now supports IProviderSupportNG
                                       {$DEFINE WITH_InternalGotoBookmark_TBookmark}
+                                      {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+

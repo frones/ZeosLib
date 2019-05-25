@@ -109,15 +109,7 @@ begin
     Query.SQL.Text := 'SELECT * FROM Table_Num1';
     Query.Open;
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType), 'id field type');
-    {$IFDEF BCD_TEST}
     CheckEquals(Ord(ftFmtBCD), Ord(Query.Fields[1].DataType), 'Num field type');
-    {$ELSE}
-      {$IFDEF WITH_FTEXTENDED}
-      CheckEquals(Ord(ftExtended), Ord(Query.Fields[1].DataType), 'Num field type');
-      {$ELSE}
-      CheckEquals(Ord(ftFloat), Ord(Query.Fields[1].DataType), 'Num field type');
-      {$ENDIF}
-    {$ENDIF}
     CheckEquals(1, Query.Fields[0].AsInteger, 'id value');
     CheckEquals(54321.0123456789, Query.Fields[1].AsFloat, 1E-11, 'Num value');
   finally

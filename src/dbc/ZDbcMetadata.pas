@@ -57,8 +57,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBCD,
   ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
   ZDbcCache, ZCompatibility, ZSelectSchema, ZURL, ZDbcConnection;
 
@@ -2411,9 +2410,7 @@ var
   I: Integer;
   Metadata: IZResultSetMetadata;
   Len: NativeUInt;
-  {$IFDEF BCD_TEST}
   Buff: array[Byte] of Byte;
-  {$ENDIF}
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
@@ -2450,14 +2447,10 @@ begin
         stCurrency:
           DestResultSet.UpdateCurrency(I, SrcResultSet.GetCurrency(I));
         stBigDecimal:
-          {$IFDEF BCD_TEST}
           begin
             SrcResultSet.GetBigDecimal(I, PBCD(@Buff[0])^);
             DestResultSet.UpdateBigDecimal(I, PBCD(@Buff[0])^);
           end;
-          {$ELSE}
-          DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
-          {$ENDIF}
         stString, stUnicodeString, stAsciiStream, stUnicodeStream:
           if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
              (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then

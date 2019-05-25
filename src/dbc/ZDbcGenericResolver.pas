@@ -57,8 +57,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} StrUtils,
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} StrUtils, FmtBCD,
   ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
   ZSelectSchema, {$IF defined(OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND} ZCollections;
 
@@ -622,27 +621,19 @@ begin
         Statement.SetCurrency(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCurrency(ColumnIndex, WasNull));
       stDouble:
         Statement.SetDouble(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDouble(ColumnIndex, WasNull));
-      stBigDecimal:
-        {$IFDEF BCD_TEST}
-                    begin
+      stBigDecimal: begin
                       RowAccessor.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^, WasNull);
                       Statement.SetBigDecimal(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@RowAccessor.TinyBuffer[0])^);
                     end;
-        {$ELSE}
-        Statement.SetBigDecimal(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-          RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
-        {$ENDIF}
       stString, stUnicodeString:
         Statement.SetCharRec(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetCharRec(ColumnIndex, WasNull));
-      stBytes{$IFNDEF BCD_TEST},stGUID{$ENDIF}:
+      stBytes:
         Statement.SetBytes(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
-      {$IFDEF BCD_TEST}
       stGUID: begin
                 RowAccessor.GetGUID(ColumnIndex, PGUID(@RowAccessor.TinyBuffer[0])^, WasNull);
                 Statement.SetGuid(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGUID(@RowAccessor.TinyBuffer[0])^);
               end;
-      {$ENDIF}
       stDate:
         Statement.SetDate(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDate(ColumnIndex, WasNull));
       stTime:
@@ -976,15 +967,10 @@ begin
                 RowAccessor.SetCurrency(Current.ColumnIndex, ResultSet.GetCurrency(I));
               stDouble:
                 RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
-              stBigDecimal:
-                {$IFDEF BCD_TEST}
-                begin
+              stBigDecimal: begin
                   ResultSet.GetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                   RowAccessor.SetBigDecimal(Current.ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
                 end;
-                {$ELSE}
-                RowAccessor.SetBigDecimal(Current.ColumnIndex, ResultSet.GetBigDecimal(I));
-                {$ENDIF}
               stString, stAsciiStream, stUnicodeString, stUnicodeStream:
                 if RowAccessor.IsRaw then
                   RowAccessor.SetPAnsiChar(Current.ColumnIndex, ResultSet.GetPAnsiChar(I, Len), Len)

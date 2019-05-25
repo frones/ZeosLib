@@ -63,10 +63,7 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF BCD_TEST}
-  FmtBCD,
-  {$ENDIF}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement, ZDbcMySqlUtils,
@@ -146,11 +143,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -1263,29 +1256,17 @@ begin
         end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(9+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONG;
           Bind^.Length[0] := 4;
-        end else {$IFDEF BCD_TEST}if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(18+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then {$ENDIF} begin
+        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(18+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONGLONG;
           Bind^.Length[0] := 8;
-        end {$IFDEF BCD_TEST}else begin
+        end else begin
           Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
           bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
-        end{$ENDIF};
+        end;
       end else begin
-        {$IFDEF BCD_TEST}
         Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
         bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
         //see: http://www.iskm.org/mysql56/libmysql_8c_source.html / setup_one_fetch_function mysql always converts the decimal_t record to a string
-        {$ELSE}
-        if (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ <= 4) and
-           (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^-2 < Cardinal(sAlignCurrencyScale2Precision[PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^])) then
-          Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^
-        else begin
-          //force binary conversion to double values!
-          bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
-          Bind^.Length[0] := 8;
-        end;
-        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
-        {$ENDIF}
       end;
     else begin
       Bind^.Length[0] := (((PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^) shr 3)+1) shl 3; //8Byte Aligned
@@ -1854,7 +1835,6 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZAbstractMySQLResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var
   Len: NativeUInt;
@@ -1923,11 +1903,6 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := (Buffer = nil) or not TryRawToBCD(Buffer, Len, Result, '.');
   end;
-{$ELSE}
-function TZAbstractMySQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-begin
-  Result := GetDouble(ColumnIndex);
-{$ENDIF}
 end;
 
 {**

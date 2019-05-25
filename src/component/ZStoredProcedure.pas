@@ -118,7 +118,7 @@ implementation
 
 uses
   ZAbstractRODataset, ZMessages, ZDatasetUtils, ZDbcMetadata
-  {$IFDEF WITH_ASBYTES}, ZSysUtils{$ENDIF} {$IFDEF BCD_TEST},FmtBCD{$ENDIF}
+  {$IFDEF WITH_ASBYTES}, ZSysUtils{$ENDIF} ,FmtBCD
   {$IFDEF WITH_INLINE_ANSICOMPARETEXT}, Windows{$ENDIF};
 
 { TZStoredProc }
@@ -203,7 +203,7 @@ var
   Param: TParam;
   FCallableStatement: IZCallableStatement;
   TempBlob: IZBlob;
-  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
+  BCD: TBCD;
 begin
   if Assigned(Statement) then
     Statement.QueryInterface(IZCallableStatement, FCallableStatement);
@@ -255,20 +255,14 @@ begin
           Param.AsFloat := FCallableStatement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         {$IFDEF WITH_FTEXTENDED}
         ftExtended:
-          {$IFDEF BCD_TEST}
           Param.AsFloat := FCallableStatement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-          {$ELSE}
-          Param.AsFloat := FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-          {$ENDIF}
         {$ENDIF}
         ftBCD:
           Param.AsCurrency := FCallableStatement.GetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$IFDEF BCD_TEST}
         ftFmtBCD: begin
             FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD);
             Param.AsFMTBCD := BCD;
           end;
-        {$ENDIF}
         ftString:
           begin
             Param.AsString := FCallableStatement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});

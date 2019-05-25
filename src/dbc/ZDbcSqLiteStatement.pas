@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
   ZVariant, Types;
 
@@ -123,7 +123,7 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single); reintroduce;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD); reintroduce;
   end;
 
   TZSQLiteStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZStatement)
@@ -555,8 +555,7 @@ begin
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.SetBigDecimal(ParameterIndex: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
-{$IFDEF BCD_TEST}
+  const Value: TBCD);
 var ErrorCode, L: Integer;
   P: PAnsiChar;
 begin
@@ -571,10 +570,6 @@ begin
     if ErrorCode <> SQLITE_OK then CheckBindError(ErrorCode);
   end else
     FLateBound := True;
-{$ELSE}
-begin
-  SetDouble(ParameterIndex, Value);
-{$ENDIF}
 end;
 
 {**

@@ -132,11 +132,7 @@ function TZValFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
-  {$IFDEF BCD_TEST}
   VariantManager.SetAsDouble(Result, StrToFloatDef(Stack.GetParameter(1).VString, 0, InternalDefaultFormatSettings));
-  {$ELSE}
-  VariantManager.SetAsFloat(Result, StrToFloatDef(Stack.GetParameter(1).VString, 0, InternalDefaultFormatSettings));
-  {$ENDIF}
 end;
 
 { TZCtodFunction }
