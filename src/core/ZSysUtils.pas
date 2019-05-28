@@ -1204,8 +1204,7 @@ function TryRawToBcd(Buf: PAnsiChar; Len: LengthInt; var Bcd: TBcd; DecimalSep: 
 function TryStr2BCD(const Value: String; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean;
 function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): TBCD;
 
-procedure Double2BCD(const Value: Double; var Result: TBCD); overload;
-
+procedure Double2BCD(const Value: Double; var Result: TBCD);
 
 Type TCurrRoundToScale = 0..4;
 
@@ -7282,9 +7281,9 @@ end;
 
 { for a better code align -> move out of method }
 {$IFNDEF CPU64}
-const CIntTable: array[TCurrRoundToScale] of Cardinal = (10000, 1000, 100, 10, 1);
+const CIntTable: array[TCurrRoundToScale]      of Cardinal = (10000, 1000, 100, 10, 1);
 {$ENDIF}
-const CInt64Table: array[TCurrRoundToScale] of Int64  = (10000, 1000, 100, 10, 1);
+const CInt64Table:    array[TCurrRoundToScale]  of Int64   = (10000, 1000, 100, 10, 1);
 const PosHalfModulos: array [TCurrRoundToScale] of Integer = ( 4445,  445,  45,  5, 0);
 const NegHalfModulos: array [TCurrRoundToScale] of Integer = (-4445, -445, -45, -5, 0);
 
@@ -7317,7 +7316,7 @@ begin
     end;
     if Scale > 0 then
       if Modulo < 0 then begin
-        if Modulo >= NegHalfModulos[Scale] then
+        if Modulo <= NegHalfModulos[Scale] then
           d64 := d64 - CInt64Table[Scale];
       end else if Modulo >= PosHalfModulos[Scale] then
         d64 := d64 + CInt64Table[Scale];
