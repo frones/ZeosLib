@@ -56,6 +56,7 @@ program ZTestAll;
 uses
   Types,
   SysUtils,
+  ActiveX,
   TestFrameWork,
   GUITestRunner,
   TextTestRunner,
@@ -79,8 +80,13 @@ begin
 
   If CommandLineSwitches.batch then
     TextTestRunner.RunTest(CreateTestSuite).Free
-  else if CommandLineSwitches.xml then
-    XMLTestRunner2.RunTest(CreateTestSuite, CommandLineSwitches.xmlfilename).Free	
-  else
+  else if CommandLineSwitches.xml then begin
+    CoInitialize(nil);
+    try
+      XMLTestRunner2.RunTest(CreateTestSuite, CommandLineSwitches.xmlfilename).Free
+    finally
+      CoUninitialize;
+    end;
+  end else
     GUITestRunner.RunTest(CreateTestSuite);
 end.
