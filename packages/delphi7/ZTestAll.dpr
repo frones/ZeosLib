@@ -56,7 +56,6 @@ program ZTestAll;
 uses
   Types,
   SysUtils,
-  {$IFDEF REQUIRES_EXPLICIT_COINITIALIZE}ActiveX,{$ENDIF}
   TestFrameWork,
   GUITestRunner,
   TextTestRunner,
@@ -80,17 +79,8 @@ begin
 
   If CommandLineSwitches.batch then
     TextTestRunner.RunTest(CreateTestSuite).Free
-  else if CommandLineSwitches.xml then begin
-    {$IFDEF REQUIRES_EXPLICIT_COINITIALIZE}
-    CoInitialize(nil);
-    try
-    {$ENDIF}
-      XMLTestRunner2.RunTest(CreateTestSuite, CommandLineSwitches.xmlfilename).Free
-    {$IFDEF REQUIRES_EXPLICIT_COINITIALIZE}
-    finally
-      CoUninitialize;
-    end;
-    {$ENDIF}
-  end else
+  else if CommandLineSwitches.xml then
+    XMLTestRunner2.RunTest(CreateTestSuite, CommandLineSwitches.xmlfilename).Free	
+  else
     GUITestRunner.RunTest(CreateTestSuite);
 end.

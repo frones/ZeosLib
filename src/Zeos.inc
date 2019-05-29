@@ -124,7 +124,6 @@
   {$DEFINE WITH_TFIELD_FREEBUFFERS}       //TField has virtual FreeBuffers procedure
   {$DEFINE WITH_FIELD_VALIDATELOOKUPINFO} //TField has private ValidateLookupInfo() procedure
   {$DEFINE WITH_FUNIDIRECTIONAL}          //TDataSet have SetUniDirectional and GetUnidirectional
-  {$DEFINE REQUIRES_EXPLICIT_COINITIALIZE}         //in console applications we need to call CoInitialize ourselves, if we want to use COM - which we do in our xml test listener
 
   //now compiler related (un)defines do follow up here
   {$IF CompilerVersion < 15}
@@ -138,7 +137,6 @@
     {$DEFINE VER150BELOW}                   //found in ZTestBugCompPostgreSql.pas
     {$DEFINE WITH_OVERLOAD_BUG}             //D7 Bug -> ambiguous overload error when both Func(Integer) and Func(Cardinal) exist and Func(a: Byte/Word) is called
     {$IF CompilerVersion >= 16} //Delphi 8+
-	  {$UNDEF REQUIRES_EXPLICIT_COINITIALIZE}        //Currently only Delphi 7 is known to need this
       {$IF CompilerVersion >= 17} //Delphi 2005+
         {$DEFINE WITH_INLINE}          // compiler supports inline methodes
 
