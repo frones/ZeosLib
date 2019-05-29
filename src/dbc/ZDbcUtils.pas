@@ -318,7 +318,7 @@ const
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math
   {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**

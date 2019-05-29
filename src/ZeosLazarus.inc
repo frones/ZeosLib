@@ -103,13 +103,17 @@
        {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
        {$DEFINE WITH_FTGUID} //TStringField descendant TGuidField is supported 
        {$DEFINE FPC2_6UP}
-       {$DEFINE FPC2_6DOWN}
     {$IFEND}
 
     {$IF FPC_FULLVERSION>=30000}
        {$DEFINE FPC3_0UP}
-       {$UNDEF FPC2_6DOWN}
+	{$ELSE}
+       {$DEFINE FPC2_6DOWN}	
     {$ENDIF}
+	
+	{$IF FPC_FULLVERSION>=30200}
+	   {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
+	{$ENDIF}
 
     {$IFDEF LCL}
       {$DEFINE WITH_LCONVENCODING} //Only available for Lazarus
