@@ -77,7 +77,7 @@
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
 {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
   {$MODE DELPHI}
-
+  {$UNDEF REQUIRES_EXPLICIT_COINITIALIZE}        //Currently only Delphi 7 is known to need this
   {$INTERFACES COM}
   {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
     {$IF FPC_FULLVERSION<=20204}
