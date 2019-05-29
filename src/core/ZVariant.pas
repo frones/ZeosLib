@@ -1043,11 +1043,11 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
 var
   i: Int64;
   TempDateTime: TDateTime;
-  function Compare(const Diff: Double): Integer; overload;
+  function CompareDiff(const Diff: Double): Integer;
   begin
     Result :=  Ord(Diff > FLOAT_COMPARE_PRECISION)-Ord(Diff < -FLOAT_COMPARE_PRECISION)
   end;
-  function Compare(const v1, v2: Currency): Integer; overload;
+  function CompareCurr(const v1, v2: Currency): Integer;
   begin
     Result := Ord(V1 > V2)-Ord(V1 < V2);
   end;
@@ -1064,8 +1064,8 @@ begin
         i := GetAsInteger(Value2);
         Result := Ord(Value1.VInteger > I)-Ord(Value1.VInteger < I);
       end;
-    vtDouble: Result := Compare(Value1.VDouble-GetAsDouble(Value2));
-    vtCurrency: Result := Compare(Value1.VCurrency, GetAsCurrency(Value2));
+    vtDouble: Result := CompareDiff(Value1.VDouble-GetAsDouble(Value2));
+    vtCurrency: Result := CompareCurr(Value1.VCurrency, GetAsCurrency(Value2));
     vtBigDecimal: Result := BCDCompare(Value1.VBigDecimal, GetAsBigDecimal(Value2));
     vtString:
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
