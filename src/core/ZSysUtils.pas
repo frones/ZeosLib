@@ -6751,7 +6751,7 @@ var
   Negative: Boolean;
   DecimalPos, Exp: Integer;
   Pos: Byte;
-  P, PEnd: PWideChar;
+  P, P2, PEnd: PWideChar;
 label Fail, CompExp, Finalize, CheckPos;
 begin
   FillChar(Bcd, SizeOf(Bcd), #0);
@@ -6766,8 +6766,9 @@ begin
   // Skip trailing zeroes
   while (PEnd > Buf) and (PWord(PEnd-1)^ = Ord('0')) do Dec(PEnd);
   //now test if either an exponent or a decimal sep was given, if not then there are no trailing zeroes i.e. '400000'
+  P2 := PEnd;
   while (PEnd > Buf) and (PWord(PEnd-1)^ in [Ord('0')..Ord('9')]) do Dec(PEnd);
-  if not (Byte(PWord(PEnd)^) or $20 in [Ord('1')..Ord('9'), Ord('e'), Ord(DecimalSep)]) then PEnd := P;
+  if not (Byte(PWord(PEnd)^) or $20 in [Ord('e'), Ord(DecimalSep)]) then PEnd := P2;
   Pos := 0;
   DecimalPos := -1;
   if Buf = PEnd then
@@ -6874,7 +6875,7 @@ var
   Negative: Boolean;
   DecimalPos, Exp: Integer;
   Pos: Byte;
-  P, PEnd: PAnsiChar;
+  P, P2, PEnd: PAnsiChar;
 label Fail, CompExp, Finalize, CheckPos;
 begin
   FillChar(Bcd, SizeOf(Bcd), #0);
@@ -6891,7 +6892,8 @@ begin
   while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away
   //now test if either an exponent or a decimal sep was given, if not then there are no trailing zeroes i.e. '400000'
   while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord('0')..Ord('9')]) do Dec(PEnd);
-  if not (PByte(PEnd)^ or $20 in [Ord('1')..Ord('9'), Ord('e'), Ord(DecimalSep)]) then PEnd := P;
+  P2 := PEnd;
+  if not (PByte(PEnd)^ or $20 in [Ord('e'), Ord(DecimalSep)]) then PEnd := P2;
   if Buf = PEnd then
     if PByte(PEnd)^ = Ord('0')
     then goto Finalize
