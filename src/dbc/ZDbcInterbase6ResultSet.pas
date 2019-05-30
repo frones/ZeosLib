@@ -152,8 +152,10 @@ type
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
-    procedure FillColumInfoFromGetColumnsRS(ColumnInfo: TZColumnInfo;
-      const TableColumns: IZResultSet; const FieldName: String); override;
+    procedure SetColumnPrecisionFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
+    procedure SetColumnTypeFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
   public
     function GetCatalogName({%H-}ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -1738,17 +1740,6 @@ begin
   ColumnInfo.DefinitelyWritable := False;
 end;
 
-procedure TZInterbaseResultSetMetadata.FillColumInfoFromGetColumnsRS(
-  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
-  const FieldName: String);
-begin
-  inherited FillColumInfoFromGetColumnsRS(ColumnInfo, TableColumns, FieldName);
-  //FB native rs can't give use users choosen precision
-  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
-     not TableColumns.IsNull(TableColColumnSizeIndex) then
-    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
-end;
-
 {**
   Gets the designated column's table's catalog name.
   @param ColumnIndex the first column is 1, the second is 2, ...
@@ -1837,5 +1828,31 @@ begin
   Loaded := True;
   {$ENDIF}
 end;
+
+procedure TZInterbaseResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
+     not TableColumns.IsNull(TableColColumnSizeIndex) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+end;
+
+procedure TZInterbaseResultSetMetadata.SetColumnTypeFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+var Precision: Integer;
+begin
+  //FB native ResultSet can't give use users choosen precision for the Numeric/Decimal Fields
+  //so a ISC_INT64 type with scale smaller then four will always be
+  //mapped to stBigDecimal while it could be a stCurrency type. Let's test it!
+  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
+     not TableColumns.IsNull(TableColColumnSizeIndex) then begin
+    Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+    if (ColumnInfo.ColumnType = stBigDecimal) and (ColumnInfo.Scale <= 4) and
+       (Precision < sAlignCurrencyScale2Precision[ColumnInfo.Scale]) then
+      ColumnInfo.ColumnType := stCurrency;
+  end else
+    inherited SetColumnTypeFromGetColumnsRS(ColumnInfo, TableColumns);
+end;
+
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.
