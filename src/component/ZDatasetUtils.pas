@@ -474,11 +474,10 @@ begin
     ColumnInfo.ColumnType := ConvertDatasetToDbcType(Current.DataType);
     ColumnInfo.ColumnName := Current.FieldName;
     ColumnInfo.Precision := Current.Size;
-    ColumnInfo.Scale := 0;
+    if Current.DataType in [ftBCD, ftFmtBCD] then
+      ColumnInfo.Scale := Current.DataSize;
     ColumnInfo.ColumnLabel := Current.DisplayName;
-    ColumnInfo.ColumnDisplaySize := Current.DisplayWidth;
     ColumnInfo.DefaultExpression := Current.DefaultExpression;
-
     Result.Add(ColumnInfo);
   end;
 end;

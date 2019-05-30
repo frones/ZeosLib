@@ -2263,7 +2263,6 @@ begin
     begin
       Currency := Metadata.IsCurrency(I);
       Signed := Metadata.IsSigned(I);
-      ColumnDisplaySize := Metadata.GetColumnDisplaySize(I);
       ColumnLabel := Metadata.GetColumnLabel(I);
       Precision := Metadata.GetPrecision(I);
       Scale := Metadata.GetScale(I);

@@ -608,7 +608,6 @@ begin
           {$ENDIF}
           ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_,
             FAdoCommand.Parameters.Item[I].Precision, FAdoCommand.Parameters.Item[I].NumericScale, ConSettings.CPType);
-          ColumnDisplaySize := FAdoCommand.Parameters.Item[I].Precision;
           Precision := FAdoCommand.Parameters.Item[I].Precision;
           IndexAlign[High(IndexAlign)] := I;
         end;

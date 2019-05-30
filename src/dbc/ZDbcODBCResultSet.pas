@@ -1601,7 +1601,7 @@ begin
           //ColumnInfo.CharOctedLength := ColNumAttribute(ColumnNumber, SQL_DESC_OCTET_LENGTH);
           AutoIncrement := ColNumAttribute(ColumnNumber, SQL_DESC_AUTO_UNIQUE_VALUE) = SQL_TRUE;
           CaseSensitive := ColNumAttribute(ColumnNumber, SQL_DESC_CASE_SENSITIVE) = SQL_TRUE;
-          ColumnDisplaySize := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
+          Precision := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
           bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_NULLABLE);
           if bufSQLLEN = SQL_NULLABLE then
             Nullable := ntNullable
@@ -1643,21 +1643,15 @@ begin
                 Scale := ColNumAttribute(ColumnNumber, SQL_DESC_SCALE);
                 Signed := True;
               end;
-            SQL_CHAR, SQL_WCHAR: begin
-                Precision := ColumnDisplaySize;
-                FixedWidth := True;
-              end;
+            SQL_CHAR, SQL_WCHAR: FixedWidth := True;
             SQL_BINARY: begin
                 Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
                 FixedWidth := True;
               end;
             SQL_VARCHAR, SQL_WVARCHAR, SQL_VARBINARY:
-                Precision := ColumnDisplaySize;
-            SQL_TINYINT, SQL_SMALLINT, SQL_INTEGER, SQL_BIGINT: begin
-                Precision := ColumnDisplaySize;
+                Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
+            SQL_TINYINT, SQL_SMALLINT, SQL_INTEGER, SQL_BIGINT:
                 Signed := ColNumAttribute(ColumnNumber, SQL_DESC_UNSIGNED) = SQL_FALSE;
-              end;
-            else Precision := ColumnDisplaySize;
           end;
 
           ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, Scale, Precision,

@@ -631,14 +631,18 @@ begin
         else ColumnInfo.ColumnType := stBigDecimal;
         Exit;
       end;
+    TIMESTAMPOID, TIMESTAMPTZOID, ABSTIMEOID: begin
+      ColumnInfo.ColumnType := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
+      ColumnInfo.Scale := TypeModifier; //milliseconds or negative if not specified
+      Exit;
+    end;
   end;
 
   SQLType := PostgreSQLToSQLType(ConSettings, Connection.IsOidAsBlob, TypeOid, TypeModifier);
 
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
-  else
-  begin
+  else begin
     ColumnInfo.ColumnType := stString;
     ColumnInfo.Precision := 255;
     ColumnInfo.ReadOnly := True;
@@ -690,13 +694,8 @@ begin
       then ColumnLabel := BufferToStr(P, Precision)
       else ColumnLabel := ZUnicodeToString(PRawToUnicode(P, Precision, FClientCP), ConSettings^.CTRL_CP);
       {$ENDIF}
-      ColumnDisplaySize := 0;
-      Scale := 0;
+      Nullable := ntNullableUnknown; //there is NO information about nullable
       Precision := 0;
-
-      AutoIncrement := False;
-      Signed := False;
-      Nullable := ntNullable;
 
       FieldType := FPlainDriver.PQftype(Fres, I);
 
@@ -719,13 +718,10 @@ begin
             else DefinePostgreSQLToSQLType(ColumnInfo, 25, FieldMode) //assume text instead!
           else if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
             Precision := 255;
-          if ColumnType = stString then begin
-            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
-            ColumnDisplaySize := Precision;
-          end else if ColumnType = stUnicodeString then begin
+          if ColumnType = stString then
+            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
+          else if ColumnType = stUnicodeString then
             CharOctedLength := Precision shl 1;
-            ColumnDisplaySize := Precision;
-          end;
         end;
       end;
     end;

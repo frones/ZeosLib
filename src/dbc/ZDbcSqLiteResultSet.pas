@@ -532,15 +532,12 @@ begin
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
         FieldPrecision, FieldDecimals, ConSettings.CPType);
 
-      if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      begin
+      if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
         ColumnCodePage := zCP_UTF8;
         if ColumnType = stString then begin
-          ColumnDisplaySize := FieldPrecision;
           CharOctedLength := FieldPrecision shl 2;
           Precision := FieldPrecision;
         end else if ColumnType = stUnicodeString then begin
-          ColumnDisplaySize := FieldPrecision;
           CharOctedLength := FieldPrecision shl 1;
           Precision := FieldPrecision;
         end;
@@ -551,7 +548,7 @@ begin
       Precision := FieldPrecision;
       Scale := FieldDecimals;
       Signed := True;
-      Nullable := ntNullable;
+      Nullable := ntNullable;  //sqlite just uses affinities .. all columns are nullable
     end;
 
     ColumnsInfo.Add(ColumnInfo);

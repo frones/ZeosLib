@@ -187,12 +187,11 @@ begin
   Result.Currency := True;
   Result.Nullable := Nullable;
   Result.Signed := True;
-  Result.ColumnDisplaySize := 32;
   Result.ColumnLabel := 'Test Label'+IntToStr(Index);
   Result.ColumnName := 'TestName'+IntToStr(Index);
   Result.SchemaName := 'TestSchemaName';
   case ColumnType of
-    stString: Result.Precision := 255;
+    stString, stUnicodeString: Result.Precision := 255;
     stBytes: Result.Precision := 5;
   else
     Result.Precision := 0;

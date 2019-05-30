@@ -478,7 +478,6 @@ begin
     ColumnInfo.Currency := Current.Currency;
     ColumnInfo.Nullable := Current.Nullable;
     ColumnInfo.Signed := Current.Signed;
-    ColumnInfo.ColumnDisplaySize := Current.ColumnDisplaySize;
     ColumnInfo.ColumnLabel := Current.ColumnLabel;
     ColumnInfo.ColumnName := Current.ColumnName;
     ColumnInfo.SchemaName := Current.SchemaName;

@@ -996,7 +996,6 @@ type
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType;
 
     function IsSigned(ColumnIndex: Integer): Boolean;
-    function GetColumnDisplaySize(ColumnIndex: Integer): Integer;
     function GetColumnLabel(ColumnIndex: Integer): string;
     function GetColumnName(ColumnIndex: Integer): string;
     function GetColumnCodePage(ColumnIndex: Integer): Word;

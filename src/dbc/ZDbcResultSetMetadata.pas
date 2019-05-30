@@ -76,7 +76,6 @@ type
                         //currency field like MS/PG-Money should be indicated here
     FNullable: TZColumnNullableType;
     FSigned: Boolean; //signed ordinals or fixed with datatype?
-    FColumnDisplaySize: Integer;
     FCharOctedLength: Integer;
     FColumnLabel: string;
     FColumnName: string;
@@ -103,8 +102,6 @@ type
     property Nullable: TZColumnNullableType read FNullable write FNullable;
 
     property Signed: Boolean read FSigned write FSigned;
-    property ColumnDisplaySize: Integer read FColumnDisplaySize
-      write FColumnDisplaySize;
     property CharOctedLength: Integer read FCharOctedLength
       write FCharOctedLength;
     property ColumnLabel: string read FColumnLabel write FColumnLabel;
@@ -196,7 +193,6 @@ type
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType; virtual;
 
     function IsSigned(ColumnIndex: Integer): Boolean; virtual;
-    function GetColumnDisplaySize(ColumnIndex: Integer): Integer; virtual;
     function GetColumnLabel(ColumnIndex: Integer): string; virtual;
     function GetColumnName(ColumnIndex: Integer): string; virtual;
     function GetColumnCodePage(ColumnIndex: Integer): Word;
@@ -227,24 +223,8 @@ uses ZFastCode, ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils, ZEncoding;
 constructor TZColumnInfo.Create;
 begin
   FAutoIncrement := False;
-  FCaseSensitive := False;
-  FSearchable := False;
-  FCurrency := False;
   FNullable := ntNullableUnknown;
-  FSigned := False;
-  FColumnDisplaySize := 0;
-  FColumnLabel := '';
-  FColumnName := '';
-  FSchemaName := '';
-  FPrecision := 0;
-  FScale := 0;
-  FTableName := '';
-  FCatalogName := '';
-  FDefaultValue := '';
-  FColumnType := stUnknown;
   FReadOnly := True;
-  FWritable := False;
-  FDefinitelyWritable := False;
   FColumnCodePage := zCP_NONE;
 end;
 
@@ -439,18 +419,6 @@ end;
 function TZAbstractResultSetMetadata.IsSigned(ColumnIndex: Integer): Boolean;
 begin
   Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Signed;
-end;
-
-{**
-  Indicates the designated column's normal maximum width in characters.
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return the normal maximum number of characters allowed as the width
-    of the designated column
-}
-function TZAbstractResultSetMetadata.GetColumnDisplaySize(
-  ColumnIndex: Integer): Integer;
-begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnDisplaySize;
 end;
 
 {**

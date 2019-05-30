@@ -343,9 +343,8 @@ begin
     if FieldSize < 0 then
       FieldSize := 0;
     if F.Type_ = adGuid
-    then ColumnInfo.ColumnDisplaySize := 38
-    else ColumnInfo.ColumnDisplaySize := FieldSize;
-    if ColType = adCurrency then begin
+    then ColumnInfo.Precision := 38
+    else if ColType = adCurrency then begin
       ColumnInfo.Precision := 19;
       ColumnInfo.Scale := 4;
       ColumnInfo.Currency := True;

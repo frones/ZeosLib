@@ -1614,13 +1614,9 @@ begin
               then ColumnCodePage := ZCodePageInfo.CP
               else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
               Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
-              if ColumnType = stString then begin
-                CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
-                ColumnDisplaySize := Precision;
-              end else begin
-                CharOctedLength := Precision shl 1;
-                ColumnDisplaySize := Precision;
-              end;
+              if ColumnType = stString
+              then CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
+              else CharOctedLength := Precision shl 1;
             end;
           stAsciiStream, stUnicodeStream:
             ColumnCodePage := ConSettings^.ClientCodePage^.CP;

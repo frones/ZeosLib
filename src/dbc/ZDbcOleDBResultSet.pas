@@ -2175,13 +2175,11 @@ begin
         FieldSize := 0
       else
         FieldSize := prgInfo^.ulColumnSize;
-      if ColumnInfo.ColumnType = stGUID then begin
-        ColumnInfo.ColumnDisplaySize := 38;
-        ColumnInfo.Precision := 38;
-      end else if ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] then begin
-        ColumnInfo.ColumnDisplaySize := FieldSize;
-        ColumnInfo.Precision := FieldSize;
-      end else if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) then begin
+      if ColumnInfo.ColumnType = stGUID then
+        ColumnInfo.Precision := 38
+      else if ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] then
+        ColumnInfo.Precision := FieldSize
+      else if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) then begin
         ColumnInfo.Precision := prgInfo.bPrecision;
         if (prgInfo^.wType = DBTYPE_CY)
         then ColumnInfo.Scale := 4

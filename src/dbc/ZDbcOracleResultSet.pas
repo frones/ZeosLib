@@ -1781,8 +1781,7 @@ begin
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
       if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
-        ColumnInfo.ColumnDisplaySize := ColumnInfo.ColumnDisplaySize shr 1; //shr 1 = div 2 but faster
-      //ColumnInfo.Precision := ColumnInfo.ColumnDisplaySize;
+        ColumnInfo.Precision := ColumnInfo.Precision shr 1;
       ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
       if ColumnInfo.ColumnType = stString then begin
         ColumnInfo.CharOctedLength := ColumnInfo.Precision * ConSettings^.ClientCodePage^.CharWidth;
@@ -2034,13 +2033,11 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ColumnInfo := TZColumnInfo.Create;
 
-    with ColumnInfo do
-    begin
+    with ColumnInfo do begin
       ColumnName := '';
       TableName := '';
 
       ColumnLabel := FFieldNames[i];
-      ColumnDisplaySize := 0;
       AutoIncrement := False;
       Signed := True;
       Nullable := ntNullable;
@@ -2060,17 +2057,12 @@ begin
           ColumnType := stString;
         if (ColumnType = stString) and ( ConSettings^.CPType = cCP_UTF16) then
           ColumnType := stUnicodeString;
-      end
-      else
+      end else
         ColumnInfo.ColumnCodePage := High(Word);
 
-      if ( ColumnType in [stString, stUnicodeString] ) then
-      begin
-        ColumnDisplaySize := CurrentVar.value_sz;
-        Precision := CurrentVar.value_sz;
-      end
-      else
-        Precision := CurrentVar.Precision;
+      if ( ColumnType in [stString, stUnicodeString] )
+      then Precision := CurrentVar.value_sz
+      else Precision := CurrentVar.Precision;
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;

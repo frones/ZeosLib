@@ -1158,11 +1158,9 @@ begin
         if ColumnType = stString then begin
           CharOctedLength := GetFieldLength(I)-4;
           Precision := CharOctedLength div ConSettings^.ClientCodePage^.CharWidth;
-          ColumnDisplaySize := Precision;
         end else if FieldSQLType = stUnicodeString then begin
           Precision := GetFieldLength(I)-4 div ConSettings^.ClientCodePage^.CharWidth;
           CharOctedLength := Precision shl 1;
-          ColumnDisplaySize := Precision;
         end;
       end else
         ColumnCodePage := High(Word);
