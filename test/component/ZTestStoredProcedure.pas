@@ -773,19 +773,11 @@ begin
 
   CheckEquals('P9', StoredProc.Fields[8].DisplayName);
   //CheckEquals(SQLTime, StoredProc.Fields[8].AsFloat);
-  {$IFDEF WITH_FTEXTENDED}
-  CheckEquals(ord(ftExtended), ord(StoredProc.Fields[8].DataType));
-  {$ELSE}
-  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[8].DataType));
-  {$ENDIF}
+  CheckEquals(ord(ftFmtBCD), ord(StoredProc.Fields[8].DataType));
 
   CheckEquals('P10', StoredProc.Fields[9].DisplayName);
   CheckEquals(40000, StoredProc.Fields[9].AsInteger);
-  {$IFDEF WITH_FTEXTENDED}
-  CheckEquals(ord(ftExtended), ord(StoredProc.Fields[9].DataType));
-  {$ELSE}
-  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[9].DataType));
-  {$ENDIF}
+  CheckEquals(Ord(ftFmtBCD), ord(StoredProc.Fields[9].DataType));
 
   CheckEquals('P11', StoredProc.Fields[10].DisplayName);
   CheckEquals(Str1, StoredProc.Fields[10].AsString, Connection.DbcConnection.GetConSettings);
