@@ -6768,7 +6768,9 @@ begin
   //now test if either an exponent or a decimal sep was given, if not then there are no trailing zeroes i.e. '400000'
   P2 := PEnd;
   while (PEnd > Buf) and (PWord(PEnd-1)^ in [Ord('0')..Ord('9')]) do Dec(PEnd);
-  if not (Byte(PWord(PEnd)^) or $20 in [Ord('e'), Ord(DecimalSep)]) then PEnd := P2;
+  if ((PEnd = Buf) and (Byte(PWord(PEnd)^) in [Ord('1')..Ord('9')])) or ((PEnd > Buf) and not (Byte(PWord(PEnd-1)^) or $20 in [Ord('e'), Ord(DecimalSep)]))
+  then PEnd := P2
+  else PEnd := P;
   Pos := 0;
   DecimalPos := -1;
   if Buf = PEnd then
@@ -6891,9 +6893,11 @@ begin
   P := PEnd; //remainder for Exponent or if no decimal sep is given
   while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away
   //now test if either an exponent or a decimal sep was given, if not then there are no trailing zeroes i.e. '400000'
-  while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord('0')..Ord('9')]) do Dec(PEnd);
   P2 := PEnd;
-  if not (PByte(PEnd)^ or $20 in [Ord('e'), Ord(DecimalSep)]) then PEnd := P2;
+  while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord('0')..Ord('9')]) do Dec(PEnd);
+  if (((P2 = Buf) and (PByte(P2)^ in [Ord('1')..Ord('9')])) or ((P2 > Buf) and (PByte(PEnd-1)^ or $20 in [Ord('e'), Byte(DecimalSep)])))
+  then PEnd := P2
+  else PEnd := P;
   if Buf = PEnd then
     if PByte(PEnd)^ = Ord('0')
     then goto Finalize
