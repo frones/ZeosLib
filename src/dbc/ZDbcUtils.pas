@@ -988,9 +988,9 @@ begin
     end;
   {$ENDIF}
   if Src.Scale < 4 then
-    i64 := i64 * ZFastCode.I64Table[4 - Src.scale]
+    i64 := i64 * ZFastCode.Int64Tower[4 - Src.scale]
   else if Src.Scale > 4 then
-    i64 := i64 div ZFastCode.I64Table[Src.scale - 4];
+    i64 := i64 div ZFastCode.Int64Tower[Src.scale - 4];
   if Src.Sign = NumericNegSign then
     Result := -Result;
 end;
@@ -1010,9 +1010,9 @@ begin
     end;
   {$ENDIF}
   if Src.Scale < 4 then
-    i64 := i64 * ZFastCode.I64Table[4 - Src.scale]
+    i64 := i64 * ZFastCode.Int64Tower[4 - Src.scale]
   else if Src.Scale > 4 then
-    i64 := i64 div ZFastCode.I64Table[Src.scale - 4];
+    i64 := i64 div ZFastCode.Int64Tower[Src.scale - 4];
   if Src.Sign = NumericNegSign then
     Result := -Result;
 end;

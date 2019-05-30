@@ -350,45 +350,35 @@ const
       10000);
   NVU_CurrencyExponents: array[0..10] of Integer =
     (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
-  {$IFNDEF WITH_UINT64_C1118_ERROR}
-  uPosScaleFaktor: array[0..19] of UInt64 = (
-      1,
-      10,
-      100,
-      1000,
-      10000,
-      100000,
-      1000000,
-      10000000,
-      100000000,
-      1000000000,
-      10000000000,
-      100000000000,
-      1000000000000,
-      10000000000000,
-      100000000000000,
-      1000000000000000,
-      10000000000000000,
-      100000000000000000,
-      1000000000000000000,
-      10000000000000000000);
-  UInt64Divisor: array[0..10] of UInt64 = (
-      1,
-      100,
-      10000,
-      1000000,
-      100000000,
-      10000000000,
-      1000000000000,
-      100000000000000,
-      10000000000000000,
-      1000000000000000000,
-      10000000000000000000);
-  {$ELSE}
+{$IF defined(NEED_TYPED_UINT64_CONSTANTS) or defined(WITH_UINT64_C1118_ERROR)}
+  cInt64Divisor: array[0..10] of Int64Rec = (
+    (lo: $00000001; hi: $00000000), {                   1}
+    (lo: $00000064; hi: $00000000), {                 100}
+    (lo: $00002710; hi: $00000000), {               10000}
+    (lo: $000F4240; hi: $00000000), {             1000000}
+    (lo: $05F5E100; hi: $00000000), {           100000000}
+    (lo: $540BE400; hi: $00000002), {         10000000000}
+    (lo: $D4A51000; hi: $000000E8), {       1000000000000}
+    (lo: $107A4000; hi: $00005AF3), {     100000000000000}
+    (lo: $6FC10000; hi: $002386F2), {   10000000000000000}
+    (lo: $A7640000; hi: $0DE0B6B3), { 1000000000000000000}
+    (lo: $89E80000; hi: $8AC72304));{10000000000000000000}
 var
-  uPosScaleFaktor: array[0..19] of UInt64;
-  UInt64Divisor: array[0..10] of UInt64;
-  {$ENDIF}
+  UInt64Divisor:   array[0..10] of UInt64 absolute cInt64Divisor;
+{$ELSE}
+  UInt64Divisor: array[0..10] of UInt64 = (
+    $0000000000000001 {                   1},
+    $0000000000000064 {                 100},
+    $0000000000002710 {               10000},
+    $00000000000F4240 {             1000000},
+    $0000000005F5E100 {           100000000},
+    $00000002540BE400 {         10000000000},
+    $000000E8D4A51000 {       1000000000000},
+    $00005AF3107A4000 {     100000000000000},
+    $002386F26FC10000 {   10000000000000000},
+    $0DE0B6B3A7640000 { 1000000000000000000},
+    $8AC7230489E80000 {10000000000000000000});
+{$IFEND}
 
 type
   { oracle loves it's recursion ... so we need a recursive obj model }
@@ -489,7 +479,7 @@ begin
     Result := Result * 100 + Byte(num[i] - 1);
   I := (vnuInfo.Len-1)*2;
   if I <= vnuInfo.Precision then
-    Result := Result * uPosScaleFaktor[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+    Result := Result * UInt64Tower[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -512,7 +502,7 @@ begin
     Result := Result * 100 - (101 - num[i]);
   I := (vnuInfo.Len-1)*2;
   if I <= vnuInfo.Precision then
-    Result := Result * I64Table[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
+    Result := Result * Int64Tower[vnuInfo.Precision+Ord(vnuInfo.FirstBase100DigitDiv10Was0)-i+Ord(vnuInfo.LastBase100DigitMod10Was0)];
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
@@ -1999,30 +1989,5 @@ begin
   if Args <> nil then
     FreeAndNil(Args);
 end;
-
-{$IFDEF WITH_UINT64_C1118_ERROR}
-procedure UIntFiller;
-var U: UInt64;
-  I: Byte;
-begin
-  {$R-} {$Q-}
-  U := 1;
-  UInt64Divisor[0] := U;
-  uPosScaleFaktor[0] := U;
-  for i := 1 to 18 do begin
-    U := U * 10;
-    uPosScaleFaktor[i] := U;
-    if not Odd(i) then
-      UInt64Divisor[I div 2] := U;
-  end;
-  U := U * 10;
-  uPosScaleFaktor[19] := U;
-  UInt64Divisor[10] := U;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
-end;
-initialization
-UIntFiller;
-{$ENDIF}
 
 end.

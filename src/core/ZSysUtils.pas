@@ -7379,7 +7379,19 @@ begin
   end;
 end;
 
+{procedure X;
+var S: String;
+  i: Integer;
+begin
+  for I := Low(I64Table) to High(I64Table) do begin
+    S := IntToHex(I64Table[i]);
+    Assert(S <> '');
+  end;
+    S := IntToHex(UInt64(1000000000000000000));
+    Assert(S <> '');
+end; }
 initialization;
+  //X;
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
