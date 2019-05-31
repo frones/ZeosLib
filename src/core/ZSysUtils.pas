@@ -6751,7 +6751,7 @@ var
   Negative: Boolean;
   DecimalPos, Exp: Integer;
   Pos: Byte;
-  P, P2, PEnd: PWideChar;
+  P, PEnd: PWideChar;
 label Fail, CompExp, Finalize, CheckPos;
 begin
   FillChar(Bcd, SizeOf(Bcd), #0);
@@ -6759,18 +6759,10 @@ begin
   // Skip leading white chars
   while (Buf < PEnd) and ((PWord(Buf)^ <= Ord(' ')) and (Byte(PWord(Buf)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14)])) do Inc(Buf);
   Negative := Buf^ = '-';
-  Inc(Buf, Ord(Negative or (PWord(Buf)^ = Ord('+'))));
+  if Negative or (PWord(Buf)^ = Ord('+')) then Inc(Buf);
   // Skip trailing white chars
   while (PEnd > Buf) and ((PWord(PEnd-1)^ <= Ord('0')) and (Byte(PWord(PEnd-1)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14), Ord('0')]))  do Dec(PEnd);
   P := PEnd; //remainder for Exponent or if no decimal sep is given
-  // Skip trailing zeroes
-  while (PEnd > Buf) and (PWord(PEnd-1)^ = Ord('0')) do Dec(PEnd);
-  //now test if either an exponent or a decimal sep was given, if not then there are no trailing zeroes i.e. '400000'
-  P2 := PEnd;
-  while (PEnd > Buf) and (PWord(PEnd-1)^ in [Ord('0')..Ord('9')]) do Dec(PEnd);
-  if ((PEnd = Buf) and (Byte(PWord(PEnd)^) in [Ord('1')..Ord('9')])) or ((PEnd > Buf) and not (Byte(PWord(PEnd-1)^) or $20 in [Ord('e'), Ord(DecimalSep)]))
-  then PEnd := P2
-  else PEnd := P;
   Pos := 0;
   DecimalPos := -1;
   if Buf = PEnd then
@@ -6789,6 +6781,7 @@ begin
       else if (Pos = 1) and (PWord(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
         Dec(Pos);
       DecimalPos := Pos;
+      while (PEnd > Buf) and (PWord(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away 123.90000000000
       Inc(Buf);
       if (Buf = PEnd) then
         goto Finalize;
@@ -6877,7 +6870,7 @@ var
   Negative: Boolean;
   DecimalPos, Exp: Integer;
   Pos: Byte;
-  P, P2, PEnd: PAnsiChar;
+  P, PEnd: PAnsiChar;
 label Fail, CompExp, Finalize, CheckPos;
 begin
   FillChar(Bcd, SizeOf(Bcd), #0);
@@ -6885,19 +6878,12 @@ begin
   // Skip leading white chars
   while (Buf < PEnd) and (Byte(PByte(Buf)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14)]) do Inc(Buf);
   Negative := Buf^ = '-';
-  Inc(Buf, Ord(Negative or (PByte(Buf)^ = Ord('+'))));
+  if Negative or (PByte(Buf)^ = Ord('+')) then Inc(Buf);
   Pos := 0;
   DecimalPos := -1;
   // Skip trailing white chars
   while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14)])  do Dec(PEnd);
   P := PEnd; //remainder for Exponent or if no decimal sep is given
-  while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away
-  //now test if either an exponent or a decimal sep was given, if not then there are no trailing zeroes i.e. '400000'
-  P2 := PEnd;
-  while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord('0')..Ord('9')]) do Dec(PEnd);
-  if (((P2 = Buf) and (PByte(P2)^ in [Ord('1')..Ord('9')])) or ((P2 > Buf) and (PByte(PEnd-1)^ or $20 in [Ord('e'), Byte(DecimalSep)])))
-  then PEnd := P2
-  else PEnd := P;
   if Buf = PEnd then
     if PByte(PEnd)^ = Ord('0')
     then goto Finalize
@@ -6912,6 +6898,7 @@ begin
       else if (Pos = 1) and (PByte(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
         Dec(Pos);
       DecimalPos := Pos;
+      while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away 123.90000000000
       Inc(Buf);
       if (Buf = PEnd) then
         goto Finalize;
