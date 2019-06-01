@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} {$IFNDEF FPC}Math,{$ENDIF}
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_LCONVENCODING}
   {$MACRO ON}
    LCLVersion, LConvEncoding,
@@ -64,7 +64,8 @@ uses
   {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF}
-  ZCompatibility;
+  ZCompatibility,
+  Math{bind me after ZCompatibility!};
 
 const
   {code page identifiers https://msdn.microsoft.com/en-us/library/windows/desktop/dd317756%28v=vs.85%29.aspx}
