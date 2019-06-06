@@ -570,7 +570,7 @@ var
 begin
   L := Length(Value);
   if L = 0 then Exit;
-  if L <= (SizeOf(fABuffer)-fABufferIndex) then begin
+  if L < (SizeOf(fABuffer)-fABufferIndex) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> no move
     then fABuffer[fABufferIndex] := AnsiChar(P^)
@@ -597,7 +597,7 @@ var
 begin
   L := Length(Value);
   if L = 0 then Exit;
-  if L <= ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
+  if L < ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> no move
     then fWBuffer[fWBufferIndex] := P^

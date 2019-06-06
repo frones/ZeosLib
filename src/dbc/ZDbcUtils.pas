@@ -1043,11 +1043,11 @@ var
 begin
   L := Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   if L <= 0 then Exit;
-  if L <= (SizeOf(Buf.Buf)-Buf.Pos) then begin
+  if L < (SizeOf(Buf.Buf)-Buf.Pos) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> worth it the check
     then Buf.Buf[Buf.Pos] := AnsiChar(P^)
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L);
     Inc(Buf.Pos, L);
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
@@ -1072,11 +1072,11 @@ var
   LRes: LengthInt;
 begin
   if L <= 0 then Exit;
-  if L <= (SizeOf(Buf.Buf)-Buf.Pos) then begin
+  if L < (SizeOf(Buf.Buf)-Buf.Pos) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> worth it the check
     then Buf.Buf[Buf.Pos] := AnsiChar(P^)
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L);
     Inc(Buf.Pos, L);
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
@@ -1100,7 +1100,7 @@ var
   P: PAnsiChar;
   L: LengthInt;
 begin
-  if Buf.Pos <= (SizeOf(Buf.Buf)) then begin
+  if Buf.Pos < (SizeOf(Buf.Buf)) then begin
     Buf.Buf[Buf.Pos] := Value;
     Inc(Buf.Pos);
   end else begin
@@ -1127,11 +1127,11 @@ var
 begin
   L := Length(Value);
   if L <= 0 then Exit;
-  if L <= ((SizeOf(Buf.Buf) shr 1)-Buf.Pos) then begin
+  if L < ((SizeOf(Buf.Buf) shr 1)-Buf.Pos) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> worth it the check
     then Buf.Buf[Buf.Pos] := P^
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L shl 1);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L shl 1);
     Inc(Buf.Pos, L);
   end else begin
     SetLength(Result, Length(Result)+Buf.Pos+L);
@@ -1151,7 +1151,7 @@ var
   P: PWideChar;
   L: LengthInt;
 begin
-  if (Buf.Pos <= (SizeOf(Buf.Buf) shr 1)) then begin
+  if (Buf.Pos < (SizeOf(Buf.Buf) shr 1)) then begin
     Buf.Buf[Buf.Pos] := Value;
     Inc(Buf.Pos);
   end else begin
