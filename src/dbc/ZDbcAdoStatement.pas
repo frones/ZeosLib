@@ -143,12 +143,11 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants,
+  Variants, Math, ActiveX,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages
-  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages, ZFastCode;
 
 { TZAdoPreparedStatement }
 
@@ -623,47 +622,71 @@ begin
   inherited;
 end;
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
 var
   Temp: OleVariant;
   P: Pointer;
   TempBlob: IZBLob;
+  PD: PDecimal;
+  L: LengthInt;
 begin
-
   if ParameterIndex > OutParamCount then
     Result := NullVariant
-  else
-  begin
-    Temp := FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-
-    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Type_,
-      ConSettings.CPType) of
-      stBoolean:
-        ClientVarManager.SetAsBoolean(Result, Temp);
-      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
-        ClientVarManager.SetAsInteger(Result, Temp);
-      stFloat, stDouble, stCurrency, stBigDecimal:
-        ClientVarManager.SetAsFloat(Result, Temp);
-      stGUID:
-        ClientVarManager.SetAsString(Result, Temp);
-      stString, stAsciiStream:
-        ClientVarManager.SetAsString(Result, Temp);
-      stUnicodeString, stUnicodeStream:
-        ClientVarManager.SetAsUnicodeString(Result, Temp);
-      stBytes:
-        ClientVarManager.SetAsBytes(Result, VarToBytes(Temp));
-      stDate, stTime, stTimestamp:
-        ClientVarManager.SetAsDateTime(Result, Temp);
-      stBinaryStream:
-        begin
-          if VarIsStr(Temp) then
-          begin
-            TempBlob := TZAbstractBlob.CreateWithStream(nil);
-            TempBlob.SetString(AnsiString(Temp));
-          end
-          else
-            if VarIsArray(Temp) then
-            begin
+  else with FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
+    Temp := Value;
+    case tagVARIANT(Temp).vt of
+      VT_NULL, VT_EMPTY: ClientVarManager.SetNull(Result);
+      VT_BOOL:        ClientVarManager.SetAsBoolean(Result, tagVARIANT(Temp).vbool);
+      VT_UI1:         ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).bVal);
+      VT_UI2:         ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).uiVal);
+      VT_UI4:         ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).ulVal);
+      VT_UINT:        ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).uintVal);
+      VT_I1:          ClientVarManager.SetAsInteger(Result, ShortInt(tagVARIANT(Temp).cVal));
+      VT_I2:          ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).iVal);
+      VT_I4:          ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).lVal);
+      VT_INT,
+      VT_HRESULT:     ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).intVal);
+      VT_ERROR:       ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).scode);
+      VT_I8:          ClientVarManager.SetAsInteger(Result, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).llVal{$ELSE}PInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
+      VT_UI8:         ClientVarManager.SetAsUInteger(Result, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).ullVal{$ELSE}PUInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
+      VT_R4:          ClientVarManager.SetAsFloat(Result, tagVARIANT(Temp).fltVal);
+      VT_R8:          ClientVarManager.SetAsFloat(Result, tagVARIANT(Temp).dblVal);
+      VT_CY:          ClientVarManager.SetAsFloat(Result, tagVARIANT(Temp).cyVal);
+      VT_DATE:        ClientVarManager.SetAsDateTime(Result, tagVARIANT(Temp).date);
+      VT_BSTR:        begin
+                        ClientVarManager.SetNull(Result);
+                        L := Length(WideString(tagVARIANT(Temp).bstrVal));
+                        case type_ of
+                          adChar, adWChar:       L := ZDbcUtils.GetAbsorbedTrailingSpacesLen(tagVARIANT(Temp).bstrVal, L);
+                        end;
+                        if ConSettings.CPType = cCP_UTF16 then begin
+                          Result.VType := vtUnicodeString;
+                          System.SetString(Result.VUnicodeString, tagVARIANT(Temp).bstrVal, L);
+                        end else if ConSettings.CPType = cCP_UTF8 then begin
+                          Result.VType := vtUTF8String;
+                          Result.VUTF8String := PUnicodeToRaw(tagVARIANT(Temp).bstrVal, L, ConSettings.CTRL_CP);
+                        end else begin
+                          Result.VType := vtAnsiString;
+                          Result.VAnsiString := PUnicodeToRaw(tagVARIANT(Temp).bstrVal, L, ConSettings.CTRL_CP);
+                        end;
+                      end;
+      VT_DECIMAL:     begin
+                        PD := @Temp;
+                        ClientVarManager.SetNull(Result);
+                        Result.VType := vtFloat;
+                        if PD.Scale > 0
+                        then Result.VFloat := UInt64(PD.Lo64) / i64Table[Pd.Scale]
+                        else Result.VFloat := UInt64(PD.Lo64);
+                        if PD.Sign > 0 then
+                          Result.VFloat := -Result.VFloat;
+                      end;
+      else            case Type_ of
+                        adBinary,
+                        adVarBinary: ClientVarManager.SetAsBytes(Result, VarToBytes(Temp));
+                        adLongVarBinary: begin
+                            TempBlob := nil;
+                            if VarIsArray(Temp) then begin
               P := VarArrayLock(Temp);
               try
                 TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(Temp, 1)+1);
@@ -673,14 +696,14 @@ begin
             end;
           ClientVarManager.SetAsInterface(Result, TempBlob);
           TempBlob := nil;
-        end
-      else
-        ClientVarManager.SetNull(Result);
+    end;
+                        else ClientVarManager.SetNull(Result);
+  end;
     end;
   end;
-
-  LastWasNull := ClientVarManager.IsNull(Result) or VarIsNull(Temp) or VarIsClear(Temp);
+  LastWasNull := ClientVarManager.IsNull(Result);
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZAdoCallableStatement.PrepareInParameters;
 var I: Integer;

@@ -202,6 +202,7 @@
                 {$DEFINE DELPHI14_UP}                 // used in ZTestStoredProcedure.pas only
 
                 {$IF CompilerVersion >= 22} //Delphi XE+
+                  {$DEFINE WITH_tagVARIANT_UINT64}          // ActivX.tagVariant supports UInt64 Values
                   {$DEFINE WITH_FORMATSETTINGS}
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
