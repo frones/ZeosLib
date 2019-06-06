@@ -527,8 +527,7 @@ begin
         13, 88, {sjis}
         35, 90, 128..151:  {ucs2}
           begin
-            Result.ColumnDisplaySize := (FieldLength div 4);
-            Result.Precision := Result.ColumnDisplaySize;
+            Result.Precision := (FieldLength div 4);
             if Result.ColumnType = stString
             then Result.CharOctedLength := FieldLength
             else Result.CharOctedLength := FieldLength shr 1;
@@ -537,25 +536,22 @@ begin
         97, 98, { eucjpms}
         12, 91: {ujis}
           begin
-            Result.ColumnDisplaySize := (FieldLength div 3);
-            Result.Precision := Result.ColumnDisplaySize;
+            Result.Precision := (FieldLength div 3);
             if Result.ColumnType = stString
             then Result.CharOctedLength := FieldLength
-            else Result.CharOctedLength := Result.ColumnDisplaySize shl 1;
+            else Result.CharOctedLength := Result.Precision shl 1;
           end;
         54, 55, 101..124, {utf16}
         56, 62, {utf16le}
         60, 61, 160..183, {utf32}
         45, 46, 224..247: {utf8mb4}
           begin
-            Result.ColumnDisplaySize := (FieldLength div 4);
-            Result.Precision := Result.ColumnDisplaySize;
+            Result.Precision := (FieldLength div 4);
             if Result.ColumnType = stString
             then Result.CharOctedLength := FieldLength
             else Result.CharOctedLength := FieldLength shr 1;
           end;
         else begin //1-Byte charsets
-          Result.ColumnDisplaySize := FieldLength;
           Result.Precision := FieldLength;
           if Result.ColumnType = stString
           then Result.CharOctedLength := FieldLength

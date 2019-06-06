@@ -427,27 +427,77 @@ function GetOrdinalDigits(Value: SmallInt; out W: Word; out Negative: Boolean): 
 function GetOrdinalDigits(Value: Byte): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: ShortInt; out B: Byte; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
-const I64Table: array[0..18] of Int64 = (
-  1,
-  10,
-  100,
-  1000,
-  10000,
-  100000,
-  1000000,
-  10000000,
-  100000000,
-  1000000000,
-  10000000000,
-  100000000000,
-  1000000000000,
-  10000000000000,
-  100000000000000,
-  1000000000000000,
-  10000000000000000,
-  100000000000000000,
-  1000000000000000000
-  );
+const Int64Tower: array[0..18] of Int64 = (
+  $0000000000000001 {                  1},
+  $000000000000000A {                 10},
+  $0000000000000064 {                100},
+  $00000000000003E8 {               1000},
+  $0000000000002710 {              10000},
+  $00000000000186A0 {             100000},
+  $00000000000F4240 {            1000000},
+  $0000000000989680 {           10000000},
+  $0000000005F5E100 {          100000000},
+  $000000003B9ACA00 {         1000000000},
+  $00000002540BE400 {        10000000000},
+  $000000174876E800 {       100000000000},
+  $000000E8D4A51000 {      1000000000000},
+  $000009184E72A000 {     10000000000000},
+  $00005AF3107A4000 {    100000000000000},
+  $00038D7EA4C68000 {   1000000000000000},
+  $002386F26FC10000 {  10000000000000000},
+  $016345785D8A0000 { 100000000000000000},
+  $0DE0B6B3A7640000 {1000000000000000000} );
+
+{$IF defined(NEED_TYPED_UINT64_CONSTANTS) or defined(WITH_UINT64_C1118_ERROR)}
+//Handle FPC(up to year 2019) and very old delphi problems with the large constants...
+  cUInt64Tower: array[0..19] of Int64Rec = (
+    (lo: $00000001; hi: $00000000), {                   1}
+    (lo: $0000000A; hi: $00000000), {                  10}
+    (lo: $00000064; hi: $00000000), {                 100}
+    (lo: $000003E8; hi: $00000000), {                1000}
+    (lo: $00002710; hi: $00000000), {               10000}
+    (lo: $000186A0; hi: $00000000), {              100000}
+    (lo: $000F4240; hi: $00000000), {             1000000}
+    (lo: $00989680; hi: $00000000), {            10000000}
+    (lo: $05F5E100; hi: $00000000), {           100000000}
+    (lo: $3B9ACA00; hi: $00000000), {          1000000000}
+    (lo: $540BE400; hi: $00000002), {         10000000000}
+    (lo: $4876E800; hi: $00000017), {        100000000000}
+    (lo: $D4A51000; hi: $000000E8), {       1000000000000}
+    (lo: $4E72A000; hi: $00000918), {      10000000000000}
+    (lo: $107A4000; hi: $00005AF3), {     100000000000000}
+    (lo: $A4C68000; hi: $00038D7E), {    1000000000000000}
+    (lo: $6FC10000; hi: $002386F2), {   10000000000000000}
+    (lo: $5D8A0000; hi: $01634578), {  100000000000000000}
+    (lo: $A7640000; hi: $0DE0B6B3), { 1000000000000000000}
+    (lo: $89E80000; hi: $8AC72304));{10000000000000000000}
+  _10Trillion: Int64Rec = (lo: $89E80000; hi: $8AC72304);
+var
+  UInt64Tower: array[0..19] of UInt64 absolute cUInt64Tower;
+{$ELSE}
+  UInt64Tower: array[0..19] of UInt64 = (
+    $0000000000000001 {                   1},
+    $000000000000000A {                  10},
+    $0000000000000064 {                 100},
+    $00000000000003E8 {                1000},
+    $0000000000002710 {               10000},
+    $00000000000186A0 {              100000},
+    $00000000000F4240 {             1000000},
+    $0000000000989680 {            10000000},
+    $0000000005F5E100 {           100000000},
+    $000000003B9ACA00 {          1000000000},
+    $00000002540BE400 {         10000000000},
+    $000000174876E800 {        100000000000},
+    $000000E8D4A51000 {       1000000000000},
+    $000009184E72A000 {      10000000000000},
+    $00005AF3107A4000 {     100000000000000},
+    $00038D7EA4C68000 {    1000000000000000},
+    $002386F26FC10000 {   10000000000000000},
+    $016345785D8A0000 {  100000000000000000},
+    $0DE0B6B3A7640000 { 1000000000000000000},
+    $8AC7230489E80000 {10000000000000000000});
+  _10Trillion = UInt64(10000000000000000000);
+{$IFEND}
 
 implementation
 
@@ -3049,9 +3099,9 @@ begin
     PByte(Buf)^ := Ord('1');
     Inc(Buf);
     {$IFDEF FPC} //fatal error?
-    Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
+    Value := Value - UInt64(_10Trillion);
     {$ELSE}
-    Dec(Value, {$IFDEF SUPPORTS_UINT64_CONSTS}10000000000000000000{$ELSE}$8AC7230489E80000{$ENDIF});
+    Dec(Value, UInt64(_10Trillion));
     {$ENDIF}
     Dec(Digits);
   end;
@@ -3297,9 +3347,9 @@ begin
     PWord(Buf)^ := Word('1');
     Inc(Buf);
     {$IFDEF FPC} //(???? Dec seems not supporting integers with range > MaxInt64 -> Fatal: Internal error 200706094
-    Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
+    Value := Value - UInt64(_10Trillion);
     {$ELSE}
-    Dec(Value, {$IFDEF SUPPORTS_UINT64_CONSTS}10000000000000000000{$ELSE}$8AC7230489E80000{$ENDIF});
+    Dec(Value, UInt64(_10Trillion));
     {$ENDIF}
     Dec(Digits);
   end;
@@ -5477,7 +5527,7 @@ begin
       Valid := true;
     end;
   if Digits < 4 then
-    i64 := i64 * I64Table[4-Digits];
+    i64 := i64 * Int64Tower[4-Digits];
   if not Valid or (Code <> Len) then
     Len := code;
 end;
@@ -6494,7 +6544,7 @@ begin
       Valid := true;
     end;
   if Digits < 4 then
-    i64 := i64 * I64Table[4-Digits];
+    i64 := i64 * Int64Tower[4-Digits];
   if not Valid or (Code <> Len) then
     Len := code;
 end;
@@ -6687,17 +6737,8 @@ begin
   else if Value >= UInt64(100000000000000) then
     if Value    >= UInt64(10000000000000000) then
       if Value  >= UInt64(1000000000000000000) then
-        Result := 19 + Ord(Value  >=
-          {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
-          UInt64(10000000000000000000)
-          {$ELSE}
-            {$IFDEF SUPPORTS_UINT64_CONSTS}
-            10000000000000000000
-            {$ELSE !SUPPORTS_UINT64_CONSTS}
-            $8AC7230489E80000
-            {$ENDIF SUPPORTS_UINT64_CONSTS}
-          {$ENDIF NEED_TYPED_UINT64_CONSTANTS})
-      else Result := 17 + Ord(Value >= UInt64(100000000000000000))
+        Result := 19 + Ord(Value  >= UInt64(_10Trillion))
+      else Result := 17 + Ord(Value >= UInt64(100000000000000000)) //$016345785D8A0000
     else Result := 15 + Ord(Value >= UInt64(1000000000000000))
   else if Value >= UInt64(1000000000000) then
     Result := 13 + Ord(Value >= UInt64(10000000000000))

@@ -250,7 +250,6 @@ begin
     Currency := True;
     Nullable := ntNoNulls;
     Signed := True;
-    ColumnDisplaySize := 100;
     ColumnLabel := 'Test Label';
     ColumnName := 'Test name';
     SchemaName := 'Test schema';
@@ -269,7 +268,6 @@ begin
    Check(Currency, 'IsCurrency');
    CheckEquals(Ord(ntNoNulls), Ord(Nullable), 'IsNullable');
    Check(Signed, 'IsSigned');
-   CheckEquals(100, ColumnDisplaySize);
    CheckEquals('Test Label',  ColumnLabel, 'GetColumnLabel');
    CheckEquals('Test name', ColumnName, 'GetColumnName');
    CheckEquals('Test schema', SchemaName, 'GetSchemaName');
@@ -292,7 +290,6 @@ begin
    Currency := True;
    Nullable := ntNoNulls;
    Signed := True;
-   ColumnDisplaySize := 100;
    ColumnLabel := 'Test Label';
    ColumnName := 'Test name';
    SchemaName := 'Test schema';

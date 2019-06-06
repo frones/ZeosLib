@@ -82,7 +82,7 @@ type
   TBCDDynArray = array of TBCD;
 
   PDB_NUMERIC = ^TDB_NUMERIC;
-  TDB_NUMERIC = record { oledb.h }
+  TDB_NUMERIC = record { oledb&odbc little enadian / dblib big endian}
     precision:  Byte;
     scale:      Byte;
     sign:       Byte; {1 if positive, 0 if negative }
@@ -295,7 +295,7 @@ const
     //fixed size DataTypes first
     SizeOf(WordBool),
     SizeOf(Byte), SizeOf(ShortInt), SizeOf(Word), SizeOf(SmallInt), SizeOf(Cardinal), SizeOf(Integer), SizeOf(UInt64), SizeOf(Int64),  //ordinals
-    SizeOf(Single), SizeOf(Double), SizeOf(Currency), SizeOf({$IFDEF BCD_TEST}TBcd{$ELSE}Extended{$ENDIF}),
+    SizeOf(Single), SizeOf(Double), SizeOf(Currency), SizeOf(TBcd),
     SizeOf(TDateTime), SizeOf(TDateTime), SizeOf(TDateTime),
     SizeOf(TGUID),
     //now varying size types in equal order
@@ -307,9 +307,9 @@ const
   NativeArrayValueTypes: array[TZSQLType] of TZVariantTypes = ([],
     [vtNull, vtBoolean],
     [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger], [vtNull, vtUInteger], [vtNull, vtInteger],  //ordinals
-    [vtNull], [vtNull, {$IFDEF BCD_TEST}vtDouble{$ELSE}vtFloat{$ENDIF}], [vtNull, {$IFDEF BCD_TEST}vtCurrency{$ELSE}vtFloat{$ENDIF}], [vtNull, {$IFDEF BCD_TEST}vtBigDecimal{$ELSE}vtFloat{$ENDIF}], //floats
+    [vtNull], [vtNull, vtDouble], [vtNull, vtCurrency], [vtNull, vtBigDecimal], //floats
     [vtNull, vtDateTime], [vtNull, vtDateTime], [vtNull, vtDateTime],
-    [vtNull, {$IFDEF BCD_TEST}vtGUID{$ELSE}vtBytes{$ENDIF}],
+    [vtNull, vtGUID],
     //now varying size types in equal order
     [], [], [vtNull, vtBytes],
     [vtNull, vtInterface], [vtNull, vtInterface], [vtNull, vtInterface],
@@ -318,7 +318,7 @@ const
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math
   {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
@@ -478,7 +478,6 @@ begin
     ColumnInfo.Currency := Current.Currency;
     ColumnInfo.Nullable := Current.Nullable;
     ColumnInfo.Signed := Current.Signed;
-    ColumnInfo.ColumnDisplaySize := Current.ColumnDisplaySize;
     ColumnInfo.ColumnLabel := Current.ColumnLabel;
     ColumnInfo.ColumnName := Current.ColumnName;
     ColumnInfo.SchemaName := Current.SchemaName;
@@ -988,9 +987,9 @@ begin
     end;
   {$ENDIF}
   if Src.Scale < 4 then
-    i64 := i64 * ZFastCode.I64Table[4 - Src.scale]
+    i64 := i64 * ZFastCode.Int64Tower[4 - Src.scale]
   else if Src.Scale > 4 then
-    i64 := i64 div ZFastCode.I64Table[Src.scale - 4];
+    i64 := i64 div ZFastCode.Int64Tower[Src.scale - 4];
   if Src.Sign = NumericNegSign then
     Result := -Result;
 end;
@@ -1010,9 +1009,9 @@ begin
     end;
   {$ENDIF}
   if Src.Scale < 4 then
-    i64 := i64 * ZFastCode.I64Table[4 - Src.scale]
+    i64 := i64 * ZFastCode.Int64Tower[4 - Src.scale]
   else if Src.Scale > 4 then
-    i64 := i64 div ZFastCode.I64Table[Src.scale - 4];
+    i64 := i64 div ZFastCode.Int64Tower[Src.scale - 4];
   if Src.Sign = NumericNegSign then
     Result := -Result;
 end;
@@ -1421,7 +1420,6 @@ begin
           OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
         stBytes:
           OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-        {$IFDEF BCD_TEST}
         stFloat:
           OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetFloat(I));
         stDouble:
@@ -1432,16 +1430,6 @@ begin
             InitializeVariant(OutParamValues[ParamIndex], vtBigDecimal);
             ResultSet.GetBigDecimal(I, OutParamValues[ParamIndex].VBigDecimal);
           end;
-        {$ELSE}
-        stFloat:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
-        stDouble:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
-        stCurrency:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetCurrency(I));
-        stBigDecimal:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
-        {$ENDIF}
         stString, stAsciiStream:
           OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
         stUnicodeString, stUnicodeStream:
@@ -1748,11 +1736,11 @@ var
 begin
   L := Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   if L <= 0 then Exit;
-  if L <= (SizeOf(Buf.Buf)-Buf.Pos) then begin
+  if L < (SizeOf(Buf.Buf)-Buf.Pos) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> worth it the check
     then Buf.Buf[Buf.Pos] := AnsiChar(P^)
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L);
     Inc(Buf.Pos, L);
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
@@ -1777,11 +1765,11 @@ var
   LRes: LengthInt;
 begin
   if L <= 0 then Exit;
-  if L <= (SizeOf(Buf.Buf)-Buf.Pos) then begin
+  if L < (SizeOf(Buf.Buf)-Buf.Pos) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> worth it the check
     then Buf.Buf[Buf.Pos] := AnsiChar(P^)
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L);
     Inc(Buf.Pos, L);
   end else begin
     LRes := Length(Result)+Buf.Pos+L;
@@ -1805,7 +1793,7 @@ var
   P: PAnsiChar;
   L: LengthInt;
 begin
-  if Buf.Pos <= (SizeOf(Buf.Buf)) then begin
+  if Buf.Pos < (SizeOf(Buf.Buf)) then begin
     Buf.Buf[Buf.Pos] := Value;
     Inc(Buf.Pos);
   end else begin
@@ -1832,11 +1820,11 @@ var
 begin
   L := Length(Value);
   if L <= 0 then Exit;
-  if L <= ((SizeOf(Buf.Buf) shr 1)-Buf.Pos) then begin
+  if L < ((SizeOf(Buf.Buf) shr 1)-Buf.Pos) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> worth it the check
     then Buf.Buf[Buf.Pos] := P^
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Buf.Buf[Buf.Pos], L shl 1);
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L shl 1);
     Inc(Buf.Pos, L);
   end else begin
     SetLength(Result, Length(Result)+Buf.Pos+L);
@@ -1856,7 +1844,7 @@ var
   P: PWideChar;
   L: LengthInt;
 begin
-  if (Buf.Pos <= (SizeOf(Buf.Buf) shr 1)) then begin
+  if (Buf.Pos < (SizeOf(Buf.Buf) shr 1)) then begin
     Buf.Buf[Buf.Pos] := Value;
     Inc(Buf.Pos);
   end else begin
@@ -2010,11 +1998,7 @@ begin
         stFloat:        TSingleDynArray(Dest)   := TSingleDynArray(aArray);
         stDouble:       TDoubleDynArray(Dest)   := TDoubleDynArray(aArray);
         stCurrency:     TCurrencyDynArray(Dest) := TCurrencyDynArray(aArray);
-        {$IFDEF BCD_TEST}
         stBigDecimal:   TBcdDynArray(Dest)      := TBcdDynArray(aArray);
-        {$ELSE}
-        stBigDecimal:   TExtendedDynArray(Dest) := TExtendedDynArray(aArray);
-        {$ENDIF}
         stDate,
         stTime,
         stTimestamp:    TDateTimeDynArray(Dest) := TDateTimeDynArray(aArray);
@@ -2052,11 +2036,7 @@ begin
         stFloat:        TSingleDynArray(Dest)   := nil;
         stDouble:       TDoubleDynArray(Dest)   := nil;
         stCurrency:     TCurrencyDynArray(Dest) := nil;
-        {$IFDEF BCD_TEST}
         stBigDecimal:   TBcdDynArray(Dest)      := nil;
-        {$ELSE}
-        stBigDecimal:   TExtendedDynArray(Dest) := nil;
-        {$ENDIF}
         stDate,
         stTime,
         stTimestamp:    TDateTimeDynArray(Dest) := nil;
@@ -2275,11 +2255,7 @@ begin
         stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
         stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
         stCurrency:   Result := TCurrencyDynArray(ZArray.VArray)[Index];
-        stBigDecimal:  {$IFDEF BCD_TEST}
-                      BCDToCurr(TBCDDynArray(ZArray.VArray)[Index], Result);
-                      {$ELSE}
-                      Result := TExtendedDynArray(ZArray.VArray)[Index];
-                      {$ENDIF}
+        stBigDecimal:  BCDToCurr(TBCDDynArray(ZArray.VArray)[Index], Result);
         stTime, stDate, stTimeStamp:
           Result := TDateTimeDynArray(ZArray.VArray)[Index];
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
@@ -2582,7 +2558,7 @@ A_Conv: Assert(ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.'), 'wrong bcd valu
         L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
 W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd value');
       end;
-    {$IFDEF BCD_TEST}vtBigDecimal, vtCurrency, vtDouble, {$ENDIF}
+    vtBigDecimal, vtCurrency, vtDouble,
     vtInteger, vtUInteger,
     vtNull: case TZSQLType(ZArray.VArrayType) of
               stBoolean:    ScaledOrdinal2BCD(Word(Ord(TBooleanDynArray(ZArray.VArray)[Index])), 0, BCD);

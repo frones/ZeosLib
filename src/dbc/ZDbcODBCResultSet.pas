@@ -62,7 +62,7 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
   ZPlainODBCDriver, ZDbcODBCCon;
@@ -140,11 +140,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -244,7 +240,7 @@ procedure TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var C, H, I: Integer;
     P: Pointer;
-    {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
+    BCD: TBCD;
 begin
   //init
   if JSONWriter.Expand then
@@ -279,12 +275,10 @@ begin
         stLong:       JSONWriter.Add(PInt64(fColDataPtr)^);
         stFloat:      JSONWriter.AddSingle(PSingle(fColDataPtr)^);
         stCurrency:   JSONWriter.AddCurr64(ODBCNumeric2Curr(fColDataPtr));
-        stBigDecimal{$IFDEF BCD_TEST}:
-                      begin
+        stBigDecimal: begin
                         SQLNumeric2BCD(fColDataPtr, BCD, 16);
                         JSONWriter.AddNoJSONEscape(@fTinyBuffer[0], BCDToRaw(BCD, @fTinyBuffer[0], '.'));
                       end;
-                    {$ELSE},{$ENDIF}
         stDouble: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
         stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
         stGUID:       begin
@@ -464,7 +458,6 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF BCD_TEST}
 procedure TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var L: LengthInt;
 begin
@@ -481,7 +474,7 @@ begin
       stULong:      ScaledOrdinal2BCD(PUInt64(fColDataPtr)^, 0, Result, False);
       stLong:       ScaledOrdinal2BCD(PInt64(fColDataPtr)^, 0, Result);
       stDate, stTime, stTimeStamp, stFloat,
-      stDouble:     DoubleToBCD(GetDouble(ColumnIndex), Result);
+      stDouble:     Double2BCD(GetDouble(ColumnIndex), Result);
       stCurrency:   SQLNumeric2BCD(fColDataPtr, Result, SizeOf(Int64));
       stBigDecimal: SQLNumeric2BCD(fColDataPtr, Result, SQL_MAX_NUMERIC_LEN);
       stString, stUnicodeString: if fIsUnicodeDriver then begin
@@ -499,11 +492,6 @@ begin
       else Result := NullBCD;
     end;
   end else Result := NullBCD;
-{$ELSE}
-function TAbstractODBCResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-begin
-  Result := GetDouble(ColumnIndex);
-{$ENDIF}
 end;
 
 function TAbstractODBCResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
@@ -943,12 +931,11 @@ begin
 Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
-      stBigDecimal{$IFDEF BCD_TEST}: begin
+      stBigDecimal: begin
                       Result := @FTinyBuffer[0];
                       Len := SQL_MAX_NUMERIC_LEN;
                       SQLNumeric2Raw(fColDataPtr, Result, Len);
                     end;
-      {$ELSE},{$ENDIF}
       stDouble: begin
                       Len := FloatToSqlRaw(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
@@ -1084,13 +1071,11 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
                     end;
 
-      stBigDecimal{$IFDEF BCD_TEST}: begin
+      stBigDecimal: begin
                       Result := @FTinyBuffer[0];
                       Len := SQL_MAX_NUMERIC_LEN;
                       SQLNumeric2Uni(fColDataPtr, Result, Len);
                     end;
-      {$ELSE},
-      {$ENDIF}
       stDouble: begin
                       Len := FloatToSqlUnicode(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
                       Result := @FTinyBuffer[0];
@@ -1616,7 +1601,7 @@ begin
           //ColumnInfo.CharOctedLength := ColNumAttribute(ColumnNumber, SQL_DESC_OCTET_LENGTH);
           AutoIncrement := ColNumAttribute(ColumnNumber, SQL_DESC_AUTO_UNIQUE_VALUE) = SQL_TRUE;
           CaseSensitive := ColNumAttribute(ColumnNumber, SQL_DESC_CASE_SENSITIVE) = SQL_TRUE;
-          ColumnDisplaySize := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
+          Precision := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
           bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_NULLABLE);
           if bufSQLLEN = SQL_NULLABLE then
             Nullable := ntNullable
@@ -1658,21 +1643,15 @@ begin
                 Scale := ColNumAttribute(ColumnNumber, SQL_DESC_SCALE);
                 Signed := True;
               end;
-            SQL_CHAR, SQL_WCHAR: begin
-                Precision := ColumnDisplaySize;
-                FixedWidth := True;
-              end;
+            SQL_CHAR, SQL_WCHAR: FixedWidth := True;
             SQL_BINARY: begin
                 Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
                 FixedWidth := True;
               end;
             SQL_VARCHAR, SQL_WVARCHAR, SQL_VARBINARY:
-                Precision := ColumnDisplaySize;
-            SQL_TINYINT, SQL_SMALLINT, SQL_INTEGER, SQL_BIGINT: begin
-                Precision := ColumnDisplaySize;
+                Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
+            SQL_TINYINT, SQL_SMALLINT, SQL_INTEGER, SQL_BIGINT:
                 Signed := ColNumAttribute(ColumnNumber, SQL_DESC_UNSIGNED) = SQL_FALSE;
-              end;
-            else Precision := ColumnDisplaySize;
           end;
 
           ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, Scale, Precision,

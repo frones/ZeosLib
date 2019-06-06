@@ -631,15 +631,7 @@ begin
 
   CheckEquals('P9', StoredProc.Params[8].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[8].ParamType));
-  {$IFDEF BCD_TEST}
   CheckEquals(ord(ftFmtBCD), ord(StoredProc.Params[8].DataType));
-  {$ELSE}
-    {$IFDEF WITH_FTEXTENDED}
-    CheckEquals(ord(ftExtended), ord(StoredProc.Params[8].DataType));
-    {$ELSE}
-    CheckEquals(ord(ftFloat), ord(StoredProc.Params[8].DataType));
-    {$ENDIF}
-  {$ENDIF}
 
   CheckEquals('P10', StoredProc.Params[9].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[9].ParamType));
@@ -781,19 +773,11 @@ begin
 
   CheckEquals('P9', StoredProc.Fields[8].DisplayName);
   //CheckEquals(SQLTime, StoredProc.Fields[8].AsFloat);
-  {$IFDEF WITH_FTEXTENDED}
-  CheckEquals(ord(ftExtended), ord(StoredProc.Fields[8].DataType));
-  {$ELSE}
-  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[8].DataType));
-  {$ENDIF}
+  CheckEquals(ord(ftFmtBCD), ord(StoredProc.Fields[8].DataType));
 
   CheckEquals('P10', StoredProc.Fields[9].DisplayName);
   CheckEquals(40000, StoredProc.Fields[9].AsInteger);
-  {$IFDEF WITH_FTEXTENDED}
-  CheckEquals(ord(ftExtended), ord(StoredProc.Fields[9].DataType));
-  {$ELSE}
-  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[9].DataType));
-  {$ENDIF}
+  CheckEquals(Ord(ftFmtBCD), ord(StoredProc.Fields[9].DataType));
 
   CheckEquals('P11', StoredProc.Fields[10].DisplayName);
   CheckEquals(Str1, StoredProc.Fields[10].AsString, Connection.DbcConnection.GetConSettings);

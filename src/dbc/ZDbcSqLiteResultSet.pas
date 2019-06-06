@@ -64,8 +64,8 @@ uses
     System.Types, System.Contnrs
   {$ELSE}
     {$IFNDEF NO_UNIT_CONTNRS} Contnrs{$ELSE}ZClasses{$ENDIF}
-  {$ENDIF}, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$ENDIF},
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
   ZSelectSchema;
@@ -133,11 +133,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -536,15 +532,12 @@ begin
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
         FieldPrecision, FieldDecimals, ConSettings.CPType);
 
-      if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      begin
+      if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
         ColumnCodePage := zCP_UTF8;
         if ColumnType = stString then begin
-          ColumnDisplaySize := FieldPrecision;
           CharOctedLength := FieldPrecision shl 2;
           Precision := FieldPrecision;
         end else if ColumnType = stUnicodeString then begin
-          ColumnDisplaySize := FieldPrecision;
           CharOctedLength := FieldPrecision shl 1;
           Precision := FieldPrecision;
         end;
@@ -555,7 +548,7 @@ begin
       Precision := FieldPrecision;
       Scale := FieldDecimals;
       Signed := True;
-      Nullable := ntNullable;
+      Nullable := ntNullable;  //sqlite just uses affinities .. all columns are nullable
     end;
 
     ColumnsInfo.Add(ColumnInfo);
@@ -994,7 +987,6 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 const BCDScales: array[Boolean] of Byte = (0,4);
 procedure TZSQLiteResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var ColType, l: Integer;
@@ -1030,12 +1022,6 @@ Fill:FillChar(Result, SizeOf(TBCD), #0);
     end;
   end;
 end;
-{$ELSE}
-function TZSQLiteResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-begin
-  Result := GetDouble(ColumnIndex);
-end;
-{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row

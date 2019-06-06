@@ -68,6 +68,7 @@ type
   published
     procedure TestTrailingSpaces;
     procedure TestNotNullValues;
+    procedure TestADQA_All_types;
   end;
 
 implementation
@@ -78,7 +79,7 @@ uses SysUtils, ZTestCase;
 
 function ZTestCompADOBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'ado';
+  Result := 'ado;odbc_w;odbc_a;OleDB';
 end;
 
 procedure ZTestCompADOBugReport.TestTrailingSpaces;
@@ -121,6 +122,24 @@ begin
   finally
     Query.SQL.Text := 'delete from people where p_id = '+IntToStr(RowID);
     Query.ExecSQL;
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompADOBugReport.TestADQA_All_types;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Query.Connection := Connection;
+  // Query.RequestLive := True;
+  try
+    Query.SQL.Text := 'select * from ADQA_All_types';
+    Query.Open;
+    Query.Close;
+  finally
     Query.Free;
   end;
 end;

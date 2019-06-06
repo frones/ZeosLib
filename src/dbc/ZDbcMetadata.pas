@@ -57,8 +57,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBCD,
   ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
   ZDbcCache, ZCompatibility, ZSelectSchema, ZURL, ZDbcConnection;
 
@@ -2309,11 +2308,9 @@ begin
     for I := 0 to High(ColumnsDefs) do
     begin
       ColumnInfo := TZColumnInfo.Create;
-      with ColumnInfo do
-      begin
+      with ColumnInfo do begin
         ColumnLabel := ColumnsDefs[I].Name;
         ColumnType := ColumnsDefs[I].SQLType;
-        ColumnDisplaySize := ColumnsDefs[I].Length;
         Precision := ColumnsDefs[I].Length;
       end;
       ColumnsInfo.Add(ColumnInfo);
@@ -2321,8 +2318,7 @@ begin
 
     Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
       IZConnection(FConnection).GetConSettings);
-    with Result do
-    begin
+    with Result do begin
       SetType(rtScrollInsensitive);
       SetConcurrency(rcUpdatable);
     end;
@@ -2411,9 +2407,7 @@ var
   I: Integer;
   Metadata: IZResultSetMetadata;
   Len: NativeUInt;
-  {$IFDEF BCD_TEST}
   Buff: array[Byte] of Byte;
-  {$ENDIF}
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
@@ -2450,14 +2444,10 @@ begin
         stCurrency:
           DestResultSet.UpdateCurrency(I, SrcResultSet.GetCurrency(I));
         stBigDecimal:
-          {$IFDEF BCD_TEST}
           begin
             SrcResultSet.GetBigDecimal(I, PBCD(@Buff[0])^);
             DestResultSet.UpdateBigDecimal(I, PBCD(@Buff[0])^);
           end;
-          {$ELSE}
-          DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
-          {$ENDIF}
         stString, stUnicodeString, stAsciiStream, stUnicodeStream:
           if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
              (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
@@ -2514,8 +2504,6 @@ begin
         Currency := Metadata.IsCurrency(i);
         Nullable := Metadata.IsNullable(i);
         Signed := Metadata.IsSigned(i);
-        ColumnDisplaySize := Metadata.GetPrecision(I); //GetColumnDisplaySize(i); ??
-        //MaxLenghtBytes := Metadata.GetPrecision(i) * ConSettings^.ClientCodePage^.CharWidth;
         ColumnLabel := Metadata.GetColumnLabel(i);
         ColumnName := Metadata.GetColumnName(i);
         SchemaName := Metadata.GetSchemaName(i);

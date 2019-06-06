@@ -76,7 +76,6 @@ type
                         //currency field like MS/PG-Money should be indicated here
     FNullable: TZColumnNullableType;
     FSigned: Boolean; //signed ordinals or fixed with datatype?
-    FColumnDisplaySize: Integer;
     FCharOctedLength: Integer;
     FColumnLabel: string;
     FColumnName: string;
@@ -103,8 +102,6 @@ type
     property Nullable: TZColumnNullableType read FNullable write FNullable;
 
     property Signed: Boolean read FSigned write FSigned;
-    property ColumnDisplaySize: Integer read FColumnDisplaySize
-      write FColumnDisplaySize;
     property CharOctedLength: Integer read FCharOctedLength
       write FCharOctedLength;
     property ColumnLabel: string read FColumnLabel write FColumnLabel;
@@ -134,13 +131,38 @@ type
     FTableColumns: TZHashMap;
     FIdentifierConvertor: IZIdentifierConvertor;
     FResultSet: TZAbstractResultSet;
-    FConSettings: PZConSettings;
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
+    FConSettings: PZConSettings;
+    procedure SetAutoIncrementFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetCaseSensitiveFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetColumnCodePageFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetColumnNullableFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetDefaultValueFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetDefinitelyWritableFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetIsSearchableFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetColumnPrecisionFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetReadOnlyFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetColumnScaleFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetColumnTypeFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
+    procedure SetWritableFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); virtual;
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
       const SelectSchema: IZSelectSchema); virtual;
-    procedure FillColumInfoFromGetColumnsRS(ColumnInfo: TZColumnInfo;
-      const TableColumns: IZResultSet; const FieldName: String); virtual;
+  protected
+    procedure FillColumInfoFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet; const FieldName: String);
     function GetTableColumns(TableRef: TZTableRef): IZResultSet;
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
     function ReadColumnByName(const FieldName: string; TableRef: TZTableRef;
@@ -171,7 +193,6 @@ type
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType; virtual;
 
     function IsSigned(ColumnIndex: Integer): Boolean; virtual;
-    function GetColumnDisplaySize(ColumnIndex: Integer): Integer; virtual;
     function GetColumnLabel(ColumnIndex: Integer): string; virtual;
     function GetColumnName(ColumnIndex: Integer): string; virtual;
     function GetColumnCodePage(ColumnIndex: Integer): Word;
@@ -202,24 +223,8 @@ uses ZFastCode, ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils, ZEncoding;
 constructor TZColumnInfo.Create;
 begin
   FAutoIncrement := False;
-  FCaseSensitive := False;
-  FSearchable := False;
-  FCurrency := False;
   FNullable := ntNullableUnknown;
-  FSigned := False;
-  FColumnDisplaySize := 0;
-  FColumnLabel := '';
-  FColumnName := '';
-  FSchemaName := '';
-  FPrecision := 0;
-  FScale := 0;
-  FTableName := '';
-  FCatalogName := '';
-  FDefaultValue := '';
-  FColumnType := stUnknown;
   FReadOnly := True;
-  FWritable := False;
-  FDefinitelyWritable := False;
   FColumnCodePage := zCP_NONE;
 end;
 
@@ -268,106 +273,40 @@ begin
 end;
 
 procedure TZAbstractResultSetMetadata.FillColumInfoFromGetColumnsRS(
-  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
-  const FieldName: String);
-var
-  TempColType: TZSQLType;
-  ColTypeName: string;
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo;
+  const TableColumns: IZResultSet; const FieldName: String);
 begin
   ColumnInfo.CatalogName := TableColumns.GetString(CatalogNameIndex);
   ColumnInfo.SchemaName := TableColumns.GetString(SchemaNameIndex);
   ColumnInfo.TableName := TableColumns.GetString(TableNameIndex);
   ColumnInfo.ColumnName := TableColumns.GetString(ColumnNameIndex);;
 
-//If the returned column information is null then the value assigned during
-//the resultset.open will be kept
-  if not TableColumns.IsNull(TableColColumnTypeIndex) then
-  begin
-    //since Pointer referencing by RowAccessor we've a pointer and GetBlob
-    //raises an exception if the pointer is a reference to PPAnsiChar or
-    //ZPPWideChar. if we execute a cast of a lob field the database meta-informtions
-    //assume a IZLob-Pointer. So let's prevent this case and check for
-    //stByte, stString, stUnicoeString first. If this type is returned from the
-    //ResultSet-Metadata we do NOT overwrite the column-type
-    //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
-
-    //or the same vice versa:
-    //(CASE WHEN (Ticket51_B."Name" IS NOT NULL) THEN Ticket51_B."Name" ELSE 'Empty' END) As "Name"
-    //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
-    tempColType := TZSQLType(TableColumns.GetSmall(TableColColumnTypeIndex));
-    if not (tempColType in [stBinaryStream, stAsciiStream,
-        stUnicodeStream, stBytes, stString, stUnicodeString]) or (ColumnInfo.ColumnType = stUnknown) then
-      ColumnInfo.ColumnType := tempColType;
-  end;
   if FConSettings = nil then //fix if on creation nil was assigned
     FConSettings := ResultSet.GetStatement.GetConnection.GetConSettings;
-
-  {Assign ColumnCodePages}
-  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-    if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then //all except ADO and DBLib (currently)
-      ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
-    else
-      if FConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTf8] then //this excludes ADO which is allways 2Byte-String based
-      begin
-        ColTypeName := UpperCase(TableColumns.GetString(TableColColumnTypeNameIndex));
-        if (ColTypeName = 'NVARCHAR') or (ColTypeName = 'NCHAR') then
-          ColumnInfo.ColumnCodePage := zCP_UTF8
-        else if (ColTypeName = 'UNIVARCHAR') or (ColTypeName = 'UNICHAR') then
-          ColumnInfo.ColumnCodePage := zCP_UTF16
-        else
-          ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
-      end
-  else
-    ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
+  { Overwrite ColumnTypes if necessary }
+  SetColumnTypeFromGetColumnsRS(ColumnInfo, TableColumns);
+  {Assign ColumnCodePages if necessary }
+  SetColumnCodePageFromGetColumnsRS(ColumnInfo, TableColumns);
   {Precision or column-size}
-  //do not overwrite the precision until domain columns (pg) are handled correctly
-  //by uncachedgetcolumns
+  SetColumnPrecisionFromGetColumnsRS(ColumnInfo, TableColumns);
   {Scale}
-  //also do not overwrite the size until domain columns (pg) are handled correctly
-  //by uncachedgetcolumns -> see SF#353
-  //if not TableColumns.IsNull(TableColColumnDecimalDigitsIndex) then
-  //  ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
+  SetColumnScaleFromGetColumnsRS(ColumnInfo, TableColumns);
   {nullable}
-  if not TableColumns.IsNull(TableColColumnNullableIndex) then
-    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));
+  SetColumnNullableFromGetColumnsRS(ColumnInfo, TableColumns);
   {auto increment field}
-  if not TableColumns.IsNull(TableColColumnAutoIncIndex) then
-    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(TableColColumnAutoIncIndex);
+  SetAutoIncrementFromGetColumnsRS(ColumnInfo, TableColumns);
   {Case sensitive}
-  if not TableColumns.IsNull(TableColColumnCaseSensitiveIndex) then
-    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(TableColColumnCaseSensitiveIndex);
-  if not TableColumns.IsNull(TableColColumnSearchableIndex) then
-    ColumnInfo.Searchable := TableColumns.GetBoolean(TableColColumnSearchableIndex);
+  SetCaseSensitiveFromGetColumnsRS(ColumnInfo, TableColumns);
+  {Is searchable}
+  SetIsSearchableFromGetColumnsRS(ColumnInfo, TableColumns);
   {Writable}
-  if not TableColumns.IsNull(TableColColumnWritableIndex) then
-    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
-      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex)
-      else
-        ColumnInfo.Writable := False
-    else
-      ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex);
+  SetWritableFromGetColumnsRS(ColumnInfo, TableColumns);
   {DefinitelyWritable}
-  if not TableColumns.IsNull(TableColColumnDefinitelyWritableIndex) then
-    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
-      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex)
-      else
-        ColumnInfo.DefinitelyWritable := False
-    else
-      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex);
+  SetDefinitelyWritableFromGetColumnsRS(ColumnInfo, TableColumns);
   {readonly}
-  if not TableColumns.IsNull(TableColColumnReadonlyIndex) then
-    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
-      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex)
-      else
-        ColumnInfo.ReadOnly := True
-    else
-      ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex);
+  SetReadOnlyFromGetColumnsRS(ColumnInfo, TableColumns);
   {default value}
-  if not TableColumns.IsNull(TableColColumnColDefIndex) then
-    ColumnInfo.DefaultValue := TableColumns.GetString(TableColColumnColDefIndex);
+  SetDefaultValueFromGetColumnsRS(ColumnInfo, TableColumns);
 end;
 
 {**
@@ -480,18 +419,6 @@ end;
 function TZAbstractResultSetMetadata.IsSigned(ColumnIndex: Integer): Boolean;
 begin
   Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Signed;
-end;
-
-{**
-  Indicates the designated column's normal maximum width in characters.
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return the normal maximum number of characters allowed as the width
-    of the designated column
-}
-function TZAbstractResultSetMetadata.GetColumnDisplaySize(
-  ColumnIndex: Integer): Integer;
-begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnDisplaySize;
 end;
 
 {**
@@ -857,18 +784,14 @@ var
   ResultSet: IZResultSet;
 begin
   I := 0;
-  while I < SelectSchema.FieldCount do
-  begin
+  while I < SelectSchema.FieldCount do begin
     Current := SelectSchema.Fields[I];
-    if (Current.Field = '*') and (Current.TableRef <> nil) then
-    begin
+    if (Current.Field = '*') and (Current.TableRef <> nil) then begin
       TableRef := Current.TableRef;
       ResultSet := Self.GetTableColumns(TableRef);
-      if ResultSet <> nil then
-      begin
+      if ResultSet <> nil then begin
         ResultSet.BeforeFirst;
-        while ResultSet.Next do
-        begin
+        while ResultSet.Next do begin
           FieldRef := TZFieldRef.Create(True, TableRef.Catalog, TableRef.Schema,
             TableRef.Table, ResultSet.GetString(ColumnNameIndex), '', TableRef);
           SelectSchema.InsertField(I, FieldRef);
@@ -882,6 +805,111 @@ begin
   end;
 end;
 
+procedure TZAbstractResultSetMetadata.SetAutoIncrementFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnAutoIncIndex) then
+    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(TableColColumnAutoIncIndex);
+end;
+
+procedure TZAbstractResultSetMetadata.SetCaseSensitiveFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnCaseSensitiveIndex) then
+    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(TableColColumnCaseSensitiveIndex);
+end;
+
+procedure TZAbstractResultSetMetadata.SetColumnCodePageFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
+    if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+      if FConSettings^.ClientCodePage.Encoding = ceUTF16
+      then ColumnInfo.ColumnCodePage := zCP_UTF16
+      else ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
+    {else keep Resultset info}
+  end else
+    ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
+end;
+
+procedure TZAbstractResultSetMetadata.SetColumnNullableFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnNullableIndex) then
+    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(TableColColumnNullableIndex));
+end;
+
+procedure TZAbstractResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  //it's a nop -> use a Override if necessary
+end;
+
+procedure TZAbstractResultSetMetadata.SetColumnScaleFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF} ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  //it's a nop -> use a Override if necessary
+end;
+
+procedure TZAbstractResultSetMetadata.SetColumnTypeFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo;
+  const TableColumns: IZResultSet);
+var tempColType: TZSQLType;
+begin
+//If the returned column information is null or is unknown then the value assigned during
+//the resultset.open will be kept
+  if not TableColumns.IsNull(TableColColumnTypeIndex) and (TableColumns.GetSmall(TableColColumnTypeIndex) > Ord(stUnknown)) then begin
+    //since Pointer referencing by RowAccessor we've a pointer and GetBlob
+    //raises an exception if the pointer is a reference to PPAnsiChar or
+    //ZPPWideChar. if we execute a cast of a lob field the database meta-informtions
+    //assume a IZLob-Pointer. So let's prevent this case and check for
+    //stByte, stString, stUnicoeString first. If this type is returned from the
+    //ResultSet-Metadata we do NOT overwrite the column-type
+    //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
+
+    //or the same vice versa:
+    //(CASE WHEN (Ticket51_B."Name" IS NOT NULL) THEN Ticket51_B."Name" ELSE 'Empty' END) As "Name"
+    //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
+    tempColType := TZSQLType(TableColumns.GetSmall(TableColColumnTypeIndex));
+    if not (tempColType in [stBinaryStream, stAsciiStream,
+        stUnicodeStream, stBytes, stString, stUnicodeString]) or (ColumnInfo.ColumnType = stUnknown) then
+      ColumnInfo.ColumnType := tempColType;
+  end;
+end;
+
+procedure TZAbstractResultSetMetadata.SetDefaultValueFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnColDefIndex) then
+    ColumnInfo.DefaultValue := TableColumns.GetString(TableColColumnColDefIndex);
+end;
+
+procedure TZAbstractResultSetMetadata.SetDefinitelyWritableFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnDefinitelyWritableIndex) then
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex)
+      else
+        ColumnInfo.DefinitelyWritable := False
+    else
+      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(TableColColumnDefinitelyWritableIndex);
+end;
+
+procedure TZAbstractResultSetMetadata.SetIsSearchableFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnSearchableIndex) then
+    ColumnInfo.Searchable := TableColumns.GetBoolean(TableColColumnSearchableIndex);
+end;
+
 procedure TZAbstractResultSetMetadata.SetMetadata(
   const Value: IZDatabaseMetadata);
 begin
@@ -890,6 +918,32 @@ begin
     FIdentifierConvertor := Value.GetIdentifierConvertor
   else
     FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
+end;
+
+procedure TZAbstractResultSetMetadata.SetReadOnlyFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnReadonlyIndex) then
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex)
+      else
+        ColumnInfo.ReadOnly := True
+    else
+      ColumnInfo.ReadOnly := TableColumns.GetBoolean(TableColColumnReadonlyIndex);
+end;
+
+procedure TZAbstractResultSetMetadata.SetWritableFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  { Zeos all time code.. Is this correct? if not use a override and fix it}
+  if not TableColumns.IsNull(TableColColumnWritableIndex) then
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields
+      then ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex)
+      else ColumnInfo.Writable := False
+    else ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex);
 end;
 
 {**

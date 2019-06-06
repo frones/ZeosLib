@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Types, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility, ZDbcProperties{$IFDEF BCD_TEST}, ZDbcUtils, FmtBCD{$ENDIF};
+  ZCompatibility, ZDbcProperties, ZDbcUtils, FmtBCD;
 
 type
   {** Implements a test case for . }
@@ -82,9 +82,7 @@ type
     procedure TestStringToUnsignedIntegerConversions;
     procedure TestAfterLast;
     procedure TestQuestionMarks;
-    {$IFDEF BCD_TEST}
     procedure TestDbcBCDValues;
-    {$ENDIF}
   end;
 
   TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
@@ -97,7 +95,7 @@ type
     stIntegerArray: TIntegerDynArray;
     stFloatArray: TSingleDynArray;
     stDoubleArray: TDoubleDynArray;
-    stBigDecimalArray: {$IFDEF BCD_TEST}TBCDDynArray{$ELSE}TExtendedDynArray{$ENDIF};
+    stBigDecimalArray: TBCDDynArray;
     stStringArray: TRawByteStringDynArray;
     stUnicodeStringArray: TUnicodeStringDynArray;
     stBytesArray: TBytesDynArray;
@@ -453,7 +451,6 @@ begin
   CheckEquals(True, Connection.IsClosed);
 end;
 
-{$IFDEF BCD_TEST}
 procedure TZGenericTestDbcResultSet.TestDbcBCDValues;
 const
   id_Index        = FirstDbcIndex;
@@ -492,9 +489,8 @@ var RS: IZResultSet;
               (RS.GetType = rtForwardOnly) and (ProtocolType = protFirebird)) then
       CheckEquals(Ord(SQLType), Ord(RS.GetMetadata.GetColumnType(ColumnIndex)), Protocol+': SQLType mismatch, for column "'+S+'"');
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
-    CheckEquals(Value, RS.GetString(ColumnIndex), Protocol+': StrValue('+Value+') mismatch, for column "'+S+'"');
-    RS.GetBigDecimal(ColumnIndex, BCD);
     CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Value: '+Value);
+  //  CheckEquals(Value, RS.GetString(ColumnIndex), Protocol+': StrValue('+Value+') mismatch, for column "'+S+'"');
   end;
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;
@@ -525,7 +521,6 @@ begin
   TestColTypes(rtForwardOnly);
   TestColTypes(rtScrollSensitive);
 end;
-{$ENDIF}
 
 {**
   Checks functionality prepared statement
@@ -1731,7 +1726,7 @@ var
       stIntegerArray[I] := I;
       stFloatArray[i] := RandomFloat(-5000, 5000);
       stDoubleArray[i] := RandomFloat(-5000, 5000);
-      stBigDecimalArray[i] := {$IFDEF BCD_TEST}DoubleToBCD{$ENDIF}(RandomFloat(-5000, 5000));
+      stBigDecimalArray[i] := DoubleToBCD(RandomFloat(-5000, 5000));
       stStringArray[i] := RandomStr(Random(99)+1);
       stUnicodeStringArray[i] := RandomStr(Random(254+1));
       stBytesArray[i] := RandomBts(ArrayLen);

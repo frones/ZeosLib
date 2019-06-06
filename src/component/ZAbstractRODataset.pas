@@ -3023,9 +3023,7 @@ begin
           PDouble(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
         ftBcd:
           PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result);
-        {$IFDEF BCD_TEST}
         ftFmtBcd: RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^, Result);
-        {$ENDIF}
         else
           {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
             Pointer(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
@@ -3043,7 +3041,7 @@ begin
         if Field.DataType = ftExtended then
         begin
           SetLength(Buffer, SizeOf(Extended));
-          PExtended(Buffer)^ := RowAccessor.{$IFDEF BCD_TEST}GetDouble{$ELSE}GetBigDecimal{$ENDIF}(ColumnIndex, Result);
+          PExtended(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
           Result := not Result;
         end
         else
@@ -3146,18 +3144,9 @@ begin
         end;
         {$IFDEF WITH_FTEXTENDED}
         ftExtended:
-          {$IFDEF BCD_TEST}
           RowAccessor.SetDouble(ColumnIndex, PExtended(Buffer)^);
-          {$ELSE}
-          RowAccessor.SetBigDecimal(ColumnIndex, PExtended(Buffer)^);
-          {$ENDIF}
         {$ENDIF}
-        ftFmtBCD: {$IFDEF BCD_TEST}
-                    RowAccessor.SetBigDecimal(ColumnIndex, PBCD(Buffer)^);
-                  {$ELSE}
-                    RowAccessor.SetBigDecimal(ColumnIndex, BCDToDouble(PBCD(Buffer)^));
-                  {$ENDIF}
-
+        ftFmtBCD: RowAccessor.SetBigDecimal(ColumnIndex, PBCD(Buffer)^);
         else  { Processes all other fields. }
           begin
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
@@ -3333,33 +3322,21 @@ begin
           Size := GetPrecision(I);
           if (FieldType = ftString) then
             if (ConSettings^.CPType = cCP_UTF8)
-            then Size := Size * 4
+            then Size := Size shl 2 //four bytes per char
             else Size := Size * ZOSCodePageMaxCharSize
           else if (FieldType = ftWideString) and (doAlignMaxRequiredWideStringFieldSize in Options) {and (ConSettings.ClientCodePage.CharWidth > 3)} then
-            Size := Size * 2;
-
-            {if (ConSettings^.CPType = cCP_UTF8) or (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
-               ((not ConSettings^.AutoEncode) and (ConSettings^.ClientCodePage^.Encoding = ceUTF8)) or
-               ((ConSettings^.CPType = cGET_ACP) and (ZOSCodePage = zCP_UTF8)) then
-              Size := Size * 4
-            else
-              Size := Size * ConSettings^.ClientCodePage^.CharWidth;}
-        end else
-          {$IFDEF WITH_FTGUID}
-          if FieldType = ftGUID then
-            Size := 38
-          else
-          {$ENDIF}
-          if FieldType in [ftBCD, ftFmtBCD] then
-            Size := GetScale(I)
-          else
-            Size := 0;
+            Size := Size shl 1; //two bytes per char
+        end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
+          Size := 38
+        else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD] then
+          Size := GetScale(I)
+        else
+          Size := 0;
 
         J := 0;
         FieldName := GetColumnLabel(I);
         FName := FieldName;
-        while FieldDefs.IndexOf(FName) >= 0 do
-        begin
+        while FieldDefs.IndexOf(FName) >= 0 do begin //add hide duplicate fieldnames
           Inc(J);
           FName := Format('%s_%d', [FieldName, J]);
         end;
@@ -3518,7 +3495,7 @@ begin
       if not (doNoAlignDisplayWidth in FOptions) then
         for i := 0 to Fields.Count -1 do
           if Fields[i].DataType = ftString then
-            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
           {$IFDEF WITH_FTGUID}
           else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
           {$ENDIF};
@@ -5649,7 +5626,7 @@ function TZField.GetAsExtended: Extended;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.{$IFDEF BCD_TEST}GetDouble{$ELSE}GetBigDecimal{$ENDIF}(FFieldIndex, IsNull)
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetDouble(FFieldIndex, IsNull)
   else
     Result := 0.0;
 end;
@@ -5954,7 +5931,7 @@ procedure TZField.SetAsExtended(Value: Extended);
 begin
   if IsFieldEditable then
   begin
-    (DataSet as TZAbstractRODataset).FRowAccessor.{$IFDEF BCD_TEST}SetDouble{$ELSE}SetBigDecimal{$ENDIF}(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetDouble(FFieldIndex, Value);
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;

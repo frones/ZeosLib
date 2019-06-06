@@ -114,11 +114,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE !BCD_TEST}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -347,9 +343,8 @@ begin
     if FieldSize < 0 then
       FieldSize := 0;
     if F.Type_ = adGuid
-    then ColumnInfo.ColumnDisplaySize := 38
-    else ColumnInfo.ColumnDisplaySize := FieldSize;
-    if ColType = adCurrency then begin
+    then ColumnInfo.Precision := 38
+    else if ColType = adCurrency then begin
       ColumnInfo.Precision := 19;
       ColumnInfo.Scale := 4;
       ColumnInfo.Currency := True;
@@ -988,7 +983,7 @@ begin
                     PD := @FColValue;
                     Result := Int64(PD.Lo64);
                     if PD.scale > 0 then
-                      Result := Result div i64Table[PD.scale];
+                      Result := Result div Int64Tower[PD.scale];
                     if PD.sign > 0 then
                       Result := -Result;
                   end;
@@ -1069,7 +1064,7 @@ begin
                     PD := @FColValue;
                     Result := UInt64(PD.Lo64);
                     if PD.scale > 0 then
-                      Result := Result div Uint64(i64Table[PD.scale]);
+                      Result := Result div Uint64(Int64Tower[PD.scale]);
                   end;
       VT_R4, VT_R8, VT_DATE: Result := Trunc(GetDouble(ColumnIndex));
       else begin
@@ -1117,7 +1112,7 @@ begin
       VT_R4:          Result := PSingle(FValueAddr)^;
       VT_DECIMAL:     begin
                         PD := @FColValue;
-                        Result := Uint64(PDecimal(PD).Lo64) / ZFastCode.I64Table[PD.Scale];
+                        Result := Uint64(PDecimal(PD).Lo64) / ZFastCode.Int64Tower[PD.Scale];
                         if PD.sign > 0 then
                           Result := -Result;
                       end;
@@ -1142,21 +1137,15 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-{$ELSE}
-function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-label ProcessFixedChar;
-{$ENDIF}
 var
   Len: NativeUint;
   P: PWideChar;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
-    Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF}
+    Result := NullBCD
   else with FField20, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
-    {$IFDEF BCD_TEST}
     case FValueType of
       VT_BOOL:        ScaledOrdinal2Bcd(Word(Ord(PWord(FValueAddr)^ <> 0)), 0, Result);
       VT_UI1:         ScaledOrdinal2Bcd(Word(PByte(FValueAddr)^), 0, Result, False);
@@ -1180,50 +1169,6 @@ begin
           if not ZSysUtils.TryUniToBcd(P, Len, Result, '.') then
             Result := NullBCD;
         end;
-      {$ELSE !BCD_TEST}
-    case Type_ of
-      adTinyInt: Result := PShortInt(FValueAddr)^;
-      adSmallInt: Result := PSmallInt(FValueAddr)^;
-      adInteger, adError: Result := PInteger(FValueAddr)^;
-      adBigInt: Result := PInt64(FValueAddr)^;
-      adUnsignedTinyInt: Result := PByte(FValueAddr)^;
-      adUnsignedSmallInt: Result := PWord(FValueAddr)^;
-      adUnsignedInt: Result := PCardinal(FValueAddr)^;
-      adUnsignedBigInt:   Result := PUInt64(FValueAddr)^;
-      adSingle: Result := PSingle(FValueAddr)^;
-      adDouble: Result := PDouble(FValueAddr)^;
-      adCurrency: Result := PCurrency(FValueAddr)^;
-      adBoolean: Result := Ord(PWordBool(FValueAddr)^);
-      adDate,
-      adDBDate,
-      adDBTime,
-      adDBTimeStamp: Result := TVarData(FColValue).VDate;
-      adChar:
-        begin
-          Len := ActualSize;
-          goto ProcessFixedChar;
-        end;
-      adWChar: {fixed char fields}
-        begin
-          Len := ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
-  ProcessFixedChar:
-          P := TVarData(FColValue).VOleStr;
-          while (P+Len-1)^ = ' ' do dec(Len);
-          ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
-        end;
-      adVarChar,
-      adLongVarChar, {varying char fields}
-      adBSTR,
-      adVarWChar,
-      adLongVarWChar: {varying char fields}
-        Result := UnicodeToFloatDef(TVarData(FColValue).VOleStr, WideChar('.'), 0);
-      else
-        try
-          Result := FColValue;
-        except
-          Result := 0;
-        end;
-      {$ENDIF !BCD_TEST}
     end;
   end;
 end;
@@ -1277,9 +1222,9 @@ begin
                   if PD.sign > 0 then
                     i64 := -i64;
                   if PD.scale < 4 then
-                    i64 := i64 * ZFastCode.I64Table[4-PD.scale]
+                    i64 := i64 * ZFastCode.Int64Tower[4-PD.scale]
                   else if PD.scale > 4 then
-                    i64 := i64 div ZFastCode.I64Table[PD.scale-4];
+                    i64 := i64 div ZFastCode.Int64Tower[PD.scale-4];
                 end;
     VT_R4:      Result := PSingle(FValueAddr)^;
     VT_R8, VT_DATE: Result := PDouble(FValueAddr)^;

@@ -65,7 +65,7 @@ uses
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  FmtBCD,
   ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
   ZPlainDbLibConstants, ZPlainDBLibDriver;
@@ -120,7 +120,9 @@ type
   end;
 
   TZDblibResultSetMetadata = class(TZAbstractResultSetMetadata, IZDblibResultSetMetadata)
-
+  protected
+    procedure SetColumnCodePageFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
   end;
 
   TZDBLIBColumnInfo = class(TZColumnInfo)
@@ -159,11 +161,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetCurrency(ColumnIndex: Integer): Currency; override;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
-    {$ELSE !BCD_TEST}
-    function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
@@ -189,7 +187,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode,
-  ZClasses, ZDbcUtils
+  ZClasses, ZDbcUtils, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZAbstractDblibDataProvider.Create(Connection: IZDBLibConnection);
@@ -841,7 +839,6 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var
   DL: Integer;
@@ -865,11 +862,6 @@ begin
       LastWasNull := not TryRawToBCD(PAnsiChar(@fTinyBuffer[0]), DL, Result, '.');
     end else Result := NullBCD;
   end;
-{$ELSE !BCD_TEST}
-function TZDBLibResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-begin
-  Result := GetDouble(ColumnIndex);
-{$ENDIF !BCD_TEST}
 end;
 
 {**
@@ -1138,5 +1130,27 @@ begin
     end;
   end;
 end;
+
+{ TZDblibResultSetMetadata }
+procedure TZDblibResultSetMetadata.SetColumnCodePageFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo;
+  const TableColumns: IZResultSet);
+var ColTypeName: string;
+  P: PChar;
+begin
+  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
+    ColTypeName := TableColumns.GetString(TableColColumnTypeNameIndex);
+    P := Pointer(ColTypeName);
+    if P = nil
+    then ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
+    else if (Length(ColTypeName) > 3) and SameText(P, PChar('UNI'), 3) //sybase only and FreeTDS does not map the type to UTF8?
+      then ColumnInfo.ColumnCodePage := zCP_UTF16{UNICHAR, UNIVARCHAR}
+      else if (Ord(P^) or $20 = Ord('n')) and not FConSettings^.ClientCodePage^.IsStringFieldCPConsistent
+        then ColumnInfo.ColumnCodePage := zCP_UTF8 {NTEXT, NVARCHAR, NCHAR}
+        else ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP; //assume server CP instead
+  end else
+    ColumnInfo.ColumnCodePage := zCP_NONE;
+end;
+
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.

@@ -55,7 +55,7 @@ interface
 {$I ZDbc.inc}
 uses
   SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Contnrs,
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  FmtBCD,
   ZDbcCachedResultSet, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
   ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestCase;
@@ -73,7 +73,7 @@ type
     FLong: LongInt;
     FFloat: Single;
     FDouble: Double;
-    FBigDecimal: {$IFDEF BCD_TEST}TBCD{$ELSE}Int64{$ENDIF};
+    FBigDecimal: TBCD;
     FString: string;
     FDate: TDateTime;
     FTime: TDateTime;
@@ -193,12 +193,11 @@ begin
   Result.Currency := True;
   Result.Nullable := Nullable;
   Result.Signed := True;
-  Result.ColumnDisplaySize := 32;
   Result.ColumnLabel := 'Column'+IntToStr(Index);
   Result.ColumnName := 'Column'+IntToStr(Index);
   Result.SchemaName := 'TestSchemaName';
   case ColumnType of
-    stString: Result.Precision := 255;
+    stString, stUnicodeString: Result.Precision := 255;
     stBytes: Result.Precision := 5;
   else
     Result.Precision := 0;
@@ -268,7 +267,7 @@ begin
   FLong := 1147483647;
   FFloat := 3.4E-38;
   FDouble := 1.7E-308;
-  FBigDecimal := {$IFDEF BCD_TEST}StrToBCD('9223372036854775807'){$ELSE}9223372036854775807{$ENDIF};
+  FBigDecimal := StrToBCD('9223372036854775807');
   FString := '0123456789';
 
   SetLength(FByteArray, 5);
@@ -500,7 +499,7 @@ var
   Collection: TObjectList;
   ByteArray: TBytes;
   CachedResultSet: TZAbstractCachedResultSet;
-  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
+  BCD: TBCD;
 begin
   Collection := GetColumnsInfoCollection;
   try
@@ -557,12 +556,8 @@ begin
         CheckEquals(FLong, GetLong(stLongIndex), 'GetLong');
         CheckEquals(FFloat, GetFloat(stFloatIndex), 0, 'GetFloat');
         CheckEquals(FDouble, GetDouble(stDoubleIndex), 0, 'GetDouble');
-        {$IFDEF BCD_TEST}
         GetBigDecimal(stBigDecimalIndex, BCD);
         CheckEquals(BcdToStr(FBigDecimal), BcdToStr(BCD), 'GetBigDecimal');
-        {$ELSE}
-        CheckEquals(FBigDecimal, GetBigDecimal(stBigDecimalIndex), 0, 'GetBigDecimal');
-        {$ENDIF}
         CheckEquals(FString, GetString(stStringIndex), 'GetString');
         CheckEquals(FDate, GetDate(stDateIndex), 0, 'GetDate');
         CheckEquals(FTime, GetTime(stTimeIndex), 0, 'GetTime');
@@ -639,7 +634,7 @@ var
   Blob: IZBlob;
   Collection: TObjectList;
   CachedResultSet: TZAbstractCachedResultSet;
-  {$IFDEF BCD_TEST}BCD: TBCD;{$ENDIF}
+  BCD: TBCD;
 begin
   Collection := GetColumnsInfoCollection;
   try
@@ -709,12 +704,8 @@ begin
         CheckEquals(FLong, GetLong(stLongIndex), 'Field changed; GetLong');
         CheckEquals(FFloat, GetFloat(stFloatIndex), 0, 'Field changed; GetFloat');
         CheckEquals(FDouble, GetDouble(stDoubleIndex), 0, 'Field changed; GetDouble');
-        {$IFDEF BCD_TEST}
         GetBigDecimal(stBigDecimalIndex, BCD);
         CheckEquals(BcdToStr(FBigDecimal), BcdToStr(BCD), 'Field changed; GetBigDecimal');
-        {$ELSE}
-        CheckEquals(FBigDecimal, GetBigDecimal(stBigDecimalIndex), 0, 'Field changed; GetBigDecimal');
-        {$ENDIF}
         CheckEquals(FString, GetString(stStringIndex), 'Field changed; GetString');
         CheckEquals(FByteArray, GetBytes(stBytesIndex), 'Field changed; GetBytes');
         CheckEquals(FDate, GetDate(stDateIndex), 0, 'Field changed; GetDate');

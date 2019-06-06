@@ -60,9 +60,8 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs,{$ENDIF}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility,
   ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASAConstants,
   ZPLainASADriver;
@@ -106,11 +105,7 @@ type
     function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
-    {$ELSE}
-    function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
@@ -171,7 +166,7 @@ type
     procedure UpdateLong(ColumnIndex: Integer; const Value: Int64);
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single);
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
-    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
@@ -832,45 +827,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZASAAbstractResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 begin
   Double2BCD(GetDouble(ColumnIndex), Result);
-{$ELSE}
-function TZASAAbstractResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-begin
-  CheckClosed;
-  LastWasNull := IsNull(ColumnIndex);
-  Result := 0;
-  if not LastWasNull then
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
-    {$ENDIF}
-    with FSQLDA.sqlvar[ColumnIndex] do
-      case sqlType and $FFFE of
-        DT_TINYINT     : Result := PShortInt(sqldata)^;
-        DT_BIT         : Result := PByte(sqldata)^;
-        DT_SMALLINT    : Result := PSmallint(sqldata)^;
-        DT_UNSSMALLINT : Result := PWord(sqldata)^;
-        DT_INT         : Result := PInteger(sqldata)^;
-        DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
-        DT_FLOAT       : Result := PSingle(sqldata)^;
-        DT_DOUBLE      : Result := PDouble(sqldata)^;
-        DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING(sqlData).length);
-        DT_LONGVARCHAR :
-          begin
-            FSqlData.ReadBlobToString(ColumnIndex, FRawTemp);
-            SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, Length(fRawTemp));
-          end;
-      else
-        FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(columnIndex), ConvertASATypeToString(sqlType)]));
-      end;
-  end;
-{$ENDIF}
 end;
 
 {**
@@ -1199,11 +1158,9 @@ begin
         if ColumnType = stString then begin
           CharOctedLength := GetFieldLength(I)-4;
           Precision := CharOctedLength div ConSettings^.ClientCodePage^.CharWidth;
-          ColumnDisplaySize := Precision;
         end else if FieldSQLType = stUnicodeString then begin
           Precision := GetFieldLength(I)-4 div ConSettings^.ClientCodePage^.CharWidth;
           CharOctedLength := Precision shl 1;
-          ColumnDisplaySize := Precision;
         end;
       end else
         ColumnCodePage := High(Word);
@@ -1559,7 +1516,7 @@ begin
   FUpdateSqlData.UpdateDouble(ColumnIndex, Value);
 end;
 
-procedure TZASACachedResultSet.UpdateBigDecimal(ColumnIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+procedure TZASACachedResultSet.UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateBigDecimal(ColumnIndex, Value);

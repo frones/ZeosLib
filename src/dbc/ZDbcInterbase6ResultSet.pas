@@ -60,9 +60,8 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
@@ -110,11 +109,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -157,8 +152,10 @@ type
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
-    procedure FillColumInfoFromGetColumnsRS(ColumnInfo: TZColumnInfo;
-      const TableColumns: IZResultSet; const FieldName: String); override;
+    procedure SetColumnPrecisionFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
+    procedure SetColumnTypeFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
   public
     function GetCatalogName({%H-}ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -443,17 +440,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZInterbase6XSQLDAResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-{$ELSE}
-function TZInterbase6XSQLDAResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-{$ENDIF}
 var
   TempDate: TZTimeStamp;
-  {$IFNDEF BCD_TEST}
-  P: PAnsiChar;
-  Len: NativeUInt;
-  {$ENDIF}
   XSQLVAR: PXSQLVAR;
   dDT, tDT: TDateTime;
 begin
@@ -463,7 +452,6 @@ begin
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF BCD_TEST}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
     Result := NullBCD
@@ -510,62 +498,6 @@ begin
           [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
     end;
   end;
-  {$ELSE}
-  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
-    LastWasNull := True;
-    Result := 0
-  end else begin
-    LastWasNull := False;
-    case (XSQLVAR.sqltype and not(1)) of
-      SQL_D_FLOAT,
-      SQL_DOUBLE    : Result := PDouble(XSQLVAR.sqldata)^;
-      SQL_LONG      : if XSQLVAR.sqlscale = 0
-                      then Result := PISC_LONG(XSQLVAR.sqldata)^
-                      else Result := PISC_LONG(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
-      SQL_FLOAT     : Result := PSingle(XSQLVAR.sqldata)^;
-      SQL_BOOLEAN   : Result := PISC_BOOLEAN(XSQLVAR.sqldata)^;
-      SQL_BOOLEAN_FB: Result := PISC_BOOLEAN_FB(XSQLVAR.sqldata)^;
-      SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                      then Result := PISC_SHORT(XSQLVAR.sqldata)^
-                      else Result := PISC_SHORT(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale];
-      SQL_INT64     : if XSQLVAR.sqlscale = 0
-                      then Result := PISC_INT64(XSQLVAR.sqldata)^
-                      else Result := PISC_INT64(XSQLVAR.sqldata)^    / IBScaleDivisor[XSQLVAR.sqlscale];
-      SQL_TEXT,
-      SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
-                        ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
-                      end;
-      SQL_TIMESTAMP : begin
-                        isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
-                          TempDate.Year, TempDate.Month, Tempdate.Day);
-                        isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
-                          TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        if not TryEncodeDate(TempDate.Year, TempDate.Month, TempDate.Day, dDT) then
-                          dDT := 0;
-                        if not TryEncodeTime(TempDate.Hour, TempDate.Minute,
-                                TempDate.Second, TempDate.Fractions div 10, tDT) then
-                          tDT :=0;
-                        if dDT < 0
-                        then Result := dDT-tDT
-                        else Result := dDT+tDT;
-                      end;
-      SQL_TYPE_DATE : begin
-                        isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
-                          TempDate.Year, TempDate.Month, Tempdate.Day);
-                        Result := SysUtils.EncodeDate(TempDate.Year,TempDate.Month, TempDate.Day);
-                      end;
-      SQL_TYPE_TIME : begin
-                        isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
-                          TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10);
-                      end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-          [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
-    end;
-  end;
-  {$ENDIF}
 end;
 
 {**
@@ -1682,13 +1614,9 @@ begin
               then ColumnCodePage := ZCodePageInfo.CP
               else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
               Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
-              if ColumnType = stString then begin
-                CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
-                ColumnDisplaySize := Precision;
-              end else begin
-                CharOctedLength := Precision shl 1;
-                ColumnDisplaySize := Precision;
-              end;
+              if ColumnType = stString
+              then CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
+              else CharOctedLength := Precision shl 1;
             end;
           stAsciiStream, stUnicodeStream:
             ColumnCodePage := ConSettings^.ClientCodePage^.CP;
@@ -1808,17 +1736,6 @@ begin
   ColumnInfo.DefinitelyWritable := False;
 end;
 
-procedure TZInterbaseResultSetMetadata.FillColumInfoFromGetColumnsRS(
-  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
-  const FieldName: String);
-begin
-  inherited FillColumInfoFromGetColumnsRS(ColumnInfo, TableColumns, FieldName);
-  //FB native rs can't give use users choosen precision
-  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
-     not TableColumns.IsNull(TableColColumnSizeIndex) then
-    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
-end;
-
 {**
   Gets the designated column's table's catalog name.
   @param ColumnIndex the first column is 1, the second is 2, ...
@@ -1907,5 +1824,31 @@ begin
   Loaded := True;
   {$ENDIF}
 end;
+
+procedure TZInterbaseResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
+     not TableColumns.IsNull(TableColColumnSizeIndex) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+end;
+
+procedure TZInterbaseResultSetMetadata.SetColumnTypeFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+var Precision: Integer;
+begin
+  //FB native ResultSet can't give use users choosen precision for the Numeric/Decimal Fields
+  //so a ISC_INT64 type with scale smaller then four will always be
+  //mapped to stBigDecimal while it could be a stCurrency type. Let's test it!
+  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
+     not TableColumns.IsNull(TableColColumnSizeIndex) then begin
+    Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+    if (ColumnInfo.ColumnType = stBigDecimal) and (ColumnInfo.Scale <= 4) and
+       (Precision < sAlignCurrencyScale2Precision[ColumnInfo.Scale]) then
+      ColumnInfo.ColumnType := stCurrency;
+  end else
+    inherited SetColumnTypeFromGetColumnsRS(ColumnInfo, TableColumns);
+end;
+
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

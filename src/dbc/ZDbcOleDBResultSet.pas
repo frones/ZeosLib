@@ -60,9 +60,8 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZOleDB, ZDbcOleDBUtils, ZDbcCache,
   ZDbcCachedResultSet, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
 
@@ -113,11 +112,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE !BCD_TEST}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -535,7 +530,7 @@ end;
 }
 function TZAbstractOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
-label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref{$IFDEF BCD_TEST}, set_from_num{$ENDIF};
+label set_from_tmp, set_from_buf, str_by_ref, lstr_by_ref, wstr_by_ref, set_from_num;
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
@@ -675,7 +670,6 @@ set_from_tmp:         Len := Length(FRawTemp);
                       then Result := PEmptyAnsiString
                       else Result := Pointer(FRawTemp);
                     end;
-    {$IFDEF BCD_TEST}
     DBTYPE_NUMERIC: begin
                       Len := SQL_MAX_NUMERIC_LEN;
                       goto set_from_num;
@@ -685,7 +679,6 @@ set_from_tmp:         Len := Length(FRawTemp);
 set_from_num:         Result := @fTinyBuffer[0];
                       SQLNumeric2Raw(fData, @fTinyBuffer[0], Len);
                     end;
-    {$ENDIF}
     //DBTYPE_UDT	= 132;
     //DBTYPE_FILETIME	= 64;
     //DBTYPE_PROPVARIANT	= 138;
@@ -707,7 +700,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
-label set_from_tmp, set_from_buf, set_from_clob{$IFDEF BCD_TEST}, set_from_num{$ENDIF};
+label set_from_tmp, set_from_buf, set_from_clob, set_from_num;
 begin
   if IsNull(ColumnIndex) then begin //Sets LastWasNull, FData, FLength!!
     Result := nil;
@@ -859,7 +852,6 @@ set_from_clob:    fTempBlob := GetBlob(ColumnIndex); //localize
                     Len := GetAbsorbedTrailingSpacesLen(ZPPWideChar(FData)^, Len);
                   Result := ZPPWideChar(FData)^;
                 end;
-    {$IFDEF BCD_TEST}
     DBTYPE_NUMERIC: begin
                       Len := SQL_MAX_NUMERIC_LEN;
                       goto set_from_num;
@@ -869,8 +861,6 @@ set_from_clob:    fTempBlob := GetBlob(ColumnIndex); //localize
 set_from_num:         Result := @fTinyBuffer[0];
                       SQLNumeric2Uni(fData, Result, Len);
                     end;
-    {$ENDIF}
-
     //DBTYPE_UDT	= 132;
     //DBTYPE_FILETIME	= 64;
     //DBTYPE_PROPVARIANT	= 138;
@@ -1278,32 +1268,34 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-  procedure FromString(ColumnIndex: Integer; var Result: TBCD);
-  begin
-    LastWasNull := not TryStrToBCD(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})
-  end;
-{$ELSE !BCD_TEST}
-function TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-{$ENDIF !BCD_TEST}
+var P: Pointer;
+  L: NativeUInt;
+label NBCD;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_DECIMAL	= 14;
-      {$IFDEF BCD_TEST}
       DBTYPE_I2:        ScaledOrdinal2Bcd(PSmallInt(FData)^, 0, Result);
       DBTYPE_I4:        ScaledOrdinal2Bcd(PInteger(FData)^, 0, Result);
       DBTYPE_R4:        Result := DoubleToBCD(PSingle(FData)^);
       DBTYPE_R8:        Result := DoubleToBCD(PDouble(FData)^);
       DBTYPE_CY:        Currency2Bcd(PCurrency(FData)^, Result);
       DBTYPE_DATE:      Result := DoubleToBCD(PDateTime(FData)^);
+      DBTYPE_STR, DBTYPE_STR or DBTYPE_BYREF: begin
+          P := GetPAnsichar(ColumnIndex, L);
+          if not ZSysUtils.TryRawToBcd(P, L, Result, '.') then
+            goto NBCD;
+        end;
       DBTYPE_BSTR, DBTYPE_BSTR or DBTYPE_BYREF,
-      DBTYPE_STR, DBTYPE_STR or DBTYPE_BYREF,
       DBTYPE_WSTR,
-      DBTYPE_WSTR or DBTYPE_BYREF,
-      DBTYPE_VARIANT:   FromString(ColumnIndex, Result);
+      DBTYPE_WSTR or DBTYPE_BYREF: begin
+          P := GetPWidechar(ColumnIndex, L);
+          if not ZSysUtils.TryUniToBcd(P, L, Result, '.') then
+            goto NBCD;
+        end;
+      DBTYPE_VARIANT:   Result := VarToBCD(POleVariant(FData)^);
       DBTYPE_ERROR:     ScaledOrdinal2Bcd(PInteger(FData)^, 0, Result);
       DBTYPE_BOOL:      ScaledOrdinal2Bcd(Word(Ord(PWord(FData)^ <> 0)), 0, Result);
       DBTYPE_UI1:       ScaledOrdinal2Bcd(Word(PByte(FData)^), 0, Result, False);
@@ -1321,44 +1313,10 @@ begin
       //DBTYPE_PROPVARIANT	= 138;
       DBTYPE_NUMERIC:   SQLNumeric2BCD(FData, Result, SQL_MAX_NUMERIC_LEN);
       DBTYPE_VARNUMERIC:SQLNumeric2BCD(FData, Result, FLength);
-      else Result := NullBcd;
-      {$ELSE}
-      DBTYPE_I2:        Result := PSmallInt(FData)^;
-      DBTYPE_I4:        Result := PInteger(FData)^;
-      DBTYPE_R4:        Result := PSingle(FData)^;
-      DBTYPE_R8:        Result := PDouble(FData)^;
-      DBTYPE_CY:        Result := PCurrency(FData)^;
-      DBTYPE_DATE:      Result := PDateTime(FData)^;
-      DBTYPE_BSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
-      DBTYPE_BSTR or DBTYPE_BYREF:
-                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
-      DBTYPE_ERROR:     Result := PInteger(FData)^;
-      DBTYPE_BOOL:      Result := Ord(PWord(FData)^ <> 0);
-      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
-      DBTYPE_UI1:       Result := PByte(FData)^;
-      DBTYPE_I1:        Result := PShortInt(FData)^;
-      DBTYPE_UI2:       Result := PWord(FData)^;
-      DBTYPE_UI4:       Result := PCardinal(FData)^;
-      DBTYPE_I8:        Result := PInt64(FData)^;
-      DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:       SQLStrToFloatDef(PAnsiChar(FData), 0, Result, FLength);
-      DBTYPE_STR or DBTYPE_BYREF:
-                        SQLStrToFloatDef(PPAnsiChar(FData)^, 0, Result, FLength);
-      DBTYPE_WSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
-      DBTYPE_WSTR or DBTYPE_BYREF:
-                        SQLStrToFloatDef(ZPPWideChar(FData)^, 0, Result, FLength shr 1);
-      //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
-      //DBTYPE_FILETIME	= 64;
-      //DBTYPE_PROPVARIANT	= 138;
-      //DBTYPE_VARNUMERIC	= 139;
-      else Result := 0;
-      {$ENDIF}
+      else goto NBCD;
     end
-  else Result := {$IFDEF BCD_TEST}NullBcd{$ELSE}0{$ENDIF};
+  else
+NBCD: Result := NullBcd;
 end;
 
 {**
@@ -1834,11 +1792,7 @@ begin
                                           stFloat       : RowAccessor.SetFloat(I, POleVariant(FData^)^);
                                           stDouble      : RowAccessor.SetDouble(I, POleVariant(FData^)^);
                                           stCurrency    : RowAccessor.SetCurrency(I, POleVariant(FData^)^);
-                                          {$IFDEF BCD_TEST}
                                           stBigDecimal  : RowAccessor.SetBigDecimal(I, DoubleToBCD(POleVariant(FData^)^));
-                                          {$ELSE}
-                                          stBigDecimal  : RowAccessor.SetBigDecimal(I, POleVariant(FData^)^);
-                                          {$ENDIF}
                                           {stDate, stTime, stTimestamp,
                                           stGUID,
                                           //now varying size types in equal order
@@ -1881,12 +1835,10 @@ begin
                                           FUniTemp := PRawToUnicode(PPAnsiChar(FData^)^, Len, ConSettings^.ClientCodePage^.CP);
                                           RowAccessor.SetPWideChar(I, Pointer(FUniTemp), Len);
                                         end;
-          {$IFDEF BCD_TEST}
           DBTYPE_NUMERIC              : begin
                                           SQLNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, SQL_MAX_NUMERIC_LEN);
                                           RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                                         end;
-          {$ENDIF}
           //DBTYPE_UDT = 132;
           DBTYPE_DBDATE               : RowAccessor.SetDate(I, EncodeDate(Abs(PDBDate(FData^)^.year), PDBDate(FData^)^.month, PDBDate(FData^)^.day));
           DBTYPE_DBTIME               : RowAccessor.SetTime(I, EncodeTime(PDBTime(FData^)^.hour, PDBTime(FData^)^.minute, PDBTime(FData^)^.second, 0));
@@ -1903,13 +1855,10 @@ begin
           //DBTYPE_DBTIMESTAMPOFFSET = 146; // introduced in SQL 2008
           //DBTYPE_FILETIME = 64;
           //DBTYPE_PROPVARIANT = 138;
-          {$IFDEF BCD_TEST}
           DBTYPE_VARNUMERIC           : begin
                                           SQLNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, FLength^);
                                           RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                                         end;
-          {$ENDIF}
-
         end;
       end;
       RowsList.Add(RowAccessor.RowBuffer);
@@ -2226,13 +2175,11 @@ begin
         FieldSize := 0
       else
         FieldSize := prgInfo^.ulColumnSize;
-      if ColumnInfo.ColumnType = stGUID then begin
-        ColumnInfo.ColumnDisplaySize := 38;
-        ColumnInfo.Precision := 38;
-      end else if ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] then begin
-        ColumnInfo.ColumnDisplaySize := FieldSize;
-        ColumnInfo.Precision := FieldSize;
-      end else if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal{$IFNDEF BCD_TEST},stDouble{$ENDIF}]) then begin
+      if ColumnInfo.ColumnType = stGUID then
+        ColumnInfo.Precision := 38
+      else if ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] then
+        ColumnInfo.Precision := FieldSize
+      else if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) then begin
         ColumnInfo.Precision := prgInfo.bPrecision;
         if (prgInfo^.wType = DBTYPE_CY)
         then ColumnInfo.Scale := 4

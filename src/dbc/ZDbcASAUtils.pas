@@ -58,8 +58,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging, ZCompatibility, ZDbcASA,
   ZDbcStatement, ZVariant, ZPlainASAConstants;
 
@@ -109,7 +108,7 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; const Value: Double);
     procedure UpdateCurrency(const Index: Integer; const Value: Currency);
-    procedure UpdateBigDecimal(const Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+    procedure UpdateBigDecimal(const Index: Integer; const Value: TBCD);
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
     procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -176,7 +175,7 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; const Value: Double);
     procedure UpdateCurrency(const Index: Integer; const Value: Currency);
-    procedure UpdateBigDecimal(const Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+    procedure UpdateBigDecimal(const Index: Integer; const Value: TBCD);
     procedure UpdatePRaw(const Index: Integer; Value: PAnsiChar; Len: NativeUInt);
     procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -772,12 +771,12 @@ end;
    @param Value the source value
 }
 procedure TZASASQLDA.UpdateBigDecimal(const Index: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+  const Value: TBCD);
 begin
   SetFieldType( Index, DT_DOUBLE or 1, SizeOf( Double));
   with FSQLDA.sqlvar[Index] do
   begin
-    PDouble(sqldata)^ := {$IFDEF BCD_TEST}BCDToDouble(Value){$ELSE}Value{$ENDIF};
+    PDouble(sqldata)^ := BCDToDouble(Value);
     if (sqlind <> nil) then
        sqlind^ := 0; // not null
   end;
@@ -1475,7 +1474,6 @@ begin
         stLong:
           ParamSqlData.UpdateLong( i,
             ClientVarManager.GetAsInteger( InParamValues[i]));
-        {$IFDEF BCD_TEST}
         stFloat:
           ParamSqlData.UpdateFloat( i,
             ClientVarManager.GetAsDouble( InParamValues[i]));
@@ -1487,17 +1485,6 @@ begin
         stBigDecimal:
           ParamSqlData.UpdateBigDecimal( i,
             ClientVarManager.GetAsBigDecimal( InParamValues[i]));
-        {$ELSE}
-        stFloat:
-          ParamSqlData.UpdateFloat( i,
-            ClientVarManager.GetAsFloat( InParamValues[i]));
-        stDouble, stCurrency:
-          ParamSqlData.UpdateDouble( i,
-            ClientVarManager.GetAsFloat( InParamValues[i]));
-        stBigDecimal:
-          ParamSqlData.UpdateBigDecimal( i,
-            ClientVarManager.GetAsFloat( InParamValues[i]));
-        {$ENDIF}
         stString, stUnicodeString:
           begin
             CharRec := ClientVarManager.GetAsCharRec( InParamValues[i], ConSettings^.ClientCodePage^.CP);

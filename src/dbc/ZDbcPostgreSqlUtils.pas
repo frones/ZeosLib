@@ -247,7 +247,7 @@ const ZSQLType2PGBindSizes: array[stUnknown..stGUID] of Integer = (-1,
     SizeOf(Byte){stBoolean},
     SizeOf(SmallInt){stByte}, SizeOf(SmallInt){stShort}, SizeOf(Integer){stWord},
     SizeOf(SmallInt){stSmall}, SizeOf(Cardinal){stLongWord}, SizeOf(Integer){stInteger}, SizeOf(Int64){stULong}, SizeOf(Int64){stLong},  //ordinals
-    SizeOf(Single){stFloat}, SizeOf(Double){stDouble}, MaxCurr2NumSize{stCurrency}, {$IFDEF BCD_TEST}MaxBCD2NumSize{$ELSE}-1{$ENDIF}{stBigDecimal}, //floats
+    SizeOf(Single){stFloat}, SizeOf(Double){stDouble}, MaxCurr2NumSize{stCurrency}, MaxBCD2NumSize{stBigDecimal}, //floats
     SizeOf(Integer){stDate}, 8{stTime}, 8{stTimestamp},
     SizeOf(TGUID){stGUID});
 
@@ -321,13 +321,10 @@ begin
     Result := stLong
   else if TypeNameLo = 'float4' then
     Result := stFloat
-  else if (TypeNameLo = 'float8') {$IFNDEF BCD_TEST}or (TypeNameLo = 'decimal')
-    or (TypeNameLo = 'numeric'){$ENDIF} then
+  else if (TypeNameLo = 'float8') then
     Result := stDouble
-  {$IFDEF BCD_TEST}
   else if (TypeNameLo = 'decimal') or (TypeNameLo = 'numeric') then
     Result := stBigDecimal
-  {$ENDIF}
   else if TypeNameLo = 'money' then
     Result := stCurrency
   else if TypeNameLo = 'bool' then
@@ -464,8 +461,8 @@ begin
     stWord, stInteger: aOID := INT4OID;
     stLongWord, stLong, stULong: aOID := INT8OID;
     stFloat: aOID := FLOAT4OID;
-    stDouble{$IFNDEF BCD_TEST},stBigDecimal{$ENDIF}: aOID := FLOAT8OID;
-    {$IFDEF BCD_TEST}stBigDecimal, {$ENDIF}stCurrency: aOID := NUMERICOID;//CASHOID;  the pg money has a scale of 2 while we've a scale of 4
+    stDouble: aOID := FLOAT8OID;
+    stBigDecimal, stCurrency: aOID := NUMERICOID;//CASHOID;  the pg money has a scale of 2 while we've a scale of 4
     stString, stUnicodeString,//: aOID := VARCHAROID;
     stAsciiStream, stUnicodeStream: aOID := TEXTOID;
     stDate: aOID := DATEOID;

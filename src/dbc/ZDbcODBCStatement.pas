@@ -56,8 +56,7 @@ interface
 {$I ZDbc.inc}
 
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
-uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
+uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties,
   ZDbcODBCCon, ZPlainODBCDriver;
@@ -169,7 +168,7 @@ type
     procedure SetFloat(Index: Integer; Value: Single); reintroduce;
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
     procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
@@ -835,18 +834,11 @@ begin
                         Curr2ODBCNumeric(ArrayValueToCurrency(Arr, I), PSQL_NUMERIC_STRUCT(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
                         N[I] := NullInd[IsNullFromArray(Arr, I)];
                       end;
-      stBigDecimal:   {$IFDEF BCD_TEST}
-                      for I := 0 to ArrayLen -1 do begin
+      stBigDecimal:   for I := 0 to ArrayLen -1 do begin
                         ArrayValueToBCD(Arr, i, PBCD(@fWBuffer[0])^);
                         BCD2SQLNumeric(PBCD(@fWBuffer[0])^, Pointer(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
                         N[I] := NullInd[IsNullFromArray(Arr, I)];
                       end;
-                      {$ELSE}
-                      for I := 0 to ArrayLen -1 do begin
-                        PDouble(P+(I*SizeOf(Double)))^ := ArrayValueToDouble(Arr, I);
-                        N[I] := NullInd[IsNullFromArray(Arr, I)];
-                      end;
-                      {$ENDIF}
       stDate:         begin
                         Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
                         for I := 0 to ArrayLen -1 do begin
@@ -1443,13 +1435,39 @@ end;
 {$ENDIF}
 
 procedure TZAbstractODBCPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+  const Value: TBCD);
+var Bind: PZODBCParamBind;
 begin
-  {$IFDEF BCD_TEST}
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, BCDToDouble(Value));
-  {$ELSE}
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
-  {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (Bind.ValueCount > 1) or (not Bind.Described and (stCurrency <> Bind.SQLType)) then
+      InitBind(Index, 1, stCurrency);
+    case Bind.ValueType of
+      SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(BCDCompare(NullBCD, Value) <> 0);
+      SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := BCD2Int64(Value);
+      SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := BCD2Int64(Value);
+      SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := BCD2Int64(Value);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := BCD2UInt64(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := BCD2UInt64(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := BCD2UInt64(Value);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      SQL_C_SBIGINT:  BCD2Int64(Value, PInt64(Bind.ParameterValuePtr)^);
+      SQL_C_UBIGINT:  BCD2UInt64(Value, PUInt64(Bind.ParameterValuePtr)^);
+      SQL_C_FLOAT:    PSingle(Bind.ParameterValuePtr)^   := BCDToDouble(Value);
+      SQL_C_DOUBLE:   PDouble(Bind.ParameterValuePtr)^   := BCDToDouble(Value);
+      SQL_C_NUMERIC:  ZDbcUtils.BCD2SQLNumeric(Value, PDB_NUMERIC(Bind.ParameterValuePtr));
+      SQL_C_WCHAR:    SetPWideChar(Index, @fWBuffer[0], ZSysUtils.BcdToUni(Value, @fWBuffer[0], '.'));
+      SQL_C_CHAR:     SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.BcdToRaw(Value, @fABuffer[0], '.'));
+      else RaiseUnsupportedParamType(Index, Bind.ValueType, stBigDecimal);
+    end;
+  end else
+    BindList.Put(Index, Value);
 end;
 
 {**

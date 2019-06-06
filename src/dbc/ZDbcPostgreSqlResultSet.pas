@@ -123,11 +123,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    {$ELSE}
-    function GetBigDecimal(ColumnIndex: Integer): Extended;
-    {$ENDIF}
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
     function GetTimestamp(ColumnIndex: Integer): TDateTime;
@@ -635,14 +631,18 @@ begin
         else ColumnInfo.ColumnType := stBigDecimal;
         Exit;
       end;
+    TIMESTAMPOID, TIMESTAMPTZOID, ABSTIMEOID: begin
+      ColumnInfo.ColumnType := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
+      ColumnInfo.Scale := TypeModifier; //milliseconds or negative if not specified
+      Exit;
+    end;
   end;
 
   SQLType := PostgreSQLToSQLType(ConSettings, Connection.IsOidAsBlob, TypeOid, TypeModifier);
 
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
-  else
-  begin
+  else begin
     ColumnInfo.ColumnType := stString;
     ColumnInfo.Precision := 255;
     ColumnInfo.ReadOnly := True;
@@ -694,13 +694,8 @@ begin
       then ColumnLabel := BufferToStr(P, Precision)
       else ColumnLabel := ZUnicodeToString(PRawToUnicode(P, Precision, FClientCP), ConSettings^.CTRL_CP);
       {$ENDIF}
-      ColumnDisplaySize := 0;
-      Scale := 0;
+      Nullable := ntNullableUnknown; //there is NO information about nullable
       Precision := 0;
-
-      AutoIncrement := False;
-      Signed := False;
-      Nullable := ntNullable;
 
       FieldType := FPlainDriver.PQftype(Fres, I);
 
@@ -723,13 +718,10 @@ begin
             else DefinePostgreSQLToSQLType(ColumnInfo, 25, FieldMode) //assume text instead!
           else if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
             Precision := 255;
-          if ColumnType = stString then begin
-            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
-            ColumnDisplaySize := Precision;
-          end else if ColumnType = stUnicodeString then begin
+          if ColumnType = stString then
+            CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
+          else if ColumnType = stUnicodeString then
             CharOctedLength := Precision shl 1;
-            ColumnDisplaySize := Precision;
-          end;
         end;
       end;
     end;
@@ -1517,11 +1509,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
 procedure TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-{$ELSE}
-function TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-{$ENDIF}
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1532,57 +1520,29 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
-  then Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF}
+  then Result := NullBCD
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
     if FBinaryValues then
       case ColumnType of
         stBoolean, stSmall,
-        stInteger, stLong, stLongWord:{$IFDEF BCD_TEST}
-                                      ScaledOrdinal2BCD(GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), 0, Result);
-                                      {$ELSE}
-                                      Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                                      {$ENDIF}
+        stInteger, stLong, stLongWord: ScaledOrdinal2BCD(GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), 0, Result);
         stFloat, stDouble,
-        stDate, stTime, stTimeStamp:  {$IFDEF BCD_TEST}
-                                      Double2Bcd(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
-                                      {$ELSE}
-                                      Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                                      {$ENDIF}
+        stDate, stTime, stTimeStamp:  Double2Bcd(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
         stCurrency:                   if ColumnOID = NUMERICOID
-                                      {$IFDEF BCD_TEST}
                                       then PGNumeric2BCD(P, Result)
                                       else ScaledOrdinal2BCD(PG2Int64(P), 2, Result);
-                                      {$ELSE}
-                                      then Result := PGNumeric2Currency(P)
-                                      else Result := PGCash2Currency(P);
-                                      {$ENDIF}
-        stBigDecimal:                 {$IFDEF BCD_TEST}
-                                      PGNumeric2BCD(P, Result);
-                                      {$ELSE}
-                                      begin
-                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
-                                        Result := BCDToDouble(PBCD(@fTinyBuffer[0])^);
-                                      end;
-                                      {$ENDIF}
+        stBigDecimal:                 PGNumeric2BCD(P, Result);
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
-        stString, stUnicodeString:    {$IFDEF BCD_TEST}
-                                        LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
-                                        {$ELSE}
-                                        SQLStrToFloatDef(P, 0, Result);
-                                        {$ENDIF}
+        stString, stUnicodeString:    LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
         //stBytes: ;
         stBinaryStream: if ColumnOID = OIDOID
-                        then {$IFDEF BCD_TEST}ScaledOrdinal2BCD(PG2Cardinal(P), 0, Result, False){$ELSE}Result := PG2Cardinal(P){$ENDIF}
-                        else Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF};
-        else Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF};
+                        then ScaledOrdinal2BCD(PG2Cardinal(P), 0, Result, False)
+                        else Result := NullBCD;
+        else Result := NullBCD;
       end
-    else {$IFDEF BCD_TEST}
-      LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
-      {$ELSE}
-      SQLStrToFloatDef(P, 0, Result);
-      {$ENDIF}
+    else LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
   end;
 end;
 

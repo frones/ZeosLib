@@ -340,11 +340,7 @@ begin
         ttFloat:
           begin
             TokenType := ttConstant;
-            {$IFDEF BCD_TEST}
             TokenValue:= EncodeDouble(Tokens.AsFloat(TokenIndex));
-            {$ELSE}
-            TokenValue:= EncodeFloat(Tokens.AsFloat(TokenIndex));
-            {$ENDIF}
           end;
         ttQuoted:
           begin

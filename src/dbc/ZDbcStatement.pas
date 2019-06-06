@@ -399,7 +399,7 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); virtual;
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD); virtual;
 
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual; abstract;
@@ -765,7 +765,7 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); virtual;
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD); virtual;
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
@@ -880,11 +880,7 @@ type
     function GetFloat(ParameterIndex: Integer): Single; virtual;
     function GetDouble(ParameterIndex: Integer): Double; virtual;
     function GetCurrency(ParameterIndex: Integer): Currency; virtual;
-    {$IFDEF BCD_TEST}
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
-    {$ELSE}
-    function GetBigDecimal(ParameterIndex: Integer): Extended; virtual;
-    {$ENDIF}
     function GetBytes(ParameterIndex: Integer): TBytes; virtual;
     function GetDate(ParameterIndex: Integer): TDateTime; virtual;
     function GetTime(ParameterIndex: Integer): TDateTime; virtual;
@@ -1007,7 +1003,7 @@ var
 begin
   L := Length(Value);
   if L = 0 then Exit;
-  if L <= (SizeOf(fABuffer)-fABufferIndex) then begin
+  if L < (SizeOf(fABuffer)-fABufferIndex) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> no move
     then fABuffer[fABufferIndex] := AnsiChar(P^)
@@ -1034,7 +1030,7 @@ var
 begin
   L := Length(Value);
   if L = 0 then Exit;
-  if L <= ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
+  if L < ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
     P := Pointer(Value);
     if L = 1 //happens very often (comma,space etc) -> no move
     then fWBuffer[fWBufferIndex] := P^
@@ -2133,12 +2129,9 @@ begin
       vtBoolean : if VBoolean then result := '(TRUE)' else result := '(FALSE)';
       vtBytes : Result := GetSQLHexAnsiString(Pointer(VBytes), Length(VBytes), False);
       vtInteger : result := IntToRaw(VInteger);
-      {$IFDEF BCD_TEST}
+      vtDouble: Result := FloatToRaw(VDouble);
       vtCurrency: Result := CurrToRaw(Value.VCurrency);
       vtBigDecimal: Result := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(BCDToStr(Value.VBigDecimal));
-      {$ELSE}
-      vtFloat : result := FloatToRaw(VFloat);
-      {$ENDIF}
       vtString,
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString,
@@ -2398,13 +2391,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetBigDecimal(
-  ParameterIndex: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+  ParameterIndex: Integer; const Value: TBCD);
 begin
-  {$IFDEF BCD_TEST}
   InternalSetDouble(ParameterIndex, stBigDecimal, BcdToDouble(Value));
-  {$ELSE}
-  InternalSetDouble(ParameterIndex, stBigDecimal, Value);
-  {$ENDIF}
 end;
 
 {**
@@ -2740,13 +2729,10 @@ begin
     vtBoolean: SQLType := stBoolean;
     vtInteger: SQLType := stLong;
     vtUInteger: SQLType := stULong;
-    {$IFDEF BCD_TEST}
+    vtDouble: SQLType := stDouble;
     vtCurrency: SQLType := stCurrency;
     vtBigDecimal: SQLType := stBigDecimal;
     vtGUID: SQLType := stGUID;
-    {$ELSE}
-    vtFloat: SQLType := stBigDecimal;
-    {$ENDIF}
     vtUnicodeString: SQLType := stUnicodeString;
     vtDateTime: SQLType := stTimestamp;
     vtBytes: SQLType := stBytes;
@@ -2796,11 +2782,7 @@ end;
 procedure TZAbstractPreparedStatement.InternalSetDouble(ParameterIndex: Integer;
   SQLType: TZSQLType; const Value: Double);
 begin
-  {$IFDEF BCD_TEST}
   SetInParam(ParameterIndex, SQLType, EncodeDouble(Value));
-  {$ELSE}
-  SetInParam(ParameterIndex, SQLType, EncodeFloat(Value));
-  {$ENDIF}
 end;
 
 procedure TZAbstractPreparedStatement.InternalSetOrdinal(ParameterIndex: Integer;
@@ -3604,11 +3586,7 @@ end;
 }
 function TZAbstractCallableStatement.GetFloat(ParameterIndex: Integer): Single;
 begin
-  {$IFDEF BCD_TEST}
   Result := ClientVarManager.GetAsDouble(GetOutParam(ParameterIndex));
-  {$ELSE}
-  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
-  {$ENDIF}
 end;
 
 {**
@@ -3621,11 +3599,7 @@ end;
 }
 function TZAbstractCallableStatement.GetDouble(ParameterIndex: Integer): Double;
 begin
-  {$IFDEF BCD_TEST}
   Result := ClientVarManager.GetAsDouble(GetOutParam(ParameterIndex));
-  {$ELSE}
-  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
-  {$ENDIF}
 end;
 
 {**
@@ -3638,11 +3612,7 @@ end;
 }
 function TZAbstractCallableStatement.GetCurrency(ParameterIndex: Integer): Currency;
 begin
-  {$IFDEF BCD_TEST}
   Result := ClientVarManager.GetAsCurrency(GetOutParam(ParameterIndex));
-  {$ELSE}
-  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
-  {$ENDIF}
 end;
 
 {**
@@ -3654,18 +3624,10 @@ end;
   @return the parameter value.  If the value is SQL <code>NULL</code>, the result is
   <code>null</code>.
 }
-{$IFDEF BCD_TEST}
 procedure TZAbstractCallableStatement.GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
 begin
   Result := ClientVarManager.GetAsBigDecimal(GetOutParam(ParameterIndex));
 end;
-{$ELSE}
-function TZAbstractCallableStatement.GetBigDecimal(ParameterIndex: Integer):
-  Extended;
-begin
-  Result := ClientVarManager.GetAsFloat(GetOutParam(ParameterIndex));
-end;
-{$ENDIF}
 
 {**
   Gets the value of a JDBC <code>BINARY</code> or <code>VARBINARY</code>
@@ -4196,11 +4158,7 @@ begin
                 stShort, stSmall, stInteger:
                   Result := EncodeInteger(PInteger(@BindValue.Value)^);
                 stFloat:
-                  {$IFDEF BCD_TEST}
                   Result := EncodeDouble(PSingle(@BindValue.Value)^);
-                  {$ELSE}
-                  Result := EncodeFloat(PSingle(@BindValue.Value)^);
-                  {$ENDIF}
                 else Result := NullVariant
               end;
     zbt8Byte: case BindValue.SQLType of
@@ -4211,17 +4169,9 @@ begin
                 stShort, stSmall, stInteger, stLong:
                   Result := EncodeInteger(PInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
                 stCurrency:
-                  {$IFDEF BCD_TEST}
                   Result := EncodeCurrency(PCurrency({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
-                  {$ELSE}
-                  Result := EncodeFloat(PCurrency({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
-                  {$ENDIF}
-                stFloat, stDouble{$IFNDEF BCD_TEST}, stBigDecimal{$ENDIF}:
-                  {$IFDEF BCD_TEST}
+                stFloat, stDouble:
                   Result := EncodeDouble(PDouble({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
-                  {$ELSE}
-                  Result := EncodeFloat(PDouble({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
-                  {$ENDIF}
                 else
                   Result := EncodeDateTime(PDateTime({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^);
               end;
@@ -4232,11 +4182,7 @@ begin
     {$IFNDEF NO_ANSISTRING}
     zbtAnsiString:Result := EncodeAnsiString(AnsiString(BindValue.Value));
     {$ENDIF}
-    {$IFDEF BCD_TEST}
     zbtBCD:       Result := EncodeBigDecimal(PBCD(BindValue.Value)^);
-    {$ELSE}
-    zbtBCD:       Result := EncodeFloat(BcdToDouble(PBCD(BindValue.Value)^));
-    {$ENDIF}
     zbtUniString: Result := EncodeUnicodeString(ZWideString(BindValue.Value));
     zbtCharByRef: Result := EncodeCharRec(PZCharRec(BindValue.Value)^);
     zbtBinByRef:  Result := EncodeBytes(BufferToBytes(PZBufRec(BindValue.Value)^.Buf, PZBufRec(BindValue.Value)^.Len));
@@ -4887,15 +4833,9 @@ end;
 procedure TZAbstractPreparedStatement2.GetBigDecimal(Index: Integer;
   var Result: TBCD);
 begin
-  {$IFDEF BCD_TEST}
   IZResultSet(FOpenResultSet).GetBigDecimal(AlignParamterIndex2ResultSetIndex(Index), Result);
   if  not SupportsBidirectionalParams and (BindList.ParamTypes[Index] = pctInOut) then
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
-  {$ELSE}
-  Double2BCD(IZResultSet(FOpenResultSet).GetBigDecimal(AlignParamterIndex2ResultSetIndex(Index)), Result);
-  if  not SupportsBidirectionalParams and (BindList.ParamTypes[Index] = pctInOut) then
-    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCDToDouble(Result))
-  {$ENDIF}
 end;
 
 {**
@@ -4965,12 +4905,9 @@ begin
       vtBytes : Result := GetSQLHexAnsiString(Pointer(VBytes), Length(VBytes), False);
       vtInteger : result := IntToRaw(VInteger);
       vtUInteger : result := IntToRaw(VUInteger);
-      {$IFDEF BCD_TEST}
+      vtDouble: Result := FloatToRaw(VDouble);
       vtCurrency: Result := CurrToRaw(VCurrency);
       vtBigDecimal: Result := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(BCDToStr(VBigDecimal));
-      {$ELSE}
-      vtFloat : result := FloatToRaw(VFloat);
-      {$ENDIF}
       {$IFNDEF UNICODE}vtString,{$ENDIF}
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString,
@@ -5269,13 +5206,9 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement2.SetBigDecimal(ParameterIndex: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
+  const Value: TBCD);
 begin
-  {$IFDEF BCD_TEST}
   BindDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, BCDToDouble(Value));
-  {$ELSE}
-  BindDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, Value);
-  {$ENDIF}
 end;
 
 {**
@@ -5667,12 +5600,9 @@ begin
     vtBoolean: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBoolean(ParameterIndex, Value.VBoolean);
     vtInteger: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetLong(ParameterIndex, Value.VInteger);
     vtUInteger: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetULong(ParameterIndex, Value.VUInteger);
-    {$IFDEF BCD_TEST}
-    vtCurrency: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDouble(ParameterIndex, Value.VCurrency);
+    vtDouble: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDouble(ParameterIndex, Value.VCurrency);
+    vtCurrency: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetCurrency(ParameterIndex, Value.VCurrency);
     vtBigDecimal: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBigDecimal(ParameterIndex, Value.VBigDecimal);
-    {$ELSE}
-    vtFloat:    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDouble(ParameterIndex, Value.VFloat);
-    {$ENDIF}
     vtUnicodeString: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetUnicodeString(ParameterIndex, Value.VUnicodeString);
     vtRawByteString: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetRawByteString(ParameterIndex, Value.VRawByteString);
     {$IFNDEF NO_ANSISTRING}
@@ -6709,30 +6639,18 @@ begin
           FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, Result.VUInteger);
           Result.VType := vtUInteger;
         end;
-      stFloat, stDouble{$IFNDEF BCD_TEST}, stBigDecimal{$ENDIF}: begin
-          {$IFDEF BCD_TEST}
+      stFloat, stDouble: begin
           InitializeVariant(Result, vtDouble);
           FExecStatements[FCallExecKind].GetDouble(ParameterIndex, Result.VDouble);
-          {$ELSE}
-          FExecStatements[FCallExecKind].GetDouble(ParameterIndex, PDouble(@Result.VDateTime)^);
-          Result := EncodeFloat(PDouble(@Result.VDateTime)^);
-          {$ENDIF}
         end;
       stCurrency: begin
-          {$IFDEF BCD_TEST}
           InitializeVariant(Result, vtCurrency);
           FExecStatements[FCallExecKind].GetCurrency(ParameterIndex, Result.VCurrency);
-          {$ELSE}
-          FExecStatements[FCallExecKind].GetCurrency(ParameterIndex, PCurrency(@Result.VInteger)^);
-          Result := EncodeFloat(PCurrency(@Result.VInteger)^);
-          {$ENDIF}
         end;
-      {$IFDEF BCD_TEST}
       stBigDecimal: begin
           InitializeVariant(Result, vtBigDecimal);
           FExecStatements[FCallExecKind].GetBigDecimal(ParameterIndex, Result.VBigDecimal);
         end;
-      {$ENDIF}
       stTime,stDate,stTimeStamp: begin
           {$IFDEF BCC32_vtDateTime_ERROR}
           FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, DT);

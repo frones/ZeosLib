@@ -1204,8 +1204,7 @@ function TryRawToBcd(Buf: PAnsiChar; Len: LengthInt; var Bcd: TBcd; DecimalSep: 
 function TryStr2BCD(const Value: String; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean;
 function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): TBCD;
 
-procedure Double2BCD(const Value: Double; var Result: TBCD); overload;
-
+procedure Double2BCD(const Value: Double; var Result: TBCD);
 
 Type TCurrRoundToScale = 0..4;
 
@@ -6760,12 +6759,10 @@ begin
   // Skip leading white chars
   while (Buf < PEnd) and ((PWord(Buf)^ <= Ord(' ')) and (Byte(PWord(Buf)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14)])) do Inc(Buf);
   Negative := Buf^ = '-';
-  Inc(Buf, Ord(Negative or (PWord(Buf)^ = Ord('+'))));
+  if Negative or (PWord(Buf)^ = Ord('+')) then Inc(Buf);
   // Skip trailing white chars
   while (PEnd > Buf) and ((PWord(PEnd-1)^ <= Ord('0')) and (Byte(PWord(PEnd-1)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14), Ord('0')]))  do Dec(PEnd);
-  P := PEnd; //remainder for Exponent
-  // Skip trailing zeroes
-  while (PEnd > Buf) and (PWord(PEnd-1)^ = Ord('0')) do Dec(PEnd);
+  P := PEnd; //remainder for Exponent or if no decimal sep is given
   Pos := 0;
   DecimalPos := -1;
   if Buf = PEnd then
@@ -6784,6 +6781,7 @@ begin
       else if (Pos = 1) and (PWord(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
         Dec(Pos);
       DecimalPos := Pos;
+      while (PEnd > Buf) and (PWord(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away 123.90000000000
       Inc(Buf);
       if (Buf = PEnd) then
         goto Finalize;
@@ -6880,13 +6878,12 @@ begin
   // Skip leading white chars
   while (Buf < PEnd) and (Byte(PByte(Buf)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14)]) do Inc(Buf);
   Negative := Buf^ = '-';
-  Inc(Buf, Ord(Negative or (PByte(Buf)^ = Ord('+'))));
+  if Negative or (PByte(Buf)^ = Ord('+')) then Inc(Buf);
   Pos := 0;
   DecimalPos := -1;
   // Skip trailing white chars
   while (PEnd > Buf) and (PByte(PEnd-1)^ in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14)])  do Dec(PEnd);
-  P := PEnd; //remainder for Exponent
-  while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away
+  P := PEnd; //remainder for Exponent or if no decimal sep is given
   if Buf = PEnd then
     if PByte(PEnd)^ = Ord('0')
     then goto Finalize
@@ -6901,6 +6898,7 @@ begin
       else if (Pos = 1) and (PByte(Buf-1)^ = Ord('0')) then //strict left padd the bcd for fpc else BCDCompare fails even if the value is correct
         Dec(Pos);
       DecimalPos := Pos;
+      while (PEnd > Buf) and (PByte(PEnd-1)^ = Ord('0')) do Dec(PEnd); //and pad trailing zeroes away 123.90000000000
       Inc(Buf);
       if (Buf = PEnd) then
         goto Finalize;
@@ -7282,9 +7280,9 @@ end;
 
 { for a better code align -> move out of method }
 {$IFNDEF CPU64}
-const CIntTable: array[TCurrRoundToScale] of Cardinal = (10000, 1000, 100, 10, 1);
+const CIntTable: array[TCurrRoundToScale]      of Cardinal = (10000, 1000, 100, 10, 1);
 {$ENDIF}
-const CInt64Table: array[TCurrRoundToScale] of Int64  = (10000, 1000, 100, 10, 1);
+const CInt64Table:    array[TCurrRoundToScale]  of Int64   = (10000, 1000, 100, 10, 1);
 const PosHalfModulos: array [TCurrRoundToScale] of Integer = ( 4445,  445,  45,  5, 0);
 const NegHalfModulos: array [TCurrRoundToScale] of Integer = (-4445, -445, -45, -5, 0);
 
@@ -7317,7 +7315,7 @@ begin
     end;
     if Scale > 0 then
       if Modulo < 0 then begin
-        if Modulo >= NegHalfModulos[Scale] then
+        if Modulo <= NegHalfModulos[Scale] then
           d64 := d64 - CInt64Table[Scale];
       end else if Modulo >= PosHalfModulos[Scale] then
         d64 := d64 + CInt64Table[Scale];
@@ -7380,7 +7378,19 @@ begin
   end;
 end;
 
+{procedure X;
+var S: String;
+  i: Integer;
+begin
+  for I := Low(I64Table) to High(I64Table) do begin
+    S := IntToHex(I64Table[i]);
+    Assert(S <> '');
+  end;
+    S := IntToHex(UInt64(1000000000000000000));
+    Assert(S <> '');
+end; }
 initialization;
+  //X;
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

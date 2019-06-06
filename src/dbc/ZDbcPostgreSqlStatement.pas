@@ -57,9 +57,8 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
   ZCompatibility, ZVariant, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcPostgreSql, ZDbcUtils;
@@ -173,7 +172,7 @@ type
     procedure SetFloat(Index: Integer; Value: Single); reintroduce;
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
     procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
@@ -599,27 +598,17 @@ begin
                       end
                   end;
     stBigDecimal: begin
-                    AllocArray(Index, {$IFDEF BCD_TEST}MaxBCD2NumSize{$ELSE}SizeOf(Double){$ENDIF}*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
+                    AllocArray(Index, MaxBCD2NumSize*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
                       if IsNullFromArray(Arr, j) then begin
                         Integer2PG(-1, P);
                         Inc(P,SizeOf(int32));
-                        {$IFDEF BCD_TEST}
                         Dec(Stmt.FPQparamLengths[Index], MaxBCD2NumSize);
-                        {$ELSE}
-                        Dec(Stmt.FPQparamLengths[Index], SizeOf(Double));
-                        {$ENDIF}
                       end else begin
-                        {$IFDEF BCD_TEST}
                         BCD2PGNumeric(TBCDDynArray(D)[j], P+SizeOf(int32), x);
                         Integer2PG(X, P);
                         Inc(P,SizeOf(int32)+X);
                         Dec(Stmt.FPQparamLengths[Index], MaxBCD2NumSize-X);
-                        {$ELSE}
-                        Integer2PG(SizeOf(Double), P);
-                        Double2PG(TExtendedDynArray(D)[j],P+SizeOf(int32));
-                        Inc(P,SizeOf(int32)+SizeOf(Double));
-                        {$ENDIF}
                       end;
                   end;
     stDate:       begin
@@ -1757,13 +1746,11 @@ var PGSQLType: TZSQLType;
 begin
   PGSQLType := OIDToSQLType(Index, SQLType);
   if PGSQLType in [stCurrency, stBigDecimal] then
-    {$IFDEF BCD_TEST}
     if PGSQLType = stBigDecimal then begin
       Double2BCD(Value, PBCD(@fABuffer[0])^);
       SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
     end else
-    {$ENDIF}
-    SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
+      SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
   else if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
     if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
       BindList.Put(Index, PGSQLType, P4Bytes(@Value));
@@ -1818,12 +1805,10 @@ begin
       stLong:     Int642PG(Value, FPQparamValues[Index]);
       stDouble:   Double2PG(Value, FPQparamValues[Index]);
       stCurrency: Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
-      {$IFDEF BCD_TEST}
       stBigDecimal: Begin
                       ScaledOrdinal2BCD(Value, 0, PBCD(@fABuffer[0])^);
                       BCD2PGNumeric(PBCD(@fABuffer[0])^, FPQparamValues[Index], FPQparamLengths[Index]);
                     end;
-      {$ENDIF}
     end;
   end else SetAsRaw;
 end;
@@ -1868,14 +1853,10 @@ begin
                             else SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGNumeric2Currency(FPQparamValues[i]));
                 stFloat:    SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Single(FPQparamValues[i]));
                 stDouble:   SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
-                stBigDecimal:{$IFDEF BCD_TEST}
-                            begin
+                stBigDecimal:begin
                               PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
                               SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
                             end;
-                            {$ELSE}
-                            SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
-                            {$ENDIF}
                 stTime:     if Finteger_datetimes
                             then SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Time(PInt64(FPQparamValues[i])^))
                             else SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Time(PDouble(FPQparamValues[i])^));
@@ -1904,8 +1885,7 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetBigDecimal(Index: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
-{$IFDEF BCD_TEST}
+  const Value: TBCD);
 var SQLType: TZSQLType;
 procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BcdToSQLRaw(Value)); end;
 begin
@@ -1932,10 +1912,6 @@ begin
     stDouble:   InternalBindDouble(Index, SQLType, BCDToDouble(Value));
     else SetAsRaw;
   end;
-  {$ELSE}
-begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
-  {$ENDIF}
 end;
 
 {**

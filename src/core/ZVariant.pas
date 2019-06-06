@@ -57,7 +57,7 @@ interface
 
 uses
   {$IF not defined(FPC) and defined(MSWINDOWS)}Windows,{$IFEND}  //need for inline
-  Classes, SysUtils, ZCompatibility, ZClasses{$IFDEF BCD_TEST}, FmtBCD{$ENDIF};
+  Classes, SysUtils, ZCompatibility, ZClasses, FmtBCD;
 
 const
   {** Precision for float values comparison }
@@ -84,9 +84,9 @@ var
 type
   {** Defines variant types. }
   TZVariantType = (vtNull, vtBoolean, vtInteger, vtUInteger,
-    {$IFDEF BCD_TEST}vtDouble, vtCurrency, vtBigDecimal, vtGUID{$ELSE}vtFloat{$ENDIF}, vtBytes,
+    vtDouble, vtCurrency, vtBigDecimal, vtGUID, vtBytes,
     vtString, {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}{$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF} vtRawByteString, vtUnicodeString, //String Types
-    {$IFDEF BCD_TEST}vtTimeStamp,{$ENDIF} vtDateTime, vtPointer, vtInterface, vtCharRec,
+    vtTimeStamp, vtDateTime, vtPointer, vtInterface, vtCharRec,
     vtArray{a dynamic array of [vtNull ... vtCharRec]} );
 
   PZArray =^TZArray;
@@ -127,14 +127,10 @@ type
       vtBoolean: (VBoolean: Boolean);
       vtInteger: (VInteger: Int64);
       vtUInteger: (VUInteger: UInt64);
-      {$IFDEF BCD_TEST}
       vtDouble: (VDouble: Double);
       vtCurrency: (VCurrency: Currency);
       vtBigDecimal: (VBigDecimal: TBCD);
       vtTimeStamp: (VTimeStamp: TZTimeStamp);
-      {$ELSE}
-      vtFloat: (VFloat: Extended);
-      {$ENDIF}
       {$IFDEF BCC32_vtDateTime_ERROR}
       vtDateTime: (VDateTime: Double);
       {$ELSE}
@@ -170,13 +166,9 @@ type
     function GetAsBytes(const Value: TZVariant): TBytes;
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsUInteger(const Value: TZVariant): UInt64;
-    {$IFDEF BCD_TEST}
     function GetAsDouble(const Value: TZVariant): Double;
     function GetAsCurrency(const Value: TZVariant): Currency;
     function GetAsBigDecimal(const Value: TZVariant): TBCD;
-    {$ELSE}
-    function GetAsFloat(const Value: TZVariant): Extended;
-    {$ENDIF}
     function GetAsString(const Value: TZVariant): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
@@ -196,13 +188,9 @@ type
     procedure SetAsBytes(out Value: TZVariant; const Data: TBytes);
     procedure SetAsInteger(out Value: TZVariant; const Data: Int64);
     procedure SetAsUInteger(out Value: TZVariant; const Data: UInt64);
-    {$IFDEF BCD_TEST}
     procedure SetAsDouble(out Value: TZVariant; const Data: Double);
     procedure SetAsCurrency(out Value: TZVariant; const Data: Currency);
     procedure SetAsBigDecimal(out Value: TZVariant; const Data: TBCD);
-    {$ELSE}
-    procedure SetAsFloat(out Value: TZVariant; const Data: Extended);
-    {$ENDIF}
     procedure SetAsString(out Value: TZVariant; const Data: String);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAsAnsiString(out Value: TZVariant; const Data: AnsiString);
@@ -267,13 +255,9 @@ type
     function GetAsBytes(const Value: TZVariant): TBytes;
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsUInteger(const Value: TZVariant): UInt64;
-    {$IFDEF BCD_TEST}
     function GetAsDouble(const Value: TZVariant): Double;
     function GetAsCurrency(const Value: TZVariant): Currency;
     function GetAsBigDecimal(const Value: TZVariant): TBCD;
-    {$ELSE}
-    function GetAsFloat(const Value: TZVariant): Extended;
-    {$ENDIF}
     function GetAsString(const Value: TZVariant): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
@@ -294,13 +278,9 @@ type
     procedure SetAsBytes(out Value: TZVariant; const Data: TBytes);
     procedure SetAsInteger(out Value: TZVariant; const Data: Int64);
     procedure SetAsUInteger(out Value: TZVariant; const Data: UInt64);
-    {$IFDEF BCD_TEST}
     procedure SetAsDouble(out Value: TZVariant; const Data: Double);
     procedure SetAsCurrency(out Value: TZVariant; const Data: Currency);
     procedure SetAsBigDecimal(out Value: TZVariant; const Data: TBCD);
-    {$ELSE}
-    procedure SetAsFloat(out Value: TZVariant; const Data: Extended);
-    {$ENDIF}
     procedure SetAsString(out Value: TZVariant; const Data: String);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAsAnsiString(out Value: TZVariant; const Data: AnsiString);
@@ -375,13 +355,9 @@ type
     function GetBytes: TBytes;
     function GetInteger: Int64;
     function GetUInteger: UInt64;
-    {$IFDEF BCD_TEST}
     function GetDouble: Double;
     function GetCurrency: Currency;
     function GetBigDecimal: TBCD;
-    {$ELSE}
-    function GetFloat: Extended;
-    {$ENDIF}
     function GetString: String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString: AnsiString;
@@ -402,13 +378,9 @@ type
     constructor CreateWithBoolean(Value: Boolean);
     constructor CreateWithInteger(const Value: Int64);
     constructor CreateWithUInteger(const Value: UInt64);
-    {$IFDEF BCD_TEST}
     constructor CreateWithDouble(const Value: Double);
     constructor CreateWithCurrency(const Value: Currency);
     constructor CreateWithBigDecimal(const Value: TBCD);
-    {$ELSE}
-    constructor CreateWithFloat(const Value: Extended);
-    {$ENDIF}
     constructor CreateWithString(const Value: String);
     {$IFDEF UNICODE}
     // unicodeType is a (dummy) default parameter to avoid
@@ -430,13 +402,9 @@ type
     function GetBytes: TBytes;
     function GetInteger: Int64;
     function GetUInteger: UInt64;
-    {$IFDEF BCD_TEST}
     function GetDouble: Double;
     function GetCurrency: Currency;
     function GetBigDecimal: TBCD;
-    {$ELSE}
-    function GetFloat: Extended;
-    {$ENDIF}
     function GetString: String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString: AnsiString;
@@ -521,14 +489,6 @@ function EncodeInteger(const Value: Int64): TZVariant; {$IFDEF WITH_INLINE}inlin
   @returns an encoded custom variant.
 }
 function EncodeUInteger(const Value: UInt64): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-{**
-  Encodes a float into a custom variant.
-  @param Value a float value to be encoded.
-  @returns an encoded custom variant.
-}
-{$IFNDEF BCD_TEST}
-function EncodeFloat(const Value: Extended): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-{$ELSE}
 
 {**
   Encodes a double into a custom variant.
@@ -548,7 +508,6 @@ function EncodeCurrency(const Value: Currency): TZVariant; {$IFDEF WITH_INLINE}i
   @returns an encoded custom variant.
 }
 function EncodeBigDecimal(const Value: TBCD): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-{$ENDIF}
 
 {**
   Encodes a String into a custom variant.
@@ -680,13 +639,9 @@ begin
     vtBytes: DstValue.VBytes := SrcValue.VBytes;
     vtInteger: DstValue.VInteger := SrcValue.VInteger;
     vtUInteger: DstValue.VUInteger := SrcValue.VUInteger;
-    {$IFDEF BCD_TEST}
     vtDouble: DstValue.VDouble := SrcValue.VDouble;
     vtCurrency: DstValue.VCurrency := SrcValue.VCurrency;
     vtBigDecimal: DstValue.VBigDecimal := SrcValue.VBigDecimal;
-    {$ELSE}
-    vtFloat: DstValue.VFloat := SrcValue.VFloat;
-    {$ENDIF}
     vtString: DstValue.VString := SrcValue.VString;
 {$IFNDEF NO_ANSISTRING}
     vtAnsiString: DstValue.VAnsiString := SrcValue.VAnsiString;
@@ -1088,18 +1043,14 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
 var
   i: Int64;
   TempDateTime: TDateTime;
-  {$IFDEF BCD_TEST}
-  function Compare(const Diff: Double): Integer; overload;
+  function CompareDiff(const Diff: Double): Integer;
   begin
     Result :=  Ord(Diff > FLOAT_COMPARE_PRECISION)-Ord(Diff < -FLOAT_COMPARE_PRECISION)
   end;
-  function Compare(const v1, v2: Currency): Integer; overload;
+  function CompareCurr(const v1, v2: Currency): Integer;
   begin
     Result := Ord(V1 > V2)-Ord(V1 < V2);
   end;
-  {$ELSE}
-  TempFloat: Extended;
-  {$ENDIF}
 label DoWideCompare;
 begin
   case Value1.VType of
@@ -1113,22 +1064,9 @@ begin
         i := GetAsInteger(Value2);
         Result := Ord(Value1.VInteger > I)-Ord(Value1.VInteger < I);
       end;
-    {$IFDEF BCD_TEST}
-    vtDouble: Result := Compare(Value1.VDouble-GetAsDouble(Value2));
-    vtCurrency: Result := Compare(Value1.VCurrency, GetAsCurrency(Value2));
+    vtDouble: Result := CompareDiff(Value1.VDouble-GetAsDouble(Value2));
+    vtCurrency: Result := CompareCurr(Value1.VCurrency, GetAsCurrency(Value2));
     vtBigDecimal: Result := BCDCompare(Value1.VBigDecimal, GetAsBigDecimal(Value2));
-    {$ELSE}
-    vtFloat:
-      begin
-        TempFloat := GetAsFloat(Value2);
-        if Value1.VFloat - TempFloat < -FLOAT_COMPARE_PRECISION then
-          Result := -1
-        else if Value1.VFloat - TempFloat > FLOAT_COMPARE_PRECISION then
-          Result := 1
-        else
-          Result := 0;
-      end;
-    {$ENDIF}
     vtString:
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
 {$IFNDEF NO_ANSISTRING}
@@ -1250,7 +1188,6 @@ begin
   Result := Convert(Value, vtUInteger).VUInteger;
 end;
 
-{$IFDEF BCD_TEST}
 {**
   Gets a variant to double value.
   @param Value a variant to be converted.
@@ -1283,18 +1220,6 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
 begin
   Result := Convert(Value, vtBigDecimal).VBigDecimal;
 end;
-{$ELSE}
-{**
-  Gets a variant to float value.
-  @param Value a variant to be converted.
-  @param a result value.
-}
-function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.GetAsFloat(
-  const Value: TZVariant): Extended;
-begin
-  Result := Convert(Value, vtFloat).VFloat;
-end;
-{$ENDIF}
 
 {**
   Gets a variant to string value.
@@ -1448,7 +1373,6 @@ begin
   Value := EncodeUInteger(Data);
 end;
 
-{$IFDEF BCD_TEST}
 {**
   Assigns a double value to variant.
   @param Value a variant to store the value.
@@ -1481,18 +1405,6 @@ procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantMana
 begin
   Value := EncodeBigDecimal(Data);
 end;
-{$ELSE}
-{**
-  Assigns a float value to variant.
-  @param Value a variant to store the value.
-  @param Data a value to be assigned.
-}
-procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsFloat(out Value: TZVariant;
-  const Data: Extended);
-begin
-  Value := EncodeFloat(Data);
-end;
-{$ENDIF}
 
 {**
   Assigns a String value to variant.
@@ -1623,16 +1535,12 @@ begin
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger + GetAsUInteger(Value2));
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    {$IFDEF BCD_TEST}
     vtDouble: Result := EncodeDouble(Value1.VDouble + GetAsDouble(Value2));
     vtCurrency: Result := EncodeCurrency(Value1.VCurrency + GetAsCurrency(Value2));
     vtBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
                     BCDAdd(Value1.VBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
                   end;
-    {$ELSE}
-    vtFloat: Result := EncodeFloat(Value1.VFloat + GetAsFloat(Value2));
-    {$ENDIF}
     vtString: Result := EncodeString(Value1.VString + GetAsString(Value2));
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: Result := EncodeAnsiString(Value1.VAnsiString + GetAsAnsiString(Value2));
@@ -1679,6 +1587,8 @@ end;
 }
 function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.OpDiv(const Value1,
   Value2: TZVariant): TZVariant;
+var i64: Int64;
+  C: Currency absolute i64;
 begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
@@ -1686,16 +1596,16 @@ begin
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger div GetAsUInteger(Value2));
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    {$IFDEF BCD_TEST}
     vtDouble: Result := EncodeDouble(Value1.VDouble / GetAsDouble(Value2));
-    vtCurrency: Result := EncodeCurrency(Value1.VCurrency / GetAsCurrency(Value2));
+    vtCurrency: begin
+                  c := GetAsCurrency(Value2);
+                  i64 := PInt64(@Value1.VCurrency)^ div i64;
+                  Result := EncodeCurrency(C);
+                end;
     vtBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
                     BcdDivide(Value1.vBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
                   end;
-    {$ELSE}
-    vtFloat: Result := EncodeFloat(Value1.VFloat / GetAsFloat(Value2));
-    {$ENDIF}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1794,16 +1704,12 @@ begin
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger * GetAsUInteger(Value2));
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    {$IFDEF BCD_TEST}
     vtDouble: Result := EncodeDouble(Value1.VDouble * GetAsDouble(Value2));
     vtCurrency: Result := EncodeCurrency(Value1.VCurrency * GetAsCurrency(Value2));
     vtBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
                     BcdMultiply(Value1.vBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
                   end;
-    {$ELSE}
-    vtFloat: Result := EncodeFloat(Value1.VFloat * GetAsFloat(Value2));
-    {$ENDIF}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1818,16 +1724,12 @@ begin
   case Value.VType of
     vtNull: Result := EncodeNull;
     vtInteger: Result := EncodeInteger(-Value.VInteger);
-    {$IFDEF BCD_TEST}
     vtDouble: Result := EncodeDouble(-Value.VDouble);
     vtCurrency: Result := EncodeCurrency(-Value.VCurrency);
     vtBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
                     BcdMultiply(Value.VBigDecimal, StrToBCD('-1'), Result.VBigDecimal);
                   end;
-    {$ELSE}
-    vtFloat: Result := EncodeFloat(-Value.VFloat);
-    {$ENDIF}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1891,16 +1793,10 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
 begin
   case Value1.VType of
     vtNull: Result := EncodeNull;
-    {$IFDEF BCD_TEST}
     vtInteger: Result := EncodeDouble(Power(Value1.VInteger, GetAsInteger(Value2)));
     vtUInteger: Result := EncodeDouble(Power(Value1.VUInteger, GetAsUInteger(Value2)));
     vtDouble: Result := EncodeDouble(Power(Value1.VDouble, GetAsDouble(Value2)));
     vtCurrency: Result := EncodeDouble(Power(Value1.VCurrency, GetAsCurrency(Value2)));
-    {$ELSE}
-    vtInteger: Result := EncodeFloat(Power(Value1.VInteger, GetAsInteger(Value2)));
-    vtUInteger: Result := EncodeFloat(Power(Value1.VUInteger, GetAsUInteger(Value2)));
-    vtFloat: Result := EncodeFloat(Power(Value1.VFloat, GetAsFloat(Value2)));
-    {$ENDIF}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1920,16 +1816,12 @@ begin
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     vtUInteger: Result := EncodeUInteger(Value1.VUInteger - GetAsUInteger(Value2));
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    {$IFDEF BCD_TEST}
     vtDouble: Result := EncodeDouble(Value1.VDouble - GetAsDouble(Value2));
     vtCurrency: Result := EncodeCurrency(Value1.VCurrency - GetAsCurrency(Value2));
     vtBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
                     BcdSubtract(Value1.VBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
                   end;
-    {$ELSE}
-    vtFloat: Result := EncodeFloat(Value1.VFloat - GetAsFloat(Value2));
-    {$ENDIF}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -2013,17 +1905,12 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
         Result.VString := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value.VInteger);
       vtUInteger:
         Result.VString := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         Result.VString := FloatToSqlStr(Value.VDouble);
       vtCurrency:
         Result.VString := CurrToStr(Value.VCurrency, FmtSettFloatDot);
       vtBigDecimal:
         Result.VString := BcdToStr(Value.VBigDecimal{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-      {$ELSE}
-      vtFloat:
-        Result.VString := FloatToSqlStr(Value.VFloat);
-      {$ENDIF}
       vtString:
         Result.VString := Value.VString;
       {$IFNDEF NO_ANSISTRING}
@@ -2078,17 +1965,12 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
         ResTmp := IntToRaw(Value.VInteger);
       vtUInteger:
         ResTmp := IntToRaw(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FloatToSqlStr(Value.VDouble));
       vtCurrency:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal));
-      {$ELSE}
-      vtFloat:
-        ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FloatToSqlStr(Value.VFloat));
-      {$ENDIF}
       vtString:
         ResTmp := {$IFDEF UNICODE}AnsiString{$ENDIF}(Value.VString);
       vtAnsiString:
@@ -2130,17 +2012,12 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
         ResTmp := IntToRaw(Value.VInteger);
       vtUInteger:
         ResTmp := IntToRaw(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         ResTmp := FloatToSqlRaw(Value.VDouble);
       vtCurrency:
         ResTmp := {$IFDEF UNICODE}UTF8String{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         ResTmp := {$IFDEF UNICODE}UTF8String{$ENDIF}(BCDToStr(Value.VBigDecimal));
-      {$ELSE}
-      vtFloat:
-        ResTmp := {$IFDEF UNICODE}UTF8String{$ENDIF}(FloatToSqlStr(Value.VFloat));
-      {$ENDIF}
       vtString:
         ResTmp := ZStringToUTF8(Value.VString, FSystemCodePage);
       {$IFNDEF NO_ANSISTRING}
@@ -2188,17 +2065,12 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
         Result.VRawByteString := IntToRaw(Value.VInteger);
       vtUInteger:
         Result.VRawByteString := IntToRaw(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         Result.VRawByteString := FloatToSqlRaw(Value.VDouble);
       vtCurrency:
         Result.VRawByteString := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         Result.VRawByteString := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
-      {$ELSE}
-      vtFloat:
-        Result.VRawByteString := FloatToSqlRaw(Value.VFloat);
-      {$ENDIF}
       vtRawByteString:
         Result.VRawByteString := Value.VRawByteString;
       vtDateTime:
@@ -2220,17 +2092,12 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
         Result.VUnicodeString := IntToUnicode(Value.VInteger);
       vtUInteger:
         Result.VUnicodeString := IntToUnicode(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FloatToSqlStr(Value.VDouble));
       vtCurrency:
         Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(BCDToStr(Value.VBigDecimal{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
-      {$ELSE}
-      vtFloat:
-        Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FloatToSqlStr(Value.VFloat));
-      {$ENDIF}
       vtString:
         Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(Value.VString);
       {$IFNDEF NO_ANSISTRING}
@@ -2302,17 +2169,12 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
         Result.VDateTime := Value.VInteger;
       vtUInteger:
         Result.VDateTime := Value.VUInteger;
-      {$IFDEF BCD_TEST}
       vtDouble:
         Result.VDateTime := Value.VDouble;
       vtCurrency:
         Result.VDateTime := Value.VCurrency;
       vtBigDecimal:
         Result.VDateTime := BcdToDouble(Value.VBigDecimal);
-      {$ELSE}
-      vtFloat:
-        Result.VDateTime := Value.VFloat;
-      {$ENDIF}
       vtString:
         Result.VDateTime := AnsiSQLDateToDateTime(Value.VString);
       {$IFNDEF NO_ANSISTRING}
@@ -2361,8 +2223,8 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
           Result.VCharRec.P := nil;
         end;
       vtBoolean, vtInteger, vtUInteger,
-      {$IFDEF BCD_TEST}vtDouble, vtCurrency, vtBigDecimal
-      {$ELSE}vtFloat{$ENDIF}, vtBytes, vtDateTime:
+      vtDouble, vtCurrency, vtBigDecimal,
+      vtBytes, vtDateTime:
         begin
           Result.VString := Convert(Value, vtString).VString;
           Goto AsVCharRecFromVString;
@@ -2441,17 +2303,12 @@ begin
           Result.VBoolean := Value.VInteger <> 0;
         vtUInteger:
           Result.VBoolean := Value.VUInteger <> 0;
-        {$IFDEF BCD_TEST}
         vtDouble:
           Result.VBoolean := Value.VDouble <> 0;
         vtCurrency:
           Result.VBoolean := Value.VCurrency <> 0;
         vtBigDecimal:
           Result.VBoolean := not (Value.VBigDecimal.Precision = 10) and (Value.VBigDecimal.SignSpecialPlaces = 2);
-        {$ELSE}
-        vtFloat:
-          Result.VBoolean := Value.VFloat <> 0;
-        {$ENDIF}
         vtString:
           Result.VBoolean := StrToBoolEx(Value.VString);
         {$IFNDEF NO_ANSISTRING}
@@ -2488,17 +2345,12 @@ begin
           Result.VInteger := Value.VInteger;
         vtUInteger:
           Result.VInteger := Value.VUInteger;
-        {$IFDEF BCD_TEST}
         vtDouble:
           Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDouble);
         vtCurrency:
           Result.VInteger := PInt64(@Value.VCurrency)^ div 10000;
         vtBigDecimal:
           BCD2Int64(Value.VBigDecimal, Result.VInteger);
-        {$ELSE}
-        vtFloat:
-          Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VFloat);
-        {$ENDIF}
         vtString:
           Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
         {$IFNDEF NO_ANSISTRING}
@@ -2535,17 +2387,12 @@ begin
           Result.VUInteger := Value.VInteger;
         vtUInteger:
           Result.VUInteger := Value.VUInteger;
-        {$IFDEF BCD_TEST}
         vtDouble:
           Result.VUInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDouble);
         vtCurrency:
           Result.VUInteger := PInt64(@Value.VCurrency)^ div 10000;
         vtBigDecimal:
           BCD2UInt64(Value.VBigDecimal, Result.VUInteger);
-        {$ELSE}
-        vtFloat:
-          Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VFloat);
-        {$ENDIF}
         vtString:
           Result.VUInteger := {$IFDEF UNICODE}UnicodeToUInt64Def{$ELSE}RawToUInt64Def{$ENDIF}(Value.VString, 0);
         {$IFNDEF NO_ANSISTRING}
@@ -2572,7 +2419,6 @@ begin
         vtInterface:
           RaiseTypeMismatchError;
       end;
-    {$IFDEF BCD_TEST}
     vtDouble:
       case Value.VType of
         vtNull:
@@ -2691,48 +2537,6 @@ begin
         else
           RaiseTypeMismatchError;
       end;
-    {$ELSE}
-    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    vtFloat:
-      case Value.VType of
-        vtNull:
-          Result.VFloat := 0;
-        vtBoolean:
-          if Value.VBoolean then
-            Result.VFloat := 1
-          else
-            Result.VFloat := 0;
-        vtInteger:
-          Result.VFloat := Value.VInteger;
-        vtUInteger:
-          Result.VFloat := Value.VUInteger;
-        vtFloat:
-          Result.VFloat := Value.VFloat;
-        vtString:
-          SqlStrToFloatDef(PChar(Pointer(Value.VString)), 0, Result.VFloat, Length(Value.VString));
-        {$IFNDEF NO_ANSISTRING}
-        vtAnsiString:
-          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VAnsiString)), 0, Result.VFloat, Length(Value.VAnsiString));
-        {$ENDIF}
-        {$IFNDEF NO_UTF8STRING}
-        vtUTF8String:
-          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VUTF8String)), 0, Result.VFloat, Length(Value.VUTF8String));
-        {$ENDIF}
-        vtRawByteString:
-          SqlStrToFloatDef(PAnsiChar(Pointer(Value.VRawByteString)), 0, Result.VFloat, Length(Value.VRawByteString));
-        vtUnicodeString:
-          SqlStrToFloatDef(PWideChar(Pointer(Value.VUnicodeString)), 0, Result.VFloat, Length(Value.VUnicodeString));
-        vtCharRec:
-          if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
-            SqlStrToFloatDef(PWideChar(Value.VCharRec.P), 0, Result.VFloat, Value.VCharRec.Len)
-          else
-            SqlStrToFloatDef(PAnsiChar(Value.VCharRec.P), 0, Result.VFloat, Value.VCharRec.Len);
-        vtDateTime:
-          Result.VFloat := Value.VDateTime;
-        else
-          RaiseTypeMismatchError;
-      end;
-    {$ENDIF}
     vtDateTime:
       ProcessDateTime(Value, Result);
     vtPointer:
@@ -2816,17 +2620,12 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
         Result.VString := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value.VInteger);
       vtUInteger:
         Result.VString := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         Result.VString := FloatToSqlStr(Value.VDouble);
       vtCurrency:
         Result.VString := CurrToStr(Value.VCurrency, FmtSettFloatDot);
       vtBigDecimal:
         Result.VString := BcdToStr(Value.VBigDecimal{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
-      {$ELSE}
-      vtFloat:
-        Result.VString := FloatToSqlStr(Value.VFloat);
-      {$ENDIF}
       vtString:
         Result.VString := Value.VString;
       {$IFNDEF NO_ANSISTRING}
@@ -2885,17 +2684,12 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
         ResTmp := IntToRaw(Value.VInteger);
       vtUInteger:
         ResTmp := IntToRaw(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FloatToSqlStr(Value.VDouble));
       vtCurrency:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal));
-      {$ELSE}
-      vtFloat:
-        ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FloatToSqlStr(Value.VFloat));
-      {$ENDIF}
       vtString:
         ResTmp := (FConSettings^.ConvFuncs.ZStringToAnsi(Value.VString, FConSettings^.CTRL_CP));
       vtAnsiString:
@@ -2940,17 +2734,12 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
         ResTmp := IntToRaw(Value.VInteger);
       vtUInteger:
         ResTmp := IntToRaw(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         ResTmp := FloatToSqlRaw(Value.VDouble);
       vtCurrency:
         ResTmp := {$IFDEF UNICODE}UTF8String{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         ResTmp := {$IFDEF UNICODE}UTF8String{$ENDIF}(BCDToStr(Value.VBigDecimal));
-      {$ELSE}
-      vtFloat:
-        ResTmp := {$IFDEF UNICODE}UTF8String{$ENDIF}(FloatToSqlStr(Value.VFloat));
-      {$ENDIF}
       vtString:
         ResTmp := FConSettings^.ConvFuncs.ZStringToUTF8(Value.VString, FConSettings^.CTRL_CP);
       {$IFNDEF NO_ANSISTRING}
@@ -3001,17 +2790,12 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
         ResTmp := IntToRaw(Value.VInteger);
       vtUInteger:
         ResTmp := IntToRaw(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         ResTmp := FloatToSqlRaw(Value.VDouble);
       vtCurrency:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         ResTmp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(BCDToStr(Value.VBigDecimal));
-      {$ELSE}
-      vtFloat:
-        ResTmp := FloatToSqlRaw(Value.VFloat);
-      {$ENDIF}
       vtString:
         ResTmp := FConSettings^.ConvFuncs.ZStringToRaw(Value.VString, FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP);
       {$IFNDEF NO_ANSISTRING}
@@ -3055,17 +2839,12 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
         Result.VUnicodeString := IntToUnicode(Value.VInteger);
       vtUInteger:
         Result.VUnicodeString := IntToUnicode(Value.VUInteger);
-      {$IFDEF BCD_TEST}
       vtDouble:
         Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FloatToSqlStr(Value.VDouble));
       vtCurrency:
         Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
       vtBigDecimal:
         Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(BCDToStr(Value.VBigDecimal));
-      {$ELSE}
-      vtFloat:
-        Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FloatToSqlStr(Value.VFloat));
-      {$ENDIF}
       vtString:
         Result.VUnicodeString := FConSettings^.ConvFuncs.ZStringToUnicode(Value.VString, FConSettings^.CTRL_CP);
       {$IFNDEF NO_ANSISTRING}
@@ -3104,7 +2883,7 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
           Result.VCharRec.P := nil;
         end;
       vtBoolean, vtInteger,
-      {$IFDEF BCD_TEST}vtDouble,vtCurrency, vtBigDecimal{$ELSE}vtFloat{$ENDIF}, vtBytes, vtDateTime:
+      vtDouble,vtCurrency, vtBigDecimal, vtBytes, vtDateTime:
           if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent
              and (Ord(FConSettings^.ClientCodePage^.Encoding) < Ord(ceUTF16)) then begin
             Result.VRawByteString := Convert(Value, vtRawByteString).VRawByteString;
@@ -3201,17 +2980,12 @@ begin
           Result.VBoolean := Value.VInteger <> 0;
         vtUInteger:
           Result.VBoolean := Value.VUInteger <> 0;
-        {$IFDEF BCD_TEST}
         vtDouble:
           Result.VBoolean := Value.VDouble <> 0;
         vtCurrency:
           Result.VBoolean := Value.VCurrency <> 0;
         vtBigDecimal:
           Result.VBoolean := not (Value.VBigDecimal.Precision = 10) and (Value.VBigDecimal.SignSpecialPlaces = 2);
-        {$ELSE}
-        vtFloat:
-          Result.VBoolean := Value.VFloat <> 0;
-        {$ENDIF}
         vtBytes:
           Result.VBoolean := Pointer(Value.VBytes) <> nil;
         vtString:
@@ -3245,7 +3019,7 @@ begin
           RaiseTypeMismatchError;
       end;
     vtBytes, vtInteger, vtUInteger, vtPointer, vtInterface,
-    {$IFDEF BCD_TEST}vtDouble, vtCurrency, vtBigDecimal{$ELSE}vtFloat{$ENDIF}:
+    vtDouble, vtCurrency, vtBigDecimal:
       Result := inherited Convert(Value, NewType);
     vtDateTime:
       case Value.VType of
@@ -3253,17 +3027,12 @@ begin
           Result.VDateTime := 0;
         vtDateTime:
           Result.VDateTime := Value.VDateTime;
-        {$IFDEF BCD_TEST}
         vtDouble:
           Result.VDateTime := Value.VDouble;
         vtCurrency:
           Result.VDateTime := Value.VCurrency;
         vtBigDecimal:
           Result.VDateTime := BcdToDouble(Value.VBigDecimal);
-        {$ELSE}
-        vtFloat:
-          Result.VDateTime := Value.VFloat;
-        {$ENDIF}
         vtString:
           begin
             CharRec.P := Pointer(Value.VString);
@@ -3367,17 +3136,12 @@ begin
       Result := IntToRaw(Value.VInteger);
     vtUInteger:
       Result := IntToRaw(Value.VUInteger);
-    {$IFDEF BCD_TEST}
     vtDouble:
       Result := FloatToSqlRaw(Value.VDouble);
     vtCurrency:
       Result := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(CurrToStr(Value.VCurrency, FmtSettFloatDot));
     vtBigDecimal:
       Result := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(BCDToStr(Value.VBigDecimal{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF}));
-    {$ELSE}
-    vtFloat:
-      Result := FloatToSqlRaw(Value.VFloat);
-    {$ENDIF}
     vtString:
       Result := fConSettings.ConvFuncs.ZStringToRaw(Value.VString, FConSettings^.CTRL_CP, RawCP);
     {$IFNDEF NO_ANSISTRING}
@@ -3574,7 +3338,6 @@ begin
   FValue := EncodeDateTime(Value);
 end;
 
-{$IFDEF BCD_TEST}
 {**
   Constructs this object and assigns the main properties.
   @param Value a double value.
@@ -3601,16 +3364,6 @@ constructor TZAnyValue.CreateWithBigDecimal(const Value: TBCD);
 begin
   FValue := EncodeBigDecimal(Value);
 end;
-{$ELSE}
-{**
-  Constructs this object and assigns the main properties.
-  @param Value a float value.
-}
-constructor TZAnyValue.CreateWithFloat(const Value: Extended);
-begin
-  FValue := EncodeFloat(Value);
-end;
-{$ENDIF}
 
 {**
   Constructs this object and assigns the main properties.
@@ -3710,7 +3463,6 @@ begin
   Result := SoftVarManager.IsNull(FValue);
 end;
 
-{$IFDEF BCD_TEST}
 {**
   Gets a stored value converted to double.
   @return a stored value converted to double.
@@ -3737,16 +3489,6 @@ function TZAnyValue.GetBigDecimal: TBCD;
 begin
   Result := SoftVarManager.GetAsBigDecimal(FValue);
 end;
-{$ELSE}
-{**
-  Gets a stored value converted to extended.
-  @return a stored value converted to extended.
-}
-function TZAnyValue.GetFloat: Extended;
-begin
-  Result := SoftVarManager.GetAsFloat(FValue);
-end;
-{$ENDIF}
 
 {**
   Gets a stored value converted to integer.
@@ -3859,13 +3601,9 @@ begin
 {$else}
         Result := ZFastCode.IntToStr(Value.VInteger);
 {$endif}
-    {$IFDEF BCD_TEST}
     vtDouble: Result := Value.VDouble;
     vtCurrency: Result := Value.VCurrency;
     vtBigDecimal: VarFMTBcdCreate(Result, Value.VBigDecimal);
-    {$ELSE}
-    vtFloat: Result := Value.VFloat;
-    {$ENDIF}
     vtString: Result := Value.VString;
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: Result := Value.VAnsiString;
@@ -3910,12 +3648,9 @@ end;
 }
 function DecodeVariant(const Value: Variant): TZVariant;
 begin
-  {$IFDEF BCD_TEST}
   if VarIsFMTBcd(Value) then
     Result := EncodeBigDecimal(VarToBcd(Value))
-  else
-  {$ENDIF}
-  case VarType(Value) of
+  else case VarType(Value) of
     varSmallint, varInteger, varByte:
       Result := EncodeInteger(Integer(Value));
     varBoolean: Result := EncodeBoolean(Value);
@@ -3923,15 +3658,10 @@ begin
    {$IFDEF UNICODE}
    varUString: Result := EncodeUnicodeString(Value);
    {$ENDIF}
-    {$IFDEF BCD_TEST}
     varSingle, varDouble:
       Result := EncodeDouble(Value);
     varCurrency:
       Result := EncodeCurrency(Value);
-    {$ELSE}
-    varSingle, varDouble, varCurrency:
-      Result := EncodeFloat(Value);
-    {$ENDIF}
     varUnknown: Result := EncodeInterface(Value);
     varOleStr:
       Result := EncodeUnicodeString(Value);
@@ -4028,7 +3758,6 @@ begin
   Result.VUInteger := Value;
 end;
 
-{$IFDEF BCD_TEST}
 {**
   Creates a double variant.
   @param Value a value to be assigned.
@@ -4058,17 +3787,6 @@ begin
   Result.VType := vtBigDecimal;
   Result.VBigDecimal := Value;
 end;
-{$ELSE}
-{**
-  Creates a float variant.
-  @param Value a value to be assigned.
-}
-function EncodeFloat(const Value: Extended): TZVariant;
-begin
-  Result.VType := vtFloat;
-  Result.VFloat := Value;
-end;
-{$ENDIF}
 
 {**
   Creates a AnsiString variant.

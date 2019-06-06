@@ -410,6 +410,7 @@ type
     function GetDescription: string; override;
 
     {API functions}
+    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS; override;
     function dbsetlversion(Login: PLOGINREC): RETCODE; virtual;
     function dbsetversion: RETCODE; virtual;
 
@@ -2179,6 +2180,12 @@ begin
     DBLibAPI.dbexit;
   end;
   inherited Destroy;
+end;
+
+function TZFreeTDSBasePlainDriver.dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
+begin
+  DBLibAPI.dbsetlogintime(10);
+  Result := FreeTDSAPI.tdsdbopen(Login, Host, 0);
 end;
 
 function TZFreeTDSBasePlainDriver.GetProtocol: string;

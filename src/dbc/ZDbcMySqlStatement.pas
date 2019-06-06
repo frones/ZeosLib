@@ -57,9 +57,8 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
   ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils;
 
@@ -164,7 +163,7 @@ type
 
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF}); reintroduce;
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
     procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
@@ -1021,11 +1020,10 @@ begin
                       BuffSize := 21;  //f.e: -922337203685477.5808
                       Bind^.buffer_type_address^ := FIELD_TYPE_NEWDECIMAL; //EH: mysql binds the high precision types as strings.. using Tdecimal_t is worth in vain                    end;
                     end;
-    stBigDecimal{$IFNDEF BCD_TEST},{$ELSE}: begin
+    stBigDecimal: begin
                       BuffSize := MaxFMTBcdFractionSize+2{dot, sign};
                       Bind^.buffer_type_address^ := FIELD_TYPE_NEWDECIMAL; //EH: mysql binds the high precision types as strings.. using Tdecimal_t is worth in vain
                     end;
-                {$ENDIF}
     stFloat,
     stDouble:       begin
                       BuffSize := SizeOf(Double);
@@ -2032,8 +2030,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF});
-{$IFDEF BCD_TEST}
+  const Value: TBCD);
 var
   Bind: PMYSQL_aligned_BIND;
   { move the string conversions into a own proc -> no (U/L)StrClear}
@@ -2060,10 +2057,6 @@ begin
     end;
     Bind^.is_null_address^ := 0;
   end;
-{$ELSE}
-begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal, Value);
-{$ENDIF}
 end;
 
 {**
@@ -2367,7 +2360,7 @@ begin
         Bind^.length_address^ := Bind^.length;
         ReAllocMem(Bind^.buffer, (SizeOf(Pointer)+22{19Dig, Sign, Dot, #0}) *BatchDMLArrayCount);
         Bind^.buffer_address^ := Bind^.buffer;
-        if (VariantType = vtNull) {$IFDEF BCD_TEST}or (VariantType = vtCurrency) {$ENDIF}then
+        if (VariantType = vtNull) or (VariantType = vtCurrency) then
           P := PAnsiChar(Bind^.buffer)+(SizeOf(Pointer)*BatchDMLArrayCount);
           for i := 0 to BatchDMLArrayCount -1 do begin
             PPointer(PAnsiChar(Bind.Buffer)+i*SizeOf(Pointer))^ := P;
@@ -2377,7 +2370,6 @@ begin
             Inc(P, Bind^.length[i]+1);
           end;
       end;
-    {$IFDEF BCD_TEST}
     stBigDecimal: begin
         Bind^.buffer_type_address^ := FIELD_TYPE_NEWDECIMAL;
         ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(Ulong));
@@ -2394,19 +2386,6 @@ begin
             Inc(P, Bind^.length[i]+1);
           end;
       end;
-    {$ELSE}
-    stBigDecimal: begin
-        ReAllocMem(Bind^.buffer, SizeOf(Double) *BatchDMLArrayCount);
-        Bind^.buffer_address^:= Pointer(Bind^.buffer);
-        Bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
-        if SQLType = stBigDecimal then
-          for i := 0 to BatchDMLArrayCount -1 do
-            PDouble(PAnsiChar(Bind^.buffer)+(I*SizeOf(Double)))^ := TExtendedDynArray(Value)[i]
-        else
-          for i := 0 to BatchDMLArrayCount -1 do
-            PDouble(PAnsiChar(Bind^.buffer)+(I*SizeOf(Double)))^ := TCurrencyDynArray(Value)[i];
-      end;
-    {$ENDIF}
     stDate, stTime, stTimeStamp: begin
         ReAllocMem(Bind^.buffer, (SizeOf(TMYSQL_TIME)+SizeOf(Pointer))*BatchDMLArrayCount);
         Bind^.buffer_address^ := Pointer(Bind^.buffer);

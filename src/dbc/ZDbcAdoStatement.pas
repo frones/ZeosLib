@@ -162,7 +162,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, Math, {$IFDEF BCD_TEST}FmtBCD,{$ENDIF}{$IFNDEF FPC}Windows{inline},{$ENDIF}
+  Variants, Math, FmtBCD,{$IFNDEF FPC}Windows{inline},{$ENDIF}
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
@@ -570,7 +570,7 @@ var
   Stream: TStream;
   Temp: OleVariant;
   RC: OleVariant;
-  BD: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+  BD: TBCD;
   PD: PDecimal;
   L: NativeUInt;
 begin
@@ -608,7 +608,6 @@ begin
           {$ENDIF}
           ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_,
             FAdoCommand.Parameters.Item[I].Precision, FAdoCommand.Parameters.Item[I].NumericScale, ConSettings.CPType);
-          ColumnDisplaySize := FAdoCommand.Parameters.Item[I].Precision;
           Precision := FAdoCommand.Parameters.Item[I].Precision;
           IndexAlign[High(IndexAlign)] := I;
         end;
@@ -654,15 +653,7 @@ begin
                                   then RS.UpdateLong(i, -UInt64(PD.Lo64))
                                   else RS.UpdateULong(I, UInt64(PD.Lo64))
                                 else begin
-                                  {$IFDEF BCD_TEST}
                                   ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.Scale, BD, PD.Sign > 0);
-                                  {$ELSE}
-                                  if PD.Scale > 0
-                                  then BD := UInt64(PD.Lo64) / i64Table[Pd.Scale]
-                                  else BD := UInt64(PD.Lo64);
-                                  if PD.Sign > 0 then
-                                    BD := -BD;
-                                  {$ENDIF}
                                   RS.UpdateBigDecimal(i, BD);
                                 end;
                               end;
@@ -812,9 +803,9 @@ begin
       VT_ERROR:       ClientVarManager.SetAsInteger(Result, tagVARIANT(Temp).scode);
       VT_I8:          ClientVarManager.SetAsInteger(Result, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).llVal{$ELSE}PInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
       VT_UI8:         ClientVarManager.SetAsUInteger(Result, {$IFDEF WITH_tagVARIANT_UINT64}tagVARIANT(Temp).ullVal{$ELSE}PUInt64(@tagVARIANT(Temp).cyVal)^{$ENDIF});
-      VT_R4:          ClientVarManager.{$IFDEF BCD_TEST}SetAsDouble{$ELSE}SetAsFloat{$ENDIF}(Result, tagVARIANT(Temp).fltVal);
-      VT_R8:          ClientVarManager.{$IFDEF BCD_TEST}SetAsDouble{$ELSE}SetAsFloat{$ENDIF}(Result, tagVARIANT(Temp).dblVal);
-      VT_CY:          ClientVarManager.{$IFDEF BCD_TEST}SetAsCurrency{$ELSE}SetAsFloat{$ENDIF}(Result, tagVARIANT(Temp).cyVal);
+      VT_R4:          ClientVarManager.SetAsDouble(Result, tagVARIANT(Temp).fltVal);
+      VT_R8:          ClientVarManager.SetAsDouble(Result, tagVARIANT(Temp).dblVal);
+      VT_CY:          ClientVarManager.SetAsCurrency(Result, tagVARIANT(Temp).cyVal);
       VT_DATE:        ClientVarManager.SetAsDateTime(Result, tagVARIANT(Temp).date);
       VT_BSTR:        begin
                         ClientVarManager.SetNull(Result);
@@ -836,17 +827,8 @@ begin
       VT_DECIMAL:     begin
                         PD := @Temp;
                         ClientVarManager.SetNull(Result);
-                        {$IFDEF BCD_TEST}
                         Result.VType := vtBigDecimal;
                         ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.Scale, Result.VBigDecimal, PD.Sign > 0);
-                        {$ELSE}
-                        Result.VType := vtFloat;
-                        if PD.Scale > 0
-                        then Result.VFloat := UInt64(PD.Lo64) / i64Table[Pd.Scale]
-                        else Result.VFloat := UInt64(PD.Lo64);
-                        if PD.Sign > 0 then
-                          Result.VFloat := -Result.VFloat;
-                        {$ENDIF}
                       end;
       else            case Type_ of
                         adBinary,

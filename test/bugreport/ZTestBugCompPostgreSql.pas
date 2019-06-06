@@ -111,6 +111,7 @@ type
     procedure TestSF266;
     procedure TestSF274;
     procedure TestMarsupilami1;
+    procedure TestSF354;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -125,6 +126,7 @@ type
 implementation
 
 uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
+  ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver,
   {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF};
 
 { TZTestCompPostgreSQLBugReport }
@@ -1249,29 +1251,41 @@ end;
 procedure TZTestCompPostgreSQLBugReport.TestSF266;
 var
   Query: TZQuery;
+  B, X: Boolean;
 begin
   Connection.Connect;
-  try
-    Query := TZQuery.Create(nil);
-    Query.Connection := Connection;
-    Query.SQL.Append('CREATE OR REPLACE FUNCTION pc_chartoint(chartoconvert character varying)');
-    Query.SQL.Append('  RETURNS integer AS');
-    Query.SQL.Append('$BODY$');
-    Query.SQL.Append('SELECT CASE WHEN trim($1) SIMILAR TO ''[0-9]+''');
-    Query.SQL.Append('        THEN CAST(trim($1) AS integer)');
-    Query.SQL.Append('    ELSE NULL END;');
-    Query.SQL.Append('');
-    Query.SQL.Append('$BODY$');
-    Query.SQL.Append('  LANGUAGE ''sql'' IMMUTABLE STRICT;');
-    Query.SQL.Append('');
-    Query.SQL.Append('INSERT INTO blob_values(b_id, b_text) values (261,'''');');
-    Query.ExecSQL;
-    Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
-    Connection.ExecuteDirect('delete from blob_values where b_id = 261');
-  finally
-    FreeAndNil(Query);
-    Connection.Disconnect;
-  end;
+  X := (Connection.DbcConnection.GetMetadata.GetDatabaseInfo as IZPostgreSQLDatabaseInfo).HasMinimumServerVersion(8,4) and //just V3.up protocol supports the binary wire
+    Assigned((Connection.DbcConnection.GetIZPlainDriver.GetInstance as TZPostgreSQLPlainDriver).PQexecParams);//pgbouncer does not support this function
+  for B := False to X do
+    try
+      Query := TZQuery.Create(nil);
+      Query.Properties.Values[DSProps_BinaryWireResultMode] := IntToStr(Ord(B));
+      Query.Connection := Connection;
+      Query.SQL.Append('CREATE OR REPLACE FUNCTION pc_chartoint(chartoconvert character varying)');
+      Query.SQL.Append('  RETURNS integer AS');
+      Query.SQL.Append('$BODY$');
+      Query.SQL.Append('SELECT CASE WHEN trim($1) SIMILAR TO ''[0-9]+''');
+      Query.SQL.Append('        THEN CAST(trim($1) AS integer)');
+      Query.SQL.Append('    ELSE NULL END;');
+      Query.SQL.Append('');
+      Query.SQL.Append('$BODY$');
+      Query.SQL.Append('  LANGUAGE ''sql'' IMMUTABLE STRICT;');
+      Query.SQL.Append('');
+      Query.SQL.Append('INSERT INTO blob_values(b_id, b_text) values (261,'''');');
+      if B then
+        try
+          Query.ExecSQL;
+          Check(False, 'Whoops Postgres has a changed behavior! Tag it as known!');
+        except end
+      else begin
+        Query.ExecSQL;
+        Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
+        Connection.ExecuteDirect('delete from blob_values where b_id = 261');
+      end;
+    finally
+      FreeAndNil(Query);
+      Connection.Disconnect;
+    end;
 end;
 
 procedure TZTestCompPostgreSQLBugReport.TestSF274;
@@ -1331,6 +1345,42 @@ begin
   finally
     FreeAndNil(Query);
     Connection.ExecuteDirect('delete from bcd_values where id = 0815');
+    Connection.Disconnect;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF354;
+var
+  Query: TZQuery;
+  Field: TField;
+
+  procedure CheckFieldExists(const FieldName, ErrorMessage: String);
+  begin
+    Field := Query.FindField(FieldName);
+    Check(Assigned(Field), ErrorMessage);
+  end;
+
+begin
+  Connection.Connect;
+  try
+    Query := TZQuery.Create(nil);
+    Query.Connection := Connection;
+    Query.SQL.Text := 'select * from sf354';
+    Query.Open;
+    try
+      CheckFieldExists('timestamp_none', 'Could not find field timstamp_none of type timestamp');
+      CheckFieldExists('timestamp0', 'Could not find field timstamp_none of type timestamp(0)');
+      CheckFieldExists('timestamp1', 'Could not find field timstamp_none of type timestamp(1)');
+      CheckFieldExists('timestamp2', 'Could not find field timstamp_none of type timestamp(2)');
+      CheckFieldExists('timestamp3', 'Could not find field timstamp_none of type timestamp(3)');
+      CheckFieldExists('timestamp4', 'Could not find field timstamp_none of type timestamp(4)');
+      CheckFieldExists('timestamp5', 'Could not find field timstamp_none of type timestamp(5)');
+      CheckFieldExists('timestamp6', 'Could not find field timstamp_none of type timestamp(6)');
+    finally
+      Query.Close;
+    end;
+  finally
+    FreeAndNil(Query);
     Connection.Disconnect;
   end;
 end;

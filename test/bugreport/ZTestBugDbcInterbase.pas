@@ -107,7 +107,7 @@ begin
   with ResultSet do
   begin
     MoveToInsertRow;
-    UpdateFloat(FLD_Index, 1.14);
+    UpdateCurrency(FLD_Index, 1.14);
     InsertRow;
   end;
 
@@ -117,7 +117,7 @@ begin
   with ResultSet do
   begin
     Next;
-    CheckEquals(1.14, GetFloat(FLD_Index), 0.001);
+    CheckEquals(1.14, GetCurrency(FLD_Index));
   end;
   ResultSet := nil;
   Statement.Close;
