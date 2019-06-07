@@ -299,7 +299,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray, MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: LongWord): RawByteString;
+  const XSQLDAMaxSize: Cardinal): RawByteString;
 
 const
   { Default Interbase blob size for reading }
@@ -2841,7 +2841,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray,MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: LongWord): RawByteString;
+  const XSQLDAMaxSize: Cardinal): RawByteString;
 const
   EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
   EBBegin =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}(')AS BEGIN'+LineEnding);
@@ -2996,8 +2996,8 @@ begin
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := Min((XSQLDAMaxSize div Cardinal(MemPerRow)),     {memory limit of XSQLDA structs}
-        (((32*1024)-LBlockLen) div Cardinal(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
+      MaxRowsPerBatch := Min((XSQLDAMaxSize div Int64(MemPerRow)),     {memory limit of XSQLDA structs}
+        (((32*1024)-LBlockLen) div Int64(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     //we run into XSQLDA !update! count limit of 255 see:

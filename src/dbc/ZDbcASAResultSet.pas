@@ -97,7 +97,7 @@ type
     function GetWord(ColumnIndex: Integer): Word; override;
     function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
-    function GetUInt(ColumnIndex: Integer): LongWord; override;
+    function GetUInt(ColumnIndex: Integer): Cardinal; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
@@ -595,7 +595,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZASAAbstractResultSet.GetUInt(ColumnIndex: Integer): LongWord;
+function TZASAAbstractResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
   CheckClosed;
   LastWasNull := IsNull(ColumnIndex);
