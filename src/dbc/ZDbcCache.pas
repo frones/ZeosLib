@@ -2558,11 +2558,7 @@ begin
       stFloat: Result := PSingle(Data)^;
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
-      {$IFDEF BCD_TEST}
-      stBigDecimal: Result := BCDToDouble(PBCD(Data)^);
-      {$ELSE}
       stBigDecimal: Result := PExtended(Data)^;
-      {$ENDIF}
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
         then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
@@ -2616,11 +2612,7 @@ begin
       stFloat: Result := PSingle(Data)^;
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
-      {$IFDEF BCD_TEST}
-      stBigDecimal: Result := BCDToDouble(PBCD(Data)^);
-      {$ELSE}
       stBigDecimal: Result := PExtended(Data)^;
-      {$ENDIF}
       stTime, stDate, stTimeStamp: Result := PDateTime(Data)^;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
@@ -2675,11 +2667,7 @@ begin
       stFloat: Result := PSingle(Data)^;
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
-      {$IFDEF BCD_TEST}
-      stBigDecimal: Result := BCDToCurr(PBCD(Data)^);
-      {$ELSE}
       stBigDecimal: Result := PExtended(Data)^;
-      {$ENDIF}
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
         then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
@@ -3236,14 +3224,10 @@ begin
       stInteger:    Result := EncodeInteger(PInteger(ValuePtr)^);
       stULong:      Result := EncodeUInteger(PUInt64(ValuePtr)^);
       stLong:       Result := EncodeInteger(PInt64(ValuePtr)^);
-      stFloat:      Result := {$IFDEF BCD_TEST}EncodeDouble{$ELSE}EncodeFloat{$ENDIF}(PSingle(ValuePtr)^);
-      stDouble:     Result := {$IFDEF BCD_TEST}EncodeDouble{$ELSE}EncodeFloat{$ENDIF}(PDouble(ValuePtr)^);
-      stCurrency:   Result := {$IFDEF BCD_TEST}EncodeCurrency{$ELSE}EncodeFloat{$ENDIF}(PCurrency(ValuePtr)^);
-      stBigDecimal: {$IFDEF BCD_TEST}
-                    Result := EncodeBigDecimal(PBCD(ValuePtr)^);
-                    {$ELSE}
-                    Result := EncodeFloat(PCurrency(ValuePtr)^);
-                    {$ENDIF}
+      stFloat:      Result := EncodeFloat(PSingle(ValuePtr)^);
+      stDouble:     Result := EncodeFloat(PDouble(ValuePtr)^);
+      stCurrency:   Result := EncodeFloat(PCurrency(ValuePtr)^);
+      stBigDecimal: Result := EncodeFloat(PExtended(ValuePtr)^);
       stBoolean:    Result := EncodeBoolean(PWordBool(ValuePtr)^);
       stDate,
       stTime,

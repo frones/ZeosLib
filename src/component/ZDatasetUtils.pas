@@ -903,10 +903,8 @@ var
       {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
         Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
       ftBCD:
-        Variables.Values[I] := {$IFDEF BCD_TEST}EncodeCurrency{$ELSE}EncodeFloat{$ENDIF}(ResultSet.GetCurrency(ColumnIndex));
-      {$IFDEF BCD_TEST}
-      ftFmtBCD: Variables.Values[I] := EncodeBcd(TField(Fields[I]).AsBCD);
-      {$ENDIF}
+        Variables.Values[I] := EncodeFloat(ResultSet.GetCurrency(ColumnIndex));
+      ftFmtBCD: Variables.Values[I] := EncodeFloat(TField(Fields[I]).AsFloat);
       ftDate, ftTime, ftDateTime:
         Variables.Values[I] := EncodeDateTime(TField(Fields[I]).AsDateTime);
       //ftString, ftMemo:
@@ -950,16 +948,14 @@ begin
           Variables.Values[I] := EncodeFloat(ResultSet.GetDouble(ColumnIndex));
         {$IFDEF WITH_FTEXTENDED}
         ftExtended:
-          Variables.Values[I] := EncodeFloat(ResultSet.{$IFDEF BCD_TEST}GetDouble{$ELSE}GetBigDecimal{$ENDIF}(ColumnIndex));
+          Variables.Values[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
         {$ENDIF}
-        {$IFDEF BCD_TEST}
         ftFmtBCD:
-          Variables.Values[I] := EncodeBcd(ResultSet.GetBigDecimal(ColumnIndex));
-        {$ENDIF}
+          Variables.Values[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
         {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
           Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftCurrency, ftBCD:
-          Variables.Values[I] := {$IFDEF BCD_TEST}EncodeCurrency{$ELSE}EncodeFloat{$ENDIF}(ResultSet.GetCurrency(ColumnIndex));
+          Variables.Values[I] := EncodeFloat(ResultSet.GetCurrency(ColumnIndex));
         ftDate:
           Variables.Values[I] := EncodeDateTime(ResultSet.GetDate(ColumnIndex));
         ftTime:

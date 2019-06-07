@@ -115,19 +115,12 @@ type
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetCurrency(ColumnIndex: Integer): Currency; override;
-    {$IFDEF BCD_TEST}
-    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); override;
-    {$ELSE !BCD_TEST}
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    {$ENDIF !BCD_TEST}
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
-    {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]); override;
-    {$ENDIF USE_SYNCOMMONS}
   end;
 
   {** Implements a cached resolver with Ado specific functionality. }
@@ -151,112 +144,6 @@ uses
   Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ActiveX,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses, ZDbcUtils;
-
-{$IFDEF USE_SYNCOMMONS}
-procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  JSONComposeOptions: TZJSONComposeOptions);
-var Len, C, H, I: Integer;
-    P: PWideChar;
-begin
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
-  for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
-      C := I else
-      C := JSONWriter.Fields[i];
-    if IsNull(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
-      if JSONWriter.Expand then begin
-        if not (jcsSkipNulls in JSONComposeOptions) then begin
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-          JSONWriter.AddShort('null,')
-        end;
-      end else
-        JSONWriter.AddShort('null,');
-    end else with FAdoRecordSet.Fields.Item[C] do begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[I]);
-      {ADO uses its own DataType-mapping different to System Variant type mapping}
-      case Type_ of
-        adTinyInt:          JSONWriter.Add(PShortInt(FValueAddr)^);
-        adSmallInt:         JSONWriter.Add(PSmallInt(FValueAddr)^);
-        adInteger, adError: JSONWriter.Add(PInteger(FValueAddr)^);
-        adBigInt:           JSONWriter.Add(PInt64(FValueAddr)^);
-        adUnsignedTinyInt:  JSONWriter.AddU(PByte(FValueAddr)^);
-        adUnsignedSmallInt: JSONWriter.AddU(PWord(FValueAddr)^);
-        adUnsignedInt:      JSONWriter.AddU(PCardinal(FValueAddr)^);
-        adUnsignedBigInt:   JSONWriter.Add(PUInt64(FValueAddr)^);
-        adSingle:           JSONWriter.AddSingle(PSingle(FValueAddr)^);
-        adDouble:           JSONWriter.AddDouble(PDouble(FValueAddr)^);
-        adCurrency:         JSONWriter.AddCurr64(PCurrency(FValueAddr)^);
-        adBoolean:          JSONWriter.AddShort(JSONBool[PWordBool(FValueAddr)^]);
-        adGUID:             begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscapeW(PWord(PWideChar(FValueAddr)+1), 36);
-                              JSONWriter.Add('"');
-                            end;
-        adDBTime:           if (jcoMongoISODate in JSONComposeOptions) then begin
-                              JSONWriter.AddShort('ISODate("0000-00-00');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddShort('Z")');
-                            end else begin
-                              if jcoDATETIME_MAGIC in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.Add('"');
-                            end;
-        adDate,
-        adDBDate,
-        adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) then begin
-                              JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddShort('Z")');
-                            end else begin
-                              if jcoDATETIME_MAGIC in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.Add('"');
-                            end;
-        adChar:             begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize));
-                              JSONWriter.Add('"');
-                            end;
-        adWChar:            begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize shr 1));
-                              JSONWriter.Add('"');
-                            end;
-        adVarChar,
-        adLongVarChar:      begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize);
-                              JSONWriter.Add('"');
-                            end;
-        adVarWChar,
-        adLongVarWChar:     begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize shr 1);
-                              JSONWriter.Add('"');
-                            end;
-        adBinary,
-        adVarBinary,
-        adLongVarBinary:    JSONWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
-      end;
-      JSONWriter.Add(',');
-    end;
-  end;
-  if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
-  end;
-end;
-{$ENDIF USE_SYNCOMMONS}
 
 {**
   Creates this object and assignes the main properties.
@@ -1145,45 +1032,16 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF BCD_TEST}
-procedure TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-{$ELSE}
 function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 label ProcessFixedChar;
-{$ENDIF}
 var
   Len: NativeUint;
   P: PWideChar;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
-    Result := {$IFDEF BCD_TEST}NullBCD{$ELSE}0{$ENDIF}
+    Result := 0
   else with FField20, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
-    {$IFDEF BCD_TEST}
-    case FValueType of
-      VT_BOOL:        ScaledOrdinal2Bcd(Word(Ord(PWord(FValueAddr)^ <> 0)), 0, Result);
-      VT_UI1:         ScaledOrdinal2Bcd(Word(PByte(FValueAddr)^), 0, Result, False);
-      VT_UI2:         ScaledOrdinal2Bcd(PWord(FValueAddr)^, 0, Result, False);
-      VT_UI4:         ScaledOrdinal2Bcd(PCardinal(FValueAddr)^, 0, Result, False);
-      VT_UINT:        ScaledOrdinal2Bcd(PLongWord(FValueAddr)^, 0, Result, False);
-      VT_UI8:         ScaledOrdinal2Bcd(PUInt64(FValueAddr)^, 0, Result, False);
-      VT_I1:          ScaledOrdinal2Bcd(SmallInt(PShortInt(FValueAddr)^), 0, Result);
-      VT_I2:          ScaledOrdinal2Bcd(PSmallInt(FValueAddr)^, 0, Result);
-      VT_HRESULT,
-      VT_ERROR,
-      VT_I4:          ScaledOrdinal2Bcd(PInteger(FValueAddr)^, 0, Result);
-      VT_I8:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 0, Result);
-      VT_INT:         ScaledOrdinal2Bcd(PLongInt(FValueAddr)^, 0, Result);
-      VT_CY:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 4, Result);
-      VT_DECIMAL:     ScaledOrdinal2Bcd(UInt64(PDecimal(FValueAddr)^.Lo64), PDecimal(FValueAddr)^.Scale, Result, PDecimal(FValueAddr)^.Sign > 0);
-      VT_R4:          Double2BCD(PSingle(FValueAddr)^, Result);
-      VT_R8, VT_DATE: Double2BCD(PDouble(FValueAddr)^, Result);
-      else begin
-          P := GetPWideChar(ColumnIndex, Len);
-          if not ZSysUtils.TryUniToBcd(P, Len, Result, '.') then
-            Result := NullBCD;
-        end;
-      {$ELSE !BCD_TEST}
     case Type_ of
       adTinyInt: Result := PShortInt(FValueAddr)^;
       adSmallInt: Result := PSmallInt(FValueAddr)^;
@@ -1226,7 +1084,6 @@ begin
         except
           Result := 0;
         end;
-      {$ENDIF !BCD_TEST}
     end;
   end;
 end;
