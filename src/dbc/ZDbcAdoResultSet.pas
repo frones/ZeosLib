@@ -167,7 +167,7 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    if TVarData(FAdoRecordSet.Fields.Item[C].Value).VType in [varNull, varEmpty] then begin
+    if IsNull(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
       if JSONWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
           JSONWriter.AddString(JSONWriter.ColNames[I]);
@@ -180,81 +180,72 @@ begin
         JSONWriter.AddString(JSONWriter.ColNames[I]);
       {ADO uses its own DataType-mapping different to System Variant type mapping}
       case Type_ of
-        adTinyInt:          JSONWriter.Add(TVarData(Value).VShortInt);
-        adSmallInt:         JSONWriter.Add(TVarData(Value).VSmallInt);
-        adInteger, adError: JSONWriter.Add(TVarData(Value).VInteger);
-        adBigInt:           JSONWriter.Add(TVarData(Value).VInt64);
-        adUnsignedTinyInt:  JSONWriter.AddU(TVarData(Value).VByte);
-        adUnsignedSmallInt: JSONWriter.AddU(TVarData(Value).VWord);
-        adUnsignedInt:      JSONWriter.AddU(TVarData(Value).VLongWord);
-        {$IFDEF WITH_VARIANT_UINT64}
-        adUnsignedBigInt:   JSONWriter.AddQ(TVarData(Value).VUInt64);
-        {$ELSE}
-        adUnsignedBigInt:   JSONWriter.Add(TVarData(Value).VInt64);
-        {$ENDIF}
-        adSingle:           JSONWriter.AddSingle(TVarData(Value).VSingle);
-        adDouble:           JSONWriter.AddDouble(TVarData(Value).VDouble);
-        adCurrency:         JSONWriter.AddCurr64(TVarData(Value).VCurrency);
-        adBoolean:          JSONWriter.AddShort(JSONBool[TVarData(Value).VBoolean]);
-        adGUID:             JSONWriter.AddNoJSONEscapeW(Pointer(TVarData(Value).VOleStr), 38);
-        adDBTime:           if (jcoMongoISODate in JSONComposeOptions) and (Type_ <> adDBTime) then begin
+        adTinyInt:          JSONWriter.Add(PShortInt(FValueAddr)^);
+        adSmallInt:         JSONWriter.Add(PSmallInt(FValueAddr)^);
+        adInteger, adError: JSONWriter.Add(PInteger(FValueAddr)^);
+        adBigInt:           JSONWriter.Add(PInt64(FValueAddr)^);
+        adUnsignedTinyInt:  JSONWriter.AddU(PByte(FValueAddr)^);
+        adUnsignedSmallInt: JSONWriter.AddU(PWord(FValueAddr)^);
+        adUnsignedInt:      JSONWriter.AddU(PCardinal(FValueAddr)^);
+        adUnsignedBigInt:   JSONWriter.Add(PUInt64(FValueAddr)^);
+        adSingle:           JSONWriter.AddSingle(PSingle(FValueAddr)^);
+        adDouble:           JSONWriter.AddDouble(PDouble(FValueAddr)^);
+        adCurrency:         JSONWriter.AddCurr64(PCurrency(FValueAddr)^);
+        adBoolean:          JSONWriter.AddShort(JSONBool[PWordBool(FValueAddr)^]);
+        adGUID:             begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddNoJSONEscapeW(PWord(PWideChar(FValueAddr)+1), 36);
+                              JSONWriter.Add('"');
+                            end;
+        adDBTime:           if (jcoMongoISODate in JSONComposeOptions) then begin
                               JSONWriter.AddShort('ISODate("0000-00-00');
-                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddShort('Z")');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.Add('"');
                             end;
         adDate,
         adDBDate,
-        adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) and (Type_ <> adDBTime) then begin
+        adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) then begin
                               JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddShort('Z")');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(TVarData(Value).VDate, jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.Add('"');
                             end;
-        adChar:
-          begin
-            JSONWriter.Add('"');
-            P := TVarData(Value).VOleStr;
-            Len := ActualSize;
-            while (P+Len-1)^ = ' ' do dec(Len);
-            JSONWriter.AddJSONEscapeW(Pointer(P), Len);
-            JSONWriter.Add('"');
-          end;
-        adWChar: {fixed char fields}
-          begin
-            JSONWriter.Add('"');
-            P := TVarData(Value).VOleStr;
-            Len := ActualSize shr 1;
-            while (P+Len-1)^ = ' ' do dec(Len);
-            JSONWriter.AddJSONEscapeW(Pointer(P), Len);
-            JSONWriter.Add('"');
-          end;
+        adChar:             begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize));
+                              JSONWriter.Add('"');
+                            end;
+        adWChar:            begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize shr 1));
+                              JSONWriter.Add('"');
+                            end;
         adVarChar,
-        adLongVarChar: begin
-            JSONWriter.Add('"');
-            JSONWriter.AddJSONEscapeW(Pointer(TVarData(Value).VOleStr), ActualSize);
-            JSONWriter.Add('"');
-          end;
+        adLongVarChar:      begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize);
+                              JSONWriter.Add('"');
+                            end;
         adVarWChar,
-        adLongVarWChar: begin
-            JSONWriter.Add('"');
-            JSONWriter.AddJSONEscapeW(Pointer(TVarData(Value).VOleStr), ActualSize shr 1);
-            JSONWriter.Add('"');
-          end;
+        adLongVarWChar:     begin
+                              JSONWriter.Add('"');
+                              JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize shr 1);
+                              JSONWriter.Add('"');
+                            end;
         adBinary,
         adVarBinary,
-        adLongVarBinary:
-          JSONWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
+        adLongVarBinary:    JSONWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
       end;
       JSONWriter.Add(',');
     end;
@@ -747,11 +738,19 @@ Set_From_Buf:           Len := Result - PAnsiChar(@fTinyBuffer[0]);
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                       end;
-      else begin
-        PW := GetPWideChar(ColumnIndex, Len);
-        FRawTemp := PUnicodeToRaw(PW, Len, ConSettings.CTRL_CP);
-        Result := Pointer(FRawTemp);
-        Len := Length(FRawTemp);
+      else case Type_ of
+        adVarBinary,
+        adLongVarBinary,
+        adBinary:     begin
+                        Result := TVarData(FColValue).VArray.Data;
+                        Len := ActualSize;
+                      end;
+        else begin
+          PW := GetPWideChar(ColumnIndex, Len);
+          FRawTemp := PUnicodeToRaw(PW, Len, ConSettings.CTRL_CP);
+          Result := Pointer(FRawTemp);
+          Len := Length(FRawTemp);
+        end;
       end;
     end;
   end;
@@ -914,7 +913,7 @@ begin
     VT_BOOL:        Result := PWordBool(FValueAddr)^;
     VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex) <> 0;
     VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex) <> 0;
-    VT_HRESULT, VT_ERROR:  Result := tagVARIANT(FColValue).scode <> 0;
+    VT_HRESULT, VT_ERROR:  Result := PHResult(FValueAddr)^ <> 0;
     VT_UI8:         Result := PUInt64(FValueAddr)^ <> 0;
     VT_I8:          Result := PInt64(FValueAddr)^ <> 0;
     VT_CY:          Result := PCurrency(FValueAddr)^ <> 0;
@@ -948,13 +947,13 @@ begin
     VT_UI1:         Result := PByte(FValueAddr)^;
     VT_UI2:         Result := PWord(FValueAddr)^;
     VT_UI4:         Result := PInteger(FValueAddr)^;
-    VT_UINT:        Result := tagVARIANT(FColValue).uintVal;
-    VT_I1:          Result := ShortInt(tagVARIANT(FColValue).cVal);
-    VT_I2:          Result := tagVARIANT(FColValue).iVal;
-    VT_I4:          Result := tagVARIANT(FColValue).lVal;
+    VT_UINT:        Result := PCardinal(FValueAddr)^;
+    VT_I1:          Result := PShortInt(FValueAddr)^;
+    VT_I2:          Result := PSmallInt(FValueAddr)^;
+    VT_I4:          Result := Pinteger(FValueAddr)^;
     VT_INT:         Result := tagVARIANT(FColValue).intVal;
     VT_HRESULT,
-    VT_ERROR:       Result := tagVARIANT(FColValue).scode;
+    VT_ERROR:       Result := PHResult(FValueAddr)^;
     VT_UI8, VT_I8, VT_CY, VT_DECIMAL, VT_R4, VT_R8, VT_DATE: Result := GetLong(ColumnIndex);
     else begin
       P := GetPWideChar(ColumnIndex, Len);
@@ -984,16 +983,10 @@ begin
     case tagVARIANT(FColValue).vt of
       VT_BOOL, VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex);
       VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex);
-      VT_HRESULT, VT_ERROR:  Result := tagVARIANT(FColValue).scode;
-      {$IFDEF WITH_tagVARIANT_UINT64}
+      VT_HRESULT, VT_ERROR:  Result := PHResult(FValueAddr)^;
       VT_UI8:         Result := PUInt64(FValueAddr)^;
       VT_I8:          Result := PInt64(FValueAddr)^;
       VT_CY:          Result := PInt64(FValueAddr)^ div 10000;
-      {$ELSE}
-      VT_UI8:         Result := PUInt64(@PInteger(FValueAddr)^)^;
-      VT_I8:          Result := PInt64(@tagVARIANT(FColValue).lVal)^;
-      VT_CY:          Result := PInt64(@tagVARIANT(FColValue).lVal)^ div 10000;
-      {$ENDIF}
       VT_DECIMAL: begin
                     PD := @FColValue;
                     Result := Int64(PD.Lo64);
@@ -1033,13 +1026,13 @@ begin
       VT_UI1:         Result := PByte(FValueAddr)^;
       VT_UI2:         Result := PWord(FValueAddr)^;
       VT_UI4:         Result := PInteger(FValueAddr)^;
-      VT_UINT:        Result := tagVARIANT(FColValue).uintVal;
-      VT_I1:          Result := ShortInt(tagVARIANT(FColValue).cVal);
-      VT_I2:          Result := tagVARIANT(FColValue).iVal;
-      VT_I4:          Result := tagVARIANT(FColValue).lVal;
+      VT_UINT:        Result := PCardinal(FValueAddr)^;
+      VT_I1:          Result := PShortInt(FValueAddr)^;
+      VT_I2:          Result := PSmallInt(FValueAddr)^;
+      VT_I4:          Result := PInteger(FValueAddr)^;
       VT_INT:         Result := tagVARIANT(FColValue).intVal;
       VT_HRESULT,
-      VT_ERROR:       Result := tagVARIANT(FColValue).scode;
+      VT_ERROR:       Result := PHResult(FValueAddr)^;
       VT_UI8, VT_I8, VT_CY, VT_DECIMAL, VT_R4, VT_R8, VT_DATE: Result := GetULong(ColumnIndex);
       else begin
         P := GetPWideChar(ColumnIndex, Len);
@@ -1071,7 +1064,7 @@ begin
     case tagVARIANT(FColValue).vt of
       VT_BOOL, VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex);
       VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex);
-      VT_HRESULT, VT_ERROR:  Result := tagVARIANT(FColValue).scode;
+      VT_HRESULT, VT_ERROR:  Result := PHResult(FValueAddr)^;
       VT_UI8:         Result := PUInt64(FValueAddr)^;
       VT_I8:          Result := PInt64(FValueAddr)^;
       VT_CY:          Result := PInt64(FValueAddr)^ div 10000;
@@ -1203,7 +1196,7 @@ begin
       adSingle: Result := PSingle(FValueAddr)^;
       adDouble: Result := PDouble(FValueAddr)^;
       adCurrency: Result := PCurrency(FValueAddr)^;
-      adBoolean: Result := Ord(TVarData(FColValue).VBoolean);
+      adBoolean: Result := Ord(PWordBool(FValueAddr)^);
       adDate,
       adDBDate,
       adDBTime,
@@ -1249,34 +1242,21 @@ end;
     value returned is <code>null</code>
 }
 function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-var
-  V: Variant;
 begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then
     Result := nil
   else with FField20 do
     case Type_ of
-      adGUID:
-        begin
+      adGUID:  begin
           SetLength(Result, 16);
-          ValidGUIDToBinary(TVarData(FColValue).VOleStr, Pointer(Result));
+          ValidGUIDToBinary(PWideChar(FValueAddr), Pointer(Result));
         end;
       adBinary,
       adVarBinary,
       adLongVarBinary:
-        begin
           Result := BufferToBytes(TVarData(FColValue).VArray.Data, ActualSize);
-        end;
-      else
-        begin
-          V := FColValue;
-          try
-            Result := V
-          except
-            Result := nil;
-          end;
-        end;
+      else Result := BufferToBytes(FValueAddr, ActualSize);
     end;
 end;
 
@@ -1414,41 +1394,35 @@ end;
     the specified column
 }
 function TZAdoResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
-var
-  L: LengthInt;
+var L: LengthInt;
+label CLOB;
 begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then
     Result := nil
   else with FField20 do
     case Type_ of
-      adGUID:
-        Result := TZAbstractClob.CreateWithData(TVarData(FColValue).VOleStr, 38, ConSettings);
-      adChar: { fixed char columns }
-        begin
-          L := ActualSize;
-          while (TVarData(FColValue).VOleStr+L-1)^ = ' ' do dec(L);
-          Result := TZAbstractClob.CreateWithData( TVarData(FColValue).VOleStr, L, ConSettings);
-        end;
-      adWChar: { fixed wchar columns }
-        begin
-          L := ActualSize shr 1;
-          while (TVarData(FColValue).VOleStr+L-1)^ = ' ' do dec(L);
-          Result := TZAbstractClob.CreateWithData( TVarData(FColValue).VOleStr, L, ConSettings);
-        end;
+      adGUID:   begin L := 38; goto CLOB; end;
+      adChar:   begin
+                  L := ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWidechar(FValueAddr), ActualSize);
+                  goto CLOB; end;
+      adWChar:  begin
+                  L := ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWidechar(FValueAddr), ActualSize shr 1);
+                  goto CLOB; end;
       adVarChar,
-      adLongVarChar:
-        Result := TZAbstractClob.CreateWithData(TVarData(FColValue).VOleStr, ActualSize, ConSettings);
-      adBSTR, adVarWChar,
-      adLongVarWChar:
-        Result := TZAbstractClob.CreateWithData(
-          TVarData(FColValue).VOleStr,
-          ActualSize shr 1, ConSettings);
-      adBinary,
+      adLongVarChar: begin
+                  L := ActualSize;
+                  goto CLOB; end;
+      adBSTR,
+      adLongVarWChar,
+      adVarWChar: begin
+                  L := ActualSize shr 1;
+CLOB:             Result := TZAbstractClob.CreateWithData(PWidechar(FValueAddr), L, ConSettings);
+                end;
+
       adVarBinary,
-      adLongVarBinary:
-        Result := TZAbstractBlob.CreateWithData(TVarData(FColValue).VArray.Data,
-          ActualSize);
+      adLongVarBinary,
+      adBinary:   Result := TZAbstractBlob.CreateWithData(TVarData(FColValue).VArray.Data, ActualSize);
       else
         Result := nil;
     end;

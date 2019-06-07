@@ -221,7 +221,7 @@ const
   i4SpaceUni: Int64 = 9007336695791648;  //integer representation of the four wide space chars
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math
   {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
