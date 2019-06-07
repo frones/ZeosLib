@@ -110,6 +110,7 @@ type
     procedure TestSF224;
     procedure TestSF266;
     procedure TestSF274;
+    procedure TestSF354;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1304,6 +1305,42 @@ procedure TZTestCompPostgreSQLBugReport.TestSF274_OnNotify(Sender: TObject; Even
         ProcessID: Integer; Payload: string);
 begin
   TestSF274_GotNotified := true;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF354;
+var
+  Query: TZQuery;
+  Field: TField;
+
+  procedure CheckFieldExists(const FieldName, ErrorMessage: String);
+  begin
+    Field := Query.FindField(FieldName);
+    Check(Assigned(Field), ErrorMessage);
+  end;
+
+begin
+  Connection.Connect;
+  try
+    Query := TZQuery.Create(nil);
+    Query.Connection := Connection;
+    Query.SQL.Text := 'select * from sf354';
+    Query.Open;
+    try
+      CheckFieldExists('timestamp_none', 'Could not find field timstamp_none of type timestamp');
+      CheckFieldExists('timestamp0', 'Could not find field timstamp_none of type timestamp(0)');
+      CheckFieldExists('timestamp1', 'Could not find field timstamp_none of type timestamp(1)');
+      CheckFieldExists('timestamp2', 'Could not find field timstamp_none of type timestamp(2)');
+      CheckFieldExists('timestamp3', 'Could not find field timstamp_none of type timestamp(3)');
+      CheckFieldExists('timestamp4', 'Could not find field timstamp_none of type timestamp(4)');
+      CheckFieldExists('timestamp5', 'Could not find field timstamp_none of type timestamp(5)');
+      CheckFieldExists('timestamp6', 'Could not find field timstamp_none of type timestamp(6)');
+    finally
+      Query.Close;
+    end;
+  finally
+    FreeAndNil(Query);
+    Connection.Disconnect;
+  end;
 end;
 
 initialization

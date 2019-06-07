@@ -135,3 +135,15 @@ CREATE TABLE Ticket51_B
 INSERT INTO Ticket51_A values(1,2);
 INSERT INTO Ticket51_A values(2,3);
 INSERT INTO Ticket51_B VALUES (1,1,'MyName');
+
+create table sf354 (
+  id integer not null,
+  timestamp_none timestamp,
+  timestamp0 timestamp(0),
+  timestamp1 timestamp(1),
+  timestamp2 timestamp(2),
+  timestamp3 timestamp(3),
+  timestamp4 timestamp(4),
+  timestamp5 timestamp(5),
+  timestamp6 timestamp(6)
+)

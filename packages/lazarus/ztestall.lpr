@@ -162,6 +162,9 @@ begin
   longopts.Add('norebuild');
   longopts.Add('monitor:');
   longopts.Add('suite:');
+  LongOpts.Add('xml:');
+  LongOpts.Add('batch');
+  LongOpts.Add('suitename:');
   if CommandLineSwitches.xml
   then DefaultFormat := fXML;
   if CommandLineSwitches.xmlfilename <> ''
