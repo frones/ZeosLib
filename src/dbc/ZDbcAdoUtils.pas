@@ -166,9 +166,9 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants, Math,
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils,
-  ZMessages, ZEncoding, ZFastCode, ZClasses;
+  ZMessages, ZEncoding, ZFastCode, Math, ZClasses;
 
 {**
   Converts an ADO native types into string related.
@@ -751,7 +751,6 @@ begin
                 else
                   raise Exception.Create('Unsupported String Variant');
               end;
-              P.Precision := Max(P.Precision, Length(UniTemp));
               P.Size := Max(1, Length(UniTemp) shl 1);
               P.Value := UniTemp;
             end;

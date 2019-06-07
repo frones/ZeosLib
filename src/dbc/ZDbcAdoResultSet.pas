@@ -1036,54 +1036,34 @@ function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 label ProcessFixedChar;
 var
   Len: NativeUint;
-  P: PWideChar;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := 0
   else with FField20, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
-    case Type_ of
-      adTinyInt: Result := PShortInt(FValueAddr)^;
-      adSmallInt: Result := PSmallInt(FValueAddr)^;
-      adInteger, adError: Result := PInteger(FValueAddr)^;
-      adBigInt: Result := PInt64(FValueAddr)^;
-      adUnsignedTinyInt: Result := PByte(FValueAddr)^;
-      adUnsignedSmallInt: Result := PWord(FValueAddr)^;
-      adUnsignedInt: Result := PCardinal(FValueAddr)^;
-      adUnsignedBigInt:   Result := PUInt64(FValueAddr)^;
-      adSingle: Result := PSingle(FValueAddr)^;
-      adDouble: Result := PDouble(FValueAddr)^;
-      adCurrency: Result := PCurrency(FValueAddr)^;
-      adBoolean: Result := Ord(PWordBool(FValueAddr)^);
-      adDate,
-      adDBDate,
-      adDBTime,
-      adDBTimeStamp: Result := TVarData(FColValue).VDate;
-      adChar:
-        begin
-          Len := ActualSize;
-          goto ProcessFixedChar;
-        end;
-      adWChar: {fixed char fields}
-        begin
-          Len := ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
-  ProcessFixedChar:
-          P := TVarData(FColValue).VOleStr;
-          while (P+Len-1)^ = ' ' do dec(Len);
-          ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
-        end;
-      adVarChar,
-      adLongVarChar, {varying char fields}
-      adBSTR,
-      adVarWChar,
-      adLongVarWChar: {varying char fields}
-        Result := UnicodeToFloatDef(TVarData(FColValue).VOleStr, WideChar('.'), 0);
-      else
-        try
-          Result := FColValue;
-        except
-          Result := 0;
-        end;
+    case FValueType of
+      VT_BOOL:        Result := Ord(PWord(FValueAddr)^ <> 0);
+      VT_UI1:         Result := PByte(FValueAddr)^;
+      VT_UI2:         Result := PWord(FValueAddr)^;
+      VT_UI4:         Result := PCardinal(FValueAddr)^;
+      VT_UINT:        Result := PLongWord(FValueAddr)^;
+      VT_UI8:         Result := PUInt64(FValueAddr)^;
+      VT_I1:          Result := PShortInt(FValueAddr)^;
+      VT_I2:          Result := PSmallInt(FValueAddr)^;
+      VT_HRESULT,
+      VT_ERROR,
+      VT_I4:          Result := PInteger(FValueAddr)^;
+      VT_I8:          Result := PInt64(FValueAddr)^;
+      VT_INT:         Result := PLongInt(FValueAddr)^;
+      VT_CY:          Result := PCurrency(FValueAddr)^;
+      VT_DECIMAL:     begin
+                        Result := UInt64(PDecimal(FValueAddr)^.Lo64) / UInt64Tower[PDecimal(FValueAddr)^.Scale];
+                        if PDecimal(FValueAddr)^.Sign > 0 then
+                          Result := -Result;
+      end;
+      VT_R4:          Result := PSingle(FValueAddr)^;
+      VT_R8, VT_DATE: Result := PDouble(FValueAddr)^;
+      else  UnicodeToFloatDef(GetPWideChar(ColumnIndex, Len), WideChar('.'), 0, Result)
     end;
   end;
 end;
