@@ -149,8 +149,8 @@ type
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
-    procedure FillColumInfoFromGetColumnsRS(ColumnInfo: TZColumnInfo;
-      const TableColumns: IZResultSet; const FieldName: String); override;
+    procedure SetColumnPrecisionFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
   public
     function GetCatalogName({%H-}ColumnIndex: Integer): string; override;
     function GetColumnName(ColumnIndex: Integer): string; override;
@@ -1788,17 +1788,6 @@ begin
   ColumnInfo.DefinitelyWritable := False;
 end;
 
-procedure TZInterbaseResultSetMetadata.FillColumInfoFromGetColumnsRS(
-  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet;
-  const FieldName: String);
-begin
-  inherited FillColumInfoFromGetColumnsRS(ColumnInfo, TableColumns, FieldName);
-  //FB native rs can't give use users choosen precision
-  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
-     not TableColumns.IsNull(TableColColumnSizeIndex) then
-    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
-end;
-
 {**
   Gets the designated column's table's catalog name.
   @param ColumnIndex the first column is 1, the second is 2, ...
@@ -1887,5 +1876,14 @@ begin
   Loaded := True;
   {$ENDIF}
 end;
+
+procedure TZInterbaseResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if (ColumnInfo.ColumnType in [stCurrency, stBigDecimal]) and
+     not TableColumns.IsNull(TableColColumnSizeIndex) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+end;
+
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

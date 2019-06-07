@@ -119,7 +119,9 @@ type
   end;
 
   TZDblibResultSetMetadata = class(TZAbstractResultSetMetadata, IZDblibResultSetMetadata)
-
+  protected
+    procedure SetColumnCodePageFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
   end;
 
   {** Implements DBLib ResultSet. }
@@ -180,7 +182,8 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
-uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode, ZClasses
+uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode,
+  ZClasses, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZAbstractDblibDataProvider.Create(Connection: IZDBLibConnection);
@@ -1218,5 +1221,27 @@ begin
     end;
   end;
 end;
+
+{ TZDblibResultSetMetadata }
+procedure TZDblibResultSetMetadata.SetColumnCodePageFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo;
+  const TableColumns: IZResultSet);
+var ColTypeName: string;
+  P: PChar;
+begin
+  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
+    ColTypeName := TableColumns.GetString(TableColColumnTypeNameIndex);
+    P := Pointer(ColTypeName);
+    if P = nil
+    then ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
+    else if (Length(ColTypeName) > 3) and SameText(P, PChar('UNI'), 3) //sybase only and FreeTDS does not map the type to UTF8?
+      then ColumnInfo.ColumnCodePage := zCP_UTF16{UNICHAR, UNIVARCHAR}
+      else if (Ord(P^) or $20 = Ord('n')) and not FConSettings^.ClientCodePage^.IsStringFieldCPConsistent
+        then ColumnInfo.ColumnCodePage := zCP_UTF8 {NTEXT, NVARCHAR, NCHAR}
+        else ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP; //assume server CP instead
+  end else
+    ColumnInfo.ColumnCodePage := zCP_NONE;
+end;
+
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.

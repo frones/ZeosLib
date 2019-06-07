@@ -708,7 +708,7 @@ Set_From_Buf:           Len := Result - PAnsiChar(@fTinyBuffer[0]);
                       end;
       VT_DECIMAL:     begin
                         Result := @FTinyBuffer[0];
-                        E := UInt64(PDecimal(Result).Lo64) / ZFastCode.I64Table[PDecimal(Result).scale];
+                        E := UInt64(PDecimal(Result).Lo64) / ZFastCode.UInt64Tower[PDecimal(Result).scale];
                         if PDecimal(Result).sign > 0 then
                           E := -E;
                         Len := FloatToSQLRaw(E, Result);
@@ -805,7 +805,7 @@ Set_From_Buf:           Len := Result - PWideChar(@fTinyBuffer[0]);
                       end;
       VT_DECIMAL:     begin
                         Result := @FTinyBuffer[0];
-                        E := UInt64(PDecimal(Result).Lo64) / ZFastCode.I64Table[PDecimal(Result).scale];
+                        E := UInt64(PDecimal(Result).Lo64) / ZFastCode.UInt64Tower[PDecimal(Result).scale];
                         if PDecimal(Result).sign > 0 then
                           E := -E;
                         Len := FloatToSQLUnicode(E, Result);
@@ -991,7 +991,7 @@ begin
                     PD := @FColValue;
                     Result := Int64(PD.Lo64);
                     if PD.scale > 0 then
-                      Result := Result div i64Table[PD.scale];
+                      Result := Result div Int64Tower[PD.scale];
                     if PD.sign > 0 then
                       Result := -Result;
                   end;
@@ -1072,7 +1072,7 @@ begin
                     PD := @FColValue;
                     Result := UInt64(PD.Lo64);
                     if PD.scale > 0 then
-                      Result := Result div Uint64(i64Table[PD.scale]);
+                      Result := Result div Uint64(Int64Tower[PD.scale]);
                   end;
       VT_R4, VT_R8, VT_DATE: Result := Trunc(GetDouble(ColumnIndex));
       else begin
@@ -1120,7 +1120,7 @@ begin
       VT_R4:          Result := PSingle(FValueAddr)^;
       VT_DECIMAL:     begin
                         PD := @FColValue;
-                        Result := Uint64(PDecimal(PD).Lo64) / ZFastCode.I64Table[PD.Scale];
+                        Result := Uint64(PDecimal(PD).Lo64) / ZFastCode.Int64Tower[PD.Scale];
                         if PD.sign > 0 then
                           Result := -Result;
                       end;
@@ -1280,9 +1280,9 @@ begin
                   if PD.sign > 0 then
                     i64 := -i64;
                   if PD.scale < 4 then
-                    i64 := i64 * ZFastCode.I64Table[4-PD.scale]
+                    i64 := i64 * ZFastCode.Int64Tower[4-PD.scale]
                   else if PD.scale > 4 then
-                    i64 := i64 div ZFastCode.I64Table[PD.scale-4];
+                    i64 := i64 div ZFastCode.Int64Tower[PD.scale-4];
                 end;
     VT_R4:      Result := PSingle(FValueAddr)^;
     VT_R8, VT_DATE: Result := PDouble(FValueAddr)^;

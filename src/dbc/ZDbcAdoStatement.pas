@@ -401,7 +401,7 @@ var
   Stream: TStream;
   Temp: OleVariant;
   RC: OleVariant;
-  BD: {$IFDEF BCD_TEST}TBCD{$ELSE}Extended{$ENDIF};
+  BD: Extended;
   PD: PDecimal;
   L: NativeUInt;
 begin
@@ -484,15 +484,11 @@ begin
                                   then RS.UpdateLong(i, -UInt64(PD.Lo64))
                                   else RS.UpdateULong(I, UInt64(PD.Lo64))
                                 else begin
-                                  {$IFDEF BCD_TEST}
-                                  ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.Scale, BD, PD.Sign > 0);
-                                  {$ELSE}
                                   if PD.Scale > 0
-                                  then BD := UInt64(PD.Lo64) / i64Table[Pd.Scale]
+                                  then BD := UInt64(PD.Lo64) / UInt64Tower[Pd.Scale]
                                   else BD := UInt64(PD.Lo64);
                                   if PD.Sign > 0 then
                                     BD := -BD;
-                                  {$ENDIF}
                                   RS.UpdateBigDecimal(i, BD);
                                 end;
                               end;
@@ -668,7 +664,7 @@ begin
                         ClientVarManager.SetNull(Result);
                         Result.VType := vtFloat;
                         if PD.Scale > 0
-                        then Result.VFloat := UInt64(PD.Lo64) / i64Table[Pd.Scale]
+                        then Result.VFloat := UInt64(PD.Lo64) / UInt64Tower[Pd.Scale]
                         else Result.VFloat := UInt64(PD.Lo64);
                         if PD.Sign > 0 then
                           Result.VFloat := -Result.VFloat;
