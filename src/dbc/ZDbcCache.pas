@@ -1992,6 +1992,7 @@ end;
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
 function TZRowAccessor.IsNull(ColumnIndex: Integer): Boolean;
+var TempBlob: PIZLob;
 begin
   if not Assigned(FBuffer) then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
@@ -2003,6 +2004,10 @@ begin
 
   {$R-}
   Result := FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull;
+  if not Result and (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stUnicodeStream, stAsciiStream, stBinaryStream]) then begin
+    TempBlob := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] +1];
+    Result := (TempBlob^ = nil) or TempBlob.IsEmpty;
+  end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
