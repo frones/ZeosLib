@@ -4962,28 +4962,20 @@ var
   L: NativeUInt;
 begin
   if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
-      not ConSettings.ClientCodePage.IsStringFieldCPConsistent then begin
-    if ConSettings.ClientCodePage.IsStringFieldCPConsistent then begin
-      FUniTemp := IZResultSet(FOpenResultSet).GetUnicodeString(AlignParamterIndex2ResultSetIndex(Index));
-      if BindList.ParamTypes[Index] = pctInOut then
-        SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FUniTemp);
-      Buf := Pointer(FUniTemp);
-      Len := Length(FUniTemp);
-    end else begin
-      Buf := IZResultSet(FOpenResultSet).GetPWideChar(AlignParamterIndex2ResultSetIndex(Index), L);
+     not ConSettings.ClientCodePage.IsStringFieldCPConsistent then begin
+    Buf := IZResultSet(FOpenResultSet).GetPWideChar(AlignParamterIndex2ResultSetIndex(Index), L);
+    if BindList.ParamTypes[Index] = pctInOut then begin
       System.SetString(FUniTemp, PWideChar(Buf), L);
-      if BindList.ParamTypes[Index] = pctInOut then begin
-        SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FUniTemp);
-      end;
+      IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FUniTemp);
     end;
     if CodePage = zCP_UTF16 then begin
-      Len := Length(FUniTemp);
-      if L = 0 then
+      Len := L;
+      if Len = 0 then
         Buf := PEmptyUnicodeString;
     end else begin
       FRawTemp := PUnicodeToRaw(Buf, L, CodePage);
       Len := Length(FRawTemp);
-      if L = 0
+      if Len = 0
       then Buf := PEmptyAnsiString
       else Buf := Pointer(FRawTemp);
     end;
@@ -4992,7 +4984,7 @@ begin
     Len := L;
     if BindList.ParamTypes[Index] = pctInOut then begin
       ZSetString(Buf, l, fRawTemp);
-      SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FRawTemp);
+      IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FRawTemp);
     end;
     if CodePage = zCP_UTF16 then begin
       if L = 0 then
@@ -6743,6 +6735,26 @@ begin
       BindList.SQLTypes[i], BindList.ParamTypes[i]);
 end;
 
+{**
+  Registers the OUT parameter in ordinal position
+  <code>parameterIndex</code> to the JDBC type
+  <code>sqlType</code>.  All OUT parameters must be registered
+  before a stored procedure is executed.
+  <p>
+  The JDBC type specified by <code>sqlType</code> for an OUT
+  parameter determines the Java type that must be used
+  in the <code>get</code> method to read the value of that parameter.
+  <p>
+  If the JDBC type expected to be returned to this output parameter
+  is specific to this particular database, <code>sqlType</code>
+  should be <code>java.sql.Types.OTHER</code>.  The method retrieves the value.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @param sqlType the JDBC type code defined by <code>java.sql.Types</code>.
+  If the parameter is of JDBC type <code>NUMERIC</code>
+  or <code>DECIMAL</code>, the version of
+  <code>registerOutParameter</code> that accepts a scale value should be used.
+}
 procedure TZAbstractCallableStatement2.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
 begin
