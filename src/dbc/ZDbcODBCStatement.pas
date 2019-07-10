@@ -2407,7 +2407,8 @@ end;
 
 constructor TZODBCCallableStatementA_MSSQL.Create(
   const Connection: IZConnection; var ConnectionHandle: SQLHDBC;
-  const StoredProcOrFuncIdentifier: string; Info: TStrings);
+  const StoredProcOrFuncIdentifier: string;
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF} Info: TStrings);
 begin
   inherited Create(Connection, StoredProcOrFuncIdentifier, Info);
   fPHDBC := @ConnectionHandle
