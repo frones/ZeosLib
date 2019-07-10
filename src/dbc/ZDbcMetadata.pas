@@ -104,7 +104,6 @@ type
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   private
     fConSettings: TZConSettings;
-    fDoClose: Boolean;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -2507,24 +2506,25 @@ begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
       begin
-        AutoIncrement := Metadata.IsAutoIncrement(i);
-        CaseSensitive := Metadata.IsCaseSensitive(i);
-        Searchable := Metadata.IsSearchable(i);
+        //EH 10.07.2019 comment all getters who force LoadColumns of the NativeResultset-Metadata
+        //AutoIncrement := Metadata.IsAutoIncrement(i);
+        //CaseSensitive := Metadata.IsCaseSensitive(i);
+        //Searchable := Metadata.IsSearchable(i);
         Currency := Metadata.IsCurrency(i);
-        Nullable := Metadata.IsNullable(i);
+        //Nullable := Metadata.IsNullable(i);
         Signed := Metadata.IsSigned(i);
         ColumnLabel := Metadata.GetColumnLabel(i);
-        ColumnName := Metadata.GetColumnName(i);
-        SchemaName := Metadata.GetSchemaName(i);
-        Precision := Metadata.GetPrecision(i);
-        Scale := Metadata.GetScale(i);
-        TableName := Metadata.GetTableName(i);
-        CatalogName := Metadata.GetCatalogName(i);
+        //ColumnName := Metadata.GetColumnName(i);
+        //SchemaName := Metadata.GetSchemaName(i);
+        //Precision := Metadata.GetPrecision(i);
+        //Scale := Metadata.GetScale(i);
+        //TableName := Metadata.GetTableName(i);
+        //CatalogName := Metadata.GetCatalogName(i);
         ColumnType := Metadata.GetColumnType(i);
-        ReadOnly := Metadata.IsReadOnly(i);
-        Writable := Metadata.IsWritable(i);
-        DefinitelyWritable := Metadata.IsDefinitelyWritable(i);
-        DefaultValue := Metadata.GetDefaultValue(i);
+        //ReadOnly := Metadata.IsReadOnly(i);
+        //Writable := Metadata.IsWritable(i);
+        //DefinitelyWritable := Metadata.IsDefinitelyWritable(i);
+        //DefaultValue := Metadata.GetDefaultValue(i);
         ColumnCodePage := Metadata.GetColumnCodePage(i);
       end;
       ColumnsInfo.Add(ColumnInfo);
