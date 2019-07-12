@@ -92,7 +92,6 @@ type
     FOpenCursorCallback: TOpenCursorCallback;
     FEmulatedValues: TRawByteStringDynArray;
     FEmulatedParams: Boolean; //just use emulated String params?
-    FIsFunction: Boolean; //did RegisterParameter evaluate against a ResultParameter;
     FLastWasOutParams: Boolean;
     FMinExecCount2Prepare: Integer; //how many executions must be done to fall into a real prepared mode?
     FExecCount: Integer; //How often did we execute the stmt until we reached MinExecCount2Prepare?
@@ -113,9 +112,8 @@ type
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     procedure InternalSetInParamCount(NewParamCount: Integer);
     function GetInParamLogValue(Index: Integer): RawByteString; override;
-    procedure CheckParameterIndex(Value: Integer); override;
+    procedure CheckParameterIndex(var Value: Integer); override;
     procedure SetBindCapacity(Capacity: Integer); override;
-    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   public
     constructor Create(const Connection: IZMySQLConnection;
       const SQL: string; Info: TStrings);
@@ -150,10 +148,10 @@ type
   public
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
-    procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); reintroduce;
-    procedure SetByte(ParameterIndex: Integer; Value: Byte); reintroduce;
-    procedure SetShort(ParameterIndex: Integer; Value: ShortInt); reintroduce;
+    procedure SetBoolean(Index: Integer; Value: Boolean);
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    procedure SetByte(ParameterIndex: Integer; Value: Byte);
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
     procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
     procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
     procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
@@ -186,7 +184,6 @@ type
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const
       StoredProcName: String): TZAbstractPreparedStatement2; override;
-    function SupportsBidirectionalParams: Boolean; override;
   public
     procedure AfterConstruction; override;
   end;
@@ -270,7 +267,8 @@ const MySQLNullIndicatorMatrix: array[Boolean, Boolean] of TIndicator = (
 
 { TZAbstractMySQLPreparedStatement }
 
-procedure TZAbstractMySQLPreparedStatement.CheckParameterIndex(Value: Integer);
+procedure TZAbstractMySQLPreparedStatement.CheckParameterIndex(var Value: Integer);
+var I: Integer;
 begin
   if (FMYSQL_STMT <> nil) and (BindList.Count < Value+1)
   then raise EZSQLException.Create(SInvalidInputParameterCount)
@@ -550,6 +548,8 @@ begin
       Result := NativeResultSet;
     FOpenResultSet := Pointer(Result);
   end;
+  if FLastWasOutParams then
+    FOutParamResultSet := Result;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.PrepareInParameters;
@@ -562,18 +562,17 @@ end;
 procedure TZAbstractMySQLPreparedStatement.RegisterParameter(
   ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
   const Name: String; PrecisionOrSize, Scale: LengthInt);
-var
-  OldCount: Integer;
+var OldCount: Integer;
 begin
   OldCount := BindList.Count;
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
-  FIsFunction := FIsFunction or (ParamType = pctReturn);
+  CheckParameterIndex(ParameterIndex);
   if not FEmulatedParams then begin
     if OldCount <> BindList.Count then
       ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
         OldCount, BindList.Count, 1);
     {$R-}
-    FMYSQL_aligned_BINDs[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].is_null_address^ := 1;
+    FMYSQL_aligned_BINDs[ParameterIndex].is_null_address^ := 1;
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   end;
 end;
@@ -600,16 +599,6 @@ begin
         OldCapacity, BindList.Capacity, 1);
 end;
 
-function TZAbstractMySQLPreparedStatement.AlignParamterIndex2ResultSetIndex(
-  Value: Integer): Integer;
-var I: Integer;
-begin
-  Result := inherited AlignParamterIndex2ResultSetIndex(Value);
-  for i := Value downto 0 do
-    if BindList.ParamTypes[i] in [pctUnknown, pctIn] then
-      Dec(Result);
-end;
-
 procedure TZAbstractMySQLPreparedStatement.BindInParameters;
 var
   P: PAnsiChar;
@@ -628,7 +617,7 @@ begin
           ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP), Self);
     end;
-    if (FPlainDriver.mysql_stmt_bind_param(FMYSQL_STMT, Pointer(FMYSQL_BINDs)) <> 0) then
+    if (FPlainDriver.mysql_stmt_bind_param(FMYSQL_STMT, PAnsichar(FMYSQL_BINDs)+(Ord(BindList.HasReturnParam)*FBindOffset.size)) <> 0) then
       checkMySQLError (FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
         ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
@@ -666,7 +655,6 @@ begin
   inherited UnPrepareInParameters;
   FBindAgain := True;
   FChunkedData := False;
-  FIsFunction := False;
 end;
 
 function TZAbstractMySQLPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
@@ -760,15 +748,11 @@ end;
 }
 function TZAbstractMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
-  RSQL: RawByteString;
   FieldCount: UInt;
-begin
-  PrepareOpenResultSetForReUse;
-  Prepare;
-  BindInParameters;
-  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
-    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute,Self);
+  function ExecuteEmulated: IZResultSet; //use a own method to suppress any LStrClear calls for non emulation
+  var
+    RSQL: RawByteString;
+  begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       FieldCount := FPlainDriver.mysql_field_count(FPMYSQL^);
@@ -782,6 +766,15 @@ begin
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
     Inc(FExecCount, Ord((FMinExecCount2Prepare >= 0) and (FExecCount < FMinExecCount2Prepare)));
     CheckPrepareSwitchMode;
+  end;
+begin
+  PrepareOpenResultSetForReUse;
+  Prepare;
+  BindInParameters;
+  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
+    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute,Self);
+    Result := ExecuteEmulated;
   end else begin
     if (DriverManager <> nil) and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecPrepStmt,Self);
@@ -807,6 +800,8 @@ begin
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
   end;
+  if FTokenMatchIndex = Ord(myCall) then
+    FOutParamResultSet := Result;
 end;
 
 {**
@@ -820,16 +815,10 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
-var
-  RSQL: RawByteString;
-  FieldCount: ULong;
-begin
-  Prepare;
-  BindInParameters;
-  Result := -1;
-  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
-    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute,Self);
+  function ExecEmulated: Integer; //no LStrClear for the RealPrepared's
+  var FieldCount: ULong;
+    RSQL: RawByteString;
+  begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       FieldCount := FplainDriver.mysql_field_count(FPMYSQL^);
@@ -841,20 +830,33 @@ begin
         LastResultSet.BeforeFirst;
       end else
         Result := FPlainDriver.mysql_affected_rows(FPMYSQL^)
-    end else
+    end else begin
+      Result := -1; //satisfy the compiler
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
+    end;
     Inc(FExecCount, Ord((FMinExecCount2Prepare >= 0) and (FExecCount < FMinExecCount2Prepare)));
     CheckPrepareSwitchMode;
+  end;
+var FieldCount: ULong;
+begin
+  Prepare;
+  BindInParameters;
+  Result := -1;
+  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute,Self);
+    Result := ExecEmulated;
   end else begin
-    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
+    if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecPrepStmt,Self);
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FStmtHandleIsExecuted := True;
       FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
       if FieldCount > 0 then begin
         Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
-        //retrieve outparam
-        LastResultSet := CreateResultSet(SQL, 0, FieldCount);
+        if BindList.HasOutOrInOutOrResultParam //retrieve outparam
+        then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
+        else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
       end else
         Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
     end else
@@ -871,8 +873,8 @@ var
 begin
   if FLastWasOutParams and Assigned(FOpenResultSet) then
     IZResultSet(FOpenResultSet).Close;
-  if FLastWasOutParams and Assigned(LastResultSet) then
-    LastResultSet.Close;
+  if FLastWasOutParams and Assigned(FOutParamResultSet) then
+    FOutParamResultSet.Close;
   if (FEmulatedParams or not FStmtHandleIsExecuted) and (FPMYSQL^ <> nil) then
     //old lib's do not have mysql_next_result method
     while Assigned(FPlainDriver.mysql_next_result) do begin
@@ -920,15 +922,11 @@ end;
   @see Statement#execute
 }
 function TZAbstractMySQLPreparedStatement.ExecutePrepared: Boolean;
-var RSQL: RawByteString;
+var
   FieldCount: UInt;
-begin
-  PrepareLastResultSetForReUse;
-  Prepare;
-  BindInParameters;
-  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute,Self);
+  procedure ExecuteEmulated;
+  var RSQL: RawByteString;
+  begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
       FieldCount := FPlainDriver.mysql_field_count(FPMYSQL^);
@@ -938,6 +936,15 @@ begin
     end else CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
     Inc(FExecCount, Ord((FMinExecCount2Prepare >= 0) and (FExecCount < FMinExecCount2Prepare)));
     CheckPrepareSwitchMode;
+  end;
+begin
+  PrepareLastResultSetForReUse;
+  Prepare;
+  BindInParameters;
+  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecute,Self);
+    ExecuteEmulated;
   end else begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecPrepStmt,Self);
@@ -952,6 +959,9 @@ begin
           ConSettings^.ClientCodePage^.CP), Self);
   end;
   Result := Assigned(LastResultSet);
+  if FTokenMatchIndex = Ord(myCall) then
+    FOutParamResultSet := LastResultSet;
+  
 end;
 
 {**
@@ -1144,7 +1154,7 @@ begin
         BindList.Count*Ord(FMYSQL_aligned_BINDs<>nil), NewParamCount, 1);
       if NewParamCount > 0 then begin
         //init types, buffers and move data to buffer
-        BindList.BindValuesToStatement(Self, True);
+        BindList.BindValuesToStatement(Self);
         //releas duplicate data now
         for i := 0 to BindList.Count -1 do
           if not (BindList[i].BindType in [zbtArray, zbtRefArray]) then
@@ -1766,7 +1776,7 @@ begin
   then ToBuff('SELECT ', SQL)
   else ToBuff('CALL ', SQL);
   ToBuff(StoredProcName, SQL);
-  ToBuff('(', SQL);
+  ToBuff(Char('('), SQL);
   for i := 0 to BindList.Count-1 do
     if BindList.ParamTypes[i] <> pctReturn then
       ToBuff('?,', SQL);
@@ -1777,16 +1787,12 @@ begin
   else (P+Length(SQL)-1)^ := ' ';
   if IsFunction then
     SQL := SQL +' as ReturnValue';
-  Result := TZAbstractMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
-  TZAbstractMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
-  TZAbstractMySQLPreparedStatement(Result).InternalRealPrepare;
+  Result := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
+  TZMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
+  TZMySQLPreparedStatement(Result)._AddRef;
+  TZMySQLPreparedStatement(Result).InternalRealPrepare;
+  TZMySQLPreparedStatement(Result).Prepare;
   FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
-  TZAbstractMySQLPreparedStatement(Result)._AddRef;
-end;
-
-function TZMySQLCallableStatement2.SupportsBidirectionalParams: Boolean;
-begin
-  Result := True; //indicate not skipping out-values
 end;
 
 { TZMySQLPreparedStatement }

@@ -64,7 +64,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection,
-  ZOleDB, ActiveX;
+  ZOleDB, ActiveX, ZDbcOleDBMetadata;
 
 type
   {** Implements Ado Metadata. }
@@ -119,6 +119,11 @@ type
 //    function GetTokenizer: IZTokenizer; override;
   end;
 
+  TZAdoDatabaseInfo = Class(TZOleDBDatabaseInfo)
+  public
+    function SupportsArrayBindings: Boolean; override;
+  end;
+
 {$ENDIF ZEOS_DISABLE_ADO}
 implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
@@ -127,7 +132,7 @@ uses
   Variants,
   Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo, ZFastCode,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
-  ZDbcAdoResultSet, ZDbcOleDBMetadata;
+  ZDbcAdoResultSet;
 
 type
   TSuppSchemaRec = record
@@ -158,7 +163,6 @@ var
 
 { TZAdoDatabaseMetadata }
 
-
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
@@ -179,7 +183,7 @@ end;
 }
 function TZAdoDatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
 begin
-  Result := TZOleDBDatabaseInfo.Create(Self);
+  Result := TZAdoDatabaseInfo.Create(Self);
 end;
 
 {**
@@ -1551,5 +1555,12 @@ begin
   end;
 end;
 
+function TZAdoDatabaseInfo.SupportsArrayBindings: Boolean;
+begin
+  Result := False;
+end;
+
 {$ENDIF ZEOS_DISABLE_ADO}
+{ TZAdoDatabaseInfo }
+
 end.

@@ -82,10 +82,8 @@ type
     procedure InitBuffer(SQLType: TZSQLType; OCIBind: PZOCIParamBind; Index, ElementCnt: Cardinal; ActualLength: LengthInt = 0);
     function CreateResultSet: IZResultSet;
     procedure SetBindCapacity(Capacity: Integer); override;
-    procedure CheckParameterIndex(Index: Integer); override;
+    procedure CheckParameterIndex(var Index: Integer); override;
     function GetInParamLogValue(Index: Integer): RawByteString; override;
-    function SupportsBidirectionalParams: Boolean; override;
-    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
@@ -114,10 +112,10 @@ type
     procedure BindUInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF});
     procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
   public
-    procedure SetNull(Index: Integer; SQLType: TZSQLType); reintroduce;
-    procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
-    procedure SetByte(Index: Integer; Value: Byte); reintroduce;
-    procedure SetShort(Index: Integer; Value: ShortInt); reintroduce;
+    procedure SetNull(Index: Integer; SQLType: TZSQLType);
+    procedure SetBoolean(Index: Integer; Value: Boolean);
+    procedure SetByte(Index: Integer; Value: Byte);
+    procedure SetShort(Index: Integer; Value: ShortInt);
     procedure SetWord(Index: Integer; Value: Word); reintroduce;
     procedure SetSmall(Index: Integer; Value: SmallInt); reintroduce;
     procedure SetUInt(Index: Integer; Value: Cardinal); reintroduce;
@@ -149,7 +147,6 @@ type
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const
       StoredProcName: String): TZAbstractPreparedStatement2; override;
-    function SupportsBidirectionalParams: Boolean; override;
     procedure PrepareInParameters; override;
   public
     procedure Unprepare; override;
@@ -184,16 +181,6 @@ var
   OraPreparableTokens: TPreparablePrefixTokens;
 
 { TZAbstractOraclePreparedStatement_A }
-
-function TZAbstractOraclePreparedStatement_A.AlignParamterIndex2ResultSetIndex(
-  Value: Integer): Integer;
-var I: Integer;
-begin
-  Result := inherited AlignParamterIndex2ResultSetIndex(Value);
-  for i := Value downto 0 do
-    if BindList.ParamTypes[i] in [pctUnknown, pctIn] then
-      Dec(Result);
-end;
 
 procedure TZAbstractOraclePreparedStatement_A.BindBinary(Index: Integer;
   SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
@@ -277,7 +264,7 @@ begin
   BindRawStr(Index, Pointer(Value), Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
 end;
 
-procedure TZAbstractOraclePreparedStatement_A.CheckParameterIndex(Index: Integer);
+procedure TZAbstractOraclePreparedStatement_A.CheckParameterIndex(var Index: Integer);
 begin
   if not Prepared then
     Prepare;
@@ -360,6 +347,8 @@ begin
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, ASQL, ConSettings);
     LastUpdateCount := upCnt;
+    if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then
+      FOutParamResultSet := CreateResultSet;
   end;
   inherited ExecutePrepared;
 end;
@@ -384,14 +373,15 @@ begin
     DriverManager.LogMessage(lcBindPrepStmt,Self);
 
   { Executes the statement and gets a resultset. }
-  if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutParams) then begin
+  if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, ASQL, ConSettings);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
-    Result := CreateResultSet
+    Result := CreateResultSet;
+    FOutParamResultSet := Result;
   end else if (FStatementType = OCI_STMT_SELECT)  then
     Result := CreateResultSet
   else begin
@@ -448,8 +438,8 @@ begin
       CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, ASQL, ConSettings);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
-    if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutParams) then
-      LastResultSet := CreateResultSet;
+    if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then
+      FOutParamResultSet := CreateResultSet;
   end;
   Result := LastUpdateCount;
   { logging execution }
@@ -758,11 +748,9 @@ var
 begin
   if SQLType in [stUnicodeString, stUnicodeStream] then
     SQLType := TZSQLType(Ord(SQLType)-1);
+  CheckParameterIndex(ParameterIndex);
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name,
     PrecisionOrSize, Scale);
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex -1;
-  {$ENDIF}
   {$R-}
   Bind := @FOraVariables[ParameterIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
@@ -810,11 +798,6 @@ begin
       FillChar((PAnsichar(FOraVariables)+(OldCapacity*SizeOf(TZOCIParamBind)))^,
         (Capacity-OldCapacity)*SizeOf(TZOCIParamBind), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
   end;
-end;
-
-function TZAbstractOraclePreparedStatement_A.SupportsBidirectionalParams: Boolean;
-begin
-  Result := True;
 end;
 
 procedure TZAbstractOraclePreparedStatement_A.Unprepare;
@@ -962,14 +945,9 @@ var Idx: Integer;
   end;
 begin
   if FProcDescriptor <> nil then begin
-    Idx := {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+    Idx := 0;
     RegisterFromDescriptor(FProcDescriptor, IDX);
   end;
-end;
-
-function TZOracleCallableStatement_A.SupportsBidirectionalParams: Boolean;
-begin
-  Result := True;
 end;
 
 procedure TZOracleCallableStatement_A.Unprepare;

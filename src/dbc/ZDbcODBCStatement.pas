@@ -143,8 +143,7 @@ type
 
     procedure ReallocParamBindings(OldCount, NewCount: Integer);
   protected
-    function SupportsBidirectionalParams: Boolean; override;
-    procedure CheckParameterIndex(Value: Integer); override;
+    procedure CheckParameterIndex(var Value: Integer); override;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -157,8 +156,8 @@ type
 
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
-    procedure SetByte(ParameterIndex: Integer; Value: Byte); reintroduce;
-    procedure SetShort(ParameterIndex: Integer; Value: ShortInt); reintroduce;
+    procedure SetByte(ParameterIndex: Integer; Value: Byte);
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
     procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
     procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
     procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
@@ -204,7 +203,6 @@ type
     fPHDBC: PSQLHDBC;
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; override;
-    function SupportsBidirectionalParams: Boolean; override;
     procedure PrepareInParameters; override;
   public
     constructor Create(const Connection: IZConnection;
@@ -226,7 +224,6 @@ type
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; override;
-    function SupportsBidirectionalParams: Boolean; override;
     procedure PrepareInParameters; override;
   end;
 
@@ -1040,7 +1037,7 @@ begin
     end;
     if not fBindImmediat then begin
       DescribeParameterFromBindList;
-      BindList.BindValuesToStatement(Self, SupportsBidirectionalParams);
+      BindList.BindValuesToStatement(Self);
     end;
   end;
   inherited BindInParameters;
@@ -1153,7 +1150,7 @@ begin
     BindList.Put(Index, stString, Value, CP);
 end;
 
-procedure TZAbstractODBCPreparedStatement.CheckParameterIndex(Value: Integer);
+procedure TZAbstractODBCPreparedStatement.CheckParameterIndex(var Value: Integer);
 begin
   if not Prepared then
     Prepare;
@@ -2325,11 +2322,6 @@ begin
   BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Cardinal(Value))
 end;
 
-function TZAbstractODBCPreparedStatement.SupportsBidirectionalParams: Boolean;
-begin
-  Result:= True;
-end;
-
 {**
   Removes eventual structures for binding input parameters.
 }
@@ -2398,11 +2390,6 @@ begin
     inherited PrepareInParameters;
 end;
 
-function TZODBCCallableStatementW_MSSQL.SupportsBidirectionalParams: Boolean;
-begin
-  Result := True;
-end;
-
 { TZODBCCallableStatementA_MSSQL }
 
 constructor TZODBCCallableStatementA_MSSQL.Create(
@@ -2457,11 +2444,6 @@ begin
     Assert(I-FirstDbcIndex = BindList.Count);
   end else
     inherited PrepareInParameters;
-end;
-
-function TZODBCCallableStatementA_MSSQL.SupportsBidirectionalParams: Boolean;
-begin
-  Result := True;
 end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit

@@ -2441,7 +2441,7 @@ procedure TZMySQL_Store_ResultSet.OpenCursor;
 begin
   inherited OpenCursor;
   if FPMYSQL_STMT^ <> nil then begin
-    if not FIsOutParamResult then begin
+    if not FIsOutParamResult then begin //else we'll get a "Commands out of Sync..." error
       FMYSQL_STMT := FPMYSQL_STMT^;
       if FPlainDriver.mysql_stmt_store_result(FMYSQL_STMT)=0
       then LastRowNo := FPlainDriver.mysql_stmt_num_rows(FMYSQL_STMT)

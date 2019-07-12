@@ -89,12 +89,11 @@ type
     FMaxRowsPerBatch, FMemPerRow: Integer;
     FOrgParamInfos: TZFBOrgXSQLDAInfos;
     FDB_CP_ID: Integer;
-    function ExecuteInternal: ISC_STATUS;
-    function ExceuteBatch: Integer;
+    procedure ExecuteInternal;
+    procedure ExceuteBatch;
   protected
-    procedure CheckParameterIndex(Value: Integer); override;
+    procedure CheckParameterIndex(var Value: Integer); override;
     function GetInParamLogValue(Index: Integer): RawByteString; override;
-    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure AfterClose; override;
@@ -134,10 +133,10 @@ type
       Scale: LengthInt = 0); override;
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
-    procedure SetNull(Index: Integer; {%H-}SQLType: TZSQLType); reintroduce;
-    procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
-    procedure SetByte(Index: Integer; Value: Byte); reintroduce;
-    procedure SetShort(Index: Integer; Value: ShortInt); reintroduce;
+    procedure SetNull(Index: Integer; {%H-}SQLType: TZSQLType);
+    procedure SetBoolean(Index: Integer; Value: Boolean);
+    procedure SetByte(Index: Integer; Value: Byte);
+    procedure SetShort(Index: Integer; Value: ShortInt);
     procedure SetWord(Index: Integer; Value: Word); reintroduce;
     procedure SetSmall(Index: Integer; Value: SmallInt); reintroduce;
     procedure SetUInt(Index: Integer; Value: Cardinal); reintroduce;
@@ -254,12 +253,11 @@ end;
 {**
   execute the dml batch array
 }
-function TZAbstractInterbase6PreparedStatement.ExceuteBatch: Integer;
+procedure TZAbstractInterbase6PreparedStatement.ExceuteBatch;
 var
   AC: Boolean;
   ArrayOffSet: Integer;
 begin
-  Result := 0;
   AC := Connection.GetAutoCommit;
   if AC then
     Connection.SetAutoCommit(False);
@@ -271,13 +269,13 @@ begin
         while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= BatchDMLArrayCount) do begin
           BindSQLDAInParameters(BindList, FBatchStmts[True].Obj,
             ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
-          Result := FBatchStmts[True].Obj.ExecuteInternal;
+          FBatchStmts[True].Obj.ExecuteInternal;
           Inc(ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
         end;
       if (FBatchStmts[False].Obj <> nil) and (ArrayOffSet < BatchDMLArrayCount) then begin
         BindSQLDAInParameters(BindList, FBatchStmts[False].Obj,
           ArrayOffSet, FBatchStmts[False].PreparedRowsOfArray);
-        Result := FBatchStmts[False].Obj.ExecuteInternal;
+        FBatchStmts[False].Obj.ExecuteInternal;
       end;
       if AC then
         Connection.Commit;
@@ -292,22 +290,22 @@ begin
   LastUpdateCount := BatchDMLArrayCount;
 end;
 
-function TZAbstractInterbase6PreparedStatement.ExecuteInternal: ISC_STATUS;
+procedure TZAbstractInterbase6PreparedStatement.ExecuteInternal;
+var iError: ISC_STATUS;
 begin
   if BatchDMLArrayCount = 0 then
     With FIBConnection do begin
       if FStatementType = stExecProc
-      then Result := FPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
+      then iError := FPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
         @FStmtHandle, GetDialect, FParamXSQLDA, FResultXSQLDA.GetData) //expecting out params
-      else Result := FPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
+      else iError := FPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
         @FStmtHandle, GetDialect, FParamXSQLDA); //not expecting a result
-      if Result <> 0 then
+      if iError <> 0 then
         ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver,
           FStatusVector, Self, lcExecute, ASQL);
       LastUpdateCount := GetAffectedRows(FPlainDriver, FStmtHandle, FStatementType, Self);
     end
-  else
-    Result := ExceuteBatch;
+  else ExceuteBatch;
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.ReleaseImmediat(
@@ -319,13 +317,6 @@ begin
     if Assigned(FBatchStmts[b].Obj) then
       FBatchStmts[b].Obj.ReleaseImmediat(Sender, AError);
   inherited ReleaseImmediat(Sender, AError);
-end;
-
-function TZAbstractInterbase6PreparedStatement.AlignParamterIndex2ResultSetIndex(
-  Value: Integer): Integer;
-begin
-  Result := inherited AlignParamterIndex2ResultSetIndex(Value);
-  Result := Result - FParamXSQLDA.sqld;
 end;
 
 {**
@@ -351,12 +342,17 @@ begin
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.CheckParameterIndex(
-  Value: Integer);
+  var Value: Integer);
+var I: Integer;
 begin
   if not Prepared then
     Prepare;
   if (Value<0) or (Value+1 > BindList.Count) then
-    raise EZSQLException.Create(SInvalidInputParameterCount)
+    raise EZSQLException.Create(SInvalidInputParameterCount);
+  if BindList.HasOutOrInOutOrResultParam then
+    for I := 0 to Value do
+      if Ord(BindList[I].ParamType) > Ord(pctInOut) then
+        Dec(Value);
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.AfterClose;
@@ -502,25 +498,22 @@ end;
   @see Statement#execute
 }
 function TZAbstractInterbase6PreparedStatement.ExecutePrepared: Boolean;
-var iError: Integer;
 begin
   Prepare;
   PrepareLastResultSetForReUse;
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
-  iError := ExecuteInternal;
-  Result := not (FStatementType in [stInsert, stDelete, stUpdate, stSelectForUpdate]);
+  ExecuteInternal;
   { Create ResultSet if possible else free Statement Handle }
-  if iError <> DISCONNECT_ERROR then
-    if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FResultXSQLDA.GetFieldCount <> 0) then begin
-      if not Assigned(LastResultSet) then
-        LastResultSet := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
-            FResultXSQLDA, True, CachedLob, FStatementType));
-        FOpenResultSet := Pointer(LastResultSet);
-      end else
-    else
-      LastResultSet := nil;
+  if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FResultXSQLDA.GetFieldCount <> 0) then begin
+    if not Assigned(LastResultSet) then
+      LastResultSet := CreateIBResultSet(SQL, Self,
+        TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+          FResultXSQLDA, True, CachedLob, FStatementType));
+      FOpenResultSet := Pointer(LastResultSet);
+  end else
+    LastResultSet := nil;
+  Result := LastResultSet <> nil;
   inherited ExecutePrepared;
 end;
 
@@ -532,25 +525,24 @@ end;
     query; never <code>null</code>
 }
 function TZAbstractInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
-var
-  iError : Integer; //Check for database disconnect AVZ
 begin
   Prepare;
   PrepareOpenResultSetForReUse;
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
-  iError := ExecuteInternal;
+  ExecuteInternal;
 
-  if (iError <> DISCONNECT_ERROR) then begin
-    if (FStatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
-      if Assigned(FOpenResultSet) then
-        Result := IZResultSet(FOpenResultSet)
-      else begin
-        Result := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
-            FResultXSQLDA, False, CachedLob, FStatementType));
-        FOpenResultSet := Pointer(Result);
-      end
+  if (FResultXSQLDA <> nil) and (FResultXSQLDA.GetFieldCount <> 0) then begin
+    if (FStatementType = stSelect) and Assigned(FOpenResultSet) and not BindList.HasOutOrInOutOrResultParam then
+      Result := IZResultSet(FOpenResultSet)
+    else begin
+      Result := CreateIBResultSet(SQL, Self,
+        TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+          FResultXSQLDA, False, CachedLob, FStatementType));
+    end;
+    if (FStatementType = stExecProc) or BindList.HasOutOrInOutOrResultParam then
+      FOutParamResultSet := Result;
+    FOpenResultSet := Pointer(Result);
   end else begin
     Result := nil;
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -585,10 +577,10 @@ begin
       stExecProc: begin
         { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
-          LastResultSet := CreateIBResultSet(SQL, Self,
+          FOutParamResultSet := CreateIBResultSet(SQL, Self,
             TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
               FResultXSQLDA, True, CachedLob, FStatementType));
-        FOpenResultSet := Pointer(LastResultSet);
+//        FOpenResultSet := Pointer(LastResultSet);
       end;
     end;
   inherited ExecuteUpdatePrepared;
@@ -738,7 +730,7 @@ begin
 
     //alloc space for lobs, arrays, param-types
     if ((FStatementType = stExecProc) and (FResultXSQLDA.GetFieldCount > 0)) or
-       ((FStatementType = stSelect) and (BindList.HasOutParams))
+       ((FStatementType = stSelect) and (BindList.HasOutOrInOutOrResultParam))
     then BindList.SetCount(FParamXSQLDA^.sqld + FResultXSQLDA.GetFieldCount)
     else BindList.SetCount(FParamXSQLDA^.sqld);
 
@@ -911,9 +903,7 @@ procedure TZInterbase6PreparedStatement.SetBoolean(
   Index: Integer; Value: Boolean);
 var XSQLVAR: PXSQLVAR;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
   CheckParameterIndex(Index);
   {$R-}
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];

@@ -189,12 +189,12 @@ const
 type
   ExecuteOptionEnum = TOleEnum;
 const
-  adOptionUnspecified = $FFFFFFFF;
+  adOptionUnspecified = Integer(-1);//$FFFFFFFF;
   adAsyncExecute = $00000010;
   adAsyncFetch = $00000020;
   adAsyncFetchNonBlocking = $00000040;
   adExecuteNoRecords = $00000080;
-  adExecuteStream = $00000400;
+  adExecuteStream = 256;//$00000400;
   adExecuteRecord = $00000800;
 
 // Constants for enum ConnectOptionEnum

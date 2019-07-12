@@ -372,9 +372,7 @@ function TZAdoConnection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
-  if GetMetadata.GetDatabaseInfo.SupportsParameterBinding
-  then Result := TZAdoPreparedStatement.Create(Self, SQL, Info)
-  else Result := TZAdoEmulatedPreparedStatement.Create(Self, SQL, Info)
+  Result := TZAdoPreparedStatement.Create(Self, SQL, Info)
 end;
 
 {**
@@ -407,7 +405,7 @@ function TZAdoConnection.CreateCallableStatement(const SQL: string; Info: TStrin
   IZCallableStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoCallableStatement.Create(Self, SQL, Info);
+  Result := TZAdoCallableStatement2.Create(Self, SQL, Info);
 end;
 
 {**

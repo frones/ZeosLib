@@ -240,7 +240,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -248,13 +248,10 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
-  S := StoredProc.ParamByName('P4').AsString +
-    ' ' + StoredProc.ParamByName('P5').AsString;
   StoredProc.Open;
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -270,7 +267,7 @@ end;
 }
 function TZTestDbLibStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'sybase, mssql';
+  Result := 'sybase, mssql,OleDB';
 end;
 
 {**
@@ -549,7 +546,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -557,8 +554,7 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
@@ -1166,9 +1162,7 @@ begin
   CheckEquals(3, ord(StoredProc.Fields.Count));
   CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
   CheckEquals('@RETURN_VALUE', StoredProc.Fields[0].FieldName);
-  if Protocol = 'ado'
-  then CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[1].DataType))
-  else CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType)); //oledb correctly describes the params
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType)); //oledb correctly describes the params
   CheckEquals('@p4', StoredProc.Fields[1].FieldName);
   CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
   CheckEquals('@p5', StoredProc.Fields[2].FieldName);
