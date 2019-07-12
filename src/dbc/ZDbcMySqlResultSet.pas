@@ -368,14 +368,15 @@ begin
       if Bind^.is_null = 1 then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
-            JSONWriter.AddString(JSONWriter.ColNames[I]);
+            JSONWriter.AddString(JSONWriter.ColNames[C]);
             JSONWriter.AddShort('null,')
-          end;
+          end else
+            Continue;
         end else
           JSONWriter.AddShort('null,')
       else begin
         if JSONWriter.Expand then
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddString(JSONWriter.ColNames[C]);
         case Bind^.buffer_type_address^ of
           //FIELD_TYPE_DECIMAL,
           FIELD_TYPE_TINY       : if Bind^.is_unsigned_address^ = 0
@@ -515,14 +516,15 @@ begin
       if P = nil then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
-            JSONWriter.AddString(JSONWriter.ColNames[I]);
+            JSONWriter.AddString(JSONWriter.ColNames[C]);
             JSONWriter.AddShort('null,')
-          end;
+          end else
+            Continue;
         end else
           JSONWriter.AddShort('null,')
       else begin
         if JSONWriter.Expand then
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddString(JSONWriter.ColNames[C]);
         case Bind.buffer_type_address^ of
           FIELD_TYPE_DECIMAL,
           FIELD_TYPE_TINY,
@@ -538,7 +540,7 @@ begin
           FIELD_TYPE_TIMESTAMP,
           FIELD_TYPE_DATETIME   : begin
                                     JSONWriter.Add('"');
-                                    if PWord(P)^ < ValidCenturyMagic then //Year below 1900
+                                    if PCardinal(P)^ <> ZeroYearMagic then
                                       inc(P, 11)
                                     else begin
                                       JSONWriter.AddNoJSONEscape(P, 10);
@@ -553,7 +555,7 @@ begin
           FIELD_TYPE_DATE,
           FIELD_TYPE_NEWDATE    : begin
                                     JSONWriter.Add('"');
-                                    if not PWord(P)^ < ValidCenturyMagic then //Year below 1900 then
+                                    if not PCardinal(P)^ <> ZeroYearMagic then
                                       JSONWriter.AddNoJSONEscape(P, 10);
                                     JSONWriter.Add('"');
                                   end;

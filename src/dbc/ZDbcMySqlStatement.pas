@@ -268,7 +268,6 @@ const MySQLNullIndicatorMatrix: array[Boolean, Boolean] of TIndicator = (
 { TZAbstractMySQLPreparedStatement }
 
 procedure TZAbstractMySQLPreparedStatement.CheckParameterIndex(var Value: Integer);
-var I: Integer;
 begin
   if (FMYSQL_STMT <> nil) and (BindList.Count < Value+1)
   then raise EZSQLException.Create(SInvalidInputParameterCount)
