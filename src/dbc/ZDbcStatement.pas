@@ -350,7 +350,7 @@ type
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = EmptyRaw);
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
-    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer;
+    function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
   protected //Properties
     property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount write FBatchDMLArrayCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
@@ -364,8 +364,6 @@ type
     procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); virtual;
     procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); virtual;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); virtual;
-    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Int64); virtual;
-    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: UInt64); virtual;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
     destructor Destroy; override;
@@ -395,12 +393,6 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual; abstract;
 
-    procedure SetWord(ParameterIndex: Integer; Value: Word); virtual;
-    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); virtual;
-    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); virtual;
-    procedure SetInt(ParameterIndex: Integer; Value: Integer); virtual;
-    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); virtual;
-    procedure SetLong(ParameterIndex: Integer; const Value: Int64); virtual;
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
@@ -529,6 +521,8 @@ type
     FStoredProcName: String;
     FBindAgain: array[TZCallExecKind] of Boolean;
     FCharRec: TZCharRec;
+    procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Integer);
+    procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; const Value: Cardinal);
   protected
     FCallExecKind: TZCallExecKind;
     FExecStatements: array[TZCallExecKind] of TZAbstractPreparedStatement2;
@@ -576,6 +570,12 @@ type
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64);
   public
     function GetResultSet: IZResultSet; override;
     function GetUpdateCount: Integer; override;
@@ -4442,7 +4442,7 @@ begin
     FBindList.Capacity := Capacity;
 end;
 
-function TZAbstractPreparedStatement2.AlignParamterIndex2ResultSetIndex(
+function TZAbstractPreparedStatement2.ParamterIndex2ResultSetIndex(
   Value: Integer): Integer;
 var I: Integer;
 begin
@@ -4534,26 +4534,6 @@ procedure TZAbstractPreparedStatement2.BindInParameters;
 begin
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
-end;
-
-{**
-  Binds a signed long
-}
-procedure TZAbstractPreparedStatement2.BindSignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: Int64);
-begin
-  CheckParameterIndex(Index);
-  FBindList.Put(Index, SQLType, P8Bytes(@Value));
-end;
-
-{**
-  Binds a unsigned long
-}
-procedure TZAbstractPreparedStatement2.BindUnsignedOrdinal(Index: Integer;
-  SQLType: TZSQLType; const Value: UInt64);
-begin
-  CheckParameterIndex(Index);
-  FBindList.Put(Index, SQLType, P8Bytes(@Value));
 end;
 
 procedure TZAbstractPreparedStatement2.CheckParameterIndex(var Value: Integer);
@@ -4806,7 +4786,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetBigDecimal(Index: Integer;
   var Result: TBCD);
 begin
-  fOutParamResultSet.GetBigDecimal(AlignParamterIndex2ResultSetIndex(Index), Result);
+  fOutParamResultSet.GetBigDecimal(ParamterIndex2ResultSetIndex(Index), Result);
   if (BindList.ParamTypes[Index] = pctInOut) then
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
 end;
@@ -4822,7 +4802,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetBytes(Index: Integer;
   out Buf: Pointer; out Len: LengthInt);
 begin
-  BindList.Put(Index, stBytes, fOutParamResultSet.GetBytes(AlignParamterIndex2ResultSetIndex(Index)));
+  BindList.Put(Index, stBytes, fOutParamResultSet.GetBytes(ParamterIndex2ResultSetIndex(Index)));
   Buf := BindList[Index].Value;
   Len := Length(TBytes(BindList[Index].Value));
   if BindList.ParamTypes[Index] = pctInOut then
@@ -4837,7 +4817,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetCurrency(Index: Integer;
   out Result: Currency);
 begin
-  Result := fOutParamResultSet.GetCurrency(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.GetCurrency(ParamterIndex2ResultSetIndex(Index));
   if (BindList.ParamTypes[Index] = pctInOut) then
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
 end;
@@ -4845,7 +4825,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetDateTime(Index: Integer;
   out Result: TDateTime);
 begin
-  Result := fOutParamResultSet.GetTimestamp(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.GetTimestamp(ParamterIndex2ResultSetIndex(Index));
   if (BindList.ParamTypes[Index] = pctInOut) then
     case BindList.SQLTypes[Index] of
       stTime: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTime(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
@@ -4857,7 +4837,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetDouble(Index: Integer;
   out Result: Double);
 begin
-  Result := fOutParamResultSet.GetDouble(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.GetDouble(ParamterIndex2ResultSetIndex(Index));
   if (BindList.ParamTypes[Index] = pctInOut) then
     if BindList.SQLTypes[Index] = stFloat
     then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetFloat(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
@@ -4911,7 +4891,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetLob(Index: Integer;
   out Result: IZBlob);
 begin
-  Result := fOutParamResultSet.GetBlob(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.GetBlob(ParamterIndex2ResultSetIndex(Index));
   if BindList.ParamTypes[Index] = pctInOut then
     BindLob(Index, BindList.SQLTypes[Index], Result);
 end;
@@ -4919,7 +4899,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetOrdinal(Index: Integer;
   out Result: UInt64);
 begin
-  Result := fOutParamResultSet.GetULong(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.GetULong(ParamterIndex2ResultSetIndex(Index));
   if (BindList.ParamTypes[Index] = pctInOut) then
     case BindList.SQLTypes[Index] of
       stByte: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetByte(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
@@ -4936,7 +4916,7 @@ var
 begin
   if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
      not ConSettings.ClientCodePage.IsStringFieldCPConsistent then begin
-    Buf := fOutParamResultSet.GetPWideChar(AlignParamterIndex2ResultSetIndex(Index), L);
+    Buf := fOutParamResultSet.GetPWideChar(ParamterIndex2ResultSetIndex(Index), L);
     if BindList.ParamTypes[Index] = pctInOut then begin
       System.SetString(FUniTemp, PWideChar(Buf), L);
       IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FUniTemp);
@@ -4953,7 +4933,7 @@ begin
       else Buf := Pointer(FRawTemp);
     end;
   end else begin
-    Buf := fOutParamResultSet.GetPAnsiChar(AlignParamterIndex2ResultSetIndex(Index), L);
+    Buf := fOutParamResultSet.GetPAnsiChar(ParamterIndex2ResultSetIndex(Index), L);
     Len := L;
     if BindList.ParamTypes[Index] = pctInOut then begin
       ZSetString(Buf, l, fRawTemp);
@@ -4996,7 +4976,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetOrdinal(Index: Integer;
   out Result: Int64);
 begin
-  Result := fOutParamResultSet.GetLong(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.GetLong(ParamterIndex2ResultSetIndex(Index));
   if (BindList.ParamTypes[Index] = pctInOut) then
     case BindList.SQLTypes[Index] of
       stShort: IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetShort(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
@@ -5016,7 +4996,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetBoolean(Index: Integer;
   out Result: Boolean);
 begin
-  Result := fOutParamResultSet.GetBoolean(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.GetBoolean(ParamterIndex2ResultSetIndex(Index));
   if (BindList.ParamTypes[Index] = pctInOut) then
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBoolean(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
@@ -5032,7 +5012,7 @@ end;
 procedure TZAbstractPreparedStatement2.GetTimeStamp(Index: Integer;
   out Result: TZTimeStamp);
 begin
-  AlignParamterIndex2ResultSetIndex(Index);
+  ParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
 end;
 
@@ -5047,7 +5027,7 @@ end;
 }
 function TZAbstractPreparedStatement2.IsNull(Index: Integer): Boolean;
 begin
-  Result := fOutParamResultSet.IsNull(AlignParamterIndex2ResultSetIndex(Index));
+  Result := fOutParamResultSet.IsNull(ParamterIndex2ResultSetIndex(Index));
   if Result and (BindList.ParamTypes[Index] = pctInOut) then
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindList.SQLTypes[Index]);
 end;
@@ -5332,33 +5312,6 @@ begin
   FBindList.SetCount(NewParamCount);
 end;
 
-{**
-  Sets the designated parameter to a Java <code>int</code> value.
-  The driver converts this
-  to an SQL <code>INTEGER</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement2.SetInt(ParameterIndex, Value: Integer);
-begin
-  BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
-end;
-
-{**
-  Sets the designated parameter to a Java <code>long</code> value.
-  The driver converts this
-  to an SQL <code>BIGINT</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement2.SetLong(ParameterIndex: Integer;
-  const Value: Int64);
-begin
-  BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
-end;
-
 procedure TZAbstractPreparedStatement2.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType);
 var BindValue: PZBindValue;
@@ -5446,20 +5399,6 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>SmallInt</code> value.
-  The driver converts this
-  to an SQL <code>SMALLINT</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement2.SetSmall(ParameterIndex: Integer;
-  Value: SmallInt);
-begin
-  BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
-end;
-
-{**
   Sets the designated parameter to a <code>java.sql.Time</code> value.
   The driver converts this to an SQL <code>TIME</code> value
   when it sends it to the database.
@@ -5485,36 +5424,6 @@ procedure TZAbstractPreparedStatement2.SetTimestamp(ParameterIndex: Integer;
   const Value: TDateTime);
 begin
   BindDateTime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
-end;
-
-{**
-  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
-  The driver converts this
-  to an SQL <code>INTEGER</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-procedure TZAbstractPreparedStatement2.SetUInt(ParameterIndex: Integer;
-  Value: Cardinal);
-begin
-  BindUnsignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord, Value);
-end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-
-{**
-  Sets the designated parameter to a Java <code>unsigned long long</code> value.
-  The driver converts this
-  to an SQL <code>BIGINT</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement2.SetULong(ParameterIndex: Integer;
-  const Value: UInt64);
-begin
-  BindUnsignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value);
 end;
 
 {**
@@ -5581,22 +5490,6 @@ begin
     else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(ParameterIndex, stUnknown);
   end;
 end;
-
-{**
-  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
-  The driver converts this
-  to an SQL <code>WORD</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-procedure TZAbstractPreparedStatement2.SetWord(ParameterIndex: Integer;
-  Value: Word);
-begin
-  BindUnsignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Value);
-end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZAbstractPreparedStatement2.SetWSQL(const Value: ZWideString);
 begin
@@ -6100,6 +5993,20 @@ begin
   if (FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] <> FExecStatements[FCallExecKind]) and
      (FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] <> nil) then
     Bindlist.BindValuesToStatement(FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)]);
+end;
+
+procedure TZAbstractCallableStatement2.BindSignedOrdinal(Index: Integer;
+  SQLType: TZSQLType; const Value: Integer);
+begin
+  CheckParameterIndex(Index);
+  FBindList.Put(Index, SQLType, P4Bytes(@Value));
+end;
+
+procedure TZAbstractCallableStatement2.BindUnsignedOrdinal(Index: Integer;
+  SQLType: TZSQLType; const Value: Cardinal);
+begin
+  CheckParameterIndex(Index);
+  FBindList.Put(Index, SQLType, P4Bytes(@Value));
 end;
 
 {**
@@ -6783,6 +6690,35 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
+  Sets the designated parameter to a Java <code>int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractCallableStatement2.SetInt(ParameterIndex, Value: Integer);
+begin
+  BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractCallableStatement2.SetLong(ParameterIndex: Integer;
+  const Value: Int64);
+begin
+  {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  FBindList.Put(ParameterIndex, stLong, P8Bytes(@Value));
+end;
+
+{**
   Sets the designated parameter to SQL <code>NULL</code>.
   <P><B>Note:</B> You must specify the parameter's SQL type.
 
@@ -6811,6 +6747,66 @@ procedure TZAbstractCallableStatement2.SetShort(ParameterIndex: Integer;
   Value: ShortInt);
 begin
   BindSignedOrdinal(ParameterIndex, stShort, Value);
+end;
+
+
+{**
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  The driver converts this
+  to an SQL <code>SMALLINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractCallableStatement2.SetSmall(ParameterIndex: Integer;
+  Value: SmallInt);
+begin
+  BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractCallableStatement2.SetUInt(ParameterIndex: Integer;
+  Value: Cardinal);
+begin
+  BindUnsignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>unsigned long long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractCallableStatement2.SetULong(ParameterIndex: Integer;
+  const Value: UInt64);
+begin
+  {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  FBindList.Put(ParameterIndex, stULong, P8Bytes(@Value));
+end;
+
+
+{**
+  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
+  The driver converts this
+  to an SQL <code>WORD</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractCallableStatement2.SetWord(ParameterIndex: Integer;
+  Value: Word);
+begin
+  BindUnsignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Value);
 end;
 
 procedure TZAbstractCallableStatement2.Unprepare;
