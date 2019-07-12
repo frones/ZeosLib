@@ -68,11 +68,6 @@ const
   ZEOS_VERSION = Char(48+ZEOS_MAJOR_VERSION)+'.'+
                  Char(48+ZEOS_MINOR_VERSION)+'.'+
                  Char(48+ZEOS_SUB_VERSION)+'-'+ZEOS_STATUS;
-{$IFDEF ENABLE_POOLED}
-  {Pooled Protocol Prefix, including final dot}
-  PooledPrefix = 'pooled.'+ZEOS_VERSION;
-{$ENDIF}
-
 
 type
   {$IFDEF OLDFPC}

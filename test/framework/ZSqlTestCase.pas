@@ -341,7 +341,7 @@ const
 implementation
 
 uses
-  Math,
+  Math, {$IFDEF ENABLE_POOLED}ZDbcPooled,{$ENDIF}
   ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset, ZDbcProperties;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;

@@ -218,6 +218,11 @@ type
     destructor Destroy; override;
   end;
 
+{$IFDEF ENABLE_POOLED}
+  {Pooled Protocol Prefix, including final dot}
+const  PooledPrefix = 'pooled.';
+{$ENDIF}
+
 {$ENDIF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_POOLED} //if set we have an empty unit
