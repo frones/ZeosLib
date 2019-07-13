@@ -340,6 +340,7 @@ type
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
+    procedure PrepareOpenResultSetForReUse; override;
 
     procedure ValidateArraySizeAndType(const Value: Pointer; SQLType: TZSQLType;
       VariantType: TZVariantType; ParamIndex: Integer);
@@ -5068,6 +5069,20 @@ end;
 }
 procedure TZAbstractPreparedStatement2.PrepareInParameters;
 begin
+end;
+
+procedure TZAbstractPreparedStatement2.PrepareOpenResultSetForReUse;
+begin
+  inherited PrepareOpenResultSetForReUse;
+  if Assigned(FOutParamResultSet) and (Pointer(FOutParamResultSet) <> FOpenResultSet) then
+    if not FOutParamResultSet.IsClosed and
+       (FOutParamResultSet.GetConcurrency = GetResultSetConcurrency) and
+       (FOutParamResultSet.GetFetchDirection = GetFetchDirection) then
+      FOutParamResultSet.ResetCursor
+    else begin
+      FOutParamResultSet.Close;
+      FOpenResultSet := nil;
+    end;
 end;
 
 {**

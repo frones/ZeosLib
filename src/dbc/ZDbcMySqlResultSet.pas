@@ -1492,9 +1492,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}Dec(ColumnIndex);{$ENDIF}
   {$R-}
   ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}

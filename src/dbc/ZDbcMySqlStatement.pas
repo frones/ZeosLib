@@ -177,7 +177,7 @@ type
     constructor Create(const Connection: IZMySQLConnection; Info: TStrings);
   end;
 
-  TZMySQLCallableStatement2 = class(TZAbstractCallableStatement_A,
+  TZMySQLCallableStatement56up = class(TZAbstractCallableStatement_A,
     IZCallableStatement{, IZParamNamedCallableStatement})
   private
     FPlainDriver: TZMySQLPLainDriver;
@@ -547,7 +547,7 @@ begin
       Result := NativeResultSet;
     FOpenResultSet := Pointer(Result);
   end;
-  if FLastWasOutParams then
+  if FLastWasOutParams or BindList.HasOutOrInOutOrResultParam then
     FOutParamResultSet := Result;
 end;
 
@@ -730,10 +730,13 @@ begin
         end;
       FIELD_TYPE_YEAR:
         Result := IntToRaw(PWord(Bind^.buffer_address^)^);
+      FIELD_TYPE_NEWDECIMAL:
+        ZSetString(PAnsiChar(Bind^.buffer), Bind^.length[0], Result);
       FIELD_TYPE_STRING:
           Result := SQLQuotedStr(PAnsiChar(Bind^.buffer), Bind^.length[0], {$IFDEF NO_ANSICHAR}Ord{$ENDIF}(#39));
       FIELD_TYPE_TINY_BLOB,
-      FIELD_TYPE_BLOB: Result := '(Blob)'
+      FIELD_TYPE_BLOB: Result := '(Blob)';
+      else Result := '(unknown)';
     end;
   end;
 end;
@@ -872,8 +875,8 @@ var
 begin
   if FLastWasOutParams and Assigned(FOpenResultSet) then
     IZResultSet(FOpenResultSet).Close;
-  if FLastWasOutParams and Assigned(FOutParamResultSet) then
-    FOutParamResultSet.Close;
+  if Assigned(FOutParamResultSet) then
+    FOutParamResultSet.ResetCursor;
   if (FEmulatedParams or not FStmtHandleIsExecuted) and (FPMYSQL^ <> nil) then
     //old lib's do not have mysql_next_result method
     while Assigned(FPlainDriver.mysql_next_result) do begin
@@ -1755,15 +1758,15 @@ begin
   FInitial_emulate_prepare := True;
 end;
 
-{ TZMySQLCallableStatement2 }
+{ TZMySQLCallableStatement56up }
 
-procedure TZMySQLCallableStatement2.AfterConstruction;
+procedure TZMySQLCallableStatement56up.AfterConstruction;
 begin
   inherited AfterConstruction;
   FPlainDriver := TZMySQLPLainDriver(Connection.GetIZPlainDriver.GetInstance);
 end;
 
-function TZMySQLCallableStatement2.CreateExecutionStatement(Mode: TZCallExecKind;
+function TZMySQLCallableStatement56up.CreateExecutionStatement(Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var
   I: Integer;
@@ -1771,8 +1774,8 @@ var
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
 begin
   SQL := '';
-  if IsFunction
-  then ToBuff('SELECT ', SQL)
+  if IsFunction //see http://ftp.nchu.edu.tw/MySQL/doc/refman/4.1/en/sql-syntax-prepared-statements.html
+  then ToBuff('SELECT ', SQL) //EH: How todo a SET ? = function ??
   else ToBuff('CALL ', SQL);
   ToBuff(StoredProcName, SQL);
   ToBuff(Char('('), SQL);
