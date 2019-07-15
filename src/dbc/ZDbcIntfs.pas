@@ -715,57 +715,436 @@ type
   IZStatement = interface(IZInterface)
     ['{22CEFA7E-6A6D-48EC-BB9B-EE66056E90F1}']
 
+    /// <summary>
+    ///  Executes an SQL statement that returns a single <c>ResultSet</c> object.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>SELECT</c> statement
+    /// </param>
+    /// <returns>
+    ///  a <c>ResultSet</c> object that contains the data produced by the
+    ///  given query; never <c>nil</c>
+    /// </returns>
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload;
+    /// <summary>
+    ///  Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <c>INSERT</c>, <c>UPDATE</c>
+    ///  or <c>DELETE</c> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function ExecuteUpdate(const SQL: ZWideString): Integer; overload;
+    /// <summary>
+    ///  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    ///  or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function Execute(const SQL: ZWideString): Boolean; overload;
+    /// <summary>
+    ///  Executes an SQL statement that returns a single <c>ResultSet</c> object.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>SELECT</c> statement
+    /// </param>
+    /// <returns>
+    ///  a <c>ResultSet</c> object that contains the data produced by the
+    ///  given query; never <c>nil</c>
+    /// </returns>
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload;
+    /// <summary>
+    ///  Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <c>INSERT</c>, <c>UPDATE</c>
+    ///  or <c>DELETE</c> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload;
+    /// <summary>
+    ///  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    ///  or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function Execute(const SQL: RawByteString): Boolean; overload;
 
+    /// <summary>
+    ///  get the current SQL string
+    /// </summary>
     function GetSQL : String;
 
+    /// <summary>
+    ///  Releases this <c>Statement</c> object's database
+    ///  resources immediately instead of waiting for
+    ///  this to happen when it is automatically closed.
+    ///  It is generally good practice to release resources as soon as
+    ///  you are finished with them to avoid tying up database
+    ///  resources.
+    ///  <para><b>Note:</b> A <c>Statement</c> object is automatically closed when its
+    ///    reference counter becomes zero. When a <c>Statement</c> object is closed, its current
+    ///    <c>ResultSet</c> object, if one exists, is also closed.
+    ///  </para>
+    /// </summary>
     procedure Close;
     function IsClosed: Boolean;
 
+    /// <summary>
+    ///  Returns the maximum number of bytes allowed
+    ///  for any column value.
+    ///  This limit is the maximum number of bytes that can be
+    ///  returned for any column value.
+    ///  The limit applies only to <c>BINARY</c>,
+    ///  <c>VARBINARY</c>, <c>LONGVARBINARY</c>, <c>CHAR</c>, <c>VARCHAR</c>, and <c>LONGVARCHAR</c>
+    ///  columns.  If the limit is exceeded, the excess data is silently
+    ///  discarded.
+    /// </summary>
+    /// <returns>
+    ///  the current max column size limit; zero means unlimited
+    /// </returns>
     function GetMaxFieldSize: Integer;
+    /// <summary>
+    ///  Sets the limit for the maximum number of bytes in a column to
+    ///  the given number of bytes.  This is the maximum number of bytes
+    ///  that can be returned for any column value.  This limit applies
+    ///  only to <c>BINARY</c>, <c>VARBINARY</c>,
+    ///  <c>LONGVARBINARY</c>, <c>CHAR</c>, <c>VARCHAR</c>, and
+    ///  <c>LONGVARCHAR</c> fields.  If the limit is exceeded, the excess data
+    ///  is silently discarded. For maximum portability, use values
+    ///  greater than 256.
+    /// </summary>
+    /// <param name="Value">
+    ///  the new max column size limit; zero means unlimited
+    /// </param>
     procedure SetMaxFieldSize(Value: Integer);
+    /// <summary>
+    ///  Retrieves the maximum number of rows that a
+    ///  <c>ResultSet</c> object can contain.  If the limit is exceeded, the excess
+    ///  rows are silently dropped.
+    /// </summary>
+    /// <returns>
+    ///  the current max row limit; zero means unlimited
+    /// </returns>
     function GetMaxRows: Integer;
+    /// <summary>
+    ///  Sets the limit for the maximum number of rows that any
+    ///  <c>ResultSet</c> object can contain to the given number.
+    ///  If the limit is exceeded, the excess rows are silently dropped.
+    /// </summary>
+    /// <param name="Value">
+    ///  the new max rows limit; zero means unlimited
+    /// </param>
     procedure SetMaxRows(Value: Integer);
+    /// <summary>
+    ///  Retrieves the number of seconds the driver will
+    ///  wait for a <c>Statement</c> object to execute. If the limit is exceeded, a
+    ///  <c>SQLException</c> is thrown.
+    /// </summary>
+    /// <returns>
+    ///  the current query timeout limit in seconds; zero means unlimited
+    /// </returns>
     function GetQueryTimeout: Integer;
+    /// <summary>
+    ///  Sets the number of seconds the driver will
+    ///  wait for a <c>Statement</c> object to execute to the given number of seconds.
+    ///  If the limit is exceeded, an <c>SQLException</c> is thrown.
+    /// </summary>
+    /// <param name="Value">
+    ///  the new query timeout limit in seconds; zero means unlimited
+    /// </param>
     procedure SetQueryTimeout(Value: Integer);
+    /// <summary>
+    ///  Cancels this <c>Statement</c> object if both the DBMS and
+    ///  driver support aborting an SQL statement.
+    ///  This method can be used by one thread to cancel a statement that
+    ///  is being executed by another thread.
+    /// </summary>
     procedure Cancel;
+    /// <summary>
+    ///  Defines the SQL cursor name that will be used by
+    ///  subsequent <c>Statement</c> object <c>execute</c> methods.
+    ///  This name can then be
+    ///  used in SQL positioned update / delete statements to identify the
+    ///  current row in the <c>ResultSet</c> object generated by this statement.  If
+    ///  the database doesn't support positioned update/delete, this
+    ///  method is a noop.  To insure that a cursor has the proper isolation
+    ///  level to support updates, the cursor's <c>SELECT</c> statement should be
+    ///  of the form 'select for update ...'. If the 'for update' phrase is
+    ///  omitted, positioned updates may fail.
+    ///  <note>
+    ///   <para><B>Note:</B> By definition, positioned update/delete
+    ///   execution must be done by a different <c>Statement</c> object than the one
+    ///   which generated the <c>ResultSet</c> object being used for positioning. Also,
+    ///   cursor names must be unique within a connection.</para>
+    ///  </note>
+    /// </summary>
+    /// <param name="Value">
+    ///    the new cursor name, which must be unique within a connection
+    /// </param>
     procedure SetCursorName(const Value: String);
 
+    /// <summary>
+    ///  Returns the current result as a <c>ResultSet</c> object.
+    ///  This method should be called only once per result.
+    /// </summary>
+    /// <returns>
+    ///  the current result as a <c>ResultSet</c> object;
+    ///  <c>nil</c> if the result is an update count or there are no more results
+    /// </returns>
+    /// <seealso cref="Execute">Execute</seealso>
     function GetResultSet: IZResultSet;
+    /// <summary>
+    ///  Returns the current result as an update count;
+    ///  if the result is a <c>ResultSet</c> object or there are no more results, -1
+    ///  is returned. This method should be called only once per result.
+    /// </summary>
+    /// <returns>
+    ///  the current result as an update count; -1 if the current result is a
+    ///  <c>ResultSet</c> object or there are no more results
+    /// </returns>
+    /// <seealso cref="Execute">Execute</seealso>
     function GetUpdateCount: Integer;
+    /// <summary>
+    ///  Moves to a <c>Statement</c> object's next result.  It returns
+    ///  <c>true</c> if this result is a <c>ResultSet</c> object.
+    ///  This method also implicitly closes any current <c>ResultSet</c>
+    ///  object obtained with the method <c>getResultSet</c>.
+    ///
+    ///  <para>There are no more results when the following is true:
+    ///  <code>(not getMoreResults and (getUpdateCount = -1)</code>
+    ///  </para>
+    /// </summary>
+    /// <returns>
+    ///  <c>true</c> if the next result is a <c>ResultSet</c> object;
+    ///  <c>false</c> if it is an update count or there are no more results
+    /// </returns>
+    /// <seealso cref="Execute">Execute</seealso>
     function GetMoreResults: Boolean;
 
+    /// <summary>
+    ///  Gives the driver a hint as to the direction in which
+    ///  the rows in a result set
+    ///  will be processed. The hint applies only to result sets created
+    ///  using this <c>Statement</c> object.  The default value is
+    ///  <c>fdForward</c>.
+    ///  <para>Note that this method sets the default fetch direction for
+    ///  result sets generated by this <c>Statement</c> object.
+    ///  Each result set has its own methods for getting and setting
+    ///  its own fetch direction.</para>
+    /// </summary>
+    /// <param name="Value">
+    ///  the initial direction for processing rows
+    /// </param>
     procedure SetFetchDirection(Value: TZFetchDirection);
+    /// <summary>
+    ///  Retrieves the direction for fetching rows from
+    ///  database tables that is the default for result sets
+    ///  generated from this <c>Statement</c> object.
+    ///  If this <c>Statement</c> object has not set
+    ///  a fetch direction by calling the method <c>setFetchDirection</c>,
+    ///  the return value is implementation-specific.
+    /// </summary>
+    /// <returns>
+    ///  the default fetch direction for result sets generated
+    ///  from this <c>Statement</c> object
+    /// </returns>
     function GetFetchDirection: TZFetchDirection;
-    procedure SetFetchSize(Value: Integer);
-    function GetFetchSize: Integer;
 
+    /// <summary>
+    ///  Gives the DBC driver a hint as to the number of rows that should
+    ///  be fetched from the database when more rows are needed.  The number
+    ///  of rows specified affects only result sets created using this
+    ///  statement. If the value specified is zero, then the hint is ignored.
+    ///  The default value is zero.
+    ///  <para><b>Note:</b> Most drivers will ignore this.</para>
+    /// </summary>
+    /// <param name="Value">
+    ///  the number of rows to fetch
+    /// </param>
+    procedure SetFetchSize(Value: Integer);
+    /// <summary>
+    ///  Retrieves the number of result set rows that is the default
+    ///  fetch size for result sets
+    ///  generated from this <c>Statement</c> object.
+    ///  If this <c>Statement</c> object has not set
+    ///  a fetch size by calling the method <c>setFetchSize</c>,
+    ///  the return value is implementation-specific.
+    ///  <para><b>Note:</b> Most drivers will ignore this.</para>
+    /// </summary>
+    /// <returns>
+    ///  the default fetch size for result sets generated
+    ///  from this <c>Statement</c> object
+    /// </returns>
+    function GetFetchSize: Integer;
+    /// <summary>
+    ///  Sets a result set concurrency for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <param name="Value">
+    ///  either <c>rcReadOnly</code> or
+    ///  <code>rcUpdateable</code>
+    /// </param>
     procedure SetResultSetConcurrency(Value: TZResultSetConcurrency);
+    /// <summary>
+    ///  Retrieves the result set concurrency for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <returns>
+    ///  either <c>rcReadOnly</c> or
+    ///  <c>rcUpdateable</c>
+    /// </returns>
     function GetResultSetConcurrency: TZResultSetConcurrency;
+    /// <summary>
+    ///  Sets a result set type for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <param name="Value">
+    ///  one of <c>rtForwardOnly</c>,
+    ///  <c>rtScrollInsensitive</c>, or
+    ///  <c>rtScrollSensitive</c>
+    /// </param>
     procedure SetResultSetType(Value: TZResultSetType);
+    /// <summary>
+    ///  Retrieves the result set type for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <returns>
+    ///  one of <c>rcForwardOnly</c>,
+    ///  <c>rcScrollInsensitive</c>, or
+    ///  <c>rcScrollSensitive</c>
+    /// </returns>
     function GetResultSetType: TZResultSetType;
 
+    /// <summary>
+    ///  Sets a new value for post updates.
+    /// </summary>
+    /// <param name="Value">
+    ///  a new value for post updates.
+    /// </param>
     procedure SetPostUpdates(Value: TZPostUpdatesMode);
+    /// <summary>
+    ///  Gets the current value for post updates.
+    /// </summary>
+    /// <returns>
+    ///  the current value for post updates.
+    /// </returns>
     function GetPostUpdates: TZPostUpdatesMode;
+    /// <summary>
+    ///  Sets a new value for locate updates.
+    /// </summary>
+    /// <param name="Value">
+    ///  Value a new value for locate updates.
+    /// </param>
     procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
+    /// <summary>
+    ///  Gets the current value for locate updates.
+    /// </summary>
+    /// <returns>
+    ///  the current value for locate updates.
+    /// </returns>
     function GetLocateUpdates: TZLocateUpdatesMode;
 
+    /// <summary>
+    ///  Adds an SQL command to the current batch of commmands for this
+    ///  <c>Statement</c> object. This method is optional.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>INSERT</c> or
+    ///  <c>UPDATE</c> statement
+    /// </param>
     procedure AddBatch(const SQL: string);
+    /// <summary>
+    ///  Adds an SQL command to the current batch of commmands for this
+    ///  <c>Statement</c> object. This method is optional.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>INSERT</c> or
+    ///  <c>UPDATE</c> statement
+    /// </param>
     procedure AddBatchRequest(const SQL: string);
 
+    /// <summary>
+    ///  Makes the set of commands in the current batch empty.
+    ///  This method is optional.
+    /// </summary>
     procedure ClearBatch;
     function ExecuteBatch: TIntegerDynArray;
 
+    /// <summary>
+    ///  Returns the <c>Connection</c> object
+    ///  that produced this <c>Statement</c> object.
+    /// </summary>
+    /// <returns>
+    ///  the connection that produced this statement
+    /// </returns>
     function GetConnection: IZConnection;
+
+    /// <summary>
+    ///  Gets statement parameters.
+    /// </summary>
+    /// <returns>
+    ///  a list with statement parameters.
+    /// </returns>
     function GetParameters: TStrings;
+    /// <summary>
+    ///  Returns the ChunkSize for reading/writing large lobs
+    /// </summary>
+    /// <returns>
+    ///  the chunksize in bytes.
+    /// </returns>
     function GetChunkSize: Integer;
 
+    /// <summary>
+    ///  Retrieves the first warning reported by calls on this <c>Statement</c> object.
+    ///  Subsequent <c>Statement</c> object warnings will be chained to this
+    ///  <c>SQLWarning</c> object.
+    ///  <para>The warning chain is automatically cleared each time
+    ///  a statement is (re)executed.</para>
+    ///  <para><b>Note:</b> If you are processing a <c>ResultSet</c> object, any
+    ///  warnings associated with reads on that <c>ResultSet</c> object
+    ///  will be chained on it.</para>
+    /// </summary>
+    /// <returns>
+    ///  the first <c>SQLWarning</c> object or <c>nil</c>
+    /// </returns>
     function GetWarnings: EZSQLWarning;
+
+    /// <summary>
+    ///  Clears all the warnings reported on this <c>Statement</c>
+    ///  object. After a call to this method,
+    ///  the method <c>getWarnings</c> will return
+    ///  <c>nil</c> until a new warning is reported for this
+    ///  <c>Statement</c> object.
+    /// </summary>
     procedure ClearWarnings;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
   end;
