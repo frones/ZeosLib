@@ -61,9 +61,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, ZSysUtils, ZOleDB, FmtBCD,
-  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
-  ZDbcOleDBUtils, ZDbcOleDBStatement;
+  ZCompatibility, ZSysUtils, {ZOleDB, }FmtBCD,
+  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils{,
+  ZDbcOleDBUtils, ZDbcOleDBStatement};
 
 type
   {** Implements Prepared ADO Statement. }
@@ -77,6 +77,7 @@ type
     FRC: OleVariant;
   protected
     function CreateResultSet: IZResultSet; virtual;
+  public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
       const Info: TStrings; CommandType: CommandTypeEnum);
   public
@@ -93,7 +94,7 @@ type
   TZAdoPreparedStatement = class(TZAbstractAdoStatement, IZPreparedStatement)
   private
     FRefreshParamsFailed, FEmulatedParams: Boolean;
-    FBatchStmt: TZOleDBPreparedStatement;
+    //FBatchStmt: TZOleDBPreparedStatement;
   protected
     function CheckParameterIndex(Index, ASize: Integer; SQLType: TZSQLType): DataTypeEnum; reintroduce;
     procedure PrepareInParameters; override;
@@ -162,7 +163,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZDbcAdoResultSet,
-  ZMessages, ZDbcProperties;
+  ZMessages;
 
 { TZAbstractAdoStatement }
 
@@ -361,7 +362,7 @@ begin
       for I := fAdoCommand.Parameters.Count to Index do begin
         V := null;
         W := 'Param'+IntToUnicode(I+1);
-        fAdoCommand.Parameters.Append(fAdoCommand.CreateParameter(W, adVariant, ParamDirection, SizeOf(OleVariant), null));
+        fAdoCommand.Parameters.Append(fAdoCommand.CreateParameter(W, adVariant, ParamDirection, SizeOf(OleVariant), V));
       end;
       fAdoCommand.Parameters.Append(fAdoCommand.CreateParameter('Param'+IntToUnicode(Index+1),
          ConvertSqlTypeToAdo(SQLType), ParamDirection, ASize, null));
@@ -456,7 +457,7 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
                                     then RS.UpdateLong(J+FirstDbcIndex, -UInt64(PD.Lo64))
                                     else RS.UpdateULong(J+FirstDbcIndex, UInt64(PD.Lo64))
                                   else begin
-                                    ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.Scale, BD, PD.Sign > 0);
+                                    ScaledOrdinal2Bcd(UInt64(PD.Lo64), PD.Scale, BD{%H-}, PD.Sign > 0);
                                     RS.UpdateBigDecimal(J+FirstDbcIndex, BD);
                                   end;
                                 end;
@@ -753,7 +754,7 @@ begin
     adDecimal,
     adNumeric:  begin
                   if FRefreshParamsFailed
-                  then Double2BCD(AValue, BCD)
+                  then Double2BCD(AValue, BCD{%H-})
                   else Double2BCD(RoundTo(AValue, -FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].NumericScale), BCD);
                   SetBigDecimal(Index, BCD);
                 end;
@@ -799,7 +800,7 @@ begin
     adDecimal,
     adNumeric:  begin
                   if FRefreshParamsFailed
-                  then Double2BCD(AValue, BCD)
+                  then Double2BCD(AValue, BCD{%H-})
                   else Double2BCD(RoundTo(AValue, -FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].NumericScale), BCD);
                   SetBigDecimal(Index, BCD);
                 end;
