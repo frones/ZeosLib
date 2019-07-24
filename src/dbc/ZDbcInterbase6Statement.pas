@@ -87,7 +87,6 @@ type
     FTypeTokens: TRawByteStringDynArray;
     FBatchStmts: array[Boolean] of TZIBStmt;
     FMaxRowsPerBatch, FMemPerRow: Integer;
-    FOrgParamInfos: TZFBOrgXSQLDAInfos;
     FDB_CP_ID: Integer;
     procedure ExecuteInternal;
     procedure ExceuteBatch;
@@ -432,11 +431,11 @@ begin
         if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
           CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, ASQL);
         if FResultXSQLDA.GetData^.sqld <> FResultXSQLDA.GetData^.sqln then begin
-          FResultXSQLDA.AllocateSQLDA(nil);
+          FResultXSQLDA.AllocateSQLDA;
           if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
             CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, ASql);
         end;
-        FResultXSQLDA.InitFields(nil);
+        FResultXSQLDA.InitFields(False);
       end;
     end;
     inherited Prepare; //log action and prepare params
@@ -653,22 +652,13 @@ end;
 procedure TZInterbase6PreparedStatement.EncodePData(XSQLVAR: PXSQLVAR;
   Index: Word; Value: PAnsiChar; Len: LengthInt);
 begin
-  if (XSQLVAR.sqltype and not(1)) = SQL_TEXT then begin
-    if Len > FOrgParamInfos[Index].SizeOrPrecision then
-      raise EZSQLException.Create(Format(SParamValueExceeded, [Index]));
-      //ReallocMem(sqldata, Len);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, XSQLVAR.sqldata^, len);
-    XSQLVAR.sqllen := len;
-  end else begin
-    if Len+SizeOf(Short) > FOrgParamInfos[Index].AllocatedMem then begin
-      FreeMem(XSQLVAR.sqldata, FOrgParamInfos[Index].AllocatedMem);
-      FOrgParamInfos[Index].AllocatedMem := ((((Len-1) shr 3)+1) shl 3)+SizeOf(Short);
-      GetMem(XSQLVAR.sqldata, FOrgParamInfos[Index].AllocatedMem);
-    end;
-    PISC_VARYING(XSQLVAR.sqldata).strlen := Len;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(XSQLVAR.sqldata).str[0], Len);
-    //XSQLVAR.sqllen := Len+SizeOf(Short);
+  if Len > XSQLVAR.sqllen then begin
+    FreeMem(XSQLVAR.sqldata, XSQLVAR.sqllen+SizeOf(Short));
+    XSQLVAR.sqllen := ((((Len-1) shr 3)+1) shl 3);
+    GetMem(XSQLVAR.sqldata, XSQLVAR.sqllen+SizeOf(Short));
   end;
+  PISC_VARYING(XSQLVAR.sqldata).strlen := Len;
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, PISC_VARYING(XSQLVAR.sqldata).str[0], Len);
 end;
 
 procedure TZInterbase6PreparedStatement.InternalBindDouble(XSQLVAR: PXSQLVAR;
@@ -724,7 +714,7 @@ begin
     FParamXSQLDA := FParamSQLData.GetData;
     if FParamXSQLDA.sqln < BindList.Capacity then begin
       FParamXSQLDA.sqld := BindList.Capacity;
-      FParamXSQLDA := FParamSQLData.AllocateSQLDA(@FOrgParamInfos);
+      FParamXSQLDA := FParamSQLData.AllocateSQLDA;
     end;
     {check dynamic sql}
     if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect, FParamXSQLDA) <> 0 then
@@ -738,11 +728,11 @@ begin
 
     { Resize XSQLDA structure if required }
     if FParamXSQLDA^.sqld <> FParamXSQLDA^.sqln then begin
-      FParamXSQLDA := FParamSQLData.AllocateSQLDA(@FOrgParamInfos);
+      FParamXSQLDA := FParamSQLData.AllocateSQLDA;
       if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect,FParamXSQLDA) <> 0 then
         ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcExecute, ASQL);
     end;
-    FParamSQLData.InitFields(@FOrgParamInfos);
+    FParamSQLData.InitFields(True);
   end;
 
 end;

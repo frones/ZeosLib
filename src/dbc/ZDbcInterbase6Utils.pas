@@ -133,21 +133,11 @@ type
     TotalSize: Integer;
   end;
 
-  PZFBOrgXSQLDAInfo = ^TZFBOrgXSQLDAInfo;
-  TZFBOrgXSQLDAInfo = record
-    AllocatedMem: Integer;
-    Scale: SmallInt;
-    SizeOrPrecision: SmallInt;
-    SQLType: SmallInt;
-  end;
-  PZFBOrgXSQLDAInfos = ^TZFBOrgXSQLDAInfos;
-  TZFBOrgXSQLDAInfos = array of TZFBOrgXSQLDAInfo;
-
   { Base interface for sqlda }
   IZSQLDA = interface
     ['{2D0D6029-B31C-4E39-89DC-D86D20437C35}']
-    procedure InitFields(OrgParamInfos: PZFBOrgXSQLDAInfos);
-    function AllocateSQLDA(OrgParamInfos: PZFBOrgXSQLDAInfos): PXSQLDA;
+    procedure InitFields(Fixed2VariableSize: Boolean);
+    function AllocateSQLDA: PXSQLDA;
     procedure FreeParamtersValues;
 
     function GetData: PXSQLDA;
@@ -181,8 +171,8 @@ type
   public
     constructor Create(const Connection: IZConnection);
     destructor Destroy; override;
-    procedure InitFields(OrgParamInfos: PZFBOrgXSQLDAInfos);
-    function AllocateSQLDA(OrgParamInfos: PZFBOrgXSQLDAInfos): PXSQLDA;
+    procedure InitFields(Fixed2VariableSize: Boolean);
+    function AllocateSQLDA: PXSQLDA;
     procedure FreeParamtersValues;
 
     function IsBlob(const Index: Word): boolean;
@@ -1598,7 +1588,7 @@ end;
    Allocate memory for SQLVar in SQLDA structure for every
    fields by it length.
 }
-procedure TZSQLDA.InitFields(OrgParamInfos: PZFBOrgXSQLDAInfos);
+procedure TZSQLDA.InitFields(Fixed2VariableSize: Boolean);
 var
   I,m: Integer;
   SqlVar: PXSQLVAR;
@@ -1606,16 +1596,16 @@ begin
   {$R-}
   for I := 0 to FXSQLDA.sqld - 1 do begin
     SqlVar := @FXSQLDA.SqlVar[I];
-    M := Max(1, SqlVar.sqllen+(2*Ord(SqlVar.sqltype and (not 1) = SQL_VARYING)));
+    if (SqlVar.sqltype and (not 1) = SQL_TEXT) and Fixed2VariableSize then
+      SqlVar.sqltype := (SQL_VARYING or 1);
+    M := Max(1, SqlVar.sqllen);
+    if SqlVar.sqltype and (not 1) = SQL_VARYING then
+      Inc(M, 2);
     ReallocMem(SqlVar.sqldata, m);
-    if OrgParamInfos <> nil then begin {Praremeters}
+    if Fixed2VariableSize then begin {Praremeters}
       //This code used when allocated sqlind parameter for Param SQLDA
-      OrgParamInfos^[i].AllocatedMem := m;
-      OrgParamInfos^[i].SQLType := SqlVar.sqltype;
-      OrgParamInfos^[i].SizeOrPrecision := SqlVar.sqllen;
-      OrgParamInfos^[i].Scale := SqlVar.sqlscale;
       SqlVar.sqltype := SqlVar.sqltype or 1;
-      IbReAlloc(SqlVar.sqlind, 0, SizeOf(Short))
+      IbReAlloc(SqlVar.sqlind, 0, SizeOf(Short));
     end else
       //This code used when allocated sqlind parameter for Result SQLDA
       if (SqlVar.sqltype and 1) <> 0
@@ -1944,12 +1934,10 @@ end;
    Reallocate SQLDA to fields count length
    @param Value the count fields
 }
-function TZSQLDA.AllocateSQLDA(OrgParamInfos: PZFBOrgXSQLDAInfos): PXSQLDA;
+function TZSQLDA.AllocateSQLDA: PXSQLDA;
 begin
   IbReAlloc(FXSQLDA, XSQLDA_LENGTH(FXSQLDA.sqln), XSQLDA_LENGTH(FXSQLDA.sqld));
   FXSQLDA.sqln := FXSQLDA.sqld;
-  if OrgParamInfos <> nil then
-    SetLength(OrgParamInfos^, FXSQLDA.sqld);
   Result := FXSQLDA;
 end;
 
