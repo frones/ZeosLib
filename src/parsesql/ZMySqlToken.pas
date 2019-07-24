@@ -134,7 +134,7 @@ begin
   LastChar := #0;
   while SPos < NTerm do begin
     Inc(SPos);
-    if (LastChar = Result.P^) and (SPos^ <> Result.P^) then begin
+    if ((LastChar = Result.P^) and (SPos^ <> Result.P^)) or (SPos = NTerm) then begin
       Dec(SPos);
       Break;
     end;
