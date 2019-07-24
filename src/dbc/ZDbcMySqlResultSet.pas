@@ -2289,11 +2289,10 @@ begin
     if not LastWasNull then
       if PByte(Buffer+2)^ = Ord(':') then
         Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
+      else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen < Len) or ((ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4) then
+        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
       else
-        if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
-          Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
-        else
-          Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
+        Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
   end;
   LastWasNull := Result = 0;
 end;
