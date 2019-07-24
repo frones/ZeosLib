@@ -582,13 +582,13 @@ begin
       Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
         IID_IRowset, @FRowsAffected, @FRowSet);
       Result := Status = S_OK;
-      if Status = S_OK then begin
+      if Result then begin
         if Assigned(FRowSet)
         then LastResultSet := CreateResultSet(FRowSet)
         else LastResultSet := nil;
         LastUpdateCount := FRowsAffected;
-      end else if Status <> DB_S_NORESULT then
-        CheckError(Status, lcOther);
+      end {else if Status <> DB_S_NORESULT then
+        CheckError(Status, lcOther)};
     end;
   end;
 end;
