@@ -424,8 +424,7 @@ end;
 
 procedure TZAbstractOleDBResultSet.ReleaseFetchedRows;
 begin
-  if (FRowsObtained > 0) then
-  begin
+  if (FRowsObtained > 0) then begin
     CheckError(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates)));
     (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(FHROWS);
     FHROWS := nil;
@@ -1948,9 +1947,6 @@ end;
 
 {**
   Creates this object and assignes the main properties.
-  @param Statement an SQL statement object.
-  @param SQL an SQL query string.
-  @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
 }
 constructor TZOleDBParamResultSet.Create(const Statement: IZStatement;
   const ParamBuffer: TByteDynArray; const ParamBindings: TDBBindingDynArray;

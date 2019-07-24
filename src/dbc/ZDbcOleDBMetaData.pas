@@ -76,6 +76,7 @@ type
     procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
     function SupportsMultipleStorageObjects: Boolean;
     function SupportsByRefAccessors: Boolean;
+    function GetOutParameterAvailability: TOleEnum;
   end;
   {** Implements OleDB Database Information. }
   TZOleDBDatabaseInfo = class(TZAbstractDatabaseInfo, IZOleDBDatabaseInfo)
@@ -107,6 +108,7 @@ type
     fDBPROP_PREPAREABORTBEHAVIOR: Integer;
     fDBPROP_PREPARECOMMITBEHAVIOR: Integer;
     fDBPROP_BYREFACCESSORS: Boolean;
+    fDBPROP_OUTPUTPARAMETERAVAILABILITY: TOleEnum;
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     // database/driver/server info:
@@ -250,6 +252,7 @@ type
 
     //Ole related
     procedure InitilizePropertiesFromDBInfo(const DBInitialize: IDBInitialize; const Malloc: IMalloc);
+    function GetOutParameterAvailability: TOleEnum;
   end;
 
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -530,6 +533,11 @@ begin
             'PI,POWER,RADIANS,RAND,ROUND,SIGN,SIN,SQUARE,SQRT,TAN';
 end;
 
+function TZOleDBDatabaseInfo.GetOutParameterAvailability: TOleEnum;
+begin
+  Result := fDBPROP_OUTPUTPARAMETERAVAILABILITY;
+end;
+
 {**
   Gets a comma-separated list of string functions.  These are the
   X/Open CLI string function names used in the JDBC function escape
@@ -570,7 +578,7 @@ end;
 procedure TZOleDBDatabaseInfo.InitilizePropertiesFromDBInfo(
   const DBInitialize: IDBInitialize; const Malloc: IMalloc);
 const
-  PropCount = 27;
+  PropCount = 28;
   rgPropertyIDs: array[0..PropCount-1] of DBPROPID =
     ( DBPROP_PROVIDERFRIENDLYNAME,
       DBPROP_PROVIDERVER,
@@ -598,13 +606,15 @@ const
       DBPROP_PREPAREABORTBEHAVIOR,
       DBPROP_PREPARECOMMITBEHAVIOR,
       DBPROP_MULTIPLEPARAMSETS,
-      DBPROP_BYREFACCESSORS);
+      DBPROP_BYREFACCESSORS,
+      DBPROP_OUTPUTPARAMETERAVAILABILITY);
 var
   DBProperties: IDBProperties;
   PropIDSet: array[0..PropCount-1] of TDBPROPIDSET;
   prgPropertySets: PDBPropSet;
   PropSet: TDBPropSet;
   nPropertySets: ULONG;
+  {$IFDEF FPC}C: Cardinal;{$ENDIF}
   i, intProp: Integer;
 begin
   DBProperties := nil;
@@ -662,6 +672,14 @@ begin
         DBPROP_PREPARECOMMITBEHAVIOR:   fDBPROP_PREPARECOMMITBEHAVIOR := PropSet.rgProperties^[i].vValue;
         DBPROP_MULTIPLEPARAMSETS:       fDBPROP_MULTIPLEPARAMSETS := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
         DBPROP_BYREFACCESSORS:          fDBPROP_BYREFACCESSORS := PropSet.rgProperties^[i].vValue = VARIANT_TRUE;
+        {$IFDEF FPC}
+        DBPROP_OUTPUTPARAMETERAVAILABILITY: begin
+                                              c := PropSet.rgProperties^[i].vValue;
+                                              fDBPROP_OUTPUTPARAMETERAVAILABILITY := C;
+                                            end;
+        {$ELSE}
+        DBPROP_OUTPUTPARAMETERAVAILABILITY: fDBPROP_OUTPUTPARAMETERAVAILABILITY := PropSet.rgProperties^[i].vValue;
+        {$ENDIF}
       end;
       VariantClear(PropSet.rgProperties^[i].vValue);
     end;

@@ -171,6 +171,7 @@ type
   public
     procedure ResetCursor; override;
     procedure OpenCursor; override;
+    procedure AfterConstruction; override;
   end;
 
   {** Implements a cached resolver with MySQL specific functionality. }
@@ -2462,8 +2463,10 @@ begin
       if Assigned(FMYSQL_STMT) then
         if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
           checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcOther, '', Self);
-    end else if FQueryHandle <> nil then
+    end else if FQueryHandle <> nil then begin
       FPlainDriver.mysql_free_result(FQueryHandle);
+      FQueryHandle := nil;
+    end;
     inherited ResetCursor;
   end;
 end;
@@ -2669,6 +2672,12 @@ begin
 End;
 
 { TZMySQL_Use_ResultSet }
+
+procedure TZMySQL_Use_ResultSet.AfterConstruction;
+begin
+  inherited;
+  SetType(rtForwardOnly);
+end;
 
 procedure TZMySQL_Use_ResultSet.OpenCursor;
 begin

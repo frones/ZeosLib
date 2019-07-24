@@ -1094,7 +1094,6 @@ begin
       LastResultSet := CreateResultSet(fServerCursor);
     if BindList.HasOutOrInOutOrResultParam then
       FOutParamResultSet := LastResultSet;
-    FOpenResultSet := Pointer(FOutParamResultSet);
   end else begin
     Result := False;
     LastUpdateCount := RawToIntDef(
@@ -1627,7 +1626,7 @@ begin
     end;
   FlushBuff(SQL);
   P := Pointer(SQL);
-  if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
+  if J > 1
   then (P+Length(SQL)-1)^ := ')' //cancel last comma
   else SQL := SQL + ')';
   Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);

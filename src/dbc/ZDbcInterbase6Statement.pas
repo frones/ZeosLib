@@ -511,6 +511,8 @@ begin
         TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
           FResultXSQLDA, True, CachedLob, FStatementType));
       FOpenResultSet := Pointer(LastResultSet);
+    if (FStatementType = stExecProc) or BindList.HasOutOrInOutOrResultParam then
+      FOutParamResultSet := LastResultSet;
   end else
     LastResultSet := nil;
   Result := LastResultSet <> nil;

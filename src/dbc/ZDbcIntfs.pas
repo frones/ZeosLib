@@ -1214,7 +1214,7 @@ type
     function GetLastResultSet: IZResultSet;
     function BOR: Boolean;
     function EOR: Boolean;
-    function GetResultSetByIndex(const Index: Integer): IZResultSet;
+    function GetResultSetByIndex(Index: Integer): IZResultSet;
     function GetResultSetCount: Integer;
 
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); //deprecated;

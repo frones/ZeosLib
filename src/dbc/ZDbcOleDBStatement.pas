@@ -66,7 +66,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement,
+  ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement, ZCollections,
   ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties;
 
 type
@@ -91,9 +91,14 @@ type
     fMoreResultsIndicator: TZMoreResultsIndicator;
     FDBBINDSTATUSArray: TDBBINDSTATUSDynArray;
     FSupportsMultipleResultSets: Boolean;
+    FOutParameterAvailibility: TOleEnum;
+    FCallResultCache: TZCollection;
     procedure CheckError(Status: HResult; LoggingCategory: TZLoggingCategory;
        const DBBINDSTATUSArray: TDBBINDSTATUSDynArray = nil);
     procedure PrepareOpenedResultSetsForReusing;
+    function FetchCallResults(var RowSet: IRowSet): Boolean;
+    function GetFirstResultSet: IZResultSet;
+    procedure ClearCallResultCache;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -159,6 +164,7 @@ type
     procedure RaiseUnsupportedParamType(Index: Integer; WType: Word; SQLType: TZSQLType);
     procedure RaiseExceeded(Index: Integer);
     function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
+    function GetInParamLogValue(Index: Integer): RawByteString; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -213,6 +219,7 @@ type
   end;
 
   TZOleDBStatement = class(TZAbstractOleDBStatement, IZStatement)
+  public
     constructor Create(const Connection: IZConnection; const Info: TStrings);
   end;
 
@@ -220,7 +227,6 @@ type
     IZCallableStatement)
   protected
     function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; override;
-    procedure PrepareInParameters; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -261,14 +267,27 @@ begin
     OleDBCheck(Status, SQL, Self, DBBINDSTATUSArray);
 end;
 
+procedure TZAbstractOleDBStatement.ClearCallResultCache;
+var I: Integer;
+  RS: IZResultSet;
+begin
+  for I := 0 to FCallResultCache.Count -1 do
+    if Supports(FCallResultCache[i], IZResultSet, RS) then
+      RS.Close;
+  FreeAndNil(FCallResultCache);
+end;
+
 constructor TZAbstractOleDBStatement.Create(const Connection: IZConnection;
   const SQL: string; const Info: TStrings);
+var DatabaseInfo: IZDataBaseInfo;
 begin
   inherited Create(Connection, SQL, Info);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
   fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_StatementTimeOut, ''), 60); //execution timeout in seconds by default 1 min
-  FSupportsMultipleResultSets := Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets;
-  FMultipleResults := nil;
+  DatabaseInfo := Connection.GetMetadata.GetDatabaseInfo;
+  FSupportsMultipleResultSets := DatabaseInfo.SupportsMultipleResultSets;
+  FOutParameterAvailibility := (DatabaseInfo as IZOleDBDatabaseInfo).GetOutParameterAvailability;
+  DatabaseInfo := nil;
 end;
 
 function TZAbstractOleDBStatement.CreateResultSet(const RowSet: IRowSet): IZResultSet;
@@ -300,6 +319,18 @@ begin
   FCommand := nil;
 end;
 
+function TZAbstractOleDBStatement.GetFirstResultSet: IZResultSet;
+var I: Integer;
+begin
+  Result := nil;
+  if FCallResultCache <> nil then
+    for I := 0 to FCallResultCache.Count -1 do
+      if Supports(FCallResultCache[i], IZResultSet, Result) then begin
+        FCallResultCache.Delete(I);
+        Break;
+      end;
+end;
+
 function TZAbstractOleDBStatement.GetInternalBufferSize: Integer;
 begin
   Result := FZBufferSize;
@@ -318,6 +349,8 @@ procedure TZAbstractOleDBStatement.Prepare;
 begin
   if FCommand = nil then
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
+  if FCallResultCache <> nil then
+    ClearCallResultCache;
   inherited Prepare;
 end;
 
@@ -387,7 +420,6 @@ begin
     if Assigned(FOpenResultSet) then
       Result := IZResultSet(FOpenResultSet)
     else begin
-      Result := nil;
       if FSupportsMultipleResultSets then begin
         CheckError(FCommand.Execute(nil, IID_IMultipleResults, FDBParams,@FRowsAffected,@FMultipleResults),
           lcExecute, fDBBINDSTATUSArray);
@@ -397,9 +429,12 @@ begin
       end else
         CheckError(FCommand.Execute(nil, IID_IRowset,
           FDBParams,@FRowsAffected,@FRowSet), lcExecute, fDBBINDSTATUSArray);
-      Result := CreateResultSet(FRowSet);
-      if BindList.HasOutOrInOutOrResultParam then
-        FOutParamResultSet := CreateResultSet(nil);
+      if BindList.HasOutOrInOutOrResultParam then begin
+        FetchCallResults(FRowSet);
+        Result := GetFirstResultSet;
+      end else if FRowSet <> nil
+        then Result := CreateResultSet(FRowSet)
+        else Result := nil;
       LastUpdateCount := FRowsAffected;
       if not Assigned(Result) then
         while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
@@ -434,6 +469,32 @@ begin
   Result := LastUpdateCount;
 end;
 
+function TZAbstractOleDBStatement.FetchCallResults(var RowSet: IRowSet): Boolean;
+var CallResultCache: TZCollection;
+begin
+  Result := RowSet <> nil;
+  if (FOutParameterAvailibility = DBPROPVAL_OA_ATEXECUTE) then
+    FOutParamResultSet := CreateResultSet(nil);
+  CallResultCache := TZCollection.Create;
+  if RowSet <> nil then begin
+    FLastResultSet := CreateResultSet(RowSet);
+    CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
+    FLastResultSet.Close;
+    RowSet := nil;
+  end else CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
+  while GetMoreresults do
+    if LastResultSet <> nil then begin
+      CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FLastResultSet));
+      FLastResultSet.Close;
+      FLastResultSet := nil;
+      FOpenResultSet := nil;
+    end else
+      CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
+  if (FOutParameterAvailibility = DBPROPVAL_OA_ATROWRELEASE) then
+    FOutParamResultSet := CreateResultSet(nil);
+  FCallResultCache := CallResultCache;
+end;
+
 {**
   Executes any kind of SQL statement.
   Some prepared statements return multiple results; the <code>execute</code>
@@ -443,15 +504,13 @@ end;
   @see Statement#execute
 }
 function TZAbstractOleDBStatement.ExecutePrepared: Boolean;
-var
-  FRowSet: IRowSet;
+var FRowSet: IRowSet;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := -1;
 
   Prepare;
   BindInParameters;
-  LastUpdateCount := FRowsAffected; //store tempory possible array bound update-counts
   FRowsAffected := DB_COUNTUNAVAILABLE;
   try
     FRowSet := nil;
@@ -465,13 +524,16 @@ begin
       CheckError(FCommand.Execute(nil, IID_IRowset,
         FDBParams,@FRowsAffected,@FRowSet), lcExecute, FDBBINDSTATUSArray);
     if BindList.HasOutOrInOutOrResultParam then
-      FOutParamResultSet := CreateResultSet(nil);
-    LastResultSet := CreateResultSet(FRowSet);
-    LastUpdateCount := LastUpdateCount + FRowsAffected;
+      if FetchCallResults(FRowSet)
+      then LastResultSet := GetFirstResultSet
+      else LastResultSet := nil
+    else if FRowSet <> nil
+      then LastResultSet := CreateResultSet(FRowSet)
+      else LastResultSet := nil;
+    LastUpdateCount := FRowsAffected;
     Result := Assigned(LastResultSet);
   finally
     FRowSet := nil;
-    if LastResultSet = nil then FMultipleResults := nil;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   end;
 end;
@@ -494,16 +556,40 @@ end;
 function TZAbstractOleDBStatement.GetMoreResults: Boolean;
 var
   FRowSet: IRowSet;
+  Status: HResult;
+  RS: IZResultSet;
+  AnyValue: IZAnyValue;
 begin
-  Result := False;
-  LastResultSet := nil;
-  LastUpdateCount := -1;
-  if Assigned(FMultipleResults) then begin
-    FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-      IID_IRowset, @FRowsAffected, @FRowSet);
-    LastResultSet := CreateResultSet(FRowSet);
-    Result := Assigned(LastResultSet);
-    LastUpdateCount := FRowsAffected;
+  if (FOpenResultSet <> nil) and (FOpenResultSet <> Pointer(FOutParamResultSet))
+  then IZResultSet(FOpenResultSet).Close;
+  if FCallResultCache <> nil then begin
+    Result := FCallResultCache.Count > 0;
+    if Result then begin
+      if Supports(FCallResultCache[0], IZResultSet, RS) then begin
+        LastResultSet := RS;
+        LastUpdateCount := -1;
+      end else begin
+        FCallResultCache[0].QueryInterface(IZAnyValue, AnyValue);
+        LastUpdateCount := AnyValue.GetInteger;
+      end;
+      FCallResultCache.Delete(0);
+    end;
+  end else begin
+    Result := False;
+    LastResultSet := nil;
+    LastUpdateCount := -1;
+    if Assigned(FMultipleResults) then begin
+      Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+        IID_IRowset, @FRowsAffected, @FRowSet);
+      Result := Status = S_OK;
+      if Status = S_OK then begin
+        if Assigned(FRowSet)
+        then LastResultSet := CreateResultSet(FRowSet)
+        else LastResultSet := nil;
+        LastUpdateCount := FRowsAffected;
+      end else if Status <> DB_S_NORESULT then
+        CheckError(Status, lcOther);
+    end;
   end;
 end;
 
@@ -546,6 +632,8 @@ begin
   if Prepared then
     try
       inherited Unprepare;
+      if FCallResultCache <> nil then
+        ClearCallResultCache;
       if FMultipleResults <> nil then begin
         repeat
           FRowSet := nil;
@@ -1148,6 +1236,114 @@ SetUniArray:
   Arr := BindList[Index].Value;
 end;
 
+function TZOleDBPreparedStatement.GetInParamLogValue(
+  Index: Integer): RawByteString;
+var Bind: PDBBINDING;
+  Data: Pointer;
+  PEnd: PAnsichar;
+  Len: NativeUInt;
+label Set_buf_len, Set_Raw;
+begin
+  case BindList.ParamTypes[Index] of
+    pctReturn: Result := '(RETURN_VALUE)';
+    pctOut: Result := '(OUT_PARAM)';
+    else begin
+      Bind := @FDBBindingArray[Index];
+      if PDBSTATUS(NativeUInt(FDBParams.pData)+Bind.obStatus)^ = DBSTATUS_S_ISNULL then
+        Result := 'NULL'
+      else begin
+        Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
+        case Bind.wType of
+          DBTYPE_NULL:      Result := 'NULL';
+          (DBTYPE_STR or DBTYPE_BYREF): Result := '(CLOB)';
+          (DBTYPE_WSTR or DBTYPE_BYREF): Result := '(NCLOB)';
+          (DBTYPE_BYTES or DBTYPE_BYREF): Result := '(BLOB)';
+          DBTYPE_BOOL:  Result := ZVariant.BoolStrsUpRaw[PWordBool(Data)^];
+          DBTYPE_I1:  begin
+                        ZFastCode.IntToRaw(PShortInt(Data)^, @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_UI1:  begin
+                        ZFastCode.IntToRaw(Cardinal(PByte(Data)^), @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_I2:  begin
+                        ZFastCode.IntToRaw(Integer(PSmallInt(Data)^), @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_UI2:  begin
+                        ZFastCode.IntToRaw(Cardinal(PWord(Data)^), @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_I4:  begin
+                        ZFastCode.IntToRaw(PInteger(Data)^, @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_UI4:  begin
+                        ZFastCode.IntToRaw(PCardinal(Data)^, @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_I8:  begin
+                        ZFastCode.IntToRaw(PInt64(Data)^, @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_UI8: begin
+                        ZFastCode.IntToRaw(PUInt64(Data)^, @fABuffer[0], @PEnd);
+                        goto Set_buf_len;
+                      end;
+          DBTYPE_R4:  begin
+                        Len := ZSysUtils.FloatToRaw(PSingle(Data)^, @fABuffer[0]);
+                        goto Set_Raw;
+                      end;
+          DBTYPE_R8:  begin
+                        Len := ZSysUtils.FloatToRaw(PDouble(Data)^, @fABuffer[0]);
+                        goto Set_raw;
+                      end;
+          DBTYPE_CY:  begin
+                        ZFastcode.CurrToRaw(PCurrency(Data)^, @fABuffer[0], @PEnd);
+Set_buf_len:            Len := PEnd - PAnsichar(@fABuffer[0]);
+                        goto Set_Raw;
+                      end;
+          DBTYPE_NUMERIC: begin
+                        Len := 16;
+                        SQLNumeric2Raw(PDB_Numeric(Data), @fABuffer[0], Len);
+                        goto Set_raw;
+                      end;
+          DBTYPE_WSTR:  Result := PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, ConSettings.CTRL_CP);
+          DBTYPE_DBDATE:begin
+                          Len := ZSysUtils.DateTimeToRawSQLDate(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
+                            PDBDATE(Data)^.day, PAnsiChar(@fABuffer[0]), ConSettings.WriteFormatSettings.DateFormat, True, PDBDATE(Data)^.year <0);
+                          goto Set_raw;
+                        end;
+          DBTYPE_DATE:   begin
+                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @fABuffer[0], ConSettings.WriteFormatSettings, True);
+                        goto Set_raw;
+                      end;
+          DBTYPE_DBTIME: begin
+                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
+                          PDBTIME(Data)^.second, 0, @fABuffer[0],  ConSettings.WriteFormatSettings.TimeFormat, True);
+                        goto Set_raw;
+                      end;
+          DBTYPE_DBTIME2: begin
+                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
+                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction div 1000000, @fABuffer[0],
+                          ConSettings.WriteFormatSettings.DateTimeFormat, True);
+                        goto Set_raw;
+                      end;
+          DBTYPE_DBTIMESTAMP: begin
+                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(Abs(PDBTimeStamp(Data)^.year),
+                          PDBTimeStamp(Data).month, PDBTimeStamp(Data).day, PDBTimeStamp(Data).hour,
+                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,  PDBTimeStamp(Data)^.fraction div 1000000,
+                          @fABuffer[0],  ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
+Set_Raw:                ZSetString(PAnsiChar(@fABuffer[0]), Len, Result);
+                      end;
+          else Result := '(unknown)';
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TZOleDBPreparedStatement.InitDateBind(Index: Integer;
   SQLType: TZSQLType);
 var Bind: PDBBINDING;
@@ -1446,6 +1642,8 @@ begin
     DBInfo := nil;
     inherited Prepare;
   end else begin
+    if FCallResultCache <> nil then
+      ClearCallResultCache;
     FMultipleResults := nil; //release this interface! else we can't free the command in some tests
     if Assigned(FParameterAccessor) and ((BatchDMLArrayCount > 0) and
        (FDBParams.cParamSets = 0)) or //new arrays have been set
@@ -1626,7 +1824,7 @@ begin
       DBTYPE_CY:        BCDToCurr(Value, PCurrency(Data)^);
       DBTYPE_BOOL:      PWordBool(Data)^ := not CompareMem(@Value.Fraction[0], @{$IFDEF NO_CONST_ZEROBCD}ZeroBCDFraction[0]{$ELSE}NullBcd.Fraction[0]{$ENDIF}, MaxFMTBcdDigits);
       DBTYPE_VARIANT:   POleVariant(Data)^ := BcdToSQLUni(Value);
-      DBTYPE_WSTR: if Bind.cbMaxLen < (Value.Precision+2) shl 1 then begin //(64nibbles+dot+neg sign) -> test final length
+      DBTYPE_WSTR: if Bind.cbMaxLen < {$IFDEF FPC}Byte{$ENDIF}(Value.Precision+2) shl 1 then begin //(64nibbles+dot+neg sign) -> test final length
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, @fWBuffer[0], '.') shl 1;
                     if PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ < Bind.cbMaxLen
                     then Move(fWBuffer[0], Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
@@ -2699,28 +2897,6 @@ begin
   TZOleDBPreparedStatement(Result).Prepare;
   FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
   TZOleDBPreparedStatement(Result)._AddRef;
-end;
-
-procedure TZOleDBCallableStatementMSSQL.PrepareInParameters;
-var I: Integer;
-  RS: IZResultSet;
-begin
-  if Connection.UseMetadata then begin
-    //Register the ParamNames
-    RS := Connection.GetMetadata.GetProcedureColumns(Connection.GetCatalog,
-      '', StoredProcName, '');
-    I := 0;
-    while RS.Next do begin
-      FExecStatements[FCallExecKind].RegisterParameter(I,
-        TZSQLType(RS.GetInt(ProcColDataTypeIndex)),
-        TZProcedureColumnType(RS.GetInt(ProcColColumnTypeIndex)),
-        RS.GetString(ProcColColumnNameIndex), RS.GetInt(ProcColPrecisionIndex),
-        RS.GetInt(ProcColScaleIndex));
-      Inc(I);
-    end;
-    Assert(I = BindList.Count);
-  end else
-    inherited PrepareInParameters;
 end;
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit

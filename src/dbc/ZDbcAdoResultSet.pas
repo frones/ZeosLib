@@ -723,7 +723,7 @@ Set_From_Buf:           Len := Result - PAnsiChar(@fTinyBuffer[0]);
                       end;
       VT_DECIMAL:     begin
                         Result := @FColValue;
-                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD, PDecimal(Result).sign > 0);
+                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD{%H-}, PDecimal(Result).sign > 0);
                         Result := @fTinyBuffer[0];
                         Len := ZSysUtils.BcdToRaw(BCd, Result, '.');
                       end;
@@ -819,7 +819,7 @@ Set_From_Buf:           Len := Result - PWideChar(@fTinyBuffer[0]);
                       end;
       VT_DECIMAL:     begin
                         Result := @FColValue;
-                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD, PDecimal(Result).sign > 0);
+                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD{%H-}, PDecimal(Result).sign > 0);
                         Result := @fTinyBuffer[0];
                         Len := ZSysUtils.BcdToUni(BCd, Result, '.');
                       end;

@@ -1336,7 +1336,8 @@ var
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
   SL: TStrings;
   i: Integer;
-  function CheckSchema: Boolean;
+  SQLType: TZSQLType;
+  function CheckOwner: Boolean;
   begin
     if TmpSchemaPattern = '' then
       Result := False
@@ -1380,10 +1381,13 @@ var
         OCI_TYPEPARAM_OUT   : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut));
         OCI_TYPEPARAM_INOUT : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut));
       end;
-      Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
+      SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
+        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings, Descriptor.IODirection);
+      if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
+      then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
+      else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
       Result.UpdateInt(ProcColLengthIndex, Arg.DataSize);
-      Result.UpdateInt(ProcColDataTypeIndex, Ord(NormalizeOracleTypeToSQLType(Arg.DataType,
-        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings, Descriptor.IODirection)));
+      Result.UpdateInt(ProcColDataTypeIndex, Ord(SQLType));
 
       Result.UpdateInt(ProcColScaleIndex, Arg.Scale);
       Result.UpdateInt(ProcColRadixIndex, Arg.Radix);
@@ -1411,7 +1415,7 @@ begin
   else TmpSchemaPattern := Catalog;
   TempProcedureNamePattern := ProcedureNamePattern;
 
-  if (TmpSchemaPattern <> '') and (not CheckSchema) then begin
+  if (TmpSchemaPattern <> '') and (not CheckOwner) then begin
     TempProcedureNamePattern  := IC.ExtractQuote(TempProcedureNamePattern);
     TmpSchemaPattern          := IC.ExtractQuote(TmpSchemaPattern);
     TempProcedureNamePattern  := TmpSchemaPattern+'.'+TempProcedureNamePattern; //no Schema so it's a PackageName
@@ -1419,7 +1423,15 @@ begin
   end else if ZFastCode.Pos('.', TempProcedureNamePattern) > 0 then begin
     SL := SplitString(TempProcedureNamePattern, '.');
     TempProcedureNamePattern := '';
-    for I := 0 to SL.Count -1 do begin
+    if (SL.Count > 1) then begin
+      TmpSchemaPattern := SL[0];
+      if CheckOwner
+      then I := 1
+      else I := 0;
+      TmpSchemaPattern := '';
+    end else
+      I := 0;
+    for I := I to SL.Count -1 do begin
       ZDbcUtils.ToBuff(IC.ExtractQuote(SL[i]), Buf, TempProcedureNamePattern);
       ZDbcUtils.ToBuff('.', Buf, TempProcedureNamePattern);
     end;

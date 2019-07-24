@@ -61,9 +61,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, ZSysUtils, {ZOleDB, }FmtBCD,
-  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils{,
-  ZDbcOleDBUtils, ZDbcOleDBStatement};
+  ZCompatibility, ZSysUtils, ZOleDB, FmtBCD,
+  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
+  ZDbcOleDBUtils, ZDbcOleDBStatement;
 
 type
   {** Implements Prepared ADO Statement. }
@@ -77,7 +77,6 @@ type
     FRC: OleVariant;
   protected
     function CreateResultSet: IZResultSet; virtual;
-  public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
       const Info: TStrings; CommandType: CommandTypeEnum);
   public
@@ -163,7 +162,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZDbcAdoResultSet,
-  ZMessages;
+  ZMessages, ZDbcProperties;
 
 { TZAbstractAdoStatement }
 
@@ -346,8 +345,8 @@ function TZAdoPreparedStatement.CheckParameterIndex(Index, ASize: Integer;
   SQLType: TZSQLType): DataTypeEnum;
 var ParamDirection: ParameterDirectionEnum;
   I: Integer;
-  V: OleVariant;
   W: WideString;
+  V: OleVariant;
 begin
   if not Prepared then Prepare;
   inherited CheckParameterIndex(Index);
@@ -1320,9 +1319,9 @@ function TZAdoCallableStatement2.CreateExecutionStatement(Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 begin
   Result := TZAdoPreparedStatement.CreateWithCommandType(Connection, StoredProcName, Info, adCmdStoredProc);
-  TZAdoPreparedStatement(Result).Prepare;
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
   TZAdoPreparedStatement(Result)._AddRef;
+  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
+  TZAdoPreparedStatement(Result).Prepare;
 end;
 
 {$ENDIF ZEOS_DISABLE_ADO}
