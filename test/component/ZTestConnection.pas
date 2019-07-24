@@ -150,10 +150,12 @@ begin
 end;
 
 procedure TZTestConnectionCase.TestLibrary;
+var CurrentLib: String;
 begin
   if not (ProtocolType in [protODBC,protADO,protOleDB]) then
   begin
     Connection.Disconnect;
+    CurrentLib := Connection.LibraryLocation;
     Connection.LibraryLocation:='dummy.dll';
     try
       Connection.Connect;
@@ -162,7 +164,7 @@ begin
       CheckNotTestFailure(E);
     end;
     Check(not Connection.Connected);
-    Connection.LibraryLocation:='';
+    Connection.LibraryLocation := CurrentLib;
     Connection.Connect;
     Check(Connection.Connected);
 //   {$ifdef fpc}Fail{$else}Status{$endif}('Info: '+Connection.Protocol+
