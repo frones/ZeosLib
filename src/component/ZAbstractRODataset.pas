@@ -2037,7 +2037,7 @@ begin
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
   FRequestLive := False;
   FFetchRow := 0;                // added by Patyi
-  FOptions := [doCalcDefaults];
+  FOptions := [doCalcDefaults, doPreferPrepared];
 
   FFilterEnabled := False;
   FProperties := TStringList.Create;
@@ -3388,7 +3388,6 @@ begin
     Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
     Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
-
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
     Temp.Free;
@@ -3957,9 +3956,8 @@ begin
   try
     if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then
       Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
-    else
-      if (Assigned(Statement)) then
-         Statement.ClearParameters;
+    else if (Assigned(Statement)) then
+      Statement.ClearParameters;
   finally
     Connection.HideSQLHourGlass;
   end;
