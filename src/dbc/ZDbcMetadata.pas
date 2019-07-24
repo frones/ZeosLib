@@ -2516,7 +2516,7 @@ begin
         ColumnLabel := Metadata.GetColumnLabel(i);
         //ColumnName := Metadata.GetColumnName(i);
         //SchemaName := Metadata.GetSchemaName(i);
-        //Precision := Metadata.GetPrecision(i);
+        Precision := Metadata.GetPrecision(i);
         //Scale := Metadata.GetScale(i);
         //TableName := Metadata.GetTableName(i);
         //CatalogName := Metadata.GetCatalogName(i);
@@ -2530,7 +2530,7 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    if ResultSet.GetType <> rtForwardOnly then
+    if not ResultSet.IsBeforeFirst and  (ResultSet.GetType <> rtForwardOnly) then
       ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
       TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings));
