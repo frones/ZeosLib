@@ -197,8 +197,7 @@ type
 
   TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const
-      StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL. }
@@ -1605,7 +1604,6 @@ end;
 { TZPostgreSQLCallableStatement }
 
 function TZPostgreSQLCallableStatement.CreateExecutionStatement(
-  Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var
   P: PChar;
@@ -1630,8 +1628,6 @@ begin
   then (P+Length(SQL)-1)^ := ')' //cancel last comma
   else SQL := SQL + ')';
   Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
-  TZPostgreSQLPreparedStatementV3(Result)._AddRef;
 end;
 
 { TZPostgreSQLPreparedStatementV3 }

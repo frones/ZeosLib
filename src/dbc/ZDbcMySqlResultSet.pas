@@ -699,14 +699,6 @@ begin
   if QueryHandle = nil then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   { Fills the column info. }
-  ColumnsInfo.Clear;
-//  FFieldCount := FPlainDriver.mysql_num_fields(QueryHandle);
-
-  { We use the refetch logic of
-    https://bugs.mysql.com/file.php?id=12361&bug_id=33086 }
-  {ReallocBindBuffer(FMYSQL_Col_BIND_Address^, FMYSQL_aligned_BINDs, FBindOffsets, 0,
-    FFieldCount, 1);}
-
   for I := 0 to FFieldCount -1 do begin
     FPlainDriver.mysql_field_seek(QueryHandle, I);
     FieldHandle := FPlainDriver.mysql_fetch_field(QueryHandle);

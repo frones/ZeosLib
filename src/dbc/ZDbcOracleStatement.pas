@@ -145,8 +145,7 @@ type
   private
     FProcDescriptor: TZOraProcDescriptor_A;
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const
-      StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
     procedure PrepareInParameters; override;
   public
     procedure Unprepare; override;
@@ -834,7 +833,6 @@ end;
 { TZOracleCallableStatement_A }
 
 function TZOracleCallableStatement_A.CreateExecutionStatement(
-  Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var
   ProcSQL: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
@@ -912,8 +910,6 @@ begin
   Result := TZOraclePreparedStatement_A.Create(Connection, '', Info);
   TZOraclePreparedStatement_A(Result).FASQL := {$IFDEF UNICODE}ZUnicodeToRaw(ProcSQL, FClientCP){$ELSE}ProcSQL{$ENDIF};
   TZOraclePreparedStatement_A(Result).Prepare;
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
-  TZOraclePreparedStatement_A(Result)._AddRef;
 end;
 
 const OCIParamTypeMatrix: array[boolean] of array[OCI_TYPEPARAM_IN..OCI_TYPEPARAM_INOUT] of TZProcedureColumnType =
@@ -937,12 +933,12 @@ var Idx: Integer;
         Descriptor.ConcatParentName(False, Buf, Tmp, nil);
         ZDbcUtils.ToBuff(Descriptor.AttributeName, Buf, Tmp);
         ZDbcUtils.FlushBuff(Buf,tmp);
-        if FExecStatements[FCallExecKind] = nil then
+        if FExecStatement = nil then
           RegisterParameter(IDX,
             Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
               Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
         else
-          FExecStatements[FCallExecKind].RegisterParameter(IDX,
+          FExecStatement.RegisterParameter(IDX,
             Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
               Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
         Inc(IDX);

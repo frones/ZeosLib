@@ -89,6 +89,7 @@ type
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
     function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
+    function StoredProcedureIsSelectable(const ProcName: String): Boolean;
   end;
 
   TGUIDDetectFlag = (gfByType, gfByDomain, gfByFieldName);
@@ -143,6 +144,7 @@ type
     FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
     FXSQLDAMaxSize: LongWord;
     FPlainDriver: TZInterbasePlainDriver;
+    FProcedureTypesCache: TStrings;
     FGUIDProps: TZInterbase6ConnectionGUIDProps;
     FTPBs: array[Boolean,TZTransactIsolationLevel] of RawByteString;
     FTEBs: array[Boolean,TZTransactIsolationLevel] of TISC_TEB;
@@ -167,6 +169,7 @@ type
     function GetXSQLDAMaxSize: LongWord;
     function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
     procedure CreateNewDatabase(const SQL: RawByteString);
+    function StoredProcedureIsSelectable(const ProcName: String): Boolean;
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
@@ -317,7 +320,7 @@ begin
   // ! Create the object before parent's constructor because it is used in
   // TZAbstractDbcConnection.Create > Url.OnPropertiesChange
   FGUIDProps := TZInterbase6ConnectionGUIDProps.Create;
-  inherited;
+  inherited Create(ZUrl);
   FClientVersion := -1;
   FIsFirebirdLib := false;
   FIsInterbaseLib := false;
@@ -325,6 +328,7 @@ end;
 
 destructor TZInterbase6Connection.Destroy;
 begin
+  FreeAndNil(FProcedureTypesCache);
   FreeAndNil(FGUIDProps);
   inherited;
 end;
@@ -458,6 +462,7 @@ begin
 
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;
+  FProcedureTypesCache := TStringList.Create;
 end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
@@ -1095,6 +1100,36 @@ begin
         FreeAndNil(Params);
     end
   end;
+end;
+
+function TZInterbase6Connection.StoredProcedureIsSelectable(
+  const ProcName: String): Boolean;
+var I: Integer;
+  function AddToCache(const ProcName: String): Boolean;
+  var RS: IZResultSet;
+    Stmt: IZStatement;
+  begin
+    Stmt := CreateRegularStatement(Info);
+    RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
+    try
+      if RS.Next then begin
+        Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
+        FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
+      end else begin
+        RaiseUnsupportedException;
+        Result := False;
+      end;
+    finally
+      RS.Close;
+      RS := nil;
+      Stmt := nil;
+    end;
+  end;
+begin
+  I := FProcedureTypesCache.IndexOf(ProcName);
+  if I = -1
+  then Result := AddToCache(ProcName)
+  else Result := FProcedureTypesCache.Objects[I] <> nil;
 end;
 
 {**

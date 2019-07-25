@@ -110,7 +110,7 @@ type
 
   TZInterbase6PreparedStatement = class(TZAbstractInterbase6PreparedStatement, IZPreparedStatement)
   private
-    procedure EncodePData(XSQLVAR: PXSQLVAR; Index: Word; Value: PAnsiChar; Len: LengthInt);
+    procedure EncodePData(XSQLVAR: PXSQLVAR; Value: PAnsiChar; Len: LengthInt);
     procedure SetPAnsiChar(Index: Word; Value: PAnsiChar; Len: LengthInt);
     procedure SetPWideChar(Index: Word; Value: PWideChar; Len: LengthInt);
     procedure WriteLobBuffer(XSQLVAR: PXSQLVAR; Buffer: Pointer; Len: LengthInt);
@@ -174,8 +174,7 @@ type
 
   TZInterbase6CallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const
-      StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -509,7 +508,7 @@ begin
       LastResultSet := CreateIBResultSet(SQL, Self,
         TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
           FResultXSQLDA, True, CachedLob, FStatementType));
-      FOpenResultSet := Pointer(LastResultSet);
+      FOpenResultSet := Pointer(FLastResultSet);
     if (FStatementType = stExecProc) or BindList.HasOutOrInOutOrResultParam then
       FOutParamResultSet := LastResultSet;
   end else
@@ -650,7 +649,7 @@ begin
 end;
 
 procedure TZInterbase6PreparedStatement.EncodePData(XSQLVAR: PXSQLVAR;
-  Index: Word; Value: PAnsiChar; Len: LengthInt);
+  Value: PAnsiChar; Len: LengthInt);
 begin
   if Len > XSQLVAR.sqllen then begin
     FreeMem(XSQLVAR.sqldata, XSQLVAR.sqllen+SizeOf(Short));
@@ -774,15 +773,15 @@ begin
       SQL_TEXT,
       SQL_VARYING   : if (ClientCP = ZOSCodePage) or (XSQLVAR.sqlsubtype and 255 = CS_BINARY)
                         or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype and 255] = ZOSCodePage)) then
-                        EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
+                        EncodePData(XSQLVAR, Pointer(Value), Length(Value))
                       else begin
                         FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage); //localize it
                         if (FDB_CP_ID = CS_NONE)
                         then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype and 255])
                         else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
                         if FRawTemp <> ''
-                        then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
-                        else EncodePData(XSQLVAR, Index, PEmptyAnsiString, 0);
+                        then EncodePData(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
+                        else EncodePData(XSQLVAR, PEmptyAnsiString, 0);
                       end;
       SQL_BLOB,
       SQL_QUAD      : if XSQLVAR.sqlsubtype = isc_blob_text then
@@ -871,7 +870,7 @@ begin
   if P <> nil then begin
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT,
-      SQL_VARYING   : EncodePData(XSQLVAR, Index, P, L);
+      SQL_VARYING   : EncodePData(XSQLVAR, P, L);
       SQL_BLOB,
       SQL_QUAD      : WriteLobBuffer(XSQLVAR, P, L);
       else raise EZIBConvertError.Create(SUnsupportedDataType);
@@ -919,7 +918,7 @@ begin
     SQL_TEXT,
     SQL_VARYING   : begin
                       PByte(@fABuffer[0])^ := Ord('0')+Ord(Value);
-                      EncodePData(XSQLVAR, Index, @fABuffer[0], 1);
+                      EncodePData(XSQLVAR, @fABuffer[0], 1);
                     end;
     else raise EZIBConvertError.Create(SUnsupportedDataType);
   end;
@@ -965,7 +964,7 @@ begin
   L := Length(Value);
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, Pointer(Value), L);
+    SQL_VARYING   : EncodePData(XSQLVAR, Pointer(Value), L);
     SQL_LONG      : if L=SizeOf(Integer)
                     then PISC_LONG(XSQLVAR.sqldata)^ := PISC_LONG(Value)^
                     else PISC_LONG(XSQLVAR.sqldata)^ := Round(RawToFloat(PAnsiChar(Pointer(Value)), AnsiChar('.')) * IBScaleDivisor[XSQLVAR.sqlscale]); //AVZ
@@ -1079,7 +1078,7 @@ begin
     SQL_TEXT,
     SQL_VARYING   : begin
                       CurrToRaw(Value, @fABuffer[0], @P);
-                      EncodePData(XSQLVAR, Index, @fABuffer[0], P-PAnsiChar(@fABuffer[0]));
+                      EncodePData(XSQLVAR, @fABuffer[0], P-PAnsiChar(@fABuffer[0]));
                     end;
     else raise EZIBConvertError.Create(SUnsupportedDataType);
   end;
@@ -1108,7 +1107,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer,
+    SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer,
                       DateTimeToRawSQLDate(Value, @fABuffer, ConSettings^.WriteFormatSettings, False));
     else InternalBindDouble(XSQLVAR, Value);
   end;
@@ -1137,7 +1136,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
+    SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
     else InternalBindDouble(XSQLVAR, Value);
   end;
   if (XSQLVAR.sqlind <> nil) then
@@ -1166,7 +1165,7 @@ begin
   case (XSQLVAR.sqltype and not(1)) of
     SQL_FLOAT     : PSingle(XSQLVAR.sqldata)^   := Value;
     SQL_TEXT,
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
+    SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer[0], FloatToSqlRaw(Value, @fABuffer[0]));
     else InternalBindDouble(XSQLVAR, Value);
   end;
   if (XSQLVAR.sqlind <> nil) then
@@ -1192,11 +1191,11 @@ begin
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
     SQL_VARYING   : if XSQLVAR.sqlsubtype = CS_BINARY then
-                      EncodePData(XSQLVAR, Index, @Value.D1, SizeOf(TGUID))
+                      EncodePData(XSQLVAR, @Value.D1, SizeOf(TGUID))
                     else begin
                       //see https://firebirdsql.org/refdocs/langrefupd25-intfunc-uuid_to_char.html
                       GUIDToBuffer(@Value.D1, PAnsiChar(@fABuffer), []);
-                      EncodePData(XSQLVAR, Index, @fABuffer, 36)
+                      EncodePData(XSQLVAR, @fABuffer, 36)
                     end;
     SQL_BLOB,
     SQL_QUAD      : if XSQLVAR.sqlsubtype = CS_BINARY then
@@ -1249,7 +1248,7 @@ begin
     SQL_TEXT,
     SQL_VARYING   : begin
                       IntToRaw(Value, @fABuffer[0], @P);
-                      EncodePData(XSQLVAR, Index, @fABuffer[0], P-@fABuffer[0]);
+                      EncodePData(XSQLVAR, @fABuffer[0], P-@fABuffer[0]);
                     end;
     else raise EZIBConvertError.Create(SUnsupportedDataType);
   end;
@@ -1296,7 +1295,7 @@ begin
     SQL_TEXT,
     SQL_VARYING   : begin
                       IntToRaw(Value, @fABuffer[0], @P);
-                      EncodePData(XSQLVAR, Index, @fABuffer[0], P-@fABuffer[0]);
+                      EncodePData(XSQLVAR, @fABuffer[0], P-@fABuffer[0]);
                     end;
     else raise EZIBConvertError.Create(SUnsupportedDataType);
   end;
@@ -1343,8 +1342,8 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
-    SQL_TEXT      : EncodePData(XSQLVAR, Index, Value, Len);
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, Value, Len);
+    SQL_TEXT      : EncodePData(XSQLVAR, Value, Len);
+    SQL_VARYING   : EncodePData(XSQLVAR, Value, Len);
     SQL_LONG      : PISC_LONG (XSQLVAR.sqldata)^ := RawToIntDef(Value, Value+Len, 0);
     SQL_SHORT     : PISC_SHORT (XSQLVAR.sqldata)^ := RawToIntDef(Value, Value+Len,0);
     SQL_BOOLEAN   : PISC_BOOLEAN(XSQLVAR.sqldata)^ := Ord(StrToBoolEx(Value, Value+Len));
@@ -1422,8 +1421,8 @@ begin
                         else FRawTemp := PUnicodeToRaw(Value, Len, FCodePageArray[XSQLVAR.sqlsubtype and 255])
                       else FRawTemp := UnicodeStringToAscii7(Value, Len);
                       if FRawTemp <> ''
-                      then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
-                      else EncodePData(XSQLVAR, Index, PEmptyAnsiString, 0)
+                      then EncodePData(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
+                      else EncodePData(XSQLVAR, PEmptyAnsiString, 0)
                     end;
     SQL_LONG      : PISC_LONG(XSQLVAR.sqldata)^ := UnicodeToIntDef(Value, Value+Len, 0);
     SQL_SHORT     : PISC_SHORT(XSQLVAR.sqldata)^ := UnicodeToIntDef(Value, Value+Len,0);
@@ -1566,7 +1565,7 @@ begin
     SQL_TEXT,
     SQL_VARYING   : begin
                       IntToRaw(Integer(Value), @fABuffer[0], @P);
-                      EncodePData(XSQLVAR, Index, @fABuffer[0], P-@fABuffer[0]);
+                      EncodePData(XSQLVAR, @fABuffer[0], P-@fABuffer[0]);
                     end;
     else raise EZIBConvertError.Create(SUnsupportedDataType);
   end;
@@ -1604,7 +1603,7 @@ begin
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT,
       SQL_VARYING   : if not ConSettings^.AutoEncode or (XSQLVAR.sqlsubtype and 255 = CS_BINARY) then
-                        EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
+                        EncodePData(XSQLVAR, Pointer(Value), Length(Value))
                       else if (ClientCP <> CS_NONE)
                         then SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
                           ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, ClientCP))
@@ -1643,7 +1642,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer,
+    SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer,
                       DateTimeToRawSQLTime(Value, @fABuffer, ConSettings^.WriteFormatSettings, False));
     else InternalBindDouble(XSQLVAR, Value);
   end;
@@ -1672,7 +1671,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
-    SQL_VARYING   : EncodePData(XSQLVAR, Index, @fABuffer,
+    SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer,
                       DateTimeToRawSQLTimeStamp(Value, @fABuffer, ConSettings^.WriteFormatSettings, False));
     else InternalBindDouble(XSQLVAR, Value);
   end;
@@ -1761,15 +1760,15 @@ begin
       SQL_TEXT,
       SQL_VARYING   : if (ClientCP = zCP_UTF8) or (XSQLVAR.sqlsubtype and 255 = CS_BINARY)
                         or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype and 255] = zCP_UTF8)) then
-                        EncodePData(XSQLVAR, Index, Pointer(Value), Length(Value))
+                        EncodePData(XSQLVAR, Pointer(Value), Length(Value))
                       else begin
                         FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8); //localize it
                         if (FDB_CP_ID = CS_NONE)
                         then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype and 255])
                         else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
                         if FRawTemp <> ''
-                        then EncodePData(XSQLVAR, Index, Pointer(FRawTemp), Length(FRawTemp))
-                        else EncodePData(XSQLVAR, Index, PEmptyAnsiString, 0);
+                        then EncodePData(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
+                        else EncodePData(XSQLVAR, PEmptyAnsiString, 0);
                       end;
       SQL_BLOB,
       SQL_QUAD      : if XSQLVAR.sqlsubtype = isc_blob_text then
@@ -1888,7 +1887,6 @@ end;
 { TZInterbase6CallableStatement }
 
 function TZInterbase6CallableStatement.CreateExecutionStatement(
-  Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var
   P: PChar;
@@ -1896,9 +1894,9 @@ var
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
 begin
   SQL := '';
-  if mode = zcekParams
-  then ToBuff('EXECUTE PROCEDURE ', SQL)
-  else ToBuff('SELECT * FROM ',SQL);
+  if (Connection as IZInterbase6Connection).StoredProcedureIsSelectable(StoredProcName)
+  then ToBuff('SELECT * FROM ', SQL)
+  else ToBuff('EXECUTE PROCEDURE ', SQL);
   ToBuff(StoredProcName, SQL);
   ToBuff('(', SQL);
   for I := 0 to BindList.Capacity -1 do

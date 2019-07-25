@@ -64,7 +64,7 @@ uses
   ZCollections;
 
 type
-  TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, myCall);
+  TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, mySet, myCall);
   TOpenCursorCallback = procedure of Object;
   THandleStatus = (hsUnknown, hsAllocated, hsExecutedPrepared, hsExecutedOnce, hsReset);
 
@@ -187,22 +187,20 @@ type
   TZMySQLCallableStatement56up = class(TZAbstractCallableStatement_A,
     IZCallableStatement{, IZParamNamedCallableStatement})
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const
-      StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
   end;
 
   TZMySQLCallableStatement56down = class(TZAbstractCallableStatement_A,
     IZCallableStatement{, IZParamNamedCallableStatement})
   private
     FPlainDriver: TZMySQLPLainDriver;
-    FInParamNames: TStringDynArray;
+    FInParamNames: TRawByteStringDynArray;
     FInParamPrecisionArray, FInParamScaleArray: TIntegerDynArray;
     FStmt, FGetOutParmStmt: TZMySQLPreparedStatement;
     procedure CreateOutParamResultSet;
   protected
     procedure SetParamCount(NewParamCount: Integer); override;
-    function CreateExecutionStatement(Mode: TZCallExecKind; const
-      StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
     procedure BindInParameters; override;
   public
     procedure AfterConstruction; override;
@@ -2381,7 +2379,7 @@ end;
 
 { TZMySQLCallableStatement56up }
 
-function TZMySQLCallableStatement56up.CreateExecutionStatement(Mode: TZCallExecKind;
+function TZMySQLCallableStatement56up.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var
   I: Integer;
@@ -2406,10 +2404,8 @@ begin
     SQL := SQL +' as ReturnValue';
   Result := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
   TZMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
-  TZMySQLPreparedStatement(Result)._AddRef;
   TZMySQLPreparedStatement(Result).InternalRealPrepare;
   TZMySQLPreparedStatement(Result).Prepare;
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
 end;
 
 { TZMySQLCallableStatement56down }
@@ -2429,7 +2425,7 @@ begin
   if (BindList.Count = 0) then
     Exit;
   SQL := 'SET ';
-  Stmt := TZMySQLPreparedStatement(FExecStatements[zcekParams]);
+  Stmt := TZMySQLPreparedStatement(FExecStatement);
   for I := 0 to BindList.Count -1 do
     if Ord(BindList[i].ParamType) < Ord(pctOut) then begin
       ToBuff('@', SQL);
@@ -2446,7 +2442,6 @@ begin
 end;
 
 function TZMySQLCallableStatement56down.CreateExecutionStatement(
-  Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var
   I: Integer;
@@ -2478,9 +2473,7 @@ begin
   FStmt.FEmulatedParams := True;
   FStmt.FInitial_emulate_prepare := True;
   FStmt.FUseDefaults := False;
-  FStmt._AddRef;
   FStmt.Prepare;
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
   SQL := 'SELECT ';
   for i := Ord(BindList.HasReturnParam) to BindList.Count-1 do
     if Ord(BindList[I].ParamType) >= Ord(pctInOut) then begin
@@ -2609,7 +2602,11 @@ begin
   CheckParameterIndex(ParameterIndex);
   if not FParamsRegistered or FRegisteringParamFromMetadata then begin
     inherited RegisterParameter(ParameterIndex, SQLType, ParamType);
-    FInParamNames[ParameterIndex] := Name;
+    {$IFDEF UNICODE}
+    FInParamNames[ParameterIndex] := ZEncoding.ZUnicodeToRaw(Name, FClientCP);
+    {$ELSE}
+    FInParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+    {$ENDIF}
     FInParamPrecisionArray[ParameterIndex] := PrecisionOrSize;
     FInParamScaleArray[ParameterIndex] := Scale;
   end;
@@ -2643,6 +2640,7 @@ MySQL568PreparableTokens[Ord(myDelete)].MatchingGroup := 'DELETE';
 MySQL568PreparableTokens[Ord(myInsert)].MatchingGroup := 'INSERT';
 MySQL568PreparableTokens[Ord(myUpdate)].MatchingGroup := 'UPDATE';
 MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'SELECT';
+MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'SET';
 MySQL568PreparableTokens[Ord(myCall)].MatchingGroup := 'CALL'; //for non realpreparable api we're emultating it..
 {EH: all others i do ignore -> they are ususall send once }
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit

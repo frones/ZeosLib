@@ -1596,12 +1596,16 @@ begin
   {$R-}
   for I := 0 to FXSQLDA.sqld - 1 do begin
     SqlVar := @FXSQLDA.SqlVar[I];
-    if (SqlVar.sqltype and (not 1) = SQL_TEXT) and Fixed2VariableSize then
-      SqlVar.sqltype := (SQL_VARYING or 1);
-    M := Max(1, SqlVar.sqllen);
+    M := SqlVar.sqllen;
     if SqlVar.sqltype and (not 1) = SQL_VARYING then
       Inc(M, 2);
-    ReallocMem(SqlVar.sqldata, m);
+    if SqlVar.sqldata <> nil then
+      FreeMem(SqlVar.sqldata, M);
+    if (SqlVar.sqltype and (not 1) = SQL_TEXT) and Fixed2VariableSize then begin
+      SqlVar.sqltype := (SQL_VARYING or 1);
+      Inc(M, 2);
+    end;
+    GetMem(SqlVar.sqldata, m);
     if Fixed2VariableSize then begin {Praremeters}
       //This code used when allocated sqlind parameter for Param SQLDA
       SqlVar.sqltype := SqlVar.sqltype or 1;

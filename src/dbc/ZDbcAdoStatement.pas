@@ -149,7 +149,7 @@ type
 
   TZAdoCallableStatement2 = class(TZAbstractCallableStatement_W, IZCallableStatement)
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ADO}
@@ -1315,12 +1315,10 @@ end;
 
 { TZAdoCallableStatement2 }
 
-function TZAdoCallableStatement2.CreateExecutionStatement(Mode: TZCallExecKind;
+function TZAdoCallableStatement2.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement2;
 begin
   Result := TZAdoPreparedStatement.CreateWithCommandType(Connection, StoredProcName, Info, adCmdStoredProc);
-  TZAdoPreparedStatement(Result)._AddRef;
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
   TZAdoPreparedStatement(Result).Prepare;
 end;
 

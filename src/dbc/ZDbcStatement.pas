@@ -516,13 +516,10 @@ type
     procedure Unprepare; override;
   end;
 
-  TZCallExecKind = (zcekParams, zcekSelect);
-
   { EH: implements a wrapper class for the Stored-Procedures/Functions}
   TZAbstractCallableStatement2 = class(TZAbstractPreparedStatement2)
   private
     FStoredProcName: String;
-    FBindAgain: array[TZCallExecKind] of Boolean;
     FCharRec: TZCharRec;
     procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; Value: NativeInt);
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; Value: NativeUint);
@@ -532,9 +529,8 @@ type
     FParamsRegistered, FRegisteringParamFromMetadata: Boolean;
     FResults: IZCollection;
     FActiveResultIndex: Integer;
-    FCallExecKind: TZCallExecKind;
-    FExecStatements: array[TZCallExecKind] of TZAbstractPreparedStatement2;
-    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; virtual; abstract;
+    FExecStatement: TZAbstractPreparedStatement2;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; virtual; abstract;
     function IsFunction: Boolean;
     procedure BindInParameters; override;
     procedure PrepareInParameters; override;
@@ -6101,10 +6097,7 @@ end;
 }
 procedure TZAbstractCallableStatement2.BindInParameters;
 begin
-  Bindlist.BindValuesToStatement(FExecStatements[FCallExecKind]);
-  if (FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] <> FExecStatements[FCallExecKind]) and
-     (FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] <> nil) then
-    Bindlist.BindValuesToStatement(FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)]);
+  Bindlist.BindValuesToStatement(FExecStatement);
 end;
 
 procedure TZAbstractCallableStatement2.BindSignedOrdinal(Index: Integer;
@@ -6186,16 +6179,16 @@ end;
 
 procedure TZAbstractCallableStatement2.CopyCallResults;
 begin
-  if (GetResultSetType <> rtForwardOnly) then
-    while FExecStatements[FCallExecKind].GetMoreResults do
-      if (FExecStatements[FCallExecKind].FLastResultSet <> nil) then begin
-        if not Supports(FExecStatements[FCallExecKind].FLastResultSet, IZVirtualResultSet)
-        then FResults.Add(Connection.GetMetadata.CloneCachedResultSet(FExecStatements[FCallExecKind].FLastResultSet))
-        else FResults.Add(FExecStatements[FCallExecKind].FLastResultSet);
-        FExecStatements[FCallExecKind].FLastResultSet := nil;
-        FExecStatements[FCallExecKind].FOpenResultSet := nil;
+  if (FResultSetType <> rtForwardOnly) then
+    while FExecStatement.GetMoreResults do
+      if (FExecStatement.FLastResultSet <> nil) then begin
+        if not Supports(FExecStatement.FLastResultSet, IZVirtualResultSet)
+        then FResults.Add(Connection.GetMetadata.CloneCachedResultSet(FExecStatement.FLastResultSet))
+        else FResults.Add(FExecStatement.FLastResultSet);
+        FExecStatement.FLastResultSet := nil;
+        FExecStatement.FOpenResultSet := nil;
       end else
-        FResults.Add(TZAnyValue.CreateWithInteger(FExecStatements[FCallExecKind].LastUpdateCount));
+        FResults.Add(TZAnyValue.CreateWithInteger(FExecStatement.LastUpdateCount));
 end;
 
 constructor TZAbstractCallableStatement2.Create(const Connection: IZConnection;
@@ -6232,18 +6225,17 @@ end;
 
 function TZAbstractCallableStatement2.ExecutePrepared: Boolean;
 begin
-  FCallExecKind := zcekSelect;
   Prepare;
   BindInParameters;
-  Result := FExecStatements[FCallExecKind].ExecutePrepared;
+  Result := FExecStatement.ExecutePrepared;
   if Result then begin
     if (FResultSetType <> rtForwardOnly) then
-      if not Supports(FExecStatements[FCallExecKind].FLastResultSet, IZVirtualResultSet)
-      then FResults.Add(Connection.GetMetadata.CloneCachedResultSet(FExecStatements[FCallExecKind].FLastResultSet))
-      else FResults.Add(FExecStatements[FCallExecKind].FLastResultSet);
+      if not Supports(FExecStatement.FLastResultSet, IZVirtualResultSet)
+      then FResults.Add(Connection.GetMetadata.CloneCachedResultSet(FExecStatement.FLastResultSet))
+      else FResults.Add(FExecStatement.FLastResultSet);
     FLastUpdateCount := -1;
   end else
-    FLastUpdateCount := FExecStatements[FCallExecKind].LastUpdateCount;
+    FLastUpdateCount := FExecStatement.LastUpdateCount;
   CopyCallResults;
 end;
 
@@ -6263,27 +6255,26 @@ end;
 
 function TZAbstractCallableStatement2.ExecuteQueryPrepared: IZResultSet;
 begin
-  FCallExecKind := zcekSelect;
   Prepare;
   BindInParameters;
-  if FExecStatements[FCallExecKind].ExecutePrepared then begin
+  if FExecStatement.ExecutePrepared then begin
     FLastUpdateCount := -1;
-    Result := FExecStatements[FCallExecKind].FLastResultSet;
-    if (GetResultSetType <> rtForwardOnly) then begin
+    Result := FExecStatement.FLastResultSet;
+    if (FResultSetType <> rtForwardOnly) then begin
       if not Supports(Result, IZVirtualResultSet) then
-        Result := Connection.GetMetadata.CloneCachedResultSet(FExecStatements[FCallExecKind].FLastResultSet);
+        Result := Connection.GetMetadata.CloneCachedResultSet(FExecStatement.FLastResultSet);
       FResults.Add(Result);
     end;
-    FExecStatements[FCallExecKind].FLastResultSet := nil;
+    FExecStatement.FLastResultSet := nil;
   end else begin
-    FLastUpdateCount := FExecStatements[FCallExecKind].LastUpdateCount;
+    FLastUpdateCount := FExecStatement.LastUpdateCount;
     if (GetResultSetType <> rtForwardOnly) then
       FResults.Add(TZAnyValue.CreateWithInteger(FLastUpdateCount));
     Result := nil;
   end;
   CopyCallResults;
-  if (Result = nil) and (FExecStatements[FCallExecKind].FOutParamResultSet <> nil) then
-    Result := FExecStatements[FCallExecKind].FOutParamResultSet;
+  if (Result = nil) and (FExecStatement.FOutParamResultSet <> nil) then
+    Result := FExecStatement.FOutParamResultSet;
 end;
 
 function TZAbstractCallableStatement2.ExecuteUpdate(
@@ -6302,18 +6293,17 @@ end;
 
 function TZAbstractCallableStatement2.ExecuteUpdatePrepared: Integer;
 begin
-  FCallExecKind := zcekParams;
   Prepare;
   BindInParameters;
-  if FExecStatements[FCallExecKind].ExecutePrepared then begin
+  if FExecStatement.ExecutePrepared then begin
     if FResultSetType <> rtForwardOnly then begin
-      FResults.Add(Connection.GetMetadata.CloneCachedResultSet(FExecStatements[FCallExecKind].FLastResultSet));
-      FExecStatements[FCallExecKind].FLastResultSet.ResetCursor;
+      FResults.Add(Connection.GetMetadata.CloneCachedResultSet(FExecStatement.FLastResultSet));
+      FExecStatement.FLastResultSet.ResetCursor;
     end{ else
-      FLastResultSet := FExecStatements[FCallExecKind].FLastResultSet};
+      FLastResultSet := FExecStatement.FLastResultSet};
     Result := -1;
   end else
-    Result := FExecStatements[FCallExecKind].LastUpdateCount;
+    Result := FExecStatement.LastUpdateCount;
   FLastUpdateCount := Result;
   CopyCallResults;
 end;
@@ -6329,8 +6319,8 @@ end;
 procedure TZAbstractCallableStatement2.GetBigDecimal(Index: Integer;
   var Result: TBCD);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetBigDecimal(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetBigDecimal(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
       SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
   end else begin
@@ -6342,10 +6332,10 @@ end;
 procedure TZAbstractCallableStatement2.GetBoolean(Index: Integer;
   out Result: Boolean);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetBoolean(Index, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetBoolean(Index, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
-      BindSignedOrdinal(Index, FExecStatements[FCallExecKind].BindList[Index].SQLType, Ord(Result));
+      BindSignedOrdinal(Index, FExecStatement.BindList[Index].SQLType, Ord(Result));
   end else begin
     Result := False; //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -6368,10 +6358,10 @@ end;
 procedure TZAbstractCallableStatement2.GetBytes(Index: Integer;
   out Buf: Pointer; out Len: LengthInt);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetBytes(Index, Buf, Len);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetBytes(Index, Buf, Len);
     if (BindList.ParamTypes[Index] = pctInOut) then
-      inherited BindBinary(Index, FExecStatements[FCallExecKind].BindList.SQLTypes[Index], Buf, Len);
+      inherited BindBinary(Index, FExecStatement.BindList.SQLTypes[Index], Buf, Len);
   end else begin
     Buf := nil; //satisfy compiler
     Len := 0;
@@ -6391,8 +6381,8 @@ end;
 procedure TZAbstractCallableStatement2.GetCurrency(Index: Integer;
   out Result: Currency);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetCurrency(Index, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetCurrency(Index, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
       SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
   end else begin
@@ -6417,10 +6407,10 @@ end;
 procedure TZAbstractCallableStatement2.GetDateTime(Index: Integer;
   out Result: TDateTime);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetDateTime(Index, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetDateTime(Index, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
-      BindDouble(Index, FExecStatements[FCallExecKind].BindList[Index].SQLType, Result);
+      BindDouble(Index, FExecStatement.BindList[Index].SQLType, Result);
   end else begin
     Result := 0; //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -6430,10 +6420,10 @@ end;
 procedure TZAbstractCallableStatement2.GetDouble(Index: Integer;
   out Result: Double);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetDouble(Index, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetDouble(Index, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
-      BindDouble(Index, FExecStatements[FCallExecKind].BindList[Index].SQLType, Result);
+      BindDouble(Index, FExecStatement.BindList[Index].SQLType, Result);
   end else begin
     Result := 0; //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -6507,8 +6497,8 @@ end;
 procedure TZAbstractCallableStatement2.GetLob(Index: Integer;
   out Result: IZBlob);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetLob(Index, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetLob(Index, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
       SetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindList.SQLTypes[Index], Result);
   end else begin
@@ -6548,10 +6538,10 @@ end;
 procedure TZAbstractCallableStatement2.GetOrdinal(Index: Integer;
   out Result: Int64);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetOrdinal(Index, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetOrdinal(Index, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
-      BindSignedOrdinal(Index, FExecStatements[FCallExecKind].BindList[Index].SQLType, Result);
+      BindSignedOrdinal(Index, FExecStatement.BindList[Index].SQLType, Result);
   end else begin
     Result := 0; //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -6562,10 +6552,10 @@ end;
 procedure TZAbstractCallableStatement2.GetOrdinal(Index: Integer;
   out Result: UInt64);
 begin
-  if FExecStatements[FCallExecKind] <> nil then begin
-    FExecStatements[FCallExecKind].GetOrdinal(Index, Result);
+  if FExecStatement <> nil then begin
+    FExecStatement.GetOrdinal(Index, Result);
     if (BindList.ParamTypes[Index] = pctInOut) then
-      BindUnSignedOrdinal(Index, FExecStatements[FCallExecKind].BindList[Index].SQLType, Result);
+      BindUnSignedOrdinal(Index, FExecStatement.BindList[Index].SQLType, Result);
   end else begin
     Result := 0; //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -6595,13 +6585,10 @@ var
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   {$IFDEF UNICODE}
-  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(Result), L, zCP_UTF16);
+  FExecStatement.GetPChar(ParameterIndex, Pointer(Result), L, zCP_UTF16);
   {$ELSE}
-  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(Result), L, ConSettings.CTRL_CP);
+  FExecStatement.GetPChar(ParameterIndex, Pointer(Result), L, ConSettings.CTRL_CP);
   {$ENDIF}
-  if (FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] <> FExecStatements[FCallExecKind]) and
-     (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-    BindList.Put(ParameterIndex, FExecStatements[FCallExecKind].BindList[ParameterIndex]);
 end;
 
 {**
@@ -6611,8 +6598,8 @@ end;
 procedure TZAbstractCallableStatement2.GetPChar(Index: Integer;
   out Buf: Pointer; out Len: LengthInt; CodePage: Word);
 begin
-  if FExecStatements[FCallExecKind] <> nil
-  then FExecStatements[FCallExecKind].GetPChar(Index, Buf, Len, CodePage)
+  if FExecStatement <> nil
+  then FExecStatement.GetPChar(Index, Buf, Len, CodePage)
   else begin
     Buf := nil;
     Len := 0;
@@ -6745,71 +6732,71 @@ var
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   Result := NullVariant;
-  if not FExecStatements[FCallExecKind].IsNull(ParameterIndex) then
+  if not FExecStatement.IsNull(ParameterIndex) then
     case BindList.SQLTypes[ParameterIndex] of
       stBoolean: begin
-          FExecStatements[FCallExecKind].GetBoolean(ParameterIndex, Result.VBoolean);
+          FExecStatement.GetBoolean(ParameterIndex, Result.VBoolean);
           Result.VType := vtBoolean;
         end;
       stByte..stInteger, stLong: begin
-          FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, Result.VInteger);
+          FExecStatement.GetOrdinal(ParameterIndex, Result.VInteger);
           Result.VType := vtInteger;
         end;
       stULong: begin
-          FExecStatements[FCallExecKind].GetOrdinal(ParameterIndex, Result.VUInteger);
+          FExecStatement.GetOrdinal(ParameterIndex, Result.VUInteger);
           Result.VType := vtUInteger;
         end;
       stFloat, stDouble: begin
           InitializeVariant(Result, vtDouble);
-          FExecStatements[FCallExecKind].GetDouble(ParameterIndex, Result.VDouble);
+          FExecStatement.GetDouble(ParameterIndex, Result.VDouble);
         end;
       stCurrency: begin
           InitializeVariant(Result, vtCurrency);
-          FExecStatements[FCallExecKind].GetCurrency(ParameterIndex, Result.VCurrency);
+          FExecStatement.GetCurrency(ParameterIndex, Result.VCurrency);
         end;
       stBigDecimal: begin
           InitializeVariant(Result, vtBigDecimal);
-          FExecStatements[FCallExecKind].GetBigDecimal(ParameterIndex, Result.VBigDecimal);
+          FExecStatement.GetBigDecimal(ParameterIndex, Result.VBigDecimal);
         end;
       stTime,stDate,stTimeStamp: begin
           {$IFDEF BCC32_vtDateTime_ERROR}
-          FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, DT);
+          FExecStatement.GetDateTime(ParameterIndex, DT);
           Result.VDateTime := DT;
           {$ELSE}
-          FExecStatements[FCallExecKind].GetDateTime(ParameterIndex, Result.VDateTime);
+          FExecStatement.GetDateTime(ParameterIndex, Result.VDateTime);
           {$ENDIF}
           Result.VType := vtDateTime;
         end;
       stGUID: begin
-          FExecStatements[FCallExecKind].GetBytes(ParameterIndex, Result.VPointer, L);
+          FExecStatement.GetBytes(ParameterIndex, Result.VPointer, L);
           Result := EncodeGUID(PGUID(Result.VPointer)^);
         end;
       stBytes: begin
-          FExecStatements[FCallExecKind].GetBytes(ParameterIndex, Result.VPointer, L);
+          FExecStatement.GetBytes(ParameterIndex, Result.VPointer, L);
           Result := EncodeBytes(BufferToBytes(Result.VPointer, L));
         end;
       stString, stUnicodeString: begin
           if ConSettings^.AutoEncode then begin
-            FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Result.VPointer, L, ConSettings^.CTRL_CP);
+            FExecStatement.GetPChar(ParameterIndex, Result.VPointer, L, ConSettings^.CTRL_CP);
             Result.VType := vtString;
             System.SetString(Result.VString, PChar(Result.VPointer), L);
           end else if (ConSettings.ClientCodePage^.Encoding = ceUTF16) or (not ConSettings.ClientCodePage^.IsStringFieldCPConsistent) then begin
-            FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Result.VPointer, L, zCP_UTF16);
+            FExecStatement.GetPChar(ParameterIndex, Result.VPointer, L, zCP_UTF16);
             Result.VType := vtUnicodeString;
             System.SetString(Result.VUnicodeString, PWideChar(Result.VPointer), L);
           end else begin
-            FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Result.VPointer, L, ConSettings^.ClientCodePage^.CP);
+            FExecStatement.GetPChar(ParameterIndex, Result.VPointer, L, ConSettings^.ClientCodePage^.CP);
             Result.VType := vtRawByteString;
             ZSetString(PAnsiChar(Result.VPointer), L, Result.VRawByteString);
           end;
         end;
       stAsciiStream, stUnicodeStream, stBinaryStream: begin
-          FExecStatements[FCallExecKind].GetLob(ParameterIndex, PIZLob(@Result.VInterface)^);
+          FExecStatement.GetLob(ParameterIndex, PIZLob(@Result.VInterface)^);
           Result := EncodeInterface(PIZLob(@Result.VInterface)^);
         end;
     end;
   if BindList.ParamTypes[ParameterIndex] = pctInOut then
-    BindList.Put(ParameterIndex, FExecStatements[FCallExecKind].BindList[ParameterIndex]);
+    BindList.Put(ParameterIndex, FExecStatement.BindList[ParameterIndex]);
 end;
 
 function TZAbstractCallableStatement2.GetWord(ParameterIndex: Integer): Word;
@@ -6835,21 +6822,21 @@ end;
 function TZAbstractCallableStatement2.IsNull(ParameterIndex: Integer): Boolean;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  Result := FExecStatements[FCallExecKind].IsNull(ParameterIndex);
+  Result := FExecStatement.IsNull(ParameterIndex);
   if Result and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
     BindList.SetNull(ParameterIndex, BindList.SQLTypes[ParameterIndex])
 end;
 
 procedure TZAbstractCallableStatement2.Prepare;
 begin
-  if FExecStatements[FCallExecKind] = nil then begin
-    FExecStatements[FCallExecKind] := CreateExecutionStatement(FCallExecKind, FStoredProcName);
-    FExecStatements[FCallExecKind]._AddRef;
+  if FExecStatement = nil then begin
+    FExecStatement := CreateExecutionStatement(FStoredProcName);
+    FExecStatement._AddRef;
     FParamsRegistered := not Connection.UseMetadata;
   end;
   if not Prepared then
     inherited Prepare;
-  FExecStatements[FCallExecKind].SetResultSetType(GetResultSetType);
+  FExecStatement.SetResultSetType(GetResultSetType);
   if Assigned(FLastResultSet) then begin
     FLastResultSet.Close;
     FLastResultSet := nil;
@@ -6876,9 +6863,9 @@ var I: Integer;
       '', StoredProcName, '');
     RS.Last;
     I := RS.GetRow;
-    if FExecStatements[FCallExecKind] = nil
+    if FExecStatement = nil
     then SetParamCount(I)
-    else FExecStatements[FCallExecKind].SetParamCount(I);
+    else FExecStatement.SetParamCount(I);
     I := 0;
     RS.BeforeFirst;
     while RS.Next do begin
@@ -6887,10 +6874,10 @@ var I: Integer;
       S := RS.GetString(ProcColColumnNameIndex);
       Prec := RS.GetInt(ProcColPrecisionIndex);
       Scale := RS.GetInt(ProcColScaleIndex);
-      if FExecStatements[FCallExecKind] = nil then
+      if FExecStatement = nil then
         RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale)
       else
-        FExecStatements[FCallExecKind].RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+        FExecStatement.RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
       Inc(I);
     end;
     FRegisteringParamFromMetadata := False;
@@ -6900,9 +6887,9 @@ begin
   if not FParamsRegistered then
     if Connection.UseMetadata
     then RegisterFromMetadata
-    else if FExecStatements[FCallExecKind] <> nil then
+    else if FExecStatement <> nil then
       for i := BindList.Count -1 downto 0 do
-        FExecStatements[FCallExecKind].RegisterParameter(I,
+        FExecStatement.RegisterParameter(I,
           BindList.SQLTypes[i], BindList.ParamTypes[i]);
 end;
 
@@ -6951,12 +6938,10 @@ end;
 
 procedure TZAbstractCallableStatement2.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-var CallExecKind: TZCallExecKind;
 begin
   FResults.Clear;
-  for CallExecKind := low(TZCallExecKind) to high(TZCallExecKind) do
-    if Assigned(FExecStatements[CallExecKind]) then
-      FExecStatements[CallExecKind].ReleaseImmediat(Sender, AError);
+  if Assigned(FExecStatement) then
+    FExecStatement.ReleaseImmediat(Sender, AError);
   inherited ReleaseImmediat(Sender, AError);
 end;
 
@@ -7243,17 +7228,15 @@ begin
 end;
 
 procedure TZAbstractCallableStatement2.Unprepare;
-var CallExecKind: TZCallExecKind;
 begin
   FResults.Clear;
   FActiveResultIndex := -1;
   FParamsRegistered := False;
-  for CallExecKind := Low(TZCallExecKind) to High(TZCallExecKind) do
-    if FExecStatements[CallExecKind] <> nil then begin
-      FExecStatements[CallExecKind].Close;
-      FExecStatements[CallExecKind]._Release;
-      FExecStatements[CallExecKind] := nil
-    end;
+  if FExecStatement <> nil then begin
+    FExecStatement.Close;
+    FExecStatement._Release;
+    FExecStatement := nil
+  end;
   inherited Unprepare;
 end;
 
@@ -7300,14 +7283,7 @@ var
   L: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
-  if (FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] <> FExecStatements[FCallExecKind]) and
-     (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-    if FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] = nil then begin
-      ZSetString(P, L, FRawTemp);
-      BindList.Put(ParameterIndex, FExecStatements[FCallExecKind].BindList.SQLTypes[ParameterIndex], FRawTemp, ConSettings.ClientCodePage.CP)
-    end else
-      TZRawPreparedStatement(FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)]).BindRawStr(ParameterIndex, P, L);
+  FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
   if ZCompatibleCodePAges(FClientCP, ZOSCodePage) then
     ZSetString(P, L, Result)
   else begin
@@ -7338,18 +7314,9 @@ function TZAbstractCallableStatement_A.GetRawByteString(
 var
   P: PAnsiChar;
   L: LengthInt;
-  ReverseExecKind: TZCallExecKind;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
-  ReverseExecKind := TZCallExecKind(not Ord(FCallExecKind) and 1);
-  if (FExecStatements[ReverseExecKind] <> FExecStatements[FCallExecKind]) and
-     (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-    if FExecStatements[ReverseExecKind] = nil then begin
-      ZSetString(P, L, FRawTemp);
-      BindList.Put(ParameterIndex, FExecStatements[FCallExecKind].BindList.SQLTypes[ParameterIndex], FRawTemp, FClientCP)
-    end else
-      TZRawPreparedStatement(FExecStatements[ReverseExecKind]).BindRawStr(ParameterIndex, P, L);
+  FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
   ZSetString(P, L, Result)
 end;
 
@@ -7407,21 +7374,9 @@ function TZAbstractCallableStatement_A.GetUnicodeString(
   ParameterIndex: Integer): ZWideString;
 var
   L: LengthInt;
-  ReverseExecKind: TZCallExecKind;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, FCharRec.P, L, FClientCP);
-  ReverseExecKind := TZCallExecKind(not Ord(FCallExecKind) and 1);
-  if (FExecStatements[ReverseExecKind] <> FExecStatements[FCallExecKind]) and
-     (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-    if FExecStatements[ReverseExecKind] = nil then begin
-      ZSetString(FCharRec.P, L, FRawTemp);
-      BindList.Put(ParameterIndex, FExecStatements[FCallExecKind].BindList.SQLTypes[ParameterIndex], FRawTemp, FClientCP);
-      FBindAgain[ReverseExecKind] := True;
-    end else begin
-      FCharRec.Len := L;
-      TZRawPreparedStatement(FExecStatements[ReverseExecKind]).BindRawStr(ParameterIndex, FCharRec.P, L);
-    end;
+  FExecStatement.GetPChar(ParameterIndex, FCharRec.P, L, FClientCP);
   Result := PRawToUnicode(FCharRec.P, L, FClientCP);
 end;
 
@@ -7448,14 +7403,7 @@ var
   L: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  FExecStatements[FCallExecKind].GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
-  if (FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] <> FExecStatements[FCallExecKind]) and
-     (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-    if FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)] = nil then begin
-      ZSetString(P, L, FRawTemp);
-      BindList.Put(ParameterIndex, FExecStatements[FCallExecKind].BindList.SQLTypes[ParameterIndex], FRawTemp, FClientCP)
-    end else
-      TZRawPreparedStatement(FExecStatements[TZCallExecKind(not Ord(FCallExecKind) and 1)]).BindRawStr(ParameterIndex, P, L);
+  FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
   if ZCompatibleCodePages(FClientCP, zCP_UTF8) then
     ZSetString(P, L, Result)
   else begin
@@ -7545,20 +7493,9 @@ end;
 
 procedure TZAbstractCallableStatement_W.FillAndBindCharRec(Index: Integer;
   out Len: LengthInt);
-var ReverseExecKind: TZCallExecKind;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
-  FExecStatements[FCallExecKind].GetPChar(Index, FCharRec.P, Len, zCP_UTF16);
-  ReverseExecKind := TZCallExecKind(not Ord(FCallExecKind) and 1);
-  if (FExecStatements[ReverseExecKind] <> FExecStatements[FCallExecKind]) and
-     (BindList.ParamTypes[Index] = pctInOut) then
-    if FExecStatements[ReverseExecKind] = nil then begin
-      System.SetString(FUniTemp, PWideChar(FCharRec.P), Len);
-      BindList.Put(Index, FExecStatements[FCallExecKind].BindList.SQLTypes[Index], FUniTemp)
-    end else begin
-      FCharRec.Len := Len;
-      IZPreparedStatement(FExecStatements[ReverseExecKind].FWeakIntfPtrOfIPrepStmt).SetCharRec(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FCharRec);
-    end;
+  FExecStatement.GetPChar(Index, FCharRec.P, Len, zCP_UTF16);
 end;
 
 {$IFNDEF NO_ANSISTRING}

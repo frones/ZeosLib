@@ -202,8 +202,7 @@ type
   private
     fPHDBC: PSQLHDBC;
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; override;
-    procedure PrepareInParameters; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
   public
     constructor Create(const Connection: IZConnection;
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
@@ -223,8 +222,7 @@ type
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const StoredProcName: String): TZAbstractPreparedStatement2; override;
-    procedure PrepareInParameters; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
@@ -2345,7 +2343,7 @@ begin
   fPHDBC := @ConnectionHandle
 end;
 
-function TZODBCCallableStatementW_MSSQL.CreateExecutionStatement(Mode: TZCallExecKind;
+function TZODBCCallableStatementW_MSSQL.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
@@ -2364,30 +2362,6 @@ begin
   ZDbcUtils.FlushBuff(Buf, SQL);
   Result := TZODBCPreparedStatementW.Create(Connection as IZODBCConnection, fPHDBC^, SQL, Info);
   TZODBCPreparedStatementW(Result).Prepare;
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
-  TZODBCPreparedStatementW(Result)._AddRef;
-end;
-
-procedure TZODBCCallableStatementW_MSSQL.PrepareInParameters;
-var I: Integer;
-  RS: IZResultSet;
-begin
-  if Connection.UseMetadata then begin
-    //Register the ParamNames
-    RS := Connection.GetMetadata.GetProcedureColumns(Connection.GetCatalog,
-      '', StoredProcName, '');
-    I := FirstDbcIndex;
-    while RS.Next do begin
-      FExecStatements[FCallExecKind].RegisterParameter(I,
-        TZSQLType(RS.GetInt(ProcColDataTypeIndex)),
-        TZProcedureColumnType(RS.GetInt(ProcColColumnTypeIndex)),
-        RS.GetString(ProcColColumnNameIndex), RS.GetInt(ProcColPrecisionIndex),
-        RS.GetInt(ProcColScaleIndex));
-      Inc(I);
-    end;
-    Assert(I-FirstDbcIndex = BindList.Count);
-  end else
-    inherited PrepareInParameters;
 end;
 
 { TZODBCCallableStatementA_MSSQL }
@@ -2401,7 +2375,7 @@ begin
   fPHDBC := @ConnectionHandle
 end;
 
-function TZODBCCallableStatementA_MSSQL.CreateExecutionStatement(Mode: TZCallExecKind;
+function TZODBCCallableStatementA_MSSQL.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
@@ -2420,30 +2394,6 @@ begin
   ZDbcUtils.FlushBuff(Buf, SQL);
   Result := TZODBCPreparedStatementA.Create(Connection as IZODBCConnection, fPHDBC^, SQL, Info);
   TZODBCPreparedStatementA(Result).Prepare;
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
-  TZODBCPreparedStatementA(Result)._AddRef;
-end;
-
-procedure TZODBCCallableStatementA_MSSQL.PrepareInParameters;
-var I: Integer;
-  RS: IZResultSet;
-begin
-  if Connection.UseMetadata then begin
-    //Register the ParamNames
-    RS := Connection.GetMetadata.GetProcedureColumns(Connection.GetCatalog,
-      '', StoredProcName, '');
-    I := FirstDbcIndex;
-    while RS.Next do begin
-      FExecStatements[FCallExecKind].RegisterParameter(I,
-        TZSQLType(RS.GetInt(ProcColDataTypeIndex)),
-        TZProcedureColumnType(RS.GetInt(ProcColColumnTypeIndex)),
-        RS.GetString(ProcColColumnNameIndex), RS.GetInt(ProcColPrecisionIndex),
-        RS.GetInt(ProcColScaleIndex));
-      Inc(I);
-    end;
-    Assert(I-FirstDbcIndex = BindList.Count);
-  end else
-    inherited PrepareInParameters;
 end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
