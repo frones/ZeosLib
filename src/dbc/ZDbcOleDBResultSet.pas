@@ -906,17 +906,19 @@ begin
       DBTYPE_I8:        Result := PInt64(FData)^ <> 0;
       DBTYPE_UI8:       Result := PUInt64(FData)^ <> 0;
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := StrToBoolEx(GetBlob(ColumnIndex).GetRawByteString)
-        else
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+          FTempBlob := GetBlob(ColumnIndex); //localize
+          Result := StrToBoolEx(PAnsiChar(FTempBlob.GetBuffer), PAnsiChar(FTempBlob.GetBuffer)+FTempBlob.Length)
+        end else
           Result := StrToBoolEx(PAnsiChar(FData),
             True, FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := StrToBoolEx(PPAnsiChar(FData)^);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := StrToBoolEx(GetBlob(ColumnIndex).GetUnicodeString)
-        else
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+          FTempBlob := GetBlob(ColumnIndex); //localize
+          Result := StrToBoolEx(FTempBlob.GetPWideChar, FTempBlob.GetPWideChar+FTempBlob.Length)
+        end else
           Result := StrToBoolEx(PWideChar(FData),
             True, FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
@@ -958,16 +960,18 @@ begin
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := RawToIntDef(GetBlob(ColumnIndex).GetBuffer, 0)
-        else
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+          FTempBlob := GetBlob(ColumnIndex); //localize
+          Result := RawToIntDef(FTempBlob.GetBuffer, 0);
+        end else
           Result := RawToIntDef(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToIntDef(PPAnsiChar(FData)^,0);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-          Result := UnicodeToIntDef(GetBlob(ColumnIndex).GetPWideChar, 0)
-        else
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+          FTempBlob := GetBlob(ColumnIndex); //localize
+          Result := UnicodeToIntDef(FTempBlob.GetPWideChar, 0)
+        end else
           Result := UnicodeToIntDef(PWideChar(FData),0);
       DBTYPE_WSTR or DBTYPE_BYREF:
         Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
@@ -1017,15 +1021,17 @@ begin
       DBTYPE_UI2:       Result := PWord(FData)^;
       DBTYPE_UI4:       Result := PCardinal(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-                          Result := RawToInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
-                        else
+      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+                          FTempBlob := GetBlob(ColumnIndex); //localize
+                          Result := RawToInt64Def(FTempBlob.GetBuffer, 0);
+                        end else
                           Result := RawToInt64Def(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
                         Result := RawToInt64Def(PAnsiChar(FData),0);
-      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-                          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
-                        else
+      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+                          FTempBlob := GetBlob(ColumnIndex); //localize
+                          Result := UnicodeToInt64Def(FTempBlob.GetPWideChar, 0)
+                        end else
                           Result := UnicodeToInt64Def(PWideChar(FData), 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
                         Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
@@ -1076,15 +1082,17 @@ begin
       DBTYPE_UI2:       Result := PWord(FData)^;
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-                          Result := RawToUInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
-                        else
+      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+                          FTempBlob := GetBlob(ColumnIndex); //localize
+                          Result := RawToUInt64Def(FTempBlob.GetBuffer, 0)
+                        end else
                           Result := RawToUInt64Def(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToUInt64Def(PPAnsiChar(FData)^, 0);
-      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-                          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
-                        else
+      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+                          FTempBlob := GetBlob(ColumnIndex); //localize
+                          Result := UnicodeToInt64Def(FTempBlob.GetPWideChar, 0)
+                        end else
                           Result := UnicodeToUInt64Def(PWideChar(FData), 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
                           Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
@@ -1126,15 +1134,17 @@ begin
       DBTYPE_UI2:       Result := PWord(FData)^;
       DBTYPE_UI4:       Result := PCardinal(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
-      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-                          Result := RawToUInt64Def(GetBlob(ColumnIndex).GetBuffer, 0)
-                        else
+      DBTYPE_STR:       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+                          FTempBlob := GetBlob(ColumnIndex); //localize
+                          Result := RawToUInt64Def(FTempBlob.GetBuffer, 0)
+                        end else
                           Result := RawToUInt64Def(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToUInt64Def(PPAnsiChar(FData)^, 0);
-      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then
-                          Result := UnicodeToInt64Def(GetBlob(ColumnIndex).GetPWideChar, 0)
-                        else
+      DBTYPE_WSTR:      if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].cbMaxLen = 0 then begin
+                          FTempBlob := GetBlob(ColumnIndex); //localize
+                          Result := UnicodeToInt64Def(FTempBlob.GetPWideChar, 0)
+                        end else
                           Result := UnicodeToUInt64Def(PWideChar(FData), 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
                           Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
