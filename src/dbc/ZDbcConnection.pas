@@ -1319,6 +1319,7 @@ var RefCountAdded: Boolean;
 begin
   //while killing pending statements which keep the Connection.RefCount greater than 0
   //we need to take care about calling Destroy which calls Close again.
+  DriverManager.ClearGarbageCollector;
   if RefCount > 0 then begin //manual close called
     RefCountAdded := True;
     _AddRef;
