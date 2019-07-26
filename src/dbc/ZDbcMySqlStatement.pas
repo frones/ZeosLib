@@ -194,7 +194,7 @@ type
     IZCallableStatement{, IZParamNamedCallableStatement})
   private
     FPlainDriver: TZMySQLPLainDriver;
-    FInParamNames: TRawByteStringDynArray;
+    FInParamNames: TStringDynArray;
     FInParamPrecisionArray, FInParamScaleArray: TIntegerDynArray;
     FStmt, FGetOutParmStmt: TZMySQLPreparedStatement;
     procedure CreateOutParamResultSet;
@@ -2602,11 +2602,7 @@ begin
   CheckParameterIndex(ParameterIndex);
   if not FParamsRegistered or FRegisteringParamFromMetadata then begin
     inherited RegisterParameter(ParameterIndex, SQLType, ParamType);
-    {$IFDEF UNICODE}
-    FInParamNames[ParameterIndex] := ZEncoding.ZUnicodeToRaw(Name, FClientCP);
-    {$ELSE}
-    FInParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
-    {$ENDIF}
+    FInParamNames[ParameterIndex] := Name;
     FInParamPrecisionArray[ParameterIndex] := PrecisionOrSize;
     FInParamScaleArray[ParameterIndex] := Scale;
   end;

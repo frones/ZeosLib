@@ -1347,7 +1347,7 @@ write_lob:WriteTempBlob.CreateBlob;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         BufferSize := Max(BufferSize, Length(ClientStrings[I]) -1);
         {$ELSE}
-        BufferSize := Max(BufferSize, PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^);
+        BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^);
         {$ENDIF}
     if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
       InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
@@ -1359,7 +1359,7 @@ write_lob:WriteTempBlob.CreateBlob;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         POCILong(P).Len := Length(ClientStrings[I]) -1;
         {$ELSE}
-        POCILong(P).Len := PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
+        POCILong(P).Len := {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
         {$ENDIF}
         Move(Pointer(ClientStrings[i])^,POCILong(P).data[0], POCILong(P).Len);
       end;
@@ -1424,7 +1424,7 @@ write_lob:WriteTempBlob.CreateBlob;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
         {$ELSE}
-        BufferSize := Max(BufferSize, PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
+        BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
         {$ENDIF}
     BufferSize := BufferSize shl 2; //oversized
     if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then

@@ -77,6 +77,7 @@ type
     FRC: OleVariant;
   protected
     function CreateResultSet: IZResultSet; virtual;
+  public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
       const Info: TStrings; CommandType: CommandTypeEnum);
   public
