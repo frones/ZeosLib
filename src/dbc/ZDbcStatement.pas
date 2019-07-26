@@ -987,15 +987,23 @@ end;
   @param Value: the SQL-String which has to be optional preprepared
 }
 procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
+{$IFNDEF UNICODE}var CP: Word;{$ENDIF}
 begin
   if FWSQL <> Value then
     {$IFDEF UNICODE}
-    if not (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
+    if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
+      FWSQL := GetUnicodeEncodedSQL(Value);
+      {$IFDEF DEBUG}FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);{$ENDIF}
+    end else begin
       FASQL := GetRawEncodedSQL(Value);
-    FWSQL := Value;
+      FWSQL := Value;
+    end;
     {$ELSE !UNICODE}
     begin
-      FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP); //required for the resultsets
+      if (ConSettings^.ClientCodePage^.Encoding = ceUTF16)
+      then CP := ConSettings^.CTRL_CP
+      else CP := FClientCP;
+      FaSQL := GetRawEncodedSQL(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, CP)); //required for the resultsets
       FWSQL := Value;
     end;
     {$ENDIF UNICODE}
@@ -1061,11 +1069,14 @@ begin
   begin
     {$IFDEF UNICODE}
     FASQL := Value;
-    FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
+    FWSQL := ZRawToUnicode(FASQL, FClientCP); //required for the resultsets
     {$ELSE !UNICODE}
-    FASQL := GetRawEncodedSQL(Value);
-    if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
-      FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
+    if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then begin
+      FWSQL := GetUnicodeEncodedSQL(Value);
+      FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);
+    end else
+      FASQL := GetRawEncodedSQL(Value);
+      {$IFDEF DEBUG}FWSQL := ZRawToUnicode(FASQL, FClientCP);{$ENDIF}
     {$ENDIF UNICODE}
   end;
 end;
@@ -1256,8 +1267,10 @@ begin
   finally
     FClosed := True;
     if RefCountAdded then begin
-      if (RefCount = 1) then
+      if (RefCount = 1) then begin
         DriverManager.AddGarbage(Self);
+        FConnection := nil;
+      end;
       _Release;
     end;
   end;
@@ -1408,7 +1421,11 @@ begin
             ToBuff(ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens.AsString(i),
               ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), Result);
           else
-            ToBuff({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens.AsString(i)), Result);
+            {$IFDEF UNICODE}
+            ToBuff(UnicodeStringToAscii7(SQLTokens[I].P, SQLTokens[I].L), Result);
+            {$ELSE}
+            ToBuff(SQLTokens.AsString(i), Result);
+            {$ENDIF}
         end;
       end;
     finally
@@ -1416,10 +1433,11 @@ begin
       SQLTokens.Free;
     end;
   end else begin
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
+    FWSQL := SQL;
     Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
+    FASQL := SQL;
     Result := SQL;
     {$ENDIF}
   end;
@@ -1433,6 +1451,7 @@ begin
 var
   SQLTokens: TZTokenList;
   i: Integer;
+  US: ZWideString;
 begin
   if ConSettings^.AutoEncode then begin
     Result := ''; //init
@@ -1441,15 +1460,19 @@ begin
       for i := 0 to SQLTokens.Count -1 do begin //Assembles the Query
         case (SQLTokens[i].TokenType) of
           ttQuoted, ttComment,
-          ttWord, ttQuotedIdentifier, ttKeyword:
-            ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
-          else
-            ToBuff(ASCII7ToUnicodeString(SQLTokens.AsString(i)), Result);
+          ttWord, ttQuotedIdentifier, ttKeyword: begin
+            US := ConSettings^.ConvFuncs.ZStringToUnicode(SQLTokens.AsString(I), ConSettings.CTRL_CP);
+            ToBuff(US, Result);
+          end else begin
+            US := ASCII7ToUnicodeString(SQLTokens[i].P, SQLTokens[i].L);
+            ToBuff(US, Result);
+          end;
         end;
       end;
     finally
       FlushBuff(Result);
       SQLTokens.Free;
+      FWSQL := '';
     end;
   end else
     Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
@@ -6044,10 +6067,10 @@ begin
       Inc(FCountOfQueryParams, Ord(FIsParamIndex[i]));
     end;
     FlushBuff(Result);
-    if FCountOfQueryParams > 0 then
-      FBindList.SetCapacity(FCountOfQueryParams);
+    SetBindCapacity(FCountOfQueryParams);
   end else
     Result := inherited GetUnicodeEncodedSQL(SQL);
+    SetBindCapacity(FCountOfQueryParams);
 end;
 
 {**
@@ -6735,16 +6758,16 @@ begin
   if not FExecStatement.IsNull(ParameterIndex) then
     case BindList.SQLTypes[ParameterIndex] of
       stBoolean: begin
+          InitializeVariant(Result, vtBoolean);
           FExecStatement.GetBoolean(ParameterIndex, Result.VBoolean);
-          Result.VType := vtBoolean;
         end;
       stByte..stInteger, stLong: begin
+          InitializeVariant(Result, vtInteger);
           FExecStatement.GetOrdinal(ParameterIndex, Result.VInteger);
-          Result.VType := vtInteger;
         end;
       stULong: begin
+          InitializeVariant(Result, vtUInteger);
           FExecStatement.GetOrdinal(ParameterIndex, Result.VUInteger);
-          Result.VType := vtUInteger;
         end;
       stFloat, stDouble: begin
           InitializeVariant(Result, vtDouble);
