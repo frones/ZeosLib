@@ -205,7 +205,7 @@ begin
       else case Type_ of {ADO uses its own DataType-mapping different to System tagVariant type mapping}
           adGUID:             begin
                                 JSONWriter.Add('"');
-                                JSONWriter.AddNoJSONEscapeW(PWord(PWideChar(FValueAddr)+1), 36);
+                                JSONWriter.AddNoJSONEscapeW(Pointer(PWideChar(FValueAddr)+1), 36);
                                 JSONWriter.Add('"');
                               end;
           adDBTime:           if (jcoMongoISODate in JSONComposeOptions) then begin

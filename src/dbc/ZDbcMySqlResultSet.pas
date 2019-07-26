@@ -353,6 +353,7 @@ var
   P: PAnsiChar;
   Bind: PMYSQL_aligned_BIND;
   MS: Word;
+label FinalizeDT;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -408,15 +409,12 @@ begin
                                     DateToIso8601PChar(@FTinyBuffer[0], True, PMYSQL_TIME(Bind^.Buffer)^.Year,
                                       PMYSQL_TIME(Bind^.Buffer)^.Month, PMYSQL_TIME(Bind^.Buffer)^.Day);
                                     MS := ((PMYSQL_TIME(Bind^.Buffer)^.second_part) * Byte(ord(jcoMilliseconds in JSONComposeOptions)) div 1000000);
-                                    FTinyBuffer[10] := Ord('T');
-                                    TimeToIso8601PChar(@FTinyBuffer[11], True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
+                                    TimeToIso8601PChar(@FTinyBuffer[10], True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
                                       PMYSQL_TIME(Bind^.Buffer)^.Minute, PMYSQL_TIME(Bind^.Buffer)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    if (jcoMilliseconds in JSONComposeOptions) and not (jcoMongoISODate in JSONComposeOptions)
+                                    if (jcoMilliseconds in JSONComposeOptions)
                                     then JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],23)
                                     else JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19);
-                                    if jcoMongoISODate in JSONComposeOptions
-                                    then JSONWriter.AddShort('Z")')
-                                    else JSONWriter.Add('"');
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_DATE,
           FIELD_TYPE_NEWDATE    : begin
@@ -428,26 +426,21 @@ begin
                                     DateToIso8601PChar(@FTinyBuffer[0], True, PMYSQL_TIME(Bind^.Buffer)^.Year,
                                       PMYSQL_TIME(Bind^.Buffer)^.Month, PMYSQL_TIME(Bind^.Buffer)^.Day);
                                     JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
-                                    if jcoMongoISODate in JSONComposeOptions
-                                    then JSONWriter.AddShort('Z")')
-                                    else JSONWriter.Add('"');
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_TIME       : begin
                                     if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("0000-00-00')
                                     else if jcoDATETIME_MAGIC in JSONComposeOptions then
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                                    else
-                                      JSONWriter.AddShort('"T');
+                                    else JSONWriter.AddShort('"');
                                     MS := (PMYSQL_TIME(Bind^.Buffer)^.second_part) div 1000000;
                                     TimeToIso8601PChar(@FTinyBuffer[0], True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
                                       PMYSQL_TIME(Bind^.Buffer)^.Minute, PMYSQL_TIME(Bind^.Buffer)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
                                     if jcoMilliseconds in JSONComposeOptions
                                     then JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],12)
                                     else JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8);
-                                    if jcoMongoISODate in JSONComposeOptions
-                                    then JSONWriter.AddShort('Z)"')
-                                    else JSONWriter.Add('"');
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_BIT        : if Bind^.Length[0] = 1
                                   then JSONWriter.AddShort(JSONBool[PByte(Bind^.Buffer)^ <> 0])
@@ -540,33 +533,35 @@ begin
           FIELD_TYPE_NULL       : JSONWriter.AddShort('null');
           FIELD_TYPE_TIMESTAMP,
           FIELD_TYPE_DATETIME   : begin
-                                    JSONWriter.Add('"');
-                                    if PCardinal(P)^ <> ZeroYearMagic then
-                                      inc(P, 11)
-                                    else begin
-                                      JSONWriter.AddNoJSONEscape(P, 10);
-                                      inc(P, 11);
-                                    end;
-                                    if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
-                                      JSONWriter.Add('T');
-                                      JSONWriter.AddNoJSONEscape(P, 8);
-                                    end;
-                                    JSONWriter.Add('"');
+                                    if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                    else if jcoMongoISODate in JSONComposeOptions then
+                                      JSONWriter.AddShort('ISODate("')
+                                    else JSONWriter.Add('"');
+                                    JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_DATE,
           FIELD_TYPE_NEWDATE    : begin
-                                    JSONWriter.Add('"');
-                                    if not PCardinal(P)^ <> ZeroYearMagic then
-                                      JSONWriter.AddNoJSONEscape(P, 10);
-                                    JSONWriter.Add('"');
+                                    if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                    else if jcoMongoISODate in JSONComposeOptions then
+                                      JSONWriter.AddShort('ISODate("')
+                                    else JSONWriter.Add('"');
+                                    JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_TIME       : begin
-                                    JSONWriter.Add('"');
-                                    if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
+                                    if jcoMongoISODate in JSONComposeOptions then
+                                      JSONWriter.AddShort('ISODate("0000-00-00T')
+                                    else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                                      JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4);
                                       JSONWriter.Add('T');
-                                      JSONWriter.AddNoJSONEscape(P, 8);
-                                    end;
-                                    JSONWriter.Add('"');
+                                    end else JSONWriter.AddShort('"T');
+                                    JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
+FinalizeDT:                         if jcoMongoISODate in JSONComposeOptions
+                                    then JSONWriter.AddShort('Z)"')
+                                    else JSONWriter.Add('"');
                                   end;
           FIELD_TYPE_BIT        : if FLengthArray^[C] = 1 then
                                     JSONWriter.AddShort(JSONBool[PByte(P)^ <> 0]) else
