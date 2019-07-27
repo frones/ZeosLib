@@ -2429,7 +2429,11 @@ begin
   for I := 0 to BindList.Count -1 do
     if Ord(BindList[i].ParamType) < Ord(pctOut) then begin
       ToBuff('@', SQL);
+      {$IFDEF UNICODE}
+      ToBuff(ZUnicodeToRaw(FInParamNames[i], FClientCP), SQL);
+      {$ELSE}
       ToBuff(FInParamNames[i], SQL);
+      {$ENDIF}
       ToBuff('=', SQL);
       ToBuff(Stmt.FEmulatedValues[i], SQL);
       ToBuff(',', SQL);
@@ -2526,7 +2530,7 @@ begin
           ColumnsInfo.Add(ColumnInfo);
         end;
       end;
-      RS := TZVirtualResultSet.CreateWithColumns(Self, ColumnsInfo, '', ConSettings);
+      RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
       RS.MoveToInsertRow;
       RS.SetType(rtScrollInsensitive);
       RS.SetConcurrency(rcReadOnly);

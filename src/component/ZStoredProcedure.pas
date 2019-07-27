@@ -201,9 +201,7 @@ var
   TempBlob: IZBlob;
   BCD: TBCD;
 begin
-  if Assigned(Statement) then
-    Statement.QueryInterface(IZCallableStatement, FCallableStatement);
-  if not Assigned(FCallableStatement) then
+  if (Statement = nil) or (Statement.QueryInterface(IZCallableStatement, FCallableStatement) <> S_OK) then
     Exit;
 
   for I := 0 to Params.Count - 1 do
@@ -256,7 +254,7 @@ begin
         ftBCD:
           Param.AsCurrency := FCallableStatement.GetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftFmtBCD: begin
-            FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD);
+            FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD{%H-});
             Param.AsFMTBCD := BCD;
           end;
         ftString:
