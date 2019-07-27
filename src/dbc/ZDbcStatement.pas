@@ -6187,7 +6187,7 @@ end;
 }
 function TZAbstractCallableStatement2.BOR: Boolean;
 begin
-  Result := FActiveResultIndex = 0;
+  Result := (FActiveResultIndex = 0) or not Supports(FResults[FActiveResultIndex], IZResultSet);
 end;
 
 procedure TZAbstractCallableStatement2.CheckParameterIndex(var Value: Integer);
@@ -6223,8 +6223,17 @@ end;
   @result <code>True</code> if so
 }
 function TZAbstractCallableStatement2.EOR: Boolean;
+var I: Integer;
 begin
-  Result := FActiveResultIndex = FResults.Count -1;
+  Result := (FActiveResultIndex = FResults.Count -1);
+  if not Result then begin
+    Result := True;
+    for i := FResults.Count -1 downto FActiveResultIndex+1 do
+      if Supports(FResults[I], IZResultSet) then begin
+        Result := False;
+        Break;
+      end;
+  end;
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally

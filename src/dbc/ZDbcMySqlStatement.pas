@@ -454,9 +454,11 @@ begin
         if Status > 0 //if status is -1 then there are no more resuls
         then CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self)
         else if Status = 0 then begin //results are in queue
+          Result := True;
+          FHasMoreResults := True;
           FieldCount := FPlainDriver.mysql_field_count(FPMYSQL^);
           if (FieldCount > 0)
-          then goto CreateRS
+          then LastResultSet := CreateResultSet(SQL, FResultSetIndex+1, FieldCount)
           else LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
         end;
       end;
@@ -465,12 +467,12 @@ begin
       if Status > 0 //if status is -1 then there are no more resuls
       then checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecute, ASQL, Self)
       else if Status = 0 then begin //results are in queue
+        Result := True;
+        FHasMoreResults := True;
         FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
-        if (FieldCount > 0) then begin
-CreateRS: Result := True;
-          LastResultSet := CreateResultSet(SQL, FResultSetIndex+1, FieldCount);
-          FHasMoreResults := True;
-        end else LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
+        if (FieldCount > 0)
+        then LastResultSet := CreateResultSet(SQL, FResultSetIndex+1, FieldCount)
+        else LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
       end;
     end;
   end;
