@@ -93,6 +93,7 @@ type
   protected
     procedure CheckParameterIndex(var Value: Integer); override;
     function GetInParamLogValue(Index: Integer): RawByteString; override;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure AfterClose; override;
@@ -304,6 +305,12 @@ begin
       LastUpdateCount := GetAffectedRows(FPlainDriver, FStmtHandle, FStatementType, Self);
     end
   else ExceuteBatch;
+end;
+
+procedure TZAbstractInterbase6PreparedStatement.ReleaseConnection;
+begin
+  inherited ReleaseConnection;
+  FIBConnection := nil;
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.ReleaseImmediat(

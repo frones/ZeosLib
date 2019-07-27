@@ -104,6 +104,7 @@ type
     function InternalCreateResultSet: IZResultSet;
     procedure InternalBeforePrepare;
     function GetCurrentResultSet: IZResultSet;
+    procedure ReleaseConnection; override;
   protected
     function SupportsSingleColumnArrays: Boolean;
   public
@@ -510,6 +511,12 @@ begin
       LastResultSet.Close;
       LastResultSet := nil;
     end;
+end;
+
+procedure TZAbstractODBCStatement.ReleaseConnection;
+begin
+  inherited ReleaseConnection;
+  FODBCConnection := nil;
 end;
 
 function TZAbstractODBCStatement.SupportsSingleColumnArrays: Boolean;

@@ -108,7 +108,7 @@ type
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
     procedure RaiseUnsupportedException;
-
+    procedure ReleaseConnection; virtual;
     property MaxFieldSize: Integer read FMaxFieldSize write FMaxFieldSize;
     property MaxRows: Integer read FMaxRows write FMaxRows;
     property EscapeProcessing: Boolean
@@ -139,7 +139,6 @@ type
     property ClientCP: word read FClientCP;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: RawByteString=EmptyRaw): TZLoggingEvent;
-    function AddRefCountOnClose: Boolean; virtual;
   public
     procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
     procedure ToBuff(const Value: RawByteString; var Result: RawByteString); overload;
@@ -536,7 +535,6 @@ type
     procedure PrepareInParameters; override;
     procedure CheckParameterIndex(var Value: Integer); override;
     property StoredProcName: String read FStoredProcName;
-    function AddRefCountOnClose: Boolean; override;
   public //value getter procs
     procedure GetBoolean(Index: Integer; out Result: Boolean); override;
     procedure GetOrdinal(Index: Integer; out Result: Int64); override;
@@ -990,6 +988,7 @@ procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 {$IFNDEF UNICODE}var CP: Word;{$ENDIF}
 begin
   if FWSQL <> Value then
+    FClosed := False;
     {$IFDEF UNICODE}
     if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
@@ -1065,8 +1064,8 @@ end;
 
 procedure TZAbstractStatement.SetASQL(const Value: RawByteString);
 begin
-  if FASQL <> Value then
-  begin
+  if FASQL <> Value then begin
+    FClosed := False;
     {$IFDEF UNICODE}
     FASQL := Value;
     FWSQL := ZRawToUnicode(FASQL, FClientCP); //required for the resultsets
@@ -1087,6 +1086,11 @@ end;
 procedure TZAbstractStatement.RaiseUnsupportedException;
 begin
   raise EZSQLException.Create(SUnsupportedOperation);
+end;
+
+procedure TZAbstractStatement.ReleaseConnection;
+begin
+  FConnection := nil;
 end;
 
 procedure TZAbstractStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable;
@@ -1253,25 +1257,27 @@ end;
 procedure TZAbstractStatement.Close;
 var RefCountAdded: Boolean;
 begin
-  RefCountAdded := (RefCount = 1) and AddRefCountOnClose;
-  if RefCountAdded then _AddRef;
-  try
+  if not fClosed then begin
+    RefCountAdded := (RefCount = 1) and (Assigned(FOpenResultSet) or Assigned(FLastResultSet));
+    if RefCountAdded then _AddRef;
     try
-      BeforeClose;
-      FClosed := True;
-      AfterClose;
-    finally
-      if FConnection <> nil then
-        FConnection.DeregisterStatement(Self);
-    end;
-  finally
-    FClosed := True;
-    if RefCountAdded then begin
-      if (RefCount = 1) then begin
-        DriverManager.AddGarbage(Self);
-        FConnection := nil;
+      try
+        BeforeClose;
+        FClosed := True;
+        AfterClose;
+      finally
+        if FConnection <> nil then
+          FConnection.DeregisterStatement(Self);
       end;
-      _Release;
+    finally
+      FClosed := True;
+      if RefCountAdded then begin
+        if (RefCount = 1) then begin
+          DriverManager.AddGarbage(Self);
+          ReleaseConnection;
+        end;
+        _Release;
+      end;
     end;
   end;
 end;
@@ -1788,11 +1794,6 @@ end;
 procedure TZAbstractStatement.AddBatchRequest(const SQL: string);
 begin
   FBatchQueries.Add(SQL);
-end;
-
-function TZAbstractStatement.AddRefCountOnClose: Boolean;
-begin
-  Result := Assigned(FOpenResultSet) or Assigned(FLastResultSet);
 end;
 
 procedure TZAbstractStatement.AfterClose;
@@ -5157,6 +5158,7 @@ begin
   DriverManager.LogMessage(lcPrepStmt,Self);
   PrepareInParameters;
   FPrepared := True;
+  FClosed := False;
 end;
 
 {**
@@ -6083,12 +6085,6 @@ begin
 end;
 
 { TZAbstractCallableStatement2 }
-
-function TZAbstractCallableStatement2.AddRefCountOnClose: Boolean;
-begin
-  FlastResultSet := nil;
-  Result := inherited AddRefCountOnClose;
-end;
 
 procedure TZAbstractCallableStatement2.BindDouble(Index: Integer;
   SQLType: TZSQLType; const Value: Double);

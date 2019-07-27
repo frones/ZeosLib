@@ -112,6 +112,7 @@ type
   protected
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure CheckParameterIndex(var Value: Integer); override;
+    procedure ReleaseConnection; override;
   protected
     procedure FlushPendingResults;
     function CreateResultSet({%H-}ServerCursor: Boolean): IZResultSet;
@@ -1521,6 +1522,12 @@ begin
   end;
   if CheckPrepareSwitchMode then
     InternalRealPrepare;
+end;
+
+procedure TZAbstractPostgreSQLPreparedStatementV3.ReleaseConnection;
+begin
+  inherited ReleaseConnection;
+  FPostgreSQLConnection := nil;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.ReleaseImmediat(

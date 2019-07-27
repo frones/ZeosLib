@@ -77,6 +77,7 @@ type
     FRC: OleVariant;
   protected
     function CreateResultSet: IZResultSet; virtual;
+    procedure ReleaseConnection; override;
   public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
       const Info: TStrings; CommandType: CommandTypeEnum);
@@ -329,6 +330,12 @@ begin
     inherited Prepare;
     FAdoCommand.Prepared := True;
   end;
+end;
+
+procedure TZAbstractAdoStatement.ReleaseConnection;
+begin
+  inherited ReleaseConnection;
+  FAdoConnection := nil;
 end;
 
 procedure TZAbstractAdoStatement.Unprepare;

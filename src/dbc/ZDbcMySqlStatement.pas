@@ -120,6 +120,7 @@ type
     function GetInParamLogValue(Index: Integer): RawByteString; override;
     procedure CheckParameterIndex(var Value: Integer); override;
     procedure SetBindCapacity(Capacity: Integer); override;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const Connection: IZMySQLConnection;
       const SQL: string; Info: TStrings);
@@ -574,6 +575,12 @@ begin
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end else
       SetLength(FEmulatedValues, BindList.Count);
+end;
+
+procedure TZAbstractMySQLPreparedStatement.ReleaseConnection;
+begin
+  inherited ReleaseConnection;
+  FMySQLConnection := nil;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.ReleaseImmediat(

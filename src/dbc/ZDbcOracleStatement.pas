@@ -84,6 +84,7 @@ type
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure CheckParameterIndex(var Index: Integer); override;
     function GetInParamLogValue(Index: Integer): RawByteString; override;
+    procedure ReleaseConnection; override;
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
@@ -765,6 +766,12 @@ begin
     end;
     Bind.indp[0] := -1;
   end;
+end;
+
+procedure TZAbstractOraclePreparedStatement_A.ReleaseConnection;
+begin
+  inherited ReleaseConnection;
+  FOracleConnection := nil;
 end;
 
 {**
