@@ -225,7 +225,6 @@ uses
   ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcResultSet, ZDbcResultSetMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
-  {$IF defined(OLDFPC) or defined (NO_UNIT_CONTNRS)},ZClasses{$IFEND}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND};
 
 var
