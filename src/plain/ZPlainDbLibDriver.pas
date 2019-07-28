@@ -77,62 +77,61 @@ type
 
     procedure CheckError(dbProc: PDBPROCESS);
 
-    function dbDead(dbProc: PDBPROCESS): Boolean;
-    function dbLogin: PLOGINREC;
-    procedure dbLoginFree(Login: PLOGINREC);
-    function dbSetLoginTime(Seconds: DBINT): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
-    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
-    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
-    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
-    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
-    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-    function dbSetLSecure(Login: PLOGINREC): RETCODE;
-    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
-    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
-    function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE;
-    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE;
+    function dbDead(dbProc: PDBPROCESS): Boolean; //done
+    function dbLogin: PLOGINREC; //done
+    procedure dbLoginFree(Login: PLOGINREC); //done
+    function dbSetLoginTime(Seconds: DBINT): RETCODE; //done
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE; //done
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE; //done
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE; //done
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE; //done
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE; //done
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE; //done
+    function dbSetLSecure(Login: PLOGINREC): RETCODE; //done
+    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; //done
+    function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS; //done
+    function dbCancel(dbProc: PDBPROCESS): RETCODE; //done
+    function dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE; //done
+    function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE; //done
     function dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
     function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
-    function dbResults(dbProc: PDBPROCESS): RETCODE;
-    function dbCanQuery(dbProc: PDBPROCESS): RETCODE;
-    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
-    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE;
+    function dbResults(dbProc: PDBPROCESS): RETCODE; //done
+    function dbCanQuery(dbProc: PDBPROCESS): RETCODE; //done
+    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE; //done
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; //done
     function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT;
-      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE;
-    function dbClose(dbProc: PDBPROCESS): RETCODE;
+      Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE; //done
+    function dbClose(dbProc: PDBPROCESS): RETCODE; //done
     function dbName(dbProc: PDBPROCESS): PAnsiChar;
-    function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
-    function dbNumCols(dbProc: PDBPROCESS): DBINT;
-    function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
-    function dbColSource(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
-    function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
-    function dbcoltypeinfo(dbproc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
-    function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
+    function dbCmdRow(dbProc: PDBPROCESS): RETCODE; //done
+    function dbNumCols(dbProc: PDBPROCESS): DBINT; //done
+    function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar; //done
+    function dbColSource(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar; //done
+    function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT; //done
+    function dbcoltypeinfo(dbproc: PDBPROCESS; Column: Integer): PDBTYPEINFO; //done
+    function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt; //done
     function dbcolinfo(pdbhandle :PDBHANDLE; _Type: Integer; Column: DBINT;
-      ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;
-    function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
-    function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+      ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE; //done
+    function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte; //done
+    function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT; //done
     function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
-      SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT;
-    function dbNextRow(dbProc: PDBPROCESS): STATUS;
-    function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
-    function dbCount(dbProc: PDBPROCESS): DBINT;
+      SrcLen: DBINT; DestType: DBINT; Dest: PByte; DestLen: DBINT): DBINT; //done
+    function dbNextRow(dbProc: PDBPROCESS): STATUS; //done
+    function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS; //done
+    function dbCount(dbProc: PDBPROCESS): DBINT; //done
 
-    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: DBSMALLINT): RETCODE; //done
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
-      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE;
-    function dbRpcSend(dbProc: PDBPROCESS): RETCODE;
-    function dbRpcExec(dbProc: PDBPROCESS): RETCODE;
-    function dbRetStatus(dbProc: PDBPROCESS): DBINT;
-    function dbHasRetStat(dbProc: PDBPROCESS): Boolean;
-    function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar;
-    function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
-    function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
-    function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
-    function dbdataready(dbproc: PDBPROCESS): LongBool;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE; //done
+    function dbRpcSend(dbProc: PDBPROCESS): RETCODE; //done
+    function dbRpcExec(dbProc: PDBPROCESS): RETCODE; //done
+    function dbRetStatus(dbProc: PDBPROCESS): DBINT; //done
+    function dbHasRetStat(dbProc: PDBPROCESS): Boolean; //done
+    function dbRetName(dbProc: PDBPROCESS; RetNum: DBINT): PAnsiChar; //done
+    function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer; //done
+    function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT; // done
+    function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT; //done
+    function dbdataready(dbproc: PDBPROCESS): LongBool; //done
     function GetVariables: TDBVariables;
     { BCP functions }
     function bcp_batch(const dbproc: PDBPROCESS): DBINT;
@@ -175,7 +174,7 @@ type
     procedure LoadApi; override;
     function dbLogin: PLOGINREC; virtual;
     function dbSetLoginTime(Seconds: DBINT): RETCODE;
-    function dbsetLName(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
+    function dbsetlname(Login: PLOGINREC; Value: PAnsiChar; Item: DBINT): RETCODE;
     function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE;
     function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE;
     function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE;
@@ -601,6 +600,9 @@ type
     Fdbdead_stdcall: function(dbproc: PDBPROCESS): DBBOOL; stdcall;
     Fdbexit: procedure; cdecl;
     Fdbexit_stdcall: procedure; stdcall;
+    FdbHasRetStat_MS: function(dbProc: PDBPROCESS): LongBool; cdecl;
+    FdbHasRetStat_SYB: function(dbProc: PDBPROCESS): DBBOOL; cdecl;
+    FdbHasRetStat_stdcall: function(dbProc: PDBPROCESS): DBBOOL; stdcall;
     {Fdbfcmd: function(Proc: PDBPROCESS; CmdString: PAnsiChar; var Params): RETCODE; cdecl;
     Fdbfcmd_stdcall: function(Proc: PDBPROCESS; CmdString: PAnsiChar; var Params): RETCODE; stdcall;}
     Fdbfirstrow: function(Proc: PDBPROCESS): DBINT; cdecl;
@@ -613,7 +615,65 @@ type
     Fdbgetchar_stdcall: function(Proc: PDBPROCESS; N: Integer): PAnsiChar; stdcall;
     Fdbgetcharset: function(dbproc: PDBPROCESS): PAnsiChar; cdecl; //NO MS
     Fdbgetcharset_stdcall: function(dbproc: PDBPROCESS): PAnsiChar; stdcall;
+    FdbGetRow: function(dbProc: PDBPROCESS; Row: DBINT): STATUS; cdecl;
+    FdbGetRow_stdcall: function(dbProc: PDBPROCESS; Row: DBINT): STATUS; stdcall;
+    FdbLogin: function: PLOGINREC; cdecl;
+    FdbLogin_stdcall: function: PLOGINREC; stdcall;
+    Fdbloginfree: procedure(loginptr: PLOGINREC); cdecl;
+    Fdbloginfree_stdcall: procedure(loginptr: PLOGINREC); stdcall;
+    FdbMoreCmds: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    FdbMoreCmds_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
+    FdbNextRow: function(dbProc: PDBPROCESS): STATUS; cdecl;
+    FdbNextRow_stdcall: function(dbProc: PDBPROCESS): STATUS; cdecl;
+    FdbNumCols: function(dbProc: PDBPROCESS): DBINT; cdecl;
+    FdbNumCols_stdcall: function(dbProc: PDBPROCESS): DBINT; stdcall;
+    FdbOpen: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; cdecl;
+    FdbOpen_stdcall: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; stdcall;
 
+    FdbResults: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    FdbResults_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
+    FdbRetData: function(dbProc: PDBPROCESS; RetNum: Integer): Pointer; cdecl;
+    FdbRetData_stdcall: function(dbProc: PDBPROCESS; RetNum: Integer): Pointer; stdcall;
+    FdbRetStatus: function(dbProc: PDBPROCESS): DBINT; cdecl;
+    FdbRetStatus_stdcall: function(dbProc: PDBPROCESS): DBINT; stdcall;
+    FdbRetType: function(dbProc: PDBPROCESS; RetNum: DBINT): DBINT; cdecl;
+    FdbRetType_stdcall: function(dbProc: PDBPROCESS; RetNum: DBINT): DBINT; stdcall;
+    {rpc i.e remote procedure calls }
+    FdbRpcInit: function(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: DBSMALLINT): RETCODE; cdecl;
+    FdbRpcInit_stdcall: function(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: DBSMALLINT): RETCODE; stdcall;
+    FdbRpcParam: function(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE; cdecl;
+    FdbRpcParam_stdcall: function(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE; stdcall;
+    FdbRpcSend: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    FdbRpcSend_stdcall: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    FdbRpcExec: function(dbProc: PDBPROCESS): RETCODE; cdecl; //MS only
+    FdbRetLen: function(dbProc: PDBPROCESS; RetNum: Integer): DBINT; cdecl;
+    FdbRetLen_stdcall: function(dbProc: PDBPROCESS; RetNum: Integer): DBINT; stdcall;
+    FdbRetName: function(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar; cdecl;
+    FdbRetName_stdcall: function(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar; stdcall;
+    FdbSqlExec: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    FdbSqlExec_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
+    FdbSqlOk: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    FdbSqlOk_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
+    Fdbsqlsend: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    Fdbsqlsend_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
+    FdbSetLName: function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
+    FdbSetLName_stdcall: function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
+    FdbSetLoginTime: function(Seconds: Integer): RETCODE; cdecl;
+    FdbSetLoginTime_stdcall: function(Seconds: Integer): RETCODE; stdcall;
+    FdbSetOpt_MS: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar): RETCODE; cdecl;
+    FdbSetOpt_SYB: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; cdecl;
+    FdbSetOpt_stdcall: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; stdcall;
+    Fdbsetlpacket: function(Login: PLOGINREC; PacketSize: Word): RETCODE; cdecl; //MS only others use dbsetlname
+    FdbSetMaxprocs_S: function(MaxProcs: SmallInt): RETCODE; cdecl;
+    FdbSetMaxprocs_I: function(MaxProcs: DBINT): RETCODE; cdecl;
+    FdbSetMaxprocs_stdcall: function(MaxProcs: DBINT): RETCODE; stdcall; //sybase has widened the type!
+    FdbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
+    FdbUse_stdcall: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; stdcall;
+    Fdbvarylen_MS: function(Proc: PDBPROCESS; Column: Integer): LongBool; cdecl;
+    Fdbvarylen_SYB: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
+    Fdbvarylen_stdcall: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; stdcall;
     //Fdb12hour: function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; cdecl; //no MS
     //Fdb12hour_stdcall:          function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; stdcall; //no MS
     {$ENDIF}
@@ -639,7 +699,7 @@ type
     function dbbind(dbproc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbbind_ps(dbproc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte; typinfo: PDBTYPEINFO): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}//no MS
     function dbbufsize(dbproc: PDBPROCESS): Integer; {$IFDEF WITH_INLINE}inline; {$ENDIF}//no MS
-    function dbbylist(dbproc: PDBPROCESS; ComputeId: Integer; Size: PInteger): PByte;  {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbbylist(dbproc: PDBPROCESS; ComputeId: Integer; Size: PInteger): PByte; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcancel(dbproc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcanquery(dbproc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbchange(dbproc: PDBPROCESS): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -670,14 +730,45 @@ type
     //public dbenlisttrans: function(Proc: PDBPROCESS; PurposeUnkonwn: Longbool): RETCODE; cdecl; //MS only purpose is unknown
     public dberrhandle_stdcall: function(Handler: SYBDBERRHANDLE_PROC): SYBDBERRHANDLE_PROC; stdcall;
     procedure dbexit; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSqlExec(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSqlOk(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbsqlsend(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     //function dbfcmd(Proc: PDBPROCESS; CmdString: PAnsiChar; var Params): RETCODE;
     function dbfirstrow(Proc: PDBPROCESS): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     procedure dbfreebuf(Proc: PDBPROCESS); {$IFDEF WITH_INLINE}inline; {$ENDIF}
     procedure dbfreequal(Ptr: PAnsiChar); {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbgetchar(Proc: PDBPROCESS; N: Integer): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbgetcharset(dbproc: PDBPROCESS): PAnsiChar;{$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS; {$IFDEF WITH_INLINE}inline; {$ENDIF}
 
-    public dbmsghandle_stdcall: function(Handler: SYBDBMSGHANDLE_PROC): SYBDBMSGHANDLE_PROC; stdcall;
+    function dbOpen(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS;// {$IFDEF WITH_INLINE}inline; {$ENDIF}
+
+    function dbLogin: PLOGINREC; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    procedure dbloginfree(loginptr: PLOGINREC); {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbMoreCmds(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbNextRow(dbProc: PDBPROCESS): STATUS; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbNumCols(dbProc: PDBPROCESS): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbResults(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRetData(dbProc: PDBPROCESS; RetNum: Integer): Pointer; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRetStatus(dbProc: PDBPROCESS): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+
+    function dbHasRetStat(dbProc: PDBPROCESS): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: DBSMALLINT): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRpcSend(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRetLen(dbProc: PDBPROCESS; RetNum: Integer): DBINT; cdecl; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbRetName(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+
+    function dbSetLoginTime(Seconds: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbVaryLen(dbProc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+  public
+    dbmsghandle_stdcall: function(Handler: SYBDBMSGHANDLE_PROC): SYBDBMSGHANDLE_PROC; stdcall;
     {$ELSE}
     dbadata: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): PByte; cdecl;
     dbadlen: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; cdecl;
@@ -722,17 +813,58 @@ type
     dbdatlen: function(dbproc: PDBPROCESS; Column: Integer): DBINT; cdecl;
     dbdead: function(dbproc: PDBPROCESS): DBBOOL; cdecl;
     dbexit: procedure; cdecl;
+    dbHasRetStat: function(dbProc: PDBPROCESS): DBBOOL; cdecl;
+
+    dbSqlExec: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    dbSqlOk: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    dbsqlsend: function(dbProc: PDBPROCESS): RETCODE; cdecl;
     //dbfcmd: function(Proc: PDBPROCESS; CmdString: PAnsiChar; var Params): RETCODE; cdecl;
     dbfirstrow: function(Proc: PDBPROCESS): DBINT; cdecl;
     dbfreebuf: procedure(Proc: PDBPROCESS); cdecl;
     dbfreequal: procedure(Ptr: PAnsiChar); cdecl;
     dbgetchar: function(Proc: PDBPROCESS; N: Integer): PAnsiChar; cdecl;
     dbgetcharset: function(dbproc: PDBPROCESS): PAnsiChar; cdecl;
+    dbGetRow: function(dbProc: PDBPROCESS; Row: DBINT): STATUS; cdecl;
+
+    dbOpen: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; cdecl;
+
+    dbLogin: function: PLOGINREC; cdecl;
+    dbloginfree: procedure(loginptr: PLOGINREC); cdecl;
+    dbMoreCmds: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    dbNextRow: function(dbProc: PDBPROCESS): STATUS; cdecl;
+    dbNumCols: function(dbProc: PDBPROCESS): DBINT; cdecl;
+    dbResults: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    dbRetStatus: function(dbProc: PDBPROCESS): DBINT; cdecl;
+    dbRpcInit: function(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: DBSMALLINT): RETCODE; cdecl;
+    dbRpcParam: function(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
+      Type_: DBINT; MaxLen: DBINT; DataLen: DBINT; Value: Pointer): RETCODE; cdecl;
+    dbRpcSend: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    dbRetData: function(dbProc: PDBPROCESS; RetNum: Integer): Pointer; cdecl;
+    dbRetLen: function(dbProc: PDBPROCESS; RetNum: Integer): DBINT; cdecl;
+    dbRetName: function(dbProc: PDBPROCESS; RetNum: Integer): PAnsiChar; cdecl;
+    dbRetType: function(dbProc: PDBPROCESS; RetNum: Integer): DBINT; cdecl;
+    dbSetLoginTime: function(Seconds: Integer): RETCODE; cdecl;
+    dbSetLName: function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
+    dbSetMaxprocs: function(MaxProcs: DBINT): RETCODE; cdecl;
+    dbSetOpt: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; cdecl;
+    dbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
+    dbvarylen: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
     {$ENDIF}
   public //common
     ///Install a user function to handle DB-Library errors
     dberrhandle: function(Handler: DBERRHANDLE_PROC): DBERRHANDLE_PROC; cdecl;
     dbmsghandle: function(Handler: DBMSGHANDLE_PROC): DBMSGHANDLE_PROC; cdecl;
+  public { macros }
+    function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLSecure(Login: PLOGINREC): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLPacket(Login: PLOGINREC; packet_size: Word): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLPwd(Login: PLOGINREC; Password: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+
+    function dbRpcExec(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
   public
     property DBLibraryVendorType: TDBLibraryVendorType read fDBLibraryVendorType;
   end;
@@ -2730,30 +2862,30 @@ end;
 
 function TMSSQLDBLibPLainDriver.GetDescription: string;
 begin
-  Result := 'mssql'
+  Result := 'Native dblib driver for SQL Server';
 end;
 
 function TMSSQLDBLibPLainDriver.GetProtocol: string;
 begin
-  Result := 'Native dblib driver for SQL Server';
+  Result := 'mssql'
 end;
 
 { TSybaseDBLibPLainDriver }
 
 function TSybaseDBLibPLainDriver.GetDescription: string;
 begin
-  Result := 'sybase_ase'
+  Result := 'Native dblib driver for Sybase ASE';
 end;
 
 function TSybaseDBLibPLainDriver.GetProtocol: string;
 begin
-  Result := 'Native dblib driver for Sybase ASE';
+  Result := 'sybase'
 end;
 
 { TZDBLIBPLainDriver }
 
-(** Return a pointer to the data for a compute column *)
 {$IFDEF MSWINDOWS}
+(** Return a pointer to the data for a compute column *)
 function TZDBLIBPLainDriver.dbadata(dbproc: PDBPROCESS; ComputeId,
   Column: Integer): PByte;
 begin
@@ -3143,7 +3275,350 @@ begin
   else Result := Fdbgetcharset_stdcall(dbproc);
 end;
 
-{$ENDIF}
+{** Read the specified row in the row buffer. *}
+function TZDBLIBPLainDriver.dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
+begin
+  if Assigned(FdbGetRow)
+  then Result := FdbGetRow(dbproc, Row)
+  else Result := FdbGetRow_stdcall(dbproc, Row);
+end;
+
+{** Determine whether the current command or remote procedure call
+  generated a return status number. *}
+function TZDBLIBPLainDriver.dbHasRetStat(dbProc: PDBPROCESS): DBBOOL;
+begin
+  if Assigned(FdbHasRetStat_MS)
+  then Result := Ord(FdbHasRetStat_MS(dbproc))
+  else if Assigned(FdbHasRetStat_SYB)
+    then Result := FdbHasRetStat_SYB(dbproc)
+    else Result := FdbHasRetStat_stdcall(dbproc);
+end;
+
+{** Allocates a login record for use in dbopen *}
+function TZDBLIBPLainDriver.dbLogin: PLOGINREC;
+begin
+  if Assigned(FdbLogin)
+  then Result := FdbLogin
+  else Result := FdbLogin_stdcall;
+end;
+
+{** Free a login record *}
+procedure TZDBLIBPLainDriver.dbloginfree(loginptr: PLOGINREC);
+begin
+  if Assigned(Fdbloginfree)
+  then Fdbloginfree(loginptr)
+  else FdbLoginfree_stdcall(loginptr);
+end;
+
+{** Indicate whether there are more commands to be processed. *}
+function TZDBLIBPLainDriver.dbMoreCmds(dbProc: PDBPROCESS): RETCODE;
+begin
+  if Assigned(FdbMoreCmds)
+  then Result := FdbMoreCmds(dbProc)
+  else Result := FdbMoreCmds_stdcall(dbProc);
+end;
+
+{** Read the next result row into the row buffer and into any program variables
+  that are bound to column data *}
+function TZDBLIBPLainDriver.dbNextRow(dbProc: PDBPROCESS): STATUS;
+begin
+  if Assigned(FdbNextRow)
+  then Result := FdbNextRow(dbProc)
+  else Result := FdbNextRow_stdcall(dbProc);
+end;
+
+{** Determine the number of regular columns for the current set of results *}
+function TZDBLIBPLainDriver.dbNumCols(dbProc: PDBPROCESS): DBINT;
+begin
+  if Assigned(FdbNumCols)
+  then Result := FdbNumCols(dbProc)
+  else Result := FdbNumCols_stdcall(dbProc);
+end;
+
+{** Create and initialize a DBPROCESS structure. *}
+function TZDBLIBPLainDriver.dbOpen(Login: PLOGINREC;
+  server: PAnsiChar): PDBPROCESS;
+begin
+  if Assigned(FdbOpen)
+  then Result := FdbOpen(Login, server)
+  else Result := FdbOpen_stdcall(Login, server);
+end;
+
+{** Set up the results of the next query. *}
+function TZDBLIBPLainDriver.dbResults(dbProc: PDBPROCESS): RETCODE;
+begin
+  if Assigned(FdbResults)
+  then Result := FdbResults(dbProc)
+  else Result := FdbResults_stdcall(dbProc);
+end;
+
+{** Return a pointer to a return parameter value generated by a stored procedure. *}
+function TZDBLIBPLainDriver.dbRetData(dbProc: PDBPROCESS;
+  RetNum: Integer): Pointer;
+begin
+  if Assigned(FdbRetData)
+  then Result := FdbRetData(dbProc, RetNum)
+  else Result := FdbRetData_stdcall(dbProc, RetNum);
+end;
+
+{** Determine the length of a return parameter value
+  generated by a stored procedure. *}
+function TZDBLIBPLainDriver.dbRetLen(dbProc: PDBPROCESS;
+  RetNum: Integer): DBINT;
+begin
+  if Assigned(FdbRetLen)
+  then Result := FdbRetLen(dbProc, RetNum)
+  else Result := FdbRetLen_stdcall(dbProc, RetNum);
+end;
+
+{** Determine the name of the stored procedure parameter
+  associated with a particular return parameter value. *}
+function TZDBLIBPLainDriver.dbRetName(dbProc: PDBPROCESS;
+  RetNum: Integer): PAnsiChar;
+begin
+  if Assigned(FdbRetName)
+  then Result := FdbRetName(dbProc, RetNum)
+  else Result := FdbRetName_stdcall(dbProc, RetNum);
+end;
+
+{** Determine the stored procedure status number returned by the
+  current command or remote procedure call.  *}
+function TZDBLIBPLainDriver.dbRetStatus(dbProc: PDBPROCESS): DBINT;
+begin
+  if Assigned(FdbRetStatus)
+  then Result := FdbRetStatus(dbProc)
+  else Result := FdbRetStatus_stdcall(dbProc);
+end;
+
+{** Determine the datatype of a return parameter value
+  generated by a stored procedure. *}
+function TZDBLIBPLainDriver.dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
+begin
+  if Assigned(FdbRetType)
+  then Result := FdbRetType(dbProc, RetNum)
+  else Result := FdbRetType_stdcall(dbProc, RetNum);
+end;
+
+{$ENDIF MSWINDOWS}
+
+{** emmidate exceute the remote procedure call. *}
+function TZDBLIBPLainDriver.dbRpcExec(dbProc: PDBPROCESS): RETCODE;
+begin
+  {$IFDEF MSWINDOWS}
+  if Assigned(FdbRpcExec)
+  then Result := FdbRpcExec(dbProc)
+  else if Assigned(FdbRpcSend) then begin
+    Result := FdbRpcSend(dbProc);
+    if Result = SUCCEED then
+      Result := dbSqlOk(dbProc);
+  end else begin
+    Result := FdbRpcSend_stdCall(dbProc);
+    if Result = SUCCEED then
+      Result := FdbSqlOk_stdcall(dbProc);
+  end;
+  {$ELSE}
+  Result := dbRpcExec(dbProc);
+  if Result = SUCCEED then
+    Result := dbSqlOk(dbProc);
+  {$ENDIF}
+end;
+
+{$IFDEF MSWINDOWS}
+{** Initialize a remote procedure call *}
+function TZDBLIBPLainDriver.dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar;
+  Options: DBSMALLINT): RETCODE;
+begin
+  if Assigned(FdbRpcInit)
+  then Result := FdbRpcInit(dbProc, RpcName, Options)
+  else Result := FdbRpcInit_stdcall(dbProc, RpcName, Options);
+end;
+
+{** Add a parameter to a remote procedure call. *}
+function TZDBLIBPLainDriver.dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar;
+  Status: Byte; Type_, MaxLen, DataLen: DBINT; Value: Pointer): RETCODE;
+begin
+  if Assigned(FdbRpcParam)
+  then Result := FdbRpcParam(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value)
+  else Result := FdbRpcParam_stdcall(dbProc, ParamName, Status, Type_, MaxLen, DataLen, Value);
+end;
+
+{** Signal the end of a remote procedure call. *}
+function TZDBLIBPLainDriver.dbRpcSend(dbProc: PDBPROCESS): RETCODE;
+begin
+  if Assigned(FdbRpcSend)
+  then Result := FdbRpcSend(dbProc)
+  else Result := FdbRpcSend_stdcall(dbProc)
+end;
+
+{$ENDIF MSWINDOWS}
+
+{** Set the application name in the LOGINREC structure *}
+function TZDBLIBPLainDriver.dbSetLApp(Login: PLOGINREC;
+  AppName: PAnsiChar): RETCODE;
+var Item: DBINT;
+begin
+  case FDBLibraryVendorType of
+    lvtFreeTDS: Item := TDSDBSETAPP;
+    lvtSybase:  Item := SYBDBSETAPP;
+    else        Item := MSDBSETAPP;
+  end;
+  Result := dbsetLName(login, AppName, Item)
+end;
+
+{** Set the character set in the LOGINREC structure. *}
+function TZDBLIBPLainDriver.dbSetLCharSet(Login: PLOGINREC;
+  CharsetName: PAnsiChar): RETCODE;
+begin
+  case FDBLibraryVendorType of
+    lvtFreeTDS: Result := dbsetLName(login, CharsetName, TDSDBSETCHARSET);
+    lvtSybase:  Result := dbsetLName(login, CharsetName, SYBDBSETCHARSET);
+    else        Result := DBFAIL;
+  end;
+end;
+
+{** Set the host name in the LOGINREC structure *}
+function TZDBLIBPLainDriver.dbSetLHost(Login: PLOGINREC;
+  HostName: PAnsiChar): RETCODE;
+begin
+  Result := dbsetLName(login, HostName, DBSETHOST)
+end;
+
+{$IFDEF MSWINDOWS}
+{** Set a value in the LOGINREC structure. *}
+function TZDBLIBPLainDriver.dbsetLName(Login: PLOGINREC; Value: PAnsiChar;
+  Item: Integer): RETCODE;
+begin
+  if Assigned(FdbsetLName)
+  then Result := FdbsetLName(login, Value, Item)
+  else Result := FdbsetLName_stdcall(login, Value, Item);
+end;
+{$ENDIF MSWINDOWS}
+
+(** Set the national language name in the LOGINREC structure. *)
+function TZDBLIBPLainDriver.dbSetLNatLang(Login: PLOGINREC;
+  NatLangName: PAnsiChar): RETCODE;
+var Item: DBINT;
+begin
+  case FDBLibraryVendorType of
+    lvtFreeTDS: Item := TDSDBSETLANG;
+    lvtSybase:  Item := SYBDBSETLANG;
+    else        Item := MSDBSETLANG;
+  end;
+  Result := dbsetLName(login, NatLangName, Item)
+end;
+
+{$IFDEF MSWINDOWS}
+{** Set the number of seconds that DB-Library waits for a server response to
+  a request for a DBPROCESS connection. *}
+function TZDBLIBPLainDriver.dbSetLoginTime(Seconds: Integer): RETCODE;
+begin
+  if Assigned(Fdbgetcharset)
+  then Result := FdbSetLoginTime(Seconds)
+  else Result := FdbSetLoginTime_stdcall(Seconds);
+end;
+{$ENDIF MSWINDOWS}
+
+{** Set the TDS packet size in an application’s LOGINREC structure. *}
+function TZDBLIBPLainDriver.dbSetLPacket(Login: PLOGINREC;
+  packet_size: Word): RETCODE;
+begin
+  case FDBLibraryVendorType of
+    lvtFreeTDS: Result := dbsetLName(login, @packet_size, TDSDBSETPACKET);
+    lvtSybase:  Result := dbsetLName(login, @packet_size, SYBDBSETPACKET);
+    else        Result := {$IFDEF MSWINDOWS}Fdbsetlpacket{$ELSE}dbsetlpacket{$ENDIF}(Login, packet_size)
+  end;
+end;
+
+{** Set the user server password in the LOGINREC structure. *}
+function TZDBLIBPLainDriver.dbSetLPwd(Login: PLOGINREC;
+  Password: PAnsiChar): RETCODE;
+begin
+  Result := dbsetLName(login, Password, DBSETPWD);
+end;
+
+{** Set the TDS packet size in an application’s LOGINREC structure. *}
+function TZDBLIBPLainDriver.dbSetLSecure(Login: PLOGINREC): RETCODE;
+begin
+  if FDBLibraryVendorType = lvtMS
+  then Result := dbsetLName(login, nil, MSDBSETSECURE)
+  else Result := DBFail;
+end;
+
+{** Set the user name in the LOGINREC structure. *}
+function TZDBLIBPLainDriver.dbSetLUser(Login: PLOGINREC;
+  UserName: PAnsiChar): RETCODE;
+begin
+  Result := dbsetLName(login, UserName, DBSETUSER);
+end;
+
+{$IFDEF MSWINDOWS}
+{** Set the maximum number of simultaneously open DBPROCESS structures. *}
+function TZDBLIBPLainDriver.dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
+begin
+  if Assigned(FdbSetMaxprocs_s)
+  then Result := FdbSetMaxprocs_s(MaxProcs)
+  else if Assigned(FdbSetMaxprocs_i)
+    then Result := FdbSetMaxprocs_i(MaxProcs)
+    else Result := FdbSetMaxprocs_stdcall(MaxProcs);
+end;
+
+{** Set a server or DB-Library option. *}
+function TZDBLIBPLainDriver.dbSetOpt(dbProc: PDBPROCESS; Option: Integer;
+  Char_Param: PAnsiChar; Int_Param: Integer): RETCODE;
+begin
+  case FDBLibraryVendorType of
+    lvtFreeTDS: Result := FdbSetOpt_SYB(dbProc, Option, Char_Param, Int_Param);
+    lvtSybase:  Result := FdbSetOpt_stdcall(dbProc, Option, Char_Param, Int_Param);
+    else        Result := FdbSetOpt_MS(dbProc, Option, Char_Param);
+  end;
+end;
+
+{** Send a command batch to the server. *}
+function TZDBLIBPLainDriver.dbSqlExec(dbProc: PDBPROCESS): RETCODE;
+begin
+  if Assigned(FdbSqlExec)
+  then Result := FdbSqlExec(dbProc)
+  else Result := FdbSqlExec_stdcall(dbProc);
+end;
+
+{** Wait for results from the server and verify the correctness of the
+  instructions the server is responding to. *}
+function TZDBLIBPLainDriver.dbSqlOk(dbProc: PDBPROCESS): RETCODE;
+begin
+  if Assigned(FdbSqlOk)
+  then Result := FdbSqlOk(dbProc)
+  else Result := FdbSqlOk_stdcall(dbProc);
+end;
+
+{** Send a command batch to the server and do not wait for a response. *}
+function TZDBLIBPLainDriver.dbsqlsend(dbProc: PDBPROCESS): RETCODE;
+begin
+  if Assigned(Fdbsqlsend)
+  then Result := Fdbsqlsend(dbProc)
+  else Result := Fdbsqlsend_stdcall(dbProc);
+end;
+
+{** Use a particular database. }
+function TZDBLIBPLainDriver.dbUse(dbProc: PDBPROCESS;
+  dbName: PAnsiChar): RETCODE;
+begin
+  if Assigned(FdbUse)
+  then Result := FdbUse(dbProc, dbName)
+  else Result := FdbUse_stdcall(dbProc, dbName);
+end;
+
+{** Determine whether the specified regular result column’s data can vary in length. *}
+function TZDBLIBPLainDriver.dbVaryLen(dbProc: PDBPROCESS;
+  Column: Integer): DBBOOL;
+begin
+  if Assigned(FdbVaryLen_MS)
+  then Result := Ord(FdbVaryLen_MS(dbProc, Column))
+    else if Assigned(Fdbvarylen_SYB)
+    then Result := Fdbvarylen_SYB(dbProc, Column)
+    else Result := Fdbvarylen_stdcall(dbProc, Column);
+end;
+
+{$ENDIF MSWINDOWS}
 
 procedure TZDBLIBPLainDriver.LoadApi;
 begin
@@ -3156,67 +3631,60 @@ begin
     else if (GetAddress('dbcoltypeinfo') <> nil) //ntwdblib.dll does not export that function
       then FDBLibraryVendorType := lvtFreeTDS
       else FDBLibraryVendorType := lvtMS;
-     // if type sizes are different:
+     // if type sizes or names are different:
     case FDBLibraryVendorType of
-      lvtFreeTDS{$IFNDEF MSWINDOWS},lvtSybase{$ENDIF}: begin
-          @{$IFDEF MSWINDOWS}Fdbclose_SYB{$ELSE}dbclose{$ENDIF} := GetAddress('dbclose');
-          {$IFNDEF MSWINDOWS}
-          if FDBLibraryVendorType = lvtSybase then begin
-            @{$IFDEF MSWINDOWS}Fdbdead_SYB{$ELSE}dbdead{$ENDIF} := GetAddress('DBDEAD'); //as documented: uppercase
-            if not Assigned({$IFDEF MSWINDOWS}Fdbcmdrow{$ELSE}dbcmdrow{$ENDIF}) then //test if renamed
-              @{$IFDEF MSWINDOWS}Fdbdead_SYB{$ELSE}dbdead{$ENDIF} := GetAddress('dbdead', True);
-            @{$IFDEF MSWINDOWS}Fdbcmdrow{$ELSE}dbcmdrow{$ENDIF} := GetAddress('DBCMDROW'); //as documented: uppercase
-            if not Assigned({$IFDEF MSWINDOWS}Fdbcmdrow{$ELSE}dbcmdrow{$ENDIF}) then //test if renamed
-              @{$IFDEF MSWINDOWS}Fdbcmdrow{$ELSE}dbcmdrow{$ENDIF} := GetAddress('dbcmdrow');
-            @{$IFDEF MSWINDOWS}Fdbcount{$ELSE}dbcount{$ENDIF} := GetAddress('DBCOUNT'); //as documented: uppercase
-            if not Assigned({$IFDEF MSWINDOWS}Fdbcount{$ELSE}dbcount{$ENDIF}) then //test if renamed
-              @{$IFDEF MSWINDOWS}Fdbcount{$ELSE}dbcount{$ENDIF} := GetAddress('dbcount');
-            @{$IFDEF MSWINDOWS}Fdbcurrow{$ELSE}dbcurrow{$ENDIF} := GetAddress('DBCURROW'); //as documented: uppercase
-            if not Assigned({$IFDEF MSWINDOWS}Fdbcurrow{$ELSE}dbcurrow{$ENDIF}) then //test if renamed
-              @{$IFDEF MSWINDOWS}Fdbcurrow{$ELSE}dbcurrow{$ENDIF} := GetAddress('dbcurrow');
-            @{$IFDEF MSWINDOWS}Fdbfirstrow{$ELSE}dbfirstrow{$ENDIF} := GetAddress('DBFIRSTROW'); //as documented: uppercase
-            if not Assigned({$IFDEF MSWINDOWS}Fdbfirstrow{$ELSE}dbcurrow{$ENDIF}) then //test if renamed
-              @{$IFDEF MSWINDOWS}Fdbfirstrow{$ELSE}dbfirstrow{$ENDIF} := GetAddress('dbfirstrow');
-          end else
-          {$ENDIF} begin
-            @{$IFDEF MSWINDOWS}Fdbdead_SYB{$ELSE}dbdead{$ENDIF} := GetAddress('dbdead', True);
-            @{$IFDEF MSWINDOWS}Fdbcmdrow{$ELSE}dbcmdrow{$ENDIF} := GetAddress('dbcmdrow');
-            @{$IFDEF MSWINDOWS}Fdbcount{$ELSE}dbcount{$ENDIF} := GetAddress('dbcount');
-            @{$IFDEF MSWINDOWS}Fdbcurrow{$ELSE}dbcurrow{$ENDIF} := GetAddress('dbcurrow');
-            @{$IFDEF MSWINDOWS}Fdbfirstrow{$ELSE}dbfirstrow{$ENDIF} := GetAddress('dbfirstrow');
-          end;
-          @{$IFDEF MSWINDOWS}Fdbcolbrowse_SYB{$ELSE}dbcolbrowse{$ENDIF} := GetAddress('dbcolbrowse'); //no FreeTDS?
-        end;
-      lvtMS: begin
-          @{$IFDEF MSWINDOWS}Fdbclose_MS{$ELSE}dbclose{$ENDIF} := GetAddress('dbclose');
+      lvtFreeTDS: begin
+          @{$IFDEF MSWINDOWS}Fdbdead_SYB{$ELSE}dbdead{$ENDIF} := GetAddress('dbdead', True);
           @{$IFDEF MSWINDOWS}Fdbcmdrow{$ELSE}dbcmdrow{$ENDIF} := GetAddress('dbcmdrow');
-          @{$IFDEF MSWINDOWS}Fdbcolbrowse_MS{$ELSE}dbcolbrowse{$ENDIF} := GetAddress('dbcolbrowse');
           @{$IFDEF MSWINDOWS}Fdbcount{$ELSE}dbcount{$ENDIF} := GetAddress('dbcount');
           @{$IFDEF MSWINDOWS}Fdbcurrow{$ELSE}dbcurrow{$ENDIF} := GetAddress('dbcurrow');
-          @{$IFDEF MSWINDOWS}Fdbdead_MS{$ELSE}dbdead{$ENDIF} := GetAddress('dbdead', True);
+          @{$IFDEF MSWINDOWS}Fdbfirstrow{$ELSE}dbfirstrow{$ENDIF} := GetAddress('dbfirstrow');
+          @{$IFDEF MSWINDOWS}Fdbclose_SYB{$ELSE}dbclose{$ENDIF} := GetAddress('dbclose'); //is a procedure
+          @{$IFDEF MSWINDOWS}Fdbsetmaxprocs_I{$ELSE}dbSetMaxprocs{$ENDIF} := GetAddress('dbsetmaxprocs'); //uses DBINT
+          @{$IFDEF MSWINDOWS}Fdbloginfree{$ELSE}dbloginfree{$ENDIF} := GetAddress('dbloginfree', True); //name diff to ms
+          //@{$IFDEF MSWINDOWS}Fdbcolbrowse_SYB{$ELSE}dbcolbrowse{$ENDIF} := GetAddress('dbcolbrowse'); //no FreeTDS
+          @{$IFDEF MSWINDOWS}FdbMoreCmds{$ELSE}dbMoreCmds{$ENDIF} := GetAddress('dbmorecmds'); //name diff to ms
+          @{$IFDEF MSWINDOWS}FdbSetOpt_SYB{$ELSE}dbsetopt{$ENDIF} := GetAddress('dbsetopt'); //int_param is available but not computed always
+          @{$IFDEF MSWINDOWS}FdbHasRetStat_SYB{$ELSE}dbHasRetStat{$ENDIF} := GetAddress('dbhasretstat'); //DBBOOL vs. LonBool
+          @{$IFDEF MSWINDOWS}Fdbvarylen_SYB{$ELSE}dbvarylen{$ENDIF} := GetAddress('dbvarylen'); //DBBOOL vs. LonBool
+        end;
+      lvtSybase: begin //handle lower vs uppercase and the call conventions
+          @{$IFDEF MSWINDOWS}Fdbdead_stdcall{$ELSE}dbdead{$ENDIF} := GetAddress('DBDEAD'); //as documented: uppercase
+          @{$IFDEF MSWINDOWS}Fdbcmdrow_stdcall{$ELSE}dbcmdrow{$ENDIF} := GetAddress('DBCMDROW'); //as documented: uppercase
+          @{$IFDEF MSWINDOWS}Fdbcount_stdcall{$ELSE}dbcount{$ENDIF} := GetAddress('DBCOUNT'); //as documented: uppercase
+          @{$IFDEF MSWINDOWS}Fdbcurrow_stdcall{$ELSE}dbcurrow{$ENDIF} := GetAddress('DBCURROW'); //as documented: uppercase
+          @{$IFDEF MSWINDOWS}Fdbfirstrow_stdcall{$ELSE}dbfirstrow{$ENDIF} := GetAddress('DBFIRSTROW'); //as documented: uppercase
+          @{$IFDEF MSWINDOWS}Fdbclose_stdcall{$ELSE}dbclose{$ENDIF} := GetAddress('dbclose');
+          @{$IFDEF MSWINDOWS}Fdbsetmaxprocs_stdcall{$ELSE}dbSetMaxprocs{$ENDIF} := GetAddress('dbsetmaxprocs');
+          @{$IFDEF MSWINDOWS}Fdbloginfree_stdcall{$ELSE}dbloginfree{$ENDIF} := GetAddress('dbloginfree', True); //name diff
+          @{$IFDEF MSWINDOWS}Fdbcolbrowse_stdcall{$ELSE}dbcolbrowse{$ENDIF} := GetAddress('dbcolbrowse'); //no FreeTDS
+          @{$IFDEF MSWINDOWS}FdbMoreCmds_stdcall{$ELSE}dbMoreCmds{$ENDIF} := GetAddress('DBMORECMDS'); //uppercase
+          @{$IFDEF MSWINDOWS}FdbSetOpt_stdcall{$ELSE}dbsetopt{$ENDIF} := GetAddress('dbsetopt'); //int_param is available
+          @{$IFDEF MSWINDOWS}FdbHasRetStat_stdcall{$ELSE}dbhasretstat{$ENDIF} := GetAddress('dbhasretstat'); //DBBOOL vs. LonBool
+          @{$IFDEF MSWINDOWS}Fdbvarylen_stdcall{$ELSE}dbvarylen{$ENDIF} := GetAddress('dbvarylen'); //DBBOOL vs. LonBool
         end;
       {$IFDEF MSWINDOWS}
-      lvtSybase: begin
-          @Fdbclose_stdcall := GetAddress('dbclose');
-          @Fdbcmdrow_stdcall := GetAddress('DBCMDROW'); //as documented: uppercase
-          if not Assigned(Fdbcmdrow_stdcall) then //test if renamed
-            @Fdbcmdrow_stdcall := GetAddress('dbcmdrow');
-          @Fdbcolbrowse_stdcall := GetAddress('dbcolbrowse');
-          @Fdbcount_stdcall := GetAddress('DBCOUNT'); //as documented: uppercase
-          if not Assigned(Fdbcount_stdcall) then //test if renamed
-            @Fdbcount_stdcall := GetAddress('dbcount');
-          @Fdbcurrow_stdcall := GetAddress('DBCURROW'); //as documented: uppercase
-          if not Assigned(Fdbcurrow_stdcall) then //test if renamed
-            @Fdbcurrow_stdcall := GetAddress('dbcurrow');
-          @Fdbdead_stdcall := GetAddress('dbdead', True);
-          @Fdbfirstrow_stdcall := GetAddress('DBFIRSTROW'); //as documented: uppercase
-          if not Assigned(Fdbfirstrow_stdcall) then //test if renamed
-            @Fdbfirstrow_stdcall := GetAddress('dbfirstrow');
+      lvtMS: begin
+          @Fdbdead_MS := GetAddress('dbdead', True);
+          @Fdbcmdrow := GetAddress('dbcmdrow');
+          @Fdbcount := GetAddress('dbcount');
+          @Fdbcurrow := GetAddress('dbcurrow');
+          @Fdbfirstrow := GetAddress('dbfirstrow');
+          @Fdbclose_MS := GetAddress('dbclose');  //is a function
+          @Fdbsetlpacket := GetAddress('dbsetlpacket'); //does not use the dbsetlname method
+          @Fdbsetmaxprocs_s := GetAddress('dbsetmaxprocs'); //uses a two byte int
+          @Fdbloginfree := GetAddress('dbfreelogin', True);//name diff
+          @Fdbcolbrowse_MS := GetAddress('dbcolbrowse'); //no FreeTDS
+          @FdbMoreCmds := GetAddress('dbmorecmds'); //name diff to ms
+          @FdbSetOpt_MS := GetAddress('dbsetopt'); //int_param is not available
+          @FdbHasRetStat_MS := GetAddress('dbhasretstat'); //DBBOOL vs. LonBool
+          @Fdbvarylen_MS := GetAddress('dbvarylen'); //DBBOOL vs. LonBool
         end;
       {$ENDIF}
     end;
     { type sizes are equal -> call convention! }
-    {$IFDEF MSWINDOWS} if FDBLibraryVendorType = lvtSybase then begin
+    {$IFDEF MSWINDOWS}
+    if FDBLibraryVendorType = lvtSybase then begin
       @Fdbadata_stdcall := GetAddress('dbadata');
       @Fdbadlen_stdcall := GetAddress('dbadlen');
       @Fdbaltbind_stdcall := GetAddress('dbaltbind');
@@ -3246,11 +3714,30 @@ begin
       @Fdbdata_stdcall := GetAddress('dbdata');
       @Fdbdatlen_stdcall := GetAddress('dbdatlen');
       @Fdbexit_stdcall := GetAddress('dbexit');
+      @FdbSqlExec_stdcall := GetAddress('dbsqlexec');
+      @FdbSqlOk_stdcall := GetAddress('dbsqlok');
+      @FdbSqlSend_stdcall := GetAddress('dbsqlsend');
       @dberrhandle_stdcall := GetAddress('dberrhandle');
       @Fdbfreebuf_stdcall := GetAddress('dbfreebuf');
       @Fdbfreequal_stdcall := GetAddress('dbfreequal');
       @Fdbgetchar_stdcall := GetAddress('dbgetchar');
       @Fdbgetcharset_stdcall := GetAddress('dbgetcharset');
+      @FdbGetRow_stdcall := GetAddress('dbgetrow');
+      @FdbNextRow_stdcall := GetAddress('dbnextrow');
+      @FdbNumCols_stdcall := GetAddress('dbnumcols');
+      @FdbOpen_stdcall := GetAddress('dbopen');
+      @FdbSetLoginTime_stdcall := GetAddress('dbsetlogintime');
+      @FdbsetLName_stdcall := GetAddress('dbsetlname');
+      @FdbResults_stdcall := GetAddress('dbresults');
+      @FdbRetData_stdcall := GetAddress('dbretdata');
+      @FdbRetLen_stdcall := GetAddress('dbretlen');
+      @FdbRetName_stdcall := GetAddress('dbretname');
+      @Fdbretstatus_stdcall := GetAddress('dbretstatus');
+      @FdbRetType_stdcall := GetAddress('dbrettype');
+      @Fdbrpcinit_stdcall := GetAddress('dbrpcinit');
+      @FdbRpcParam_stdcall := GetAddress('dbrpcparam');
+      @FdbRpcSend_stdcall := GetAddress('dbrpcsend');
+      @Fdbuse_stdcall := GetAddress('dbuse');
 
       @dbmsghandle_stdcall := GetAddress('dbmsghandle');
     end else {$ENDIF}begin
@@ -3284,12 +3771,32 @@ begin
       {$IFDEF MSWINDOWS}@dbdataready := GetAddress('dbdata'); {$ENDIF}
       @{$IFDEF MSWINDOWS}Fdbdatlen{$ELSE}dbdatlen{$ENDIF} := GetAddress('dbdatlen');
       @{$IFDEF MSWINDOWS}Fdbexit{$ELSE}dbexit{$ENDIF} := GetAddress('dbexit');
+      @{$IFDEF MSWINDOWS}FdbSqlExec{$ELSE}dbSqlExec{$ENDIF} := GetAddress('dbsqlexec');
+      @{$IFDEF MSWINDOWS}FdbSqlOk{$ELSE}dbSqlOk{$ENDIF} := GetAddress('dbsqlok');
+      @{$IFDEF MSWINDOWS}FdbSqlSend{$ELSE}dbSqlSend{$ENDIF} := GetAddress('dbsqlsend');
       @dberrhandle := GetAddress('dberrhandle');
       @{$IFDEF MSWINDOWS}Fdbfreebuf{$ELSE}dbfreebuf{$ENDIF} := GetAddress('dbfreebuf');
       @{$IFDEF MSWINDOWS}Fdbfreequal{$ELSE}dbfreequal{$ENDIF} := GetAddress('dbfreequal');
       @{$IFDEF MSWINDOWS}Fdbgetchar{$ELSE}dbgetchar{$ENDIF} := GetAddress('dbgetchar');
       @{$IFDEF MSWINDOWS}Fdbgetcharset{$ELSE}dbgetcharset{$ENDIF} := GetAddress('dbgetcharset');
+      @{$IFDEF MSWINDOWS}FdbGetRow{$ELSE}dbGetRow{$ENDIF} := GetAddress('dbgetrow');
+      @{$IFDEF MSWINDOWS}FdbNextRow{$ELSE}dbNextRow{$ENDIF} := GetAddress('dbnextrow');
+      @{$IFDEF MSWINDOWS}FdbNumCols{$ELSE}dbnumcols{$ENDIF} := GetAddress('dbnumcols');
+      @{$IFDEF MSWINDOWS}FdbResults{$ELSE}dbResults{$ENDIF} := GetAddress('dbresults');
+      @{$IFDEF MSWINDOWS}Fdbretdata{$ELSE}dbretdata{$ENDIF} := GetAddress('dbretdata');
+      @{$IFDEF MSWINDOWS}Fdbretlen{$ELSE}dbretlen{$ENDIF} := GetAddress('dbretlen');
+      @{$IFDEF MSWINDOWS}Fdbretname{$ELSE}dbretname{$ENDIF} := GetAddress('dbretname');
+      @{$IFDEF MSWINDOWS}Fdbretstatus{$ELSE}dbretstatus{$ENDIF} := GetAddress('dbretstatus');
+      @{$IFDEF MSWINDOWS}Fdbrettype{$ELSE}dbrettype{$ENDIF} := GetAddress('dbrettype');
+      @{$IFDEF MSWINDOWS}Fdbrpcinit{$ELSE}dbrpcinit{$ENDIF} := GetAddress('dbrpcinit');
+      @{$IFDEF MSWINDOWS}Fdbrpcparam{$ELSE}dbrpcparam{$ENDIF} := GetAddress('dbrpcparam');
+      @{$IFDEF MSWINDOWS}FdbRpcSend{$ELSE}dbRpcSend{$ENDIF} := GetAddress('dbrpcsend');
 
+
+      @{$IFDEF MSWINDOWS}FdbSetLoginTime{$ELSE}dbSetLoginTime{$ENDIF} := GetAddress('dbsetlogintime');
+      @{$IFDEF MSWINDOWS}FdbsetLName{$ELSE}dbsetLName{$ENDIF} := GetAddress('dbsetlname');
+      @{$IFDEF MSWINDOWS}Fdbopen{$ELSE}dbopen{$ENDIF} := GetAddress('dbopen');
+      @{$IFDEF MSWINDOWS}Fdbuse{$ELSE}dbuse{$ENDIF} := GetAddress('dbuse');
 
       @dbmsghandle := GetAddress('dbmsghandle');
     end;
