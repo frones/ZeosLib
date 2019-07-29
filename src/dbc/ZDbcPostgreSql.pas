@@ -928,7 +928,7 @@ begin
       then PError := FPlainDriver.PQresultErrorField(QueryHandle,Ord(PG_DIAG_SQLSTATE))
       else PError := FPLainDriver.PQerrorMessage(Fconn);
       //transaction aborted and in postre zombi status? If so a rollback is required
-      if (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
+      if (PError = nil) or (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
         FPlainDriver.PQclear(QueryHandle);
         QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(cRollback));
       end;
