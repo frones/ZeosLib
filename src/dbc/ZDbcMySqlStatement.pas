@@ -803,11 +803,10 @@ var
       else while GetMoreResults do
         if LastResultSet <> nil then begin
           Result := LastResultSet;
-          LastResultSet := nil;
+          FLastResultSet := nil;
+          FOpenResultSet := Pointer(Result);
           Break;
         end;
-      if Result = nil then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
       FOpenResultSet := Pointer(Result);
     end else
       CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, RSQL, Self);
@@ -845,9 +844,12 @@ begin
         if BindList.HasOutParam or BindList.HasInOutParam then
           FOutParamResultSet := GetLastResultSet;
       end else if FieldCount = 0 then
-        if GetMoreResults
-        then Result := LastResultSet
-        else raise EZSQLException.Create(SCanNotOpenResultSet)
+        while GetMoreResults do
+          if FLastResultSet <> nil then begin
+            Result := FLastResultSet;
+            FLastResultSet := nil;
+            FOpenResultset := Pointer(Result);
+          end
       else Result := CreateResultSet(SQL, 0, FieldCount);
       FOpenResultSet := Pointer(Result);
     end else
@@ -855,6 +857,7 @@ begin
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), Self);
   end;
+  if Result = nil then raise EZSQLException.Create(SCanNotOpenResultSet);
   if (FTokenMatchIndex = Ord(myCall)) or BindList.HasReturnParam then
     FOutParamResultSet := Result;
 end;
