@@ -60,7 +60,7 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
-  ZDbcLogging, ZVariant, ZMessages;
+  ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet;
 
 type
   {** Implements Prepared SQL Statement for Interbase or FireBird. }
@@ -94,6 +94,7 @@ type
     procedure CheckParameterIndex(var Value: Integer); override;
     function GetInParamLogValue(Index: Integer): RawByteString; override;
     procedure ReleaseConnection; override;
+    function CreateResultSet: IZResultSet;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure AfterClose; override;
@@ -346,6 +347,31 @@ begin
   FMaxRowsPerBatch := 0;
 end;
 
+function TZAbstractInterbase6PreparedStatement.CreateResultSet: IZResultSet;
+var
+  NativeResultSet: TZInterbase6XSQLDAResultSet;
+  CachedResolver: TZInterbase6CachedResolver;
+  CachedResultSet: TZCachedResultSet;
+begin
+  if FOpenResultSet <> nil then
+    Result := IZResultSet(FOpenResultSet)
+  else begin
+    NativeResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+      FResultXSQLDA, CachedLob, FStatementType);
+    if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
+    begin
+      CachedResolver  := TZInterbase6CachedResolver.Create(Self,  NativeResultSet.GetMetadata);
+      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
+      CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+      Result := CachedResultSet;
+    end
+    else
+      Result := NativeResultSet;
+    NativeResultSet.TransactionResultSet := Pointer(Result);
+    FOpenResultSet := Pointer(Result);
+  end;
+end;
+
 procedure TZAbstractInterbase6PreparedStatement.CheckParameterIndex(
   var Value: Integer);
 var I: Integer;
@@ -512,10 +538,7 @@ begin
   { Create ResultSet if possible else free Statement Handle }
   if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FResultXSQLDA.GetFieldCount <> 0) then begin
     if not Assigned(LastResultSet) then
-      LastResultSet := CreateIBResultSet(SQL, Self,
-        TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
-          FResultXSQLDA, True, CachedLob, FStatementType));
-      FOpenResultSet := Pointer(FLastResultSet);
+      LastResultSet := CreateResultSet;
     if (FStatementType = stExecProc) or BindList.HasOutOrInOutOrResultParam then
       FOutParamResultSet := LastResultSet;
   end else
@@ -540,16 +563,11 @@ begin
   ExecuteInternal;
 
   if (FResultXSQLDA <> nil) and (FResultXSQLDA.GetFieldCount <> 0) then begin
-    if (FStatementType = stSelect) and Assigned(FOpenResultSet) and not BindList.HasOutOrInOutOrResultParam then
-      Result := IZResultSet(FOpenResultSet)
-    else begin
-      Result := CreateIBResultSet(SQL, Self,
-        TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
-          FResultXSQLDA, False, CachedLob, FStatementType));
-    end;
+    if (FStatementType = stSelect) and Assigned(FOpenResultSet) and not BindList.HasOutOrInOutOrResultParam
+    then Result := IZResultSet(FOpenResultSet)
+    else Result := CreateResultSet;
     if (FStatementType = stExecProc) or BindList.HasOutOrInOutOrResultParam then
       FOutParamResultSet := Result;
-    FOpenResultSet := Pointer(Result);
   end else begin
     Result := nil;
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -584,10 +602,7 @@ begin
       stExecProc: begin
         { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
-          FOutParamResultSet := CreateIBResultSet(SQL, Self,
-            TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
-              FResultXSQLDA, True, CachedLob, FStatementType));
-//        FOpenResultSet := Pointer(LastResultSet);
+          FOutParamResultSet := CreateResultSet;
       end;
     end;
   inherited ExecuteUpdatePrepared;

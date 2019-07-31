@@ -205,9 +205,6 @@ type
     It clas can only write data to parameters/fields }
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA);
 
-function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
-  const NativeResultSet: IZResultSet): IZResultSet;
-
 {Interbase6 Connection Functions}
 function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
@@ -467,32 +464,6 @@ implementation
 uses
   ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
-
-{**
-  Create CachedResultSet with using TZCachedResultSet and return it.
-  @param SQL a sql query command
-  @param Statement a zeos statement object
-  @param NativeResultSet a native result set
-  @return cached ResultSet if rcReadOnly <> rcReadOnly
-}
-function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
-  const NativeResultSet: IZResultSet): IZResultSet;
-var
-  CachedResolver: TZInterbase6CachedResolver;
-  CachedResultSet: TZCachedResultSet;
-begin
-  if (Statement.GetResultSetConcurrency = rcUpdatable)
-    or (Statement.GetResultSetType <> rtForwardOnly) then
-  begin
-    CachedResolver  := TZInterbase6CachedResolver.Create(Statement,  NativeResultSet.GetMetadata);
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-      CachedResolver, Statement.GetConnection.GetConSettings);
-    CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
-    Result := CachedResultSet;
-  end
-  else
-    Result := NativeResultSet;
-end;
 
 function FindPBParam(const ParamName: string; const ParamArr: array of TZIbParam): PZIbParam;
 var
