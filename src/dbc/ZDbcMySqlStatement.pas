@@ -427,7 +427,6 @@ var status: Integer;
   FieldCount: UInt;
   RS: IZResultSet;
   AnyValue: IZAnyValue;
-label CreateRS;
 begin
   if (FOpenResultSet <> nil)
   then IZResultSet(FOpenResultSet).Close;
