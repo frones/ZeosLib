@@ -161,6 +161,7 @@ type
     procedure UnPrepareInParameters; override;
     procedure CheckParameterIndex(var Value: Integer); override;
     procedure SetParamCount(NewParamCount: Integer); override;
+    procedure SetBindCapacity(Capacity: Integer); override;
     procedure RaiseUnsupportedParamType(Index: Integer; WType: Word; SQLType: TZSQLType);
     procedure RaiseExceeded(Index: Integer);
     function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
@@ -1843,6 +1844,13 @@ begin
     InitFixedBind(Index, SizeOf(TDB_NUMERIC), DBTYPE_NUMERIC);
     BindList.Put(Index, Value);
   end;
+end;
+
+procedure TZOleDBPreparedStatement.SetBindCapacity(Capacity: Integer);
+begin
+  inherited SetBindCapacity(Capacity);
+  if not fBindImmediat and not fDEFERPREPARE and (Bindlist.Count < Capacity) then
+    SetParamCount(Capacity);
 end;
 
 procedure TZOleDBPreparedStatement.SetBindOffsets;
