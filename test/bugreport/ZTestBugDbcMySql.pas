@@ -74,6 +74,7 @@ type
     procedure Test881634;
     procedure Test961337;
     procedure TestBin_Collation;
+    procedure TestTicket365;
   end;
 
 implementation
@@ -405,6 +406,60 @@ begin
     end;
   finally
     Statement.Close;
+  end;
+end;
+
+(*
+INSERT/UPDATE via TZSQLQuery - got error under Win7x64
+I have two operators in .SQL.Text and I want to get AUTOINCREMENT valua for 'ter_id':
+INSERT INTO territory ( 'ter_name' ) VALUES ( 'aaa' ); SELECT LAST_INSERT_ID() as ter_id;
+ERROR: SIGSEGV .\src\dbc\ZDbcStatement.pas 1809 *)
+procedure TZTestDbcMySQLBugReport.TestTicket365;
+var
+  I: Integer;
+  Stmt: IZStatement;
+  PStmt: IZPreparedStatement;
+  RS: IZResultSet;
+
+begin
+  Connection.GetParameters.Add('CLIENT_MULTI_STATEMENTS=1');
+  // prepare sample table
+  Stmt := Connection.CreateStatement;
+  try
+    Stmt.ExecuteUpdate('create table TestTicket365 (id int not null auto_increment,int_value int,primary key (id))');
+    RS := Stmt.ExecuteQuery('insert into TestTicket365 (int_value) values (0); SELECT last_insert_id() as id;');
+    Check(RS <> nil, 'No resultset retrived');
+    Check(RS.Next, 'No row retrieved');
+    Check(not RS.IsNull(FirstDbcIndex), 'No data retrieved');
+    RS.Close;
+    Check(Stmt.ExecuteUpdate('insert into TestTicket365 (int_value) values (1); SELECT last_insert_id() as id;') = 1,'UpdateCount');
+    Check(Stmt.GetMoreResults, 'There should be an pending result');
+    RS := Stmt.GetResultSet;
+    Check(RS <> nil, 'No resultset retrived');
+    Check(RS.Next, 'No row retrieved');
+    Check(not RS.IsNull(FirstDbcIndex), 'No data retrieved');
+    I := RS.GetInt(FirstDbcIndex);
+
+    PStmt := Connection.PrepareStatement('insert into TestTicket365 (int_value) values (?); SELECT last_insert_id() as id;');
+
+    for I:= I to 10 do begin
+      PStmt.SetInt(FirstDbcIndex, I);
+      Check(PStmt.ExecuteUpdatePrepared = 1,'UpdateCount');
+      Check(PStmt.GetMoreResults, 'There should be an pending result');
+      RS := PStmt.GetResultSet;
+      Check(RS <> nil, 'No resultset retrived');
+      Check(RS.Next, 'No row retrieved');
+      Check(not RS.IsNull(FirstDbcIndex), 'No data retrieved');
+      RS.Close;
+    end;
+  finally
+    if Assigned(PStmt) then begin
+      PStmt.Close;
+      PStmt:= nil;
+    end;
+    Stmt.ExecuteUpdate('drop table TestTicket365');
+    Stmt.Close;
+    Stmt := nil;
   end;
 end;
 
