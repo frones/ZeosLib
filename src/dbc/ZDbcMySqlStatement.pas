@@ -473,6 +473,9 @@ begin
         else LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
       end;
     end;
+    //handle multiple statements which can not be prepared
+    if FHasMoreResults and (TokenMatchIndex < Ord(myCall)) then
+      FTokenMatchIndex := -1; //indicate we'll never fall into a prepared mode
   end;
 end;
 
@@ -823,14 +826,6 @@ begin
   end else begin
     if (DriverManager <> nil) and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecPrepStmt,Self);
-    if FplainDriver.IsMariaDBDriver and (FTokenMatchIndex = Ord(myCall)) then begin //EH: no idea why but maria db hangs if we do not reset the stmt ):
-       if FPlainDriver.mysql_stmt_reset(FMYSQL_STMT) <> 0 then
-        checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
-          ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP), Self);
-       FBindAgain := True;
-       BindInParameters;
-    end;
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FStmtHandleIsExecuted := True;
       FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
@@ -964,9 +959,9 @@ begin
       if Status = -1 then
         Break
       else if (Status = 0) then begin
-        FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
-        if FQueryHandle <> nil then begin
-          FHasMoreResults := FHasMoreResults or (FPlainDriver.mysql_field_count(FPMYSQL^) > 0);
+        FHasMoreResults := True;
+        if FPlainDriver.mysql_field_count(FPMYSQL^) > 0 then begin
+          FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
           FPlainDriver.mysql_free_result(FQueryHandle);
         end;
       end else if Status > 0 then begin
@@ -975,17 +970,17 @@ begin
       end;
     end
   else if (FMYSQL_STMT <> nil) and FStmtHandleIsExecuted then
-    while Assigned(FPlainDriver.mysql_stmt_next_result) do begin //so we need to do the job by hand now
+    while Assigned(FPlainDriver.mysql_stmt_next_result) do begin
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status = -1 then
         Break
       else if (Status = 0) then begin
-        FHasMoreResults := FHasMoreResults or (FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0);
-        //horray we can't store the result -> https://dev.mysql.com/doc/refman/5.7/en/mysql-stmt-store-result.html
-        if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then //MySQL allows this Mariadb is viny nilly now
-          checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
-          ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-            ConSettings^.ClientCodePage^.CP), Self);
+        FHasMoreResults := True;
+        if (FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT) > 0) then
+          if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
+            checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
+            ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+              ConSettings^.ClientCodePage^.CP), Self);
       end else if Status > 0 then begin
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
