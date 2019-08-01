@@ -529,19 +529,18 @@ begin
 *)
 procedure TZTestDbcInterbaseBugReport.TestTicket363;
 var
-  I: Integer;
+  I, J: Integer;
   Stmt: IZStatement;
   LStmt: IZPreparedStatement;
   LSet: IZResultSet;
 begin
-  //Exit;
   Connection.Open;
   // prepare sample table
   Stmt := Connection.CreateStatement;
   try
     Stmt.ExecuteUpdate('create table TestTicket363 (id integer primary key, "value" BLOB SUB_TYPE TEXT)');
     // generate test data
-    for I:= 1 to 20 do
+    for I:= 1 to 10 do
       Stmt.ExecuteUpdate('insert into TestTicket363 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')');
     // direct approach (just like mORMot with SynDBZeos)
     LStmt:= Connection.PrepareStatement('select * from TestTicket363 where id > ?');
@@ -558,7 +557,7 @@ begin
       if I > 20 then
         Break;
     end;
-    Check(I = 20, 'duplicated rows retrieved');
+    Check(I = 10, 'duplicated rows retrieved');
 //  LSet:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
     LStmt.ClearParameters;
     // trigger fix for ticket #228
@@ -568,13 +567,24 @@ begin
 
     LStmt.SetInt(FirstDbcIndex, 0);
     LSet:= LStmt.ExecuteQueryPrepared; // the transaction ID is not updated
-    I:= 0;
+    I:= 1;
     while LSet.Next do begin // BUG! fails here as the fix is trying to open the resultset already opened in ExecuteQueryPrepared
       Inc(I);
       if I > 20 then
         Break;
     end;
-    Check(I = 20, 'duplicated rows retrieved');
+    Check(I = 11, 'duplicated rows retrieved');
+
+    LStmt.SetInt(FirstDbcIndex, 0);
+    LSet:= LStmt.ExecuteQueryPrepared; // the transaction ID is not updated
+    I:= 1;
+    while LSet.Next do begin // BUG! fails here as the fix is trying to open the resultset already opened in ExecuteQueryPrepared
+      Inc(I);
+      Connection.SetAutoCommit(I and 1 = 0);
+      if I > 20 then
+        Break;
+    end;
+    Check(I = 11, 'duplicated rows retrieved');
   finally
     if Assigned(LStmt) then begin
       LStmt.Close;
