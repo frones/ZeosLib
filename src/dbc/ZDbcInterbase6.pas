@@ -90,6 +90,7 @@ type
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpencursor(const CursorRS: IZResultSet);
     function GetExplicitTransactionCount: Integer;
+    function GetOpenCursorCount: Integer;
   end;
 
   {** Represents a Interbase specific connection interface. }
