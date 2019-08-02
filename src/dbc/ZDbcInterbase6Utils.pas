@@ -1287,7 +1287,7 @@ begin
   { Note: Update statements could have Select counter <> 0 as well }
 
   case StatementType of
-    stSelect,
+    stSelect, //selectable procedure could have a update count but FB does not return them.
     stSelectForUpdate: Result := Counts[cntSel];
     stInsert:          Result := Counts[cntIns];
     stUpdate:          Result := Counts[cntUpd];

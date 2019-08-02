@@ -6,6 +6,9 @@ drop procedure ABTEST;
 drop procedure procedure2;
 drop procedure procedure1;
 drop procedure guidtest;
+drop procedure procedure_upd_people_A;
+drop procedure procedure_upd_people_B;
+drop procedure procedure_upd_people_C;
 
 drop view dep_view;
 
@@ -36,5 +39,4 @@ drop domain tinteger;
 drop domain tfloat;
 drop domain tstring;
 drop domain DOM_GUID;
-
 drop generator GEN_ID;

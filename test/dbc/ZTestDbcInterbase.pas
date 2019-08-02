@@ -80,6 +80,11 @@ type
     procedure TestInsertReturning;
     procedure TestClientVersionNumber;
     procedure TestDefaultReadCommittedMode;
+    procedure FB_TestUpdateCounts;
+    procedure FB_TestUpdateCounts_Returning;
+    procedure FB_TestUpdateCounts_FromSuspendedProcedure_A;
+    procedure FB_TestUpdateCounts_FromSuspendedProcedure_B;
+    procedure FB_TestUpdateCounts_FromSuspendedProcedure_C;
   end;
 
 implementation
@@ -87,6 +92,103 @@ implementation
 uses SysUtils, ZTestConsts, ZTestCase, ZVariant, ZMessages, ZDbcInterbase6Metadata;
 
 { TZTestDbcInterbaseCase }
+
+procedure TZTestDbcInterbaseCase.FB_TestUpdateCounts_FromSuspendedProcedure_A;
+var Stmt: IZStatement;
+  RS: IZResultSet;
+  I, Cnt: Integer;
+begin
+  Stmt := Connection.CreateStatement;
+  RS := nil;
+  try
+    CheckNotNull(Stmt);
+    RS := Stmt.ExecuteQuery('select count(*) from people');
+    Check(Rs <> nil, 'no resultset retieved');
+    Check(Rs.Next, 'no count(*) retieved');
+    Cnt := Rs.GetInt(FirstDbcIndex);
+    RS := Stmt.ExecuteQuery('select r1 from procedure_upd_people_A');
+    //Check(Stmt.GetUpdateCount = 0, 'updatecount is not equal');
+    I := 0;
+    while RS.Next do
+      Inc(I);
+    Check(I = Cnt, 'rowcount is not equal');
+    Stmt.Close;
+  finally
+    Stmt.Close;
+    Stmt := nil;
+    RS := nil;
+  end;
+end;
+
+procedure TZTestDbcInterbaseCase.FB_TestUpdateCounts_FromSuspendedProcedure_B;
+var Stmt: IZStatement;
+  RS: IZResultSet;
+  I, Cnt: Integer;
+begin
+  Stmt := Connection.CreateStatement;
+  RS := nil;
+  try
+    CheckNotNull(Stmt);
+    RS := Stmt.ExecuteQuery('select count(*) from people');
+    Check(Rs <> nil, 'no resultset retieved');
+    Check(Rs.Next, 'no count(*) retieved');
+    Cnt := Rs.GetInt(FirstDbcIndex);
+    RS := Stmt.ExecuteQuery('select r1 from procedure_upd_people_B');
+    I := 0;
+    while RS.Next do
+      Inc(I);
+    Check(I = Cnt, 'rowcount is not equal');
+    //Check(Stmt.GetUpdateCount = Cnt, 'updatecount is not equal');
+    Stmt.Close;
+  finally
+    Stmt.Close;
+    Stmt := nil;
+    RS := nil;
+  end;
+end;
+
+procedure TZTestDbcInterbaseCase.FB_TestUpdateCounts_FromSuspendedProcedure_C;
+var Stmt: IZStatement;
+  RS: IZResultSet;
+  I, Cnt: Integer;
+begin
+  Stmt := Connection.CreateStatement;
+  RS := nil;
+  try
+    CheckNotNull(Stmt);
+    RS := Stmt.ExecuteQuery('select count(*) from people');
+    Check(Rs <> nil, 'no resultset retieved');
+    Check(Rs.Next, 'no count(*) retieved');
+    Cnt := Rs.GetInt(FirstDbcIndex);
+    RS := Stmt.ExecuteQuery('select r1 from procedure_upd_people_B');
+//    Check(Stmt.GetUpdateCount = Cnt, 'updatecount is not equal');
+    I := 0;
+    while RS.Next do
+      Inc(I);
+    Check(I = Cnt, 'rowcount is not equal');
+    Stmt.Close;
+  finally
+    Stmt.Close;
+    Stmt := nil;
+    RS := nil;
+  end;
+end;
+
+procedure TZTestDbcInterbaseCase.FB_TestUpdateCounts_Returning;
+var Stmt: IZStatement;
+  Cnt: Integer;
+begin
+  Stmt := Connection.CreateStatement;
+  try
+    CheckNotNull(Stmt);
+    Cnt := Stmt.ExecuteUpdate('update people set p_id = p_id where p_id = 5 returning p_id'); //fb does not support multiple rows yet
+    Check(Cnt = 1, 'updatecount is not equal');
+    Stmt.Close;
+  finally
+    Stmt.Close;
+    Stmt := nil;
+  end;
+end;
 
 {**
   Gets an array of protocols valid for this test.
@@ -369,6 +471,30 @@ begin
   ImageStream.Free;
 
   Statement.Close;
+end;
+
+procedure TZTestDbcInterbaseCase.FB_TestUpdateCounts;
+var Stmt: IZStatement;
+  RS: IZResultSet;
+  I, Cnt: Integer;
+begin
+  Stmt := Connection.CreateStatement;
+  RS := nil;
+  try
+    CheckNotNull(Stmt);
+
+    RS := Stmt.ExecuteQuery('select count(*) from people');
+    Check(Rs <> nil, 'no resultset retieved');
+    Check(Rs.Next, 'no count(*) retieved');
+    Cnt := Rs.GetInt(FirstDbcIndex);
+    I := Stmt.ExecuteUpdate('Update people set p_id = p_id');
+    Check(I = Cnt, 'updatecount is not equal');
+    Stmt.Close;
+  finally
+    Stmt.Close;
+    Stmt := nil;
+    RS := nil;
+  end;
 end;
 
 procedure TZTestDbcInterbaseCase.TestCaseSensitive;

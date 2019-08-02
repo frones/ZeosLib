@@ -181,6 +181,7 @@ type
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpencursor(const CursorRS: IZResultSet);
     function GetExplicitTransactionCount: Integer;
+    function GetOpenCursorCount: Integer;
   public
     constructor Create(const Owner: TZIBTransactionManager);
     procedure BeforeDestruction; override;
@@ -1641,7 +1642,7 @@ begin
     IBSavePoint.Release;
     Result := fSavepoints.Count +1;
   end else if FTrHandle <> 0 then with FOwner.FOwner do try
-    if (FOpenCursors.Count = 0) or TestCachedResultsAndForceFetchAll then
+    if (FOpenCursors.Count = 0) or FOwner.FOwner.FHardCommit or TestCachedResultsAndForceFetchAll then
       Status := FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle)
     else begin
       fDoCommit := True;
@@ -1680,6 +1681,11 @@ begin
   Result := FExplicitTransactionCounter;
 end;
 
+function TZIBTransaction.GetOpenCursorCount: Integer;
+begin
+  Result := FOpenCursors.Count;
+end;
+
 function TZIBTransaction.GetTrHandle: PISC_TR_HANDLE;
 begin
   if FTrHandle = 0 then
@@ -1713,7 +1719,7 @@ begin
     IBSavePoint.RollBackTo;
     Result := fSavepoints.Count+1;
   end else if FTrHandle <> 0 then with FOwner.FOwner do try
-    if (FOpenCursors.Count = 0) or TestCachedResultsAndForceFetchAll then
+    if (FOpenCursors.Count = 0) or FOwner.FOwner.FHardCommit or TestCachedResultsAndForceFetchAll then
       Status := FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle)
     else begin
       fDoCommit := False;
