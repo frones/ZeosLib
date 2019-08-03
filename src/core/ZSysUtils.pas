@@ -1095,7 +1095,6 @@ implementation
 uses DateUtils, StrUtils,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   SysConst,{keep it after RTLConst -> deprecated warning}
-  {$IFDEF WITH_DBCONSTS}DBConsts{$ENDIF},
   ZFastCode;
 
 
