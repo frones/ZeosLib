@@ -544,19 +544,23 @@ end;
   @param Value: the SQL-String which has to be optional preprepared
 }
 procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
+{$IFNDEF UNICODE}var CP: Word;{$ENDIF}
 begin
   if FWSQL <> Value then
     {$IFDEF UNICODE}
-    if not (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
-      FASQL := GetRawEncodedSQL(Value)
-    else
-      if ConSettings^.AutoEncode then
-        FWSQL := GetUnicodeEncodedSQL(Value)
-      else
-        FWSQL := Value;
+    if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
+      FWSQL := GetUnicodeEncodedSQL(Value);
+      {$IFDEF DEBUG}FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);{$ENDIF}
+    end else begin
+      FASQL := GetRawEncodedSQL(Value);
+      FWSQL := Value;
+    end;
     {$ELSE !UNICODE}
     begin
-      FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP); //required for the resultsets
+      if (ConSettings^.ClientCodePage^.Encoding = ceUTF16)
+      then CP := ConSettings^.CTRL_CP
+      else CP := ConSettings.ClientCodePage.CP;
+      FaSQL := GetRawEncodedSQL(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, CP)); //required for the resultsets
       FWSQL := Value;
     end;
     {$ENDIF UNICODE}
@@ -622,11 +626,15 @@ begin
   begin
     {$IFDEF UNICODE}
     FASQL := Value;
-    FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
+    FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage.CP); //required for the resultsets
     {$ELSE !UNICODE}
-    FASQL := GetRawEncodedSQL(Value);
-    if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
-      FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
+    if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then begin
+      FWSQL := GetUnicodeEncodedSQL(Value);
+      FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);
+    end else begin
+      FASQL := GetRawEncodedSQL(Value);
+      {$IFDEF DEBUG}FWSQL := ZRawToUnicode(FASQL, FClientCP);{$ENDIF}
+    end;
     {$ENDIF UNICODE}
   end;
 end;
@@ -798,8 +806,10 @@ begin
     finally
     FClosed := True;
     if RefCountAdded then begin
-      if (RefCount = 1) then
+      if (RefCount = 1) then begin
         DriverManager.AddGarbage(Self);
+        FConnection := nil;
+      end;
       _Release;
     end;
   end;
@@ -965,10 +975,11 @@ begin
     end;
     FlushBuff(Result);
   end else begin
-    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
+    FWSQL := SQL;
     Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
+    FASQL := SQL;
     Result := SQL;
     {$ENDIF}
   end;
@@ -978,6 +989,7 @@ function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) a
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
+  {$IFNDEF UNICODE}US: ZWideString;{$ENDIF}
 begin
   if ConSettings^.AutoEncode then begin
     Result := ''; //init
@@ -990,10 +1002,13 @@ begin
       ToBuff(SQLTokens[i].Value, FASQL);
       case (SQLTokens[i].TokenType) of
         ttQuoted, ttComment,
-        ttWord, ttQuotedIdentifier, ttKeyword:
-          ToBuff(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP), Result);
-        else
-          ToBuff(ASCII7ToUnicodeString(SQLTokens[i].Value), Result);
+        ttWord, ttQuotedIdentifier, ttKeyword: begin
+          US := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
+          ToBuff(US, Result);
+        end else begin
+          US := ASCII7ToUnicodeString(SQLTokens[i].Value);
+          ToBuff(US, Result);
+        end;
       end;
       {$ENDIF UNICODE}
     end;
@@ -1011,6 +1026,7 @@ begin
     {$ELSE !UNICODE}
     Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
     {$ENDIF UNICODE}
+      FWSQL := '';
   end;
 end;
 
