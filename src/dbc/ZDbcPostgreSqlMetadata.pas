@@ -1658,7 +1658,7 @@ begin
             ColumnTypeOid := ColumnsRS.GetUIntByName('atttypid');
             InsertProcedureColumnRow(Result, GetStringByName('nspname'),
               GetStringByName('proname'), ColumnsRS.GetStringByName('attname'),
-              Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid, -1)),
+              Ord(pctReturn), Ord(GetSQLTypeByOid(ColumnTypeOid, -1)),
               GetPostgreSQLType(ColumnTypeOid), Ord(ntNullableUnknown));
           end;
           ColumnsRS.Close;

@@ -4934,13 +4934,19 @@ begin
       Flags := Flags or 1; {Valid := True}
       Inc(P);
     end;
-    if UInt64(Result) >= {$IFDEF FPC}HighInt64{$ELSE}$8000000000000000{$ENDIF} then {Possible Overflow}
-      if ((Flags and 2) = 0) or (UInt64(Result) <> {$IFDEF FPC}HighInt64{$ELSE}$8000000000000000{$ENDIF}) then begin {Overflow}
-        if ((Flags and 2) <> 0) then {Neg=True}
-          Result := -Result;
-        Code := P-S;
-        Exit;
-      end;
+    {$IFDEF FPC}
+    if UInt64(Result) >= UInt64(Int64($8000000000000000)) then {Possible Overflow}
+      if ((Flags and 2) = 0) or (UInt64(Result) <> UInt64(Int64($8000000000000000))) then
+    {$ELSE}
+    if UInt64(Result) >= $8000000000000000 then {Possible Overflow}
+      if ((Flags and 2) = 0) or (UInt64(Result) <> $8000000000000000) then
+    {$ENDIF}
+        begin {Overflow}
+          if ((Flags and 2) <> 0) then {Neg=True}
+            Result := -Result;
+          Code := P-S;
+          Exit;
+        end;
   end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;

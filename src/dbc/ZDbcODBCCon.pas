@@ -683,11 +683,11 @@ begin
       {$IFDEF UNICODE}
       SetLength(Result, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+2, @aLen));
       {$ELSE}
       SetLength(Buf, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+2, @aLen));
       Result := PUnicodeToRaw(Pointer(Buf), Length(Buf), ZOSCodePage);
       {$ENDIF}
       inherited SetCatalog(Result);
@@ -785,12 +785,12 @@ begin
       {$IFNDEF UNICODE}
       SetLength(Result, aLen);
       CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+1, @aLen));
       {$ELSE}
       SetLength(Buf, aLen);
       CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
-      Result := PRawToUnicode(Pointer(Buf), Length(Buf), ZOSCodePage);
+      Result := PRawToUnicode(Pointer(Buf), aLen+1, ZOSCodePage);
       {$ENDIF}
       inherited SetCatalog(Result);
     end;

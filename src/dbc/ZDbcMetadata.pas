@@ -104,7 +104,6 @@ type
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   private
     fConSettings: TZConSettings;
-    fDoClose: Boolean;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -113,12 +112,21 @@ type
     constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
-      ConSettings: PZConSettings);
+      ConSettings: PZConSettings); overload;
+    constructor CreateWithColumns(const Statement: IZStatement;
+      ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings); overload;
+  public
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+  end;
+
+  {** Implements Unclosable ResultSet which frees all memory if it's not referenced anymore. }
+  TZUnCloseableResultSet = class(TZVirtualResultSet)
+  private
+    fDoClose: Boolean;
+  public
     procedure Close; override;
     destructor Destroy; override;
     procedure ResetCursor; override;
-  public
-    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
 
   {** Implements Abstract Database Metadata. }
@@ -2316,7 +2324,7 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
+    Result := TZUnCloseableResultSet.CreateWithColumns(ColumnsInfo, '',
       IZConnection(FConnection).GetConSettings);
     with Result do begin
       SetType(rtScrollInsensitive);
@@ -2408,11 +2416,15 @@ var
   Metadata: IZResultSetMetadata;
   Len: NativeUInt;
   Buff: array[Byte] of Byte;
+  IsUTF16: Boolean;
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
 
   Metadata := SrcResultSet.GetMetadata;
+  IsUTF16 :=  (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+             (ConSettings^.ClientCodePage^.Encoding = ceUTF16);
+
   while SrcResultSet.Next do
   begin
     DestResultSet.MoveToInsertRow;
@@ -2443,17 +2455,13 @@ begin
           DestResultSet.UpdateDouble(I, SrcResultSet.GetDouble(I));
         stCurrency:
           DestResultSet.UpdateCurrency(I, SrcResultSet.GetCurrency(I));
-        stBigDecimal:
-          begin
+        stBigDecimal: begin
             SrcResultSet.GetBigDecimal(I, PBCD(@Buff[0])^);
             DestResultSet.UpdateBigDecimal(I, PBCD(@Buff[0])^);
           end;
-        stString, stUnicodeString, stAsciiStream, stUnicodeStream:
-          if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-             (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
-            DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), Len)
-          else
-            DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), Len);
+        stString, stUnicodeString, stAsciiStream, stUnicodeStream: if IsUTF16
+          then DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), Len)
+          else DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), Len);
         stGUID, stBytes, stBinaryStream:
           DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
         stDate:
@@ -2498,30 +2506,31 @@ begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
       begin
-        AutoIncrement := Metadata.IsAutoIncrement(i);
-        CaseSensitive := Metadata.IsCaseSensitive(i);
-        Searchable := Metadata.IsSearchable(i);
+        //EH 10.07.2019 comment all getters who force LoadColumns of the NativeResultset-Metadata
+        //AutoIncrement := Metadata.IsAutoIncrement(i);
+        //CaseSensitive := Metadata.IsCaseSensitive(i);
+        //Searchable := Metadata.IsSearchable(i);
         Currency := Metadata.IsCurrency(i);
-        Nullable := Metadata.IsNullable(i);
+        //Nullable := Metadata.IsNullable(i);
         Signed := Metadata.IsSigned(i);
         ColumnLabel := Metadata.GetColumnLabel(i);
-        ColumnName := Metadata.GetColumnName(i);
-        SchemaName := Metadata.GetSchemaName(i);
+        //ColumnName := Metadata.GetColumnName(i);
+        //SchemaName := Metadata.GetSchemaName(i);
         Precision := Metadata.GetPrecision(i);
-        Scale := Metadata.GetScale(i);
-        TableName := Metadata.GetTableName(i);
-        CatalogName := Metadata.GetCatalogName(i);
+        //Scale := Metadata.GetScale(i);
+        //TableName := Metadata.GetTableName(i);
+        //CatalogName := Metadata.GetCatalogName(i);
         ColumnType := Metadata.GetColumnType(i);
-        ReadOnly := Metadata.IsReadOnly(i);
-        Writable := Metadata.IsWritable(i);
-        DefinitelyWritable := Metadata.IsDefinitelyWritable(i);
-        DefaultValue := Metadata.GetDefaultValue(i);
+        //ReadOnly := Metadata.IsReadOnly(i);
+        //Writable := Metadata.IsWritable(i);
+        //DefinitelyWritable := Metadata.IsDefinitelyWritable(i);
+        //DefaultValue := Metadata.GetDefaultValue(i);
         ColumnCodePage := Metadata.GetColumnCodePage(i);
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    if ResultSet.GetType <> rtForwardOnly then
+    if not ResultSet.IsBeforeFirst and  (ResultSet.GetType <> rtForwardOnly) then
       ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
       TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings));
@@ -5039,6 +5048,13 @@ end;
 
 { TZVirtualResultSet }
 
+constructor TZVirtualResultSet.CreateWithColumns(const Statement: IZStatement;
+  ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
+begin
+  fConSettings := ConSettings^;
+  inherited CreateWithColumns(Statement, ColumnsInfo, SQL, @fConSettings);
+end;
+
 {**
   Creates this object and assignes the main properties.
   @param Statement an SQL statement object.
@@ -5049,12 +5065,6 @@ constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
 begin
   fConSettings := ConSettings^;
   inherited CreateWithStatement(SQL, Statement, @fConSettings);
-end;
-
-destructor TZVirtualResultSet.Destroy;
-begin
-  fDoClose := True;
-  inherited Destroy;
 end;
 
 {**
@@ -5081,12 +5091,6 @@ end;
   @param ColumnsInfo a columns info for cached rows.
   @param SQL an SQL query string.
 }
-procedure TZVirtualResultSet.Close;
-begin
-  if fDoClose then
-    inherited Close;
-end;
-
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
@@ -5111,12 +5115,6 @@ end;
 procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
-end;
-
-procedure TZVirtualResultSet.ResetCursor;
-begin
-  if not fDoClose then
-    BeforeFirst;
 end;
 
 { TZDefaultIdentifierConvertor }
@@ -5629,6 +5627,26 @@ const
 
 var
   I: Integer;
+
+{ TZUnCloseableResultSet }
+
+procedure TZUnCloseableResultSet.Close;
+begin
+  if fDoClose then
+    inherited Close;
+end;
+
+destructor TZUnCloseableResultSet.Destroy;
+begin
+  fDoClose := True;
+  inherited Destroy;
+end;
+
+procedure TZUnCloseableResultSet.ResetCursor;
+begin
+  if not fDoClose then
+    BeforeFirst;
+end;
 
 initialization
   SetLength(CharacterSetsColumnsDynArray, CharacterSetsColumnsCount);

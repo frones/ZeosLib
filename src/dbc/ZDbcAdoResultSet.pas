@@ -152,6 +152,7 @@ procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var Len, C, H, I: Integer;
     P: PWideChar;
+    BCD: TBCD;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -170,77 +171,93 @@ begin
         end;
       end else
         JSONWriter.AddShort('null,');
-    end else with FAdoRecordSet.Fields.Item[C] do begin
+    end else with FField20 do begin
       if JSONWriter.Expand then
         JSONWriter.AddString(JSONWriter.ColNames[I]);
-      {ADO uses its own DataType-mapping different to System Variant type mapping}
-      case Type_ of
-        adTinyInt:          JSONWriter.Add(PShortInt(FValueAddr)^);
-        adSmallInt:         JSONWriter.Add(PSmallInt(FValueAddr)^);
-        adInteger, adError: JSONWriter.Add(PInteger(FValueAddr)^);
-        adBigInt:           JSONWriter.Add(PInt64(FValueAddr)^);
-        adUnsignedTinyInt:  JSONWriter.AddU(PByte(FValueAddr)^);
-        adUnsignedSmallInt: JSONWriter.AddU(PWord(FValueAddr)^);
-        adUnsignedInt:      JSONWriter.AddU(PCardinal(FValueAddr)^);
-        adUnsignedBigInt:   JSONWriter.Add(PUInt64(FValueAddr)^);
-        adSingle:           JSONWriter.AddSingle(PSingle(FValueAddr)^);
-        adDouble:           JSONWriter.AddDouble(PDouble(FValueAddr)^);
-        adCurrency:         JSONWriter.AddCurr64(PCurrency(FValueAddr)^);
-        adBoolean:          JSONWriter.AddShort(JSONBool[PWordBool(FValueAddr)^]);
-        adGUID:             begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscapeW(PWord(PWideChar(FValueAddr)+1), 36);
-                              JSONWriter.Add('"');
-                            end;
-        adDBTime:           if (jcoMongoISODate in JSONComposeOptions) then begin
-                              JSONWriter.AddShort('ISODate("0000-00-00');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddShort('Z")');
-                            end else begin
-                              if jcoDATETIME_MAGIC in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.Add('"');
-                            end;
-        adDate,
-        adDBDate,
-        adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) then begin
-                              JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddShort('Z")');
-                            end else begin
-                              if jcoDATETIME_MAGIC in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else JSONWriter.Add('"');
-                              JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.Add('"');
-                            end;
-        adChar:             begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize));
-                              JSONWriter.Add('"');
-                            end;
-        adWChar:            begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize shr 1));
-                              JSONWriter.Add('"');
-                            end;
-        adVarChar,
-        adLongVarChar:      begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize);
-                              JSONWriter.Add('"');
-                            end;
-        adVarWChar,
-        adLongVarWChar:     begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize shr 1);
-                              JSONWriter.Add('"');
-                            end;
-        adBinary,
-        adVarBinary,
-        adLongVarBinary:    JSONWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
+      case FValueType of
+        VT_BOOL:        JSONWriter.AddShort(JSONBool[PWordBool(FValueAddr)^]);
+        VT_UI1:         JSONWriter.AddU(PByte(FValueAddr)^);
+        VT_UI2:         JSONWriter.AddU(PWord(FValueAddr)^);
+        VT_UI4:         JSONWriter.AddU(PCardinal(FValueAddr)^);
+        VT_UINT:        JSONWriter.AddU(PLongWord(FValueAddr)^);
+        VT_I1:          JSONWriter.Add(PShortInt(FValueAddr)^);
+        VT_I2:          JSONWriter.Add(PSmallInt(FValueAddr)^);
+        VT_ERROR,
+        VT_I4:          JSONWriter.Add(PInteger(FValueAddr)^);
+        VT_INT:         JSONWriter.Add(PLongInt(FValueAddr)^);
+        VT_HRESULT:     JSONWriter.Add(PHResult(FValueAddr)^);
+        VT_UI8:         JSONWriter.AddQ(PUInt64(FValueAddr)^);
+        VT_I8:          JSONWriter.Add(PInt64(FValueAddr)^);
+        VT_CY:          JSONWriter.AddCurr64(PCurrency(FValueAddr)^);
+        VT_DECIMAL:     begin
+                          P := @FColValue;
+                          if PDecimal(P).scale > 0 then begin
+                            ScaledOrdinal2Bcd(UInt64(PDecimal(P).Lo64), PDecimal(P).scale, BCD, PDecimal(P).sign > 0);
+                            Len := ZSysUtils.BcdToRaw(BCd, @fTinyBuffer[0], '.');
+                            JSONWriter.AddNoJSONEscape(@fTinyBuffer[0], Len);
+                          end else if PDecimal(P).sign > 0 then
+                            JSONWriter.Add(Int64(-UInt64(PDecimal(P).Lo64)))
+                          else
+                            JSONWriter.AddQ(UInt64(PDecimal(P).Lo64));
+                        end;
+        VT_R4:          JSONWriter.AddSingle(PSingle(FValueAddr)^);
+        VT_R8:          JSONWriter.AddDouble(PDouble(FValueAddr)^);
+      else case Type_ of {ADO uses its own DataType-mapping different to System tagVariant type mapping}
+          adGUID:             begin
+                                JSONWriter.Add('"');
+                                JSONWriter.AddNoJSONEscapeW(Pointer(PWideChar(FValueAddr)+1), 36);
+                                JSONWriter.Add('"');
+                              end;
+          adDBTime:           if (jcoMongoISODate in JSONComposeOptions) then begin
+                                JSONWriter.AddShort('ISODate("0000-00-00');
+                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                JSONWriter.AddShort('Z")');
+                              end else begin
+                                if jcoDATETIME_MAGIC in JSONComposeOptions
+                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else JSONWriter.Add('"');
+                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                JSONWriter.Add('"');
+                              end;
+          adDate,
+          adDBDate,
+          adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) then begin
+                                JSONWriter.AddShort('ISODate("');
+                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                JSONWriter.AddShort('Z")');
+                              end else begin
+                                if jcoDATETIME_MAGIC in JSONComposeOptions
+                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                else JSONWriter.Add('"');
+                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                JSONWriter.Add('"');
+                              end;
+          adChar:             begin
+                                JSONWriter.Add('"');
+                                JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize));
+                                JSONWriter.Add('"');
+                              end;
+          adWChar:            begin
+                                JSONWriter.Add('"');
+                                JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize shr 1));
+                                JSONWriter.Add('"');
+                              end;
+          adVarChar,
+          adLongVarChar:      begin
+                                JSONWriter.Add('"');
+                                JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize);
+                                JSONWriter.Add('"');
+                              end;
+          adVarWChar,
+          adLongVarWChar:     begin
+                                JSONWriter.Add('"');
+                                JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize shr 1);
+                                JSONWriter.Add('"');
+                              end;
+          adBinary,
+          adVarBinary,
+          adLongVarBinary:    JSONWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
+        end;
       end;
       JSONWriter.Add(',');
     end;
@@ -355,7 +372,6 @@ begin
       ColumnInfo.Precision := FieldSize;
     end;
     ColumnInfo.Signed := ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adDouble, adSingle, adCurrency, adDecimal, adNumeric];
-
     ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0) and (F.Properties.Item['BASECOLUMNNAME'].Value <> null) and not ColumnInfo.AutoIncrement;
     ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0) or ColumnInfo.AutoIncrement;
     ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;
@@ -420,6 +436,7 @@ end;
 function TZAdoResultSet.Next: Boolean;
 begin
   Result := False;
+  FField20 := nil;
   FFields := nil;
   if (FAdoRecordSet = nil) or (FAdoRecordSet.BOF and FAdoRecordSet.EOF) then
     Exit;
@@ -464,15 +481,19 @@ end;
 }
 function TZAdoResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
+  FField20 := nil;
   FFields := nil;
-  if FAdoRecordSet.EOF or FAdoRecordSet.BOF then
-     FAdoRecordSet.MoveFirst;
-  if Row > 0 then
-    FAdoRecordSet.Move(Row - 1, adBookmarkFirst)
-  else
-    FAdoRecordSet.Move(Abs(Row) - 1, adBookmarkLast);
-  Result := not (FAdoRecordSet.EOF or FAdoRecordSet.BOF);
-  if Result then FFields := FAdoRecordSet.Fields;
+  if FAdoRecordSet.CursorType = adUseClient then begin
+    if FAdoRecordSet.EOF or FAdoRecordSet.BOF then
+       FAdoRecordSet.MoveFirst;
+    if Row > 0 then
+      FAdoRecordSet.Move(Row - 1, adBookmarkFirst)
+    else
+      FAdoRecordSet.Move(Abs(Row) - 1, adBookmarkLast);
+    Result := not (FAdoRecordSet.EOF or FAdoRecordSet.BOF);
+    if Result then FFields := FAdoRecordSet.Fields;
+  end else
+    Result := inherited MoveAbsolute(Row);
 end;
 
 {**
@@ -482,10 +503,11 @@ end;
 }
 function TZAdoResultSet.GetRow: NativeInt;
 begin
-  if FAdoRecordSet.EOF or FAdoRecordSet.BOF then
-    Result := -1
-  else
-    Result := FAdoRecordSet.AbsolutePosition;
+  if FAdoRecordSet.CursorType = adUseClient then
+    if FAdoRecordSet.EOF or FAdoRecordSet.BOF
+    then Result := -1
+    else Result := FAdoRecordSet.AbsolutePosition
+  else Result := RowNo;
 end;
 
 {**
@@ -504,6 +526,7 @@ begin
   if (FFields = nil) then begin
     Result := True;
     FValueAddr := nil;
+    FField20 := nil;
   end else begin
     FField20 := FFields.Get_Item(ColumnIndex);
     FColValue := FField20.Value;
@@ -517,7 +540,7 @@ begin
         FValueType := FValueType xor VT_BYREF;
         FValueAddr := tagVariant(FColValue).unkVal;
       end else if FValueType = VT_DECIMAL
-        then FValueAddr := @FColValue
+        then FValueAddr := (@FColValue)
         else if (FValueType = VT_BSTR)
           then FValueAddr := tagVariant(FColValue).bstrVal
           else FValueAddr := @tagVariant(FColValue).bVal;
@@ -578,7 +601,7 @@ begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then
      Result := ''
-  else with FField20 do begin
+  else with FField20 do
     case Type_ of
       adChar, adWChar, adVarChar, adLongVarChar, adBSTR, adVarWChar,
       adLongVarWChar: begin
@@ -589,7 +612,6 @@ begin
                         PA := GetPAnsiChar(ColumnIndex, Len);
                         ZSetString(PA, Len, Result);
                       end;
-    end;
   end;
 end;
 
@@ -610,7 +632,7 @@ begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then
      Result := ''
-  else with FField20 do begin
+  else with FField20 do
     case Type_ of
       adChar, adWChar, adVarChar, adLongVarChar, adBSTR, adVarWChar,
       adLongVarWChar: begin
@@ -622,7 +644,6 @@ begin
                         ZSetString(PA, Len, Result);
                       end;
     end;
-  end;
 end;
 
 {**
@@ -671,7 +692,7 @@ begin
     Result := nil;
     Len := 0;
   end else with FField20 do begin
-    case tagVARIANT(FColValue).vt of
+    case FValueType of
       VT_BOOL:        if PWordBool(FValueAddr)^ then begin
                         Result := Pointer(BoolStrsRaw[True]);
                         Len := 4;
@@ -702,7 +723,7 @@ Set_From_Buf:           Len := Result - PAnsiChar(@fTinyBuffer[0]);
                       end;
       VT_DECIMAL:     begin
                         Result := @FColValue;
-                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD, PDecimal(Result).sign > 0);
+                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD{%H-}, PDecimal(Result).sign > 0);
                         Result := @fTinyBuffer[0];
                         Len := ZSysUtils.BcdToRaw(BCd, Result, '.');
                       end;
@@ -798,7 +819,7 @@ Set_From_Buf:           Len := Result - PWideChar(@fTinyBuffer[0]);
                       end;
       VT_DECIMAL:     begin
                         Result := @FColValue;
-                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD, PDecimal(Result).sign > 0);
+                        ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD{%H-}, PDecimal(Result).sign > 0);
                         Result := @fTinyBuffer[0];
                         Len := ZSysUtils.BcdToUni(BCd, Result, '.');
                       end;
@@ -901,7 +922,7 @@ begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then begin
     Result := False;
-  end else case tagVARIANT(FColValue).vt of
+  end else case FValueType of
     VT_BOOL:        Result := PWordBool(FValueAddr)^;
     VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex) <> 0;
     VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex) <> 0;
@@ -934,7 +955,7 @@ begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then begin
     Result := 0;
-  end else case tagVARIANT(FColValue).vt of
+  end else case FValueType of
     VT_BOOL:        Result := Ord(PWord(FValueAddr)^ <> 0);
     VT_UI1:         Result := PByte(FValueAddr)^;
     VT_UI2:         Result := PWord(FValueAddr)^;
@@ -972,7 +993,7 @@ begin
   if LastWasNull then begin
     Result := 0;
   end else with FField20 do begin
-    case tagVARIANT(FColValue).vt of
+    case FValueType of
       VT_BOOL, VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex);
       VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex);
       VT_HRESULT, VT_ERROR:  Result := PHResult(FValueAddr)^;
@@ -1012,24 +1033,22 @@ begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then begin
     Result := 0;
-  end else with FField20 do begin
-    case tagVARIANT(FColValue).vt of
-      VT_BOOL:        Result := Ord(PWord(FValueAddr)^ <> 0);
-      VT_UI1:         Result := PByte(FValueAddr)^;
-      VT_UI2:         Result := PWord(FValueAddr)^;
-      VT_UI4:         Result := PInteger(FValueAddr)^;
-      VT_UINT:        Result := PCardinal(FValueAddr)^;
-      VT_I1:          Result := PShortInt(FValueAddr)^;
-      VT_I2:          Result := PSmallInt(FValueAddr)^;
-      VT_I4:          Result := PInteger(FValueAddr)^;
-      VT_INT:         Result := tagVARIANT(FColValue).intVal;
-      VT_HRESULT,
-      VT_ERROR:       Result := PHResult(FValueAddr)^;
-      VT_UI8, VT_I8, VT_CY, VT_DECIMAL, VT_R4, VT_R8, VT_DATE: Result := GetULong(ColumnIndex);
-      else begin
-        P := GetPWideChar(ColumnIndex, Len);
-        Result := UnicodeToUInt64Def(P, P+Len, 0);
-      end;
+  end else case FValueType of
+    VT_BOOL:        Result := Ord(PWord(FValueAddr)^ <> 0);
+    VT_UI1:         Result := PByte(FValueAddr)^;
+    VT_UI2:         Result := PWord(FValueAddr)^;
+    VT_UI4:         Result := PInteger(FValueAddr)^;
+    VT_UINT:        Result := PCardinal(FValueAddr)^;
+    VT_I1:          Result := PShortInt(FValueAddr)^;
+    VT_I2:          Result := PSmallInt(FValueAddr)^;
+    VT_I4:          Result := PInteger(FValueAddr)^;
+    VT_INT:         Result := tagVARIANT(FColValue).intVal;
+    VT_HRESULT,
+    VT_ERROR:       Result := PHResult(FValueAddr)^;
+    VT_UI8, VT_I8, VT_CY, VT_DECIMAL, VT_R4, VT_R8, VT_DATE: Result := GetULong(ColumnIndex);
+    else begin
+      P := GetPWideChar(ColumnIndex, Len);
+      Result := UnicodeToUInt64Def(P, P+Len, 0);
     end;
   end;
 end;
@@ -1052,25 +1071,23 @@ begin
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then begin
     Result := 0;
-  end else with FField20 do begin
-    case tagVARIANT(FColValue).vt of
-      VT_BOOL, VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex);
-      VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex);
-      VT_HRESULT, VT_ERROR:  Result := PHResult(FValueAddr)^;
-      VT_UI8:         Result := PUInt64(FValueAddr)^;
-      VT_I8:          Result := PInt64(FValueAddr)^;
-      VT_CY:          Result := PInt64(FValueAddr)^ div 10000;
-      VT_DECIMAL: begin
-                    PD := @FColValue;
-                    Result := UInt64(PD.Lo64);
-                    if PD.scale > 0 then
-                      Result := Result div Uint64(Int64Tower[PD.scale]);
-                  end;
-      VT_R4, VT_R8, VT_DATE: Result := Trunc(GetDouble(ColumnIndex));
-      else begin
-        P := GetPWideChar(ColumnIndex, Len);
-        Result := UnicodeToUInt64Def(P, P+Len, 0);
-      end;
+  end else case FValueType of
+    VT_BOOL, VT_UI1, VT_UI2, VT_UI4, VT_UINT: Result := GetUInt(ColumnIndex);
+    VT_I1, VT_I2, VT_I4, VT_INT:  Result := GetInt(ColumnIndex);
+    VT_HRESULT, VT_ERROR:  Result := PHResult(FValueAddr)^;
+    VT_UI8:         Result := PUInt64(FValueAddr)^;
+    VT_I8:          Result := PInt64(FValueAddr)^;
+    VT_CY:          Result := PInt64(FValueAddr)^ div 10000;
+    VT_DECIMAL: begin
+                  PD := @FColValue;
+                  Result := UInt64(PD.Lo64);
+                  if PD.scale > 0 then
+                    Result := Result div Uint64(Int64Tower[PD.scale]);
+                end;
+    VT_R4, VT_R8, VT_DATE: Result := Trunc(GetDouble(ColumnIndex));
+    else begin
+      P := GetPWideChar(ColumnIndex, Len);
+      Result := UnicodeToUInt64Def(P, P+Len, 0);
     end;
   end;
 end;
@@ -1107,7 +1124,7 @@ begin
   if LastWasNull then
     Result := 0
   else with FField20 do begin
-    case tagVARIANT(FColValue).vt of
+    case FValueType of
       VT_R8:          Result := PDouble(FValueAddr)^;
       VT_R4:          Result := PSingle(FValueAddr)^;
       VT_DECIMAL:     begin
@@ -1145,31 +1162,29 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := NullBCD
-  else with FField20, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
-    case FValueType of
-      VT_BOOL:        ScaledOrdinal2Bcd(Word(Ord(PWord(FValueAddr)^ <> 0)), 0, Result);
-      VT_UI1:         ScaledOrdinal2Bcd(Word(PByte(FValueAddr)^), 0, Result, False);
-      VT_UI2:         ScaledOrdinal2Bcd(PWord(FValueAddr)^, 0, Result, False);
-      VT_UI4:         ScaledOrdinal2Bcd(PCardinal(FValueAddr)^, 0, Result, False);
-      VT_UINT:        ScaledOrdinal2Bcd(PLongWord(FValueAddr)^, 0, Result, False);
-      VT_UI8:         ScaledOrdinal2Bcd(PUInt64(FValueAddr)^, 0, Result, False);
-      VT_I1:          ScaledOrdinal2Bcd(SmallInt(PShortInt(FValueAddr)^), 0, Result);
-      VT_I2:          ScaledOrdinal2Bcd(PSmallInt(FValueAddr)^, 0, Result);
-      VT_HRESULT,
-      VT_ERROR,
-      VT_I4:          ScaledOrdinal2Bcd(PInteger(FValueAddr)^, 0, Result);
-      VT_I8:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 0, Result);
-      VT_INT:         ScaledOrdinal2Bcd(PLongInt(FValueAddr)^, 0, Result);
-      VT_CY:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 4, Result);
-      VT_DECIMAL:     ScaledOrdinal2Bcd(UInt64(PDecimal(FValueAddr)^.Lo64), PDecimal(FValueAddr)^.Scale, Result, PDecimal(FValueAddr)^.Sign > 0);
-      VT_R4:          Double2BCD(PSingle(FValueAddr)^, Result);
-      VT_R8, VT_DATE: Double2BCD(PDouble(FValueAddr)^, Result);
-      else begin
-          P := GetPWideChar(ColumnIndex, Len);
-          if not ZSysUtils.TryUniToBcd(P, Len, Result, '.') then
-            Result := NullBCD;
-        end;
-    end;
+  else case FValueType of
+    VT_BOOL:        ScaledOrdinal2Bcd(Word(Ord(PWord(FValueAddr)^ <> 0)), 0, Result);
+    VT_UI1:         ScaledOrdinal2Bcd(Word(PByte(FValueAddr)^), 0, Result, False);
+    VT_UI2:         ScaledOrdinal2Bcd(PWord(FValueAddr)^, 0, Result, False);
+    VT_UI4:         ScaledOrdinal2Bcd(PCardinal(FValueAddr)^, 0, Result, False);
+    VT_UINT:        ScaledOrdinal2Bcd(PLongWord(FValueAddr)^, 0, Result, False);
+    VT_UI8:         ScaledOrdinal2Bcd(PUInt64(FValueAddr)^, 0, Result, False);
+    VT_I1:          ScaledOrdinal2Bcd(SmallInt(PShortInt(FValueAddr)^), 0, Result);
+    VT_I2:          ScaledOrdinal2Bcd(PSmallInt(FValueAddr)^, 0, Result);
+    VT_HRESULT,
+    VT_ERROR,
+    VT_I4:          ScaledOrdinal2Bcd(PInteger(FValueAddr)^, 0, Result);
+    VT_I8:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 0, Result);
+    VT_INT:         ScaledOrdinal2Bcd(PLongInt(FValueAddr)^, 0, Result);
+    VT_CY:          ScaledOrdinal2Bcd(PInt64(FValueAddr)^, 4, Result);
+    VT_DECIMAL:     ScaledOrdinal2Bcd(UInt64(PDecimal(FValueAddr)^.Lo64), PDecimal(FValueAddr)^.Scale, Result, PDecimal(FValueAddr)^.Sign > 0);
+    VT_R4:          Double2BCD(PSingle(FValueAddr)^, Result);
+    VT_R8, VT_DATE: Double2BCD(PDouble(FValueAddr)^, Result);
+    else begin
+        P := GetPWideChar(ColumnIndex, Len);
+        if not ZSysUtils.TryUniToBcd(P, Len, Result, '.') then
+          Result := NullBCD;
+      end;
   end;
 end;
 
@@ -1189,17 +1204,20 @@ begin
   if LastWasNull then
     Result := nil
   else with FField20 do
-    case Type_ of
+    case FValueType of
+      VT_ARRAY or VT_UI1: Result := BufferToBytes(TVarData(FColValue).VArray.Data, ActualSize);
+    end;
+    (*case Type_ of
       adGUID:  begin
           SetLength(Result, 16);
           ValidGUIDToBinary(PWideChar(FValueAddr), Pointer(Result));
         end;
-      adBinary,
+      adBinary, //8209
       adVarBinary,
       adLongVarBinary:
           Result := BufferToBytes(TVarData(FColValue).VArray.Data, ActualSize);
       else Result := BufferToBytes(FValueAddr, ActualSize);
-    end;
+    end;*)
 end;
 
 function TZAdoResultSet.GetCurrency(ColumnIndex: Integer): Currency;
@@ -1212,7 +1230,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := 0
-  else case tagVARIANT(FColValue).vt of
+  else case FValueType of
     VT_UI1, VT_I1, VT_UI2, VT_I2, VT_UI4, VT_I4, VT_UI8, VT_I8, VT_INT,
     VT_UINT, VT_HRESULT, VT_ERROR, VT_BOOL: Result := GetLong(FirstDbcIndex);
     VT_CY: Result := PCurrency(FValueAddr)^;
@@ -1257,7 +1275,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := 0
-  else case tagVARIANT(FColValue).vt of
+  else case FValueType of
     VT_DATE: Result := Int(PDouble(FValueAddr)^);
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
@@ -1286,7 +1304,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := 0
-  else case tagVARIANT(FColValue).vt of
+  else case FValueType of
     VT_DATE: Result := Frac(PDouble(FValueAddr)^);
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
@@ -1316,7 +1334,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := 0
-  else case tagVARIANT(FColValue).vt of
+  else case FValueType of
     VT_DATE: Result := PDouble(FValueAddr)^;
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);

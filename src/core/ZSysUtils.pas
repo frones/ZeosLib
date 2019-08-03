@@ -1180,9 +1180,25 @@ function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideSt
 function StringReplaceAll_CI_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;*)
 
 function BcdToSQLRaw(const Value: TBCD): RawByteString; overload;
+
+{** EH:
+   convert a BCD record into a raw buffer
+   @param Bcd the value to be converted
+   @param Buf the buffer we write into
+   @param DecimalSep the decimal-seperator
+   @return the count of bytes we wrote into the buffer
+}
 function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt; overload;
 function RawToBCD(Value: PAnsiChar; Len: LengthInt): TBCD; overload;
 function RawToBCD(const Value: RawByteString): TBCD; overload;
+
+{** EH:
+   convert a BCD record into a UTF16 buffer
+   @param Bcd the value to be converted
+   @param Buf the buffer we write into
+   @param DecimalSep the decimal-seperator
+   @return the count of words we wrote into the buffer
+}
 function BcdToSQLUni(const Value: TBCD): ZWideString;
 function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
 function UniToBCD(Value: PWideChar; Len: LengthInt): TBCD; overload;
@@ -1226,8 +1242,10 @@ const
 
 implementation
 
-uses DateUtils, StrUtils, SysConst{$IFDEF WITH_DBCONSTS}, DBConsts{$ENDIF},
+uses DateUtils, StrUtils,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
+  SysConst,{keep it after RTLConst -> deprecated warning}
+  {$IFDEF WITH_DBCONSTS}DBConsts,{$ENDIF}
   ZFastCode;
 
 var
@@ -4947,10 +4965,10 @@ begin
   if Len = 0 then
     Exit;
   PSrc := Pointer(Str);
-  PSrcEnd := @Str[Len];
+  PSrcEnd := PSrc+Len; //address the term
   PDest := Pointer(Result);
 
-  while PSrc <= PSrcEnd do
+  while PSrc < PSrcEnd do
   begin
     if PSrc^ <> ToRemove then
     begin
@@ -6714,12 +6732,26 @@ begin
 end;
 
 
-procedure BCD2Int64(const Value: TBCD; out Result: Int64);
+procedure RaiseBcd2OrdException(P, PEnd: PChar);
+var S: String;
 begin
-  Result := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(BcdToStr(Value), 0);
+  SetString(s, P, PEnd-P);
+  raise EConvertError.CreateResFmt(@SInvalidInteger, [S])
 end;
 
-function BCD2Int64(const Value: TBCD): Int64; overload;
+procedure BCD2Int64(const Value: TBCD; out Result: Int64);
+var Buf: array[0..MaxFMTBcdFractionSize+2] of Char;
+ P, PEnd, PFail: PChar;
+begin
+  P := @Buf[0];
+  PEnd := P +{$IFDEF UNICODE}BCDToUni{$ELSE}BcdToRaw{$ENDIF}(Value, P, '.');
+  PFail := PEnd; //save
+  Result := {$IFDEF UNICODE}ValUnicodeInt64{$ELSE}ValRawInt64{$ENDIF}(P, PFail);
+  if (PFail <> PEnd) and (PFail^ <> '.') then //BCD truncation ? or overrun
+    RaiseBcd2OrdException(P, PEnd);
+end;
+
+function BCD2Int64(const Value: TBCD): Int64;
 begin
   BCD2Int64(Value, Result);
 end;
@@ -6730,8 +6762,15 @@ begin
 end;
 
 function BCD2UInt64(const Value: TBCD): UInt64;
+var Buf: array[0..MaxFMTBcdFractionSize+2] of Char;
+ P, PEnd, PFail: PChar;
 begin
-  BCD2UInt64(Value, Result);
+  P := @Buf[0];
+  PEnd := P +{$IFDEF UNICODE}BcdToUni{$ELSE}BcdToRaw{$ENDIF}(Value, P, '.');
+  PFail := PEnd; //save
+  Result := {$IFDEF UNICODE}ValUnicodeUInt64{$ELSE}ValRawUInt64{$ENDIF}(P, PFail);
+  if (PFail <> PEnd) and (PFail^ <> '.') then //BCD truncation ? or overrun
+    RaiseBcd2OrdException(P, PEnd);
 end;
 
 function TryUniToBcd(const Value: ZWideString; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean; overload;
@@ -6860,7 +6899,7 @@ end;
 
 function TryRawToBcd(const Value: RawByteString; var Bcd: TBcd; DecimalSep: Char): Boolean; overload;
 begin
-  if Value <> ''
+  if Value <> EmptyRaw
   then Result := False
   else Result := TryRawToBcd(Pointer(Value), Length(Value), BCD, DecimalSep);
 end;
@@ -7064,8 +7103,8 @@ begin
   ZSetString(PAnsiChar(@Digits[0]), BcdToRaw(Value, @Digits[0], '.'),Result)
 end;
 
-{** Egonhugeist:
-  Each half byte represents one niblle from 0..9 High nibble first means we read
+{  Egonhugeist:
+  Each half byte represents one nibble from 0..9 High nibble first means we read
   big endian order from left to right. First half byte will be left shift by 4,
   second will be added to first half byte. There are no other knwon rules!
   All bytes until Precison div 2 must be valid. All trailing bytes are ignored.
@@ -7084,9 +7123,9 @@ end;
   \/ \/ \/ \/  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
   n0,n1,n2,n3, n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
   0..9                          10 .. 19                      20..29                        30..31
-  Precison: 11 Scale: 9  Value: 12.34567891
+  Precison: 11 Scale: 9  Value: 12.345678901
   FN DN         LN
-  12.34 56 78 91 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-nibbles
+  12.34 56 78 90 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-nibbles
   \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
   n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
   0..9                          10 .. 19                      20..29                        30..31
@@ -7110,10 +7149,24 @@ end;
   n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
   0..9                          10 .. 19                      20..29                        30..31
 
+  Precison: 64 Scale: 0  Value: 1
+        FN                       LN    Pr
+  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 <-nibbles
+  \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+  n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,n1 <-bytes
+  0..9                          10 .. 19                      20..29                        30..31
+
   FN is the nibble we start with. It's possible 2. half byte written and first half byte is zero.
   LN is the nibble we end. It's possible 1. half byte written and second half byte is ignored.
   DN is the decimal pos nibble. If Odd prec it's the nibble where second half byte is after the
      decimal separator else it's the double nibble after the decimal separator.
+}
+{** EH:
+   convert a BCD record into a raw buffer
+   @param Bcd the value to be converted
+   @param Buf the buffer we write into
+   @param DecimalSep the decimal-seperator
+   @return the count of bytes we wrote into the buffer
 }
 function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt;
 var
@@ -7180,8 +7233,13 @@ zero: Result := 1;
   Result := (Buf-PBuf);
 end;
 
-{** Egonhugeist:
-*}
+{** EH:
+   convert a BCD record into a UTF16 buffer
+   @param Bcd the value to be converted
+   @param Buf the buffer we write into
+   @param DecimalSep the decimal-seperator
+   @return the count of words we wrote into the buffer
+}
 function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
 var
   pCN{current nibble}, pDN{decimal nibble}, pLN{last bibble}, pFN{firts nibble}: PAnsiChar;
@@ -7378,19 +7436,7 @@ begin
   end;
 end;
 
-{procedure X;
-var S: String;
-  i: Integer;
-begin
-  for I := Low(I64Table) to High(I64Table) do begin
-    S := IntToHex(I64Table[i]);
-    Assert(S <> '');
-  end;
-    S := IntToHex(UInt64(1000000000000000000));
-    Assert(S <> '');
-end; }
 initialization;
-  //X;
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

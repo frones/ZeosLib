@@ -240,7 +240,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -248,13 +248,10 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
-  S := StoredProc.ParamByName('P4').AsString +
-    ' ' + StoredProc.ParamByName('P5').AsString;
   StoredProc.Open;
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -270,7 +267,7 @@ end;
 }
 function TZTestDbLibStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'sybase, mssql';
+  Result := 'sybase, mssql,OleDB';
 end;
 
 {**
@@ -546,10 +543,9 @@ begin
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
 
-  StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -557,11 +553,10 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
-  StoredProc.Unprepare;
+
   S := StoredProc.ParamByName('P4').AsString +
     ' ' + StoredProc.ParamByName('P5').AsString;
   StoredProc.ParamByName('P1').AsInteger := 50;
@@ -572,7 +567,7 @@ begin
   StoredProc.Open;
 
   CheckEquals(2, StoredProc.Fields.Count);
-  CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
   CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
 
   CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
@@ -584,16 +579,19 @@ var
   SQLTime: TDateTime;
   TempBytes: TBytes;
   CP: Word;
+  ConSettings: PZConSettings;
 begin
   Connection.Connect;
-  CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  Check(Connection.Connected);
+  ConSettings := connection.DbcConnection.GetConSettings;
+  CP := ConSettings.ClientCodePage.CP;
   //eh the russion abrakadabra can no be mapped to other charsets then:
-  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
-    {add some more if you run into same issue !!} then begin
-    BlankCheck;
+  if (ConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+    not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
     Exit;
-  end;
-
+  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    {add some more if you run into same issue !!} then
+    Exit;
   StoredProc.StoredProcName := 'TEST_All_TYPES';
   CheckEquals(28, StoredProc.Params.Count);
 
@@ -639,7 +637,7 @@ begin
 
   CheckEquals('P11', StoredProc.Params[10].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[10].ParamType));
-  CheckStringFieldType(StoredProc.Params[10].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[10].DataType, ConSettings);
 
   CheckEquals('P12', StoredProc.Params[11].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[11].ParamType));
@@ -679,19 +677,19 @@ begin
 
   CheckEquals('P21', StoredProc.Params[20].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[20].ParamType));
-  CheckMemoFieldType(StoredProc.Params[20].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[20].DataType, ConSettings);
 
   CheckEquals('P22', StoredProc.Params[21].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[21].ParamType));
-  CheckMemoFieldType(StoredProc.Params[21].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[21].DataType, ConSettings);
 
   CheckEquals('P23', StoredProc.Params[22].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[22].ParamType));
-  CheckMemoFieldType(StoredProc.Params[22].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[22].DataType, ConSettings);
 
   CheckEquals('P24', StoredProc.Params[23].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[23].ParamType));
-  CheckMemoFieldType(StoredProc.Params[23].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[23].DataType, ConSettings);
 
   CheckEquals('P25', StoredProc.Params[24].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[24].ParamType));
@@ -699,7 +697,7 @@ begin
 
   CheckEquals('P26', StoredProc.Params[25].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[25].ParamType));
-  CheckStringFieldType(StoredProc.Params[25].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[25].DataType, ConSettings);
 
   CheckEquals('P27', StoredProc.Params[26].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[26].ParamType));
@@ -715,21 +713,21 @@ begin
   StoredProc.Params[3].AsInteger := 1000;
   StoredProc.Params[4].AsInteger := 2000;
   StoredProc.Params[5].AsInteger := 30000;
-  SQLTime := now;
+  SQLTime := SysUtils.EncodeTime(11,57,12,0)+EncodeDate(2017, 7, 13);
   StoredProc.Params[6].AsFloat := SQLTime;
   StoredProc.Params[7].AsFloat := SQLTime;
   StoredProc.Params[8].AsFloat := SQLTime;
   StoredProc.Params[9].AsInteger := 40000;
-  StoredProc.Params[10].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+  StoredProc.Params[10].AsString := GetDBTestString(Str1, ConSettings);
   StoredProc.Params[11].AsDate := SQLTime;
   StoredProc.Params[12].AsTime := SQLTime;
   StoredProc.Params[13].AsSmallInt := 40;
   StoredProc.Params[14].AsDateTime := SQLTime;
   StoredProc.Params[15].AsDateTime := SQLTime;
-  StoredProc.Params[20].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-  StoredProc.Params[21].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-  StoredProc.Params[22].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-  StoredProc.Params[23].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+  StoredProc.Params[20].AsString := GetDBTestString(Str1, ConSettings);
+  StoredProc.Params[21].AsString := GetDBTestString(Str1, ConSettings);
+  StoredProc.Params[22].AsString := GetDBTestString(Str1, ConSettings);
+  StoredProc.Params[23].AsString := GetDBTestString(Str1, ConSettings);
   StoredProc.Params[24].Value := StrToBytes(AnsiString('121415'));
   StoredProc.Params[25].AsString := 'a';
   StoredProc.Params[26].AsInteger := 50000;
@@ -741,23 +739,23 @@ begin
 
   CheckEquals('P1', StoredProc.Fields[0].DisplayName);
   CheckEquals(10, StoredProc.Fields[0].AsInteger);
-  //CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[0].DataType));
+  CheckEquals(Ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Fields[0].DataType));
 
   CheckEquals('P2', StoredProc.Fields[1].DisplayName);
   CheckEquals(20, StoredProc.Fields[1].AsInteger);
-  //CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[1].DataType));
+  CheckEquals(Ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Fields[1].DataType));
 
   CheckEquals('P3', StoredProc.Fields[2].DisplayName);
   CheckEquals(30, StoredProc.Fields[2].AsInteger);
-  //CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[2].DataType));
+  CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[2].DataType));
 
   CheckEquals('P4', StoredProc.Fields[3].DisplayName);
   CheckEquals(1000, StoredProc.Fields[3].AsInteger);
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[3].DataType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[3].DataType));
 
   CheckEquals('P5', StoredProc.Fields[4].DisplayName);
   CheckEquals(2000, StoredProc.Fields[4].AsInteger);
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[4].DataType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[4].DataType));
 
   CheckEquals('P6', StoredProc.Fields[5].DisplayName);
   CheckEquals(30000, StoredProc.Fields[5].AsInteger);
@@ -768,7 +766,7 @@ begin
   CheckEquals(ord(ftFloat), ord(StoredProc.Fields[6].DataType));
 
   CheckEquals('P8', StoredProc.Fields[7].DisplayName);
-  //CheckEquals(True, Abs(SQLTime - StoredProc.Fields[7].AsFloat) < FLOAT_COMPARE_PRECISION_SINGLE);
+//  CheckEquals(True, Abs(SQLTime - StoredProc.Fields[7].AsFloat) < FLOAT_COMPARE_PRECISION_SINGLE);
   CheckEquals(ord(ftFloat), ord(StoredProc.Fields[7].DataType));
 
   CheckEquals('P9', StoredProc.Fields[8].DisplayName);
@@ -777,11 +775,11 @@ begin
 
   CheckEquals('P10', StoredProc.Fields[9].DisplayName);
   CheckEquals(40000, StoredProc.Fields[9].AsInteger);
-  CheckEquals(Ord(ftFmtBCD), ord(StoredProc.Fields[9].DataType));
+  CheckEquals(Ord(ftLargeInt), ord(StoredProc.Fields[9].DataType));
 
   CheckEquals('P11', StoredProc.Fields[10].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[10].AsString, Connection.DbcConnection.GetConSettings);
-  CheckStringFieldType(StoredProc.Fields[10].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals(Str1, StoredProc.Fields[10].AsString, ConSettings, 'P11 String');
+  CheckStringFieldType(StoredProc.Fields[10].DataType, ConSettings);
 
   CheckEquals('P12', StoredProc.Fields[11].DisplayName);
   CheckEquals(Int(SQLTime), StoredProc.Fields[11].AsDateTime);
@@ -793,7 +791,7 @@ begin
 
   CheckEquals('P14', StoredProc.Fields[13].DisplayName);
   CheckEquals(2040, StoredProc.Fields[13].AsInteger);
-  CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[13].DataType));
+  CheckEquals(ord(ftWord), ord(StoredProc.Fields[13].DataType));
 
   CheckEquals('P15', StoredProc.Fields[14].DisplayName);
   CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[14].AsDateTime));
@@ -804,36 +802,32 @@ begin
   CheckEquals(ord(ftDateTime), ord(StoredProc.Fields[15].DataType));
 
   CheckEquals('P17', StoredProc.Fields[16].DisplayName);
-  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[16].AsDateTime));
   CheckEquals(ord(ftBlob), ord(StoredProc.Fields[16].DataType));
 
   CheckEquals('P18', StoredProc.Fields[17].DisplayName);
-  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[17].AsDateTime));
   CheckEquals(ord(ftBlob), ord(StoredProc.Fields[17].DataType));
 
   CheckEquals('P19', StoredProc.Fields[18].DisplayName);
-  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[18].AsDateTime));
   CheckEquals(ord(ftBlob), ord(StoredProc.Fields[18].DataType));
 
   CheckEquals('P20', StoredProc.Fields[19].DisplayName);
-  //CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[19].AsDateTime));
   CheckEquals(ord(ftBlob), ord(StoredProc.Fields[19].DataType));
 
   CheckEquals('P21', StoredProc.Fields[20].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[20].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[20].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals(Str1, StoredProc.Fields[20].AsString, ConSettings, 'P21 String');
+  CheckMemoFieldType(StoredProc.Fields[20].DataType, ConSettings);
 
   CheckEquals('P22', StoredProc.Fields[21].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[21].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[21].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals(Str1, StoredProc.Fields[21].AsString, ConSettings, 'P22 String');
+  CheckMemoFieldType(StoredProc.Fields[21].DataType, ConSettings);
 
   CheckEquals('P23', StoredProc.Fields[22].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[22].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[22].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals(Str1, StoredProc.Fields[22].AsString, ConSettings, 'P23 String');
+  CheckMemoFieldType(StoredProc.Fields[22].DataType, ConSettings);
 
   CheckEquals('P24', StoredProc.Fields[23].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[23].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[23].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals(Str1, StoredProc.Fields[23].AsString, ConSettings, 'P24 String');
+  CheckMemoFieldType(StoredProc.Fields[23].DataType, ConSettings);
 
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
   TempBytes :=StrToBytes(RawByteString('121415'));
@@ -848,15 +842,15 @@ begin
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);
   CheckEquals('a', StoredProc.Fields[25].AsString);
-  CheckStringFieldType(StoredProc.Fields[25].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Fields[25].DataType, ConSettings);
 
   CheckEquals('P27', StoredProc.Fields[26].DisplayName);
   CheckEquals(50000, StoredProc.Fields[26].AsInteger);
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[26].DataType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[26].DataType));
 
   CheckEquals('P28', StoredProc.Fields[27].DisplayName);
   CheckEquals(60000, StoredProc.Fields[27].AsInteger);
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Fields[27].DataType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[27].DataType));
 end;
 
 procedure TZTestMySQLStoredProcedure.Test_FuncReturnInteger;
@@ -864,23 +858,23 @@ begin
   StoredProc.StoredProcName := 'FuncReturnInteger';
   CheckEquals(2, StoredProc.Params.Count);
 
-  CheckEquals('p_in', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('ReturnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
   CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
 
-  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('p_in', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
   CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
 
-  StoredProc.Params[0].AsInteger := 100;
+  StoredProc.Params[1].AsInteger := 100;
   StoredProc.ExecProc;
 
-  CheckEquals('ReturnValue', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
-  CheckEquals(110, StoredProc.Params[1].AsInteger);
+  CheckEquals('ReturnValue', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+  CheckEquals(110, StoredProc.Params[0].AsInteger);
 
-  StoredProc.Params[0].AsInteger := 200;
+  StoredProc.Params[1].AsInteger := 200;
   StoredProc.Open;
   CheckEquals(1, StoredProc.Fields.Count);
 
@@ -911,6 +905,7 @@ begin
 end;
 
 procedure TZTestMySQLStoredProcedure.MultipleVaryingResultSets;
+var B: Boolean;
 begin
   StoredProc.StoredProcName := 'MultipleVaryingResultSets';
   CheckEquals(3, StoredProc.Params.Count);
@@ -930,146 +925,95 @@ begin
   StoredProc.Params[0].AsInteger := 100;
   StoredProc.Params[1].AsInteger := 200;
   StoredProc.Params[2].AsInteger := 300;
-  StoredProc.ExecProc;
+//  StoredProc.ExecProc;
   StoredProc.Open;
 
-  CheckEquals(True, StoredProc.EOR);
-  CheckEquals(False, StoredProc.BOR);
+  for B := Low(Boolean) to High(Boolean) do begin
+    CheckFalse(StoredProc.EOR, 'Resultset is not last');
+    CheckTrue(StoredProc.BOR, 'Resultset is first');
 
-  //5 Resultsets Returned What now?
+    //5 Resultsets Returned What now?
 
-  //The call resultset is retieved..
-  CheckEquals(2, StoredProc.Fields.Count);
+    //The call resultset is retieved..
+    CheckEquals(3, StoredProc.Fields.Count);
 
-  CheckEquals('p_out', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(200, StoredProc.Fields[0].AsInteger);
+    CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(100, StoredProc.Fields[0].AsInteger);
 
-  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[1].DataType));
-  CheckEquals(300, StoredProc.Fields[1].AsInteger);
+    CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(300, StoredProc.Fields[1].AsInteger);
 
-  {check first resultset of procedure body}
-  StoredProc.FirstResultSet;
+    CheckEquals('p_out', StoredProc.Fields[2].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+    CheckEquals(0, StoredProc.Fields[2].AsInteger);
 
-  CheckEquals(3, StoredProc.Fields.Count);
+    {check second resultset}
+    StoredProc.NextResultSet;
 
-  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+    CheckEquals(3, StoredProc.Fields.Count);
 
-  CheckEquals('p_out', StoredProc.Fields[1].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
-  CheckEquals(0, StoredProc.Fields[1].AsInteger);
+    CheckEquals('p_inout', StoredProc.Fields[0].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(300, StoredProc.Fields[0].AsInteger);
 
-  CheckEquals('p_inout', StoredProc.Fields[2].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
-  CheckEquals(300, StoredProc.Fields[2].AsInteger);
+    CheckEquals('p_in', StoredProc.Fields[1].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(100, StoredProc.Fields[1].AsInteger);
 
-  {check second resultset}
-  StoredProc.NextResultSet;
+    CheckEquals('p_out', StoredProc.Fields[2].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+    CheckEquals(200, StoredProc.Fields[2].AsInteger);
 
-  CheckEquals(3, StoredProc.Fields.Count);
+    {check third resultset}
+    StoredProc.NextResultSet;
 
-  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+    CheckEquals(2, StoredProc.Fields.Count);
 
-  CheckEquals('p_out', StoredProc.Fields[1].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
-  CheckEquals(200, StoredProc.Fields[1].AsInteger);
+    CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(100, StoredProc.Fields[0].AsInteger);
 
-  CheckEquals('p_inout', StoredProc.Fields[2].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
-  CheckEquals(300, StoredProc.Fields[2].AsInteger);
+    CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(300, StoredProc.Fields[1].AsInteger);
 
-  {check third resultset}
-  StoredProc.NextResultSet;
+    {check fourth resultset}
+    StoredProc.NextResultSet;
 
-  CheckEquals(2, StoredProc.Fields.Count);
+    CheckEquals(1, StoredProc.Fields.Count);
+    CheckEquals('10', StoredProc.Fields[0].DisplayName);
+    // behavior inconsistency between mysql and mariadb:
+    // mysql maps const ordinals to Largeint, mariadb to integer(if in range)
+  //  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(10, StoredProc.Fields[0].AsInteger);
 
-  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(100, StoredProc.Fields[0].AsInteger);
+    CheckTrue(StoredProc.EOR, 'End of results');
+    CheckFalse(StoredProc.BOR, 'Begin of results');
 
-  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
-  CheckEquals(300, StoredProc.Fields[1].AsInteger);
+    {check third resultset again}
+    StoredProc.PreviousResultSet;
 
-  {check fourths resultset}
-  StoredProc.NextResultSet;
+    CheckEquals(2, StoredProc.Fields.Count);
 
-  CheckEquals(1, StoredProc.Fields.Count);
+    CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(100, StoredProc.Fields[0].AsInteger);
 
-  CheckEquals('10', StoredProc.Fields[0].DisplayName);
-  // behavior inconsistency between mysql and mariadb:
-  // mysql maps const ordinals to Largeint, mariadb to integer(if in range)
-//  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(10, StoredProc.Fields[0].AsInteger);
+    CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
+    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(300, StoredProc.Fields[1].AsInteger);
 
-  CheckEquals(False, StoredProc.EOR);
-  CheckEquals(False, StoredProc.BOR);
+    CheckFalse(StoredProc.EOR, 'End of results');
+    CheckFalse(StoredProc.BOR, 'Begin of results');
 
-  {check call resultset again}
-  StoredProc.LastResultSet;
+    StoredProc.LastResultSet;
+    CheckTrue(StoredProc.EOR, 'End of results');
 
-  CheckEquals(2, StoredProc.Fields.Count);
-
-  CheckEquals('p_out', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(200, StoredProc.Fields[0].AsInteger);  //these are the paramters. They have been resettet now
-
-  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[1].DataType));
-  CheckEquals(300, StoredProc.Fields[1].AsInteger);  //these are the paramters. They have been resettet now
-
-  CheckEquals(True, StoredProc.EOR);
-  CheckEquals(False, StoredProc.BOR);
-
-  {check first resultset of procedure body again}
-  StoredProc.FirstResultSet;
-
-  CheckEquals(3, StoredProc.Fields.Count);
-
-  CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(100, StoredProc.Fields[0].AsInteger);
-
-  CheckEquals('p_out', StoredProc.Fields[1].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
-  CheckEquals(0, StoredProc.Fields[1].AsInteger);
-
-  CheckEquals('p_inout', StoredProc.Fields[2].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
-  CheckEquals(300, StoredProc.Fields[2].AsInteger);
-
-  CheckEquals(False, StoredProc.EOR);
-  CheckEquals(True, StoredProc.BOR);
-
-  {check call resultset again}
-  StoredProc.LastResultSet;
-
-  CheckEquals(2, StoredProc.Fields.Count);
-
-  CheckEquals('p_out', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(200, StoredProc.Fields[0].AsInteger);
-
-  CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
-  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[1].DataType));
-  CheckEquals(300, StoredProc.Fields[1].AsInteger);
-
-  {check third resultset again}
-  StoredProc.PreviousResultSet;
-
-  CheckEquals(1, StoredProc.Fields.Count);
-
-  CheckEquals('10', StoredProc.Fields[0].DisplayName);
-  // behavior inconsistency between mysql and mariadb:
-  // mysql maps const ordinals to Largeint, mariadb to integer(if in range)
-  //CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
-  CheckEquals(10, StoredProc.Fields[0].AsInteger);
-
+    if not B then
+      StoredProc.FirstResultSet;
+  end;
 end;
 
 { TZTestADOStoredProcedure }
@@ -1092,7 +1036,7 @@ end;
 
 function TZTestADOStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'ado,OleDB';
+  Result := 'ado,OleDB,odbc_w,odbc_a';
 end;
 
 procedure TZTestADOStoredProcedure.ADO_Test_abtest;
@@ -1166,9 +1110,7 @@ begin
   CheckEquals(3, ord(StoredProc.Fields.Count));
   CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
   CheckEquals('@RETURN_VALUE', StoredProc.Fields[0].FieldName);
-  if Protocol = 'ado'
-  then CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[1].DataType))
-  else CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType)); //oledb correctly describes the params
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType)); //oledb correctly describes the params
   CheckEquals('@p4', StoredProc.Fields[1].FieldName);
   CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
   CheckEquals('@p5', StoredProc.Fields[2].FieldName);

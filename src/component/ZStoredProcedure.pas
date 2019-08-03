@@ -79,8 +79,6 @@ type
       const ParamNames: TStringDynArray; Params: TParams;
       DataLink: TDataLink); override;
     procedure InternalOpen; override;
-    procedure InternalClose; override;
-
   protected
   {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
@@ -138,8 +136,6 @@ var
 begin
   CallableStatement := Connection.DbcConnection.PrepareCallWithParams(
     Trim(SQL), Properties);
-
-  CallableStatement.ClearParameters;
 
   if Supports(CallableStatement, IZParamNamedCallableStatement) then
     if Assigned(FMetaResultSet) then
@@ -205,9 +201,7 @@ var
   TempBlob: IZBlob;
   BCD: TBCD;
 begin
-  if Assigned(Statement) then
-    Statement.QueryInterface(IZCallableStatement, FCallableStatement);
-  if not Assigned(FCallableStatement) then
+  if (Statement = nil) or (Statement.QueryInterface(IZCallableStatement, FCallableStatement) <> S_OK) then
     Exit;
 
   for I := 0 to Params.Count - 1 do
@@ -260,7 +254,7 @@ begin
         ftBCD:
           Param.AsCurrency := FCallableStatement.GetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftFmtBCD: begin
-            FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD);
+            FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD{%H-});
             Param.AsFMTBCD := BCD;
           end;
         ftString:
@@ -314,14 +308,6 @@ begin
     Resultset.BeforeFirst;
 end;
 
-{**
-  Performs internal query closing.
-}
-procedure TZStoredProc.InternalClose;
-begin
-  inherited InternalClose;
-end;
-
 function TZStoredProc.GetStoredProcName: string;
 begin
   Result := Trim(SQL.Text);
@@ -352,10 +338,8 @@ begin
         try
           OldParams.Assign(Params);
           Params.Clear;
-          while FMetaResultSet.Next do
-          begin
+          while FMetaResultSet.Next do begin
             ColumnType := TZProcedureColumnType(FMetaResultSet.GetInt(ProcColColumnTypeIndex));
-            //if ColumnType >= 0 then //-1 is result column
               Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetInt(ProcColDataTypeIndex))),
                 FMetaResultSet.GetString(ProcColColumnNameIndex),
                 ProcColDbcToDatasetType[ColumnType]);
@@ -388,43 +372,46 @@ end;
   Procedure the First retrieved resultset if the givens
 }
 procedure TZStoredProc.FirstResultSet;
+var CallableStmt: IZCallableStatement;
 begin
-  if Assigned(Statement) then
-    if Statement.GetMoreResults then
-      SetAnotherResultset((Statement as IZCallableStatement).GetFirstResultSet);
+  if Assigned(Statement) and Supports(Statement, IZCallableStatement, CallableStmt) then
+    SetAnotherResultset(CallableStmt.GetFirstResultSet);
 end;
 
 {**
   Procedure the Previous retrieved resultset if the givens
 }
 procedure TZStoredProc.PreviousResultSet;
+var CallableStmt: IZCallableStatement;
 begin
-  if Assigned(Statement) then
-    if Statement.GetMoreResults then
-      SetAnotherResultset((Statement as IZCallableStatement).GetPreviousResultSet);
+  if Assigned(Statement) and Supports(Statement, IZCallableStatement, CallableStmt) then
+    SetAnotherResultset(CallableStmt.GetPreviousResultSet);
 end;
 
 {**
   Procedure the Next retrieved resultset if the givens
 }
 function TZStoredProc.NextResultSet: Boolean;
+var CallableStmt: IZCallableStatement;
+  RS: IZResultSet;
 begin
   Result := False;
-  if Assigned(Statement) then
-    if Statement.GetMoreResults then begin
-      Result := True;
-      SetAnotherResultset((Statement as IZCallableStatement).GetNextResultSet);
-    end;
+  if Assigned(Statement) and Supports(Statement, IZCallableStatement, CallableStmt) then begin
+    RS := CallableStmt.GetNextResultSet;
+    Result := RS <> nil;
+    if Result then
+      SetAnotherResultset(RS);
+  end;
 end;
 
 {**
   Procedure the Last retrieved resultset if the givens
 }
 procedure TZStoredProc.LastResultSet;
+var CallableStmt: IZCallableStatement;
 begin
-  if Assigned(Statement) then
-    if Statement.GetMoreResults then
-      SetAnotherResultset((Statement as IZCallableStatement).GetLastResultSet);
+  if Assigned(Statement) and Supports(Statement, IZCallableStatement, CallableStmt) then
+    SetAnotherResultset(CallableStmt.GetLastResultSet)
 end;
 
 {**
@@ -458,11 +445,13 @@ end;
   @result <code>True</code> if first ResultSet
 }
 function TZStoredProc.BOR: Boolean;
+var CallableStmt: IZCallableStatement;
 begin
   Result := True;
-  if Assigned(Statement) then
-    if Statement.GetMoreResults then
-      Result := (Statement as IZCallableStatement).BOR;
+  if Assigned(Statement) and Supports(Statement, IZCallableStatement, CallableStmt) then begin
+    Result := CallableStmt.BOR;
+    CallableStmt := nil;
+  end;
 end;
 
 {**
@@ -470,11 +459,13 @@ end;
   @result <code>True</code> if Last ResultSet
 }
 function TZStoredProc.EOR: Boolean;
+var CallableStmt: IZCallableStatement;
 begin
   Result := True;
-  if Assigned(Statement) then
-    if Statement.GetMoreResults then
-      Result := (Statement as IZCallableStatement).EOR;
+  if Assigned(Statement) and Supports(Statement, IZCallableStatement, CallableStmt) then begin
+    Result := CallableStmt.EOR;
+    CallableStmt := nil;
+  end;
 end;
 
 {**

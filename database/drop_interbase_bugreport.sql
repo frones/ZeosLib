@@ -22,5 +22,3 @@ DROP TABLE Ticket54;
 drop table PLUSA;
 drop table PLUS__;
 drop table Ticket192;
-drop table TABLE1;
-drop domain CURRENCY_D;

@@ -104,8 +104,6 @@ type
     FUserEncoding: TZCharEncoding;
 
     procedure FetchResults;
-    //procedure FetchRowCount; virtual;
-
   protected
     procedure SetInParamCount(NewParamCount: Integer); override;
   public
@@ -491,31 +489,6 @@ begin
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
 end;
-
-(*procedure TZDBLibCallableStatement.FetchRowCount;
-var
-  NativeResultSet: TZDBLibResultSet;
-begin
-  //Sybase does not seem to return dbCount at all, so a workaround is made
-  if FLastRowsAffected = -1 then
-  begin
-    FDBLibConnection.InternalExecuteStatement('select @@rowcount');
-    try
-      FPlainDriver.dbresults(FHandle);
-      NativeResultSet := TZDBLibResultSet.Create(Self, 'select @@rowcount');
-      try
-        if NativeResultset.Next then
-          FLastRowsAffected := NativeResultSet.GetInt(FirstDbcIndex);
-      finally
-        NativeResultset.Close;
-      end;
-      FResultSets.Add(TZUpdateCount.Create(FLastRowsAffected));
-    finally
-      FPlainDriver.dbCancel(FHandle);
-    end;
-    FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
-  end;
-end;*)
 
 {**
   Moves to a <code>Statement</code> object's next result.  It returns

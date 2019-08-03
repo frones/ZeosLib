@@ -171,6 +171,7 @@ type
   public
     procedure ResetCursor; override;
     procedure OpenCursor; override;
+    procedure AfterConstruction; override;
   end;
 
   {** Implements a cached resolver with MySQL specific functionality. }
@@ -352,6 +353,7 @@ var
   P: PAnsiChar;
   Bind: PMYSQL_aligned_BIND;
   MS: Word;
+label FinalizeDT;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -368,14 +370,15 @@ begin
       if Bind^.is_null = 1 then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
-            JSONWriter.AddString(JSONWriter.ColNames[I]);
+            JSONWriter.AddString(JSONWriter.ColNames[C]);
             JSONWriter.AddShort('null,')
-          end;
+          end else
+            Continue;
         end else
           JSONWriter.AddShort('null,')
       else begin
         if JSONWriter.Expand then
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddString(JSONWriter.ColNames[C]);
         case Bind^.buffer_type_address^ of
           //FIELD_TYPE_DECIMAL,
           FIELD_TYPE_TINY       : if Bind^.is_unsigned_address^ = 0
@@ -406,15 +409,12 @@ begin
                                     DateToIso8601PChar(@FTinyBuffer[0], True, PMYSQL_TIME(Bind^.Buffer)^.Year,
                                       PMYSQL_TIME(Bind^.Buffer)^.Month, PMYSQL_TIME(Bind^.Buffer)^.Day);
                                     MS := ((PMYSQL_TIME(Bind^.Buffer)^.second_part) * Byte(ord(jcoMilliseconds in JSONComposeOptions)) div 1000000);
-                                    FTinyBuffer[10] := Ord('T');
-                                    TimeToIso8601PChar(@FTinyBuffer[11], True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
+                                    TimeToIso8601PChar(@FTinyBuffer[10], True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
                                       PMYSQL_TIME(Bind^.Buffer)^.Minute, PMYSQL_TIME(Bind^.Buffer)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    if (jcoMilliseconds in JSONComposeOptions) and not (jcoMongoISODate in JSONComposeOptions)
+                                    if (jcoMilliseconds in JSONComposeOptions)
                                     then JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],23)
                                     else JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19);
-                                    if jcoMongoISODate in JSONComposeOptions
-                                    then JSONWriter.AddShort('Z")')
-                                    else JSONWriter.Add('"');
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_DATE,
           FIELD_TYPE_NEWDATE    : begin
@@ -426,26 +426,21 @@ begin
                                     DateToIso8601PChar(@FTinyBuffer[0], True, PMYSQL_TIME(Bind^.Buffer)^.Year,
                                       PMYSQL_TIME(Bind^.Buffer)^.Month, PMYSQL_TIME(Bind^.Buffer)^.Day);
                                     JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
-                                    if jcoMongoISODate in JSONComposeOptions
-                                    then JSONWriter.AddShort('Z")')
-                                    else JSONWriter.Add('"');
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_TIME       : begin
                                     if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("0000-00-00')
                                     else if jcoDATETIME_MAGIC in JSONComposeOptions then
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                                    else
-                                      JSONWriter.AddShort('"T');
+                                    else JSONWriter.AddShort('"');
                                     MS := (PMYSQL_TIME(Bind^.Buffer)^.second_part) div 1000000;
                                     TimeToIso8601PChar(@FTinyBuffer[0], True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
                                       PMYSQL_TIME(Bind^.Buffer)^.Minute, PMYSQL_TIME(Bind^.Buffer)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
                                     if jcoMilliseconds in JSONComposeOptions
                                     then JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],12)
                                     else JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8);
-                                    if jcoMongoISODate in JSONComposeOptions
-                                    then JSONWriter.AddShort('Z)"')
-                                    else JSONWriter.Add('"');
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_BIT        : if Bind^.Length[0] = 1
                                   then JSONWriter.AddShort(JSONBool[PByte(Bind^.Buffer)^ <> 0])
@@ -515,14 +510,15 @@ begin
       if P = nil then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
-            JSONWriter.AddString(JSONWriter.ColNames[I]);
+            JSONWriter.AddString(JSONWriter.ColNames[C]);
             JSONWriter.AddShort('null,')
-          end;
+          end else
+            Continue;
         end else
           JSONWriter.AddShort('null,')
       else begin
         if JSONWriter.Expand then
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
+          JSONWriter.AddString(JSONWriter.ColNames[C]);
         case Bind.buffer_type_address^ of
           FIELD_TYPE_DECIMAL,
           FIELD_TYPE_TINY,
@@ -537,33 +533,35 @@ begin
           FIELD_TYPE_NULL       : JSONWriter.AddShort('null');
           FIELD_TYPE_TIMESTAMP,
           FIELD_TYPE_DATETIME   : begin
-                                    JSONWriter.Add('"');
-                                    if PWord(P)^ < ValidCenturyMagic then //Year below 1900
-                                      inc(P, 11)
-                                    else begin
-                                      JSONWriter.AddNoJSONEscape(P, 10);
-                                      inc(P, 11);
-                                    end;
-                                    if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
-                                      JSONWriter.Add('T');
-                                      JSONWriter.AddNoJSONEscape(P, 8);
-                                    end;
-                                    JSONWriter.Add('"');
+                                    if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                    else if jcoMongoISODate in JSONComposeOptions then
+                                      JSONWriter.AddShort('ISODate("')
+                                    else JSONWriter.Add('"');
+                                    JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_DATE,
           FIELD_TYPE_NEWDATE    : begin
-                                    JSONWriter.Add('"');
-                                    if not PWord(P)^ < ValidCenturyMagic then //Year below 1900 then
-                                      JSONWriter.AddNoJSONEscape(P, 10);
-                                    JSONWriter.Add('"');
+                                    if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                    else if jcoMongoISODate in JSONComposeOptions then
+                                      JSONWriter.AddShort('ISODate("')
+                                    else JSONWriter.Add('"');
+                                    JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
+                                    goto FinalizeDT;
                                   end;
           FIELD_TYPE_TIME       : begin
-                                    JSONWriter.Add('"');
-                                    if PInt64(P)^ <> ZeroTimeMagic then begin //not 00:00:00 ?
+                                    if jcoMongoISODate in JSONComposeOptions then
+                                      JSONWriter.AddShort('ISODate("0000-00-00T')
+                                    else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                                      JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4);
                                       JSONWriter.Add('T');
-                                      JSONWriter.AddNoJSONEscape(P, 8);
-                                    end;
-                                    JSONWriter.Add('"');
+                                    end else JSONWriter.AddShort('"T');
+                                    JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
+FinalizeDT:                         if jcoMongoISODate in JSONComposeOptions
+                                    then JSONWriter.AddShort('Z)"')
+                                    else JSONWriter.Add('"');
                                   end;
           FIELD_TYPE_BIT        : if FLengthArray^[C] = 1 then
                                     JSONWriter.AddShort(JSONBool[PByte(P)^ <> 0]) else
@@ -696,14 +694,6 @@ begin
   if QueryHandle = nil then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   { Fills the column info. }
-  ColumnsInfo.Clear;
-//  FFieldCount := FPlainDriver.mysql_num_fields(QueryHandle);
-
-  { We use the refetch logic of
-    https://bugs.mysql.com/file.php?id=12361&bug_id=33086 }
-  {ReallocBindBuffer(FMYSQL_Col_BIND_Address^, FMYSQL_aligned_BINDs, FBindOffsets, 0,
-    FFieldCount, 1);}
-
   for I := 0 to FFieldCount -1 do begin
     FPlainDriver.mysql_field_seek(QueryHandle, I);
     FieldHandle := FPlainDriver.mysql_fetch_field(QueryHandle);
@@ -1490,9 +1480,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}Dec(ColumnIndex);{$ENDIF}
   {$R-}
   ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
@@ -2288,11 +2276,10 @@ begin
     if not LastWasNull then
       if PByte(Buffer+2)^ = Ord(':') then
         Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
+      else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen < Len) or ((ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4) then
+        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
       else
-        if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
-          Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
-        else
-          Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
+        Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
   end;
   LastWasNull := Result = 0;
 end;
@@ -2441,7 +2428,7 @@ procedure TZMySQL_Store_ResultSet.OpenCursor;
 begin
   inherited OpenCursor;
   if FPMYSQL_STMT^ <> nil then begin
-    if not FIsOutParamResult then begin
+    if not FIsOutParamResult then begin //else we'll get a "Commands out of Sync..." error
       FMYSQL_STMT := FPMYSQL_STMT^;
       if FPlainDriver.mysql_stmt_store_result(FMYSQL_STMT)=0
       then LastRowNo := FPlainDriver.mysql_stmt_num_rows(FMYSQL_STMT)
@@ -2462,8 +2449,10 @@ begin
       if Assigned(FMYSQL_STMT) then
         if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
           checkMySQLError(FPlainDriver,FPMYSQL^, FMYSQL_STMT, lcOther, '', Self);
-    end else if FQueryHandle <> nil then
+    end else if FQueryHandle <> nil then begin
       FPlainDriver.mysql_free_result(FQueryHandle);
+      FQueryHandle := nil;
+    end;
     inherited ResetCursor;
   end;
 end;
@@ -2669,6 +2658,12 @@ begin
 End;
 
 { TZMySQL_Use_ResultSet }
+
+procedure TZMySQL_Use_ResultSet.AfterConstruction;
+begin
+  inherited;
+  SetType(rtForwardOnly);
+end;
 
 procedure TZMySQL_Use_ResultSet.OpenCursor;
 begin

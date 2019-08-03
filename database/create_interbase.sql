@@ -344,6 +344,50 @@ END
 ^
 
 /*==============================================================*/
+/* Stored procedure: procedure_upd_people_A                     */
+/*==============================================================*/
+
+CREATE PROCEDURE procedure_upd_people_A
+   RETURNS(R1 Int)
+AS
+BEGIN
+  FOR SELECT p_id FROM people ORDER BY p_id INTO :R1
+  DO begin
+    update people set p_id = p_id where p_id = :R1;
+    SUSPEND;
+  end
+END
+^
+
+/*==============================================================*/
+/* Stored procedure: procedure_upd_people_B                     */
+/*==============================================================*/
+
+CREATE PROCEDURE procedure_upd_people_B
+   RETURNS(R1 Int)
+AS
+BEGIN
+  FOR SELECT p_id FROM people ORDER BY p_id INTO :R1
+  DO SUSPEND;
+  update people set p_id = p_id;
+END
+^
+
+/*==============================================================*/
+/* Stored procedure: procedure_upd_people_C                     */
+/*==============================================================*/
+
+CREATE PROCEDURE procedure_upd_people_C
+   RETURNS(R1 Int)
+AS
+BEGIN
+  update people set p_id = p_id;
+  FOR SELECT p_id FROM people ORDER BY p_id INTO :R1
+  DO SUSPEND;
+END
+^
+
+/*==============================================================*/
 /* Stored procedure: ABTEST                                     */
 /*==============================================================*/
 
@@ -358,7 +402,6 @@ as
 begin
   P4 = P1 * 10 + P2;
   P5 = P3 || P3;
-  suspend;
 end
 ^ 
 

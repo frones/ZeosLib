@@ -586,8 +586,8 @@ type
 {$IFDEF USE_SYNCOMMONS}
 const
   JSONBool: array[Boolean] of ShortString = ('false', 'true');
-  ValidCenturyMagic = Word(14641); //min '19'      14385
   ZeroTimeMagic = Int64(3472339291344613424); //00:00:00
+  ZeroYearMagic = Cardinal(808464432); //0000
 {$ENDIF USE_SYNCOMMONS}
 
 implementation
@@ -5342,6 +5342,7 @@ begin
       {$ENDIF}
   end else Result := '';
 end;
+
 {$ENDIF}
 
 end.

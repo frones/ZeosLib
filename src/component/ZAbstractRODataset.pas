@@ -2037,7 +2037,7 @@ begin
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
   FRequestLive := False;
   FFetchRow := 0;                // added by Patyi
-  FOptions := [doCalcDefaults];
+  FOptions := [doCalcDefaults, doPreferPrepared];
 
   FFilterEnabled := False;
   FProperties := TStringList.Create;
@@ -2592,13 +2592,11 @@ function TZAbstractRODataset.FetchOneRow: Boolean;
 begin
   if Assigned(ResultSet) then
     repeat
-      if (FetchCount = 0) or (ResultSet.GetRow = FetchCount)
-        or ResultSet.MoveAbsolute(FetchCount) then
-        Result := ResultSet.Next
-      else
-        Result := False;
-      if Result then
-      begin
+      if (FetchCount = 0) or (ResultSet.GetRow = FetchCount) or
+          ResultSet.MoveAbsolute(FetchCount)
+      then Result := ResultSet.Next
+      else Result := False;
+      if Result then begin
         Inc(FFetchCount);
         if FilterRow(ResultSet.GetRow) then
           CurrentRows.Add({%H-}Pointer(ResultSet.GetRow))
@@ -2976,29 +2974,24 @@ begin
     begin
       case Field.DataType of
         { Processes DateTime fields. }
-        ftDate, ftTime, ftDateTime:
-          if Field.DataType <> ftTime then
-            DateTimeToNative(Field.DataType,
-              RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer)
-          else
-            DateTimeToNative(Field.DataType,
+        ftTime: DateTimeToNative(Field.DataType,
               RowAccessor.GetTime(ColumnIndex, Result), Buffer);
+        ftDate, ftDateTime: DateTimeToNative(Field.DataType,
+              RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer);
         { Processes binary fields. }
-        ftVarBytes:
-          begin
+        ftVarBytes: begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, PWord(Buffer)^);
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PAnsiChar(P)+SizeOf(Word))^,
               Pointer(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
           end;
-        ftBytes:
-          begin
+        ftBytes: begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, bLen);
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, Min(bLen, RowAccessor.GetColumnDataSize(ColumnIndex)));
             FillChar((PAnsiChar(Buffer)+bLen)^, RowAccessor.GetColumnDataSize(ColumnIndex)-blen, #0);
           end;
         { Processes blob fields. }
         ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF} :
-          Result := RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
+          Result := not RowAccessor.IsNull(ColumnIndex);
         { Processes String fields. }
         ftWideString:
           Result := FWideStringFieldGetter(ColumnIndex, Field.Size, PWideChar(Buffer));
@@ -3008,10 +3001,8 @@ begin
         ftGUID:
           begin
             P := RowAccessor.GetColumnData(ColumnIndex, Result);
-            if Result then
-              PAnsiChar(Buffer)^ := #0
-            else
-              GUIDToBuffer(P, PAnsiChar(Buffer), True, True);
+            if Result then PAnsiChar(Buffer)^ := #0
+            else GUIDToBuffer(P, PAnsiChar(Buffer), True, True);
           end;
         {$ENDIF}
         {$IFDEF WITH_FTDATASETSUPPORT}
@@ -3029,25 +3020,21 @@ begin
             Pointer(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
       end;
       Result := not Result;
-    end
-    else
-      if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}] then
-        Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty
-      else
-      // added by KestasL
+    end else if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}] then
+      Result := not RowAccessor.IsNull(ColumnIndex)
+    else begin // added by KestasL
+      {$IFDEF WITH_TVALUEBUFFER}
+      //See: http://sourceforge.net/p/zeoslib/tickets/118/
+      if Field.DataType = ftExtended then
       begin
-        {$IFDEF WITH_TVALUEBUFFER}
-        //See: http://sourceforge.net/p/zeoslib/tickets/118/
-        if Field.DataType = ftExtended then
-        begin
-          SetLength(Buffer, SizeOf(Extended));
-          PExtended(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
-          Result := not Result;
-        end
-        else
-        {$ENDIF WITH_TVALUEBUFFER}
-          Result := not RowAccessor.IsNull(ColumnIndex);
-      end;
+        SetLength(Buffer, SizeOf(Extended));
+        PExtended(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
+        Result := not Result;
+      end
+      else
+      {$ENDIF WITH_TVALUEBUFFER}
+        Result := not RowAccessor.IsNull(ColumnIndex);
+    end;
   end
   else
     Result := False;
@@ -3401,7 +3388,6 @@ begin
     Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
     Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
-
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
     Temp.Free;
@@ -3970,9 +3956,8 @@ begin
   try
     if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then
       Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
-    else
-      if (Assigned(Statement)) then
-         Statement.ClearParameters;
+    else if (Assigned(Statement)) then
+      Statement.ClearParameters;
   finally
     Connection.HideSQLHourGlass;
   end;

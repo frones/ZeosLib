@@ -251,6 +251,8 @@ begin
     Check(Statement.GetMoreResults, 'There is a second resultset available!');
     CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
     Check(Statement.GetResultSet.Next, 'There should be a row retrieved');
+    Check(Statement.GetMoreResults, 'There is a final update count available');
+    CheckEquals(0, Statement.GetUpdateCount, 'Final update count');
     Check(not Statement.GetMoreResults, 'There no more resultset available!');
     Check(not ResultSet.Next, 'Previous ResultSet should be closed');
     ResultSet.Close;

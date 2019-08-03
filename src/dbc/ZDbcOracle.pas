@@ -277,7 +277,6 @@ begin
   if IsClosed then
      Open;
   Result := TZOracleCallableStatement_A.Create(Self, SQL, Info);
-  Result.ClearParameters;
 end;
 
 {**

@@ -75,7 +75,6 @@ type
     FCachedBlob: boolean;
     FStmtHandle: TISC_STMT_HANDLE;
     FStmtHandleAddr: PISC_STMT_HANDLE;
-    FWasLastResult: Boolean;
     FXSQLDA: PXSQLDA;
     FIZSQLDA: IZSQLDA;
     FPISC_DB_HANDLE: PISC_DB_HANDLE;
@@ -88,12 +87,23 @@ type
     FISC_TR_HANDLE: TISC_TR_HANDLE;
     FIBConnection: IZInterbase6Connection;
     FClientCP: word;
+    FIBTransaction: IZIBTransaction;
+    FSQL: String;
+    procedure RegisterCursor;
   protected
     procedure Open; override;
   public
+    TransactionResultSet: Pointer; //EH: this field is a weak resultset reference
+      //it may be an address of a cached resultset which owns this instance.
+      //this pointer should be registered as open cursor on the TA
+      //aim is: if a transaction commit is called the TA checks if
+      //all open resultsets a scollable. If so a fetchall will be done by TA.
+      //finally the TA can commit the handle (i.e. changing the AutoCommit mode)
+      //which would ususally close all pending cursors
+  public
     constructor Create(const Statement: IZStatement; const SQL: string;
       StmtHandleAddr: PISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
-      WasLastResult, CachedBlob: boolean; StmtType: TZIbSqlStatementType);
+      CachedBlob: boolean; StmtType: TZIbSqlStatementType);
 
     procedure AfterClose; override;
     procedure ResetCursor; override;
@@ -209,7 +219,7 @@ end;
 }
 constructor TZInterbase6XSQLDAResultSet.Create(const Statement: IZStatement;
   const SQL: string; StmtHandleAddr: PISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
-  WasLastResult, CachedBlob: Boolean; StmtType: TZIbSqlStatementType);
+  CachedBlob: Boolean; StmtType: TZIbSqlStatementType);
 begin
   inherited Create(Statement, SQL, TZInterbaseResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
@@ -224,7 +234,6 @@ begin
   FPlainDriver := TZInterbasePlainDriver(FIBConnection.GetIZPlainDriver.GetInstance);
   FDialect := FIBConnection.GetDialect;
   FStmtType := StmtType; //required to know how to fetch the columns for ExecProc
-  FWasLastResult := WasLastResult;
 
   FStmtHandleAddr := StmtHandleAddr;
   FStmtHandle := StmtHandleAddr^;
@@ -233,7 +242,7 @@ begin
 
   FCodePageArray := FPlainDriver.GetCodePageArray;
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
-
+  FSQL := SQL;
   Open;
 end;
 
@@ -1516,8 +1525,8 @@ end;
 function TZInterbase6XSQLDAResultSet.Next: Boolean;
 var
   StatusVector: TARRAY_ISC_STATUS;
-  I, OldRow: Integer;
-  RS: IZResultSet;
+  Status: ISC_STATUS;
+label CheckE;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -1525,40 +1534,29 @@ begin
     Exit;
 
   { Fetch row. }
-  if (FStmtType = stSelect) then begin //AVZ - Test for ExecProc - this is for multiple rows
-    { FireBirdAPI:
-    Both isc_commit_transaction() and isc_rollback_transaction() close the record streams
-    associated with the transaction, reinitialize the transaction name to zero, and release
-    system resources allocated for the transaction. Freed system resources are available for
-    subsequent use by any application or program. }
-    if (FISC_TR_HANDLE <> FIBConnection.GetTrHandle^) and (Statement.GetUpdateCount = 0) then begin //transaction changed and no updates done?
-      OldRow := RowNo-1; //safe -> reuse resets the rowno
-      //this finally goes to !self! or IZCachedResultSet containing !self! recursive
-      //and scrolls to RowNo -1
-      if FWasLastResult then begin
-        (Statement as IZPreparedStatement).ExecutePrepared;
-        RS := Statement.GetResultSet;
-      end else
-        RS := (Statement as IZPreparedStatement).ExecuteQueryPrepared;
-      FISC_TR_HANDLE := FIBConnection.GetTrHandle^;//set current transaction handle
-      for i := 1 to OldRow do
-        RS.Next; //reload data
-    end;
-    if (RowNo = 0) and (FStmtHandle = 0) then
+  if (FStmtType <> stExecProc) then begin //AVZ - Test for ExecProc - this is for multiple rows
+    if (RowNo = 0) then
       FStmtHandle := FStmtHandleAddr^;
-    if FPlainDriver.isc_dsql_fetch(@StatusVector,
-      @FStmtHandle, FDialect, FXSQLDA) = 0 then begin
+    Status := FPlainDriver.isc_dsql_fetch(@StatusVector,
+      @FStmtHandle, FDialect, FXSQLDA);
+    if Status = 0 then begin
+      if (RowNo = 0) then RegisterCursor;
       RowNo := RowNo + 1;
       LastRowNo := RowNo;
       Result := True;
-    end else begin
-      CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+    end else if Status = 100  then begin
+
       {no error occoured -> notify IsAfterLast and close the recordset}
       RowNo := RowNo + 1;
       if FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
-        CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+        goto CheckE;
       FStmtHandle := 0;
-    end;
+      if (FIBTransaction <> nil) then begin
+        FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
+        FIBTransaction := nil;
+      end;
+    end else
+CheckE:CheckInterbase6Error(FPlainDriver, StatusVector, Self);
   end else if RowNo = 0 then begin
     Result := True;
     RowNo := 1;
@@ -1650,15 +1648,27 @@ begin
   inherited Open;
 end;
 
+procedure TZInterbase6XSQLDAResultSet.RegisterCursor;
+begin
+  FIBTransaction := FIBConnection.GetActiveTransaction;
+  FIBTransaction.RegisterOpencursor(IZResultSet(TransactionResultSet));
+end;
+
 procedure TZInterbase6XSQLDAResultSet.ResetCursor;
 var StatusVector: TARRAY_ISC_STATUS;
 begin
   if not Closed then begin
     if (FStmtHandle <> 0) then begin
-      if (FStmtType <> stExecProc) and (FISC_TR_HANDLE = FIBConnection.GetTrHandle^) and
-         (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then
-        CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcOther, 'isc_dsql_free_statement');
-      FStmtHandle := 0;
+      if (FStmtType <> stExecProc) then begin
+         if (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then
+          CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcOther, 'isc_dsql_free_statement');
+        FStmtHandle := 0;
+        if FIBTransaction <> nil then begin
+          FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
+          FIBTransaction := nil;
+        end;
+      end else
+        FStmtHandle := 0;
     end;
     inherited ResetCursor;
   end;

@@ -97,22 +97,22 @@ type
     FPQParamOIDs: TPQparamTypes; //the Parameter OID's
     FPQResultFormat: Integer; //which format will the tubles have binary or string? note if any unsupported oid  given we use string format only as a fallback
     FPGArrayDMLStmts: array[TArrayDMLType] of TPGArrayDMLStmt;
-    FParamNames: TRawByteStringDynArray;
     FOutParamCount: Integer;
     FMinExecCount2Prepare: Integer; //how many executions must be done to fall into a real prepared mode?
     FExecCount: Integer; //How often did we execute the stmt until we reached MinExecCount2Prepare?
     FOrgSQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+    FParamNames: TRawByteStringDynArray;
     function CheckPrepareSwitchMode: Boolean;
     procedure InternalRealPrepare;
-    function OIDToSQLType(Index: Integer; SQLType: TZSQLType): TZSQLType;
+    function OIDToSQLType(var Index: Integer; SQLType: TZSQLType): TZSQLType;
     function ExecuteDMLBatchWithUnnestVarlenaArrays: TPGresult;
     procedure LinkBinParam2PG(Index: Integer; Buf: Pointer; Len: LengthInt);
     procedure LinkTxtParam2PG(Index: Integer; Buf: Pointer; Len: LengthInt);
     procedure BindArray(Index: Cardinal; Stmt: TZPostgreSQLPreparedStatementV3); reintroduce;
   protected
     procedure SetBindCapacity(Capacity: Integer); override;
-    procedure CheckParameterIndex(Value: Integer); override;
-    function AlignParamterIndex2ResultSetIndex(Value: Integer): Integer; override;
+    procedure CheckParameterIndex(var Value: Integer); override;
+    procedure ReleaseConnection; override;
   protected
     procedure FlushPendingResults;
     function CreateResultSet({%H-}ServerCursor: Boolean): IZResultSet;
@@ -122,10 +122,6 @@ type
     procedure PGExecuteUnPrepare;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
-  public
-    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZProcedureColumnType; const Name: String = '';
-      {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0); override;
   public
     constructor Create(const Connection: IZPostgreSQLConnection;
       const SQL: string; Info: TStrings);
@@ -159,9 +155,9 @@ type
   public
     procedure ClearParameters; reintroduce;
 
-    procedure SetNull(Index: Integer; SQLType: TZSQLType); reintroduce;
-    procedure SetBoolean(Index: Integer; Value: Boolean); reintroduce;
-    procedure SetByte(Index: Integer; Value: Byte); reintroduce;
+    procedure SetNull(Index: Integer; SQLType: TZSQLType);
+    procedure SetBoolean(Index: Integer; Value: Boolean);
+    procedure SetByte(Index: Integer; Value: Byte);
     procedure SetShort(Index: Integer; Value: ShortInt); reintroduce;
     procedure SetWord(Index: Integer; Value: Word); reintroduce;
     procedure SetSmall(Index: Integer; Value: SmallInt); reintroduce;
@@ -178,6 +174,9 @@ type
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
 
+    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZProcedureColumnType; const Name: String = '';
+      {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0); override;
     (*procedure SetNullArray(Index: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
     procedure SetDataArray(Index: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);*)
   end;
@@ -199,8 +198,7 @@ type
 
   TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
-    function CreateExecutionStatement(Mode: TZCallExecKind; const
-      StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL. }
@@ -740,7 +738,8 @@ begin
   end;
 end;
 
-procedure TZAbstractPostgreSQLPreparedStatementV3.CheckParameterIndex(Value: Integer);
+procedure TZAbstractPostgreSQLPreparedStatementV3.CheckParameterIndex(var Value: Integer);
+var I: Integer;
 begin
   if not Prepared then
     Prepare;
@@ -748,6 +747,11 @@ begin
     if fRawPlanname <> ''
     then raise EZSQLException.Create(SInvalidInputParameterCount)
     else inherited CheckParameterIndex(Value);
+  { now change the index to the !in!-param ordinal index }
+  if BindList.HasOutOrInOutOrResultParam then
+    for I := 0 to Value do
+      if Ord(BindList[I].ParamType) > Ord(pctInOut) then
+        Dec(Value);
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.CheckPrepareSwitchMode: Boolean;
@@ -1088,6 +1092,8 @@ begin
     Result := True;
     if not Assigned(LastResultSet) then
       LastResultSet := CreateResultSet(fServerCursor);
+    if BindList.HasOutOrInOutOrResultParam then
+      FOutParamResultSet := LastResultSet;
   end else begin
     Result := False;
     LastUpdateCount := RawToIntDef(
@@ -1115,11 +1121,13 @@ begin
   then Fres := PGExecute
   else Fres := PGExecutePrepared;
   Status := FPlainDriver.PQresultStatus(Fres);
-  if (Fres <> nil) and (Status = PGRES_TUPLES_OK) then
+  if (Fres <> nil) and (Status = PGRES_TUPLES_OK) then begin
     if Assigned(FOpenResultSet)
     then Result := IZResultSet(FOpenResultSet)
-    else Result := CreateResultSet(fServerCursor)
-  else
+    else Result := CreateResultSet(fServerCursor);
+    if BindList.HasOutOrInOutOrResultParam then
+      FOutParamResultSet := Result;
+  end else
     Result := nil;
 end;
 
@@ -1145,9 +1153,9 @@ begin
     then Fres := PGExecute
     else Fres := PGExecutePrepared;
   if Fres <> nil then
-    if (FPlainDriver.PQresultStatus(Fres) = PGRES_TUPLES_OK) and (FHasInOutParams or (FOutParamCount > 0)) then begin
+    if (FPlainDriver.PQresultStatus(Fres) = PGRES_TUPLES_OK) and (BindList.HasOutOrInOutOrResultParam) then begin
       if not Assigned(LastResultSet) then
-        LastResultSet := CreateResultSet(fServerCursor);
+        FOutParamResultSet := CreateResultSet(fServerCursor);
       LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
     end else begin
       LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
@@ -1344,6 +1352,7 @@ begin
     SetLength(FPQparamFormats, BindList.Capacity);
     SetLength(FPQParamOIDs, BindList.Capacity);
     SetLength(FInParamDefaultValues, BindList.Capacity);
+    SetLength(FParamNames, BindList.Capacity);
     { rebind since the realloc did change the addresses of the hooked values}
     for i := 0 to Capacity -1 do
       if BindList.BindTypes[i] {$IFDEF CPU64}in [zbt4Byte, zbt8Byte]{$ELSE}= zbt4Byte{$ENDIF} then
@@ -1367,7 +1376,7 @@ begin
   FPQparamFormats[Index] := ParamFormatStr;
 end;
 
-function TZAbstractPostgreSQLPreparedStatementV3.OIDToSQLType(Index: Integer;
+function TZAbstractPostgreSQLPreparedStatementV3.OIDToSQLType(var Index: Integer;
   SQLType: TZSQLType): TZSQLType;
 begin
   CheckParameterIndex(Index);
@@ -1399,16 +1408,6 @@ begin
     else
       Result := stUnknown; //indicate unsupport the types as Fallback to String format
   end;
-end;
-
-function TZAbstractPostgreSQLPreparedStatementV3.AlignParamterIndex2ResultSetIndex(
-  Value: Integer): Integer;
-var I: Integer;
-begin
-  Result := inherited AlignParamterIndex2ResultSetIndex(Value);
-  for i := Value downto 0 do
-    if BindList.ParamTypes[i] in [pctUnknown, pctIn] then
-      Dec(Result);
 end;
 
 {**
@@ -1525,29 +1524,10 @@ begin
     InternalRealPrepare;
 end;
 
-procedure TZAbstractPostgreSQLPreparedStatementV3.RegisterParameter(
-  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
-  const Name: String; PrecisionOrSize, Scale: LengthInt);
-var I: Integer;
+procedure TZAbstractPostgreSQLPreparedStatementV3.ReleaseConnection;
 begin
-  if SQLType in [stUnicodeString, stUnicodeStream] then
-    SQLType := TZSQLType(Ord(SQLType)-1);
-  inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
-  if ParamType in [pctOut, pctReturn] then begin
-    FOutParamCount := 0;
-    for i := 0 to BindList.Count -1 do
-      Inc(FOutParamCount, Ord(BindList.ParamTypes[i] in [pctOut, pctReturn]));
-  end else
-    FHasInOutParams := FHasInOutParams or (ParamType = pctInOut);
-  if (Name = '') then
-    exit;
-  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  SetLength(FParamNames, BindList.Capacity);
-  {$IFDEF UNICODE}
-  FParamNames[ParameterIndex] := ZUnicodeToRaw(Name, ConSettings.ClientCodePage^.CP);
-  {$ELSE}
-  FParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, ConSettings.ClientCodePage^.CP);
-  {$ENDIF}
+  inherited ReleaseConnection;
+  FPostgreSQLConnection := nil;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.ReleaseImmediat(
@@ -1577,7 +1557,6 @@ begin
   Findeterminate_datatype := False;
   FRawPlanName := '';
   FOutParamCount := 0;
-  FHasInOutParams := False;
   for ArrayDMLType := low(TArrayDMLType) to high(TArrayDMLType) do begin
     FPGArrayDMLStmts[ArrayDMLType].Obj := nil;
     FPGArrayDMLStmts[ArrayDMLType].Intf := nil;
@@ -1632,7 +1611,6 @@ end;
 { TZPostgreSQLCallableStatement }
 
 function TZPostgreSQLCallableStatement.CreateExecutionStatement(
-  Mode: TZCallExecKind;
   const StoredProcName: String): TZAbstractPreparedStatement2;
 var
   P: PChar;
@@ -1642,23 +1620,21 @@ begin
   SQL := '';
   ToBuff('SELECT * FROM ',SQL);
   ToBuff(StoredProcName, SQL);
-  ToBuff('(', SQL);
+  ToBuff(Char('('), SQL);
   J := 1;
   for I := 0 to BindList.Capacity -1 do
     if Ord(BindList.ParamTypes[I]) < Ord(pctOut) then begin
-      ToBuff('$', SQL);
+      ToBuff(Char('$'), SQL);
       ToBuff(ZFastCode.IntToStr(J), SQL);
-      ToBuff(',', SQL);
+      ToBuff(Char(','), SQL);
       Inc(J);
     end;
   FlushBuff(SQL);
   P := Pointer(SQL);
-  if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
+  if J > 1
   then (P+Length(SQL)-1)^ := ')' //cancel last comma
   else SQL := SQL + ')';
   Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);
-  FExecStatements[TZCallExecKind(not Ord(Mode) and 1)] := Result;
-  TZPostgreSQLPreparedStatementV3(Result)._AddRef;
 end;
 
 { TZPostgreSQLPreparedStatementV3 }
@@ -1673,50 +1649,80 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.BindBinary(Index: Integer;
   SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
+var InParamIdx: Integer;
 begin
-  inherited BindBinary(Index, SQLType, Buf, Len);
-  LinkBinParam2PG(Index, Buf, Len);
+  InParamIdx := Index;
+  CheckParameterIndex(InParamIdx);
+  if SQLType = stBytes
+  then BindList.Put(Index, SQLType, TBytes(Buf))
+  else BindList.Put(Index, SQLtype, Buf, Len);
+  LinkBinParam2PG(InParamIdx, Buf, Len);
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindLob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob);
 var WriteTempBlob: IZPostgreSQLOidBlob;
   Lob_OID: OID;
+  InParamIdx: Integer;
+  RefCntLob: IZBlob;
 begin
-  inherited BindLob(Index, SQLType, Value); //keep alive and play with refcounts
-  if (Value <> nil) and not Value.IsEmpty then
+  InParamIdx := Index;
+  CheckParameterIndex(InParamIdx);
+  RefCntLob := Value; //inc RefCount
+  if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then begin
+    if Value.IsClob then
+      Value.GetPAnsiChar(FClientCP)
+    else begin
+      FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
+      RefCntLob := TZAbstractCLob.CreateWithData(Pointer(FRawTemp),
+        Length(FRawTemp), ConSettings^.ClientCodePage.CP, ConSettings);
+    end;
+    SQLType := stAsciiStream;
+  end;
+  BindList.Put(Index, SQLType, RefCntLob);
+  if (RefCntLob <> nil) and not RefCntLob.IsEmpty then
     if ((SQLType = stBinaryStream) and FOidAsBlob) then begin
       WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^, 0, ChunkSize);
-      WriteTempBlob.WriteBuffer(Value.GetBuffer, Value.Length);
+      WriteTempBlob.WriteBuffer(RefCntLob.GetBuffer, RefCntLob.Length);
       Lob_OID := WriteTempBlob.GetBlobOid;
-      FPQParamOIDs[Index] := OIDOID;
+      FPQParamOIDs[InParamIdx] := OIDOID;
       BindList.Put(Index, stBinaryStream, P4Bytes(@Lob_OID));
-      LinkBinParam2PG(Index, BindList._4Bytes[Index], SizeOf(OID));
+      LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], SizeOf(OID));
       {$IFNDEF ENDIAN_BIG}Reverse4Bytes(FPQparamValues[Index]);{$ENDIF}
       WriteTempBlob := nil;
     end else begin
-      FPQparamValues[Index] := Value.GetBuffer;
-      FPQparamLengths[Index] := Value.Length;
+      FPQparamValues[InParamIdx] := RefCntLob.GetBuffer;
+      FPQparamLengths[InParamIdx] := RefCntLob.Length;
       if SQLType = stBinaryStream
-      then FPQparamFormats[Index] := ParamFormatBin
-      else FPQparamFormats[Index] := ParamFormatStr;
+      then FPQparamFormats[InParamIdx] := ParamFormatBin
+      else FPQparamFormats[InParamIdx] := ParamFormatStr;
     end;
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   Buf: PAnsiChar; Len: LengthInt);
+var InParamIDX: Integer;
 begin
-    inherited BindRawStr(Index, Buf, Len);
-    LinkTxtParam2PG(Index, Buf, Len);
+  InParamIDX := Index;
+  CheckParameterIndex(InParamIDX);
+  if Buf = nil then begin
+    Buf := PEmptyAnsiString;
+    Len := 0;
+  end;
+  BindList.Put(Index, stString, Buf, Len, FClientCP);
+  LinkTxtParam2PG(InParamIDX, Buf, Len);
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
   const Value: RawByteString);
+var InParamIDX: Integer;
 begin
-    inherited BindRawStr(Index, Value); //localize
-    LinkTxtParam2PG(Index, Pointer(Value), Length(Value));
-    if Pointer(Value) = nil then
-      FPQparamValues[Index] := PEmptyAnsiString;
+  InParamIDX := Index;
+  CheckParameterIndex(InParamIDX);
+  BindList.Put(Index, stString, Value, FClientCP);
+  LinkTxtParam2PG(InParamIDX, Pointer(Value), Length(Value));
+  if Pointer(Value) = nil then
+    FPQparamValues[InParamIDX] := PEmptyAnsiString;
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.ClearParameters;
@@ -1725,6 +1731,9 @@ begin
   BatchDMLArrayCount := 0;
 end;
 
+{**
+  Binds a double value
+}
 procedure TZPostgreSQLPreparedStatementV3.InternalBindDouble(Index: Integer;
   SQLType: TZSQLType; const Value: Double);
 var PGSQLType: TZSQLType;
@@ -1741,38 +1750,41 @@ var PGSQLType: TZSQLType;
       stTimeStamp:  fRawTemp := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False);
       else          fRawTemp := FloatToSqlRaw(Value);
     end;
-    SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fRawTemp)
+    SetRawByteString(Index, fRawTemp)
   end;
+var InParamIdx: Integer;
 begin
-  PGSQLType := OIDToSQLType(Index, SQLType);
+  InParamIdx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  PGSQLType := OIDToSQLType(InParamIdx, SQLType);
   if PGSQLType in [stCurrency, stBigDecimal] then
     if PGSQLType = stBigDecimal then begin
       Double2BCD(Value, PBCD(@fABuffer[0])^);
-      SetBigDecimal(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
+      SetBigDecimal(Index, PBCD(@fABuffer[0])^);
     end else
-      SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
+      SetCurrency(Index, Value)
   else if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
+    {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
     if PGSQLType in [stBoolean, stFloat, stSmall, stInteger, stDate] then begin
       BindList.Put(Index, PGSQLType, P4Bytes(@Value));
-      LinkBinParam2PG(Index, BindList._4Bytes[Index], 4);
+      LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], 4);
     end else begin
       BindList.Put(Index, PGSQLType, P8Bytes(@Value));
-      LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
+      LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
     end;
     case PGSQLType of
-      stBoolean:    PByte(FPQparamValues[Index])^ := Byte(Ord(Value <> 0));
-      stSmall:      SmallInt2PG(Trunc(Value), FPQparamValues[Index]);
-      stInteger:    Integer2PG(Trunc(Value), FPQparamValues[Index]);
-      stLong:       Int642PG(Trunc(Value), FPQparamValues[Index]);
-      stFloat:      Single2PG(Value, FPQparamValues[Index]);
-      stDouble:     {$IFNDEF ENDIAN_BIG}Reverse8Bytes(FPQparamValues[Index]){$ENDIF};
-      stDate:       Date2PG(Value, PInteger(FPQparamValues[Index])^);
+      stBoolean:    PByte(FPQparamValues[InParamIdx])^ := Byte(Ord(Value <> 0));
+      stSmall:      SmallInt2PG(Trunc(Value), FPQparamValues[InParamIdx]);
+      stInteger:    Integer2PG(Trunc(Value), FPQparamValues[InParamIdx]);
+      stLong:       Int642PG(Trunc(Value), FPQparamValues[InParamIdx]);
+      stFloat:      Single2PG(Value, FPQparamValues[InParamIdx]);
+      stDouble:     {$IFNDEF ENDIAN_BIG}Reverse8Bytes(FPQparamValues[InParamIdx]){$ENDIF};
+      stDate:       Date2PG(Value, PInteger(FPQparamValues[InParamIdx])^);
       stTime:       if Finteger_datetimes
-                    then Time2PG(Value, PInt64(FPQparamValues[Index])^)
-                    else Time2PG(Value, PDouble(FPQparamValues[Index])^);
+                    then Time2PG(Value, PInt64(FPQparamValues[InParamIdx])^)
+                    else Time2PG(Value, PDouble(FPQparamValues[InParamIdx])^);
       stTimeStamp:  if Finteger_datetimes
-                    then DateTime2PG(Value, PInt64(FPQparamValues[Index])^)
-                    else DateTime2PG(Value, PDouble(FPQparamValues[Index])^);
+                    then DateTime2PG(Value, PInt64(FPQparamValues[InParamIdx])^)
+                    else DateTime2PG(Value, PDouble(FPQparamValues[InParamIdx])^);
                     end;
   end else SetAsRaw;
 end;
@@ -1781,33 +1793,36 @@ procedure TZPostgreSQLPreparedStatementV3.InternalBindInt(Index: Integer;
   SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
 var PGSQLType: TZSQLType;
 { move the string conversions into a own proc -> no (U/L)StrClear}
-procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value)); end;
+procedure SetAsRaw; begin SetRawByteString(Index, IntToRaw(Value)); end;
+var InParamIdx: Integer;
 begin
-  PGSQLType := OIDToSQLType(Index, SQLType);
+  InParamIdx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  PGSQLType := OIDToSQLType(InParamIdx, SQLType);
   if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
-    if (FPQparamValues[Index] = nil) or (BindList[Index].SQLType <> PGSQLType) then
+    {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+    if (FPQparamValues[InParamIdx] = nil) or (BindList[Index].SQLType <> PGSQLType) then
       if ZSQLType2PGBindSizes[PGSQLType] <= 4 then begin
         BindList.Put(Index, PGSQLType, P4Bytes(@Value));
-        LinkBinParam2PG(Index, BindList._4Bytes[Index], ZSQLType2PGBindSizes[PGSQLType]);
+        LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], ZSQLType2PGBindSizes[PGSQLType]);
       end else if ZSQLType2PGBindSizes[PGSQLType] = 8 then begin
         BindList.Put(Index, PGSQLType, P8Bytes({$IFNDEF CPU64}@faBuffer[0]{$ELSE}@Value{$ENDIF}));
-        LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
+        LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
       end else
-        LinkBinParam2PG(Index, BindList.AquireCustomValue(Index, PGSQLType,
+        LinkBinParam2PG(InParamIdx, BindList.AquireCustomValue(Index, PGSQLType,
           ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
     case PGSQLType of
-      stBoolean:  PByte(FPQparamValues[Index])^ := Ord(Value);
-      stSmall:    SmallInt2PG(Value, FPQparamValues[Index]);
+      stBoolean:  PByte(FPQparamValues[InParamIdx])^ := Ord(Value);
+      stSmall:    SmallInt2PG(Value, FPQparamValues[InParamIdx]);
       stInteger,
-      stDate:     Integer2PG(Value, FPQparamValues[Index]);
-      stFloat:    Single2PG(Value, FPQparamValues[Index]);
-      stLongWord: Cardinal2PG(Value, FPQparamValues[Index]);
-      stLong:     Int642PG(Value, FPQparamValues[Index]);
-      stDouble:   Double2PG(Value, FPQparamValues[Index]);
-      stCurrency: Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+      stDate:     Integer2PG(Value, FPQparamValues[InParamIdx]);
+      stFloat:    Single2PG(Value, FPQparamValues[InParamIdx]);
+      stLongWord: Cardinal2PG(Value, FPQparamValues[InParamIdx]);
+      stLong:     Int642PG(Value, FPQparamValues[InParamIdx]);
+      stDouble:   Double2PG(Value, FPQparamValues[InParamIdx]);
+      stCurrency: Currency2PGNumeric(Value, FPQparamValues[InParamIdx], FPQparamLengths[InParamIdx]);
       stBigDecimal: Begin
                       ScaledOrdinal2BCD(Value, 0, PBCD(@fABuffer[0])^);
-                      BCD2PGNumeric(PBCD(@fABuffer[0])^, FPQparamValues[Index], FPQparamLengths[Index]);
+                      BCD2PGNumeric(PBCD(@fABuffer[0])^, FPQparamValues[InParamIdx], FPQparamLengths[InParamIdx]);
                     end;
     end;
   end else SetAsRaw;
@@ -1876,6 +1891,26 @@ begin
   end;
 end;
 
+procedure TZPostgreSQLPreparedStatementV3.RegisterParameter(
+  ParameterIndex: Integer; SQLType: TZSQLType; ParamType: TZProcedureColumnType;
+  const Name: String; PrecisionOrSize, Scale: LengthInt);
+var I: Integer;
+begin
+  if SQLType in [stUnicodeString, stUnicodeStream] then
+    SQLType := TZSQLType(Ord(SQLType)-1);
+  I := ParameterIndex;
+  CheckParameterIndex(I);
+  BindList.SetParamTypes(ParameterIndex , SQLType, ParamType);
+  if Name <> '' then
+    FParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+
+  if ParamType in [pctOut, pctReturn] then begin
+    FOutParamCount := 0;
+    for i := 0 to BindList.Count -1 do
+      Inc(FOutParamCount, Ord(BindList.ParamTypes[i] in [pctOut, pctReturn]));
+  end;
+end;
+
 {**
   Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
   The driver converts this to an SQL <code>NUMERIC</code> value when
@@ -1887,26 +1922,25 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetBigDecimal(Index: Integer;
   const Value: TBCD);
 var SQLType: TZSQLType;
-procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BcdToSQLRaw(Value)); end;
+procedure SetAsRaw; begin SetRawByteString(Index, BcdToSQLRaw(Value)); end;
+var Idx: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  SQLType := OIDToSQLType(Index, stBigDecimal);
-  if (FPQParamOIDs[index] = NUMERICOID) then begin
-    if (FPQparamValues[Index] = nil) or (BindList.SQLTypes[Index] <> SQLType) then begin
-      FPQparamValues[Index] := BindList.AquireCustomValue(Index, SQLType, MaxBCD2NumSize);
-      FPQparamFormats[Index] := ParamFormatBin;
+  Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  SQLType := OIDToSQLType(Idx, stBigDecimal);
+  if (FPQParamOIDs[Idx] = NUMERICOID) then begin
+    if (FPQparamValues[Idx] = nil) or (BindList.SQLTypes[Idx] <> SQLType) then begin
+      FPQparamValues[Idx] := BindList.AquireCustomValue(Idx, SQLType, MaxBCD2NumSize);
+      FPQparamFormats[Idx] := ParamFormatBin;
     end;
-    BCD2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+    BCD2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
   end else case SQLType of
     stBoolean,
     stSmall,
     stInteger,
     {$IFDEF CPU64}stLong,{$ENDIF}
-    stLongWord: InternalBindInt(Index, SQLType, PInt64(@Value)^ div 10000);
+    stLongWord: InternalBindInt(Index, SQLType, ZSysUtils.BCD2Int64(Value));
     {$IFNDEF CPU64}
-    stLong:     SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2Int64(Value));
+    stLong:     SetLong(Index, BCD2Int64(Value));
     {$ENDIF}
     stTime, stDate, stTimeStamp, stFloat,
     stDouble:   InternalBindDouble(Index, SQLType, BCDToDouble(Value));
@@ -1925,7 +1959,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetBoolean(Index: Integer;
   Value: Boolean);
 begin
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean, Ord(Value));
+  InternalBindInt(Index, stBoolean, Ord(Value));
 end;
 
 {**
@@ -1938,7 +1972,7 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetByte(Index: Integer; Value: Byte);
 begin
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
+  InternalBindInt(Index, stSmall, Value);
 end;
 
 {**
@@ -1952,38 +1986,37 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetCurrency(Index: Integer;
   const Value: Currency);
 var SQLType: TZSQLType;
-procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, CurrToRaw(Value)); end;
+procedure SetAsRaw; begin SetRawByteString(Index, CurrToRaw(Value)); end;
+var Idx: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  SQLType := OIDToSQLType(Index, stCurrency);
-  if (FPQParamOIDs[index] = NUMERICOID) then begin
-    if (FPQparamValues[Index] = nil) or (BindList.SQLTypes[Index] <> SQLType) then begin
-      FPQparamValues[Index] := BindList.AquireCustomValue(Index, SQLType, MaxCurr2NumSize);
-      FPQparamFormats[Index] := ParamFormatBin;
+  Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  SQLType := OIDToSQLType(Idx, stCurrency);
+  if (FPQParamOIDs[Idx] = NUMERICOID) then begin
+    if (FPQparamValues[Idx] = nil) or (BindList.SQLTypes[Idx] <> SQLType) then begin
+      FPQparamValues[Idx] := BindList.AquireCustomValue(Idx, SQLType, MaxCurr2NumSize);
+      FPQparamFormats[Idx] := ParamFormatBin;
     end;
-    Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+    Currency2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
   end else case SQLType of
-    stBoolean:  InternalBindInt(Index, stBoolean, Ord(Value <> 0));
+    stBoolean:  InternalBindInt(Idx, stBoolean, Ord(Value <> 0));
     stSmall,
-    stInteger:  InternalBindInt(Index, SQLType, PInt64(@Value)^ div 10000);
+    stInteger:  InternalBindInt(Idx, SQLType, PInt64(@Value)^ div 10000);
     stLongWord: begin
-                  BindList.Put(Index, stLong, P4Bytes(@Value));
-                  LinkBinParam2PG(Index, BindList._4Bytes[Index], SizeOf(Cardinal));
-                  Cardinal2PG(Cardinal(PInt64(@Value)^ div 10000), FPQparamValues[Index]);
+                  BindList.Put(Idx, stLong, P4Bytes(@Value));
+                  LinkBinParam2PG(Idx, BindList._4Bytes[Idx], SizeOf(Cardinal));
+                  Cardinal2PG(Cardinal(PInt64(@Value)^ div 10000), FPQparamValues[Idx]);
                 end;
     stLong:     begin
-                  BindList.Put(Index, stLong, P8Bytes(@Value));
-                  LinkBinParam2PG(Index, BindList._8Bytes[Index], SizeOf(Int64));
-                  Int642PG(PInt64(@Value)^ div 10000, FPQparamValues[Index]);
+                  BindList.Put(Idx, stLong, P8Bytes(@Value));
+                  LinkBinParam2PG(Idx, BindList._8Bytes[Idx], SizeOf(Int64));
+                  Int642PG(PInt64(@Value)^ div 10000, FPQparamValues[Idx]);
                 end;
     stTime, stDate, stTimeStamp, stFloat,
-    stDouble:   InternalBindDouble(Index, SQLType, Value);
+    stDouble:   InternalBindDouble(Idx, SQLType, Value);
     stCurrency: begin
-                  BindList.Put(Index, stCurrency, P8Bytes(@Value));
-                  LinkBinParam2PG(Index, BindList._8Bytes[Index], SizeOf(Currency));
-                  Currency2PGCash(Value, FPQparamValues[Index]);
+                  BindList.Put(Idx, stCurrency, P8Bytes(@Value));
+                  LinkBinParam2PG(Idx, BindList._8Bytes[Idx], SizeOf(Currency));
+                  Currency2PGCash(Value, FPQparamValues[Idx]);
                 end;
     else SetAsRaw;
   end;
@@ -2000,7 +2033,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetDate(Index: Integer;
   const Value: TDateTime);
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
+  InternalBindDouble(Index, stDate, Value);
 end;
 
 {**
@@ -2014,7 +2047,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetDouble(Index: Integer;
   const Value: Double);
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
+  InternalBindDouble(Index, stDouble, Value);
 end;
 
 {**
@@ -2028,7 +2061,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetFloat(Index: Integer;
   Value: Single);
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value);
+  InternalBindDouble(Index, stFloat, Value);
 end;
 
 {**
@@ -2041,7 +2074,7 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetInt(Index, Value: Integer);
 begin
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
+  InternalBindInt(Index, stInteger, Value);
 end;
 
 {**
@@ -2056,35 +2089,36 @@ procedure TZPostgreSQLPreparedStatementV3.SetLong(Index: Integer;
   const Value: Int64);
 {$IFDEF CPU64}
 begin
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+  InternalBindInt(Index, stLong, Value);
 {$ELSE}
 { move the string conversions into a own proc -> no (U/L)StrClear}
 var PGSQLType: TZSQLType;
-procedure SetAsRaw; begin SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IntToRaw(Value)); end;
+procedure SetAsRaw; begin SetRawByteString(Index, IntToRaw(Value)); end;
+var Idx: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
-  PGSQLType := OIDToSQLType(Index, stLong);
+  Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  PGSQLType := OIDToSQLType(Idx, stLong);
   if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
-    if (FPQparamValues[Index] = nil) or (BindList[Index].SQLType <> PGSQLType) then
+    if (FPQparamValues[Idx] = nil) or (BindList[Idx].SQLType <> PGSQLType) then
       if ZSQLType2PGBindSizes[PGSQLType] <= 4 then begin
-        BindList.Put(Index, PGSQLType, P4Bytes(@Value));
-        LinkBinParam2PG(Index, BindList._4Bytes[Index], ZSQLType2PGBindSizes[PGSQLType]);
+        BindList.Put(Idx, PGSQLType, P4Bytes(@Value));
+        LinkBinParam2PG(Idx, BindList._4Bytes[Idx], ZSQLType2PGBindSizes[PGSQLType]);
       end else if ZSQLType2PGBindSizes[PGSQLType] = 8 then begin
-        BindList.Put(Index, PGSQLType, P8Bytes(@Value));
-        LinkBinParam2PG(Index, BindList._8Bytes[Index], 8);
+        BindList.Put(Idx, PGSQLType, P8Bytes(@Value));
+        LinkBinParam2PG(Idx, BindList._8Bytes[Idx], 8);
       end else
-        LinkBinParam2PG(Index, BindList.AquireCustomValue(Index, PGSQLType,
+        LinkBinParam2PG(Idx, BindList.AquireCustomValue(Idx, PGSQLType,
           ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
     case PGSQLtype of
-      stLong:     Int642PG(Value, FPQparamValues[Index]);
-      stBoolean:  PByte(FPQparamValues[Index])^ := Ord(Value);
-      stSmall:    SmallInt2PG(Value, FPQparamValues[Index]);
+      stLong:     Int642PG(Value, FPQparamValues[Idx]);
+      stBoolean:  PByte(FPQparamValues[Idx])^ := Ord(Value);
+      stSmall:    SmallInt2PG(Value, FPQparamValues[Idx]);
       stInteger,
-      stDate:     Integer2PG(Value, FPQparamValues[Index]);
-      stLongWord: Cardinal2PG(Value, FPQparamValues[Index]);
-      stFloat:    Single2PG(Value, FPQparamValues[Index]);
-      stDouble:   Double2PG(Value, FPQparamValues[Index]);
-      stCurrency: Currency2PGNumeric(Value, FPQparamValues[Index], FPQparamLengths[Index]);
+      stDate:     Integer2PG(Value, FPQparamValues[Idx]);
+      stLongWord: Cardinal2PG(Value, FPQparamValues[Idx]);
+      stFloat:    Single2PG(Value, FPQparamValues[Idx]);
+      stDouble:   Double2PG(Value, FPQparamValues[Idx]);
+      stCurrency: Currency2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
     end;
   end else SetAsRaw;
 {$ENDIF}
@@ -2099,13 +2133,13 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetNull(Index: Integer;
   SQLType: TZSQLType);
+var InParamIdx: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  BindList.SetNull(Index, OIDToSQLType(Index, SQLType));
-  FPQparamFormats[Index] := ParamFormatStr;
-  FPQparamValues[Index] := nil
+  InParamIdx := {$IFNDEF GENERIC_INDEX}Index -1{$ENDIF};
+  SQLType := OIDToSQLType(InParamIdx, SQLType);
+  BindList.SetNull(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SQLType);
+  FPQparamFormats[InParamIdx] := ParamFormatStr;
+  FPQparamValues[InParamIdx] := nil
 end;
 
 {**
@@ -2119,7 +2153,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetShort(Index: Integer;
   Value: ShortInt);
 begin
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
+  InternalBindInt(Index, stSmall, Value);
 end;
 
 {**
@@ -2133,7 +2167,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetSmall(Index: Integer;
   Value: SmallInt);
 begin
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
+  InternalBindInt(Index, stSmall, Value);
 end;
 
 {**
@@ -2147,7 +2181,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetTime(Index: Integer;
   const Value: TDateTime);
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+  InternalBindDouble(Index, stTime, Value);
 end;
 
 {**
@@ -2161,7 +2195,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetTimestamp(Index: Integer;
   const Value: TDateTime);
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+  InternalBindDouble(Index, stTimeStamp, Value);
 end;
 
 {**
@@ -2176,7 +2210,7 @@ procedure TZPostgreSQLPreparedStatementV3.SetUInt(Index: Integer;
   Value: Cardinal);
 begin
   {$IFDEF CPU64}
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+  InternalBindInt(Index, stLong, Value);
   {$ELSE}
   SetLong(Index, Value);
   {$ENDIF}
@@ -2194,7 +2228,7 @@ procedure TZPostgreSQLPreparedStatementV3.SetULong(Index: Integer;
   const Value: UInt64);
 begin
   {$IFDEF CPU64}
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value);
+  InternalBindInt(Index, stLong, Value);
   {$ELSE}
   SetLong(Index, Value);
   {$ENDIF}
@@ -2210,7 +2244,7 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetWord(Index: Integer; Value: Word);
 begin
-  InternalBindInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
+  InternalBindInt(Index, stInteger, Value);
 end;
 
 {**

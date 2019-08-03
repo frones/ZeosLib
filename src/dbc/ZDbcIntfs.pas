@@ -77,7 +77,9 @@ const
 
 // Data types
 type
-  {** Defines supported SQL types. }
+  /// <summary>
+  ///  Defines supported SQL types.
+  /// </summary>
   TZSQLType = (stUnknown,
     //fixed size DataTypes first
     stBoolean,
@@ -91,63 +93,95 @@ type
     //finally the object types
     stArray, stDataSet);
 
-  {** Defines a transaction isolation level. }
+  /// <summary>
+  ///  Defines a transaction isolation level.
+  /// </summary>
   TZTransactIsolationLevel = (tiNone, tiReadUncommitted, tiReadCommitted,
     tiRepeatableRead, tiSerializable);
 
   TZSupportedTransactIsolationLevels = set of TZTransactIsolationLevel;
 
-  {** Defines a resultset fetch direction. }
+  /// <summary>
+  ///  Defines a resultset fetch direction.
+  /// </summary>
   TZFetchDirection = (fdForward, fdReverse, fdUnknown);
 
-  {** Defines a type of result set. }
+  /// <summary>
+  ///  Defines a type of result set.
+  /// </summary>
   TZResultSetType = (rtForwardOnly, rtScrollInsensitive, rtScrollSensitive);
 
-  {** Defines a result set concurrency type. }
+  /// <summary>
+  ///  Defines a result set concurrency type.
+  /// </summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
 
-  {** Defines a nullable type for the column. }
+  /// <summary>
+  ///  Defines a nullable type for the column.
+  /// </summary>
   TZColumnNullableType = (ntNoNulls, ntNullable, ntNullableUnknown);
 
-  {** Defines a result type for the procedures. }
+  /// <summary>
+  ///  Defines a nullable type for the column.
+  /// </summary>
   TZProcedureResultType = (prtUnknown, prtNoResult, prtReturnsResult);
 
-  {** Defines a column type for the procedures. }
+  /// <summary>
+  ///  Defines a column type for the procedures.
+  /// </summary>
   TZProcedureColumnType = (pctUnknown, pctIn, pctInOut, pctOut, pctReturn,
     pctResultSet);
 
-  {** Defines a dynamic array of column types for the procedures. }
+  /// <summary>
+  ///  Defines a dynamic array of column types for the procedures.
+  /// </summary>
   TZProcedureColumnTypeDynArray = array of TZProcedureColumnType;
 
-  {** Defines a best row identifier. }
+  /// <summary>
+  ///  Defines a best row identifier.
+  /// </summary>
   TZBestRowIdentifier = (brUnknown, brNotPseudo, brPseudo);
 
-  {** Defines a scope best row identifier. }
+  /// <summary>
+  ///  Defines a scope best row identifier.
+  /// </summary>
   TZScopeBestRowIdentifier = (sbrTemporary, sbrTransaction, sbrSession);
 
-  {** Defines a version column. }
+  /// <summary>
+  ///  Defines a version column.
+  /// </summary>
   TZVersionColumn = (vcUnknown, vcNotPseudo, vcPseudo);
 
-  {**  }
   TZImportedKey = (ikCascade, ikRestrict, ikSetNull, ikNoAction, ikSetDefault,
     ikInitiallyDeferred, ikInitiallyImmediate, ikNotDeferrable);
 
   TZTableIndex = (tiStatistic, tiClustered, tiHashed, tiOther);
 
-  {** Defines a post update mode. }
+  /// <summary>
+  ///   Defines a post update mode.
+  /// </summary>
   TZPostUpdatesMode = (poColumnsAll, poColumnsChanged);
 
-  {** Defines a locate mode. }
+  /// <summary>
+  ///   Defines a locate mode.
+  /// </summary>
   TZLocateUpdatesMode = (loWhereAll, loWhereChanged, loWhereKeyOnly);
 
-  {** Defines a MoreResults state }
+  /// <summary>
+  ///   Defines a MoreResults state.
+  /// </summary>
   TZMoreResultsIndicator = (mriUnknown, mriHasNoMoreResults, mriHasMoreResults);
 
+  /// <summary>
+  ///  Defines the server type.
+  /// </summary>
   TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spSybase,
     spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
     spInformix, spCUBRID, spFoxPro);
 
-  {** Generic connection lost exception. }
+  /// <summary>
+  ///   Generic connection lost exception.
+  /// </summary>
   EZSQLConnectionLost = class(EZSQLException);
 
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
@@ -173,31 +207,163 @@ type
   IZSequence = interface;
   IZDataSet = interface;
 
-  {** Driver Manager interface. }
+  /// <summary>
+  ///   Driver Manager interface.
+  /// </summary>
   IZDriverManager = interface(IZInterface)
     ['{8874B9AA-068A-4C0C-AE75-9DB1EA9E3720}']
-
+    /// <summary>
+    ///  Locates a required driver and opens a connection to the specified database.
+    /// </summary>
+    /// <param name="Url">
+    ///   a database connection Url.
+    /// </param>
+    /// <returns>
+    ///   an opened connection.
+    /// </returns>
     function GetConnection(const Url: string): IZConnection;
+    /// <summary>
+    ///  Locates a required driver and opens a connection to the specified database.
+    /// </summary>
+    /// <param name="Url">
+    ///   a database connection Url.
+    /// </param>
+    /// <param name="Info">
+    ///   a list of extra connection parameters.
+    /// </param>
+    /// <returns>
+    ///   an opened connection.
+    /// </returns>
     function GetConnectionWithParams(const Url: string; Info: TStrings): IZConnection;
+    /// <summary>
+    ///  Locates a required driver and opens a connection to the specified database.
+    /// </summary>
+    /// <param name="User">
+    ///   a user's name.
+    /// </param>
+    /// <param name="Password">
+    ///   a user's password.
+    /// </param>
+    /// <returns>
+    ///   an opened connection.
+    /// </returns>
     function GetConnectionWithLogin(const Url: string; const User: string;
       const Password: string): IZConnection;
-
+    /// <summary>
+    ///  Gets a driver which accepts the specified url.
+    /// </summary>
+    /// <param name="Url">
+    ///   a database connection url.
+    /// </param>
+    /// <returns>
+    ///   a found driver or <c>nil</c> otherwise.
+    /// </returns>
     function GetDriver(const Url: string): IZDriver;
+    /// <summary>
+    ///  Locates a required driver and returns the client library version number.
+    /// </summary>
+    /// <param name="Url">
+    ///  a database connection Url.
+    /// </param>
+    /// <returns>
+    ///  client library version number.
+    /// </returns>
     function GetClientVersion(const Url: string): Integer;
+    /// <summary>
+    ///    Registers a driver for specific database.
+    /// </summary>
+    /// <param name="Driver">
+    ///    a driver to be registered.
+    /// </param>
     procedure RegisterDriver(const Driver: IZDriver);
+    /// <summary>
+    ///    Unregisters a driver for specific database.
+    /// </summary>
+    /// <param name="Driver">
+    ///    a driver to be unregistered.
+    /// </param>
     procedure DeregisterDriver(const Driver: IZDriver);
-
+    /// <summary>
+    ///  Gets a collection of registered drivers.
+    /// </summary>
+    /// <returns>
+    ///   an unmodifiable collection with registered drivers.
+    /// </returns>
     function GetDrivers: IZCollection;
-
+    /// <summary>
+    ///  Adds a logging listener to log SQL events.
+    /// </summary>
+    /// <param name="Listener">
+    ///  a logging interface to be added.
+    /// </param>
     procedure AddLoggingListener(const Listener: IZLoggingListener);
+    /// <summary>
+    ///  Removes a logging listener from the list.
+    /// </summary>
+    /// <param name="Listener">
+    ///  a logging interface to be removed.
+    /// </param>
     procedure RemoveLoggingListener(const Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
-
+    /// <summary>
+    ///  Logs a message about event with normal result code.
+    /// </summary>
+    /// <param name="Category">
+    ///  a category of the message.
+    /// </param>
+    /// <param name="Protocol">
+    ///  a name of the protocol.
+    /// </param>
+    /// <param name="Msg">
+    ///  a description message.
+    /// </param>
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString); overload;
     procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
+    /// <summary>
+    ///  Logs a message about event with error result code.
+    /// </summary>
+    /// <param name="Category">
+    ///   the category of the message.
+    /// </param>
+    /// <param name="Protocol">
+    ///   the name of the protocol.
+    /// </param>
+    /// <param name="Msg">
+    ///   a description message.
+    /// </param>
+    /// <param name="ErrorCode">
+    ///   an error code.
+    /// </param>
+    /// <param name="Error">
+    ///   an error message.
+    /// </param>
     procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
+    /// <summary>
+    ///  Constructs a valid URL
+    /// </summary>
+    /// <param name="Protocol">
+    ///  the Driver-protocol (must be assigned).
+    /// </param>
+    /// <param name="HostName">
+    ///  the hostname (could be empty).
+    /// </param>
+    /// <param name="Database">
+    ///  the connection-database (could be empty).
+    /// </param>
+    /// <param name="UserName">
+    ///  the username (could be empty).
+    /// </param>
+    /// <param name="Password">
+    ///  the password(could be empty).
+    /// </param>
+    /// <param name="Port">
+    ///  the Server-Port (could be 0).
+    /// </param>
+    /// <param name="Properties">
+    ///  the Database-Properties (could be empty).
+    /// </param>
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil; const LibLocation: String = ''): String;
@@ -205,7 +371,9 @@ type
     procedure ClearGarbageCollector;
   end;
 
-  {** Database Driver interface. }
+  /// <summary>
+  ///   Database Driver interface.
+  /// </summary>
   IZDriver = interface(IZInterface)
     ['{2157710E-FBD8-417C-8541-753B585332E2}']
 
@@ -233,7 +401,9 @@ type
     function GetConSettings: PZConSettings;
   end;
 
-  {** Database Connection interface. }
+  /// <summary>
+  ///   Database Connection interface.
+  /// </summary>
   IZConnection = interface(IZInterface)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
     procedure RegisterOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
@@ -323,7 +493,9 @@ type
     function GetServerProvider: TZServerProvider;
   end;
 
-  {** Database metadata interface. }
+  /// <summary>
+  ///   Database metadata interface.
+  /// </summary>
   IZDatabaseMetadata = interface(IZInterface)
     ['{FE331C2D-0664-464E-A981-B4F65B85D1A8}']
 
@@ -389,10 +561,10 @@ type
     function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
   end;
 
-  {**
-    Database information interface. Used to describe the database as a whole
-    (version, capabilities, policies, etc).
-  } // technobot 2008-06-24
+  /// <summary>
+  ///  Database information interface. Used to describe the database as a whole
+  ///  (version, capabilities, policies, etc).
+  /// </summary>
   IZDatabaseInfo = interface(IZInterface)
     ['{107CA354-F594-48F9-8E08-CD797F151EA0}']
 
@@ -537,66 +709,449 @@ type
     function GetExtraNameCharacters: string;
   end;
 
-  {** Generic SQL statement interface. }
+  /// <summary>
+  ///  Generic SQL statement interface.
+  /// </summary>
   IZStatement = interface(IZInterface)
     ['{22CEFA7E-6A6D-48EC-BB9B-EE66056E90F1}']
 
+    /// <summary>
+    ///  Executes an SQL statement that returns a single <c>ResultSet</c> object.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>SELECT</c> statement
+    /// </param>
+    /// <returns>
+    ///  a <c>ResultSet</c> object that contains the data produced by the
+    ///  given query; never <c>nil</c>
+    /// </returns>
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload;
+    /// <summary>
+    ///  Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <c>INSERT</c>, <c>UPDATE</c>
+    ///  or <c>DELETE</c> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function ExecuteUpdate(const SQL: ZWideString): Integer; overload;
+    /// <summary>
+    ///  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    ///  or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function Execute(const SQL: ZWideString): Boolean; overload;
+    /// <summary>
+    ///  Executes an SQL statement that returns a single <c>ResultSet</c> object.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>SELECT</c> statement
+    /// </param>
+    /// <returns>
+    ///  a <c>ResultSet</c> object that contains the data produced by the
+    ///  given query; never <c>nil</c>
+    /// </returns>
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload;
+    /// <summary>
+    ///  Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <c>INSERT</c>, <c>UPDATE</c>
+    ///  or <c>DELETE</c> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload;
+    /// <summary>
+    ///  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement. In addition,
+    ///  SQL statements that return nothing, such as SQL DDL statements,
+    ///  can be executed.
+    /// </summary>
+    /// <param name="SQL">
+    ///  an SQL <code>INSERT</code>, <code>UPDATE</code> or
+    ///  <code>DELETE</code> statement or an SQL statement that returns nothing
+    /// </param>
+    /// <returns>
+    ///  either the row count for <code>INSERT</code>, <code>UPDATE</code>
+    ///  or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
+    /// </returns>
     function Execute(const SQL: RawByteString): Boolean; overload;
 
+    /// <summary>
+    ///  get the current SQL string
+    /// </summary>
     function GetSQL : String;
 
+    /// <summary>
+    ///  Releases this <c>Statement</c> object's database
+    ///  resources immediately instead of waiting for
+    ///  this to happen when it is automatically closed.
+    ///  It is generally good practice to release resources as soon as
+    ///  you are finished with them to avoid tying up database
+    ///  resources.
+    ///  <para><b>Note:</b> A <c>Statement</c> object is automatically closed when its
+    ///    reference counter becomes zero. When a <c>Statement</c> object is closed, its current
+    ///    <c>ResultSet</c> object, if one exists, is also closed.
+    ///  </para>
+    /// </summary>
     procedure Close;
     function IsClosed: Boolean;
 
+    /// <summary>
+    ///  Returns the maximum number of bytes allowed
+    ///  for any column value.
+    ///  This limit is the maximum number of bytes that can be
+    ///  returned for any column value.
+    ///  The limit applies only to <c>BINARY</c>,
+    ///  <c>VARBINARY</c>, <c>LONGVARBINARY</c>, <c>CHAR</c>, <c>VARCHAR</c>, and <c>LONGVARCHAR</c>
+    ///  columns.  If the limit is exceeded, the excess data is silently
+    ///  discarded.
+    /// </summary>
+    /// <returns>
+    ///  the current max column size limit; zero means unlimited
+    /// </returns>
     function GetMaxFieldSize: Integer;
+    /// <summary>
+    ///  Sets the limit for the maximum number of bytes in a column to
+    ///  the given number of bytes.  This is the maximum number of bytes
+    ///  that can be returned for any column value.  This limit applies
+    ///  only to <c>BINARY</c>, <c>VARBINARY</c>,
+    ///  <c>LONGVARBINARY</c>, <c>CHAR</c>, <c>VARCHAR</c>, and
+    ///  <c>LONGVARCHAR</c> fields.  If the limit is exceeded, the excess data
+    ///  is silently discarded. For maximum portability, use values
+    ///  greater than 256.
+    /// </summary>
+    /// <param name="Value">
+    ///  the new max column size limit; zero means unlimited
+    /// </param>
     procedure SetMaxFieldSize(Value: Integer);
+    /// <summary>
+    ///  Retrieves the maximum number of rows that a
+    ///  <c>ResultSet</c> object can contain.  If the limit is exceeded, the excess
+    ///  rows are silently dropped.
+    /// </summary>
+    /// <returns>
+    ///  the current max row limit; zero means unlimited
+    /// </returns>
     function GetMaxRows: Integer;
+    /// <summary>
+    ///  Sets the limit for the maximum number of rows that any
+    ///  <c>ResultSet</c> object can contain to the given number.
+    ///  If the limit is exceeded, the excess rows are silently dropped.
+    /// </summary>
+    /// <param name="Value">
+    ///  the new max rows limit; zero means unlimited
+    /// </param>
     procedure SetMaxRows(Value: Integer);
+    /// <summary>
+    ///  Retrieves the number of seconds the driver will
+    ///  wait for a <c>Statement</c> object to execute. If the limit is exceeded, a
+    ///  <c>SQLException</c> is thrown.
+    /// </summary>
+    /// <returns>
+    ///  the current query timeout limit in seconds; zero means unlimited
+    /// </returns>
     function GetQueryTimeout: Integer;
+    /// <summary>
+    ///  Sets the number of seconds the driver will
+    ///  wait for a <c>Statement</c> object to execute to the given number of seconds.
+    ///  If the limit is exceeded, an <c>SQLException</c> is thrown.
+    /// </summary>
+    /// <param name="Value">
+    ///  the new query timeout limit in seconds; zero means unlimited
+    /// </param>
     procedure SetQueryTimeout(Value: Integer);
+    /// <summary>
+    ///  Cancels this <c>Statement</c> object if both the DBMS and
+    ///  driver support aborting an SQL statement.
+    ///  This method can be used by one thread to cancel a statement that
+    ///  is being executed by another thread.
+    /// </summary>
     procedure Cancel;
+    /// <summary>
+    ///  Defines the SQL cursor name that will be used by
+    ///  subsequent <c>Statement</c> object <c>execute</c> methods.
+    ///  This name can then be
+    ///  used in SQL positioned update / delete statements to identify the
+    ///  current row in the <c>ResultSet</c> object generated by this statement.  If
+    ///  the database doesn't support positioned update/delete, this
+    ///  method is a noop.  To insure that a cursor has the proper isolation
+    ///  level to support updates, the cursor's <c>SELECT</c> statement should be
+    ///  of the form 'select for update ...'. If the 'for update' phrase is
+    ///  omitted, positioned updates may fail.
+    ///  <note>
+    ///   <para><B>Note:</B> By definition, positioned update/delete
+    ///   execution must be done by a different <c>Statement</c> object than the one
+    ///   which generated the <c>ResultSet</c> object being used for positioning. Also,
+    ///   cursor names must be unique within a connection.</para>
+    ///  </note>
+    /// </summary>
+    /// <param name="Value">
+    ///    the new cursor name, which must be unique within a connection
+    /// </param>
     procedure SetCursorName(const Value: String);
 
+    /// <summary>
+    ///  Returns the current result as a <c>ResultSet</c> object.
+    ///  This method should be called only once per result.
+    /// </summary>
+    /// <returns>
+    ///  the current result as a <c>ResultSet</c> object;
+    ///  <c>nil</c> if the result is an update count or there are no more results
+    /// </returns>
+    /// <seealso cref="Execute">Execute</seealso>
     function GetResultSet: IZResultSet;
+    /// <summary>
+    ///  Returns the current result as an update count;
+    ///  if the result is a <c>ResultSet</c> object or there are no more results, -1
+    ///  is returned. This method should be called only once per result.
+    /// </summary>
+    /// <returns>
+    ///  the current result as an update count; -1 if the current result is a
+    ///  <c>ResultSet</c> object or there are no more results
+    /// </returns>
+    /// <seealso cref="Execute">Execute</seealso>
     function GetUpdateCount: Integer;
+    /// <summary>
+    ///  Moves to a <c>Statement</c> object's next result.  It returns
+    ///  <c>true</c> if this result is a <c>ResultSet</c> object.
+    ///  This method also implicitly closes any current <c>ResultSet</c>
+    ///  object obtained with the method <c>getResultSet</c>.
+    ///
+    ///  <para>There are no more results when the following is true:
+    ///  <code>(not getMoreResults and (getUpdateCount = -1)</code>
+    ///  </para>
+    /// </summary>
+    /// <returns>
+    ///  <c>true</c> if the next result is a <c>ResultSet</c> object;
+    ///  <c>false</c> if it is an update count or there are no more results
+    /// </returns>
+    /// <seealso cref="Execute">Execute</seealso>
     function GetMoreResults: Boolean;
 
+    /// <summary>
+    ///  Gives the driver a hint as to the direction in which
+    ///  the rows in a result set
+    ///  will be processed. The hint applies only to result sets created
+    ///  using this <c>Statement</c> object.  The default value is
+    ///  <c>fdForward</c>.
+    ///  <para>Note that this method sets the default fetch direction for
+    ///  result sets generated by this <c>Statement</c> object.
+    ///  Each result set has its own methods for getting and setting
+    ///  its own fetch direction.</para>
+    /// </summary>
+    /// <param name="Value">
+    ///  the initial direction for processing rows
+    /// </param>
     procedure SetFetchDirection(Value: TZFetchDirection);
+    /// <summary>
+    ///  Retrieves the direction for fetching rows from
+    ///  database tables that is the default for result sets
+    ///  generated from this <c>Statement</c> object.
+    ///  If this <c>Statement</c> object has not set
+    ///  a fetch direction by calling the method <c>setFetchDirection</c>,
+    ///  the return value is implementation-specific.
+    /// </summary>
+    /// <returns>
+    ///  the default fetch direction for result sets generated
+    ///  from this <c>Statement</c> object
+    /// </returns>
     function GetFetchDirection: TZFetchDirection;
-    procedure SetFetchSize(Value: Integer);
-    function GetFetchSize: Integer;
 
+    /// <summary>
+    ///  Gives the DBC driver a hint as to the number of rows that should
+    ///  be fetched from the database when more rows are needed.  The number
+    ///  of rows specified affects only result sets created using this
+    ///  statement. If the value specified is zero, then the hint is ignored.
+    ///  The default value is zero.
+    ///  <para><b>Note:</b> Most drivers will ignore this.</para>
+    /// </summary>
+    /// <param name="Value">
+    ///  the number of rows to fetch
+    /// </param>
+    procedure SetFetchSize(Value: Integer);
+    /// <summary>
+    ///  Retrieves the number of result set rows that is the default
+    ///  fetch size for result sets
+    ///  generated from this <c>Statement</c> object.
+    ///  If this <c>Statement</c> object has not set
+    ///  a fetch size by calling the method <c>setFetchSize</c>,
+    ///  the return value is implementation-specific.
+    ///  <para><b>Note:</b> Most drivers will ignore this.</para>
+    /// </summary>
+    /// <returns>
+    ///  the default fetch size for result sets generated
+    ///  from this <c>Statement</c> object
+    /// </returns>
+    function GetFetchSize: Integer;
+    /// <summary>
+    ///  Sets a result set concurrency for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <param name="Value">
+    ///  either <c>rcReadOnly</code> or
+    ///  <code>rcUpdateable</code>
+    /// </param>
     procedure SetResultSetConcurrency(Value: TZResultSetConcurrency);
+    /// <summary>
+    ///  Retrieves the result set concurrency for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <returns>
+    ///  either <c>rcReadOnly</c> or
+    ///  <c>rcUpdateable</c>
+    /// </returns>
     function GetResultSetConcurrency: TZResultSetConcurrency;
+    /// <summary>
+    ///  Sets a result set type for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <param name="Value">
+    ///  one of <c>rtForwardOnly</c>,
+    ///  <c>rtScrollInsensitive</c>, or
+    ///  <c>rtScrollSensitive</c>
+    /// </param>
     procedure SetResultSetType(Value: TZResultSetType);
+    /// <summary>
+    ///  Retrieves the result set type for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.
+    /// </summary>
+    /// <returns>
+    ///  one of <c>rcForwardOnly</c>,
+    ///  <c>rcScrollInsensitive</c>, or
+    ///  <c>rcScrollSensitive</c>
+    /// </returns>
     function GetResultSetType: TZResultSetType;
 
+    /// <summary>
+    ///  Sets a new value for post updates.
+    /// </summary>
+    /// <param name="Value">
+    ///  a new value for post updates.
+    /// </param>
     procedure SetPostUpdates(Value: TZPostUpdatesMode);
+    /// <summary>
+    ///  Gets the current value for post updates.
+    /// </summary>
+    /// <returns>
+    ///  the current value for post updates.
+    /// </returns>
     function GetPostUpdates: TZPostUpdatesMode;
+    /// <summary>
+    ///  Sets a new value for locate updates.
+    /// </summary>
+    /// <param name="Value">
+    ///  Value a new value for locate updates.
+    /// </param>
     procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
+    /// <summary>
+    ///  Gets the current value for locate updates.
+    /// </summary>
+    /// <returns>
+    ///  the current value for locate updates.
+    /// </returns>
     function GetLocateUpdates: TZLocateUpdatesMode;
 
+    /// <summary>
+    ///  Adds an SQL command to the current batch of commmands for this
+    ///  <c>Statement</c> object. This method is optional.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>INSERT</c> or
+    ///  <c>UPDATE</c> statement
+    /// </param>
     procedure AddBatch(const SQL: string);
+    /// <summary>
+    ///  Adds an SQL command to the current batch of commmands for this
+    ///  <c>Statement</c> object. This method is optional.
+    /// </summary>
+    /// <param name="SQL">
+    ///  typically this is a static SQL <c>INSERT</c> or
+    ///  <c>UPDATE</c> statement
+    /// </param>
     procedure AddBatchRequest(const SQL: string);
 
+    /// <summary>
+    ///  Makes the set of commands in the current batch empty.
+    ///  This method is optional.
+    /// </summary>
     procedure ClearBatch;
     function ExecuteBatch: TIntegerDynArray;
 
+    /// <summary>
+    ///  Returns the <c>Connection</c> object
+    ///  that produced this <c>Statement</c> object.
+    /// </summary>
+    /// <returns>
+    ///  the connection that produced this statement
+    /// </returns>
     function GetConnection: IZConnection;
+
+    /// <summary>
+    ///  Gets statement parameters.
+    /// </summary>
+    /// <returns>
+    ///  a list with statement parameters.
+    /// </returns>
     function GetParameters: TStrings;
+    /// <summary>
+    ///  Returns the ChunkSize for reading/writing large lobs
+    /// </summary>
+    /// <returns>
+    ///  the chunksize in bytes.
+    /// </returns>
     function GetChunkSize: Integer;
 
+    /// <summary>
+    ///  Retrieves the first warning reported by calls on this <c>Statement</c> object.
+    ///  Subsequent <c>Statement</c> object warnings will be chained to this
+    ///  <c>SQLWarning</c> object.
+    ///  <para>The warning chain is automatically cleared each time
+    ///  a statement is (re)executed.</para>
+    ///  <para><b>Note:</b> If you are processing a <c>ResultSet</c> object, any
+    ///  warnings associated with reads on that <c>ResultSet</c> object
+    ///  will be chained on it.</para>
+    /// </summary>
+    /// <returns>
+    ///  the first <c>SQLWarning</c> object or <c>nil</c>
+    /// </returns>
     function GetWarnings: EZSQLWarning;
+
+    /// <summary>
+    ///  Clears all the warnings reported on this <c>Statement</c>
+    ///  object. After a call to this method,
+    ///  the method <c>getWarnings</c> will return
+    ///  <c>nil</c> until a new warning is reported for this
+    ///  <c>Statement</c> object.
+    /// </summary>
     procedure ClearWarnings;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
   end;
 
-  {** Prepared SQL statement interface. }
+  /// <summary>
+  ///   Prepared SQL statement interface.
+  /// </summary>
   IZPreparedStatement = interface(IZStatement)
     ['{990B8477-AF11-4090-8821-5B7AFEA9DD70}']
 
@@ -647,7 +1202,9 @@ type
     procedure ClearParameters;
   end;
 
-  {** Callable SQL statement interface. }
+  /// <summary>
+  ///   Callable SQL statement interface.
+  /// </summary>
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
     { Multiple ResultSet support API }
@@ -657,7 +1214,7 @@ type
     function GetLastResultSet: IZResultSet;
     function BOR: Boolean;
     function EOR: Boolean;
-    function GetResultSetByIndex(const Index: Integer): IZResultSet;
+    function GetResultSetByIndex(Index: Integer): IZResultSet;
     function GetResultSetCount: Integer;
 
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); //deprecated;
@@ -704,11 +1261,15 @@ type
       const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
   end;
 
-  {** EH: sort helper procs }
+  /// <summary>
+  ///   EH: sort helper procs.
+  /// </summary>
   TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
   TCompareFuncs = Array of TCompareFunc;
 
-  {** Defines Column-Comparison kinds }
+  /// <summary>
+  ///   Defines Column-Comparison kinds
+  /// </summary>
   TComparisonKind = (ckAscending{greater than}, ckDescending{less than}, ckEquals);
   TComparisonKindArray = Array of TComparisonKind;
 
@@ -718,7 +1279,9 @@ type
   TZJSONComposeOptions = set of TZJSONComposeOption;
   {$ENDIF USE_SYNCOMMONS}
 
-  {** Rows returned by SQL query. }
+  /// <summary>
+  ///   Rows returned by SQL query.
+  /// </summary>
   IZResultSet = interface(IZInterface)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']
 
@@ -975,14 +1538,18 @@ type
     {$ENDIF USE_SYNCOMMONS}
   end;
 
-  {** TDataSet interface}
+  /// <summary>
+  ///   TDataSet interface.
+  /// </summary>
   IZDataSet = interface(IZInterface)
     ['{DBC24011-EF26-4FD8-AC8B-C3E01619494A}']
     //function GetDataSet: TDataSet;
     function IsEmpty: Boolean;
   end;
 
-  {** ResultSet metadata interface. }
+  /// <summary>
+  ///   ResultSet metadata interface.
+  /// </summary>
   IZResultSetMetadata = interface(IZInterface)
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
 
@@ -1013,8 +1580,9 @@ type
     function HasDefaultValue(ColumnIndex: Integer): Boolean;
   end;
 
-  {** External or internal blob wrapper object. }
-  PIZLob = ^IZBlob;
+  /// <summary>
+  ///   External or internal blob wrapper object.
+  /// </summary>
   IZBlob = interface(IZInterface)
     ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
 
@@ -1066,6 +1634,7 @@ type
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
     {$ENDIF}
   end;
+  PIZLob = ^IZBlob;
   IZLobDynArray = array of IZBLob;
 
   IZUnCachedLob = interface(IZBlob)
@@ -1073,7 +1642,9 @@ type
     procedure FlushBuffer;
   end;
 
-  {** Database notification interface. }
+  /// <summary>
+  ///   Database notification interface.
+  /// </summary>
   IZNotification = interface(IZInterface)
     ['{BF785C71-EBE9-4145-8DAE-40674E45EF6F}']
 
@@ -1086,7 +1657,9 @@ type
     function GetConnection: IZConnection;
   end;
 
-  {** Database sequence generator interface. }
+  /// <summary>
+  ///   Database sequence generator interface.
+  /// </summary>
   IZSequence = interface(IZInterface)
     ['{A9A54FE5-0DBE-492F-8DA6-04AC5FCE779C}']
     function  GetName: string;
@@ -1101,7 +1674,9 @@ type
   end;
 
 var
-  {** The common driver manager object. }
+  /// <summary>
+  ///   The common driver manager object.
+  /// </summary>
   DriverManager: IZDriverManager;
   GlobalCriticalSection: TCriticalSection;
 
@@ -1110,10 +1685,12 @@ implementation
 uses ZMessages, ZConnProperties;
 
 type
-  {** Driver Manager interface. }
 
   { TZDriverManager }
 
+  /// <summary>
+  ///   Driver Manager interface.
+  /// </summary>
   TZDriverManager = class(TInterfacedObject, IZDriverManager)
   private
     FDriversCS: TCriticalSection; // thread-safety for FDrivers collection. Not the drivers themselves!
@@ -1184,10 +1761,6 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Gets a collection of registered drivers.
-  @return an unmodifiable collection with registered drivers.
-}
 function TZDriverManager.GetDrivers: IZCollection;
 begin
   FDriversCS.Enter;
@@ -1198,10 +1771,6 @@ begin
   end;
 end;
 
-{**
-  Registers a driver for specific database.
-  @param Driver a driver to be registered.
-}
 procedure TZDriverManager.RegisterDriver(const Driver: IZDriver);
 begin
   FDriversCS.Enter;
@@ -1213,10 +1782,6 @@ begin
   end;
 end;
 
-{**
-  Unregisters a driver for specific database.
-  @param Driver a driver to be unregistered.
-}
 procedure TZDriverManager.DeregisterDriver(const Driver: IZDriver);
 begin
   FDriversCS.Enter;
@@ -1227,11 +1792,6 @@ begin
   end;
 end;
 
-{**
-  Gets a driver which accepts the specified url.
-  @param Url a database connection url.
-  @return a found driver or <code>null</code> otherwise.
-}
 function TZDriverManager.GetDriver(const Url: string): IZDriver;
 var
   I: Integer;
@@ -1254,12 +1814,6 @@ begin
   end;
 end;
 
-{**
-  Locates a required driver and opens a connection to the specified database.
-  @param Url a database connection Url.
-  @param Info an extra connection parameters.
-  @return an opened connection.
-}
 function TZDriverManager.GetConnectionWithParams(const Url: string; Info: TStrings):
   IZConnection;
 var
@@ -1271,11 +1825,6 @@ begin
   Result := Driver.Connect(Url, Info);
 end;
 
-{**
-  Locates a required driver and returns the client library version number.
-  @param Url a database connection Url.
-  @return client library version number.
-}
 function TZDriverManager.GetClientVersion(const Url: string): Integer;
 var
   Driver: IZDriver;
@@ -1286,13 +1835,6 @@ begin
   Result := Driver.GetClientVersion(Url);
 end;
 
-{**
-  Locates a required driver and opens a connection to the specified database.
-  @param Url a database connection Url.
-  @param User a user's name.
-  @param Password a user's password.
-  @return an opened connection.
-}
 function TZDriverManager.GetConnectionWithLogin(const Url: string; const User: string;
   const Password: string): IZConnection;
 var
@@ -1308,11 +1850,6 @@ begin
   end;
 end;
 
-{**
-  Locates a required driver and opens a connection to the specified database.
-  @param Url a database connection Url.
-  @return an opened connection.
-}
 function TZDriverManager.GetConnection(const Url: string): IZConnection;
 begin
   Result := GetConnectionWithParams(Url, nil);
@@ -1328,10 +1865,6 @@ begin
   end;
 end;
 
-{**
-  Adds a logging listener to log SQL events.
-  @param Listener a logging interface to be added.
-}
 procedure TZDriverManager.AddLoggingListener(const Listener: IZLoggingListener);
 begin
   FLogCS.Enter;
@@ -1343,10 +1876,6 @@ begin
   end;
 end;
 
-{**
-  Removes a logging listener from the list.
-  @param Listener a logging interface to be removed.
-}
 procedure TZDriverManager.RemoveLoggingListener(const Listener: IZLoggingListener);
 begin
   FLogCS.Enter;
@@ -1363,14 +1892,6 @@ begin
   Result := FHasLoggingListener;
 end;
 
-{**
-  Logs a message about event with error result code.
-  @param Category a category of the message.
-  @param Protocol a name of the protocol.
-  @param Msg a description message.
-  @param ErrorCode an error code.
-  @param Error an error message.
-}
 procedure TZDriverManager.LogError(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer;
   const Error: RawByteString);
@@ -1421,12 +1942,6 @@ begin
   end;
 end;
 
-{**
-  Logs a message about event with normal result code.
-  @param Category a category of the message.
-  @param Protocol a name of the protocol.
-  @param Msg a description message.
-}
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString);
 begin
@@ -1464,16 +1979,6 @@ begin
   end;
 end;
 
-{**
-  Constructs a valid URL
-  @param Protocol the Driver-protocol (must be assigned).
-  @param HostName the hostname (could be empty).
-  @param Database the connection-database (could be empty).
-  @param UserName the username (could be empty).
-  @param Password the password(could be empty).
-  @param Port the Server-Port (could be 0).
-  @param Properties the Database-Properties (could be empty).
-}
 function TZDriverManager.ConstructURL(const Protocol, HostName, Database,
   UserName, Password: String; const Port: Integer;
   const Properties: TStrings = nil; const LibLocation: String = ''): String;

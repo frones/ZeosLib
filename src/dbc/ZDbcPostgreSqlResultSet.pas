@@ -835,7 +835,7 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                       Len := PEnd - Result;
                     end;
         stBigDecimal: begin
-                      PGNumeric2BCD(Result, BCD);
+                      PGNumeric2BCD(Result, BCD{%H-});
                       Result := @fTinyBuffer[0];
                       Len := BCDToRaw(BCD, @fTinyBuffer[0], '.');
                     end;
@@ -1011,7 +1011,7 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                       Len := PEnd - Result;
                     end;
         stBigDecimal: begin
-                      PGNumeric2BCD(P, BCD);
+                      PGNumeric2BCD(P, BCD{%H-});
                       Result := @fTinyBuffer[0];
                       Len := BCDToUni(BCD, @fTinyBuffer[0], '.');
                     end;
@@ -1434,7 +1434,7 @@ fail: LastWasNull := True;
       end else ValidGUIDToBinary(P, @Result.D1)
     else case ColumnType of
       stAsciiStream, stUnicodeStream,
-      stString, stUnicodeString:  if ZFastCode.StrLen(P) in [36, 38]
+      stString, stUnicodeString:  if Byte(ZFastCode.StrLen(P)) in [36, 38]
                                   then ValidGUIDToBinary(P, @Result.D1)
                                   else goto fail;
       else Goto Fail;

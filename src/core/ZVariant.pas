@@ -131,6 +131,7 @@ type
       vtCurrency: (VCurrency: Currency);
       vtBigDecimal: (VBigDecimal: TBCD);
       vtTimeStamp: (VTimeStamp: TZTimeStamp);
+      vtGUID: (VGUID: TGUID);
       {$IFDEF BCC32_vtDateTime_ERROR}
       vtDateTime: (VDateTime: Double);
       {$ELSE}
@@ -258,6 +259,7 @@ type
     function GetAsDouble(const Value: TZVariant): Double;
     function GetAsCurrency(const Value: TZVariant): Currency;
     function GetAsBigDecimal(const Value: TZVariant): TBCD;
+    function GetAsGUID(const Value: TZVariant): TGUID;
     function GetAsString(const Value: TZVariant): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
@@ -281,6 +283,7 @@ type
     procedure SetAsDouble(out Value: TZVariant; const Data: Double);
     procedure SetAsCurrency(out Value: TZVariant; const Data: Currency);
     procedure SetAsBigDecimal(out Value: TZVariant; const Data: TBCD);
+    procedure SetAsGUID(out Value: TZVariant; const Data: TGUID);
     procedure SetAsString(out Value: TZVariant; const Data: String);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAsAnsiString(out Value: TZVariant; const Data: AnsiString);
@@ -652,6 +655,7 @@ begin
 {$ENDIF}
     vtCharRec: DstValue.VCharRec := SrcValue.VCharRec;
     vtUnicodeString: DstValue.VUnicodeString := SrcValue.VUnicodeString;
+    vtTimeStamp: DstValue.VDateTime := SrcValue.VDateTime;
     vtDateTime: DstValue.VDateTime := SrcValue.VDateTime;
     vtPointer: DstValue.VPointer := SrcValue.VPointer;
     vtInterface: DstValue.VInterface := SrcValue.VInterface;
@@ -1200,6 +1204,16 @@ begin
 end;
 
 {**
+  Gets a variant to GUID value.
+  @param Value a variant to be converted.
+  @param a result value.
+}
+function TZSoftVariantManager.GetAsGUID(const Value: TZVariant): TGUID;
+begin
+  Result := Convert(Value, vtGUID).VGUID;
+end;
+
+{**
   Gets a variant to currency value.
   @param Value a variant to be converted.
   @param a result value.
@@ -1382,6 +1396,17 @@ procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantMana
   const Data: Double);
 begin
   Value := EncodeDouble(Data);
+end;
+
+{**
+  Assigns a GUID value to variant.
+  @param Value a variant to store the value.
+  @param Data a value to be assigned.
+}
+procedure TZSoftVariantManager.SetAsGUID(out Value: TZVariant;
+  const Data: TGUID);
+begin
+  Value := EncodeGUID(Data);
 end;
 
 {**

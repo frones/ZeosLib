@@ -1992,6 +1992,7 @@ end;
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
 function TZRowAccessor.IsNull(ColumnIndex: Integer): Boolean;
+var TempBlob: PIZLob;
 begin
   if not Assigned(FBuffer) then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
@@ -2003,6 +2004,10 @@ begin
 
   {$R-}
   Result := FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNull;
+  if not Result and (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] in [stUnicodeStream, stAsciiStream, stBinaryStream]) then begin
+    TempBlob := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] +1];
+    Result := (TempBlob^ = nil) or TempBlob.IsEmpty;
+  end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
@@ -2125,7 +2130,7 @@ Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
       stAsciiStream, stUnicodeStream:
                   if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
                     if PIZLob(Data)^.IsClob then begin
-                      if ConSettings^.AutoEncode
+                      if ConSettings^.ClientCodePage.Encoding = ceUTF16// ConSettings^.AutoEncode
                       then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP)
                       else Result := PIZLob(Data)^.GetPAnsiChar(FClientCP);
                       Len := PIZLob(Data)^.Length;
@@ -3366,34 +3371,9 @@ end;
     <code>ResultSet</code> value in the specified column
 }
 function TZRowAccessor.GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
-var
-  Ptr: PPointer;
-  NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
 begin
-{$R-}
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnIndex(ColumnIndex);
-  if not (FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = stDataSet) then
-  begin
-    raise EZSQLException.Create(
-      Format(SCanNotAccessBlobRecord,
-      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}])]));
-  end;
-{$ENDIF}
-
-  Ptr := PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1]);
-  NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]]);
-
-  {$IFNDEF FPC}
-  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then
-  {$ELSE}
-  if NullPtr^ = 0 then
-  {$ENDIF}
-    Result := IZDataSet(Ptr^)
-  else
-    Result := nil;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  IsNull := Result = nil;
+  Result := nil;
+  IsNull := True;
 end;
 
 {**

@@ -92,7 +92,7 @@ type
     property Loaded: Boolean read FLoaded write FLoaded;
     property Handle: THandle { M.A. LongWord} read FHandle write FHandle;
     property CurrentLocation: String read FCurrentLocation write FCurrentLocation;
-    function GetAddress(ProcName: {$IFDEF HAVE_GetProcAddressW}PWideChar{$ELSE}PAnsiChar{$ENDIF}): Pointer;
+    function GetAddress(ProcName: {$IFDEF HAVE_GetProcAddressW}PWideChar{$ELSE}PAnsiChar{$ENDIF}; IsRequired: Boolean = False): Pointer;
   end;
 
 implementation
@@ -261,9 +261,15 @@ end;
   @param ProcName a name of the procedure.
   @return a procedure address.
 }
-function TZNativeLibraryLoader.GetAddress(ProcName: {$IFDEF HAVE_GetProcAddressW}PWideChar{$ELSE}PAnsiChar{$ENDIF}): Pointer;
+function TZNativeLibraryLoader.GetAddress(ProcName: {$IFDEF HAVE_GetProcAddressW}PWideChar{$ELSE}PAnsiChar{$ENDIF};
+  IsRequired: Boolean = False): Pointer;
 begin
   Result := GetProcAddress(Handle, ProcName);
+  if IsRequired and (Result = nil) then begin
+    FreeLibrary(FHandle);
+    raise Exception.Create('Required method "'+String(ProcName)+'" is not exported by library. Check if the library is valid!');
+  end;
+
 end;
 
 end.

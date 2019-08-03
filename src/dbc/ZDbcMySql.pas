@@ -644,7 +644,10 @@ end;
 function TZMySQLConnection.CreateCallableStatement(const SQL: string; Info: TStrings):
   IZCallableStatement;
 begin
-  Result := TZMySQLCallableStatement.Create(Self, SQL, Info);
+  if (FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 100000)) or
+     (not FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 50608))
+  then Result := TZMySQLCallableStatement56up.Create(Self, SQL, Info)
+  else Result := TZMySQLCallableStatement56down.Create(Self, SQL, Info);
 end;
 
 {**

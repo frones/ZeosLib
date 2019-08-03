@@ -95,7 +95,7 @@ const
 
   ODBCInputOutputType: array[Boolean, TZProcedureColumnType] of SQLSMALLINT = (
     (SQL_PARAM_INPUT{pctUnknown}, SQL_PARAM_INPUT{pctIn}, SQL_PARAM_INPUT_OUTPUT{pctInOut},
-     SQL_PARAM_OUTPUT{pctOut}, SQL_RETURN_VALUE{pctReturn}, SQL_PARAM_TYPE_UNKNOWN{pctResultSet}),
+     SQL_PARAM_OUTPUT{pctOut}, SQL_PARAM_OUTPUT{pctReturn}, SQL_PARAM_TYPE_UNKNOWN{pctResultSet}),
 
     (SQL_PARAM_INPUT{pctUnknown}, SQL_PARAM_INPUT{pctIn}, SQL_PARAM_INPUT_OUTPUT_STREAM{pctInOut},
      SQL_PARAM_OUTPUT_STREAM{pctOut}, SQL_RETURN_VALUE{pctReturn}, SQL_PARAM_TYPE_UNKNOWN{pctResultSet}));

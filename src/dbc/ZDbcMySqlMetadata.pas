@@ -2544,7 +2544,7 @@ var
   Len: NativeUInt;
   SQL: String;
   TypeName, Temp: RawByteString;
-  ParamList, Params, Names, Returns: TStrings;
+  ParamList, Params, Names{ Returns}: TStrings;
   I, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
   ProcedureNameCondition, SchemaCondition: string;
@@ -2642,20 +2642,24 @@ begin
       ParamList := TStringList.Create;
       Params := TStringList.Create;
       Names := TStringList.Create;
-      Returns := TStringList.Create;
+      //Returns := TStringList.Create;
       while Next do
       begin
-        PutSplitString(ParamList, Trim(GetString(PARAMS_Index)), ',');
+        ParamList.Clear;
+        SQL := Trim(GetString(RETURN_VALUES_Index));
+        if SQL <> '' then
+          ParamList.Add('RETURNS '+SQL);
+        AppendSplitString(ParamList, Trim(GetString(PARAMS_Index)), ',');
         PutSplitString(ParamList, DecomposeParamFromList(ParamList), LineEnding);
 
-        PutSplitString(Returns, Trim(GetString(RETURN_VALUES_Index)), ',');
-        PutSplitString(Returns, DecomposeParamFromList(Returns), LineEnding);
+        //PutSplitString(Returns, Trim(GetString(RETURN_VALUES_Index)), ',');
+        //PutSplitString(Returns, DecomposeParamFromList(Returns), LineEnding);
 
-        for I := 0 to Returns.Count-1 do
+        {for I := 0 to Returns.Count-1 do
         begin
           Returns[i] := 'RETURNS '+Returns[i];
           ParamList.Add(Returns[i]);
-        end;
+        end;}
 
         for i := 0 to ParamList.Count -1 do
         begin
@@ -2723,7 +2727,7 @@ begin
     FreeAndNil(Names);
     FreeAndNil(Params);
     FreeAndNil(ParamList);
-    FreeAndNil(Returns);
+    //FreeAndNil(Returns);
   end;
 end;
 
@@ -2885,7 +2889,7 @@ begin
        + '  SPECIFIC_CATALOG as PROCEDURE_CAT, '
        + '  SPECIFIC_SCHEMA as PROCEDURE_SCHEM, '
        + '  SPECIFIC_NAME as PROCEDURE_NAME, '
-       + '  PARAMETER_NAME as COLUMN_NAME, '
+       + '  case when (P.ORDINAL_POSITION = 0) then ''ReturnValue'' else PARAMETER_NAME end as COLUMN_NAME, '
        + '  case when PARAMETER_MODE = ''IN'' then '+IntToStr(Ord(pctIn))+' when PARAMETER_MODE = ''INOUT'' then '+IntToStr(Ord(pctInOut))+' when PARAMETER_MODE = ''OUT'' then '+IntToStr(Ord(pctOut))+' when PARAMETER_MODE is null then '+IntToStr(Ord(pctReturn))+' else '+IntToStr(Ord(pctUnknown))+' end as COLUMN_TYPE, '
        // don''t forget the DATA_TYPE column
        + '  DATA_TYPE as TYPE_NAME, '
@@ -2898,31 +2902,8 @@ begin
        + '  NUMERIC_PRECISION, '
        + '  CHARACTER_MAXIMUM_LENGTH '
        + 'from information_schema.PARAMETERS P '
-       + 'where (P.ORDINAL_POSITION > 0)' + AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition) //position 0 is reserved for function results
-       + ' ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION) '
-
-       + 'union all ' // the union all and all this stuff is necessary because the rest of the code expects the return value of functions to be the last parameter.
-
-       + '(select '
-       + '  SPECIFIC_CATALOG as PROCEDURE_CAT, '
-       + '  SPECIFIC_SCHEMA as PROCEDURE_SCHEM, '
-       + '  SPECIFIC_NAME as PROCEDURE_NAME, '
-       + '  ''ReturnValue'' as COLUMN_NAME, '
-       + '  case when PARAMETER_MODE = ''IN'' then 1 when PARAMETER_MODE = ''INOUT'' then 2 when PARAMETER_MODE = ''OUT'' then 3 when PARAMETER_MODE is null then 4 else 0 end as COLUMN_TYPE, '
-       // don''t forget the DATA_TYPE column
-       + '  DATA_TYPE as TYPE_NAME, '
-       // don''t forget the PRECISION column -> mix of CHARACTER_MAXIMUM_LENGTH and NUMERIC_PRECISION
-       + '  CHARACTER_OCTET_LENGTH as LENGTH, '
-       + '  NUMERIC_SCALE as SCALE, '
-       // don''t forget to null the radix column?
-       // don''t forget nullable -> 2
-       // don''t forget remarks -> null
-       + '  NUMERIC_PRECISION, '
-       + '  CHARACTER_MAXIMUM_LENGTH '
-       + 'from information_schema.PARAMETERS P '
-       + 'where (P.ORDINAL_POSITION = 0)' + AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition) //position 0 is reserved for function results
-       + ' ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION)';
-
+       + 'where (1=1)' + AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition) //position 0 is reserved for function results
+       + ' ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION) ';
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do begin
     while Next do begin
       MysqlTypeToZeos(GetString(myProcColTypeNameIndex), GetInt(myExtraNumericPrecisionIndex), GetInt(myProcColScaleIndex), GetInt(myExtraMaxCharLength), ZType, ZPrecision, ZScale);
