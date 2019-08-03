@@ -1083,7 +1083,7 @@ begin
         DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
       PError := FPlainDriver.GetResultErrorField(QueryHandle,PG_DIAG_SQLSTATE);
       //transaction aborted and in postre zombi status? If so a rollback is required
-      if (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
+      if (PError = nil) or (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
         FPlainDriver.PQclear(QueryHandle);
         QueryHandle := FPlainDriver.ExecuteQuery(FHandle, Pointer(cRollback));
       end;

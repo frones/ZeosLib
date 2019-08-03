@@ -89,6 +89,51 @@ type
     function GetXSQLDAMaxSize: LongWord;
   end;
 
+  TZInterbase6Connection = class;
+  TZIBTransactionManager = class;
+
+  TOnCursorClose = procedure(const RS: IZResultSet) of object;
+
+  TZIBTransaction = class(TZCodePagedObject, IImmediatelyReleasable)
+  private
+    fDoCommit, fDoLog: Boolean;
+    FOpenCursors: TList;
+    FTrHandle: TISC_TR_HANDLE;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZIBTransactionManager;
+  public
+    procedure Commit;
+    procedure Rollback;
+    procedure RegisterOpenCursor(const RS: IZResultSet; Out OnCursorClose: TOnCursorClose);
+    procedure DeRegisterOpenCursor(const RS: IZResultSet);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    procedure StartTransaction;
+    function GetTrHandle: PISC_TR_HANDLE;
+  public
+    constructor Create(const Owner: TZIBTransactionManager);
+    procedure BeforeDestruction; override;
+  end;
+
+
+  TZIBTransactionManager = class(TZCodePagedObject, IImmediatelyReleasable)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZInterbase6Connection;
+    FOrphanTransactions, FTransactions: TObjectList;
+  public
+    function GetTrHandle: PISC_TR_HANDLE;
+    procedure RemoveOrphan(const Obj: TZIBTransaction);
+    procedure AddToOrphanList(const Obj: TZIBTransaction);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    function GetActiveTransaction: TZIBTransaction;
+  public
+    function StartTransaction(TransactIsolationLevel: TZTransactIsolationLevel;
+      AutoCommit, ReadOnly: Boolean): Integer; overload;
+    function StartTransaction: Integer; overload;
+    function Commit: Integer;
+    function Rollback: Integer;
+  public
+    Constructor Create(Owner: TZInterbase6Connection);
+  end;
+
   {** Implements Interbase6 Database Connection. }
 
   { TZInterbase6Connection }
@@ -116,8 +161,6 @@ type
     procedure OnPropertiesChange({%H-}Sender: TObject); override;
   public
     procedure StartTransaction;
-    function GetPlainDriver: IZInterbasePlainDriver;
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function GetHostVersion: Integer; override;
     function GetClientVersion: Integer; Override;
     function IsFirebirdLib: Boolean;
@@ -127,7 +170,7 @@ type
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
     procedure CreateNewDatabase(const SQL: RawByteString);
-
+  public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
@@ -137,6 +180,7 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
 
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetAutoCommit(Value: Boolean); override;
 
@@ -965,8 +1009,7 @@ var
   OverwritableParams: TOverwritableParamValues;
 begin
   if FHandle <> 0 then begin
-    if FTrHandle <> 0 then
-    begin {CLOSE Last Transaction first!}
+    if FTrHandle <> 0 then begin {CLOSE Last Transaction first!}
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
       FTrHandle := 0;
@@ -980,7 +1023,6 @@ begin
       case TransactIsolationLevel of
         tiReadCommitted:
           begin
-            // hier
             if (self as IZInterbase6Connection).GetHostVersion >= 4000000 then
               OverwritableParams[parRecVer] := 'isc_tpb_read_consistency'
             else
@@ -1247,6 +1289,179 @@ begin
     Result := Format(' NEXT VALUE FOR %s ', [QuotedName])
   else
     Result := Format(' GEN_ID(%s, %d) ', [QuotedName, BlockSize]);
+end;
+
+{ TZIBTransactionManager }
+
+procedure TZIBTransactionManager.AddToOrphanList(const Obj: TZIBTransaction);
+var I: Integer;
+begin
+  I := FTransactions.IndexOf(Obj);
+  {$IFDEF DEBUG}Assert(I > -1, 'Wrong orphan behavior');{$ENDIF}
+  FOrphanTransactions.Add(Obj);
+  FTransactions[i] := nil;
+  FTransactions.Delete(I);
+end;
+
+function TZIBTransactionManager.Commit: Integer;
+begin
+  GetActiveTransaction.Rollback;
+  Result := FTransactions.Count;
+end;
+
+constructor TZIBTransactionManager.Create(Owner: TZInterbase6Connection);
+begin
+  FTransactions := TObjectList.Create(True);
+  FOrphanTransactions := TObjectList.Create(True);
+  FOwner := Owner;
+end;
+
+function TZIBTransactionManager.GetActiveTransaction: TZIBTransaction;
+begin
+  Result := nil;
+end;
+
+function TZIBTransactionManager.GetTrHandle: PISC_TR_HANDLE;
+begin
+  Result := GetActiveTransaction.GetTrHandle;
+end;
+
+procedure TZIBTransactionManager.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var I: Integer;
+begin
+  for i := 0 to FOrphanTransactions.Count -1 do
+    TZIBTransaction(FOrphanTransactions[i]).ReleaseImmediat(Sender, AError);
+  FOrphanTransactions.Clear;
+  for i := 0 to FTransactions.Count -1 do
+    TZIBTransaction(FTransactions[i]).ReleaseImmediat(Sender, AError);
+  FTransactions.Clear;
+end;
+
+procedure TZIBTransactionManager.RemoveOrphan(const Obj: TZIBTransaction);
+begin
+end;
+
+function TZIBTransactionManager.Rollback: Integer;
+begin
+  GetActiveTransaction.Rollback;
+  Result := FTransactions.Count;
+end;
+
+function TZIBTransactionManager.StartTransaction: Integer;
+begin
+  with fOwner do
+    Result := Self.StartTransaction(TransactIsolationLevel, AutoCommit, ReadOnly)
+end;
+
+function TZIBTransactionManager.StartTransaction(
+  TransactIsolationLevel: TZTransactIsolationLevel; AutoCommit,
+  ReadOnly: Boolean): Integer;
+begin
+  Result := -1;
+end;
+
+{ TZIBTransaction }
+
+procedure TZIBTransaction.BeforeDestruction;
+begin
+  try
+    FOpenCursors.Clear;
+    if fDoCommit
+    then Commit
+    else RollBack;
+  finally
+    FreeAndNil(FOpenCursors);
+    inherited BeforeDestruction;
+  end;
+end;
+
+procedure TZIBTransaction.Commit;
+var Status: ISC_STATUS;
+begin
+  if FTrHandle <> 0 then with FOwner.FOwner do try
+    if (FOpenCursors.Count = 0)
+    then Status := FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle)
+    else begin
+      fDoCommit := True;
+      fDoLog := False;
+      Status := FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
+      FOwner.AddToOrphanList(Self);
+    end;
+    if Status <> 0 then
+      CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+  finally
+    if fDoLog and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+  end;
+end;
+
+constructor TZIBTransaction.Create(const Owner: TZIBTransactionManager);
+begin
+  FOwner := Owner;
+  ConSettings := Owner.FOwner.ConSettings;
+  FOpenCursors := TList.Create;
+  fDoLog := True;
+end;
+
+procedure TZIBTransaction.DeRegisterOpenCursor(const RS: IZResultSet);
+var I: Integer;
+begin
+  {$IFDEF DEBUG}Assert(FOpenCursors <> nil, 'Wrong DeRegisterOpenCursor beahvior'); {$ENDIF DEBUG}
+  I := FOpenCursors.IndexOf(Pointer(RS));
+  {$IFDEF DEBUG}Assert(I > -1, 'Wrong DeRegisterOpenCursor beahvior'); {$ENDIF DEBUG}
+  FOpenCursors.Delete(I);
+end;
+
+function TZIBTransaction.GetTrHandle: PISC_TR_HANDLE;
+begin
+  if FTrHandle = 0 then
+    StartTransaction;
+  Result := @FTrHandle
+end;
+
+procedure TZIBTransaction.RegisterOpenCursor(const RS: IZResultSet;
+  Out OnCursorClose: TOnCursorClose);
+begin
+  OnCursorClose := DeRegisterOpenCursor;
+  FOpenCursors.Add(Pointer(RS));
+end;
+
+procedure TZIBTransaction.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
+begin
+  FTrHandle := 0;
+  FOpenCursors.Clear;
+end;
+
+procedure TZIBTransaction.Rollback;
+var Status: ISC_STATUS;
+begin
+  if FTrHandle <> 0 then with FOwner.FOwner do try
+    if (FOpenCursors.Count = 0)
+    then Status := FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle)
+    else begin
+      fDoCommit := False;
+      fDoLog := False;
+      Status := FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
+      FOwner.AddToOrphanList(Self);
+    end;
+    if Status <> 0 then
+      CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+  finally
+    if fDoLog and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
+  end;
+end;
+
+procedure TZIBTransaction.StartTransaction;
+begin
+  {$IFDEF DEBUG}Assert(FTrHandle = 0, 'Wrong transaction behavior');{$ENDIF}
+  with fOwner.FOwner do begin
+    if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEBs[AutoCommit][TransactIsolationLevel]) <> 0 then
+      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcTransaction);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
+  end;
 end;
 
 initialization
