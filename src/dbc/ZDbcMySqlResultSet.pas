@@ -931,14 +931,12 @@ begin
 
   if LastWasNull then
     Result := 0
+  else if (Buffer+2)^ = ':' then
+    Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+  else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen < Len) or (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len <= 4) then
+    Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
   else
-    if (Buffer+2)^ = ':' then
-      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
-    else
-      if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
-        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
-      else
-        Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
+    Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
   LastWasNull := Result = 0;
 end;
 
@@ -2640,7 +2638,7 @@ begin
             Result := RawSQLTimeToDateTime(PAnsiChar(FColBind^.buffer),
               FColBind^.length, ConSettings^.ReadFormatSettings, Failed{%H-})
           else
-            if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - FColBind^.length) <= 4 then
+            if (ConSettings^.ReadFormatSettings.DateTimeFormatLen < FColBind^.length) or (ConSettings^.ReadFormatSettings.DateTimeFormatLen - FColBind^.length <= 4) then
               Result := RawSQLTimeStampToDateTime(PAnsiChar(FColBind^.buffer), FColBind^.length, ConSettings^.ReadFormatSettings, Failed)
             else
               Result := RawSQLDateToDateTime(PAnsiChar(FColBind^.buffer), FColBind^.length, ConSettings^.ReadFormatSettings, Failed);
