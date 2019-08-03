@@ -151,6 +151,7 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const PlainDriver: IZMysqlPlainDriver; const Connection: IZConnection;
       const SQL: string; Info: TStrings);
@@ -683,6 +684,12 @@ begin
     checkMySQLPrepStmtError (FPlainDriver, FMYSQL_STMT, lcPrepStmt,
       ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
       ConSettings^.ClientCodePage^.CP), ConSettings);
+end;
+
+procedure TZMySQLPreparedStatement.ReleaseConnection;
+begin
+  inherited;
+  FMySQLConnection := nil;
 end;
 
 {$WARNINGS OFF} //Len & P might not be init...

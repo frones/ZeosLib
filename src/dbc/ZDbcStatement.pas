@@ -110,7 +110,7 @@ type
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
     procedure RaiseUnsupportedException;
-
+    procedure ReleaseConnection; virtual;
     property MaxFieldSize: Integer read FMaxFieldSize write FMaxFieldSize;
     property MaxRows: Integer read FMaxRows write FMaxRows;
     property EscapeProcessing: Boolean
@@ -547,6 +547,7 @@ procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 {$IFNDEF UNICODE}var CP: Word;{$ENDIF}
 begin
   if FWSQL <> Value then
+    FClosed := False;
     {$IFDEF UNICODE}
     if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
@@ -622,8 +623,8 @@ end;
 
 procedure TZAbstractStatement.SetASQL(const Value: RawByteString);
 begin
-  if FASQL <> Value then
-  begin
+  if FASQL <> Value then begin
+    FClosed := False;
     {$IFDEF UNICODE}
     FASQL := Value;
     FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage.CP); //required for the resultsets
@@ -645,6 +646,11 @@ end;
 procedure TZAbstractStatement.RaiseUnsupportedException;
 begin
   raise EZSQLException.Create(SUnsupportedOperation);
+end;
+
+procedure TZAbstractStatement.ReleaseConnection;
+begin
+  FConnection := nil;
 end;
 
 {**
@@ -797,21 +803,23 @@ end;
 procedure TZAbstractStatement.Close;
 var RefCountAdded: Boolean;
 begin
-  RefCountAdded := (RefCount = 1) and Assigned(FOpenResultSet) or Assigned(FLastResultSet);
+  if not fClosed then begin
+    RefCountAdded := (RefCount = 1) and (Assigned(FOpenResultSet) or Assigned(FLastResultSet));
   if RefCountAdded then _AddRef;
   try
-    BeforeClose;
-  FClosed := True;
-    AfterClose;
+        BeforeClose;
+        FClosed := True;
+        AfterClose;
     finally
     FClosed := True;
     if RefCountAdded then begin
       if (RefCount = 1) then begin
         DriverManager.AddGarbage(Self);
-        FConnection := nil;
+          ReleaseConnection;
       end;
       _Release;
     end;
+  end;
   end;
 end;
 

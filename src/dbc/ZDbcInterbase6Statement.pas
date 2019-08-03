@@ -91,6 +91,7 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
     constructor Create(const Connection: IZConnection; Info: TStrings); overload;
@@ -119,6 +120,7 @@ type
   protected
     procedure CheckInterbase6Error(const Sql: RawByteString = '');
     function GetProcedureSql(SelectProc: boolean): RawByteString;
+    procedure ReleaseConnection; override;
 
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -233,6 +235,12 @@ begin
     end;
     FParamSQLData.InitFields(True);
   end;
+end;
+
+procedure TZInterbase6PreparedStatement.ReleaseConnection;
+begin
+  inherited;
+  FIBConnection := nil;
 end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
@@ -562,6 +570,12 @@ begin
 
     FParamSQLData.InitFields(True);
   end;
+end;
+
+procedure TZInterbase6CallableStatement.ReleaseConnection;
+begin
+  inherited;
+  FIBConnection := nil;
 end;
 
 procedure TZInterbase6CallableStatement.BindInParameters;

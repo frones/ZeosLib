@@ -75,6 +75,7 @@ type
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
@@ -101,6 +102,7 @@ type
     FAdoConnection: IZAdoConnection;
   protected
     function GetParamAsString(ParamIndex: Integer): ZWideString; override;
+    procedure ReleaseConnection; override;
   public
     constructor Create(Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
@@ -190,6 +192,12 @@ procedure TZAdoPreparedStatement.PrepareInParameters;
 begin
   if InParamCount > 0 then
       RefreshParameters(FAdoCommand);
+end;
+
+procedure TZAdoPreparedStatement.ReleaseConnection;
+begin
+  inherited;
+  FAdoConnection := nil;
 end;
 
 procedure TZAdoPreparedStatement.BindInParameters;
@@ -925,5 +933,12 @@ SetNull:
       RaiseUnsupportedParameterTypeException(InParamTypes[ParamIndex]);
   end;
 end;
+
+procedure TZAdoEmulatedPreparedStatement.ReleaseConnection;
+begin
+  inherited;
+  FAdoConnection := nil;
+end;
+
 {$ENDIF ZEOS_DISABLE_ADO}
 end.

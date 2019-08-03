@@ -87,6 +87,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const PlainDriver: IZOraclePlainDriver;
       const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
@@ -277,6 +278,12 @@ begin
   end;
   CheckMaxIter:
   FIteration := Max(FIteration, 1);
+end;
+
+procedure TZOraclePreparedStatement.ReleaseConnection;
+begin
+  inherited;
+  FOracleConnection := nil;
 end;
 
 {**

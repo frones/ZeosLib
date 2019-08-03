@@ -77,6 +77,7 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
     constructor Create(const Connection: IZConnection; Info: TStrings); overload;
@@ -107,6 +108,7 @@ type
     FPrepared: Boolean;
   protected
     function GetProcedureSQL: RawByteString;
+    procedure ReleaseConnection; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -198,6 +200,12 @@ begin
       ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
       {sade: initfields doesnt't help > ASA describes !paramcount! only}
     end;
+end;
+
+procedure TZASAPreparedStatement.ReleaseConnection;
+begin
+  inherited;
+  FASAConnection := nil;
 end;
 
 procedure TZASAPreparedStatement.BindInParameters;
@@ -696,6 +704,12 @@ begin
   Result := 'call ' + ConSettings^.ConvFuncs.ZStringToRaw(SQL,
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP) + InParams;
 end;
+procedure TZASACallableStatement.ReleaseConnection;
+begin
+  inherited;
+  FASAConnection := nil;
+end;
+
 {$ENDIF ZEOS_DISABLE_ASA}
 
 end.
