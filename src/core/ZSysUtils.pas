@@ -4733,10 +4733,10 @@ begin
   if Len = 0 then
     Exit;
   PSrc := Pointer(Str);
-  PSrcEnd := @Str[Len];
+  PSrcEnd := PSrc+Len; //address the term
   PDest := Pointer(Result);
 
-  while PSrc <= PSrcEnd do
+  while PSrc < PSrcEnd do
   begin
     if PSrc^ <> ToRemove then
     begin

@@ -161,7 +161,9 @@ type
     constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
-      ConSettings: PZConSettings);
+      ConSettings: PZConSettings); overload;
+    constructor CreateWithColumns(const Statement: IZStatement;
+      ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings); overload;
     destructor Destroy; override;
 
     procedure AfterClose; override;
@@ -334,6 +336,17 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding
 
 
 { TZAbstractCachedResultSet }
+
+constructor TZAbstractCachedResultSet.CreateWithColumns(
+  const Statement: IZStatement; ColumnsInfo: TObjectList; const SQL: string;
+  ConSettings: PZConSettings);
+begin
+  inherited Create(Statement, SQL, nil, ConSettings);
+
+  CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
+  FCachedUpdates := False;
+  Open;
+end;
 
 {**
   Creates this object and assignes the main properties.

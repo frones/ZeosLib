@@ -102,7 +102,7 @@ type
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   private
-    fDoClose: Boolean;
+    fConSettings: TZConSettings;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -111,7 +111,18 @@ type
     constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
-      ConSettings: PZConSettings);
+      ConSettings: PZConSettings); overload;
+    constructor CreateWithColumns(const Statement: IZStatement;
+      ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings); overload;
+  public
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+  end;
+
+  {** Implements Unclosable ResultSet which frees all memory if it's not referenced anymore. }
+  TZUnCloseableResultSet = class(TZVirtualResultSet)
+  private
+    fDoClose: Boolean;
+  public
     procedure Close; override;
     destructor Destroy; override;
     procedure ResetCursor; override;
@@ -2150,11 +2161,10 @@ end;
 }
 function TZAbstractDatabaseMetadata.HasNoWildcards(const Pattern: string): boolean;
 var
-  I: Integer;
   PreviousCharWasEscape: Boolean;
   EscapeChar,PreviousChar: Char;
   WildcardsSet: TZWildcardsSet;
-  P: PChar;
+  P, PEnd: PChar;
   {$IFDEF TSYSCHARSET_IS_DEPRECATED}
   function CharInSet(C: Char; const CharSet: TZWildcardsSet): Boolean;
   var I: Integer;
@@ -2174,15 +2184,16 @@ begin
   P := Pointer(GetDatabaseInfo.GetSearchStringEscape);
   EscapeChar := P^;
   WildcardsSet := GetWildcardsSet;
-  for I := 1 to Length(Pattern) do begin
-    if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
+  P := Pointer(Pattern);
+  PEnd := P+Length(Pattern);
+  while P<PEnd do begin
+    if (not PreviousCharWasEscape) and CharInset(P^, WildcardsSet) then
      Exit;
-
-    PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
-    if (PreviousCharWasEscape) and (Pattern[I] = EscapeChar) then
-      PreviousChar := #0
-    else
-      PreviousChar := Pattern[I];
+    PreviousCharWasEscape := (P^ = EscapeChar) and (PreviousChar <> EscapeChar);
+    if (PreviousCharWasEscape) and (P^ = EscapeChar)
+    then PreviousChar := #0
+    else PreviousChar := P^;
+    Inc(P);
   end;
   Result := True;
 end;
@@ -2269,20 +2280,17 @@ begin
     for I := 0 to High(ColumnsDefs) do
     begin
       ColumnInfo := TZColumnInfo.Create;
-      with ColumnInfo do
-      begin
+      with ColumnInfo do begin
         ColumnLabel := ColumnsDefs[I].Name;
         ColumnType := ColumnsDefs[I].SQLType;
-        ColumnDisplaySize := ColumnsDefs[I].Length;
         Precision := ColumnsDefs[I].Length;
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    Result := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
+    Result := TZUnCloseableResultSet.CreateWithColumns(ColumnsInfo, '',
       IZConnection(FConnection).GetConSettings);
-    with Result do
-    begin
+    with Result do begin
       SetType(rtScrollInsensitive);
       SetConcurrency(rcUpdatable);
     end;
@@ -2371,11 +2379,15 @@ var
   I: Integer;
   Metadata: IZResultSetMetadata;
   Len: NativeUInt;
+  IsUTF16: Boolean;
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
 
   Metadata := SrcResultSet.GetMetadata;
+  IsUTF16 :=  (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+             (ConSettings^.ClientCodePage^.Encoding = ceUTF16);
+
   while SrcResultSet.Next do
   begin
     DestResultSet.MoveToInsertRow;
@@ -2408,13 +2420,10 @@ begin
           DestResultSet.UpdateCurrency(I, SrcResultSet.GetCurrency(I));
         stBigDecimal:
           DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
-        stString, stUnicodeString, stAsciiStream, stUnicodeStream:
-          if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-             (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
-            DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), @Len)
-          else
-            DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), @Len);
-        stBytes, stBinaryStream:
+        stString, stUnicodeString, stAsciiStream, stUnicodeStream: if IsUTF16
+          then DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), @Len)
+          else DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), @Len);
+        stGUID, stBytes, stBinaryStream:
           DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
         stDate:
           DestResultSet.UpdateDate(I, SrcResultSet.GetDate(I));
@@ -2464,7 +2473,7 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    if ResultSet.GetType <> rtForwardOnly then
+    if not ResultSet.IsBeforeFirst and  (ResultSet.GetType <> rtForwardOnly) then
       ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
       TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings));
@@ -4983,6 +4992,32 @@ end;
 { TZVirtualResultSet }
 
 {**
+  Change Order of one Rows in Resultset
+  Note: First Row = 1, to get RowNo use IZResultSet.GetRow
+  @param CurrentRowNo the curren number of row
+  @param NewRowNo the new number of row
+}
+procedure TZVirtualResultSet.ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+var P: Pointer;
+begin
+  CurrentRowNo := CurrentRowNo -1;
+  NewRowNo := NewRowNo -1;
+  P := RowsList[CurrentRowNo];
+  RowsList.Delete(CurrentRowNo);
+  RowsList.Insert(NewRowNo, P);
+  P := InitialRowsList[CurrentRowNo];
+  InitialRowsList.Delete(CurrentRowNo);
+  InitialRowsList.Insert(NewRowNo, P);
+end;
+
+constructor TZVirtualResultSet.CreateWithColumns(const Statement: IZStatement;
+  ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
+begin
+  fConSettings := ConSettings^;
+  inherited CreateWithColumns(Statement, ColumnsInfo, SQL, @fConSettings);
+end;
+
+{**
   Creates this object and assignes the main properties.
   @param Statement an SQL statement object.
   @param SQL an SQL query string.
@@ -4993,23 +5028,11 @@ begin
   inherited CreateWithStatement(SQL, Statement, ConSettings);
 end;
 
-destructor TZVirtualResultSet.Destroy;
-begin
-  fDoClose := True;
-  inherited Destroy;
-end;
-
 {**
   Creates this object and assignes the main properties.
   @param ColumnsInfo a columns info for cached rows.
   @param SQL an SQL query string.
 }
-procedure TZVirtualResultSet.Close;
-begin
-  if fDoClose then
-    inherited Close;
-end;
-
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
@@ -5033,12 +5056,6 @@ end;
 procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
-end;
-
-procedure TZVirtualResultSet.ResetCursor;
-begin
-  if not fDoClose then
-    BeforeFirst;
 end;
 
 { TZDefaultIdentifierConvertor }
@@ -5552,6 +5569,26 @@ const
 
 var
   I: Integer;
+
+{ TZUnCloseableResultSet }
+
+procedure TZUnCloseableResultSet.Close;
+begin
+  if fDoClose then
+    inherited Close;
+end;
+
+destructor TZUnCloseableResultSet.Destroy;
+begin
+  fDoClose := True;
+  inherited Destroy;
+end;
+
+procedure TZUnCloseableResultSet.ResetCursor;
+begin
+  if not fDoClose then
+    BeforeFirst;
+end;
 
 initialization
   SetLength(CharacterSetsColumnsDynArray, CharacterSetsColumnsCount);
