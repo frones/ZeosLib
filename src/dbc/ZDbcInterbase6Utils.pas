@@ -60,7 +60,7 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcStatement, ZPlainFirebirdDriver, ZCompatibility,
   ZPlainFirebirdInterbaseConstants, ZDbcCachedResultSet, ZDbcLogging, ZMessages,
-  ZVariant, ZClasses;
+  ZVariant, ZClasses, ZDbcResultSet;
 
 type
   { Interbase Statement Type }
@@ -214,7 +214,7 @@ type
   end;
 
 function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
-  const NativeResultSet: IZResultSet): IZResultSet;
+  const NativeResultSet: TZAbstractResultSet): IZResultSet;
 
 {Interbase6 Connection Functions}
 function GenerateDPB(PlainDriver: IZInterbasePlainDriver; Info: TStrings;
@@ -460,7 +460,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
-  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils, ZEncoding
+  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils, ZEncoding,
+  ZDbcInterbase6ResultSet
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -471,22 +472,21 @@ uses
   @return cached ResultSet if rcReadOnly <> rcReadOnly
 }
 function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
-  const NativeResultSet: IZResultSet): IZResultSet;
+  const NativeResultSet: TZAbstractResultSet): IZResultSet;
 var
   CachedResolver: TZInterbase6CachedResolver;
   CachedResultSet: TZCachedResultSet;
 begin
-  if (Statement.GetResultSetConcurrency = rcUpdatable)
-    or (Statement.GetResultSetType <> rtForwardOnly) then
-  begin
+  if (Statement.GetResultSetConcurrency = rcUpdatable) or
+     (Statement.GetResultSetType <> rtForwardOnly) then begin
     CachedResolver  := TZInterbase6CachedResolver.Create(Statement,  NativeResultSet.GetMetadata);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
       CachedResolver, Statement.GetConnection.GetConSettings);
     CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
     Result := CachedResultSet;
-  end
-  else
+  end else
     Result := NativeResultSet;
+  TZInterbase6XSQLDAResultSet(NativeResultSet).TransactionResultSet := Pointer(Result);
 end;
 
 function FindPBParam(const ParamName: string; const ParamArr: array of TZIbParam): PZIbParam;

@@ -60,7 +60,7 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZCompatibility,
-  ZDbcLogging, ZVariant, ZMessages;
+  ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet;
 
 type
   {** Implements Prepared SQL Statement for Interbase or FireBird. }
@@ -387,12 +387,12 @@ begin
       FBatchStmts[b].Obj := nil;
       end;
   FMaxRowsPerBatch := 0;
-  if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
-    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
   FResultXSQLDA := nil;
   FParamSQLData := nil;
   SetLength(FTypeTokens, 0);
   inherited Unprepare;
+  if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
+    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
 end;
 
 {**
@@ -423,8 +423,8 @@ begin
     if (FStatementType in [stSelect, stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
       if not Assigned(LastResultSet) then
         LastResultSet := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, True, CachedLob, FStatementType))
+          TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+            FResultXSQLDA, CachedLob, FStatementType))
       else
     else
       LastResultSet := nil;
@@ -453,8 +453,8 @@ begin
         Result := IZResultSet(FOpenResultSet)
       else begin
         Result := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, False, CachedLob, FStatementType));
+          TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+            FResultXSQLDA, CachedLob, FStatementType));
         FOpenResultSet := Pointer(Result);
       end
   end else begin
@@ -492,8 +492,9 @@ begin
         { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
           LastResultSet := CreateIBResultSet(SQL, Self,
-            TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-              FResultXSQLDA, True, CachedLob, FStatementType));
+            TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+              FResultXSQLDA, CachedLob, FStatementType));
+
     end;
   inherited ExecuteUpdatePrepared;
 end;
@@ -599,7 +600,7 @@ begin
   if CallableStmtType[SelectProc] <> FStatementType then UnPrepare;
   if not Prepared then
   begin
-    FProcSql := GetProcedureSql(SelectProc);
+    FProcSql := GetProcedureSql(Self.FIBConnection.StoredProcedureIsSelectable(SQL));
     with FIBConnection do
     begin
       FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
@@ -660,14 +661,14 @@ begin
     if (FStatementType in [stSelect, stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
       if not Assigned(LastResultSet) then
         LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
-          FStmtHandle, FResultXSQLDA, True, CachedLob, FStatementType)
+          @FStmtHandle, FResultXSQLDA, CachedLob, FStatementType)
       else begin
         { Fetch data and fill Output params }
         LastResultSet := nil;
         if not Assigned(FOpenResultSet) then
         begin
-          RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, False, CachedLob, FStatementType);
+          RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+            FResultXSQLDA, CachedLob, FStatementType);
           FOpenResultSet := Pointer(RS);
         end;
         AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet),
@@ -700,7 +701,7 @@ begin
       else
       begin
         Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL,
-          FStmtHandle, FResultXSQLDA, False, CachedLob, FStatementType);
+          @FStmtHandle, FResultXSQLDA, CachedLob, FStatementType);
         FOpenResultSet := Pointer(Result);
       end;
   end;
@@ -733,8 +734,8 @@ begin
     { Fetch data and fill Output params }
     if not Assigned(FOpenResultSet) then
     begin
-      RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-        FResultXSQLDA, False, CachedLob, FStatementType);
+      RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
+        FResultXSQLDA, CachedLob, FStatementType);
       FOpenResultSet := Pointer(RS);
     end;
     AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet), OutParamValues, OutParamCount , FDBParamTypes);
