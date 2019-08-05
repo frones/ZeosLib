@@ -295,7 +295,6 @@ as
 begin
   P4 = P1 * 10 + P2;
   P5 = P3 || P3;
-  suspend;
 end
 ^ 
 
