@@ -5,6 +5,10 @@
 drop procedure ABTEST;
 drop procedure procedure2;
 drop procedure procedure1;
+drop procedure procedure_upd_people_A;
+drop procedure procedure_upd_people_B;
+drop procedure procedure_upd_people_C;
+
 drop view dep_view;
 drop table blob_values;
 drop table cargo;
