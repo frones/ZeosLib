@@ -826,8 +826,8 @@ begin
   end else begin
     if (DriverManager <> nil) and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecPrepStmt,Self);
+    FStmtHandleIsExecuted := True; //keep this even if an error is thrown
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
-      FStmtHandleIsExecuted := True;
       FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
       if FieldCount = 0
       then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
@@ -903,8 +903,8 @@ begin
   end else begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecPrepStmt,Self);
+    FStmtHandleIsExecuted := True; //keep this even if an error is thrown
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
-      FStmtHandleIsExecuted := True;
       FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
       if FieldCount = 0
       then Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
@@ -1033,8 +1033,8 @@ begin
   end else begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecPrepStmt,Self);
+    FStmtHandleIsExecuted := True; //keep this even if an error is thrown
     if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
-      FStmtHandleIsExecuted := True;
       FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
       if FieldCount = 0 // we can call this function if fielcount is zero only
       then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
