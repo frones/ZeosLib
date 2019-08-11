@@ -76,7 +76,8 @@ type
   IZDBLibPlainDriver = interface (IZPlainDriver)
     ['{7731C3B4-0608-4B6B-B089-240AC43A3463}']
 
-    procedure CheckError(dbProc: PDBPROCESS);
+    procedure CheckError(dbProc: PDBPROCESS); deprecated;
+    function GetErrorString(dbProc: PDBPROCESS): String;
 
     function dbDead(dbProc: PDBPROCESS): Boolean; //done
     function dbLogin: PLOGINREC; //done
@@ -164,6 +165,7 @@ type
     procedure dbLoginFree(Login: PLOGINREC); virtual; abstract;
     constructor Create; virtual;
     procedure CheckError(dbProc: PDBPROCESS);
+    function GetErrorString(dbProc: PDBPROCESS): String;
     function GetVariables: TDBVariables;
   end;
 
@@ -999,6 +1001,7 @@ var
   OldSybaseMessageHandle: SYBDBMSGHANDLE_PROC = nil;
   OldMsSQLMessageHandle: DBMSGHANDLE_PROC = nil;
   OldMsSQLErrorHandle: DBERRHANDLE_PROC = nil;
+  ErrorCS: TCriticalSection;
   SQLErrors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
   SQLMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
 
@@ -1064,18 +1067,22 @@ function SybaseErrorHandle(dbproc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
 var
   SqlError: PDBLibError;
 begin
-  New(SqlError);
-  SqlError.dbProc := dbproc;
-  SqlError.Severity := Severity;
-  SqlError.DbErr := DbErr;
-  SqlError.OsErr := OsErr;
-  if DbErrStr <> nil then
-    ZSetString(DbErrStr, StrLen(DbErrStr), SqlError.DbErrStr);
-  if OsErrStr <> nil then
-    ZSetString(OsErrStr, StrLen(OsErrStr), SqlError.OsErrStr);
-  SQLErrors.Add(SqlError);
-
-  Result := INT_CANCEL;
+  ErrorCS.Enter;
+  try
+    New(SqlError);
+    SqlError.dbProc := dbproc;
+    SqlError.Severity := Severity;
+    SqlError.DbErr := DbErr;
+    SqlError.OsErr := OsErr;
+    if DbErrStr <> nil then
+      ZSetString(DbErrStr, StrLen(DbErrStr), SqlError.DbErrStr);
+    if OsErrStr <> nil then
+      ZSetString(OsErrStr, StrLen(OsErrStr), SqlError.OsErrStr);
+    SQLErrors.Add(SqlError);
+  finally
+    Result := INT_CANCEL;
+    ErrorCS.Leave;
+  end;
 end;
 
 { Handle sql server messages }
@@ -1085,21 +1092,25 @@ function SybaseMessageHandle(dbproc: PDBPROCESS; MsgNo: DBINT; MsgState,
 var
   SQLMessage: PDBLibMessage;
 begin
-  New(SQLMessage);
-  SQLMessage.dbProc := dbproc;
-  SQLMessage.MsgNo := MsgNo;
-  SQLMessage.MsgState := MsgState;
-  SQLMessage.Severity := Severity;
-  if MsgText <> nil then
-    ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
-  if SrvName <> nil then
-    ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
-  if ProcName <> nil then
-    ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
-  SQLMessage.Line := Line;
-  SQLMessages.Add(SQLMessage);
-
-  Result := 0;
+  ErrorCS.Enter;
+  try
+    New(SQLMessage);
+    SQLMessage.dbProc := dbproc;
+    SQLMessage.MsgNo := MsgNo;
+    SQLMessage.MsgState := MsgState;
+    SQLMessage.Severity := Severity;
+    if MsgText <> nil then
+      ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
+    if SrvName <> nil then
+      ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
+    if ProcName <> nil then
+      ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
+    SQLMessage.Line := Line;
+    SQLMessages.Add(SQLMessage);
+  finally
+    Result := 0;
+    ErrorCS.Leave;
+  end;
 end;
 
 { Handle sql server error messages }
@@ -1108,18 +1119,22 @@ function DbLibErrorHandle(dbproc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
 var
   SqlError: PDBLibError;
 begin
-  New(SqlError);
-  SqlError.dbProc := dbproc;
-  SqlError.Severity := Severity;
-  SqlError.DbErr := DbErr;
-  SqlError.OsErr := OsErr;
-  if DbErrStr <> nil then
-    ZSetString(DbErrStr, StrLen(DbErrStr),SqlError.DbErrStr);
-  if OsErrStr <> nil then
-    ZSetString(OsErrStr, StrLen(OsErrStr),SqlError.OsErrStr);
-  SQLErrors.Add(SqlError);
-
-  Result := INT_CANCEL;
+  ErrorCS.Enter;
+  try
+    New(SqlError);
+    SqlError.dbProc := dbproc;
+    SqlError.Severity := Severity;
+    SqlError.DbErr := DbErr;
+    SqlError.OsErr := OsErr;
+    if DbErrStr <> nil then
+      ZSetString(DbErrStr, StrLen(DbErrStr),SqlError.DbErrStr);
+    if OsErrStr <> nil then
+      ZSetString(OsErrStr, StrLen(OsErrStr),SqlError.OsErrStr);
+    SQLErrors.Add(SqlError);
+  finally
+    Result := INT_CANCEL;
+    ErrorCS.Leave;
+  end;
 end;
 
 { Handle sql server messages }
@@ -1128,21 +1143,25 @@ function DbLibMessageHandle(dbproc: PDBPROCESS; MsgNo: DBINT; MsgState, Severity
 var
   SQLMessage: PDBLibMessage;
 begin
-  New(SQLMessage);
-  SQLMessage.dbProc := dbproc;
-  SQLMessage.MsgNo := MsgNo;
-  SQLMessage.MsgState := MsgState;
-  SQLMessage.Severity := Severity;
-  if MsgText <> nil then
-    ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
-  if SrvName <> nil then
-    ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
-  if ProcName <> nil then
-    ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
-  SQLMessage.Line := Line;
-  SQLMessages.Add(SQLMessage);
-
-  Result := 0;
+  ErrorCS.Enter;
+  try
+    New(SQLMessage);
+    SQLMessage.dbProc := dbproc;
+    SQLMessage.MsgNo := MsgNo;
+    SQLMessage.MsgState := MsgState;
+    SQLMessage.Severity := Severity;
+    if MsgText <> nil then
+      ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
+    if SrvName <> nil then
+      ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
+    if ProcName <> nil then
+      ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
+    SQLMessage.Line := Line;
+    SQLMessages.Add(SQLMessage);
+  finally
+    Result := 0;
+    ErrorCS.Leave;
+  end;
 end;
 
 constructor TZDBLibAbstractPlainDriver.Create;
@@ -1155,54 +1174,65 @@ begin
 end;
 
 procedure TZDBLibAbstractPlainDriver.CheckError(dbProc: Pointer);
+var S: String;
+begin
+  S := GetErrorString(dbProc);
+  if S <> '' then
+    raise EZSQLException.Create(S);
+end;
+
+function TZDBLibAbstractPlainDriver.GetErrorString(
+  dbProc: PDBPROCESS): String;
 var
   I: Integer;
-  S: String;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
 
     procedure AddToErrorMsg(const AError: String);
     begin
-      if S > '' then
-        S := S + #13#10;
-      S := S + AError;
+      if Result <> EmptyRaw then
+        Result := Result + LineEnding;
+      Result := Result + AError;
     end;
 
 begin
-  if ((SQLErrors = nil) or (SQLErrors.Count = 0)) and
-     ((SQLMessages = nil) or (SQLMessages.Count = 0)) then
-    Exit;
-  S := '';
-  I := 0;
-  while I < SQLErrors.Count do begin
-    lErrorEntry := PDBLibError(SQLErrors[I]);
-    if (dbProc = nil) or (lErrorEntry^.dbProc = dbProc) or (lErrorEntry^.dbProc = nil) then begin
-        if lErrorEntry^.Severity > EXINFO then
-          AddToErrorMsg(Format('DBError : [%4.4d] : %s', [lErrorEntry^.DbErr, String(lErrorEntry^.DbErrStr)]) );
-        if lErrorEntry^.OsErr > EXINFO then
-          AddToErrorMsg(Format('OSError : [%4.4d] : %s', [lErrorEntry^.OsErr, String(lErrorEntry^.OsErrStr)]) );
-        Dispose(lErrorEntry);
-        SQLErrors.Delete(I);
-    end
-    else
-      Inc(I);
+  ErrorCS.Enter;
+  Result := '';
+  try
+    if ((SQLErrors = nil) or (SQLErrors.Count = 0)) and
+       ((SQLMessages = nil) or (SQLMessages.Count = 0)) then
+      Exit;
+    I := 0;
+    while I < SQLErrors.Count do begin
+      lErrorEntry := PDBLibError(SQLErrors[I]);
+      if (dbProc = nil) or (lErrorEntry^.dbProc = dbProc) or (lErrorEntry^.dbProc = nil) then begin
+          if lErrorEntry^.Severity > EXINFO then
+            AddToErrorMsg(Format('DBError : [%4.4d] : %s', [lErrorEntry^.DbErr, String(lErrorEntry^.DbErrStr)]) );
+          if lErrorEntry^.OsErr > EXINFO then
+            AddToErrorMsg(Format('OSError : [%4.4d] : %s', [lErrorEntry^.OsErr, String(lErrorEntry^.OsErrStr)]) );
+          Dispose(lErrorEntry);
+          SQLErrors.Delete(I);
+      end
+      else
+        Inc(I);
+    end;
+    I := 0;
+    while I < SQLMessages.Count do begin
+      lMesageEntry := PDBLibMessage(SQLMessages[I]);
+      if (dbProc = nil) or (lMesageEntry^.dbProc = dbProc) or (lMesageEntry^.dbProc = nil) then begin
+        if lMesageEntry^.Severity > EXINFO then begin
+          if lMesageEntry^.MsgNo <> 5701
+          then AddToErrorMsg(String(lMesageEntry^.MsgText));
+        end;
+        Dispose(lMesageEntry);
+        SQLMessages.Delete(I);
+      end
+      else
+        Inc(I);
+    end;
+  finally
+    ErrorCS.Leave;
   end;
-  I := 0;
-  while I < SQLMessages.Count do begin
-    lMesageEntry := PDBLibMessage(SQLMessages[I]);
-    if (dbProc = nil) or (lMesageEntry^.dbProc = dbProc) or (lMesageEntry^.dbProc = nil) then begin
-      if lMesageEntry^.Severity > EXINFO then begin
-        if lMesageEntry^.MsgNo <> 5701
-        then AddToErrorMsg(String(lMesageEntry^.MsgText));
-      end;
-      Dispose(lMesageEntry);
-      SQLMessages.Delete(I);
-    end
-    else
-      Inc(I);
-  end;
-  if S <> '' then
-    raise EZSQLException.Create(S);
 end;
 
 function TZDBLibAbstractPlainDriver.GetVariables: TDBVariables;
@@ -4222,7 +4252,9 @@ end;
 initialization
   SQLErrors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   SQLMessages := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  ErrorCS := TCriticalSection.Create;
 finalization
+  FreeAndnil(ErrorCS);
 //Free any record in the list if any
   while SQLErrors.Count > 0 do
   begin
