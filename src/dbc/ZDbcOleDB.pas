@@ -116,7 +116,7 @@ type
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
-    procedure StartTransaction;
+    function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
 
@@ -391,13 +391,14 @@ const
      ISOLATIONLEVEL_REPEATABLEREAD,
      ISOLATIONLEVEL_SERIALIZABLE);
 
-procedure TZOleDBConnection.StartTransaction;
+function TZOleDBConnection.StartTransaction: Integer;
 var
   rgDBPROPSET_DBPROPSET_SESSION: TDBProp;
   prgPropertySets: TDBPROPSET;
   SessionProperties: ISessionProperties;
   Res: HResult;
 begin
+  Result := 1;
   if (not Closed) and Self.GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(TransactIsolationLevel) then
     if AutoCommit then begin
       SessionProperties := nil;
@@ -417,8 +418,9 @@ begin
       if not Succeeded(Res) then begin
         Dec(FpulTransactionLevel);
         fTransaction := nil;
-      end;
-      CheckError(Res, ocaStartTransaction, True);
+        CheckError(Res, ocaStartTransaction, True);
+      end else
+        Result := FpulTransactionLevel;
     end;
 end;
 
