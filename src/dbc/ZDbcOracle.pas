@@ -106,8 +106,6 @@ type
     FPlainDriver: TZOraclePlainDriver;
   protected
     procedure InternalCreate; override;
-    procedure StartTransactionSupport;
-
   public
     destructor Destroy; override;
 
@@ -118,6 +116,7 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
+    function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
 
@@ -397,7 +396,7 @@ begin
     OCI_ATTR_SESSION, FErrorHandle);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
-  StartTransactionSupport;
+  StartTransaction;
 
   inherited Open;
 end;
@@ -405,19 +404,16 @@ end;
 {**
   Starts a transaction support.
 }
-procedure TZOracleConnection.StartTransactionSupport;
+function TZOracleConnection.StartTransaction: Integer;
 var
   SQL: RawByteString;
   Status: Integer;
   Isolation: Integer;
 begin
-  if TransactIsolationLevel = tiNone then
-  begin
+  if TransactIsolationLevel = tiNone then begin
     SQL := 'SET TRANSACTION ISOLATION LEVEL DEFAULT';
     Isolation := OCI_DEFAULT;
-  end
-  else if TransactIsolationLevel = tiReadCommitted then
-  begin
+  end else if TransactIsolationLevel = tiReadCommitted then begin
 // Behaviour changed by mdaems 31/05/2006 : Read Committed is the default
 // isolation level used by oracle. This property should not be abused to add
 // the non-standard isolation level 'read only' thats invented by oracle.
@@ -425,18 +421,13 @@ begin
 //    Isolation := OCI_TRANS_READONLY;
     SQL := 'SET TRANSACTION ISOLATION LEVEL DEFAULT';
     Isolation := OCI_DEFAULT;
-  end
-  else if TransactIsolationLevel = tiRepeatableRead then
-  begin
+  end else if TransactIsolationLevel = tiRepeatableRead then begin
     SQL := 'SET TRANSACTION ISOLATION LEVEL READWRITE';
     Isolation := OCI_TRANS_READWRITE;
-  end
-  else if TransactIsolationLevel = tiSerializable then
-  begin
+  end else if TransactIsolationLevel = tiSerializable then begin
     SQL := 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE';
     Isolation := OCI_TRANS_SERIALIZABLE;
-  end
-  else
+  end else
     raise EZSQLException.Create(SIsolationIsNotSupported);
 
   FTransHandle := nil;
@@ -447,14 +438,14 @@ begin
   Status := FPlainDriver.OCITransStart(FContextHandle, FErrorHandle, 0, Isolation);
   CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
 
-  if FStmtMode = OCI_STMT_CACHE  then
-  begin
+  if FStmtMode = OCI_STMT_CACHE  then begin
     Status := FPlainDriver.OCIAttrSet(FContextHandle,OCI_HTYPE_SVCCTX,@FStatementPrefetchSize,0,
         OCI_ATTR_STMTCACHESIZE,FErrorHandle);
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
   end;
 
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+  Result := 1;
 end;
 
 {**
@@ -664,7 +655,7 @@ begin
       FTransHandle := nil;
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
-      StartTransactionSupport;
+      StartTransaction;
     end;
   end;
 end;
