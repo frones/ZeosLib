@@ -92,6 +92,7 @@ type
     procedure Test_Ticket228;
     procedure Test_SF249;
     procedure Test_SF287;
+    procedure TestTicket363;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -733,6 +734,149 @@ begin
 
   finally
     Query.Free;
+  end;
+end;
+
+(*
+Hello,
+I am trying to use SynDB of mORMot with statement caching.
+Seems to be working fine, but the fix for ticket 228 causes error
+"Dynamic SQL Error; SQL error code = -502; Attempt to reopen an open cursor.".
+The problem is that reused statement opend the cursor in the
+ExecuteQueryPrepared call, but the FISC_TR_HANDLE property of reused
+resultset is not updated and TZInterbase6XSQLDAResultSet.Next() triggers the error.
+I have prepared a sample project to investigate the issue (it is attached).
+It also demonstrates duplicating of records described in ticket #362.
+code:
+
+var
+  I: Integer;
+  LStmt: IZPreparedStatement;
+  LSet: IZResultSet;
+begin
+  ZConnection1.Connected:= True;
+  // prepare sample table
+  ZQuery1.SQL.Text:= 'create table test73 (id integer primary key, "value" BLOB SUB_TYPE TEXT)';
+  ZQuery1.ExecSQL;
+  try
+    // generate test data
+    for I:= 1 to 20 do begin
+      ZQuery1.SQL.Text:= 'insert into test73 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')';
+      ZQuery1.ExecSQL;
+    end;
+    // trigger fix for ticket #228
+    ZQuery1.SQL.Text:= 'select * from test73';
+    ZQuery1.Open;
+    while not ZQuery1.Eof do begin
+      Memo1.Lines.Add(ZQuery1.Fields[0].AsString);
+      if ZQuery1.RecNo = 2 then begin // go
+        ZConnection1.StartTransaction;
+        ZConnection1.Commit;
+      end;
+      ZQuery1.Next; // it works here with a TZQuery
+    end;
+    // direct approach (just like mORMot with SynDBZeos)
+    LStmt:= ZConnection1.DbcConnection.PrepareStatement('select * from test73 where id > ?');
+    LStmt.SetInt(1, 1);
+    LSet:= LStmt.ExecuteQueryPrepared;
+    I:= 1;
+    while LSet.Next do begin // BUG! duplicates the fetched row
+      Memo1.Lines[I]:= Memo1.Lines[I] + ', ' + LSet.GetString(1);
+      if I = 2 then begin // trigger
+        ZConnection1.StartTransaction;
+        ZConnection1.Commit;
+      end;
+      Inc(I);
+    end;
+//  LSet:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
+    LStmt.ClearParameters;
+    // trigger fix for ticket #228
+    ZConnection1.StartTransaction;
+    ZConnection1.Commit;
+
+    LStmt.SetInt(1, 0);
+    LSet:= LStmt.ExecuteQueryPrepared; // the transaction ID is not updated
+    I:= 0;
+    while LSet.Next do begin // BUG! fails here as the fix is trying to open the resultset already opened in ExecuteQueryPrepared
+      Memo1.Lines[I]:= Memo1.Lines[I] + ', ' + LSet.GetString(1);
+      Inc(I);
+    end;
+  finally
+    if Assigned(LStmt) then
+      LStmt.Close;
+    LStmt:= nil;
+    ZQuery1.SQL.Text:= 'drop table test73';
+    ZQuery1.ExecSQL;
+  end;
+
+*)
+procedure ZTestCompInterbaseBugReport.TestTicket363;
+var
+  I: Integer;
+  LStmt: IZPreparedStatement;
+  LSet: IZResultSet;
+  ZQuery1: TZQuery;
+begin
+  Exit;
+  ZQuery1 := CreateQuery;
+  // prepare sample table
+  ZQuery1.SQL.Text:= 'create table test73 (id integer primary key, "value" BLOB SUB_TYPE TEXT)';
+  ZQuery1.ExecSQL;
+  try
+    // generate test data
+    for I:= 1 to 20 do begin
+      ZQuery1.SQL.Text:= 'insert into test73 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')';
+      ZQuery1.ExecSQL;
+    end;
+    // trigger fix for ticket #228
+    ZQuery1.SQL.Text:= 'select * from test73';
+    ZQuery1.Open;
+    I := 1;
+    while not ZQuery1.Eof do begin
+      if ZQuery1.RecNo = 2 then begin // go
+        Connection.StartTransaction;
+        Connection.Commit;
+      end;
+      ZQuery1.Next; // it works here with a TZQuery
+      Inc(I);
+      if I > 20 then Break;
+    end;
+    Check(I = 20, 'duplicated rows retrieved');
+    // direct approach (just like mORMot with SynDBZeos)
+    LStmt:= Connection.DbcConnection.PrepareStatement('select * from test73 where id > ?');
+    LStmt.SetInt(FirstDbcIndex, 1);
+    LSet:= LStmt.ExecuteQueryPrepared;
+    I:= 0;
+    while LSet.Next do begin // BUG! duplicates the fetched row
+      if I = 2 then begin // trigger
+        Connection.StartTransaction;
+        Connection.Commit;
+      end;
+      Inc(I);
+      if I > 21 then Break;
+    end;
+    Check(I = 20, 'duplicated rows retrieved');
+//  LSet:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
+    LStmt.ClearParameters;
+    // trigger fix for ticket #228
+    Connection.StartTransaction;
+    Connection.Commit;
+
+    LStmt.SetInt(FirstDbcIndex, 0);
+    LSet:= LStmt.ExecuteQueryPrepared; // the transaction ID is not updated
+    I:= 0;
+    while LSet.Next do begin // BUG! fails here as the fix is trying to open the resultset already opened in ExecuteQueryPrepared
+      Inc(I);
+      if I > 20 then
+        Break;
+    end;
+    Check(I = 20, 'duplicated rows retrieved');
+  finally
+    ZQuery1.SQL.Text:= 'drop table test73';
+    ZQuery1.ExecSQL;
+    if Assigned(LStmt) then
+      LStmt.Close;
+    LStmt:= nil;
   end;
 end;
 
