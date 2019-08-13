@@ -386,16 +386,13 @@ begin
 end;
 
 procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawByteString);
+var errStr: String;
 begin
-  try
-    GetPlainDriver.CheckError(FHandle);
-  except
-    on E: Exception do
-    begin
-      DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage, 0,
-       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
+  ErrStr := GetPlainDriver.GetErrorString(FHandle);
+  if ErrStr <> '' then begin
+    DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage, 0,
+      ConvertEMsgToRaw(ErrStr, ConSettings^.ClientCodePage^.CP));
+    raise EZSQLException.Create(ErrStr);
   end;
 end;
 

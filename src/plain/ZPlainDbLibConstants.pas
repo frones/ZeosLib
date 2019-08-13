@@ -217,6 +217,48 @@ const
   Z_ANSITOOEM             = 43;
   Z_OEMTOANSI             = 44;
 
+type TdbOption = ({Zeos DBOption placeholders}
+{ a large list of options, DBTEXTSIZE is needed by sybtcl }
+  dboptPARSEONLY             = 0,
+  dboptESTIMATE              = 1,
+  dboptSHOWPLAN              = 2,
+  dboptNOEXEC                = 3,
+  dboptARITHIGNORE           = 4,
+  dboptNOCOUNT               = 5,
+  dboptARITHABORT            = 6,
+  dboptTEXTLIMIT             = 7,
+  dboptBROWSE                = 8,
+  dboptOFFSET                = 9,
+  dboptSTAT                  = 10,
+  dboptERRLVL                = 11,
+  dboptCONFIRM               = 12,
+  dboptSTORPROCID            = 13,
+  dboptBUFFER                = 14,
+  dboptNOAUTOFREE            = 15,
+  dboptROWCOUNT              = 16,
+  dboptTEXTSIZE              = 17,
+  dboptNATLANG               = 18,
+  dboptDATEFORMAT            = 19,
+  dboptPRPAD                 = 20,
+  dboptPRCOLSEP              = 21,
+  dboptPRLINELEN             = 22,
+  dboptPRLINESEP             = 23,
+  dboptLFCONVERT             = 24,
+  dboptDATEFIRST             = 25,
+  dboptCHAINXACTS            = 26,
+  dboptFIPSFLAG              = 27,
+  dboptISOLATION             = 28,
+  dboptAUTH                  = 29,
+  dboptIDENTITY              = 30,
+  dboptNOIDCOL               = 31,
+  dboptDATESHORT             = 32,
+  dboptCLIENTCURSORS         = 33,
+  dboptSETTIME               = 34,
+  dboptQUOTEDIDENT           = 35,
+  dboptANSITOOEM             = 36,
+  dboptOEMTOANSI             = 37
+);
+const
 { loginrec manipulation Placeholders}
   Z_SETHOST               = 0;
   Z_SETUSER               = 1;
@@ -295,7 +337,7 @@ const
   TDSCLIENTCURSORS         = 33;
   TDSSETTIME               = 34;
   TDSQUOTEDIDENT           = 35;
-  TDSNUMOPTIONS             = 36;
+  TDSNUMOPTIONS            = 36;
   TDSPADOFF                 = 0;
   TDSPADON                  = 1;
   TDSOFF                    = 0;
@@ -549,7 +591,7 @@ const
   EXRESOURCE            = 8;  { Running out of resources - the DBPROCESS may be dead }
   EXCOMM                = 9;  { Failure in communication with Server - the DBPROCESS is dead }
   EXFATAL               = 10; { Fatal error - the DBPROCESS is dead }
-  EXCONSISTENCY         = 11; { Internal software error  - notify MS Technical Supprt }
+  EXCONSISTENCY         = 11; { Internal software error  - notify MS Technical Support }
 
 { Offset identifiers }
   OFF_SELECT            = $16d;

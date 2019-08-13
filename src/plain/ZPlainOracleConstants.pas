@@ -664,7 +664,7 @@ const
   OCI_TRANS_NOMIGRATE    = $00100000; // non migratable transaction
   OCI_TRANS_TWOPHASE     = $01000000; // use two phase commit
 
-  { OCI pece wise fetch }
+  { OCI piece wise fetch }
   OCI_ONE_PIECE       = 0; // one piece
   OCI_FIRST_PIECE     = 1; // the first piece
   OCI_NEXT_PIECE      = 2; // the next of many pieces

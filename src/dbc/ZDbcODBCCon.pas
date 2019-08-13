@@ -94,7 +94,6 @@ type
     fServerProvider: TZServerProvider;
     procedure StopTransaction;
   protected
-    procedure StartTransaction;
     procedure InternalCreate; override;
   public
     function GetArrayRowSupported: Boolean;
@@ -119,6 +118,7 @@ type
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
 
+    function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
 
@@ -636,8 +636,9 @@ begin
   end;
 end;
 
-procedure TZAbstractODBCConnection.StartTransaction;
+function TZAbstractODBCConnection.StartTransaction: Integer;
 begin
+  Result := 1;
   if (not AutoCommit) and Assigned(fHDBC) then
     CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,0));
 end;

@@ -59,7 +59,8 @@ interface
 {$IFNDEF ZEOS_DISABLE_DBLIB}
 {.$UNDEF MSWINDOWS}
 
-uses Classes, ZCompatibility, ZPlainDriver, ZPlainDbLibConstants
+uses Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
+  ZCompatibility, ZPlainDriver, ZPlainDbLibConstants, ZClasses
   {$IFDEF TLIST_IS_DEPRECATED},ZSysUtils{$ENDIF};
 
 const
@@ -75,7 +76,8 @@ type
   IZDBLibPlainDriver = interface (IZPlainDriver)
     ['{7731C3B4-0608-4B6B-B089-240AC43A3463}']
 
-    procedure CheckError(dbProc: PDBPROCESS);
+    procedure CheckError(dbProc: PDBPROCESS); deprecated;
+    function GetErrorString(dbProc: PDBPROCESS): String;
 
     function dbDead(dbProc: PDBPROCESS): Boolean; //done
     function dbLogin: PLOGINREC; //done
@@ -102,7 +104,7 @@ type
     function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT;
       Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE; //done
     function dbClose(dbProc: PDBPROCESS): RETCODE; //done
-    function dbName(dbProc: PDBPROCESS): PAnsiChar;
+    function dbName(dbProc: PDBPROCESS): PAnsiChar; //done
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE; //done
     function dbNumCols(dbProc: PDBPROCESS): DBINT; //done
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar; //done
@@ -163,6 +165,7 @@ type
     procedure dbLoginFree(Login: PLOGINREC); virtual; abstract;
     constructor Create; virtual;
     procedure CheckError(dbProc: PDBPROCESS);
+    function GetErrorString(dbProc: PDBPROCESS): String;
     function GetVariables: TDBVariables;
   end;
 
@@ -504,8 +507,42 @@ type
     function dbsetversion: RETCODE; override;
   end;
 
+
+  TDBERRHANDLE_PROC_cdecl = function(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
+    DbErrStr, OsErrStr: PAnsiChar): Integer; cdecl;
+  TDBMSGHANDLE_PROC_cdecl = function(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
+    Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT):
+    Integer; cdecl;
+  {$IFDEF MSWINDOWS}
+  TDBERRHANDLE_PROC_stdcall = function(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
+    DbErrStr, OsErrStr: PAnsiChar): Integer; stdcall;
+
+  TDBMSGHANDLE_PROC_stdcall = function(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
+    Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT):
+    Integer; stdcall;
+  {$ENDIF}
+
+  TDBERRHANDLE_PROC = function(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
+    DbErrStr, OsErrStr: PAnsiChar): Integer of Object;
+  TDBMSGHANDLE_PROC = function(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
+    Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer of Object;
+
+
+  IZDBLibErrorHandler = interface(IZInterface)
+    ['{E853EAE4-3E13-45FD-9483-726D25A7930E}']
+  end;
+  IZDBLibMessageHandler = interface(IZInterface)
+    ['{2B0CB89E-7C17-4C38-B5C4-677C483672AF}']
+  end;
+
   TDBLibraryVendorType = (lvtFreeTDS, lvtMS, lvtSybase);
+  TDbLibErrorHandler = class; //forward
+  TDbLibMessageHandler = class; //forward
   TZDBLIBPLainDriver = class(TZAbstractPlainDriver, IZPlainDriver)
+  private
+    FSQLErrorHandlerList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FSQLMessageHandlerList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FCS: TCriticalSection;
   private
     { core }
     {$IFDEF MSWINDOWS}
@@ -623,6 +660,8 @@ type
     Fdbloginfree_stdcall: procedure(loginptr: PLOGINREC); stdcall;
     FdbMoreCmds: function(dbProc: PDBPROCESS): RETCODE; cdecl;
     FdbMoreCmds_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
+    FdbName: function(dbProc: PDBPROCESS): PAnsiChar; cdecl;
+    FdbName_stdcall: function(dbProc: PDBPROCESS): PAnsiChar; stdcall;
     FdbNextRow: function(dbProc: PDBPROCESS): STATUS; cdecl;
     FdbNextRow_stdcall: function(dbProc: PDBPROCESS): STATUS; cdecl;
     FdbNumCols: function(dbProc: PDBPROCESS): DBINT; cdecl;
@@ -676,13 +715,19 @@ type
     Fdbvarylen_stdcall: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; stdcall;
     //Fdb12hour: function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; cdecl; //no MS
     //Fdb12hour_stdcall:          function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; stdcall; //no MS
+    dberrhandle_stdcall: function(Handler: TDBERRHANDLE_PROC_stdcall): TDBERRHANDLE_PROC_stdcall; stdcall;
+    dbmsghandle_stdcall: function(Handler: TDBMSGHANDLE_PROC_stdcall): TDBMSGHANDLE_PROC_stdcall; stdcall;
     {$ENDIF}
     //Fdbtds: function(dbproc: PDBPROCESS): DBINT; cdecl;
   private
     FDBLibraryVendorType: TDBLibraryVendorType;
   public
     procedure LoadApi; override;
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
   public //core
+    dberrhandle: function(Handler: TDBERRHANDLE_PROC_cdecl): TDBERRHANDLE_PROC_cdecl; cdecl;
+    dbmsghandle: function(Handler: TDBMSGHANDLE_PROC_cdecl): TDBMSGHANDLE_PROC_cdecl; cdecl;
     {$IFDEF MSWINDOWS}
     function dbadata(dbproc: PDBPROCESS; ComputeId, Column: Integer): PByte; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function dbadlen(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -728,7 +773,6 @@ type
     function dbdatlen(dbproc: PDBPROCESS; Column: Integer): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbdead(dbproc: PDBPROCESS): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     //public dbenlisttrans: function(Proc: PDBPROCESS; PurposeUnkonwn: Longbool): RETCODE; cdecl; //MS only purpose is unknown
-    public dberrhandle_stdcall: function(Handler: SYBDBERRHANDLE_PROC): SYBDBERRHANDLE_PROC; stdcall;
     procedure dbexit; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbSqlExec(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbSqlOk(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -741,11 +785,12 @@ type
     function dbgetcharset(dbproc: PDBPROCESS): PAnsiChar;{$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS; {$IFDEF WITH_INLINE}inline; {$ENDIF}
 
-    function dbOpen(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS;// {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbOpen(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; {$IFDEF WITH_INLINE}inline; {$ENDIF}
 
     function dbLogin: PLOGINREC; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     procedure dbloginfree(loginptr: PLOGINREC); {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbMoreCmds(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbname(dbProc: PDBPROCESS): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbNextRow(dbProc: PDBPROCESS): STATUS; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbNumCols(dbProc: PDBPROCESS): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbResults(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -768,7 +813,6 @@ type
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbVaryLen(dbProc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
   public
-    dbmsghandle_stdcall: function(Handler: SYBDBMSGHANDLE_PROC): SYBDBMSGHANDLE_PROC; stdcall;
     {$ELSE}
     dbadata: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): PByte; cdecl;
     dbadlen: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; cdecl;
@@ -831,6 +875,7 @@ type
     dbLogin: function: PLOGINREC; cdecl;
     dbloginfree: procedure(loginptr: PLOGINREC); cdecl;
     dbMoreCmds: function(dbProc: PDBPROCESS): RETCODE; cdecl;
+    dbname: function(dbProc: PDBPROCESS): PAnsiChar; cdecl;
     dbNextRow: function(dbProc: PDBPROCESS): STATUS; cdecl;
     dbNumCols: function(dbProc: PDBPROCESS): DBINT; cdecl;
     dbResults: function(dbProc: PDBPROCESS): RETCODE; cdecl;
@@ -850,10 +895,6 @@ type
     dbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
     dbvarylen: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
     {$ENDIF}
-  public //common
-    ///Install a user function to handle DB-Library errors
-    dberrhandle: function(Handler: DBERRHANDLE_PROC): DBERRHANDLE_PROC; cdecl;
-    dbmsghandle: function(Handler: DBMSGHANDLE_PROC): DBMSGHANDLE_PROC; cdecl;
   public { macros }
     function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbSetLHost(Login: PLOGINREC; HostName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -865,21 +906,93 @@ type
     function dbSetLUser(Login: PLOGINREC; UserName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
 
     function dbRpcExec(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+  public //mapings from zeos to provider enums
+    function GetDBOption(AOption: TdbOption): DBINT;
+  public
+    function GetErrorHandler(dbProc: PDBPROCESS; ADBERRHANDLE_PROC: TDBERRHANDLE_PROC): IZDBLibErrorHandler;
+    function GetMessageHandler(dbProc: PDBPROCESS; ADBMSGHANDLE_PROC: TDBMSGHANDLE_PROC): IZDBLibMessageHandler;
+    procedure DeRegisterErrorHandler(Const Handler: TDbLibErrorHandler);
+    procedure DeRegisterMessageHandler(Const Handler: TDbLibMessageHandler);
   public
     property DBLibraryVendorType: TDBLibraryVendorType read fDBLibraryVendorType;
   end;
 
-  TMSSQLDBLibPLainDriver = class(TZAbstractPlainDriver, IZPlainDriver)
+  TMSSQLDBLibPLainDriver = class(TZDBLIBPLainDriver, IZPlainDriver)
+  protected
+    procedure LoadCodePages; override;
+    function Clone: IZPlainDriver; override;
   public
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
 
-  TSybaseDBLibPLainDriver = class(TZAbstractPlainDriver, IZPlainDriver)
+  TSybaseDBLibPLainDriver = class(TZDBLIBPLainDriver, IZPlainDriver)
+  protected
+    procedure LoadCodePages; override;
+    function Clone: IZPlainDriver; override;
   public
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
+
+//see: https://www.experts-exchange.com/questions/10414716/How-to-make-a-Callback-Procedure-Function-to-Procedure-Function-of-Object.html
+//http://delphi.cjcsoft.net/viewthread.php?tid=45566
+//https://entwickler-forum.de/forum/archiv/andere-sprachen-aa/delphi-aa/dll/25575-objekte-aus-callback-funktionen-ansprechen
+  TZMethodToDllCallbackProcedure = class(TZMethodToDllCallbackDispatcher)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FManager: TZDBLIBPLainDriver;
+  public
+    constructor Create(const Instance: TObject; methodAddr: pointer;
+      const CallBackManager: TZDBLIBPLainDriver);
+  end;
+
+  TDbLibErrorHandler = class(TZMethodToDllCallbackProcedure, IZDBLibErrorHandler)
+  private
+    FHandle: PDBPROCESS;
+    {$IFDEF MSWINDOWS}
+    FOlddberrhandle_stdcall: TDBERRHANDLE_PROC_stdcall;
+    {$ENDIF MSWINDOWS}
+    FOlddberrhandle_cdecl: TDBERRHANDLE_PROC_cdecl;
+    FMydberrhandle: TDBERRHANDLE_PROC; //fastcall convention
+    {$IFDEF MSWINDOWS}
+    function dberrhandle_stdcall(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
+      DbErrStr, OsErrStr: PAnsiChar): Integer; stdcall;
+    {$ENDIF MSWINDOWS}
+    function dberrhandle_cdecl(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
+      DbErrStr, OsErrStr: PAnsiChar): Integer; cdecl;
+  public
+    Constructor Create(Handle: PDBPROCESS; DBERRHANDLE_PROC: TDBERRHANDLE_PROC;
+      const Manager: TZDBLIBPLainDriver);
+    procedure BeforeDestruction; override;
+  end;
+
+  TDbLibMessageHandler = class(TZMethodToDllCallbackProcedure, IZDBLibMessageHandler)
+  private
+    FHandle: PDBPROCESS;
+    {$IFDEF MSWINDOWS}
+    FOlddbmsghandle_stdcall: TDBMSGHANDLE_PROC_stdcall;
+    {$ENDIF MSWINDOWS}
+    FOlddbmsghandle_cdecl: TDBMSGHANDLE_PROC_cdecl;
+    FMydbmsghandle: TDBMSGHANDLE_PROC; //fastcall convention
+    {$IFDEF MSWINDOWS}
+    function dbmsghandle_stdcall(Proc: PDBPROCESS; MsgNo: DBINT; MsgState, Severity: Integer;
+      MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer; stdcall;
+    {$ENDIF MSWINDOWS}
+    function dbmsghandle_cdecl(Proc: PDBPROCESS; MsgNo: DBINT; MsgState, Severity: Integer;
+      MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer; cdecl;
+  public
+    Constructor Create(Handle: PDBPROCESS; DBMSGHANDLE_PROC: TDBMSGHANDLE_PROC;
+      const Manager: TZDBLIBPLainDriver);
+    procedure BeforeDestruction; override;
+  end;
+
+{$ENDIF ZEOS_DISABLE_DBLIB}
+
+implementation
+
+{$IFNDEF ZEOS_DISABLE_DBLIB}
+
+uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode;
 
 var
   OldFreeTDSErrorHandle: DBERRHANDLE_PROC = nil;
@@ -888,16 +1001,9 @@ var
   OldSybaseMessageHandle: SYBDBMSGHANDLE_PROC = nil;
   OldMsSQLMessageHandle: DBMSGHANDLE_PROC = nil;
   OldMsSQLErrorHandle: DBERRHANDLE_PROC = nil;
+  ErrorCS: TCriticalSection;
   SQLErrors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
   SQLMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
-
-{$ENDIF ZEOS_DISABLE_DBLIB}
-
-implementation
-
-{$IFNDEF ZEOS_DISABLE_DBLIB}
-
-uses SysUtils, ZPlainLoader, ZEncoding, ZClasses, ZFastCode;
 
 procedure AddSybaseCodePages(PlainDriver: TZAbstractPlainDriver);
 begin
@@ -961,18 +1067,22 @@ function SybaseErrorHandle(dbproc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
 var
   SqlError: PDBLibError;
 begin
-  New(SqlError);
-  SqlError.dbProc := dbproc;
-  SqlError.Severity := Severity;
-  SqlError.DbErr := DbErr;
-  SqlError.OsErr := OsErr;
-  if DbErrStr <> nil then
-    ZSetString(DbErrStr, StrLen(DbErrStr), SqlError.DbErrStr);
-  if OsErrStr <> nil then
-    ZSetString(OsErrStr, StrLen(OsErrStr), SqlError.OsErrStr);
-  SQLErrors.Add(SqlError);
-
-  Result := INT_CANCEL;
+  ErrorCS.Enter;
+  try
+    New(SqlError);
+    SqlError.dbProc := dbproc;
+    SqlError.Severity := Severity;
+    SqlError.DbErr := DbErr;
+    SqlError.OsErr := OsErr;
+    if DbErrStr <> nil then
+      ZSetString(DbErrStr, StrLen(DbErrStr), SqlError.DbErrStr);
+    if OsErrStr <> nil then
+      ZSetString(OsErrStr, StrLen(OsErrStr), SqlError.OsErrStr);
+    SQLErrors.Add(SqlError);
+  finally
+    Result := INT_CANCEL;
+    ErrorCS.Leave;
+  end;
 end;
 
 { Handle sql server messages }
@@ -982,21 +1092,25 @@ function SybaseMessageHandle(dbproc: PDBPROCESS; MsgNo: DBINT; MsgState,
 var
   SQLMessage: PDBLibMessage;
 begin
-  New(SQLMessage);
-  SQLMessage.dbProc := dbproc;
-  SQLMessage.MsgNo := MsgNo;
-  SQLMessage.MsgState := MsgState;
-  SQLMessage.Severity := Severity;
-  if MsgText <> nil then
-    ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
-  if SrvName <> nil then
-    ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
-  if ProcName <> nil then
-    ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
-  SQLMessage.Line := Line;
-  SQLMessages.Add(SQLMessage);
-
-  Result := 0;
+  ErrorCS.Enter;
+  try
+    New(SQLMessage);
+    SQLMessage.dbProc := dbproc;
+    SQLMessage.MsgNo := MsgNo;
+    SQLMessage.MsgState := MsgState;
+    SQLMessage.Severity := Severity;
+    if MsgText <> nil then
+      ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
+    if SrvName <> nil then
+      ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
+    if ProcName <> nil then
+      ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
+    SQLMessage.Line := Line;
+    SQLMessages.Add(SQLMessage);
+  finally
+    Result := 0;
+    ErrorCS.Leave;
+  end;
 end;
 
 { Handle sql server error messages }
@@ -1005,18 +1119,22 @@ function DbLibErrorHandle(dbproc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
 var
   SqlError: PDBLibError;
 begin
-  New(SqlError);
-  SqlError.dbProc := dbproc;
-  SqlError.Severity := Severity;
-  SqlError.DbErr := DbErr;
-  SqlError.OsErr := OsErr;
-  if DbErrStr <> nil then
-    ZSetString(DbErrStr, StrLen(DbErrStr),SqlError.DbErrStr);
-  if OsErrStr <> nil then
-    ZSetString(OsErrStr, StrLen(OsErrStr),SqlError.OsErrStr);
-  SQLErrors.Add(SqlError);
-
-  Result := INT_CANCEL;
+  ErrorCS.Enter;
+  try
+    New(SqlError);
+    SqlError.dbProc := dbproc;
+    SqlError.Severity := Severity;
+    SqlError.DbErr := DbErr;
+    SqlError.OsErr := OsErr;
+    if DbErrStr <> nil then
+      ZSetString(DbErrStr, StrLen(DbErrStr),SqlError.DbErrStr);
+    if OsErrStr <> nil then
+      ZSetString(OsErrStr, StrLen(OsErrStr),SqlError.OsErrStr);
+    SQLErrors.Add(SqlError);
+  finally
+    Result := INT_CANCEL;
+    ErrorCS.Leave;
+  end;
 end;
 
 { Handle sql server messages }
@@ -1025,21 +1143,25 @@ function DbLibMessageHandle(dbproc: PDBPROCESS; MsgNo: DBINT; MsgState, Severity
 var
   SQLMessage: PDBLibMessage;
 begin
-  New(SQLMessage);
-  SQLMessage.dbProc := dbproc;
-  SQLMessage.MsgNo := MsgNo;
-  SQLMessage.MsgState := MsgState;
-  SQLMessage.Severity := Severity;
-  if MsgText <> nil then
-    ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
-  if SrvName <> nil then
-    ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
-  if ProcName <> nil then
-    ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
-  SQLMessage.Line := Line;
-  SQLMessages.Add(SQLMessage);
-
-  Result := 0;
+  ErrorCS.Enter;
+  try
+    New(SQLMessage);
+    SQLMessage.dbProc := dbproc;
+    SQLMessage.MsgNo := MsgNo;
+    SQLMessage.MsgState := MsgState;
+    SQLMessage.Severity := Severity;
+    if MsgText <> nil then
+      ZSetString(MsgText, StrLen(MsgText), SQLMessage.MsgText);
+    if SrvName <> nil then
+      ZSetString(SrvName, StrLen(SrvName), SQLMessage.SrvName);
+    if ProcName <> nil then
+      ZSetString(ProcName, StrLen(ProcName), SQLMessage.ProcName);
+    SQLMessage.Line := Line;
+    SQLMessages.Add(SQLMessage);
+  finally
+    Result := 0;
+    ErrorCS.Leave;
+  end;
 end;
 
 constructor TZDBLibAbstractPlainDriver.Create;
@@ -1052,54 +1174,65 @@ begin
 end;
 
 procedure TZDBLibAbstractPlainDriver.CheckError(dbProc: Pointer);
+var S: String;
+begin
+  S := GetErrorString(dbProc);
+  if S <> '' then
+    raise EZSQLException.Create(S);
+end;
+
+function TZDBLibAbstractPlainDriver.GetErrorString(
+  dbProc: PDBPROCESS): String;
 var
   I: Integer;
-  S: String;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
 
     procedure AddToErrorMsg(const AError: String);
     begin
-      if S > '' then
-        S := S + #13#10;
-      S := S + AError;
+      if Result <> EmptyRaw then
+        Result := Result + LineEnding;
+      Result := Result + AError;
     end;
 
 begin
-  if ((SQLErrors = nil) or (SQLErrors.Count = 0)) and
-     ((SQLMessages = nil) or (SQLMessages.Count = 0)) then
-    Exit;
-  S := '';
-  I := 0;
-  while I < SQLErrors.Count do begin
-    lErrorEntry := PDBLibError(SQLErrors[I]);
-    if (dbProc = nil) or (lErrorEntry^.dbProc = dbProc) or (lErrorEntry^.dbProc = nil) then begin
-        if lErrorEntry^.Severity > EXINFO then
-          AddToErrorMsg(Format('DBError : [%4.4d] : %s', [lErrorEntry^.DbErr, String(lErrorEntry^.DbErrStr)]) );
-        if lErrorEntry^.OsErr > EXINFO then
-          AddToErrorMsg(Format('OSError : [%4.4d] : %s', [lErrorEntry^.OsErr, String(lErrorEntry^.OsErrStr)]) );
-        Dispose(lErrorEntry);
-        SQLErrors.Delete(I);
-    end
-    else
-      Inc(I);
+  ErrorCS.Enter;
+  Result := '';
+  try
+    if ((SQLErrors = nil) or (SQLErrors.Count = 0)) and
+       ((SQLMessages = nil) or (SQLMessages.Count = 0)) then
+      Exit;
+    I := 0;
+    while I < SQLErrors.Count do begin
+      lErrorEntry := PDBLibError(SQLErrors[I]);
+      if (dbProc = nil) or (lErrorEntry^.dbProc = dbProc) or (lErrorEntry^.dbProc = nil) then begin
+          if lErrorEntry^.Severity > EXINFO then
+            AddToErrorMsg(Format('DBError : [%4.4d] : %s', [lErrorEntry^.DbErr, String(lErrorEntry^.DbErrStr)]) );
+          if lErrorEntry^.OsErr > EXINFO then
+            AddToErrorMsg(Format('OSError : [%4.4d] : %s', [lErrorEntry^.OsErr, String(lErrorEntry^.OsErrStr)]) );
+          Dispose(lErrorEntry);
+          SQLErrors.Delete(I);
+      end
+      else
+        Inc(I);
+    end;
+    I := 0;
+    while I < SQLMessages.Count do begin
+      lMesageEntry := PDBLibMessage(SQLMessages[I]);
+      if (dbProc = nil) or (lMesageEntry^.dbProc = dbProc) or (lMesageEntry^.dbProc = nil) then begin
+        if lMesageEntry^.Severity > EXINFO then begin
+          if lMesageEntry^.MsgNo <> 5701
+          then AddToErrorMsg(String(lMesageEntry^.MsgText));
+        end;
+        Dispose(lMesageEntry);
+        SQLMessages.Delete(I);
+      end
+      else
+        Inc(I);
+    end;
+  finally
+    ErrorCS.Leave;
   end;
-  I := 0;
-  while I < SQLMessages.Count do begin
-    lMesageEntry := PDBLibMessage(SQLMessages[I]);
-    if (dbProc = nil) or (lMesageEntry^.dbProc = dbProc) or (lMesageEntry^.dbProc = nil) then begin
-      if lMesageEntry^.Severity > EXINFO then begin
-        if lMesageEntry^.MsgNo <> 5701
-        then AddToErrorMsg(String(lMesageEntry^.MsgText));
-      end;
-      Dispose(lMesageEntry);
-      SQLMessages.Delete(I);
-    end
-    else
-      Inc(I);
-  end;
-  if S <> '' then
-    raise EZSQLException.Create(S);
 end;
 
 function TZDBLibAbstractPlainDriver.GetVariables: TDBVariables;
@@ -2860,6 +2993,11 @@ end;
 
 { TMSSQLDBLibPLainDriver }
 
+function TMSSQLDBLibPLainDriver.Clone: IZPlainDriver;
+begin
+  Result := TMSSQLDBLibPLainDriver.Create;
+end;
+
 function TMSSQLDBLibPLainDriver.GetDescription: string;
 begin
   Result := 'Native dblib driver for SQL Server';
@@ -2870,7 +3008,18 @@ begin
   Result := 'mssql'
 end;
 
+procedure TMSSQLDBLibPLainDriver.LoadCodePages;
+begin
+  inherited;
+  AddmMSCodePages(Self);
+end;
+
 { TSybaseDBLibPLainDriver }
+
+function TSybaseDBLibPLainDriver.Clone: IZPlainDriver;
+begin
+  Result := TSybaseDBLibPLainDriver.Create;
+end;
 
 function TSybaseDBLibPLainDriver.GetDescription: string;
 begin
@@ -2882,10 +3031,38 @@ begin
   Result := 'sybase'
 end;
 
+procedure TSybaseDBLibPLainDriver.LoadCodePages;
+begin
+  inherited;
+  AddSybaseCodePages(Self);
+end;
+
 { TZDBLIBPLainDriver }
 
-{$IFDEF MSWINDOWS}
 (** Return a pointer to the data for a compute column *)
+procedure TZDBLIBPLainDriver.AfterConstruction;
+begin
+  inherited;
+  FLoader := TZNativeLibraryLoader.Create([]);
+  Loader.AddLocation(NTWDBLIB_DLL_LOCATION);
+  FSQLErrorHandlerList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FSQLMessageHandlerList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FCS := TCriticalSection.Create;
+end;
+
+procedure TZDBLIBPLainDriver.BeforeDestruction;
+var I: Integer;
+begin
+  for i := FSQLErrorHandlerList.Count-1 downto 0 do
+    Dispose(PDBLibError(FSQLErrorHandlerList[i]));
+  FreeAndNil(FSQLErrorHandlerList);
+  for i := FSQLMessageHandlerList.Count-1 downto 0 do
+    Dispose(PDBLibMessage(FSQLMessageHandlerList[i]));
+  FreeAndNil(FSQLMessageHandlerList);
+  FCS.Free;
+end;
+
+{$IFDEF MSWINDOWS}
 function TZDBLIBPLainDriver.dbadata(dbproc: PDBPROCESS; ComputeId,
   Column: Integer): PByte;
 begin
@@ -3318,6 +3495,14 @@ begin
   else Result := FdbMoreCmds_stdcall(dbProc);
 end;
 
+{** Return the name of the current database. *}
+function TZDBLIBPLainDriver.dbname(dbProc: PDBPROCESS): PAnsiChar;
+begin
+  if Assigned(Fdbname)
+  then Result := Fdbname(dbProc)
+  else Result := Fdbname_stdcall(dbProc);
+end;
+
 {** Read the next result row into the row buffer and into any program variables
   that are bound to column data *}
 function TZDBLIBPLainDriver.dbNextRow(dbProc: PDBPROCESS): STATUS;
@@ -3620,6 +3805,127 @@ end;
 
 {$ENDIF MSWINDOWS}
 
+procedure TZDBLIBPLainDriver.DeRegisterErrorHandler(
+  const Handler: TDbLibErrorHandler);
+var MyIdx, OldIdx: Integer;
+begin
+  FCS.Enter;
+  try
+    MyIdx := FSQLErrorHandlerList.IndexOf(Handler);
+    Assert(MyIdx <> -1, 'worng DeRegisterErrorHandler behavior');
+    if (FSQLErrorHandlerList.Count = 1) then //assign given handle back
+      {$IFDEF MSWINDOWS}
+      if Assigned(dberrhandle_stdcall)
+      then dberrhandle_stdcall(TDbLibErrorHandler(FSQLErrorHandlerList[MyIdx]).FOlddberrhandle_stdcall)
+      else {$ENDIF} dberrhandle(TDbLibErrorHandler(FSQLErrorHandlerList[MyIdx]).FOlddberrhandle_cdecl)
+    else begin
+      if MyIdx = 0
+      then OldIdx := MyIdx+1
+      else OldIdx := MyIdx-1;
+      {$IFDEF MSWINDOWS}
+      if Assigned(dberrhandle_stdcall)
+      then TDbLibErrorHandler(FSQLErrorHandlerList[OldIdx]).FOlddberrhandle_stdcall := dberrhandle_stdcall(TDbLibErrorHandler(FSQLErrorHandlerList[MyIdx]).FOlddberrhandle_stdcall)
+      else {$ENDIF} TDbLibErrorHandler(FSQLErrorHandlerList[OldIdx]).FOlddberrhandle_cdecl := dberrhandle(TDbLibErrorHandler(FSQLErrorHandlerList[MyIdx]).FOlddberrhandle_cdecl);
+    end;
+    FSQLErrorHandlerList.Delete(MyIdx);
+  finally
+    FCS.Leave;
+  end;
+end;
+
+procedure TZDBLIBPLainDriver.DeRegisterMessageHandler(
+  const Handler: TDbLibMessageHandler);
+var MyIdx, OldIdx: Integer;
+begin
+  FCS.Enter;
+  try
+    MyIdx := FSQLMessageHandlerList.IndexOf(Handler);
+    Assert(MyIdx <> -1, 'worng DeRegisterMessageHandler behavior');
+    if (FSQLMessageHandlerList.Count = 1) then
+      {$IFDEF MSWINDOWS}
+      if Assigned(dbmsghandle_stdcall)
+      then dbmsghandle_stdcall(TDbLibMessageHandler(FSQLMessageHandlerList[MyIdx]).FOlddbmsghandle_stdcall)
+      else {$ENDIF} dbmsghandle(TDbLibMessageHandler(FSQLMessageHandlerList[MyIdx]).FOlddbmsghandle_cdecl)
+    else begin
+      if MyIdx = 0
+      then OldIdx := MyIdx+1
+      else OldIdx := MyIdx-1;
+      {$IFDEF MSWINDOWS}TDbLibMessageHandler(FSQLMessageHandlerList[OldIdx]).FOlddbMSGhandle_stdcall := TDbLibMessageHandler(FSQLMessageHandlerList[MyIdx]).FOlddbMSGhandle_stdcall;{$ENDIF MSWINDOWS}
+      TDbLibMessageHandler(FSQLMessageHandlerList[OldIdx]).FOlddbMSGhandle_cdecl := TDbLibMessageHandler(FSQLMessageHandlerList[MyIdx]).FOlddbMSGhandle_cdecl;
+    end;
+    FSQLMessageHandlerList.Delete(MyIdx);
+  finally
+    FCS.Leave;
+  end;
+end;
+
+function TZDBLIBPLainDriver.GetDBOption(AOption: TdbOption): DBINT;
+begin
+  case FDBLibraryVendorType of
+    lvtMS:  case AOption of
+              dboptPARSEONLY:     Result := DBLIBDBPARSEONLY;
+              dboptSHOWPLAN:      Result := DBLIBDBSHOWPLAN;
+              dboptNOEXEC:        Result := DBLIBDBNOEXEC;
+              dboptARITHIGNORE:   Result := DBLIBDBARITHIGNORE;
+              dboptNOCOUNT:       Result := DBLIBDBNOCOUNT;
+              dboptARITHABORT:    Result := DBLIBDBARITHABORT;
+              dboptTEXTLIMIT:     Result := DBLIBDBTEXTLIMIT;
+              dboptOFFSET:        Result := DBLIBDBOFFSET;
+              dboptSTAT:          Result := DBLIBDBSTAT;
+              dboptSTORPROCID:    Result := DBLIBDBSTORPROCID;
+              dboptBUFFER:        Result := DBLIBDBBUFFER;
+              dboptNOAUTOFREE:    Result := DBLIBDBNOAUTOFREE;
+              dboptROWCOUNT:      Result := DBLIBDBROWCOUNT;
+              dboptTEXTSIZE:      Result := DBLIBDBTEXTSIZE;
+              dboptCLIENTCURSORS: Result := DBLIBDBCLIENTCURSORS;
+              dboptSETTIME:       Result := DBLIBDBSET_TIME;
+              dboptQUOTEDIDENT:   Result := DBLIBDBQUOTEDIDENT;
+              dboptANSITOOEM:     Result := DBLIBDBANSITOOEM;
+              dboptOEMTOANSI:     Result := DBLIBDBOEMTOANSI;
+              else                Result := DBNOERR;
+           end;
+    else  case AOption of
+              dboptPARSEONLY:     Result := TDSPARSEONLY;
+              dboptESTIMATE:      Result := TDSESTIMATE;
+              dboptSHOWPLAN:      Result := TDSSHOWPLAN;
+              dboptNOEXEC:        Result := TDSNOEXEC;
+              dboptARITHIGNORE:   Result := TDSARITHIGNORE;
+              dboptNOCOUNT:       Result := TDSNOCOUNT;
+              dboptARITHABORT:    Result := TDSARITHABORT;
+              dboptTEXTLIMIT:     Result := TDSTEXTLIMIT;
+              dboptBROWSE:        Result := TDSBROWSE;
+              dboptOFFSET:        Result := TDSOFFSET;
+              dboptSTAT:          Result := TDSSTAT;
+              dboptERRLVL:        Result := TDSERRLVL;
+              dboptCONFIRM:       Result := TDSCONFIRM;
+              dboptSTORPROCID:    Result := TDSSTORPROCID;
+              dboptBUFFER:        Result := TDSBUFFER;
+              dboptNOAUTOFREE:    Result := TDSNOAUTOFREE;
+              dboptROWCOUNT:      Result := TDSROWCOUNT;
+              dboptTEXTSIZE:      Result := TDSTEXTSIZE;
+              dboptNATLANG:       Result := TDSNATLANG;
+              dboptDATEFORMAT:    Result := TDSDATEFORMAT;
+              dboptPRPAD:         Result := TDSPRPAD;
+              dboptPRCOLSEP:      Result := TDSPRCOLSEP;
+              dboptPRLINELEN:     Result := TDSPRLINELEN;
+              dboptPRLINESEP:     Result := TDSPRLINESEP;
+              dboptLFCONVERT:     Result := TDSLFCONVERT;
+              dboptDATEFIRST:     Result := TDSDATEFIRST;
+              dboptCHAINXACTS:    Result := TDSCHAINXACTS;
+              dboptFIPSFLAG:      Result := TDSFIPSFLAG;
+              dboptISOLATION:     Result := TDSISOLATION;
+              dboptAUTH:          Result := TDSAUTH;
+              dboptIDENTITY:      Result := TDSIDENTITY;
+              dboptNOIDCOL:       Result := TDSNOIDCOL;
+              dboptDATESHORT:     Result := TDSDATESHORT;
+              dboptCLIENTCURSORS: Result := TDSCLIENTCURSORS;
+              dboptSETTIME:       Result := TDSSETTIME;
+              dboptQUOTEDIDENT:   Result := TDSQUOTEDIDENT;
+              else                Result := DBNOERR;
+            end;
+  end;
+end;
+
 procedure TZDBLIBPLainDriver.LoadApi;
 begin
   with FLoader do begin
@@ -3701,6 +4007,7 @@ begin
       @Fdbcancel_stdcall := GetAddress('dbcancel');
       @Fdbcanquery_stdcall := GetAddress('dbcanquery');
       @Fdbclrbuf_stdcall := GetAddress('dbclrbuf');
+      @Fdbcmd_stdcall := GetAddress('dbcmd');
       @Fdbclropt_stdcall := GetAddress('dbclropt');
       @Fdbcollen_stdcall := GetAddress('dbcollen');
       @Fdbcolname_stdcall := GetAddress('dbcolname');
@@ -3717,12 +4024,13 @@ begin
       @FdbSqlExec_stdcall := GetAddress('dbsqlexec');
       @FdbSqlOk_stdcall := GetAddress('dbsqlok');
       @FdbSqlSend_stdcall := GetAddress('dbsqlsend');
-      @dberrhandle_stdcall := GetAddress('dberrhandle');
       @Fdbfreebuf_stdcall := GetAddress('dbfreebuf');
       @Fdbfreequal_stdcall := GetAddress('dbfreequal');
       @Fdbgetchar_stdcall := GetAddress('dbgetchar');
       @Fdbgetcharset_stdcall := GetAddress('dbgetcharset');
       @FdbGetRow_stdcall := GetAddress('dbgetrow');
+      @FdbLogin_stdcall := GetAddress('dblogin');
+      @Fdbname_stdcall := GetAddress('dbname');
       @FdbNextRow_stdcall := GetAddress('dbnextrow');
       @FdbNumCols_stdcall := GetAddress('dbnumcols');
       @FdbOpen_stdcall := GetAddress('dbopen');
@@ -3739,7 +4047,9 @@ begin
       @FdbRpcSend_stdcall := GetAddress('dbrpcsend');
       @Fdbuse_stdcall := GetAddress('dbuse');
 
+      @dberrhandle_stdcall := GetAddress('dberrhandle');
       @dbmsghandle_stdcall := GetAddress('dbmsghandle');
+      //FOldDBMSGHANDLE_PROC_stdcall := dbmsghandle_stdcall(DBMSGHANDLE_PROC_stdcall);
     end else {$ENDIF}begin
       @{$IFDEF MSWINDOWS}Fdbadata{$ELSE}dbadata{$ENDIF} := GetAddress('dbadata');
       @{$IFDEF MSWINDOWS}Fdbadlen{$ELSE}dbadlen{$ENDIF} := GetAddress('dbadlen');
@@ -3758,6 +4068,7 @@ begin
       @{$IFDEF MSWINDOWS}Fdbcanquery{$ELSE}dbcanquery{$ENDIF} := GetAddress('dbcanquery');
       @{$IFDEF MSWINDOWS}Fdbclrbuf{$ELSE}dbclrbuf{$ENDIF} := GetAddress('dbclrbuf');
       @{$IFDEF MSWINDOWS}Fdbclropt{$ELSE}dbclropt{$ENDIF} := GetAddress('dbclropt');
+      @{$IFDEF MSWINDOWS}Fdbcmd{$ELSE}dbcmd{$ENDIF} := GetAddress('dbcmd');
       @{$IFDEF MSWINDOWS}Fdbcollen{$ELSE}dbcollen{$ENDIF} := GetAddress('dbcollen');
       @dbcolinfo := GetAddress('dbcolinfo'); //no sybase but freeTDS and MS
       @{$IFDEF MSWINDOWS}Fdbcolname{$ELSE}dbcolname{$ENDIF} := GetAddress('dbcolname');
@@ -3774,12 +4085,13 @@ begin
       @{$IFDEF MSWINDOWS}FdbSqlExec{$ELSE}dbSqlExec{$ENDIF} := GetAddress('dbsqlexec');
       @{$IFDEF MSWINDOWS}FdbSqlOk{$ELSE}dbSqlOk{$ENDIF} := GetAddress('dbsqlok');
       @{$IFDEF MSWINDOWS}FdbSqlSend{$ELSE}dbSqlSend{$ENDIF} := GetAddress('dbsqlsend');
-      @dberrhandle := GetAddress('dberrhandle');
       @{$IFDEF MSWINDOWS}Fdbfreebuf{$ELSE}dbfreebuf{$ENDIF} := GetAddress('dbfreebuf');
       @{$IFDEF MSWINDOWS}Fdbfreequal{$ELSE}dbfreequal{$ENDIF} := GetAddress('dbfreequal');
       @{$IFDEF MSWINDOWS}Fdbgetchar{$ELSE}dbgetchar{$ENDIF} := GetAddress('dbgetchar');
       @{$IFDEF MSWINDOWS}Fdbgetcharset{$ELSE}dbgetcharset{$ENDIF} := GetAddress('dbgetcharset');
       @{$IFDEF MSWINDOWS}FdbGetRow{$ELSE}dbGetRow{$ENDIF} := GetAddress('dbgetrow');
+      @{$IFDEF MSWINDOWS}FdbLogin{$ELSE}dbLogin{$ENDIF} := GetAddress('dblogin');
+      @{$IFDEF MSWINDOWS}Fdbname{$ELSE}dbname{$ENDIF} := GetAddress('dbname');
       @{$IFDEF MSWINDOWS}FdbNextRow{$ELSE}dbNextRow{$ENDIF} := GetAddress('dbnextrow');
       @{$IFDEF MSWINDOWS}FdbNumCols{$ELSE}dbnumcols{$ENDIF} := GetAddress('dbnumcols');
       @{$IFDEF MSWINDOWS}FdbResults{$ELSE}dbResults{$ENDIF} := GetAddress('dbresults');
@@ -3792,21 +4104,157 @@ begin
       @{$IFDEF MSWINDOWS}Fdbrpcparam{$ELSE}dbrpcparam{$ENDIF} := GetAddress('dbrpcparam');
       @{$IFDEF MSWINDOWS}FdbRpcSend{$ELSE}dbRpcSend{$ENDIF} := GetAddress('dbrpcsend');
 
-
       @{$IFDEF MSWINDOWS}FdbSetLoginTime{$ELSE}dbSetLoginTime{$ENDIF} := GetAddress('dbsetlogintime');
       @{$IFDEF MSWINDOWS}FdbsetLName{$ELSE}dbsetLName{$ENDIF} := GetAddress('dbsetlname');
       @{$IFDEF MSWINDOWS}Fdbopen{$ELSE}dbopen{$ENDIF} := GetAddress('dbopen');
       @{$IFDEF MSWINDOWS}Fdbuse{$ELSE}dbuse{$ENDIF} := GetAddress('dbuse');
 
       @dbmsghandle := GetAddress('dbmsghandle');
+      @dberrhandle := GetAddress('dberrhandle');
     end;
   end;
 end;
 
+function TZDBLIBPLainDriver.GetErrorHandler(dbProc: PDBPROCESS;
+  ADBERRHANDLE_PROC: TDBERRHANDLE_PROC): IZDBLibErrorHandler;
+var DbLibErrorHandler: TDbLibErrorHandler;
+begin
+  FCS.Enter;
+  Result := nil;
+  try
+    DbLibErrorHandler := TDbLibErrorHandler.Create(dbProc, ADBERRHANDLE_PROC, Self);
+    Result := DbLibErrorHandler;
+    FSQLErrorHandlerList.Add(DbLibErrorHandler);
+  finally
+    FCS.Leave;
+  end;
+end;
+
+function TZDBLIBPLainDriver.GetMessageHandler(dbProc: PDBPROCESS;
+  ADBMSGHANDLE_PROC: TDBMSGHANDLE_PROC): IZDBLibMessageHandler;
+var DbLibMessageHandler: TDbLibMessageHandler;
+begin
+  FCS.Enter;
+  Result := nil;
+  try
+    DbLibMessageHandler := TDbLibMessageHandler.Create(dbProc, ADBMSGHANDLE_PROC, Self);
+    Result := DbLibMessageHandler;
+    FSQLMessageHandlerList.Add(DbLibMessageHandler);
+  finally
+    FCS.Leave;
+  end;
+end;
+
+constructor TZMethodToDllCallbackProcedure.Create(const Instance: TObject;
+  methodAddr: pointer; const CallBackManager: TZDBLIBPLainDriver);
+begin
+  inherited Create(Instance, methodAddr);
+  FManager := CallBackManager;
+end;
+
+{ TDbLibErrorHandler }
+
+procedure TDbLibErrorHandler.BeforeDestruction;
+begin
+  inherited;
+  FManager.DeRegisterErrorHandler(Self);
+end;
+
+constructor TDbLibErrorHandler.Create(Handle: PDBPROCESS;
+  DBERRHANDLE_PROC: TDBERRHANDLE_PROC; const Manager: TZDBLIBPLainDriver);
+var P: Pointer;
+begin
+  P := GetProcedureAddress;
+  {$IFDEF MSWINDOWS}
+  if Manager.FDBLibraryVendorType = lvtSybase then begin
+    inherited Create(Self, @TDbLibErrorHandler.dberrhandle_stdcall, Manager);
+    FOlddberrhandle_stdcall := Manager.dberrhandle_stdcall(P);
+  end else {$ENDIF}begin
+    inherited Create(Self, @TDbLibErrorHandler.dberrhandle_cdecl, Manager);
+    FOlddberrhandle_cdecl := Manager.dberrhandle(P);
+  end;
+  FHandle := Handle;
+  FMydberrhandle := DBERRHANDLE_PROC;
+end;
+
+function TDbLibErrorHandler.dberrhandle_cdecl(Proc: PDBPROCESS;
+  Severity, DbErr, OsErr: Integer; DbErrStr, OsErrStr: PAnsiChar): Integer;
+begin
+  if FHandle = Proc
+  then Result := FMydberrhandle(Proc, Severity, DbErr, OsErr, DbErrStr, OsErrStr)
+  else if Assigned(FOlddberrhandle_cdecl)
+    then Result := FOlddberrhandle_cdecl(Proc, Severity, DbErr, OsErr, DbErrStr, OsErrStr)
+    else Result := INT_CANCEL;
+end;
+
+{$IFDEF MSWINDOWS}
+function TDbLibErrorHandler.dberrhandle_stdcall(Proc: PDBPROCESS;
+  Severity, DbErr, OsErr: Integer; DbErrStr, OsErrStr: PAnsiChar): Integer;
+begin
+  if FHandle = Proc
+  then Result := FMydberrhandle(Proc, Severity, DbErr, OsErr, DbErrStr, OsErrStr)
+  else if Assigned(FOlddberrhandle_stdcall)
+    then Result := FOlddberrhandle_stdcall(Proc, Severity, DbErr, OsErr, DbErrStr, OsErrStr)
+    else Result := INT_CANCEL;
+end;
+{$ENDIF MSWINDOWS}
+
+{ TDbLibMessageHandler }
+
+procedure TDbLibMessageHandler.BeforeDestruction;
+begin
+  inherited;
+  FManager.DeRegisterMessageHandler(Self);
+end;
+
+constructor TDbLibMessageHandler.Create(
+  Handle: PDBPROCESS; DBMSGHANDLE_PROC: TDBMSGHANDLE_PROC;
+  const Manager: TZDBLIBPLainDriver);
+var P: Pointer;
+begin
+  P := GetProcedureAddress;
+  {$IFDEF MSWINDOWS}
+  if Manager.FDBLibraryVendorType = lvtSybase then begin
+    inherited Create(Self, @TDbLibMessageHandler.dbmsghandle_stdcall, Manager);
+    FOlddbmsghandle_stdcall := Manager.dbmsghandle_stdcall(P);
+  end else {$ENDIF}begin
+    inherited Create(Self, PAnsiChar(@TDbLibMessageHandler.dbmsghandle_cdecl), Manager);
+    FOlddbmsghandle_cdecl := Manager.dbmsghandle(P);
+  end;
+  FMydbmsghandle := DBMSGHANDLE_PROC;
+  FHandle := Handle;
+end;
+
+function TDbLibMessageHandler.dbmsghandle_cdecl(Proc: PDBPROCESS; MsgNo: DBINT;
+  MsgState, Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar;
+  Line: DBUSMALLINT): Integer;
+begin
+  if FHandle = Proc
+  then Result := FMydbmsghandle(Proc, MsgNo, MsgState, Severity, MsgText, SrvName, ProcName, Line)
+  else if Assigned(FOlddbmsghandle_cdecl)
+    then Result := FOlddbmsghandle_cdecl(Proc, MsgNo, MsgState, Severity, MsgText, SrvName, ProcName, Line)
+    else Result := INT_EXIT;
+end;
+
+{$IFDEF MSWINDOWS}
+function TDbLibMessageHandler.dbmsghandle_stdcall(Proc: PDBPROCESS;
+  MsgNo: DBINT; MsgState, Severity: Integer; MsgText, SrvName,
+  ProcName: PAnsiChar; Line: DBUSMALLINT): Integer;
+begin
+  if FHandle = Proc
+  then Result := FMydbmsghandle(Proc, MsgNo, MsgState, Severity, MsgText, SrvName, ProcName, Line)
+  else if Assigned(FOlddbmsghandle_stdcall)
+    then Result := FOlddbmsghandle_stdcall(Proc, MsgNo, MsgState, Severity, MsgText, SrvName, ProcName, Line)
+    else Result := INT_EXIT;
+end;
+{$ENDIF}
+
 initialization
   SQLErrors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   SQLMessages := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  ErrorCS := TCriticalSection.Create;
 finalization
+  FreeAndnil(ErrorCS);
 //Free any record in the list if any
   while SQLErrors.Count > 0 do
   begin
