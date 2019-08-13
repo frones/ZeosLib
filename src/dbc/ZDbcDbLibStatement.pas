@@ -65,7 +65,7 @@ type
   TZDBLibPreparedStatementEmulated = class(TZEmulatedPreparedStatement_A)
   private
     FDBLibConnection: IZDBLibConnection;
-    FPlainDriver: IZDBLibPlainDriver;
+    FPlainDriver: TZDBLIBPLainDriver;
     FHandle: PDBPROCESS;
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
@@ -96,7 +96,7 @@ type
   private
     FSQL: string;
     FDBLibConnection: IZDBLibConnection;
-    FPlainDriver: IZDBLibPlainDriver;
+    FPlainDriver: TZDBLIBPLainDriver;
     FHandle: PDBPROCESS;
     FLastRowsAffected: Integer;//Workaround for sybase
     FRetrievedResultSet: IZResultSet;
@@ -153,8 +153,9 @@ constructor TZDBLibPreparedStatementEmulated.Create(
 begin
   inherited Create(Connection, SQL, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);
-  if Assigned(FDBLibConnection) then
-    FPLainDriver := FDBLibConnection.GetPlainDriver;
+  FPlainDriver := TZDBLIBPLainDriver(Connection.GetIZPlainDriver.GetInstance);
+  //if Assigned(FDBLibConnection) then
+    //FPLainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
   FResults := TZCollection.Create;
@@ -269,8 +270,7 @@ begin
     Ansi := StringReplaceAll_CS_LToEQ(SQL, RawByteString(' AND NULL IS NULL'), EmptyRaw);
 
   FHandle := FDBLibConnection.GetConnectionHandle;
-  FPlainDriver := FDBLibConnection.GetPlainDriver;
-  //2018-09-16 Coomented by marsupilami79 because this hides errors in the logic
+  //2018-09-16 Commented by marsupilami79 because this hides errors in the logic
   //result sets might get only partial data without an error
   //if FPlainDriver.dbcancel(FHandle) <> DBSUCCEED then
   //  FDBLibConnection.CheckDBLibError(lcExecute, SQL);
@@ -370,11 +370,16 @@ var
   NativeResultSet: TZDBLibResultSet;
   CachedResultSet: TZCachedResultSet;
   RowsAffected: Integer;
+  Status: Integer;
 begin
-//Sybase does not seem to return dbCount at all, so a workaround is made
-  //RowsAffected := -2;
-  while FPlainDriver.dbresults(FHandle) = DBSUCCEED do begin
-    if FPlainDriver.dbcmdrow(FHandle) = DBSUCCEED then begin
+  while True do begin
+    Status := FPlainDriver.dbresults(FHandle);
+    if Status = NO_MORE_RESULTS then
+      Break;
+    if Status <> DBSUCCEED then
+      FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS/dbresults');
+    Status := FPlainDriver.dbcmdrow(FHandle);
+    if Status = DBSUCCEED then begin
       {EH: Developer notes:
        the TDS protocol does NOT support any stmt handles. All actions are
        executed sequentially so in ALL cases we need cached Results NO WAY around!!!}
@@ -393,27 +398,6 @@ begin
     end;
     FPlainDriver.dbCanQuery(FHandle);
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
-
-  (*if not FDBLibConnection.FreeTDS then
-    if RowsAffected = -1 then
-    begin
-      FDBLibConnection.InternalExecuteStatement('select @@rowcount');
-      try
-        FPlainDriver.dbresults(FHandle);
-        NativeResultSet := TZDBLibResultSet.Create(Self, 'select @@rowcount');
-        try
-          if NativeResultset.Next then
-            RowsAffected := NativeResultSet.GetInt(FirstDbcIndex);
-        finally
-          NativeResultSet.Close;
-        end;
-        FResults.Add(TZAnyValue.CreateWithInteger(RowsAffected));
-      finally
-        FPlainDriver.dbCancel(FHandle);
-      end;
-      FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
-    end; *)
 end;
 
 procedure TZDBLibPreparedStatementEmulated.FlushPendingResults;
@@ -437,8 +421,7 @@ constructor TZDBLibCallableStatement.Create(const Connection: IZConnection;
 begin
   inherited Create(Connection, ProcName, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);
-  if Assigned(FDBLibConnection) then
-    FPLainDriver := FDBLibConnection.GetPlainDriver;
+  FPLainDriver := TZDBLIBPLainDriver(FDBLibConnection.GetIZPlainDriver.GetInstance);
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
   {note: this is a hack! Purpose is to notify Zeos all Character columns are
@@ -750,7 +733,7 @@ begin
   FetchResults;
   Result := GetMoreResults;
 
-  if FPLainDriver.dbHasRetStat(FHandle) then
+  if FPLainDriver.dbHasRetStat(FHandle) = DBSUCCEED then
     Temp := EncodeInteger(FPlainDriver.dbRetStatus(FHandle))
   else
     Temp := NullVariant;
