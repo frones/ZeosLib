@@ -140,6 +140,26 @@ begin
   CheckEquals('user_ID', SQLStrings.ParamNames[0]);
   CheckEquals('nazwaFiltr', SQLStrings.ParamNames[1]);
   SQLStrings.Clear;
+
+  //See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=98333
+  SQLScript := 'SELECT * FROM sys_users WHERE login = :login';
+  SQLStrings.Text := SQLScript;
+  CheckEquals(1, SQLStrings.ParamCount);
+  CheckEquals('login', SQLStrings.ParamNames[0]);
+  SQLStrings.Clear;
+
+  SQLScript := 'SELECT * FROM users WHERE username = :username;';
+  SQLStrings.Text := SQLScript;
+  CheckEquals(1, SQLStrings.ParamCount);
+  CheckEquals('username', SQLStrings.ParamNames[0]);
+  SQLStrings.Clear;
+
+  //See: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
+  SQLScript := 'SELECT * FROM sys_users WHERE login = :user_id';
+  SQLStrings.Text := SQLScript;
+  CheckEquals(1, SQLStrings.ParamCount);
+  CheckEquals('user_id', SQLStrings.ParamNames[0]);
+  SQLStrings.Clear;
 end;
 
 {**
