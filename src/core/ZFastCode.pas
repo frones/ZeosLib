@@ -3183,7 +3183,7 @@ begin
       I64 := PInt64(@Value)^;
     Digits := GetOrdinalDigits(I64);
     if Digits < 5 then begin
-      PLongWord(Buf)^ := ord('0')+ord('.') shl 8+ord('0') shl 16+ord('0') shl 24; //fill 0.00 @once
+      PCardinal(Buf)^ := ord('0')+ord('.') shl 8+ord('0') shl 16+ord('0') shl 24; //fill 0.00 @once
       if Digits = 1
       then PWord(Buf+4)^ := Ord('0')+(Ord('0')+I64Rec.Lo) shl 8 //finalize last 0x pair directyl
       else IntToRaw(I64Rec.Lo, Buf+2+Ord(Digits<3)+Ord(Digits<4), Digits);
@@ -3236,10 +3236,10 @@ begin
       I64 := PInt64(@Value)^;
     Digits := GetOrdinalDigits(I64);
     if Digits < 5 then begin
-      PLongWord(Buf)^   := ord('0') + ord('.') shl 16; //write "0." @once
-      PLongWord(Buf+2)^ := ord('0') + ord('0') shl 16; //fill "00" @once
+      PCardinal(Buf)^   := ord('0') + ord('.') shl 16; //write "0." @once
+      PCardinal(Buf+2)^ := ord('0') + ord('0') shl 16; //fill "00" @once
       if Digits = 1
-      then PLongWord(Buf+4)^ := Ord('0')+(Ord('0')+I64Rec.Lo) shl 16 //finalize last 0x pair directly
+      then PCardinal(Buf+4)^ := Ord('0')+(Ord('0')+I64Rec.Lo) shl 16 //finalize last 0x pair directly
       else IntToUnicode(I64Rec.Lo, Buf+2+Ord(Digits<3)+Ord(Digits<4), Digits);
       Inc(Buf, 5);
     end else begin
@@ -3304,10 +3304,10 @@ begin
       K  := Value - K;               {Dividend mod 100}
       Value  := J;                   {Next Dividend}
       Dec(Digits, 2);
-      PLongWord(Buf+Digits)^ := TwoDigitLookupLW[K];
+      PCardinal(Buf+Digits)^ := TwoDigitLookupLW[K];
     until Digits <= 2;
   if Digits = 2
-  then PLongWord(Buf)^ := TwoDigitLookupLW[Value]
+  then PCardinal(Buf)^ := TwoDigitLookupLW[Value]
   else PWord(Buf)^ := Value or Ord('0');
 end;
 
@@ -3376,16 +3376,16 @@ begin
   J32 := I32 div 100;
   K32 := J32 * 100;
   K32 := I32 - K32;
-  PLongWord(Buf + Digits - 2)^ := TwoDigitLookupLW[K32];
+  PCardinal(Buf + Digits - 2)^ := TwoDigitLookupLW[K32];
   I32 := J32 div 100;
   L32 := I32 * 100;
   L32 := J32 - L32;
-  PLongWord(Buf + Digits - 4)^ := TwoDigitLookupLW[L32];
+  PCardinal(Buf + Digits - 4)^ := TwoDigitLookupLW[L32];
   J32 := I32 div 100;
   K32 := J32 * 100;
   K32 := I32 - K32;
-  PLongWord(Buf + Digits - 6)^ := TwoDigitLookupLW[K32];
-  PLongWord(Buf + Digits - 8)^ := TwoDigitLookupLW[J32];
+  PCardinal(Buf + Digits - 6)^ := TwoDigitLookupLW[K32];
+  PCardinal(Buf + Digits - 8)^ := TwoDigitLookupLW[J32];
   Dec(Digits, 8);
   I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
 cardinal_range:
@@ -3396,10 +3396,10 @@ cardinal_range:
       K32 := I32 - K32;  {Dividend mod 100}
       I32 := J32;        {next Dividend}
       Dec(Digits, 2);
-      PLongWord(Buf + Digits)^ := TwoDigitLookupLW[K32];
+      PCardinal(Buf + Digits)^ := TwoDigitLookupLW[K32];
     until Digits <= 2;
   if Digits = 2
-  then PLongWord(Buf)^ := TwoDigitLookupLW[I32]
+  then PCardinal(Buf)^ := TwoDigitLookupLW[I32]
   else PWord(Buf)^ := Word(I32 or ord('0'));
 end;
 
@@ -8603,7 +8603,7 @@ begin
   begin
     W[0] := Ord(TwoDigitLookupRaw[I][1]);
     W[1] := Ord(TwoDigitLookupRaw[I][2]);
-    TwoDigitLookupLW[I] := PLongWord(@W)^;
+    TwoDigitLookupLW[I] := PCardinal(@W)^;
   end;
 end;
 {$ENDIF}
