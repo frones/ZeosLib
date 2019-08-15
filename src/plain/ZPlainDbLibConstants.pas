@@ -398,9 +398,9 @@ const
 
 { TDS_DBVERSION_xxx are used with dbsetversion() }
   TDSDBVERSION_UNKNOWN  = 0;
-  TDSDBVERSION_46       = 1;
+  TDSDBVERSION_46       = 1; // Sybase <= 10
   TDSDBVERSION_100      = 2; // Sybase TDS 5.0  Ver >= 10
-  TDSDBVERSION_42       = 3; // This can be used for old Microsoft(<=6.5) and Sybase < V10 servers
+  TDSDBVERSION_42       = 3; // This can be used for old Microsoft(<=6.5)
   TDSDBVERSION_70       = 4; // MSSQL v7..2000
   TDSDBVERSION_71       = 5;
   TDSDBVERSION_80       = TDSDBVERSION_71;
@@ -931,8 +931,8 @@ type
   end;
   PDBMONEY = ^TDBMONEY;
 
-  PDBDATETIME = ^DBDATETIME;
-  DBDATETIME = packed record
+  PDBDATETIME = ^TDBDATETIME;
+  TDBDATETIME = packed record
     dtdays:	DBINT;          // Days since Jan 1, 1900
     dttime:	LongWord;       // 300ths of a second since midnight, 25920000 unit is 1 day
   end;

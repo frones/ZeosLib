@@ -71,7 +71,6 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
-    function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; override;
 
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
@@ -216,39 +215,6 @@ end;
 function TZDBLibDriver.GetMinorVersion: Integer;
 begin
   Result := 0;
-end;
-
-function TZDBLibDriver.GetPlainDriver(const Url: TZURL;
-  const InitDriver: Boolean): IZPlainDriver;
-var S: String;
-  PlainDriver: TZDBLIBPLainDriver;
-  TDSVersion: DBINT;
-begin
-  Result := inherited GetPlainDriver(URL, False);
-  PlainDriver := TZDBLIBPLainDriver(Result.GetInstance);
-  //EH move to ZDbcProperties !
-  if not plainDriver.Loader.Loaded then begin
-    S := URL.Properties.Values[ConnProps_TDSVersion];
-    TDSVersion := StrToIntDef(S, TDSDBVERSION_UNKNOWN);
-    if TDSVersion = TDSDBVERSION_UNKNOWN then begin
-      if plainDriver.DBLibraryVendorType = lvtMS then
-        TDSVersion := TDSDBVERSION_42
-      else begin {as long we left the protocol names this workaraound is possible}
-        S := plainDriver.GetDescription;
-        if (ZFastCode.Pos('MsSQL 7.0', S) > 0) or (ZFastCode.Pos('MsSQL 2000', S) > 0) then
-          TDSVersion := DBVERSION_70
-        else if ZFastCode.Pos('MsSQL 2005+', plainDriver.GetDescription) > 0 then
-          TDSVersion := DBVERSION_72
-        else if ZFastCode.Pos('Sybase-10+', plainDriver.GetDescription) > 0 then
-          TDSVersion := TDSDBVERSION_100
-        else //old sybase and MSSQL <= 6.5
-          TDSVersion := TDSDBVERSION_42;
-      end;
-    end;
-    PlainDriver.SetTDSVersion(TDSVersion);
-    if InitDriver then
-      PlainDriver.Initialize(URL.LibLocation);
-  end;
 end;
 
 {**
@@ -566,8 +532,7 @@ begin
     CheckDBLibError(lcConnect, LogMessage);
   if FPlainDriver.dbsetopt(FHandle, FPlainDriver.GetDBOption(dboptTEXTSIZE),Pointer(textlimit), -1) <> DBSUCCEED then
     CheckDBLibError(lcConnect, LogMessage);
-  if FPlainDriver.dbsetopt(FHandle, FPlainDriver.GetDBOption(dboptQUOTEDIDENT),PAnsiChar('"ON"'), -1) <> DBSUCCEED then
-    CheckDBLibError(lcConnect, LogMessage);
+  InternalExecuteStatement('set quoted_identifier on');
 
   inherited Open;
 

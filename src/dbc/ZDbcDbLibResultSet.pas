@@ -962,7 +962,7 @@ function TZDBLibResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
   DL: Integer;
   Data: Pointer;
-  TempDate: DBDATETIME;
+  TempDate: TDBDATETIME;
   tdsTempDate: TTDSDBDATETIME;
   Failed: Boolean;
 begin
