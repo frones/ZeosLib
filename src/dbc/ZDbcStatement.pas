@@ -365,7 +365,6 @@ type
     procedure BindArray(Index: Integer; const Value: TZArray); virtual;
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); virtual;
     procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); virtual;
-    procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double); virtual;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); virtual;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
@@ -395,9 +394,6 @@ type
       var AError: EZSQLConnectionLost); override;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual; abstract;
-
-    procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
-    procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
 
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual; abstract;
@@ -476,7 +472,6 @@ type
     FNCharDetected: PBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
-    //property IsNCharIndex: TBooleanDynArray read FNCharDetected;
   public
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     procedure Unprepare; override;
@@ -4615,16 +4610,6 @@ begin
 end;
 
 {**
-  Binds a double value
-}
-procedure TZAbstractPreparedStatement2.BindDouble(Index: Integer;
-  SQLType: TZSQLType; const Value: Double);
-begin
-  CheckParameterIndex(Index);
-  FBindList.Put(Index, SQLType, P8Bytes(@Value));
-end;
-
-{**
   Binds the input parameters
 }
 procedure TZAbstractPreparedStatement2.BindInParameters;
@@ -5357,34 +5342,6 @@ procedure TZAbstractPreparedStatement2.SetDate(ParameterIndex: Integer;
   const Value: TDateTime);
 begin
   BindDateTime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
-end;
-
-{**
-  Sets the designated parameter to a Java <code>double</code> value.
-  The driver converts this
-  to an SQL <code>DOUBLE</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement2.SetDouble(ParameterIndex: Integer;
-  const Value: Double);
-begin
-  BindDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
-end;
-
-{**
-  Sets the designated parameter to a Java <code>float</code> value.
-  The driver converts this
-  to an SQL <code>FLOAT</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement2.SetFloat(ParameterIndex: Integer;
-  Value: Single);
-begin
-  BindDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value);
 end;
 
 {**

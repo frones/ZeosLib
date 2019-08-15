@@ -233,9 +233,16 @@ var
   BindVal: PZBindValue;
   ErrorCode: Integer;
 begin
-  if FBindDoubleDateTimeValues then
-    BindDouble(Index, SQLType, Value-JulianEpoch)
-  else begin
+  CheckParameterIndex(Index);
+  if FBindDoubleDateTimeValues then begin
+    if FBindLater or FHasLoggingListener
+      then BindList.Put(Index, SQLType, P8Bytes(@Value));
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, Value-JulianEpoch);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end else begin
     CheckParameterIndex(Index);
     BindVal := BindList[Index];
     if SQLType = stDate then
