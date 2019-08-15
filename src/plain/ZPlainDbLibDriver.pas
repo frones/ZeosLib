@@ -60,7 +60,8 @@ interface
 {.$UNDEF MSWINDOWS}
 
 uses Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
-  ZCompatibility, ZPlainDriver, ZPlainDbLibConstants, ZClasses
+  ZCompatibility, ZPlainDriver, ZPlainDbLibConstants
+  {$IFDEF TEST_CALLBACK}, ZClasses{$ENDIF}
   {$IFDEF TLIST_IS_DEPRECATED},ZSysUtils{$ENDIF};
 
 const
@@ -117,7 +118,6 @@ type
     FCS: TCriticalSection;
     {$ENDIF TEST_CALLBACK}
     {$IFDEF MSWINDOWS}FClientVersion: String;{$ENDIF}
-    FTDSVERSION: Integer;
   private
     { core }
     {$IFDEF MSWINDOWS}
@@ -240,7 +240,7 @@ type
     FdbName: function(dbProc: PDBPROCESS): PAnsiChar; cdecl;
     FdbName_stdcall: function(dbProc: PDBPROCESS): PAnsiChar; stdcall;
     FdbNextRow: function(dbProc: PDBPROCESS): STATUS; cdecl;
-    FdbNextRow_stdcall: function(dbProc: PDBPROCESS): STATUS; cdecl;
+    FdbNextRow_stdcall: function(dbProc: PDBPROCESS): STATUS; stdcall;
     FdbNumCols: function(dbProc: PDBPROCESS): DBINT; cdecl;
     FdbNumCols_stdcall: function(dbProc: PDBPROCESS): DBINT; stdcall;
     FdbOpen: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; cdecl;
@@ -275,7 +275,7 @@ type
     Fdbsqlsend: function(dbProc: PDBPROCESS): RETCODE; cdecl;
     Fdbsqlsend_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
     FdbSetLName: function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
-    FdbSetLName_stdcall: function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
+    FdbSetLName_stdcall: function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; stdcall;
     FdbSetLoginTime: function(Seconds: Integer): RETCODE; cdecl;
     FdbSetLoginTime_stdcall: function(Seconds: Integer): RETCODE; stdcall;
     FdbSetOpt_MS: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar): RETCODE; cdecl;
@@ -500,8 +500,6 @@ type
     function dbLogin: PLOGINREC; virtual;
   public //mapings from zeos to provider enums
     function GetDBOption(AOption: TdbOption): DBINT;
-    procedure SetTDSVersion(Value: DBINT);
-    function GetTDSVersion: DBINT;
   public
     {$IFDEF TEST_CALLBACK}
     function GetErrorHandler(dbProc: PDBPROCESS; ADBERRHANDLE_PROC: TDBERRHANDLE_PROC): IZDBLibErrorHandler;
@@ -1838,11 +1836,6 @@ begin
   end;
 end;
 
-function TZDBLIBPLainDriver.GetTDSVersion: DBINT;
-begin
-  Result := FTDSVERSION;
-end;
-
 procedure TZDBLIBPLainDriver.LoadApi;
 begin
   with FLoader do begin
@@ -1880,15 +1873,28 @@ begin
         end;
       lvtSybase: begin //handle lower vs uppercase and the call conventions
           @{$IFDEF MSWINDOWS}Fdbdead_stdcall{$ELSE}dbdead{$ENDIF} := GetAddress('DBDEAD'); //as documented: uppercase
+          if not Assigned({$IFDEF MSWINDOWS}Fdbdead_stdcall{$ELSE}dbdead{$ENDIF}) then
+            @{$IFDEF MSWINDOWS}Fdbdead_stdcall{$ELSE}dbdead{$ENDIF} := GetAddress('dbdead'); //lowercase since 15+
           @{$IFDEF MSWINDOWS}Fdbcmdrow_stdcall{$ELSE}dbcmdrow{$ENDIF} := GetAddress('DBCMDROW'); //as documented: uppercase
+          if not Assigned({$IFDEF MSWINDOWS}Fdbcmdrow_stdcall{$ELSE}dbcmdrow{$ENDIF}) then
+            @{$IFDEF MSWINDOWS}Fdbcmdrow_stdcall{$ELSE}dbcmdrow{$ENDIF} := GetAddress('dbcmdrow'); //lowercase since 15+
           @{$IFDEF MSWINDOWS}Fdbcount_stdcall{$ELSE}dbcount{$ENDIF} := GetAddress('DBCOUNT'); //as documented: uppercase
+          if not Assigned({$IFDEF MSWINDOWS}Fdbcount_stdcall{$ELSE}dbcount{$ENDIF}) then
+            @{$IFDEF MSWINDOWS}Fdbcount_stdcall{$ELSE}dbcount{$ENDIF} := GetAddress('dbcount'); //lowercase since 15+
           @{$IFDEF MSWINDOWS}Fdbcurrow_stdcall{$ELSE}dbcurrow{$ENDIF} := GetAddress('DBCURROW'); //as documented: uppercase
+          if not Assigned({$IFDEF MSWINDOWS}Fdbcurrow_stdcall{$ELSE}dbcurrow{$ENDIF}) then
+            @{$IFDEF MSWINDOWS}Fdbcurrow_stdcall{$ELSE}dbcurrow{$ENDIF} := GetAddress('dbcurrow'); //lowercase since 15+
           @{$IFDEF MSWINDOWS}Fdbfirstrow_stdcall{$ELSE}dbfirstrow{$ENDIF} := GetAddress('DBFIRSTROW'); //as documented: uppercase
+          if not Assigned({$IFDEF MSWINDOWS}Fdbfirstrow_stdcall{$ELSE}dbfirstrow{$ENDIF}) then
+            @{$IFDEF MSWINDOWS}Fdbfirstrow_stdcall{$ELSE}dbfirstrow{$ENDIF} := GetAddress('dbfirstrow'); //lowercase since 15+
           @{$IFDEF MSWINDOWS}Fdbclose_stdcall{$ELSE}dbclose{$ENDIF} := GetAddress('dbclose');
           @{$IFDEF MSWINDOWS}Fdbsetmaxprocs_stdcall{$ELSE}dbSetMaxprocs{$ENDIF} := GetAddress('dbsetmaxprocs');
           @{$IFDEF MSWINDOWS}Fdbloginfree_stdcall{$ELSE}dbloginfree{$ENDIF} := GetAddress('dbloginfree', True); //name diff
           @{$IFDEF MSWINDOWS}Fdbcolbrowse_stdcall{$ELSE}dbcolbrowse{$ENDIF} := GetAddress('dbcolbrowse'); //no FreeTDS
           @{$IFDEF MSWINDOWS}FdbMoreCmds_stdcall{$ELSE}dbMoreCmds{$ENDIF} := GetAddress('DBMORECMDS'); //uppercase
+          if not Assigned({$IFDEF MSWINDOWS}FdbMoreCmds_stdcall{$ELSE}dbMoreCmds{$ENDIF}) then
+            @{$IFDEF MSWINDOWS}FdbMoreCmds_stdcall{$ELSE}dbMoreCmds{$ENDIF} := GetAddress('dbmorecmds'); //lowercase since 15+
+
           @{$IFDEF MSWINDOWS}FdbSetOpt_stdcall{$ELSE}dbsetopt{$ENDIF} := GetAddress('dbsetopt'); //int_param is available
           @{$IFDEF MSWINDOWS}FdbHasRetStat_stdcall{$ELSE}dbhasretstat{$ENDIF} := GetAddress('dbhasretstat'); //DBBOOL vs. LonBool
           @{$IFDEF MSWINDOWS}Fdbvarylen_stdcall{$ELSE}dbvarylen{$ENDIF} := GetAddress('dbvarylen'); //DBBOOL vs. LonBool
@@ -2061,12 +2067,6 @@ begin
   AddCodePage('UTF-8', 1, ceUTF8, zCP_UTF8,  '', 4, True);
   AddCodePage('ISO-8859-1', 2, ceAnsi, zCP_L1_ISO_8859_1, '', 1, False);
   AddCodePage('ASCII', 3, ceAnsi, zCP_us_ascii, '', 1, False);
-end;
-
-procedure TZDBLIBPLainDriver.SetTDSVersion(Value: DBINT);
-begin
-  //if Loader.Loaded then
-  FTDSVERSION := Value;
 end;
 
 {$IFDEF TEST_CALLBACK}
@@ -2314,7 +2314,7 @@ end;
 function TZFreeTDS72PlainDriver.dbLogin: PLOGINREC;
 begin
   Result := inherited dbLogin;
-//  Assert(fdbsetversion(TDSDBVERSION_72) = DBSUCCEED, 'failed to set the TDS version');
+  Assert(fdbsetversion(TDSDBVERSION_72) = DBSUCCEED, 'failed to set the TDS version');
 end;
 
 { TMSSQLDBLibPLainDriver }
@@ -2380,12 +2380,13 @@ end;
 procedure TSybaseDBLibPLainDriver.LoadApi;
 begin
   inherited LoadApi;
-  if (FTDSVERSION <> TDSDBVERSION_UNKNOWN) and (FDBLibraryVendorType = lvtSybase) then
-    {$IFDEF MSWIDOWS}
-    Assert(FdbSetVersion_stdcall(FTDSVERSION) = DBSUCCEED, 'failed to set the TDS version');
-    {$ELSE}
-    Assert(FdbSetVersion(FTDSVERSION) = DBSUCCEED, 'failed to set the TDS version');
-    {$ENDIF}
+  {$IFDEF MSWINDOWS}
+  if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then
+    Assert(FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
+  {$ELSE}
+  if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then
+    Assert(FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
+  {$ENDIF}
 end;
 
 { TZFreeTDS50PlainDriver }
