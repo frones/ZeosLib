@@ -56,13 +56,13 @@ interface
 {$I ZDbc.inc}
 
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
-uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   ZCompatibility, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs, ZDbcStatement,
   ZDbcDbLib, ZPlainDbLibConstants, ZPlainDbLibDriver;
 
 type
   {** Implements Prepared SQL Statement for DBLib. With emulation}
-  TZDBLibPreparedStatementEmulated = class(TZEmulatedPreparedStatement_A)
+  TZDBLibEmulatedStatement = class(TZRawParamDetectPreparedStatement)
   private
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: TZDBLIBPLainDriver;
@@ -71,15 +71,15 @@ type
     FUserEncoding: TZCharEncoding;
     FLastOptainedRS: IZResultSet;
     FClientCP: Word;
+    FIsNCharIndex: TBooleanDynArray;
+    function ComposeRawSQLQuery: RawByteString;
   protected
     procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure FetchResults;
     procedure FlushPendingResults;
-    function GetParamAsString(ParamIndex: Integer): RawByteString; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
-      const Info: TStrings); overload;
-    constructor Create(const Connection: IZConnection; const Info: TStrings); overload;
+      const Info: TStrings);
     procedure Prepare; override;
     procedure Unprepare; override;
     function GetMoreResults: Boolean; override;
@@ -90,7 +90,46 @@ type
   end;
 
   {** Implements Generic DBLib Statement. }
-  TZDBLibStatement = class(TZDBLibPreparedStatementEmulated);
+  TZDBLibStatement = class(TZDBLibEmulatedStatement)
+  public
+    constructor Create(const Connection: IZConnection; const Info: TStrings);
+  end;
+
+  TZDBLibPreparedStatementEmulated = class(TZDBLibEmulatedStatement, IZPreparedStatement)
+  protected
+    function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
+  public
+    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
+    procedure SetByte(ParameterIndex: Integer; Value: Byte);
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64);
+    procedure SetFloat(ParameterIndex: Integer; Value: Single);
+    procedure SetDouble(ParameterIndex: Integer; const Value: Double);
+    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);reintroduce;
+    procedure SetString(ParameterIndex: Integer; const Value: String);reintroduce;
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); reintroduce;
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); reintroduce;
+    procedure SetGuid(ParameterIndex: Integer; const Value: TGUID); reintroduce;
+    {$IFNDEF NO_ANSISTRING}
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); reintroduce;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); reintroduce;
+    {$ENDIF}
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); reintroduce;
+    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
+    procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
+  end;
 
   TZDBLibCallableStatement = class(TZAbstractCallableStatement)
   private
@@ -102,7 +141,6 @@ type
     FRetrievedResultSet: IZResultSet;
     FRetrievedUpdateCount: Integer;
     FUserEncoding: TZCharEncoding;
-
     procedure FetchResults;
   protected
     procedure SetInParamCount(NewParamCount: Integer); override;
@@ -134,13 +172,13 @@ https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedur
 *)
 
 uses
-  Types, Math,
+  Math,
   ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
-  ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet, ZDbcProperties
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
-  {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF}, ZMessages;
+  ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet, ZDbcProperties,
+  {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings, {$ENDIF}
+  ZFastCode, ZMessages;
 
-{ TZDBLibPreparedStatementEmulated }
+{ TZDBLibEmulatedStatement }
 
 {**
   Constructs this object and assignes the main properties.
@@ -148,9 +186,10 @@ uses
   @param SQL the command text.
   @param Info a statement parameters.
 }
-constructor TZDBLibPreparedStatementEmulated.Create(
+constructor TZDBLibEmulatedStatement.Create(
   const Connection: IZConnection; const SQL: string; const Info: TStrings);
 begin
+  FNCharDetected := @FIsNCharIndex;
   inherited Create(Connection, SQL, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   FPlainDriver := TZDBLIBPLainDriver(Connection.GetIZPlainDriver.GetInstance);
@@ -169,7 +208,6 @@ begin
     FUserEncoding := ceUTF8
   else
     Self.FUserEncoding := ceDefault;
-  FNeedNCharDetection := True;
   FClientCP := ConSettings.ClientCodePage.CP;
 end;
 
@@ -188,7 +226,7 @@ end;
    <code>false</code> if it is an update count or there are no more results
  @see #execute
 }
-function TZDBLibPreparedStatementEmulated.GetMoreResults: Boolean;
+function TZDBLibEmulatedStatement.GetMoreResults: Boolean;
 var
   ResultSet: IZResultSet;
   UpdateCount: IZAnyValue;
@@ -208,21 +246,6 @@ begin
   end;
 end;
 
-function TZDBLibPreparedStatementEmulated.GetParamAsString(
-  ParamIndex: Integer): RawByteString;
-var P: PAnsiChar absolute Result;
-begin
-  // Todo: Talk with EgonHugeist wether this requiresmodifications for his Mextgen effort
-  if InParamCount <= ParamIndex
-  then Result := 'NULL'
-  else Result := PrepareSQLParameter(InParamValues[ParamIndex],
-      InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
-  if (P <> nil) and (PByte(P)^ = Ord(#39)) and not IsNCharIndex[ParamIndex] and
-     (FDBLibConnection.GetProvider = dpMsSQL) and FDBLibConnection.FreeTDS and
-     (PByte(P+Length(Result)-1)^ = Ord(#39)) and (FClientCP = zCP_UTF8)
-  then Result := 'N' + Result;
-end;
-
 {**
   Returns the current result as an update count;
   if the result is a <code>ResultSet</code> object or there are no more results, -1
@@ -232,7 +255,7 @@ end;
     <code>ResultSet</code> object or there are no more results
   @see #execute
 }
-function TZDBLibPreparedStatementEmulated.GetUpdateCount: Integer;
+function TZDBLibEmulatedStatement.GetUpdateCount: Integer;
 var
   UpdateCount: IZAnyValue;
   I: Integer;
@@ -258,7 +281,7 @@ end;
   @param Handle a DBLib connection handle.
   @sql string containing the statements to execute
 }
-procedure TZDBLibPreparedStatementEmulated.InternalExecuteStatement(
+procedure TZDBLibEmulatedStatement.InternalExecuteStatement(
   const SQL: RawByteString);
 var Ansi: RawByteString;
 begin
@@ -283,27 +306,42 @@ begin
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 end;
 
-procedure TZDBLibPreparedStatementEmulated.Prepare;
+procedure TZDBLibEmulatedStatement.Prepare;
 begin
   FlushPendingResults;
   inherited Prepare;
 end;
 
-procedure TZDBLibPreparedStatementEmulated.Unprepare;
+procedure TZDBLibEmulatedStatement.Unprepare;
 begin
   FlushPendingResults;
   inherited UnPrepare;
 end;
 
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Info a statement parameters.
-}
-constructor TZDBLibPreparedStatementEmulated.Create(
-  const Connection: IZConnection; const Info: TStrings);
+function TZDBLibEmulatedStatement.ComposeRawSQLQuery: RawByteString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+  Bind: PZBindValue;
 begin
-  Create(Connection, '', Info)
+  ParamIndex := 0;
+  Result := '';
+  for I := 0 to High(FCachedQueryRaw) do
+    if IsParamIndex[i] then begin
+      Bind := BindList[ParamIndex];
+      if Bind.BindType = zbtNull
+      then if FInParamDefaultValues[ParamIndex] <> '' then
+        ToBuff(FInParamDefaultValues[ParamIndex], Result)
+        else ToBuff('null', Result)
+      else begin
+        if (Bind.SQLType in [stString, stAsciiStream]) and (Bind.BindType = zbtUTF8String) and not FIsNCharIndex[ParamIndex] then
+          ToBuff('N', Result);
+        ToBuff(RawByteString(Bind.Value), Result);
+      end;
+      Inc(ParamIndex);
+    end else
+      ToBuff(FCachedQueryRaw[I], Result);
+  FlushBuff(Result);
 end;
 
 {**
@@ -313,7 +351,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-function TZDBLibPreparedStatementEmulated.ExecutePrepared: Boolean;
+function TZDBLibEmulatedStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
   InternalExecuteStatement(ComposeRawSQLQuery);
@@ -331,7 +369,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-function TZDBLibPreparedStatementEmulated.ExecuteQueryPrepared: IZResultSet;
+function TZDBLibEmulatedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Prepare;
   InternalExecuteStatement(ComposeRawSQLQuery);
@@ -353,7 +391,7 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-function TZDBLibPreparedStatementEmulated.ExecuteUpdatePrepared: Integer;
+function TZDBLibEmulatedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   InternalExecuteStatement(ComposeRawSQLQuery);
@@ -365,7 +403,7 @@ end;
   Fetches all results and creates a cachedresultset object for each resultset
   and a ZAnyValue object for each count value.
 }
-procedure TZDBLibPreparedStatementEmulated.FetchResults;
+procedure TZDBLibEmulatedStatement.FetchResults;
 var
   NativeResultSet: TZDBLibResultSet;
   CachedResultSet: TZCachedResultSet;
@@ -400,7 +438,7 @@ begin
   end;
 end;
 
-procedure TZDBLibPreparedStatementEmulated.FlushPendingResults;
+procedure TZDBLibEmulatedStatement.FlushPendingResults;
 var I: Integer;
 begin
   if FLastOptainedRS <> nil then begin
@@ -882,5 +920,352 @@ begin
     SetOutParamCount(NewParamCount);
 end;
 
+{ TZDBLibPreparedStatementEmulated }
+
+function TZDBLibPreparedStatementEmulated.GetInParamLogValue(
+  ParamIndex: Integer): RawByteString;
+var Bind: PZBindValue;
+begin
+  Bind := BindList[ParamIndex];
+  if Bind.BindType = zbtNull then
+    Result := '(NULL)'
+  else if Bind.BindType = zbtArray then
+    Result := '(ARRAY)'
+  else case Bind.SQLType of
+    stBoolean:      if PAnsiChar(Bind.Value)^ = AnsiChar('0')
+                    then Result := '(FALSE)'
+                    else Result := '(TRUE)';
+    stAsciiStream:  Result := '(CLOB)';
+    stBinaryStream: Result := '(BLOB)';
+    else            Result := RawByteString(Bind.Value);
+  end;
+end;
+
+{$IFNDEF NO_ANSISTRING}
+procedure TZDBLibPreparedStatementEmulated.SetAnsiString(ParameterIndex: Integer;
+  const Value: AnsiString);
+var P: PAnsiChar;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  P := Pointer(Value);
+  L := Length(Value);
+  if (FClientCP = zOSCodePage) or not FIsNCharIndex[ParameterIndex] then begin
+    FRawTemp := SQLQuotedStr(P, L, #39); //localize -> no hidden LStrClear in call
+    BindList.Put(ParameterIndex, stString, FRawTemp, zOSCodePage)
+  end else begin
+    FUniTemp := PRawToUnicode(P, L, zOSCodePage);
+    SetUnicodeString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FUniTemp);
+  end;
+end;
+{$ENDIF NO_ANSISTRING}
+
+procedure TZDBLibPreparedStatementEmulated.SetBigDecimal(ParameterIndex: Integer;
+  const Value: TBCD);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stBigDecimal, BcdToSQLRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetBlob(Index: Integer; SQLType: TZSQLType;
+  const Value: IZBlob);
+var InParamIdx: Integer;
+  RefCntLob: IZBlob;
+  CP: Word;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  InParamIdx := Index;
+  CheckParameterIndex(InParamIdx);
+  RefCntLob := Value; //inc RefCount
+  if (RefCntLob <> nil) and not RefCntLob.IsEmpty then
+    if (SQLType in [stAsciiStream, stUnicodeStream]) then begin
+      if (FClientCP = zCP_UTF8) or FIsNCharIndex[Index]
+      then CP := zCP_UTF8
+      else CP := FClientCP;
+      if Value.IsClob then begin
+        RefCntLob.GetPAnsiChar(CP);
+        FRawTemp := SQLQuotedStr(RefCntLob.GetPAnsiChar(CP), refCntLob.Length, #39)
+      end else begin
+        FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings, CP);
+        FRawTemp := SQLQuotedStr(FRawTemp, #39);
+      end;
+      BindList.Put(Index, stAsciiStream, FRawTemp, CP);
+    end else
+      BindList.Put(Index, stBinaryStream, GetSQLHexAnsiString(RefCntLob.GetBuffer, RefCntLob.Length, True), FClientCP)
+  else BindList.SetNull(Index, SQLType);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetBoolean(ParameterIndex: Integer;
+  Value: Boolean);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stBoolean, BoolStrIntsRaw[Value], FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetByte(ParameterIndex: Integer;
+  Value: Byte);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stByte, IntToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetBytes(ParameterIndex: Integer;
+  const Value: TBytes);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stBytes, GetSQLHexAnsiString(Pointer(Value), Length(Value), True), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetCharRec(ParameterIndex: Integer;
+  const Value: TZCharRec);
+var CP: Word;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  if (Value.CP = FClientCP) or ((Value.CP = zCP_UTF8) and FIsNCharIndex[ParameterIndex]) then begin
+    FRawTemp := SQLQuotedStr(PAnsiChar(Value.P), Value.Len, #39);
+    BindList.Put(ParameterIndex, stString, FRawTemp, Value.CP);
+  end else begin
+    if FIsNCharIndex[ParameterIndex] or (FClientCP = zCP_UTF8)
+    then CP := zCP_UTF8
+    else CP := FClientCP;
+    if Value.CP = zCP_UTF16 then
+      fRawTemp := PUnicodeToRaw(Value.P, Value.Len, CP)
+    else begin
+      fUniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP);
+      fRawTemp := ZUnicodeToRaw(fUniTemp, CP)
+    end;
+    FRawTemp := SQLQuotedStr(fRawTemp, #39);
+    BindList.Put(ParameterIndex, stString, FRawTemp, Value.CP);
+  end;
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetCurrency(ParameterIndex: Integer;
+  const Value: Currency);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stCurrency, CurrToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetDate(ParameterIndex: Integer;
+  const Value: TDateTime);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stDate, ZSysUtils.DateTimeToRawSQLDate(Value, ConSettings.WriteFormatSettings, True), FClientCP);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZDBLibPreparedStatementEmulated.SetDouble(ParameterIndex: Integer;
+  const Value: Double);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stDouble, FloatToSQLRaw(Value), FClientCP);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>float</code> value.
+  The driver converts this
+  to an SQL <code>FLOAT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZDBLibPreparedStatementEmulated.SetFloat(ParameterIndex: Integer;
+  Value: Single);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stFloat, FloatToSQLRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetGuid(ParameterIndex: Integer;
+  const Value: TGUID);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stGUID, GUIDToRaw(Value, [guidWithBrackets, guidQuoted]), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetInt(ParameterIndex, Value: Integer);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stInteger, IntToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetLong(ParameterIndex: Integer;
+  const Value: Int64);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stLong, IntToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetNull(ParameterIndex: Integer;
+  SQLType: TZSQLType);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.SetNull(ParameterIndex, SQLType);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetRawByteString(ParameterIndex: Integer;
+  const Value: RawByteString);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  FRawTemp := SQLQuotedStr(Value, #39);
+  BindList.Put(ParameterIndex, stString, FRawTemp, FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetShort(ParameterIndex: Integer;
+  Value: ShortInt);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stShort, IntToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetSmall(ParameterIndex: Integer;
+  Value: SmallInt);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stSmall, IntToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetString(ParameterIndex: Integer;
+  const Value: String);
+{$IFNDEF UNICODE}
+var CP: Word;
+  P: PAnsichar;
+  L: LengthInt;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  SetUnicodeString(ParameterIndex, Value);
+  {$ELSE}
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  if (FClientCP = zCP_UTF8) or FIsNCharIndex[ParameterIndex]
+  then CP := zCP_UTF8
+  else CP := FClientCP;
+  if ConSettings.AutoEncode then begin
+    FRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, CP);
+    P := Pointer(FRawTemp);
+    L := Length(FRawTemp);
+  end else begin
+    P := Pointer(Value);
+    L := Length(Value);
+  end;
+  FRawTemp := SQLQuotedStr(P, L, #39);
+  BindList.Put(ParameterIndex, stString, FRawTemp, CP);
+  {$ENDIF}
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetTime(ParameterIndex: Integer;
+  const Value: TDateTime);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stTime, ZSysUtils.DateTimeToRawSQLTime(Value, ConSettings.WriteFormatSettings, True), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetTimestamp(ParameterIndex: Integer;
+  const Value: TDateTime);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stTimeStamp, ZSysUtils.DateTimeToRawSQLTimeStamp(Value, ConSettings.WriteFormatSettings, True), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetUInt(ParameterIndex: Integer;
+  Value: Cardinal);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stLongWord, IntToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetULong(ParameterIndex: Integer;
+  const Value: UInt64);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stULong, IntToRaw(Value), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.SetUnicodeString(ParameterIndex: Integer;
+  const Value: ZWideString);
+var CP: Word;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  if (FClientCP = zCP_UTF8) or FIsNCharIndex[ParameterIndex]
+  then CP := zCP_UTF8
+  else CP := FClientCP;
+  FRawTemp := PUnicodeToRaw(Pointer(Value), Length(Value), CP);
+  FRawTemp := SQLQuotedStr(FRawTemp, #39); //localize -> no hidden LStrClear in call
+  BindList.Put(ParameterIndex, stString, FRawTemp, CP)
+end;
+
+{$IFNDEF NO_UTF8STRING}
+procedure TZDBLibPreparedStatementEmulated.SetUTF8String(ParameterIndex: Integer;
+  const Value: UTF8String);
+var P: PAnsiChar;
+  L: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  P := Pointer(Value);
+  L := Length(Value);
+  if (FClientCP = zCP_UTF8) or FIsNCharIndex[ParameterIndex] then begin
+    FRawTemp := SQLQuotedStr(P, L, #39); //localize -> no hidden LStrClear in call
+    BindList.Put(ParameterIndex, stString,FRawTemp, zCP_UTF8)
+  end else begin
+    FUniTemp := PRawToUnicode(P, L, zCP_UTF8);
+    SetUnicodeString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FUniTemp);
+  end;
+end;
+{$ENDIF NO_UTF8STRING}
+
+procedure TZDBLibPreparedStatementEmulated.SetWord(ParameterIndex: Integer;
+  Value: Word);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stWord, IntToRaw(Value), FClientCP);
+end;
+
+{ TZDBLibStatement }
+
+{**
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Info a statement parameters.
+}
+constructor TZDBLibStatement.Create(const Connection: IZConnection;
+  const Info: TStrings);
+begin
+  inherited Create(Connection, '', Info)
+end;
+
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
+
 end.
