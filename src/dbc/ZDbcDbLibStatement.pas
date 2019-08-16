@@ -223,10 +223,12 @@ https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedur
 *)
 
 uses
-  Math, {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs,{$ELSE} Contnrs,{$ENDIF}
+  Math,
+  {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs,
+  {$ELSE}{$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$ENDIF}{$IFDEF WITH_UNITANSISTRINGS} AnsiStrings, {$ENDIF}
   ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
   ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet, ZDbcProperties,
-  {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings, {$ENDIF}
   ZFastCode, ZMessages, ZDbcResultSetMetadata, ZDbcMetadata;
 
 { TZAbstractDBLibStatement }
@@ -493,7 +495,7 @@ begin
   else if Bind.BindType = zbtArray then
     Result := '(ARRAY)'
   else case Bind.SQLType of
-    stBoolean:      if PAnsiChar(Bind.Value)^ = AnsiChar('0')
+    stBoolean:      if PByte(Bind.Value)^ = Ord('0')
                     then Result := '(FALSE)'
                     else Result := '(TRUE)';
     stAsciiStream:  Result := '(CLOB)';
@@ -502,7 +504,6 @@ begin
   end;
 end;
 
-{$IFNDEF NO_ANSISTRING}
 function TZDBLibPreparedStatementEmulated.GetRawSQL: RawByteString;
 var
   I: Integer;
@@ -529,6 +530,7 @@ begin
   FlushBuff(Result);
 end;
 
+{$IFNDEF NO_ANSISTRING}
 procedure TZDBLibPreparedStatementEmulated.SetAnsiString(ParameterIndex: Integer;
   const Value: AnsiString);
 var P: PAnsiChar;
@@ -574,10 +576,10 @@ begin
       else CP := FClientCP;
       if Value.IsClob then begin
         RefCntLob.GetPAnsiChar(CP);
-        FRawTemp := SQLQuotedStr(RefCntLob.GetPAnsiChar(CP), refCntLob.Length, #39)
+        FRawTemp := SQLQuotedStr(RefCntLob.GetPAnsiChar(CP), refCntLob.Length, AnsiChar(#39))
       end else begin
         FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings, CP);
-        FRawTemp := SQLQuotedStr(FRawTemp, #39);
+        FRawTemp := SQLQuotedStr(FRawTemp, AnsiChar(#39));
       end;
       BindList.Put(Index, stAsciiStream, FRawTemp, CP);
     end else
@@ -616,7 +618,7 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   if (Value.CP = FClientCP) or ((Value.CP = zCP_UTF8) and FIsNCharIndex[ParameterIndex]) then begin
-    FRawTemp := SQLQuotedStr(PAnsiChar(Value.P), Value.Len, #39);
+    FRawTemp := SQLQuotedStr(PAnsiChar(Value.P), Value.Len, AnsiChar(#39));
     BindList.Put(ParameterIndex, stString, FRawTemp, Value.CP);
   end else begin
     if FIsNCharIndex[ParameterIndex] or (FClientCP = zCP_UTF8)
@@ -628,7 +630,7 @@ begin
       fUniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP);
       fRawTemp := ZUnicodeToRaw(fUniTemp, CP)
     end;
-    FRawTemp := SQLQuotedStr(fRawTemp, #39);
+    FRawTemp := SQLQuotedStr(fRawTemp, AnsiChar(#39));
     BindList.Put(ParameterIndex, stString, FRawTemp, Value.CP);
   end;
 end;
@@ -717,7 +719,7 @@ procedure TZDBLibPreparedStatementEmulated.SetRawByteString(ParameterIndex: Inte
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  FRawTemp := SQLQuotedStr(Value, #39);
+  FRawTemp := SQLQuotedStr(Value, AnsiChar(#39));
   BindList.Put(ParameterIndex, stString, FRawTemp, FClientCP);
 end;
 
@@ -808,7 +810,7 @@ begin
   then CP := zCP_UTF8
   else CP := FClientCP;
   FRawTemp := PUnicodeToRaw(Pointer(Value), Length(Value), CP);
-  FRawTemp := SQLQuotedStr(FRawTemp, #39); //localize -> no hidden LStrClear in call
+  FRawTemp := SQLQuotedStr(FRawTemp, AnsiChar(#39)); //localize -> no hidden LStrClear in call
   BindList.Put(ParameterIndex, stString, FRawTemp, CP)
 end;
 
@@ -823,7 +825,7 @@ begin
   P := Pointer(Value);
   L := Length(Value);
   if (FClientCP = zCP_UTF8) or FIsNCharIndex[ParameterIndex] then begin
-    FRawTemp := SQLQuotedStr(P, L, #39); //localize -> no hidden LStrClear in call
+    FRawTemp := SQLQuotedStr(P, L, AnsiChar(#39)); //localize -> no hidden LStrClear in call
     BindList.Put(ParameterIndex, stString,FRawTemp, zCP_UTF8)
   end else begin
     FUniTemp := PRawToUnicode(P, L, zCP_UTF8);
@@ -874,6 +876,8 @@ begin
     case Bind.BindType of
       zbtNull: FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),
         Ord(ConvertSqlTypeToTDSType(Bind.SQLType)), -1, 0, nil);
+      zbtPointer: FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),
+        Ord(tdsBit), -1, 0, @Bind.Value); //stBoolean
       zbt4Byte: FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),
         Ord(ConvertSqlTypeToTDSType(Bind.SQLType)), -1, -1, @Bind.Value);
       zbt8Byte: FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),

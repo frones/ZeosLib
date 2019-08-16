@@ -208,7 +208,7 @@ type
     Fdbdatlen_stdcall: function(dbproc: PDBPROCESS; Column: Integer): DBINT; stdcall;
 
     Fdbdead_MS:  function(dbroc: PDBPROCESS): LongBool; cdecl;
-    Fdbdead_SYB: function(dbroc: PDBPROCESS): DBBOOL; cdecl;
+    Fdbdead: function(dbroc: PDBPROCESS): DBBOOL; cdecl;
     Fdbdead_stdcall: function(dbproc: PDBPROCESS): DBBOOL; stdcall;
     Fdbexit: procedure; cdecl;
     Fdbexit_stdcall: procedure; stdcall;
@@ -1263,8 +1263,8 @@ end;
 (** Determine whether a particular DBPROCESS is dead *)
 function TZDBLIBPLainDriver.dbdead(dbproc: PDBPROCESS): DBBOOL;
 begin
-  if Assigned(Fdbdead_SYB)
-  then Result := Fdbdead_SYB(dbproc)
+  if Assigned(Fdbdead)
+  then Result := Fdbdead(dbproc)
   else if Assigned(Fdbdead_MS)
     then Result := Ord(Fdbdead_MS(dbproc))
     else Result := Fdbdead_stdcall(dbproc);
@@ -1850,7 +1850,7 @@ begin
      // if type sizes or names are different:
     case FDBLibraryVendorType of
       lvtFreeTDS: begin
-          @{$IFDEF MSWINDOWS}Fdbdead_SYB{$ELSE}dbdead{$ENDIF} := GetAddress('dbdead', True);
+          @{$IFDEF MSWINDOWS}Fdbdead{$ELSE}dbdead{$ENDIF} := GetAddress('dbdead', True);
           @{$IFDEF MSWINDOWS}Fdbcmdrow{$ELSE}dbcmdrow{$ENDIF} := GetAddress('dbcmdrow');
           @{$IFDEF MSWINDOWS}Fdbcount{$ELSE}dbcount{$ENDIF} := GetAddress('dbcount');
           @{$IFDEF MSWINDOWS}Fdbcurrow{$ELSE}dbcurrow{$ENDIF} := GetAddress('dbcurrow');
@@ -1861,8 +1861,8 @@ begin
           //@{$IFDEF MSWINDOWS}Fdbcolbrowse_SYB{$ELSE}dbcolbrowse{$ENDIF} := GetAddress('dbcolbrowse'); //no FreeTDS
           @{$IFDEF MSWINDOWS}FdbMoreCmds{$ELSE}dbMoreCmds{$ENDIF} := GetAddress('dbmorecmds'); //name diff to ms
           @{$IFDEF MSWINDOWS}FdbSetOpt_SYB{$ELSE}dbsetopt{$ENDIF} := GetAddress('dbsetopt'); //int_param is available but not computed always
-          @{$IFDEF MSWINDOWS}FdbHasRetStat_SYB{$ELSE}dbHasRetStat{$ENDIF} := GetAddress('dbhasretstat'); //DBBOOL vs. LonBool
-          @{$IFDEF MSWINDOWS}Fdbvarylen_SYB{$ELSE}dbvarylen{$ENDIF} := GetAddress('dbvarylen'); //DBBOOL vs. LonBool
+          @{$IFDEF MSWINDOWS}FdbHasRetStat_SYB{$ELSE}dbHasRetStat{$ENDIF} := GetAddress('dbhasretstat'); //DBBOOL vs. LongBool
+          @{$IFDEF MSWINDOWS}Fdbvarylen_SYB{$ELSE}dbvarylen{$ENDIF} := GetAddress('dbvarylen'); //DBBOOL vs. LongBool
           @Fdbinit := GetAddress('dbinit'); //Result is a RetCode
           @FdbSetVersion := GetAddress('dbsetversion');  //no MS but ms supports dbSetLVersion
           @dbsetlversion := GetAddress('dbsetlversion'); //no sybase see: https://lists.ibiblio.org/pipermail/freetds/2011q4/027489.html
@@ -1896,8 +1896,8 @@ begin
             @{$IFDEF MSWINDOWS}FdbMoreCmds_stdcall{$ELSE}dbMoreCmds{$ENDIF} := GetAddress('dbmorecmds'); //lowercase since 15+
 
           @{$IFDEF MSWINDOWS}FdbSetOpt_stdcall{$ELSE}dbsetopt{$ENDIF} := GetAddress('dbsetopt'); //int_param is available
-          @{$IFDEF MSWINDOWS}FdbHasRetStat_stdcall{$ELSE}dbhasretstat{$ENDIF} := GetAddress('dbhasretstat'); //DBBOOL vs. LonBool
-          @{$IFDEF MSWINDOWS}Fdbvarylen_stdcall{$ELSE}dbvarylen{$ENDIF} := GetAddress('dbvarylen'); //DBBOOL vs. LonBool
+          @{$IFDEF MSWINDOWS}FdbHasRetStat_stdcall{$ELSE}dbhasretstat{$ENDIF} := GetAddress('dbhasretstat'); //DBBOOL vs. LongBool
+          @{$IFDEF MSWINDOWS}Fdbvarylen_stdcall{$ELSE}dbvarylen{$ENDIF} := GetAddress('dbvarylen'); //DBBOOL vs. LongBool
           @{$IFDEF MSWINDOWS}Fdbinit_stdcall{$ELSE}Fdbinit{$ENDIF} := GetAddress('dbinit'); //Result is a RetCode
           @{$IFDEF MSWINDOWS}FdbSetVersion_stdcall{$ELSE}FdbSetVersion{$ENDIF} := GetAddress('dbsetversion');  //no MS
         end;
@@ -1915,8 +1915,8 @@ begin
           @Fdbcolbrowse_MS := GetAddress('dbcolbrowse'); //no FreeTDS
           @FdbMoreCmds := GetAddress('dbmorecmds'); //name diff to ms
           @FdbSetOpt_MS := GetAddress('dbsetopt'); //int_param is not available
-          @FdbHasRetStat_MS := GetAddress('dbhasretstat'); //DBBOOL vs. LonBool
-          @Fdbvarylen_MS := GetAddress('dbvarylen'); //DBBOOL vs. LonBool
+          @FdbHasRetStat_MS := GetAddress('dbhasretstat'); //DBBOOL vs. LongBool
+          @Fdbvarylen_MS := GetAddress('dbvarylen'); //DBBOOL vs. LongBool
           @Fdbinit_MS := GetAddress('dbinit'); //Result is a PAnsiChar not a RetCode
           @dbsetlversion := GetAddress('dbsetlversion') //no sybase see: https://lists.ibiblio.org/pipermail/freetds/2011q4/027489.html
         end;
