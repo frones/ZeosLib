@@ -1619,9 +1619,7 @@ begin
           ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf);
           if ColumnName = '' then
             ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf);
-          if ColumnName = '' then //aggregates like SUM() don't have a columname -> skip processing
-            ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
-          else begin
+          if ColumnName <> '' then begin//aggregates like SUM() don't have a columname -> skip processing
             TableName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_TABLE_NAME, StrBuf);
             if TableName = '' then
               TableName := ColStrAttribute(ColumnNumber, SQL_DESC_TABLE_NAME, StrBuf);
