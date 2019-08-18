@@ -1206,7 +1206,7 @@ end;
 procedure TZASAAbstractResultSet.BeforeClose;
 begin
   FSqlData := nil;
-  inherited Close; //Calls ResetCursor so db_close is called!
+  inherited BeforeClose; //Calls ResetCursor so db_close is called!
 end;
 
 {**
