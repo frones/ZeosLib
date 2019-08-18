@@ -1564,6 +1564,7 @@ type
 
     function IsSigned(ColumnIndex: Integer): Boolean;
     function GetColumnLabel(ColumnIndex: Integer): string;
+    function GetOrgColumnLabel(ColumnIndex: Integer): string;
     function GetColumnName(ColumnIndex: Integer): string;
     function GetColumnCodePage(ColumnIndex: Integer): Word;
     function GetSchemaName(ColumnIndex: Integer): string;
