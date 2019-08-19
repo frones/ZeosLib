@@ -2023,7 +2023,7 @@ begin
     for I := prgInfo.iOrdinal-1 to fpcColumns-1 do
     begin
       ColumnInfo := TZColumnInfo.Create;
-      if (prgInfo^.pwszName<>nil) and (prgInfo^.pwszName^=#0) then
+      if (prgInfo.pwszName<>nil) and (prgInfo.pwszName^<>#0) then
         ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
