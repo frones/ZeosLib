@@ -304,7 +304,7 @@ end;
 
 function TZASAPlainDriver.GetDescription: string;
 begin
-  Result := 'Native Plain Driver for ASA';
+  Result := 'Native Plain Driver for Sybase ASA';
 end;
 
 function TZASAPlainDriver.GetProtocol: string;

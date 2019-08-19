@@ -148,8 +148,6 @@ begin
   FetchSize := BlockSize;
   ResultSetType := rtScrollSensitive;
   CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+IntToRaw(FStatementId);
-  FParamSQLData := TZASASQLDA.Create(FPlainDriver,
-    FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings, FParamsCnt);
 end;
 
 {**
@@ -208,8 +206,7 @@ end;
 
 procedure TZASAPreparedStatement.UnPrepareInParameters;
 begin
-//  if assigned(FParamSQLData) then
-  //  FParamSQLData.FreeSQLDA;
+  FParamSQLData := nil;
 end;
 
 procedure TZASAPreparedStatement.Prepare;
@@ -229,6 +226,8 @@ begin
         FCursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
       if ResultSetType = rtScrollInsensitive then
         FCursorOptions := FCursorOptions + CUR_INSENSITIVE;
+      FParamSQLData := TZASASQLDA.Create(FPlainDriver,
+        FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings, FParamsCnt);
       if Assigned(FPlainDriver.dbpp_prepare_describe_12) then
         FPlainDriver.dbpp_prepare_describe_12(GetDBHandle, nil, nil, @FStmtNum, Pointer(ASQL),
           nil, FParamSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
