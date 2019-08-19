@@ -149,7 +149,7 @@ begin
   ResultSetType := rtScrollSensitive;
   CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+IntToRaw(FStatementId);
   FParamSQLData := TZASASQLDA.Create(FPlainDriver,
-    FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
+    FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings, FParamsCnt);
 end;
 
 {**
