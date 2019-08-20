@@ -1235,7 +1235,7 @@ begin
   Stmt := Connection.CreateStatement;
   CheckNotNull(Stmt);
   CheckEquals(False, Connection.IsClosed);
-  for i := 0 to 10 do begin
+  for i := 0 to 5 do begin
     Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
     with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
       Check(Next, 'wrong commit behavior');
@@ -1254,7 +1254,7 @@ begin
   Stmt := Connection.CreateStatement;
   CheckNotNull(Stmt);
   CheckEquals(False, Connection.IsClosed);
-  for i := 0 to 10 do begin
+  for i := 0 to 5 do begin
     Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
     Connection.Commit;
     with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
@@ -1284,7 +1284,7 @@ begin
   Stmt := Connection.CreateStatement;
   CheckNotNull(Stmt);
   CheckEquals(False, Connection.IsClosed);
-  for i := 0 to 10 do begin
+  for i := 0 to 5 do begin
     Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
     with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
       Check(Next, 'wrong commit behavior');
@@ -1391,9 +1391,12 @@ begin
         CheckEquals(UTF8String(SNames[name]), ResultSet.GetUTF8String(p_name_Index));
         CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
         CheckEquals(ZWideString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
-        CheckEquals(PAnsiChar(AnsiString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index));
+        //some drivers are not null terminated such as ASA so the test can't pass with the deprecated getters
+        if ProtocolType <> protASA then
+          CheckEquals(PAnsiChar(AnsiString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index));
         CheckEquals(PAnsiChar(RawByteString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-        CheckEquals(PChar(SNames[name]), ResultSet.GetPChar(p_name_Index));
+        {$IFNDEF UNICODE} if ProtocolType <> protASA then {$ENDIF}
+          CheckEquals(PChar(SNames[name]), ResultSet.GetPChar(p_name_Index));
         CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index)));
         CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index, Len)));
       end;
