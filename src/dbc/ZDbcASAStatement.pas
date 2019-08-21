@@ -380,34 +380,21 @@ end;
 
 procedure TZASAPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
   const Value: IZBlob);
-var RefCntLob: IZBlob;
-  ASAType: SmallInt;
+var ASAType: SmallInt;
   P: Pointer;
   L: LengthInt;
   SQLVAR: PZASASQLVAR;
 begin
-  RefCntLob := Value;
+  inherited BindLob(Index, SQLType, Value); //else FPC raises tons of memleaks
   if (Value = nil) or Value.IsEmpty then
     SetNull(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType)
   else begin
-    CheckParameterIndex(Index);
-    SQLVAR := @FInParamSQLDA.sqlvar[Index];
-    if (SQLType in [stAsciiStream, stUnicodeStream]) then
-      if Value.IsClob then begin
-        P := RefCntLob.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
-        L := RefCntLob.Length;
-      end else begin
-        FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
-        P := Pointer(FRawTemp);
-        L := Length(FRawTemp);
-      end
-    else begin
-      P := RefCntLob.GetBuffer;
-      L := RefCntLob.Length;
-    end;
+    P := IZBlob(BindList[Index].Value).GetBuffer;
+    L := IZBlob(BindList[Index].Value).Length;
     if SQLType = stBinaryStream
     then ASAType := DT_LONGBINARY
     else ASAType := DT_LONGVARCHAR;
+    SQLVAR := @FInParamSQLDA.sqlvar[Index];
     InitBind(SQLVAR, ASAType or 1, L);
     Move(P^, PZASABlobStruct(SQLVAR.sqlData).arr[0], L);
   end;
