@@ -369,11 +369,11 @@ begin
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := SizeOf( TZASASQLDateTime);
                         end;
-        DT_DECIMAL:
+        DT_DECIMAL: //it's recommended by SYB to use strings instead of the packed undefined decimal value
                         begin
-                          FSQLDA.sqlVar[i].sqlType := DT_DOUBLE +
+                          FSQLDA.sqlVar[i].sqlType := DT_VARCHAR +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
-                          FSQLDA.sqlVar[i].sqlLen := SizeOf( Double);
+                          FSQLDA.sqlVar[i].sqlLen := FmtBCD.MaxFMTBcdFractionSize+2;//sign and dot
                         end;
         DT_STRING,
         DT_FIXCHAR,
@@ -1016,7 +1016,7 @@ begin
             if ( sqlind^ < 0 ) then
               break;
             Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
-            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len+ORd(sqlType and $FFFE <> DT_LONGBINARY)); //keep 1 byte for trailing #0 term
+            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len+Byte(ORd(sqlType and $FFFE <> DT_LONGBINARY))); //keep 1 byte for trailing #0 term
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PZASABlobStruct( sqlData)^.arr[0]), (PAnsiChar(Buffer)+Offs)^, PZASABlobStruct( sqlData)^.stored_len);
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
