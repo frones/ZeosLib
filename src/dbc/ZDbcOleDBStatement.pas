@@ -227,7 +227,7 @@ type
   TZOleDBCallableStatementMSSQL = class(TZAbstractCallableStatement_W,
     IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -2885,7 +2885,7 @@ end;
 { TZOleDBCallableStatementMSSQL }
 
 function TZOleDBCallableStatementMSSQL.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};

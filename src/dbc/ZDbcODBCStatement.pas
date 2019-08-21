@@ -82,7 +82,7 @@ type
   PZODBCParamBindArray = ^TZODBCParamBindArray;
   TZODBCParamBindArray = array[Byte] of TZODBCParamBind;
 
-  TZAbstractODBCStatement = class(TZAbstractPreparedStatement2)
+  TZAbstractODBCStatement = class(TZAbstractPreparedStatement)
   private
     fPlainDriver: TZODBC3PlainDriver;
     fPHDBC: PSQLHDBC;
@@ -203,7 +203,7 @@ type
   private
     fPHDBC: PSQLHDBC;
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   public
     constructor Create(const Connection: IZConnection;
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
@@ -223,7 +223,7 @@ type
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
@@ -2351,7 +2351,7 @@ begin
 end;
 
 function TZODBCCallableStatementW_MSSQL.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
@@ -2383,7 +2383,7 @@ begin
 end;
 
 function TZODBCCallableStatementA_MSSQL.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};

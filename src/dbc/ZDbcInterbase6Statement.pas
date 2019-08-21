@@ -176,7 +176,7 @@ type
 
   TZInterbase6CallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -1909,7 +1909,7 @@ end;
 { TZInterbase6CallableStatement }
 
 function TZInterbase6CallableStatement.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   P: PChar;
   I: Integer;

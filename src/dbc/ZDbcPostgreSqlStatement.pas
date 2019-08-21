@@ -198,7 +198,7 @@ type
 
   TZPostgreSQLCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL. }
@@ -1611,7 +1611,7 @@ end;
 { TZPostgreSQLCallableStatement }
 
 function TZPostgreSQLCallableStatement.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   P: PChar;
   I, J: Integer;

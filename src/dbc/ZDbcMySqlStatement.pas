@@ -188,7 +188,7 @@ type
   TZMySQLCallableStatement56up = class(TZAbstractCallableStatement_A,
     IZCallableStatement{, IZParamNamedCallableStatement})
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
   TZMySQLCallableStatement56down = class(TZAbstractCallableStatement_A,
@@ -201,7 +201,7 @@ type
     procedure CreateOutParamResultSet;
   protected
     procedure SetParamCount(NewParamCount: Integer); override;
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
     procedure BindInParameters; override;
   public
     procedure AfterConstruction; override;
@@ -2461,7 +2461,7 @@ end;
 { TZMySQLCallableStatement56up }
 
 function TZMySQLCallableStatement56up.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
   P: PChar;
@@ -2527,7 +2527,7 @@ begin
 end;
 
 function TZMySQLCallableStatement56down.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
   P: PChar;
