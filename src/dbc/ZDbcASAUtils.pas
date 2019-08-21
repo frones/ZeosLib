@@ -1010,14 +1010,13 @@ begin
           Offs := 0;
           Rd := 0;
 
-          while True do
-          begin
+          while True do begin
             FPlainDriver.dbpp_get_data(FHandle, FCursorName, Index + 1, Offs, TempSQLDA, 0);
             CheckASAError( FPlainDriver, FHandle, lcOther, FConSettings);
             if ( sqlind^ < 0 ) then
               break;
             Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
-            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len);
+            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len+ORd(sqlType and $FFFE <> DT_LONGBINARY)); //keep 1 byte for trailing #0 term
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PZASABlobStruct( sqlData)^.arr[0]), (PAnsiChar(Buffer)+Offs)^, PZASABlobStruct( sqlData)^.stored_len);
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
@@ -1048,6 +1047,8 @@ procedure TZASASQLDA.ReadBlobToMem(const Index: Word; out Buffer: Pointer;
   out Length: NativeUInt; const Binary: Boolean);
 begin
   CheckRange(Index);
+  Buffer := nil;
+  Length := 0;
   with FSQLDA.sqlvar[Index] do
   begin
     Length := 0;
