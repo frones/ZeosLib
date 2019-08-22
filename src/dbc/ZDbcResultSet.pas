@@ -1150,7 +1150,7 @@ begin
     if not LastWasNull and (Blob <> nil) then
       if Blob.IsClob then
         Result := Blob.GetStream
-      else if Self.GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream then begin
+      else if GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream then begin
         FRawTemp := GetValidatedAnsiStringFromBuffer(Blob.GetBuffer,
             Blob.Length, ConSettings, ConSettings.CTRL_CP);
         Result := StreamFromData(Pointer(FRawTemp), Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
