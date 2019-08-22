@@ -73,6 +73,7 @@ type
     FSQLData: IZASASQLDA;
     FMoreResults: Boolean;
     FInParamSQLData: IZASASQLDA;
+    FHasOutParams: Boolean;
   private
     function CreateResultSet: IZResultSet;
   protected
@@ -193,39 +194,64 @@ begin
 end;
 
 procedure TZAbstractASAStatement.Prepare;
+var DBHandle: PZASASQLCA;
 begin
   if not Prepared then
   begin
-    with FASAConnection do
+    DBHandle := FASAConnection.GetDBHandle;
+    if FStmtNum <> 0 then
     begin
-      if FStmtNum <> 0 then
-      begin
-        FPlainDriver.dbpp_dropstmt(GetDBHandle, nil, nil, @FStmtNum);
-        FStmtNum := 0;
-      end;
-      if ResultSetConcurrency = rcUpdatable then
-        FCursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
-      else
-        FCursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
-      if ResultSetType = rtScrollInsensitive then
-        FCursorOptions := FCursorOptions + CUR_INSENSITIVE;
-      FInParamSQLData := TZASASQLDA.Create(FPlainDriver,
-        FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings, FCountOfQueryParams);
+      FPlainDriver.dbpp_dropstmt(DBHandle, nil, nil, @FStmtNum);
+      FStmtNum := 0;
+    end;
+    if ResultSetConcurrency = rcUpdatable then
+      FCursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
+    else
+      FCursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
+    if ResultSetType = rtScrollInsensitive then
+      FCursorOptions := FCursorOptions + CUR_INSENSITIVE;
+    FInParamSQLData := TZASASQLDA.Create(FPlainDriver,
+      FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings, FCountOfQueryParams);
+    FInParamSQLDA := FInParamSQLData.GetData;
+    {EH: ASA describes the StmtNum and Variable-Count only
+        the first descriptor field is ignored
+        also the ParamSQL MUST be given because we wanted to describe the inputparams (even if no types nor names are done)
+        else the FMoreResuls indicator does not work properly }
+    if Assigned(FPlainDriver.dbpp_prepare_describe_12) then
+      FPlainDriver.dbpp_prepare_describe_12(DBHandle, nil, nil, @FStmtNum, Pointer(ASQL),
+        FResultSQLDA, FInParamSQLDA, SQL_PREPARE_DESCRIBE_STMTNUM +
+          SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0, 0)
+    else
+      FPlainDriver.dbpp_prepare_describe(DBHandle, nil, nil, @FStmtNum, Pointer(ASQL),
+        FResultSQLDA, FInParamSQLDA, SQL_PREPARE_DESCRIBE_STMTNUM +
+          SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
+    ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
+    SetParamCount(FInParamSQLDA.sqld);
+    if FInParamSQLDA.sqld <> FInParamSQLDA.sqln then begin
+      FInParamSQLData.AllocateSQLDA(FInParamSQLDA.sqld);
       FInParamSQLDA := FInParamSQLData.GetData;
-      {EH: ASA describes the StmtNum and Variable-Count only
-          the first descriptor field is ignored
-          also the ParamSQL MUST be given because we wanted to describe the inputparams (even if no types nor names are done)
-          else the FMoreResuls indicator does not work properly }
-      if Assigned(FPlainDriver.dbpp_prepare_describe_12) then
-        FPlainDriver.dbpp_prepare_describe_12(GetDBHandle, nil, nil, @FStmtNum, Pointer(ASQL),
-          FResultSQLDA, FInParamSQLDA, SQL_PREPARE_DESCRIBE_STMTNUM +
-            SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0, 0)
-      else
-        FPlainDriver.dbpp_prepare_describe(GetDBHandle, nil, nil, @FStmtNum, Pointer(ASQL),
-          FResultSQLDA, FInParamSQLDA, SQL_PREPARE_DESCRIBE_STMTNUM +
-            SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
-      FMoreResults := GetDBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
+      FPlainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum,
+        FInParamSQLDA, SQL_DESCRIBE_INPUT);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
+      {sade: initfields doesnt't help > ASA describes !paramcount! only}
+    end;
+    FMoreResults := DBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
+    if not FMoreResults then begin
+      FSQLData := TZASASQLDA.Create(FPlainDriver,
+        FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings, 0);
+      FResultSQLDA := FSQLData.GetData;
+      FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, SQL);
+      if FResultSQLDA.sqld <> FResultSQLDA.sqln then begin
+        FSQLData.AllocateSQLDA(FResultSQLDA.sqld);
+        FResultSQLDA := FSQLData.GetData;
+        FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
+        ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
+    {sade: initfields doesnt't help > ASA describes !paramcount! only}
+        FHasOutParams := FResultSQLDA.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = DT_PROCEDURE_OUT;
+        if FHasOutParams then
+          FSQLData.InitFields;
+      end;
     end;
     inherited Prepare
   end;
@@ -308,7 +334,7 @@ function TZAbstractASAStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
   BindInParameters;
-  if FMoreResults
+  if FMoreResults or FHasOutParams
   then LastResultSet := ExecuteQueryPrepared
   else begin
     FPlainDriver.dbpp_open(FASAConnection.GetDBHandle, Pointer(CursorName),
@@ -316,8 +342,10 @@ begin
     if FASAConnection.GetDBHandle.sqlCode = SQLE_OPEN_CURSOR_ERROR then begin
       ExecuteUpdatePrepared;
       FLastResultSet := nil;
-    end else
+    end else begin
+      ZDbcASAUtils.CheckASAError(FPlainDriver, FASAConnection.GetDBHandle, lcExecute, ConSettings);
       LastResultSet := CreateResultSet;
+    end;
   end;
   Result := Assigned(FLastResultSet);
 end;
@@ -336,12 +364,17 @@ begin
   BindInParameters;
 
   with FASAConnection do begin
-    FPlainDriver.dbpp_open(GetDBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
-      FInParamSQLDA, FetchSize, 0, FCursorOptions);
-    if Assigned(FOpenResultSet) then
-      Result := IZResultSet(FOpenResultSet)
-    else
-      Result := CreateResultSet;
+    if not FHasOutParams then begin
+      FPlainDriver.dbpp_open(GetDBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
+        FInParamSQLDA, FetchSize, 0, FCursorOptions);
+      if Assigned(FOpenResultSet) then
+        Result := IZResultSet(FOpenResultSet)
+      else
+        Result := CreateResultSet;
+    end else begin
+      Result := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, True);
+      FOutParamResultSet := Result;
+    end;
   end;
   { Logging SQL Command and values}
   inherited ExecuteQueryPrepared;
@@ -532,15 +565,6 @@ end;
 procedure TZASAPreparedStatement.PrepareInParameters;
 begin
   with FASAConnection do begin
-    SetParamCount(FInParamSQLDA.sqld);
-    if FInParamSQLDA.sqld <> FInParamSQLDA.sqln then begin
-      FInParamSQLData.AllocateSQLDA(FInParamSQLDA.sqld);
-      FInParamSQLDA := FInParamSQLData.GetData;
-      FPlainDriver.dbpp_describe(GetDBHandle, nil, nil, @FStmtNum,
-        FInParamSQLDA, SQL_DESCRIBE_INPUT);
-      ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
-      {sade: initfields doesnt't help > ASA describes !paramcount! only}
-    end;
   end;
 end;
 
@@ -819,8 +843,8 @@ begin
   if (P+Length(SQL)-1)^ = ','
   then (P+Length(SQL)-1)^ := ')' //cancel last comma
   else (P+Length(SQL)-1)^ := ' ';
-  if IsFunction then
-    SQL := SQL +' as ReturnValue';
+//  if IsFunction then
+  //  SQL := SQL +' as ReturnValue';
   Result := TZASAPreparedStatement.Create(Connection , SQL, Info);
   TZASAPreparedStatement(Result).Prepare;
 end;
