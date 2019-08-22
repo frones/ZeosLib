@@ -89,7 +89,7 @@ uses SysUtils, ZTestConsts, ZTestCase;
 }
 function TZTestDbcASACase.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9,ASA12';
+  Result := 'ASA';
 end;
 
 procedure TZTestDbcASACase.TestConnection;
