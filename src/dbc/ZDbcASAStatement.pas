@@ -108,7 +108,6 @@ type
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure BindTimeStampStruct(Index: Integer; ASAType: SmallInt; const Value: TDateTime);
   protected
-    procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
     function GetInParamLogValue(Index: Integer): RawByteString; override;
   public
@@ -230,10 +229,10 @@ begin
     if FInParamSQLDA.sqld <> FInParamSQLDA.sqln then begin
       FInParamSQLData.AllocateSQLDA(FInParamSQLDA.sqld);
       FInParamSQLDA := FInParamSQLData.GetData;
+      {ASA describes !paramcount! and if params are outparams only}
       FPlainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum,
         FInParamSQLDA, SQL_DESCRIBE_INPUT);
       ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
-      {sade: initfields doesnt't help > ASA describes !paramcount! only}
     end;
     FMoreResults := DBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
     if not FMoreResults then begin
@@ -241,16 +240,16 @@ begin
         FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings, 0);
       FResultSQLDA := FSQLData.GetData;
       FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
-      ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, SQL);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
       if FResultSQLDA.sqld <> FResultSQLDA.sqln then begin
         FSQLData.AllocateSQLDA(FResultSQLDA.sqld);
         FResultSQLDA := FSQLData.GetData;
         FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
         ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
-    {sade: initfields doesnt't help > ASA describes !paramcount! only}
+        { test if Outparams are available: }
         FHasOutParams := FResultSQLDA.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = DT_PROCEDURE_OUT;
-        if FHasOutParams then
-          FSQLData.InitFields;
+        //if FHasOutParams then
+          //FSQLData.InitFields;
       end;
     end;
     inherited Prepare
@@ -367,12 +366,20 @@ begin
     if not FHasOutParams then begin
       FPlainDriver.dbpp_open(GetDBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
         FInParamSQLDA, FetchSize, 0, FCursorOptions);
-      if Assigned(FOpenResultSet) then
-        Result := IZResultSet(FOpenResultSet)
-      else
-        Result := CreateResultSet;
+      if Assigned(FOpenResultSet)
+      then Result := IZResultSet(FOpenResultSet)
+      else Result := CreateResultSet;
     end else begin
-      Result := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, True);
+      //first create the ResultSet -> exact types are described
+      if Assigned(FOpenResultSet)
+      then Result := IZResultSet(FOpenResultSet)
+      else begin
+        Result := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, True);
+        FOpenResultSet := Pointer(Result);
+      end;
+      //now fill the outparam SQLDA-Variables
+      FPlainDriver.dbpp_execute_into(GetDBHandle, nil, nil, @FStmtNum, FInParamSQLDA, FResultSQLDA);
+      ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
       FOutParamResultSet := Result;
     end;
   end;
@@ -394,9 +401,14 @@ function TZAbstractASAStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   BindInParameters;
+  if FHasOutParams and (FOpenResultSet = nil) then begin
+    //first create the ResultSet -> exact types are described
+    FOutParamResultSet := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, True);
+    FOpenResultSet := Pointer(FOutParamResultSet);
+  end;
   with FASAConnection do begin
     FPlainDriver.dbpp_execute_into(GetDBHandle, nil, nil, @FStmtNum,
-      FInParamSQLDA, nil);
+      FInParamSQLDA, FResultSQLDA);
     ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings,
       ASQL, SQLE_TOO_MANY_RECORDS);
     Result := GetDBHandle.sqlErrd[2];
@@ -559,12 +571,6 @@ begin
         end;
     end;
     sqlType := ASAType;
-  end;
-end;
-
-procedure TZASAPreparedStatement.PrepareInParameters;
-begin
-  with FASAConnection do begin
   end;
 end;
 
@@ -833,8 +839,7 @@ begin
   SQL := '';
   ToBuff('CALL ', SQL);
   ToBuff(StoredProcName, SQL);
-  if BindList.Count > 0 then
-    ToBuff(Char('('), SQL);
+  ToBuff(Char('('), SQL);
   for i := 0 to BindList.Count-1 do
     if BindList.ParamTypes[i] <> pctReturn then
       ToBuff('?,', SQL);
@@ -843,8 +848,6 @@ begin
   if (P+Length(SQL)-1)^ = ','
   then (P+Length(SQL)-1)^ := ')' //cancel last comma
   else (P+Length(SQL)-1)^ := ' ';
-//  if IsFunction then
-  //  SQL := SQL +' as ReturnValue';
   Result := TZASAPreparedStatement.Create(Connection , SQL, Info);
   TZASAPreparedStatement(Result).Prepare;
 end;
