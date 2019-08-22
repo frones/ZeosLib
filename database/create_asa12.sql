@@ -245,7 +245,7 @@ create table bcd_values
 /* Table : domain_values                                        */
 /*==============================================================*/
 
-/*create DOMAIN tinteger INTEGER default 123456;
+create DOMAIN tinteger INTEGER default 123456;
 create DOMAIN tfloat FLOAT default 123.456;
 create DOMAIN tstring VARCHAR(10) default 'xyz';
 
@@ -256,7 +256,7 @@ create table domain_values
    d_fld2                     tfloat null,
    d_fld3                     tstring null,
    primary key (d_id)
-);*/
+);
 
 
 alter table cargo
