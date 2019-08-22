@@ -429,12 +429,14 @@ type
     procedure GetOrdinal(Index: Integer; out Result: UInt64); overload; virtual;
     procedure GetCurrency(Index: Integer; out Result: Currency); overload; virtual;
     procedure GetDouble(Index: Integer; out Result: Double); overload; virtual;
+    procedure GetGUID(Index: Integer; var Result: TGUID); overload; virtual;
     procedure GetBigDecimal(Index: Integer; var Result: TBCD); overload; virtual;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); overload; virtual;
     procedure GetDateTime(Index: Integer; out Result: TDateTime); virtual;
-    procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); overload; virtual;
+    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload; virtual;
     procedure GetLob(Index: Integer; out Result: IZBlob); virtual;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); overload; virtual;
+
 
     procedure ClearParameters; virtual;
 
@@ -539,7 +541,7 @@ type
     procedure GetBigDecimal(Index: Integer; var Result: TBCD); override;
     procedure GetBytes(Index: Integer; out Buf: Pointer; out Len: LengthInt); override;
     procedure GetDateTime(Index: Integer; out Result: TDateTime); override;
-    procedure GetTimeStamp(Index: Integer; out Result: TZTimeStamp); override;
+    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); override;
     procedure GetLob(Index: Integer; out Result: IZBlob); override;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
   public //value getter methods
@@ -2722,6 +2724,13 @@ begin
     else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
+procedure TZAbstractPreparedStatement.GetGUID(Index: Integer;
+  var Result: TGUID);
+begin
+  ParamterIndex2ResultSetIndex(Index);
+  RaiseUnsupportedException
+end;
+
 function TZAbstractPreparedStatement.GetInParamLogValue(
   ParamIndex: Integer): RawByteString;
 var Value: TZVariant;
@@ -2888,7 +2897,7 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement.GetTimeStamp(Index: Integer;
-  out Result: TZTimeStamp);
+  var Result: TZTimeStamp);
 begin
   ParamterIndex2ResultSetIndex(Index);
   RaiseUnsupportedException
@@ -4470,7 +4479,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement.GetTimeStamp(Index: Integer;
-  out Result: TZTimeStamp);
+  var Result: TZTimeStamp);
 begin
   RaiseUnsupportedException
 end;
