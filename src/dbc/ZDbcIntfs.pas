@@ -1199,6 +1199,12 @@ type
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 
+    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      {%H-}Scale: LengthInt = 0);
+
+    function IsNull(Index: Integer): Boolean;
+
     procedure ClearParameters;
   end;
 
@@ -1220,10 +1226,6 @@ type
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); //deprecated;
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); //deprecated;
 
-(*    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
-      {%H-}Scale: LengthInt = 0);
-*)
     function IsNull(ParameterIndex: Integer): Boolean;
     function GetPChar(ParameterIndex: Integer): PChar;
     function GetString(ParameterIndex: Integer): String;
