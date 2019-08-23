@@ -1397,10 +1397,10 @@ var Len: NativeUInt;
 begin
   if ProcedureNamePattern <> '' then begin
     RS := GetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
-    if RS.Next then
-      SkipResultColumn := RS.GetSmall(ProcedureTypeIndex) <> Ord(prtReturnsResult);
+    SkipResultColumn := RS.Next and (RS.GetSmall(ProcedureTypeIndex) <> Ord(prtReturnsResult));
     RS.Close;
-  end;
+  end else
+    SkipResultColumn := False;
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern,
     ProcedureNamePattern, ColumnNamePattern);
