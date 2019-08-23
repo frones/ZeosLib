@@ -186,13 +186,13 @@ type
   end;
 
   TZMySQLCallableStatement56up = class(TZAbstractCallableStatement_A,
-    IZCallableStatement{, IZParamNamedCallableStatement})
+    IZCallableStatement)
   protected
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
   TZMySQLCallableStatement56down = class(TZAbstractCallableStatement_A,
-    IZCallableStatement{, IZParamNamedCallableStatement})
+    IZCallableStatement)
   private
     FPlainDriver: TZMySQLPLainDriver;
     FInParamNames: TStringDynArray;
