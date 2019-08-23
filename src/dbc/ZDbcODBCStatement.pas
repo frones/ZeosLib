@@ -59,7 +59,7 @@ interface
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties,
-  ZDbcODBCCon, ZPlainODBCDriver;
+  ZDbcODBCCon, ZPlainODBCDriver, ZCollections;
 
 type
   PSQLHDBC = ^SQLHDBC;
@@ -95,8 +95,13 @@ type
     fLastAutoCommit: Boolean;
     FClientEncoding: TZCharEncoding;
     FODBCConnection: IZODBCConnection;
+    FCallResultCache: TZCollection;
+    FExecRETCODE: SQLRETURN;
     procedure InternalExecute;
     procedure PrepareOpenedResultSetsForReusing;
+    procedure FetchCallResults;
+    function GetFirstResultSet: IZResultSet;
+    procedure ClearCallResultCache;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
     procedure CheckDbcError(RETCODE: SQLRETURN);
@@ -159,16 +164,16 @@ type
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
-    procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
-    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
-    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
-    procedure SetInt(ParameterIndex: Integer; Value: Integer); reintroduce;
-    procedure SetULong(Index: Integer; const Value: UInt64); reintroduce;
-    procedure SetLong(Index: Integer; const Value: Int64); reintroduce;
-    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
-    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
-    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    procedure SetULong(Index: Integer; const Value: UInt64);
+    procedure SetLong(Index: Integer; const Value: Int64);
+    procedure SetFloat(Index: Integer; Value: Single);
+    procedure SetDouble(Index: Integer; const Value: Double);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
     procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
@@ -268,6 +273,16 @@ begin
     HandleError(RETCODE, fHSTMT, SQL_HANDLE_STMT);
 end;
 
+procedure TZAbstractODBCStatement.ClearCallResultCache;
+var I: Integer;
+  RS: IZResultSet;
+begin
+  for I := 0 to FCallResultCache.Count -1 do
+    if Supports(FCallResultCache[i], IZResultSet, RS) then
+      RS.Close;
+  FreeAndNil(FCallResultCache);
+end;
+
 procedure TZAbstractODBCStatement.AfterClose;
 begin
   if Assigned(fHSTMT) then begin
@@ -301,15 +316,20 @@ begin
   Prepare;
   BindInParameters;
   InternalExecute;
-  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-  if ColumnCount > 0 then begin
-    LastUpdateCount := -1;
-    LastResultSet := GetCurrentResultSet;
-  end else begin
-    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-    LastUpdateCount := RowCount;
+  if BindList.HasOutOrInOutOrResultParam then
+    Result := Supports(FCallResultCache[0], IZResultSet, FLastResultSet)
+  else begin
+    CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+    if ColumnCount > 0 then begin
+      LastUpdateCount := -1;
+      LastResultSet := GetCurrentResultSet;
+    end else begin
+      CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+      LastUpdateCount := RowCount;
+      LastResultSet := nil;
+    end;
+    Result := Assigned(LastResultSet);
   end;
-  Result := Assigned(LastResultSet);
 end;
 
 function TZAbstractODBCStatement.ExecuteQueryPrepared: IZResultSet;
@@ -320,8 +340,11 @@ begin
   BindInParameters;
   InternalExecute;
   CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-  if ColumnCount > 0 then
-    if Assigned(FOpenResultSet) 
+  if BindList.HasOutOrInOutOrResultParam then begin
+     FetchCallResults;
+     Result := GetFirstResultSet;
+  end else if ColumnCount > 0 then
+    if Assigned(FOpenResultSet)
     then Result := IZResultSet(FOpenResultSet)
     else Result := GetCurrentResultSet
   else begin
@@ -347,6 +370,33 @@ begin
   Result := RowCount;
 end;
 
+procedure TZAbstractODBCStatement.FetchCallResults;
+var CallResultCache: TZCollection;
+  ColumnCount: SQLSMALLINT;
+  RowCount: SQLLEN;
+begin
+  CallResultCache := TZCollection.Create;
+  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+  if ColumnCount > 0 then begin
+    FLastResultSet := InternalCreateResultSet;
+    CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
+    FLastResultSet.Close;
+  end else begin
+    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+    LastUpdateCount := RowCount;
+    CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
+  end;
+  while GetMoreresults do
+    if LastResultSet <> nil then begin
+      CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FLastResultSet));
+      FLastResultSet.Close;
+      FLastResultSet := nil;
+      FOpenResultSet := nil;
+    end else
+      CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
+  FCallResultCache := CallResultCache;
+end;
+
 function TZAbstractODBCStatement.GetCurrentResultSet: IZResultSet;
 var
   CachedResolver: IZCachedResolver;
@@ -366,6 +416,18 @@ begin
   else
     Result := NativeResultSet;
   FOpenResultSet := Pointer(Result);
+end;
+
+function TZAbstractODBCStatement.GetFirstResultSet: IZResultSet;
+var I: Integer;
+begin
+  Result := nil;
+  if FCallResultCache <> nil then
+    for I := 0 to FCallResultCache.Count -1 do
+      if Supports(FCallResultCache[i], IZResultSet, Result) then begin
+        FCallResultCache.Delete(I);
+        Break;
+      end;
 end;
 
 {**
@@ -388,9 +450,24 @@ var
   ColumnCount: SQLSMALLINT;
   RowCount: SQLLEN;
   RETCODE: SQLRETURN;
+  RS: IZResultSet;
+  AnyValue: IZAnyValue;
 begin
   Result := False;
-  if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then begin
+  if FCallResultCache <> nil then begin
+    Result := FCallResultCache.Count > 0;
+    if Result then begin
+      if Supports(FCallResultCache[0], IZResultSet, RS) then begin
+        LastResultSet := RS;
+        LastUpdateCount := -1;
+      end else begin
+        FCallResultCache[0].QueryInterface(IZAnyValue, AnyValue);
+        LastUpdateCount := AnyValue.GetInteger;
+        LastResultSet := nil;
+      end;
+      FCallResultCache.Delete(0);
+    end;
+  end else if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then begin
     RETCODE := fPlainDriver.SQLMoreResults(fHSTMT);
     if RETCODE = SQL_SUCCESS then begin
       Result := True;
@@ -418,6 +495,8 @@ end;
 
 procedure TZAbstractODBCStatement.InternalBeforePrepare;
 begin
+  if FCallResultCache <> nil then
+    ClearCallResultCache;
   if not Assigned(fHSTMT) then begin
     CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT));
     CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
@@ -435,8 +514,6 @@ begin
 end;
 
 procedure TZAbstractODBCStatement.InternalExecute;
-var
-  RETCODE, RETCODE2: SQLRETURN;
   procedure MoveLateBoundData(var RETCODE: SQLRETURN);
   var I,l: Integer;
     ValuePtr: PIZLob;
@@ -465,25 +542,26 @@ var
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
   end;
+  procedure FetchLateBoundData(var RETCODE: SQLRETURN);
+  begin
+    while RETCODE = SQL_PARAM_DATA_AVAILABLE do begin
+//      CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1, ODBC_CType,
+//        ColumnBuffer, CharOctedLength, StrLen_or_IndPtr))
+    end;
+  end;
 begin
 //  CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE)); //handle a get data issue
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  RETCODE := fPlainDriver.SQLExecute(fHSTMT);
-  if RETCODE = SQL_NEED_DATA then
-    MoveLateBoundData(RETCODE);
-  if RETCODE = SQL_PARAM_DATA_AVAILABLE then begin //check output params ...
-    RETCODE2 := fPlainDriver.SQLMoreResults(fHSTMT);
-    if RETCODE2 = SQL_NO_DATA then
-      //???
-    else begin
-      { get data chunked }
-      CheckStmtError(RETCODE2);
-    // CheckStmtError(fPlainDriver.SQLParamData(fHSTMT, @ValuePtr));
-    // Assert(Assigned(ValuePtr), 'wrong descriptor pointer');
-    end;
-  end else if not RETCODE in [SQL_NO_DATA, SQL_SUCCESS] then
-    CheckStmtError(RetCode);
+  FExecRETCODE := fPlainDriver.SQLExecute(fHSTMT);
+  if FExecRETCODE = SQL_NEED_DATA then
+    MoveLateBoundData(FExecRETCODE)
+  else if (FExecRETCODE = SQL_PARAM_DATA_AVAILABLE) then
+    FetchLateBoundData(FExecRETCODE);
+  if BindList.HasOutOrInOutOrResultParam then
+    FetchCallResults;
+  if not FExecRETCODE in [SQL_NO_DATA, SQL_SUCCESS] then
+    CheckStmtError(FExecRETCODE);
 end;
 
 procedure TZAbstractODBCStatement.Prepare;
@@ -527,6 +605,8 @@ end;
 procedure TZAbstractODBCStatement.Unprepare;
 begin
   inherited Unprepare;
+  if FCallResultCache <> nil then
+    ClearCallResultCache;
   if Assigned(fHSTMT) then begin
     CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fHSTMT)); //<- does the trick to get a instance reused
     fHSTMT := nil;
@@ -1432,15 +1512,15 @@ ReAlloc:
     then GetMem(Bind.ParameterValuePtr, Bind.BufferLength * ValueCount)
     else goto ReAlloc
   else begin
-      if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
-        FlushLobs;
-        FreeMem(Bind.ParameterValuePtr, Bind.ValueCount*SizeOf(Pointer));
-        Bind.ParameterValuePtr := nil;
-      end;
-      Bind.BufferLength := SizeOf(Pointer);
-      GetMem(Bind.ParameterValuePtr, SizeOf(Pointer)*ValueCount);
-      FillChar(Bind.ParameterValuePtr^, SizeOf(Pointer)*ValueCount, #0);
+    if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
+      FlushLobs;
+      FreeMem(Bind.ParameterValuePtr, Bind.ValueCount*SizeOf(Pointer));
+      Bind.ParameterValuePtr := nil;
     end;
+    Bind.BufferLength := SizeOf(Pointer);
+    GetMem(Bind.ParameterValuePtr, SizeOf(Pointer)*ValueCount);
+    FillChar(Bind.ParameterValuePtr^, SizeOf(Pointer)*ValueCount, #0);
+  end;
   Bind.ValueCount := ValueCount;
   Bind.ExternalMem := ValueCount = 0;
   if BindAgain and (ValueCount > 0) then
@@ -1508,7 +1588,7 @@ var Bind: PZODBCParamBind;
 begin
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
   {$R-}
-  Bind := @fParamBindings[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  Bind := @fParamBindings[ParameterIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Bind.InputOutputType := ODBCInputOutputType[SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]][ParamType] ;
   if not Bind.Described then begin
@@ -1531,7 +1611,7 @@ begin
     end;
   end;
   if (Bind.ParameterValuePtr = nil) then
-    InitBind(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, 1, SQLType);
+    InitBind(ParameterIndex, 1, SQLType);
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -1620,15 +1700,19 @@ begin
         if Value.IsClob then
           if FClientEncoding = ceUTF16
           then Value.GetPWideChar
-          else Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP)
+          else Value.GetPAnsiChar(FClientCP)
         else if (FClientEncoding <> ceUTF16) then begin
           fRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
           inherited SetBlob(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream,
             TZAbstractCLob.CreateWithData(Pointer(fRawTemp),
             Length(fRawTemp), ConSettings^.ClientCodePage.CP, ConSettings));
         end;
-      PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
-      Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC
+      if Bind.SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+        PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
+        Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC
+      end else if (SQLType = stBinaryStream) or (FClientEncoding <> ceUTF16) then
+        SetPAnsiChar(ParameterIndex, Value.GetBuffer, Value.Length)
+      else SetPWideChar(ParameterIndex, Value.GetPWideChar, Value.Length)
     end;
   end;
 end;
@@ -2008,6 +2092,7 @@ begin
                         RaiseExceeded(Index);
                       Exit;
                     end;
+      SQL_C_BINARY,
       SQL_C_CHAR:   begin
                       if BLen > Bind.BufferLength-1 then
                         RaiseExceeded(Index);

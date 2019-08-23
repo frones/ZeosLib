@@ -95,10 +95,12 @@ const
 
   ODBCInputOutputType: array[Boolean, TZProcedureColumnType] of SQLSMALLINT = (
     (SQL_PARAM_INPUT{pctUnknown}, SQL_PARAM_INPUT{pctIn}, SQL_PARAM_INPUT_OUTPUT{pctInOut},
-     SQL_PARAM_OUTPUT{pctOut}, SQL_PARAM_OUTPUT{pctReturn}, SQL_PARAM_TYPE_UNKNOWN{pctResultSet}),
+     SQL_PARAM_OUTPUT{pctOut}, SQL_PARAM_OUTPUT{SQL_RETURN_VALUE does not work with mssql}{pctReturn},
+     SQL_PARAM_TYPE_UNKNOWN{pctResultSet}),
 
     (SQL_PARAM_INPUT{pctUnknown}, SQL_PARAM_INPUT{pctIn}, SQL_PARAM_INPUT_OUTPUT_STREAM{pctInOut},
-     SQL_PARAM_OUTPUT_STREAM{pctOut}, SQL_RETURN_VALUE{pctReturn}, SQL_PARAM_TYPE_UNKNOWN{pctResultSet}));
+     SQL_PARAM_OUTPUT_STREAM{pctOut}, SQL_PARAM_OUTPUT{SQL_RETURN_VALUE does not work with mssql}{pctReturn},
+     SQL_PARAM_TYPE_UNKNOWN{pctResultSet}));
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation

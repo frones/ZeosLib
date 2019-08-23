@@ -69,7 +69,7 @@ uses
 
 type
   { eh: improve missing meta informations of SQLColumns}
-  TODBCTResultSetMetadata = class(TZAbstractResultSetMetadata)
+  TZODBCResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
@@ -117,7 +117,7 @@ type
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
     constructor CreateForMetadataCall(out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
-      {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConneaction as IZODBCConnection) is different to dephi and crashs
+      {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConnection as IZODBCConnection) is different to dephi and crashs
     procedure Open; override;
     procedure BeforeClose; override;
 
@@ -130,7 +130,9 @@ type
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetUInt(ColumnIndex: Integer): Cardinal;
@@ -390,7 +392,7 @@ constructor TAbstractODBCResultSet.Create(const Statement: IZStatement;
   const EnhancedColInfo: Boolean = True);
 var Supported: SQLUSMALLINT;
 begin
-  inherited Create(Statement, SQL, TODBCTResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
+  inherited Create(Statement, SQL, TZODBCResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
   fConnection := Connection;
   fPlainDriver := TZODBC3PlainDriver(fConnection.GetPlainDriver.GetInstance);
   fIsUnicodeDriver := Supports(fPlainDriver, IODBC3UnicodePlainDriver);
@@ -1406,6 +1408,7 @@ begin
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
+{$IFNDEF NO_UTF8STRING}
 function TAbstractODBCResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: Pointer;
   L: NativeUInt;
@@ -1441,6 +1444,7 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
 function TAbstractODBCResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
@@ -1891,9 +1895,9 @@ begin
     else ColumnInfo.ColumnCodePage := FClientCP;
 end;
 
-{ TODBCTResultSetMetadata }
+{ TZODBCResultSetMetadata }
 
-procedure TODBCTResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+procedure TZODBCResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
 begin
   ColumnInfo.CatalogName := '';
   ColumnInfo.SchemaName := '';
