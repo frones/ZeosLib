@@ -113,8 +113,7 @@ type
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
 
-    function GetMoreResults: Boolean; overload; override;
-    function GetMoreResults(var RS: IZResultSet): Boolean; reintroduce; overload;
+    function GetMoreResults: Boolean; override;
 
     procedure Cancel; override;
   public
@@ -181,16 +180,16 @@ type
     procedure SetBoolean(Index: Integer; Value: Boolean);
     procedure SetByte(Index: Integer; Value: Byte);
     procedure SetShort(Index: Integer; Value: ShortInt);
-    procedure SetWord(Index: Integer; Value: Word); reintroduce;
-    procedure SetSmall(Index: Integer; Value: SmallInt); reintroduce;
-    procedure SetUInt(Index: Integer; Value: Cardinal); reintroduce;
-    procedure SetInt(Index: Integer; Value: Integer); reintroduce;
-    procedure SetULong(Index: Integer; const Value: UInt64); reintroduce;
-    procedure SetLong(Index: Integer; const Value: Int64); reintroduce;
-    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
-    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
-    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetWord(Index: Integer; Value: Word);
+    procedure SetSmall(Index: Integer; Value: SmallInt);
+    procedure SetUInt(Index: Integer; Value: Cardinal);
+    procedure SetInt(Index: Integer; Value: Integer);
+    procedure SetULong(Index: Integer; const Value: UInt64);
+    procedure SetLong(Index: Integer; const Value: Int64);
+    procedure SetFloat(Index: Integer; Value: Single);
+    procedure SetDouble(Index: Integer; const Value: Double);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
 
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
@@ -438,7 +437,11 @@ begin
         else Result := nil;
       LastUpdateCount := FRowsAffected;
       if not Assigned(Result) then
-        while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
+        while GetMoreResults do
+          if (LastResultSet <> nil) then begin
+            Result := LastResultSet;
+            FLastResultSet := nil;
+          end;
     end;
   finally
     FRowSet := nil;
@@ -572,6 +575,7 @@ begin
       end else begin
         FCallResultCache[0].QueryInterface(IZAnyValue, AnyValue);
         LastUpdateCount := AnyValue.GetInteger;
+        LastResultSet := nil;
       end;
       FCallResultCache.Delete(0);
     end;
@@ -592,22 +596,6 @@ begin
         CheckError(Status, lcOther)};
     end;
   end;
-end;
-
-function TZAbstractOleDBStatement.GetMoreResults(var RS: IZResultSet): Boolean;
-var
-  FRowSet: IRowSet;
-begin
-  if Assigned(FMultipleResults) then
-  begin
-    FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-      IID_IRowset, @FRowsAffected, @FRowSet);
-    RS := CreateResultSet(FRowSet);
-    Result := Assigned(RS);
-    LastUpdateCount := FRowsAffected;
-  end
-  else
-    Result := False;
 end;
 
 function TZAbstractOleDBStatement.GetMoreResultsIndicator: TZMoreResultsIndicator;
