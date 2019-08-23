@@ -944,10 +944,14 @@ var Idx: Integer;
           RegisterParameter(IDX,
             Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
               Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
-        else
+        else begin
+          RegisterParameter(IDX,
+            Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
+              Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
           FExecStatement.RegisterParameter(IDX,
             Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
               Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+        end;
         Inc(IDX);
       end;
     end;
