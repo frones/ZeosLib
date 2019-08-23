@@ -750,6 +750,7 @@ type
       sqlWarn9: array[0..0] of AnsiChar;
   end;
 
+  PPZASASQLCA = ^PZASASQLCA;
   PZASASQLCA = ^TZASASQLCA;
   TZASASQLCA = record
     sqlcaID: array[0..7] of AnsiChar;
