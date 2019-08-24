@@ -2034,7 +2034,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetLong(Index: Integer; const Value: Int64);
 {$IFDEF CPU64}
 begin
-  BindInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value)
+  BindSInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value)
 {$ELSE}
 var Bind: PZODBCParamBind;
 begin
@@ -2362,7 +2362,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetULong(Index: Integer; const Value: UInt64);
 {$IFDEF CPU64}
 begin
-  BindInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value)
+  BindUInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value)
 {$ELSE}
 var Bind: PZODBCParamBind;
 begin
