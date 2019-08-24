@@ -1823,7 +1823,6 @@ begin
   for I := Low(ParamBindings) to High(ParamBindings) do
     if ParamBindings[i].eParamIO <> DBPARAMIO_INPUT then
       Inc(J);
-//  FDBBindingArray := ParamBindings;
   FRowSize := Length(ParamBuffer);
   SetLength(FDBBindingArray,J);
   SetLength(FDBBINDSTATUSArray, J);

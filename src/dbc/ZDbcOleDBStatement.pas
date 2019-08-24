@@ -150,8 +150,8 @@ type
     procedure InitFixedBind(Index: Integer; Size: Cardinal; _Type: DBTYPE);
     procedure InitDateBind(Index: Integer; SQLType: TZSQLType);
     procedure InitLongBind(Index: Integer; _Type: DBTYPE);
-    procedure InternalBindSInt(Index: Integer; SQLType: TZSQLType; Value: {$IFDEF CPU64}Int64{$ELSE}Integer{$ENDIF});
-    procedure InternalBindUInt(Index: Integer; SQLType: TZSQLType; Value: {$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF});
+    procedure InternalBindSInt(Index: Integer; SQLType: TZSQLType; Value: NativeInt);
+    procedure InternalBindUInt(Index: Integer; SQLType: TZSQLType; Value: NativeUInt);
     procedure InternalBindDbl(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure SetBindOffsets;
   protected
@@ -1491,10 +1491,10 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
 end;
 
 procedure TZOleDBPreparedStatement.InternalBindSInt(Index: Integer;
-  SQLType: TZSQLType; Value: {$IFDEF CPU64}Int64{$ELSE}Integer{$ENDIF});
+  SQLType: TZSQLType; Value: NativeInt);
 var Bind: PDBBINDING;
   Data: Pointer;
-  C: {$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF};
+  C: NativeUInt;
   L: Cardinal;
   Negative: Boolean;
 begin
@@ -1548,7 +1548,7 @@ begin
 end;
 
 procedure TZOleDBPreparedStatement.InternalBindUInt(Index: Integer;
-  SQLType: TZSQLType; Value: {$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF});
+  SQLType: TZSQLType; Value: NativeUInt);
 var Bind: PDBBINDING;
   Data: PAnsichar;
   L: Cardinal;

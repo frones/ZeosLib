@@ -432,19 +432,7 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
 
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); virtual; abstract;
-
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual; abstract;
-    procedure SetString(ParameterIndex: Integer; const Value: String); virtual; abstract;
-    {$IFNDEF NO_ANSISTRING}
-    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual; abstract;
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
-    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); virtual; abstract;
-    {$ENDIF}
-    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); virtual; abstract;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; abstract;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); virtual;
@@ -479,17 +467,17 @@ type
     procedure SetBindCapacity(Capacity: Integer); override;
     property InParamDefaultValues: TRawByteStringDynArray read FInParamDefaultValues;
   public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
-    procedure SetString(ParameterIndex: Integer; const Value: String); override;
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
-    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
-    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);
   end;
 
   TZRawParamDetectPreparedStatement = class(TZRawPreparedStatement)
@@ -511,17 +499,17 @@ type
     property InParamDefaultValues: TUnicodeStringDynArray read FInParamDefaultValues;
     procedure SetBindCapacity(Capacity: Integer); override;
   public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
-    procedure SetString(ParameterIndex: Integer; const Value: String); override;
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
-    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
-    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);
   end;
 
   TZUTF16ParamDetectPreparedStatement = class(TZUTF16PreparedStatement)
@@ -529,8 +517,6 @@ type
     FCachedQueryUni: TUnicodeStringDynArray;
     FNCharDetected: PBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
-    //property IsParamIndex: TBooleanDynArray read FIsParamIndex;
-    //property IsNCharIndex: TBooleanDynArray read FNCharDetected;
   public
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
     procedure Unprepare; override;
@@ -599,7 +585,7 @@ type
     function GetUpdateCount: Integer; override;
     function GetMoreResults: Boolean; override;
   public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: String); override;
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: String);
   public //additional IZCallableStatement api
     function GetFirstResultSet: IZResultSet; virtual;
     function GetPreviousResultSet: IZResultSet; virtual;
@@ -641,16 +627,16 @@ type
   public
     procedure AfterConstruction; override;
   public //setters
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); override;
-    procedure SetString(ParameterIndex: Integer; const Value: String); override;
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
-    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); override;
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); override;
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
-    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); override;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); override;
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);
   public //getters
     function GetString(ParameterIndex: Integer): String; reintroduce;
     {$IFNDEF NO_ANSISTRING}
@@ -3376,9 +3362,9 @@ procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
   Value: PChar);
 begin
   {$IFDEF UNICODE}
-  SetUnicodeString(ParameterIndex, Value);
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetUnicodeString(ParameterIndex, Value);
   {$ELSE}
-  SetRawByteString(ParameterIndex, Value);
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetRawByteString(ParameterIndex, Value);
   {$ENDIF}
 end;
 
@@ -3493,7 +3479,7 @@ begin
     {$IFNDEF NO_UTF8STRING}
     vtUTF8String:    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetUTF8String(ParameterIndex, Value.VUTF8String);
     {$ENDIF}
-    vtCharRec:       SetCharRec(ParameterIndex, Value.VCharRec);
+    vtCharRec:       IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetCharRec(ParameterIndex, Value.VCharRec);
     vtDateTime:      IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimestamp(ParameterIndex, Value.VDateTime);
     vtBytes:         IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBytes(ParameterIndex, Value.VBytes);
     vtArray:  begin

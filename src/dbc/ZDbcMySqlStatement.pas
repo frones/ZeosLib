@@ -175,7 +175,7 @@ type
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
 
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
   end;

@@ -115,6 +115,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -1105,6 +1106,20 @@ end;
 function TZAdoResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
   Result := GetDouble(ColumnIndex);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>double</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>zerouid</code>
+}
+procedure TZAdoResultSet.GetGUID(ColumnIndex: Integer; var Result: TGUID);
+begin
+
 end;
 
 {**

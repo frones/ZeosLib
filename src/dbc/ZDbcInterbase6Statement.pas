@@ -138,9 +138,9 @@ type
     procedure SetULong(Index: Integer; const Value: UInt64);
     procedure SetLong(Index: Integer; const Value: Int64);
     procedure SetFloat(Index: Integer; Value: Single);
-    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
-    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetDouble(Index: Integer; const Value: Double);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
 
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
