@@ -73,7 +73,7 @@ uses
 type
   TZAbstractDblibDataProvider = class
     protected
-      FPLainDriver: IZDBLibPlainDriver;
+      FPLainDriver: TZDBLIBPLainDriver;
       FHandle: PDBPROCESS;
       FConnection: IZDBLibConnection;
       FNeedDbCanQuery: Boolean;
@@ -141,7 +141,7 @@ type
     procedure CheckColumnIndex(ColumnIndex: Integer);
   protected
     FDBLibConnection: IZDBLibConnection;
-    FPlainDriver: IZDBLibPlainDriver;
+    FPlainDriver: TZDBLIBPLainDriver;
     FDataProvider: TZAbstractDblibDataProvider;
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -194,7 +194,7 @@ constructor TZAbstractDblibDataProvider.Create(Connection: IZDBLibConnection);
 begin
   inherited Create;
   FConnection := Connection;
-  FPLainDriver := Connection.GetPlainDriver;
+  FPLainDriver := TZDBLIBPLainDriver(Connection.GetIZPlainDriver.GetInstance);
   FHandle := Connection.GetConnectionHandle;
 end;
 
@@ -209,7 +209,7 @@ function TZPlainDblibDataProvider.Next: Boolean;
 begin
   Result := False;
   if FCheckDBDead then
-    if FPlainDriver.dbDead(FHandle) then
+    if FPlainDriver.dbDead(FHandle) <> 0 then
       Exit;
 //!!! maybe an error message other than dbconnection is dead should be raised
   case FPlainDriver.dbnextrow(FHandle) of
@@ -327,7 +327,7 @@ begin
     TZDblibResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
   Statement.GetConnection.QueryInterface(IZDBLibConnection, FDBLibConnection);
-  FPlainDriver := FDBLibConnection.GetPlainDriver;
+  FPlainDriver := TZDBLIBPLainDriver(FDBLibConnection.GetIZPlainDriver.GetInstance);
   FHandle := FDBLibConnection.GetConnectionHandle;
   FSQL := SQL;
   FCheckDBDead := FPlainDriver.GetProtocol = 'mssql';
@@ -479,7 +479,7 @@ begin
 { TODO -ofjanos -cGeneral : Maybe it needs a dbcanquery here. }
   if FDataProvider.needDbCanQuery then
     if Assigned(FHandle) then
-      if not FPlainDriver.dbDead(FHandle) then
+      if FPlainDriver.dbDead(FHandle) = 0 then
         if FPlainDriver.dbCanQuery(FHandle) <> DBSUCCEED then
           FDBLibConnection.CheckDBLibError(lcDisconnect, 'CLOSE QUERY');
   FHandle := nil;
@@ -962,7 +962,7 @@ function TZDBLibResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
   DL: Integer;
   Data: Pointer;
-  TempDate: DBDATETIME;
+  TempDate: TDBDATETIME;
   tdsTempDate: TTDSDBDATETIME;
   Failed: Boolean;
 begin

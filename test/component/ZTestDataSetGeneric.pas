@@ -109,6 +109,7 @@ type
     procedure TestInsertReturning;
     procedure TestNullUnionNull;
     procedure TestVeryLargeBlobs;
+    procedure TestKeyWordParams;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -2367,6 +2368,40 @@ begin
   end;
 end;
 
+{** some people reporting problems that params are not found..
+
+  http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
+  http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=98333
+}
+procedure TZGenericTestDataSet.TestKeyWordParams;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Query.Connection.Connect;
+  try
+    Query.SQL.Text := 'select IsNull(B.X||B.y, '+QuotedStr('')+') as X_Y_Z from "My_Table" as B '+
+      'where 1=1 and :user_ID = B.x and ((B.nazwa iLike :nazwaFiltr) or (B.skrot iLike :nazwaFiltr))';
+    CheckEquals(2, Query.Params.Count);
+    CheckEquals('user_ID', Query.Params[0].Name);
+    CheckEquals('nazwaFiltr', Query.Params[1].Name);
+
+    Query.SQL.Text := 'SELECT * FROM sys_users WHERE login = :login';
+    CheckEquals(1, Query.Params.Count);
+    CheckEquals('login', Query.Params[0].Name);
+
+    Query.SQL.Text := 'SELECT * FROM users WHERE username = :username;';
+    CheckEquals(1, Query.Params.Count);
+    CheckEquals('username', Query.Params[0].Name);
+
+    Query.SQL.Text := 'SELECT * FROM sys_users WHERE login = :user_id';
+    CheckEquals(1, Query.Params.Count);
+    CheckEquals('user_id', Query.Params[0].Name);
+  finally
+    Query.Free;
+  end;
+end;
+
 type
   THackQuery = class(TZAbstractRODataSet);
 // Test if fields got the right types - the simplest method is to try
@@ -2384,7 +2419,7 @@ var
     Query.Fields[i].AsInteger := Value;
     // This has nothing to do with the test - Sybase and MSSQL just don't allow
     // setting bit fields to null.
-    if ProtocolType in [protFreeTDS, protSybase]
+    if ProtocolType in [protFreeTDS, protSybase, protMSSQL]
     then Query.FieldByName('stBoolean').AsBoolean := true;
     Query.Post;
     CheckEquals(Value, Query.Fields[i].AsInteger);

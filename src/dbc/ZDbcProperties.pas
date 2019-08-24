@@ -171,6 +171,10 @@ const
   { Parameters specific to a single DBC }
 
 {$IFDEF ENABLE_DBLIB}
+  // Type: INTEGER
+  // If set, the TDS version will be set on connect
+  // or dbinit (sybase-lib only)
+  ConnProps_TDSVersion = 'TDSVersion';
   // Type: BOOLEAN
   // If set, executes 'SET ANSI_PADDING ON' on connect
   ConnProps_AnsiPadding = 'ANSI_PADDING';

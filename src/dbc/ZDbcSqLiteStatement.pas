@@ -112,15 +112,15 @@ type
     procedure SetNull(ParameterIndex: Integer; {%H-}SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
-    procedure SetShort(ParameterIndex: Integer; Value: ShortInt); reintroduce;
-    procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
-    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
-    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
-    procedure SetInt(ParameterIndex: Integer; Value: Integer); reintroduce;
-    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); reintroduce;
-    procedure SetLong(ParameterIndex: Integer; const Value: Int64); reintroduce;
-    procedure SetFloat(ParameterIndex: Integer; Value: Single); reintroduce;
-    procedure SetDouble(ParameterIndex: Integer; const Value: Double); reintroduce;
+    procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64);
+    procedure SetFloat(ParameterIndex: Integer; Value: Single);
+    procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); reintroduce;
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD); reintroduce;
   end;
@@ -233,9 +233,16 @@ var
   BindVal: PZBindValue;
   ErrorCode: Integer;
 begin
-  if FBindDoubleDateTimeValues then
-    BindDouble(Index, SQLType, Value-JulianEpoch)
-  else begin
+  CheckParameterIndex(Index);
+  if FBindDoubleDateTimeValues then begin
+    if FBindLater or FHasLoggingListener
+      then BindList.Put(Index, SQLType, P8Bytes(@Value));
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, Value-JulianEpoch);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end else begin
     CheckParameterIndex(Index);
     BindVal := BindList[Index];
     if SQLType = stDate then

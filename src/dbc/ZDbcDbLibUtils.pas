@@ -76,13 +76,6 @@ function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer;
   CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
-  Convert string DBLib field type to SqlType
-  @param string field type value
-  @result the SqlType field type value
-}
-function ConvertDBLibTypeToSqlType(const {%H-}Value: string): TZSQLType;
-
-{**
   Converts ZDBC SQL types into MS SQL native types.
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
@@ -103,15 +96,6 @@ function ConvertSqlTypeToFreeTDSTypeName(FieldType: TZSQLType): string;
   @return a SQL TZColumnNullableType.
 }
 function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
-
-{**
-  Prepares an SQL parameter for the query.
-  @param ParameterIndex the first parameter is 1, the second is 2, ...
-  @return a string representation of the parameter.
-}
-function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
-  const ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
-  NChar: Boolean = False): RawByteString;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
@@ -221,16 +205,6 @@ begin
 end;
 
 {**
-  Convert string DBLib field type to SqlType
-  @param string field type value
-  @result the SqlType field type value
-}
-function ConvertDBLibTypeToSqlType(const Value: string): TZSQLType;
-begin
-  Result := stUnknown;
-end;
-
-{**
   Converts ZDBC SQL types into DBLib native types.
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
@@ -268,14 +242,15 @@ begin
   Result := tdsVoid;
   case FieldType of
     stBoolean: Result := tdsBit;
-    stByte: Result := tdsInt1;
-    stShort, stSmall: Result := tdsInt2;
-    stWord, stInteger: Result := tdsInt4;
-    stLongWord, stLong, stUlong: Result := tdsFlt8; //EH: Better would nbe tdsInt8
+    stByte, stShort: Result := tdsInt1;
+    stWord, stSmall: Result := tdsInt2;
+    stLongWord, stInteger: Result := tdsInt4;
+    stLong, stUlong: Result := tdsInt8;
     stFloat: Result := tdsFlt4;
     stDouble, stBigDecimal: Result := tdsFlt8;
     stString, stUnicodeString: Result := tdsVarChar;
     stBytes: Result := tdsVarBinary;
+    stGUID: Result := tdsUnique;
     stDate, stTime, stTimestamp: Result := tdsDateTime;
     stAsciiStream, stUnicodeStream: Result := tdsText;
     stBinaryStream: Result := tdsImage;
@@ -311,7 +286,6 @@ begin
   end;
 end;
 
-
 {**
   Converts a DBLib nullability value into ZDBC TZColumnNullableType.
   @param DBLibNullability dblibc native nullability.
@@ -323,92 +297,6 @@ const
     (ntNoNulls, ntNullable, ntNullableUnknown);
 begin
   Result := Nullability[DBLibNullability];
-end;
-
-{**
-  Prepares an SQL parameter for the query.
-  @param ParameterIndex the first parameter is 1, the second is 2, ...
-  @return a string representation of the parameter.
-}
-function PrepareSQLParameter(const Value: TZVariant; ParamType: TZSQLType;
-  const ClientVarManager: IZClientVariantManager;
-  ConSettings: PZConSettings; NChar: Boolean = False): RawByteString;
-var
-  TempBytes: TBytes;
-  TempBlob: IZBlob;
-begin
-  TempBytes := nil;
-
-  if SoftVarManager.IsNull(Value)
-  then Result := 'NULL'
-  else case ParamType of
-    stBoolean:
-      Result := BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)];
-    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
-    stFloat, stDouble, stCurrency, stBigDecimal:
-      Result := ClientVarManager.GetAsRawByteString(Value);
-    stString, stUnicodeString:
-      if NChar
-      then Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8),AnsiChar(#39))
-      else Result := ZSysUtils.SQLQuotedStr(ClientVarManager.GetAsRawByteString(Value), AnsiChar(#39));
-    stBytes:
-      begin
-        TempBytes := ClientVarManager.GetAsBytes(Value);
-        if Length(TempBytes) = 0 then
-          Result := 'NULL'
-        else
-          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
-      end;
-    stGuid:
-      begin
-        TempBytes := ClientVarManager.GetAsBytes(Value);
-        case Length(TempBytes) of
-          0: Result := 'NULL';
-          16: Result := ''''+GUIDToRaw(TempBytes)+'''';
-          else EZSQLException.Create('The TBytes was not 16 bytes long when trying to convert it to a GUID');
-        end;
-      end;
-    stDate:
-      Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-        ConSettings^.WriteFormatSettings, True);
-    stTime:
-      Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-        ConSettings^.WriteFormatSettings, True);
-    stTimestamp:
-      Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-        ConSettings^.WriteFormatSettings, True);
-    stAsciiStream, stUnicodeStream, stBinaryStream:
-      begin
-        TempBlob := SoftVarManager.GetAsInterface(Value) as IZBlob;
-        if not TempBlob.IsEmpty then
-        begin
-          if ParamType = stBinaryStream then
-            Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
-          else begin
-            if TempBlob.IsClob then begin
-              if NChar
-              then TempBlob.GetPAnsiChar(zCP_UTF8)
-              else TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage.CP);
-              Result := SQLQuotedStr(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, AnsiChar(#39))
-            end else
-              if NChar then
-                Result := SQLQuotedStr(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings, zCP_UTF8), AnsiChar(#39))
-              else
-                Result := SQLQuotedStr(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), AnsiChar(#39));
-            if ZFastCode.Pos(RawByteString(#0), Result) > 1
-            then raise EZSQLException.Create('Character 0x00 is not allowed in Strings with Text and NText fields and this driver.');
-          end;
-        end else
-          Result := 'NULL';
-        TempBlob := nil;
-      end;
-    else
-      Result := 'NULL';
-  end;
 end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
