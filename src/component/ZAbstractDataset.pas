@@ -374,11 +374,11 @@ procedure TZAbstractDataset.InternalClose;
 begin
   inherited InternalClose;
 
-  if not DoNotCloseResultset then
-  begin
-    if Assigned(CachedResultSet) then
+  if not ResultSetWalking then begin
+    if Assigned(CachedResultSet) then begin
       CachedResultSet.Close;
-    CachedResultSet := nil;
+      CachedResultSet := nil;
+    end;
     CachedResolver := nil;
   end;
 end;
