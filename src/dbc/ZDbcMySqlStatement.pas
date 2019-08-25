@@ -1288,7 +1288,7 @@ begin
   CheckParameterIndex(Index);
   if FEmulatedParams then begin
     BindValue := BindList[Index];
-    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) then begin
+    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray) then begin
       BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
       EmulatedAsRaw;
     end else case BindValue.SQLType of
@@ -1361,7 +1361,7 @@ begin
   CheckParameterIndex(Index);
   if FEmulatedParams then begin
     BindValue := BindList[Index];
-    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) then begin
+    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray) then begin
       BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
       EmulatedAsRaw;
     end else case BindValue.SQLType of
@@ -1509,7 +1509,7 @@ begin
   CheckParameterIndex(Index);
   Len := Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   BindValue := BindList[Index];
-  if BindValue.SQLType = stUnknown
+  if (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray)
   then SQLType := stString
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
@@ -1608,7 +1608,7 @@ var
 begin
   CheckParameterIndex(Index);
   BindValue := BindList[Index];
-  if BindValue.SQLType = stUnknown
+  if (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray)
   then SQLType := stString
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
