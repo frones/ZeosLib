@@ -1310,7 +1310,7 @@ begin
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeSQLTimeStampToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end else begin
-                  L := fStrLen_or_Ind shr 1;
+                  L := fStrLen_or_Ind;
                   if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawSQLTimeStampToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);

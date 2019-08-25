@@ -701,7 +701,7 @@ begin
       SetLength(Buf, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+2, @aLen));
-      Result := PUnicodeToRaw(Pointer(Buf), Length(Buf), ConSettings.CTRL_CP);
+      Result := PUnicodeToRaw(Pointer(Buf), aLen shr 1, ConSettings.CTRL_CP);
       {$ENDIF}
       inherited SetCatalog(Result);
     end;
@@ -813,20 +813,20 @@ var
   {$ENDIF}
   aLen: SQLINTEGER;
 begin
-  Result := GetCatalog;
+  Result := inherited GetCatalog;
   if Result = '' then begin
     CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
       SQL_ATTR_CURRENT_CATALOG, nil, 0, @aLen));
     if aLen > 0 then begin
       {$IFNDEF UNICODE}
-      SetLength(Result, aLen);
+      SetLength(Result, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+1, @aLen));
       {$ELSE}
-      SetLength(Buf, aLen);
+      SetLength(Buf, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
-      Result := PRawToUnicode(Pointer(Buf), aLen+1, ZOSCodePage);
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+1, @aLen));
+      Result := PRawToUnicode(Pointer(Buf), aLen, ConSettings.ClientCodePage.CP);
       {$ENDIF}
       inherited SetCatalog(Result);
     end;
