@@ -199,30 +199,31 @@ var
   CommitCount, I: Integer;
 begin
   SQLMonitor := TZSQLMonitor.Create(nil);
-  SQLMonitor.Active := True;
-  MasterQuery.SQL.Text := 'SELECT * FROM default_values ORDER BY d_id';
-  MasterQuery.Open;
-
-  DetailQuery.SQL.Text := 'SELECT * FROM date_values';
-  DetailQuery.MasterSource := MasterDataSource;
-  DetailQuery.MasterFields := 'd_id';
-  DetailQuery.LinkedFields := 'd_id';
-  DetailQuery.Open;
-
-  DetailQuery2.SQL.Text := 'SELECT * FROM date_values';
-  DetailQuery2.MasterSource := MasterDataSource;
-  DetailQuery2.MasterFields := 'd_id';
-  DetailQuery2.LinkedFields := 'd_id';
-  DetailQuery2.Open;
-
-  DetailQuery3.SQL.Text := 'SELECT * FROM date_values';
-  DetailQuery3.MasterSource := MasterDataSource;
-  DetailQuery3.MasterFields := 'd_id';
-  DetailQuery3.LinkedFields := 'd_id';
-  DetailQuery3.Open;
-
-  CommitCount := 0;
   try
+    SQLMonitor.Active := True;
+    MasterQuery.SQL.Text := 'SELECT * FROM default_values ORDER BY d_id';
+    MasterQuery.Open;
+
+    DetailQuery.SQL.Text := 'SELECT * FROM date_values';
+    DetailQuery.MasterSource := MasterDataSource;
+    DetailQuery.MasterFields := 'd_id';
+    DetailQuery.LinkedFields := 'd_id';
+    DetailQuery.Open;
+
+    DetailQuery2.SQL.Text := 'SELECT * FROM date_values';
+    DetailQuery2.MasterSource := MasterDataSource;
+    DetailQuery2.MasterFields := 'd_id';
+    DetailQuery2.LinkedFields := 'd_id';
+    DetailQuery2.Open;
+
+    DetailQuery3.SQL.Text := 'SELECT * FROM date_values';
+    DetailQuery3.MasterSource := MasterDataSource;
+    DetailQuery3.MasterFields := 'd_id';
+    DetailQuery3.LinkedFields := 'd_id';
+    DetailQuery3.Open;
+
+    CommitCount := 0;
+
     MasterQuery.Append;
     MasterQuery.FieldByName('d_id').AsInteger := TestRowID;
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
