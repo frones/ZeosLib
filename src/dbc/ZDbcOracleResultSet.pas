@@ -122,6 +122,7 @@ type
   protected
     procedure Open; override;
   public
+    procedure ResetCursor; override;
     procedure BeforeClose; override;
     function Next: Boolean; reintroduce;
   end;
@@ -1875,6 +1876,13 @@ begin
   end;
 
   inherited Open;
+end;
+
+procedure TZOracleResultSet_A.ResetCursor;
+begin
+  FCurrentRowBufIndex := 0;
+  inherited;
+
 end;
 
 {**
