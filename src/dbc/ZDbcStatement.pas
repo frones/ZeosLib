@@ -4698,8 +4698,11 @@ var I: Integer;
       Scale := RS.GetInt(ProcColScaleIndex);
       if FExecStatement = nil then
         RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale)
-      else
+      else begin
         FExecStatement.RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+        if BindList.Count < I+1 then
+          RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+      end;
       Inc(I);
     end;
     FRegisteringParamFromMetadata := False;

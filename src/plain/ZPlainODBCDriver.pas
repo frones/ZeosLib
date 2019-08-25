@@ -1278,8 +1278,8 @@ const
   SQL_RETURN_VALUE = 5;
   SQL_PARAM_INPUT_OUTPUT_STREAM = 8; //(ODBCVER >= 0x0380)
   SQL_PARAM_OUTPUT_STREAM = 16; //(ODBCVER >= 0x0380)
-{ Defines for SQLProcedures (returned in the result set)  }
 
+{ Defines for SQLProcedures (returned in the result set)  }
 const
   SQL_PT_UNKNOWN = 0;
   SQL_PT_PROCEDURE = 1;

@@ -1494,7 +1494,7 @@ procedure TZOleDBPreparedStatement.InternalBindSInt(Index: Integer;
   SQLType: TZSQLType; Value: NativeInt);
 var Bind: PDBBINDING;
   Data: Pointer;
-  C: NativeUInt;
+  C: NativeUInt; //some delphis can't determine the overload of GetOrdinalDigits if a NativeUInt is uses
   L: Cardinal;
   Negative: Boolean;
 begin
@@ -1888,6 +1888,7 @@ var Bind: PDBBINDING;
   Data: PAnsichar;
   DBStatus: PDBSTATUS;
   DBLENGTH: PDBLENGTH;
+label Fix_CLob;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1910,7 +1911,7 @@ begin
           PPointer(Data)^ := Value.GetPAnsiChar(FClientCP);
           DBLENGTH^ := Value.Length;
         end else begin
-          FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
+Fix_CLob: FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
           SetBLob(Index, stAsciiStream, TZAbstractCLob.CreateWithData(Pointer(FRawTemp),
             Length(FRawTemp), FClientCP, ConSettings));
         end;
@@ -1923,6 +1924,27 @@ begin
           PPointer(Data)^ := Value.GetBuffer;
           DBLENGTH^ := Value.Length;
         end;
+      DBTYPE_BYTES: begin
+              DBLENGTH^ := Value.Length;
+              if DBLENGTH^ < Bind.cbMaxLen
+              then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+              else RaiseExceeded(Index);
+            end;
+      DBTYPE_STR: if Value.IsClob then begin
+                Value.GetPAnsiChar(FClientCP);
+                DBLENGTH^ := Value.Length;
+                if DBLENGTH^ < Bind.cbMaxLen
+                then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+                else RaiseExceeded(Index);
+              end else
+                goto Fix_CLob;
+      DBTYPE_WSTR: begin
+              Value.GetPWideChar;
+              DBLENGTH^ := Value.Length;
+              if DBLENGTH^ < Bind.cbMaxLen
+              then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+              else RaiseExceeded(Index);
+            end;
       else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
     end;
   end else
@@ -2883,10 +2905,12 @@ begin
   SQL := '';
   ZDbcUtils.ToBuff('{? = CALL ', Buf, SQL);
   ZDbcUtils.ToBuff(StoredProcName, Buf, SQL);
+  if BindList.Count > 1 then
   ZDbcUtils.ToBuff(Char('('), Buf, SQL);
   for i := 1 to BindList.Count-1 do
     ZDbcUtils.ToBuff('?,', Buf, SQL);
-  ReplaceOrAddLastChar(',', ')', Buf, SQL);
+  if BindList.Count > 1 then
+    ReplaceOrAddLastChar(',', ')', Buf, SQL);
   ZDbcUtils.ToBuff(Char('}'), Buf, SQL);
   ZDbcUtils.FlushBuff(Buf, SQL);
   Result := TZOleDBPreparedStatement.Create(Connection, SQL, Info);
