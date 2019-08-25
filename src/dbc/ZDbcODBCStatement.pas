@@ -1031,10 +1031,11 @@ begin
                               if Native
                               then DT := TDateTimeDynArray(D)[i]
                               else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
-                              DecodeTime(DT, SQL_TIME_STRUCT.hour, SQL_TIME_STRUCT.minute,
-                                SQL_TIME_STRUCT.second, Fraction);
+                              DecodeTime(DT, SQL_SS_TIME2_STRUCT.hour, SQL_SS_TIME2_STRUCT.minute,
+                                SQL_SS_TIME2_STRUCT.second, Fraction);
+                              SQL_SS_TIME2_STRUCT.fraction := fraction*1000000;
                             end;
-                            Inc(P, SizeOf(TSQL_TIME_STRUCT));
+                            Inc(P, SizeOf(TSQL_SS_TIME2_STRUCT));
                           end;
                         end else for I := 0 to ArrayLen -1 do begin
                           if IsNullFromArray(Arr, I) then
@@ -1044,11 +1045,10 @@ begin
                             if Native
                             then DT := TDateTimeDynArray(D)[i]
                             else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
-                            DecodeTime(DT, SQL_SS_TIME2_STRUCT.hour, SQL_SS_TIME2_STRUCT.minute,
-                              SQL_SS_TIME2_STRUCT.second, Fraction);
-                            SQL_SS_TIME2_STRUCT.fraction := fraction*1000000;
+                              DecodeTime(DT, SQL_TIME_STRUCT.hour, SQL_TIME_STRUCT.minute,
+                                SQL_TIME_STRUCT.second, Fraction);
                           end;
-                          Inc(P, SizeOf(TSQL_SS_TIME2_STRUCT));
+                          Inc(P, SizeOf(TSQL_TIME_STRUCT));
                         end;
                       end;
       stTimeStamp:    begin
