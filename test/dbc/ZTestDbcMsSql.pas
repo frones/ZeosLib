@@ -88,7 +88,7 @@ uses ZTestConsts;
 }
 function TZTestDbcMSSqlCase.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,ado';
+  Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,ado,odbc_w,odbc_a,OleDB';
 end;
 
 {**
@@ -126,10 +126,10 @@ end;
 }
 procedure TZTestDbcMsSQLCase.TestPreparedStatement;
 const
-  dep_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  dep_name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  dep_shname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  dep_address_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  dep_id_index = FirstDbcIndex;
+  dep_name_index = FirstDbcIndex+1;
+  dep_shname_index = FirstDbcIndex+2;
+  dep_address_index = FirstDbcIndex+3;
 var
   Statement: IZPreparedStatement;
   Stream: TStream;
@@ -234,13 +234,13 @@ end;
 }
 procedure TZTestDbcMsSQLCase.TestDefaultValues;
 const
-  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  D_ID = FirstDbcIndex;
+  D_FLD1 = FirstDbcIndex+1;
+  D_FLD2 = FirstDbcIndex+2;
+  D_FLD3 = FirstDbcIndex+3;
+  D_FLD4 = FirstDbcIndex+4;
+  D_FLD5 = FirstDbcIndex+5;
+  D_FLD6 = FirstDbcIndex+6;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -280,10 +280,10 @@ end;
 }
 procedure TZTestDbcMSSqlCase.TestStoredprocedures;
 const
-  RETURN_VALUE_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  P1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  R1_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  eq_name_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  RETURN_VALUE_Index = FirstDbcIndex;
+  P1_Index = FirstDbcIndex+1;
+  R1_Index = FirstDbcIndex+2;
+  eq_name_Index = FirstDbcIndex;
 var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
@@ -302,7 +302,7 @@ begin
   finally
     CallableStatement.Close;
   end;
-
+  CallableStatement := nil;
   CallableStatement := Connection.PrepareCallWithParams(
     'procedure2', nil);
   try
