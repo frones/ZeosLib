@@ -625,10 +625,12 @@ begin
                                 else Result := Result*ClientCodePage^.CharWidth +1;
     stGUID:                     Result := SizeOf(TGUID);
     stDate:                     Result := SizeOf(TSQL_DATE_STRUCT);
-    stTime:                     if ODBC_CType = SQL_C_BINARY then
-                                  Result := SizeOf(TSQL_SS_TIME2_STRUCT) else
-                                  Result := SizeOf(TSQL_TIME_STRUCT);
-    stTimestamp:                Result := SizeOf(TSQL_TIMESTAMP_STRUCT);
+    stTime:                     if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType=SQL_C_SS_TIME2)
+                                then Result := SizeOf(TSQL_SS_TIME2_STRUCT)
+                                else Result := SizeOf(TSQL_TIME_STRUCT);
+    stTimestamp:                if (ODBC_CType = SQL_C_SS_TIMESTAMPOFFSET)
+                                then Result := SizeOf(TSQL_SS_TIMESTAMPOFFSET_STRUCT)
+                                else Result := SizeOf(TSQL_TIMESTAMP_STRUCT);
     stAsciiStream,
     stUnicodeStream,
     stBinaryStream:             Result := SizeOf(Pointer){we use SQL_DATA_AT_EXEC and this userdefined token points to our lob-interface};
