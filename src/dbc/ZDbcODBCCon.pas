@@ -408,7 +408,6 @@ fail:
       CheckCharEncoding('CP_UTF16')
     else
       CheckCharEncoding('CP_ACP');
-  Open;
 end;
 
 function TZAbstractODBCConnection.ODBCVersion: Word;
