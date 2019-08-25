@@ -151,7 +151,7 @@ type
 
   TZAdoCallableStatement2 = class(TZAbstractCallableStatement_W, IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ADO}
@@ -1324,7 +1324,7 @@ end;
 { TZAdoCallableStatement2 }
 
 function TZAdoCallableStatement2.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 begin
   Result := TZAdoPreparedStatement.CreateWithCommandType(Connection, StoredProcName, Info, adCmdStoredProc);
   TZAdoPreparedStatement(Result).Prepare;

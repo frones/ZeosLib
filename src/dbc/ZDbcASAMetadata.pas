@@ -1392,9 +1392,19 @@ function TZASADatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var Len: NativeUInt;
+  SkipResultColumn: Boolean;
+  RS: IZResultSet;
 begin
+  if ProcedureNamePattern <> '' then begin
+    RS := GetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
+    SkipResultColumn := RS.Next and (RS.GetSmall(ProcedureTypeIndex) <> Ord(prtReturnsResult));
+    RS.Close;
+  end else
+    SkipResultColumn := False;
+
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern,
     ProcedureNamePattern, ColumnNamePattern);
+
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getprocedurecolumns %s, %s, %s, %s',
@@ -1411,8 +1421,11 @@ begin
       case GetSmallByName('COLUMN_TYPE') of
         1: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctIn));
         2: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctInOut));
-        3: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctOut));
-        5: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
+        3: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctResultSet));
+        4: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctOut));
+        5:  if SkipResultColumn
+            then Continue
+            else Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctReturn));
       else
         Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
       end;

@@ -175,7 +175,7 @@ type
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
 
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
   end;
@@ -186,13 +186,13 @@ type
   end;
 
   TZMySQLCallableStatement56up = class(TZAbstractCallableStatement_A,
-    IZCallableStatement{, IZParamNamedCallableStatement})
+    IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
   TZMySQLCallableStatement56down = class(TZAbstractCallableStatement_A,
-    IZCallableStatement{, IZParamNamedCallableStatement})
+    IZCallableStatement)
   private
     FPlainDriver: TZMySQLPLainDriver;
     FInParamNames: TStringDynArray;
@@ -201,7 +201,7 @@ type
     procedure CreateOutParamResultSet;
   protected
     procedure SetParamCount(NewParamCount: Integer); override;
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
     procedure BindInParameters; override;
   public
     procedure AfterConstruction; override;
@@ -1288,7 +1288,7 @@ begin
   CheckParameterIndex(Index);
   if FEmulatedParams then begin
     BindValue := BindList[Index];
-    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) then begin
+    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray) then begin
       BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
       EmulatedAsRaw;
     end else case BindValue.SQLType of
@@ -1361,7 +1361,7 @@ begin
   CheckParameterIndex(Index);
   if FEmulatedParams then begin
     BindValue := BindList[Index];
-    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) then begin
+    if (BindValue.SQLType = SQLType) or (BindValue.ParamType = pctUnknown) or (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray) then begin
       BindList.Put(Index, SQLType, {$IFNDEF CPU64}P4Bytes{$ELSE}P8Bytes{$ENDIF}(@Value));
       EmulatedAsRaw;
     end else case BindValue.SQLType of
@@ -1509,7 +1509,7 @@ begin
   CheckParameterIndex(Index);
   Len := Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   BindValue := BindList[Index];
-  if BindValue.SQLType = stUnknown
+  if (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray)
   then SQLType := stString
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
@@ -1608,7 +1608,7 @@ var
 begin
   CheckParameterIndex(Index);
   BindValue := BindList[Index];
-  if BindValue.SQLType = stUnknown
+  if (BindValue.SQLType = stUnknown) or (BindValue.SQLType = stArray)
   then SQLType := stString
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
@@ -2461,7 +2461,7 @@ end;
 { TZMySQLCallableStatement56up }
 
 function TZMySQLCallableStatement56up.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
   P: PChar;
@@ -2527,7 +2527,7 @@ begin
 end;
 
 function TZMySQLCallableStatement56down.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
   P: PChar;

@@ -6791,7 +6791,7 @@ begin
   Negative := Buf^ = '-';
   if Negative or (PWord(Buf)^ = Ord('+')) then Inc(Buf);
   // Skip trailing white chars
-  while (PEnd > Buf) and ((PWord(PEnd-1)^ <= Ord('0')) and (Byte(PWord(PEnd-1)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14), Ord('0')]))  do Dec(PEnd);
+  while (PEnd > Buf) and ((PWord(PEnd-1)^ <= Ord(' ')) and (Byte(PWord(PEnd-1)^) in [Ord(' '), Ord(#6), Ord(#9), Ord(#10), Ord(#13), Ord(#14), Ord('0')]))  do Dec(PEnd);
   P := PEnd; //remainder for Exponent or if no decimal sep is given
   Pos := 0;
   DecimalPos := -1;

@@ -108,10 +108,6 @@ type
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
 
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    {function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;}
-
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -134,6 +130,9 @@ type
   protected
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
+    function CreateRegularStatement(Info: TStrings): IZStatement; override;
+    function CreateCallableStatement(const StoredProcedureName: string; Info: TStrings):
+      IZCallableStatement; override;
   public
     function NativeSQL(const SQL: string): string; override;
     function GetCatalog: string; override;
@@ -144,6 +143,9 @@ type
   protected
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
+    function CreateRegularStatement(Info: TStrings): IZStatement; override;
+    function CreateCallableStatement(const StoredProcedureName: string; Info: TStrings):
+      IZCallableStatement; override;
   public
     function NativeSQL(const SQL: string): string; override;
     function GetCatalog: string; override;
@@ -272,17 +274,6 @@ begin
     raise Exception.Create(SInvalidOpInAutoCommit);
   if (not AutoCommit) and (not Closed) then
     CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_COMMIT));
-end;
-
-{**
-  Creates a regular statement object.
-  @param SQL a SQL query string.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
-function TZAbstractODBCConnection.CreateRegularStatement(Info: TStrings): IZStatement;
-begin
-  Result := CreatePreparedStatement('', Info);
 end;
 
 {**
@@ -417,7 +408,6 @@ fail:
       CheckCharEncoding('CP_UTF16')
     else
       CheckCharEncoding('CP_ACP');
-  Open;
 end;
 
 function TZAbstractODBCConnection.ODBCVersion: Word;
@@ -653,6 +643,18 @@ end;
 { TZODBCConnectionW }
 
 {**
+  Creates a regular statement object.
+  @param StoredProcedureName a name of a stored procedure or function.
+  @param Info a statement parameters.
+  @returns a created statement.
+}
+function TZODBCConnectionW.CreateCallableStatement(const StoredProcedureName: string;
+  Info: TStrings): IZCallableStatement;
+begin
+  Result := TZODBCCallableStatementW.Create(Self, fHDBC, StoredProcedureName, Info);
+end;
+
+{**
   Creates a prepared statement object.
   @param SQL a SQL query string.
   @param Info a statement parameters.
@@ -663,6 +665,16 @@ function TZODBCConnectionW.CreatePreparedStatement(const SQL: string;
 begin
   if Closed then Open;
   Result := TZODBCPreparedStatementW.Create(Self, fHDBC, SQL, Info);
+end;
+
+{**
+  Creates a regular statement object.
+  @param Info a statement parameters.
+  @returns a created statement.
+}
+function TZODBCConnectionW.CreateRegularStatement(Info: TStrings): IZStatement;
+begin
+  Result := TZODBCStatementW.Create(Self, fHDBC, Info);
 end;
 
 {**
@@ -688,8 +700,8 @@ begin
       {$ELSE}
       SetLength(Buf, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+2, @aLen));
-      Result := PUnicodeToRaw(Pointer(Buf), Length(Buf), ZOSCodePage);
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+2, @aLen));
+      Result := PUnicodeToRaw(Pointer(Buf), aLen shr 1, ConSettings.CTRL_CP);
       {$ENDIF}
       inherited SetCatalog(Result);
     end;
@@ -755,6 +767,18 @@ end;
 { TZODBCConnectionA }
 
 {**
+  Creates a regular statement object.
+  @param StoredProcedureName a name of a stored procedure or function.
+  @param Info a statement parameters.
+  @returns a created statement.
+}
+function TZODBCConnectionA.CreateCallableStatement(
+  const StoredProcedureName: string; Info: TStrings): IZCallableStatement;
+begin
+  Result := TZODBCCallableStatementA.Create(Self, fHDBC, StoredProcedureName, Info);
+end;
+
+{**
   Creates a prepared statement object.
   @param SQL a SQL query string.
   @param Info a statement parameters.
@@ -768,9 +792,20 @@ begin
 end;
 
 {**
+  Creates a regular statement object.
+  @param Info a statement parameters.
+  @returns a created statement.
+}
+function TZODBCConnectionA.CreateRegularStatement(Info: TStrings): IZStatement;
+begin
+  Result := TZODBCStatementA.Create(Self, fHDBC, Info);
+end;
+
+{**
   Returns the Connection's current catalog name.
   @return the current catalog name or null
 }
+
 function TZODBCConnectionA.GetCatalog: string;
 var
   {$IFDEF UNICODE}
@@ -778,20 +813,20 @@ var
   {$ENDIF}
   aLen: SQLINTEGER;
 begin
-  Result := GetCatalog;
+  Result := inherited GetCatalog;
   if Result = '' then begin
     CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
       SQL_ATTR_CURRENT_CATALOG, nil, 0, @aLen));
     if aLen > 0 then begin
       {$IFNDEF UNICODE}
-      SetLength(Result, aLen);
+      SetLength(Result, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+1, @aLen));
       {$ELSE}
-      SetLength(Buf, aLen);
+      SetLength(Buf, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), Length(Result), @aLen));
-      Result := PRawToUnicode(Pointer(Buf), aLen+1, ZOSCodePage);
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+1, @aLen));
+      Result := PRawToUnicode(Pointer(Buf), aLen, ConSettings.ClientCodePage.CP);
       {$ENDIF}
       inherited SetCatalog(Result);
     end;

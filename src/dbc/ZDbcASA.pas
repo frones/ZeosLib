@@ -358,7 +358,7 @@ function TZASAConnection.CreateRegularStatement(
 begin
   if IsClosed then
      Open;
-  Result := TZASAPreparedStatement.Create(Self, Info);
+  Result := TZASAStatement.Create(Self, Info);
 end;
 
 {**

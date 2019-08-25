@@ -204,7 +204,7 @@ type
 
   TZDBLibCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
@@ -1398,7 +1398,7 @@ end;
 { TZDBLibCallableStatement }
 
 function TZDBLibCallableStatement.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 begin
   Result := TZDBLIBPreparedRPCStatement.Create(Connection, StoredProcName, Info);
 end;

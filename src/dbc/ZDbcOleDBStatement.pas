@@ -113,8 +113,7 @@ type
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
 
-    function GetMoreResults: Boolean; overload; override;
-    function GetMoreResults(var RS: IZResultSet): Boolean; reintroduce; overload;
+    function GetMoreResults: Boolean; override;
 
     procedure Cancel; override;
   public
@@ -151,8 +150,8 @@ type
     procedure InitFixedBind(Index: Integer; Size: Cardinal; _Type: DBTYPE);
     procedure InitDateBind(Index: Integer; SQLType: TZSQLType);
     procedure InitLongBind(Index: Integer; _Type: DBTYPE);
-    procedure InternalBindSInt(Index: Integer; SQLType: TZSQLType; Value: {$IFDEF CPU64}Int64{$ELSE}Integer{$ENDIF});
-    procedure InternalBindUInt(Index: Integer; SQLType: TZSQLType; Value: {$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF});
+    procedure InternalBindSInt(Index: Integer; SQLType: TZSQLType; Value: NativeInt);
+    procedure InternalBindUInt(Index: Integer; SQLType: TZSQLType; Value: NativeUInt);
     procedure InternalBindDbl(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure SetBindOffsets;
   protected
@@ -181,16 +180,16 @@ type
     procedure SetBoolean(Index: Integer; Value: Boolean);
     procedure SetByte(Index: Integer; Value: Byte);
     procedure SetShort(Index: Integer; Value: ShortInt);
-    procedure SetWord(Index: Integer; Value: Word); reintroduce;
-    procedure SetSmall(Index: Integer; Value: SmallInt); reintroduce;
-    procedure SetUInt(Index: Integer; Value: Cardinal); reintroduce;
-    procedure SetInt(Index: Integer; Value: Integer); reintroduce;
-    procedure SetULong(Index: Integer; const Value: UInt64); reintroduce;
-    procedure SetLong(Index: Integer; const Value: Int64); reintroduce;
-    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
-    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
-    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetWord(Index: Integer; Value: Word);
+    procedure SetSmall(Index: Integer; Value: SmallInt);
+    procedure SetUInt(Index: Integer; Value: Cardinal);
+    procedure SetInt(Index: Integer; Value: Integer);
+    procedure SetULong(Index: Integer; const Value: UInt64);
+    procedure SetLong(Index: Integer; const Value: Int64);
+    procedure SetFloat(Index: Integer; Value: Single);
+    procedure SetDouble(Index: Integer; const Value: Double);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
 
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
@@ -227,7 +226,7 @@ type
   TZOleDBCallableStatementMSSQL = class(TZAbstractCallableStatement_W,
     IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -438,7 +437,11 @@ begin
         else Result := nil;
       LastUpdateCount := FRowsAffected;
       if not Assigned(Result) then
-        while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
+        while GetMoreResults do
+          if (LastResultSet <> nil) then begin
+            Result := LastResultSet;
+            FLastResultSet := nil;
+          end;
     end;
   finally
     FRowSet := nil;
@@ -572,6 +575,7 @@ begin
       end else begin
         FCallResultCache[0].QueryInterface(IZAnyValue, AnyValue);
         LastUpdateCount := AnyValue.GetInteger;
+        LastResultSet := nil;
       end;
       FCallResultCache.Delete(0);
     end;
@@ -592,22 +596,6 @@ begin
         CheckError(Status, lcOther)};
     end;
   end;
-end;
-
-function TZAbstractOleDBStatement.GetMoreResults(var RS: IZResultSet): Boolean;
-var
-  FRowSet: IRowSet;
-begin
-  if Assigned(FMultipleResults) then
-  begin
-    FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-      IID_IRowset, @FRowsAffected, @FRowSet);
-    RS := CreateResultSet(FRowSet);
-    Result := Assigned(RS);
-    LastUpdateCount := FRowsAffected;
-  end
-  else
-    Result := False;
 end;
 
 function TZAbstractOleDBStatement.GetMoreResultsIndicator: TZMoreResultsIndicator;
@@ -1503,10 +1491,10 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
 end;
 
 procedure TZOleDBPreparedStatement.InternalBindSInt(Index: Integer;
-  SQLType: TZSQLType; Value: {$IFDEF CPU64}Int64{$ELSE}Integer{$ENDIF});
+  SQLType: TZSQLType; Value: NativeInt);
 var Bind: PDBBINDING;
   Data: Pointer;
-  C: {$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF};
+  C: NativeUInt; //some delphis can't determine the overload of GetOrdinalDigits if a NativeUInt is uses
   L: Cardinal;
   Negative: Boolean;
 begin
@@ -1560,7 +1548,7 @@ begin
 end;
 
 procedure TZOleDBPreparedStatement.InternalBindUInt(Index: Integer;
-  SQLType: TZSQLType; Value: {$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF});
+  SQLType: TZSQLType; Value: NativeUInt);
 var Bind: PDBBINDING;
   Data: PAnsichar;
   L: Cardinal;
@@ -1900,6 +1888,7 @@ var Bind: PDBBINDING;
   Data: PAnsichar;
   DBStatus: PDBSTATUS;
   DBLENGTH: PDBLENGTH;
+label Fix_CLob;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1922,7 +1911,7 @@ begin
           PPointer(Data)^ := Value.GetPAnsiChar(FClientCP);
           DBLENGTH^ := Value.Length;
         end else begin
-          FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
+Fix_CLob: FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
           SetBLob(Index, stAsciiStream, TZAbstractCLob.CreateWithData(Pointer(FRawTemp),
             Length(FRawTemp), FClientCP, ConSettings));
         end;
@@ -1935,6 +1924,27 @@ begin
           PPointer(Data)^ := Value.GetBuffer;
           DBLENGTH^ := Value.Length;
         end;
+      DBTYPE_BYTES: begin
+              DBLENGTH^ := Value.Length;
+              if DBLENGTH^ < Bind.cbMaxLen
+              then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+              else RaiseExceeded(Index);
+            end;
+      DBTYPE_STR: if Value.IsClob then begin
+                Value.GetPAnsiChar(FClientCP);
+                DBLENGTH^ := Value.Length;
+                if DBLENGTH^ < Bind.cbMaxLen
+                then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+                else RaiseExceeded(Index);
+              end else
+                goto Fix_CLob;
+      DBTYPE_WSTR: begin
+              Value.GetPWideChar;
+              DBLENGTH^ := Value.Length;
+              if DBLENGTH^ < Bind.cbMaxLen
+              then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+              else RaiseExceeded(Index);
+            end;
       else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
     end;
   end else
@@ -2885,7 +2895,7 @@ end;
 { TZOleDBCallableStatementMSSQL }
 
 function TZOleDBCallableStatementMSSQL.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
@@ -2895,10 +2905,12 @@ begin
   SQL := '';
   ZDbcUtils.ToBuff('{? = CALL ', Buf, SQL);
   ZDbcUtils.ToBuff(StoredProcName, Buf, SQL);
+  if BindList.Count > 1 then
   ZDbcUtils.ToBuff(Char('('), Buf, SQL);
   for i := 1 to BindList.Count-1 do
     ZDbcUtils.ToBuff('?,', Buf, SQL);
-  ReplaceOrAddLastChar(',', ')', Buf, SQL);
+  if BindList.Count > 1 then
+    ReplaceOrAddLastChar(',', ')', Buf, SQL);
   ZDbcUtils.ToBuff(Char('}'), Buf, SQL);
   ZDbcUtils.FlushBuff(Buf, SQL);
   Result := TZOleDBPreparedStatement.Create(Connection, SQL, Info);

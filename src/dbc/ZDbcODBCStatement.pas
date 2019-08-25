@@ -59,35 +59,19 @@ interface
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties,
-  ZDbcODBCCon, ZPlainODBCDriver;
+  ZDbcODBCCon, ZPlainODBCDriver, ZDbcODBCUtils, ZCollections;
 
 type
   PSQLHDBC = ^SQLHDBC;
 
-  PZODBCParamBind = ^TZODBCParamBind;
-  TZODBCParamBind = record
-    InputOutputType: SQLSMALLINT; //the InputOutputType of the Parameter
-    ValueType: SQLSMALLINT; //the C-DataType
-    ParameterType: SQLSMALLINT; //the SQL-DataType
-    ColumnSize: SQLULEN;
-    DecimalDigits: SQLSMALLINT;
-    ParameterValuePtr: SQLPOINTER;
-    StrLen_or_IndPtr: PSQLLEN;
-    Nullable: SQLSMALLINT;
-    BufferLength: SQLLEN;
-    ValueCount: Integer;
-    SQLType: TZSQLType;
-    Described, ExternalMem: Boolean;
-  end;
-  PZODBCParamBindArray = ^TZODBCParamBindArray;
-  TZODBCParamBindArray = array[Byte] of TZODBCParamBind;
-
-  TZAbstractODBCStatement = class(TZAbstractPreparedStatement2)
+  TZODBCHandleState = (hsNone, hsAllocated, hsExecuteDirect, hsPrepared, hsExecute);
+  TZAbstractODBCStatement = class(TZAbstractPreparedStatement)
   private
     fPlainDriver: TZODBC3PlainDriver;
     fPHDBC: PSQLHDBC;
     fHSTMT: SQLHSTMT;
     fStreamSupport: Boolean;
+    FHandleState: TZODBCHandleState;
     fZBufferLength: Integer;
     fStmtTimeOut: SQLULEN;
     fEnhancedColInfo: Boolean;
@@ -95,9 +79,17 @@ type
     fLastAutoCommit: Boolean;
     FClientEncoding: TZCharEncoding;
     FODBCConnection: IZODBCConnection;
+    FCallResultCache: TZCollection;
+    FExecRETCODE: SQLRETURN;
+    fParamBindings: PZODBCParamBindArray;
     procedure InternalExecute;
     procedure PrepareOpenedResultSetsForReusing;
+    procedure FetchCallResults;
+    function GetFirstResultSet: IZResultSet;
+    procedure ClearCallResultCache;
   protected
+    function ExecutDirect: RETCODE; virtual; abstract;
+    procedure InternalPrepare; virtual;
     procedure CheckStmtError(RETCODE: SQLRETURN);
     procedure CheckDbcError(RETCODE: SQLRETURN);
     procedure HandleError(RETCODE: SQLRETURN; Handle: SQLHANDLE; HandleType: SQLSMALLINT);
@@ -125,15 +117,14 @@ type
 
   TZAbstractODBCPreparedStatement = class(TZAbstractODBCStatement)
   private
-    fParamBindings: PZODBCParamBindArray;
     fBindImmediat: Boolean;
     fCurrentIterations: NativeUInt;
     procedure RaiseUnsupportedParamType(Index: Integer; SQLCType: SQLSMALLINT; SQLType: TZSQLType);
     procedure RaiseExceeded(Index: Integer);
     procedure SetPWideChar(Index: Integer; Value: PWideChar; WLen: LengthInt);
     procedure SetPAnsiChar(Index: Integer; Value: PAnsiChar; BLen: LengthInt);
-    procedure BindInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}); overload;
-    procedure BindInteger(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF}); overload;
+    procedure BindSInteger(Index: Integer; SQLType: TZSQLType; Value: NativeInt);
+    procedure BindUInteger(Index: Integer; SQLType: TZSQLType; Value: NativeUInt);
     procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure InitBind(Index, ValueCount: Integer; SQLType: TZSQLType; ActualLength: LengthInt = 0);
     procedure BindRaw(Index: Integer; const Value: RawByteString; CP: Word);
@@ -153,22 +144,22 @@ type
     constructor Create(const Connection: IZODBCConnection;
       var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
   public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string); override;
+    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
-    procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
-    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
-    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
-    procedure SetInt(ParameterIndex: Integer; Value: Integer); reintroduce;
-    procedure SetULong(Index: Integer; const Value: UInt64); reintroduce;
-    procedure SetLong(Index: Integer; const Value: Int64); reintroduce;
-    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
-    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
-    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    procedure SetULong(Index: Integer; const Value: UInt64);
+    procedure SetLong(Index: Integer; const Value: Int64);
+    procedure SetFloat(Index: Integer; Value: Single);
+    procedure SetDouble(Index: Integer; const Value: Double);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
     procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
     procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
@@ -195,15 +186,24 @@ type
   end;
 
   TZODBCPreparedStatementW = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
-  public
-    procedure Prepare; override;
+  protected
+    function ExecutDirect: RETCODE; override;
+    procedure InternalPrepare; override;
   end;
 
-  TZODBCCallableStatementW_MSSQL = class(TZAbstractCallableStatement_W, IZCallableStatement)
+  TZODBCStatementW = class(TZAbstractODBCStatement)
+  protected
+    function ExecutDirect: RETCODE; override;
+  public
+    constructor Create(const Connection: IZODBCConnection;
+      var ConnectionHandle: SQLHDBC; Info: TStrings);
+  end;
+
+  TZODBCCallableStatementW = class(TZAbstractCallableStatement_W, IZCallableStatement)
   private
     fPHDBC: PSQLHDBC;
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   public
     constructor Create(const Connection: IZConnection;
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
@@ -211,11 +211,20 @@ type
   end;
 
   TZODBCPreparedStatementA = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
-  public
-    procedure Prepare; override;
+  protected
+    function ExecutDirect: RETCODE; override;
+    procedure InternalPrepare; override;
   end;
 
-  TZODBCCallableStatementA_MSSQL = class(TZAbstractCallableStatement_A, IZCallableStatement)
+  TZODBCStatementA = class(TZAbstractODBCStatement)
+  protected
+    function ExecutDirect: RETCODE; override;
+  public
+    constructor Create(const Connection: IZODBCConnection;
+      var ConnectionHandle: SQLHDBC; Info: TStrings);
+  end;
+
+  TZODBCCallableStatementA = class(TZAbstractCallableStatement_A, IZCallableStatement)
   private
     fPHDBC: PSQLHDBC;
   public
@@ -223,7 +232,7 @@ type
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
@@ -232,7 +241,7 @@ implementation
 
 uses Math, DateUtils, TypInfo, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZSysUtils, ZMessages, ZEncoding, ZDbcUtils, ZDbcResultSet, ZFastCode, ZDbcLogging,
-  ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver,
+  ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver,
   ZClasses, ZDbcMetadata;
 
 const
@@ -268,6 +277,16 @@ begin
     HandleError(RETCODE, fHSTMT, SQL_HANDLE_STMT);
 end;
 
+procedure TZAbstractODBCStatement.ClearCallResultCache;
+var I: Integer;
+  RS: IZResultSet;
+begin
+  for I := 0 to FCallResultCache.Count -1 do
+    if Supports(FCallResultCache[i], IZResultSet, RS) then
+      RS.Close;
+  FreeAndNil(FCallResultCache);
+end;
+
 procedure TZAbstractODBCStatement.AfterClose;
 begin
   if Assigned(fHSTMT) then begin
@@ -301,15 +320,20 @@ begin
   Prepare;
   BindInParameters;
   InternalExecute;
-  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-  if ColumnCount > 0 then begin
-    LastUpdateCount := -1;
-    LastResultSet := GetCurrentResultSet;
-  end else begin
-    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-    LastUpdateCount := RowCount;
+  if BindList.HasOutOrInOutOrResultParam then
+    Result := Supports(FCallResultCache[0], IZResultSet, FLastResultSet)
+  else begin
+    CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+    if ColumnCount > 0 then begin
+      LastUpdateCount := -1;
+      LastResultSet := GetCurrentResultSet;
+    end else begin
+      CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+      LastUpdateCount := RowCount;
+      LastResultSet := nil;
+    end;
+    Result := Assigned(LastResultSet);
   end;
-  Result := Assigned(LastResultSet);
 end;
 
 function TZAbstractODBCStatement.ExecuteQueryPrepared: IZResultSet;
@@ -320,8 +344,11 @@ begin
   BindInParameters;
   InternalExecute;
   CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
-  if ColumnCount > 0 then
-    if Assigned(FOpenResultSet) 
+  if BindList.HasOutOrInOutOrResultParam then begin
+     FetchCallResults;
+     Result := GetFirstResultSet;
+  end else if ColumnCount > 0 then
+    if Assigned(FOpenResultSet)
     then Result := IZResultSet(FOpenResultSet)
     else Result := GetCurrentResultSet
   else begin
@@ -342,9 +369,51 @@ begin
   BindInParameters;
   LastUpdateCount := 0;
   InternalExecute;
-  CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-  LastUpdateCount := LastUpdateCount + RowCount;
-  Result := RowCount;
+  if BindList.HasOutOrInOutOrResultParam then
+    Result := LastUpdateCount
+  else begin
+    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+    LastUpdateCount := LastUpdateCount + RowCount;
+    Result := RowCount;
+  end;
+end;
+
+procedure TZAbstractODBCStatement.FetchCallResults;
+var CallResultCache: TZCollection;
+  ColumnCount: SQLSMALLINT;
+  RowCount: SQLLEN;
+begin
+  if FCallResultCache <> nil then
+    ClearCallResultCache;
+  CallResultCache := TZCollection.Create;
+  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+  if (fMoreResultsIndicator <> mriHasNoMoreResults) and (ColumnCount > 0) then begin
+    FLastResultSet := InternalCreateResultSet;
+    CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
+    (*EH: There is a problem i could not handle:
+      if a {? = CALL() } af a SP using SQLExecute which returns !no! result shows this behavior:
+      SQLNumResultCols returns a valid count
+      but the columninfos are from sp_describe_undeclared_parameters ...
+      -> the first fetch leads to an invalid cursor handle
+    but if the sp returns a resultset everything is fine do far *)
+    fMoreResultsIndicator := mriHasMoreResults;
+  end else begin
+    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+    LastUpdateCount := RowCount;
+    CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
+  end;
+  while GetMoreresults do
+    if LastResultSet <> nil then begin
+      CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FLastResultSet));
+      FLastResultSet.Close;
+      FLastResultSet := nil;
+      FOpenResultSet := nil;
+    end else
+      CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
+  FCallResultCache := CallResultCache;
+  FOutParamResultSet := TZParamODBCResultSet.Create(Self, SQL, fParamBindings, BindList.Count);
+  if GetResultSetType <> rtForwardOnly then
+    FOutParamResultSet := Connection.GetMetadata.CloneCachedResultSet(FOutParamResultSet);
 end;
 
 function TZAbstractODBCStatement.GetCurrentResultSet: IZResultSet;
@@ -368,6 +437,18 @@ begin
   FOpenResultSet := Pointer(Result);
 end;
 
+function TZAbstractODBCStatement.GetFirstResultSet: IZResultSet;
+var I: Integer;
+begin
+  Result := nil;
+  if FCallResultCache <> nil then
+    for I := 0 to FCallResultCache.Count -1 do
+      if Supports(FCallResultCache[i], IZResultSet, Result) then begin
+        FCallResultCache.Delete(I);
+        Break;
+      end;
+end;
+
 {**
   Moves to a <code>Statement</code> object's next result.  It returns
   <code>true</code> if this result is a <code>ResultSet</code> object.
@@ -388,9 +469,24 @@ var
   ColumnCount: SQLSMALLINT;
   RowCount: SQLLEN;
   RETCODE: SQLRETURN;
+  RS: IZResultSet;
+  AnyValue: IZAnyValue;
 begin
   Result := False;
-  if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then begin
+  if FCallResultCache <> nil then begin
+    Result := FCallResultCache.Count > 0;
+    if Result then begin
+      if Supports(FCallResultCache[0], IZResultSet, RS) then begin
+        LastResultSet := RS;
+        LastUpdateCount := -1;
+      end else begin
+        FCallResultCache[0].QueryInterface(IZAnyValue, AnyValue);
+        LastUpdateCount := AnyValue.GetInteger;
+        LastResultSet := nil;
+      end;
+      FCallResultCache.Delete(0);
+    end;
+  end else if Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets then begin
     RETCODE := fPlainDriver.SQLMoreResults(fHSTMT);
     if RETCODE = SQL_SUCCESS then begin
       Result := True;
@@ -418,10 +514,13 @@ end;
 
 procedure TZAbstractODBCStatement.InternalBeforePrepare;
 begin
+  if FCallResultCache <> nil then
+    ClearCallResultCache;
   if not Assigned(fHSTMT) then begin
     CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT));
     CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
     fMoreResultsIndicator := mriUnknown;
+    FHandleState := hsAllocated;
   end;
 end;
 
@@ -435,8 +534,6 @@ begin
 end;
 
 procedure TZAbstractODBCStatement.InternalExecute;
-var
-  RETCODE, RETCODE2: SQLRETURN;
   procedure MoveLateBoundData(var RETCODE: SQLRETURN);
   var I,l: Integer;
     ValuePtr: PIZLob;
@@ -465,37 +562,70 @@ var
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
   end;
+  procedure FetchLateBoundData(var RETCODE: SQLRETURN);
+  begin
+    while RETCODE = SQL_PARAM_DATA_AVAILABLE do begin
+//      CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1, ODBC_CType,
+//        ColumnBuffer, CharOctedLength, StrLen_or_IndPtr))
+    end;
+  end;
 begin
 //  CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE)); //handle a get data issue
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  RETCODE := fPlainDriver.SQLExecute(fHSTMT);
-  if RETCODE = SQL_NEED_DATA then
-    MoveLateBoundData(RETCODE);
-  if RETCODE = SQL_PARAM_DATA_AVAILABLE then begin //check output params ...
-    RETCODE2 := fPlainDriver.SQLMoreResults(fHSTMT);
-    if RETCODE2 = SQL_NO_DATA then
-      //???
-    else begin
-      { get data chunked }
-      CheckStmtError(RETCODE2);
-    // CheckStmtError(fPlainDriver.SQLParamData(fHSTMT, @ValuePtr));
-    // Assert(Assigned(ValuePtr), 'wrong descriptor pointer');
-    end;
-  end else if not RETCODE in [SQL_NO_DATA, SQL_SUCCESS] then
-    CheckStmtError(RetCode);
+  if BindList.HasOutOrInOutOrResultParam then //first test with ExecuteDirect
+    if FHandleState = hsPrepared then begin
+      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
+      FExecRETCODE := ExecutDirect;
+      FHandleState := hsExecuteDirect;
+    end else begin
+      if FHandleState = hsExecuteDirect then begin
+        InternalPrepare;
+        FHandleState := hsExecute;
+      end;
+      FExecRETCODE := fPlainDriver.SQLExecute(fHSTMT)
+    end
+  else if Ord(FHandleState) >= Ord(hsPrepared) then begin
+    FExecRETCODE := fPlainDriver.SQLExecute(fHSTMT);
+    FHandleState := hsExecute;
+  end else
+    FExecRETCODE := ExecutDirect;
+  if FExecRETCODE = SQL_NEED_DATA then
+    MoveLateBoundData(FExecRETCODE)
+  else if (FExecRETCODE = SQL_PARAM_DATA_AVAILABLE) then
+    FetchLateBoundData(FExecRETCODE);
+  if BindList.HasOutOrInOutOrResultParam then
+    FetchCallResults;
+  if not FExecRETCODE in [SQL_NO_DATA, SQL_SUCCESS] then
+    CheckStmtError(FExecRETCODE);
+end;
+
+procedure TZAbstractODBCStatement.InternalPrepare;
+begin
+  FHandleState := hsExecuteDirect;
 end;
 
 procedure TZAbstractODBCStatement.Prepare;
 begin
+  if FCallResultCache <> nil then
+    ClearCallResultCache;
+  if not Assigned(fHSTMT) then begin
+    CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT));
+    CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(fStmtTimeOut), 0));
+    fMoreResultsIndicator := mriUnknown;
+    FHandleState := hsAllocated;
+  end;
   if not Prepared then begin
     {EH commented!
      this options means performance loss even if docs explain it vice versa:
      https://docs.microsoft.com/en-us/sql/relational-databases/native-client-odbc-api/sqlsetstmtattr?view=sql-server-2017
     if Connection.GetServerProvider = spMSSQL then
       CheckStmtError(FPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_SOPT_SS_CURSOR_OPTIONS, Pointer(SQL_CO_FFO),0));}
+    InternalPrepare;
     inherited Prepare;
-  end;
+  end else if Ord(FHandleState) <> Ord(hsAllocated) then
+    if Assigned(fHSTMT) and Assigned(fPHDBC^) then
+      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
 end;
 
 procedure TZAbstractODBCStatement.PrepareOpenedResultSetsForReusing;
@@ -527,7 +657,10 @@ end;
 procedure TZAbstractODBCStatement.Unprepare;
 begin
   inherited Unprepare;
+  if FCallResultCache <> nil then
+    ClearCallResultCache;
   if Assigned(fHSTMT) then begin
+    FHandleState := hsNone;
     CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, fHSTMT)); //<- does the trick to get a instance reused
     fHSTMT := nil;
   end;
@@ -535,34 +668,34 @@ end;
 
 { TZODBCPreparedStatementW }
 
-procedure TZODBCPreparedStatementW.Prepare;
+function TZODBCPreparedStatementW.ExecutDirect: RETCODE;
 begin
-  if Not Prepared then begin
-    InternalBeforePrepare;
-    CheckStmtError(TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL)));
-    inherited Prepare;
-  end else
-    if Assigned(fHSTMT) and Assigned(fPHDBC^) then
-      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
+  Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL))
+end;
+
+procedure TZODBCPreparedStatementW.InternalPrepare;
+begin
+  CheckStmtError(TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL)));
+  FHandleState := hsPrepared;
 end;
 
 { TZODBCPreparedStatementA }
 
-procedure TZODBCPreparedStatementA.Prepare;
+function TZODBCPreparedStatementA.ExecutDirect: RETCODE;
 begin
-  if Not Prepared then begin
-    InternalBeforePrepare;
-    CheckStmtError(TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL)));
-    inherited Prepare;
-  end else
-    if Assigned(fHSTMT) and Assigned(fPHDBC^) then
-      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
+  Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(ASQL), Length(ASQL));
+end;
+
+procedure TZODBCPreparedStatementA.InternalPrepare;
+begin
+  CheckStmtError(TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL)));
+  FHandleState := hsPrepared;
 end;
 
 { TZAbstractODBCPreparedStatement }
 
-procedure TZAbstractODBCPreparedStatement.BindInteger(Index: Integer;
-  SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
+procedure TZAbstractODBCPreparedStatement.BindSInteger(Index: Integer;
+  SQLType: TZSQLType; Value: NativeInt);
 var Bind: PZODBCParamBind;
 begin
   CheckParameterIndex(Index);
@@ -898,10 +1031,11 @@ begin
                               if Native
                               then DT := TDateTimeDynArray(D)[i]
                               else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
-                              DecodeTime(DT, SQL_TIME_STRUCT.hour, SQL_TIME_STRUCT.minute,
-                                SQL_TIME_STRUCT.second, Fraction);
+                              DecodeTime(DT, SQL_SS_TIME2_STRUCT.hour, SQL_SS_TIME2_STRUCT.minute,
+                                SQL_SS_TIME2_STRUCT.second, Fraction);
+                              SQL_SS_TIME2_STRUCT.fraction := fraction*1000000;
                             end;
-                            Inc(P, SizeOf(TSQL_TIME_STRUCT));
+                            Inc(P, SizeOf(TSQL_SS_TIME2_STRUCT));
                           end;
                         end else for I := 0 to ArrayLen -1 do begin
                           if IsNullFromArray(Arr, I) then
@@ -911,11 +1045,10 @@ begin
                             if Native
                             then DT := TDateTimeDynArray(D)[i]
                             else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
-                            DecodeTime(DT, SQL_SS_TIME2_STRUCT.hour, SQL_SS_TIME2_STRUCT.minute,
-                              SQL_SS_TIME2_STRUCT.second, Fraction);
-                            SQL_SS_TIME2_STRUCT.fraction := fraction*1000000;
+                              DecodeTime(DT, SQL_TIME_STRUCT.hour, SQL_TIME_STRUCT.minute,
+                                SQL_TIME_STRUCT.second, Fraction);
                           end;
-                          Inc(P, SizeOf(TSQL_SS_TIME2_STRUCT));
+                          Inc(P, SizeOf(TSQL_TIME_STRUCT));
                         end;
                       end;
       stTimeStamp:    begin
@@ -1048,8 +1181,8 @@ begin
   inherited BindInParameters;
 end;
 
-procedure TZAbstractODBCPreparedStatement.BindInteger(Index: Integer;
-  SQLType: TZSQLType; Value: {$IFNDEF CPU64}Cardinal{$ELSE}UInt64{$ENDIF});
+procedure TZAbstractODBCPreparedStatement.BindUInteger(Index: Integer;
+  SQLType: TZSQLType; Value: NativeUInt);
 var Bind: PZODBCParamBind;
 begin
   CheckParameterIndex(Index);
@@ -1432,15 +1565,15 @@ ReAlloc:
     then GetMem(Bind.ParameterValuePtr, Bind.BufferLength * ValueCount)
     else goto ReAlloc
   else begin
-      if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
-        FlushLobs;
-        FreeMem(Bind.ParameterValuePtr, Bind.ValueCount*SizeOf(Pointer));
-        Bind.ParameterValuePtr := nil;
-      end;
-      Bind.BufferLength := SizeOf(Pointer);
-      GetMem(Bind.ParameterValuePtr, SizeOf(Pointer)*ValueCount);
-      FillChar(Bind.ParameterValuePtr^, SizeOf(Pointer)*ValueCount, #0);
+    if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
+      FlushLobs;
+      FreeMem(Bind.ParameterValuePtr, Bind.ValueCount*SizeOf(Pointer));
+      Bind.ParameterValuePtr := nil;
     end;
+    Bind.BufferLength := SizeOf(Pointer);
+    GetMem(Bind.ParameterValuePtr, SizeOf(Pointer)*ValueCount);
+    FillChar(Bind.ParameterValuePtr^, SizeOf(Pointer)*ValueCount, #0);
+  end;
   Bind.ValueCount := ValueCount;
   Bind.ExternalMem := ValueCount = 0;
   if BindAgain and (ValueCount > 0) then
@@ -1478,15 +1611,16 @@ begin
       {$R-}
       Bind := @fParamBindings[I];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      Bind.ParamName := '';
       if not Bind.ExternalMem and (Bind.ParameterValuePtr <> nil) then begin
         if Ord(Bind.SQLType) >= Ord(stAsciiStream) then
           for j := 0 to Bind.ValueCount -1 do
             {$R-}
             PLobArray(Bind.ParameterValuePtr)[j] := nil;
             {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-        FreeMem(Bind.ParameterValuePtr, Bind.BufferLength*Bind.ValueCount)
+        FreeMem(Bind.ParameterValuePtr{, Bind.BufferLength*Bind.ValueCount})
       end;
-      FreeMem(Bind.StrLen_or_IndPtr, SizeOf(SQLLEN)*Bind.ValueCount);
+      FreeMem(Bind.StrLen_or_IndPtr{, SizeOf(SQLLEN)*Bind.ValueCount});
     end;
   ReallocMem(fParamBindings, NewCount*SizeOf(TZODBCParamBind));
   if fParamBindings <> nil then begin
@@ -1508,7 +1642,7 @@ var Bind: PZODBCParamBind;
 begin
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
   {$R-}
-  Bind := @fParamBindings[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  Bind := @fParamBindings[ParameterIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Bind.InputOutputType := ODBCInputOutputType[SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]][ParamType] ;
   if not Bind.Described then begin
@@ -1530,8 +1664,9 @@ begin
       Bind.DecimalDigits := Scale;
     end;
   end;
+  Bind.ParamName := Name;
   if (Bind.ParameterValuePtr = nil) then
-    InitBind(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, 1, SQLType);
+    InitBind(ParameterIndex, 1, SQLType);
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -1620,15 +1755,19 @@ begin
         if Value.IsClob then
           if FClientEncoding = ceUTF16
           then Value.GetPWideChar
-          else Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP)
+          else Value.GetPAnsiChar(FClientCP)
         else if (FClientEncoding <> ceUTF16) then begin
           fRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
           inherited SetBlob(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream,
             TZAbstractCLob.CreateWithData(Pointer(fRawTemp),
             Length(fRawTemp), ConSettings^.ClientCodePage.CP, ConSettings));
         end;
-      PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
-      Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC
+      if Bind.SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+        PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
+        Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC
+      end else if (SQLType = stBinaryStream) or (FClientEncoding <> ceUTF16) then
+        SetPAnsiChar(ParameterIndex, Value.GetBuffer, Value.Length)
+      else SetPWideChar(ParameterIndex, Value.GetPWideChar, Value.Length)
     end;
   end;
 end;
@@ -1645,7 +1784,7 @@ procedure TZAbstractODBCPreparedStatement.SetBoolean(ParameterIndex: Integer;
   Value: Boolean);
 begin
   if fBindImmediat then
-    BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean,
+    BindSInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean,
       Ord(Value))
   else BindList.Put(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value);
 end;
@@ -1660,7 +1799,7 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetByte(ParameterIndex: Integer; Value: Byte);
 begin
-  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte, Cardinal(Value))
+  BindUInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte, Cardinal(Value))
 end;
 
 {**
@@ -1881,7 +2020,7 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetInt(ParameterIndex, Value: Integer);
 begin
-  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value)
+  BindSInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value)
 end;
 
 {**
@@ -1895,7 +2034,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetLong(Index: Integer; const Value: Int64);
 {$IFDEF CPU64}
 begin
-  BindInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value)
+  BindSInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong, Value)
 {$ELSE}
 var Bind: PZODBCParamBind;
 begin
@@ -2008,6 +2147,7 @@ begin
                         RaiseExceeded(Index);
                       Exit;
                     end;
+      SQL_C_BINARY,
       SQL_C_CHAR:   begin
                       if BLen > Bind.BufferLength-1 then
                         RaiseExceeded(Index);
@@ -2106,7 +2246,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetShort(ParameterIndex: Integer;
   Value: ShortInt);
 begin
-  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stShort, Integer(Value))
+  BindSInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stShort, Integer(Value))
 end;
 
 {**
@@ -2120,7 +2260,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetSmall(ParameterIndex: Integer;
   Value: SmallInt);
 begin
-  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Integer(Value))
+  BindSInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Integer(Value))
 end;
 
 {**
@@ -2208,7 +2348,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetUInt(ParameterIndex: Integer;
   Value: Cardinal);
 begin
-  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord, Value)
+  BindUInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord, Value)
 end;
 
 {**
@@ -2222,7 +2362,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetULong(Index: Integer; const Value: UInt64);
 {$IFDEF CPU64}
 begin
-  BindInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value)
+  BindUInteger(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong, Value)
 {$ELSE}
 var Bind: PZODBCParamBind;
 begin
@@ -2324,7 +2464,7 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetWord(ParameterIndex: Integer; Value: Word);
 begin
-  BindInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Cardinal(Value))
+  BindUInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Cardinal(Value))
 end;
 
 {**
@@ -2340,9 +2480,9 @@ begin
   end;
 end;
 
-{ TZODBCCallableStatementW_MSSQL }
+{ TZODBCCallableStatementW }
 
-constructor TZODBCCallableStatementW_MSSQL.Create(const Connection: IZConnection;
+constructor TZODBCCallableStatementW.Create(const Connection: IZConnection;
   var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
   {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
 begin
@@ -2350,8 +2490,8 @@ begin
   fPHDBC := @ConnectionHandle
 end;
 
-function TZODBCCallableStatementW_MSSQL.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+function TZODBCCallableStatementW.CreateExecutionStatement(
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
@@ -2371,9 +2511,9 @@ begin
   TZODBCPreparedStatementW(Result).Prepare;
 end;
 
-{ TZODBCCallableStatementA_MSSQL }
+{ TZODBCCallableStatementA }
 
-constructor TZODBCCallableStatementA_MSSQL.Create(
+constructor TZODBCCallableStatementA.Create(
   const Connection: IZConnection; var ConnectionHandle: SQLHDBC;
   const StoredProcOrFuncIdentifier: string;
   {$IFDEF AUTOREFCOUNT}const{$ENDIF} Info: TStrings);
@@ -2382,8 +2522,8 @@ begin
   fPHDBC := @ConnectionHandle
 end;
 
-function TZODBCCallableStatementA_MSSQL.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+function TZODBCCallableStatementA.CreateExecutionStatement(
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
@@ -2401,6 +2541,32 @@ begin
   ZDbcUtils.FlushBuff(Buf, SQL);
   Result := TZODBCPreparedStatementA.Create(Connection as IZODBCConnection, fPHDBC^, SQL, Info);
   TZODBCPreparedStatementA(Result).Prepare;
+end;
+
+{ TZODBCStatementW }
+
+constructor TZODBCStatementW.Create(const Connection: IZODBCConnection;
+  var ConnectionHandle: SQLHDBC; Info: TStrings);
+begin
+  inherited Create(Connection, ConnectionHandle, '', Info);
+end;
+
+function TZODBCStatementW.ExecutDirect: RETCODE;
+begin
+  Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL))
+end;
+
+{ TZODBCStatementA }
+
+constructor TZODBCStatementA.Create(const Connection: IZODBCConnection;
+  var ConnectionHandle: SQLHDBC; Info: TStrings);
+begin
+  inherited Create(Connection, ConnectionHandle, '', Info);
+end;
+
+function TZODBCStatementA.ExecutDirect: RETCODE;
+begin
+  Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(fASQL), Length(fASQL))
 end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit

@@ -1036,7 +1036,7 @@ end;
 
 function TZTestADOStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'ado,OleDB,odbc_w,odbc_a';
+  Result := 'ado,OleDB,odbc_w,odbc_a,MSSQL,Sybase';
 end;
 
 procedure TZTestADOStoredProcedure.ADO_Test_abtest;

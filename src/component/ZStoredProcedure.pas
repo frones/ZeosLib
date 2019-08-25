@@ -132,37 +132,15 @@ function TZStoredProc.CreateStatement(const SQL: string; Properties: TStrings):
 var
   I: Integer;
   CallableStatement: IZCallableStatement;
-  Catalog, Schema, ObjectName: string;
 begin
   CallableStatement := Connection.DbcConnection.PrepareCallWithParams(
     Trim(SQL), Properties);
 
-  if Supports(CallableStatement, IZParamNamedCallableStatement) then
-    if Assigned(FMetaResultSet) then
-      FMetaResultSet.BeforeFirst
-    else
-    begin //i need allways all types to cast and there names
-      SplitQualifiedObjectName(Trim(SQL), Catalog, Schema, ObjectName);
-      Schema := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(Schema);
-      ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
-      FMetaResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
-    end;
-
-  for I := 0 to Params.Count - 1 do
-  begin
-    CallableStatement.RegisterParamType( I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ord(DatasetTypeToProcColDbc[Params[I].ParamType]));
-    if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
-      CallableStatement.RegisterOutParameter(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-        Ord(ConvertDatasetToDbcType(Params[I].DataType)));
-
-    if Supports(CallableStatement, IZParamNamedCallableStatement) and
-      Assigned(FMetaResultSet) then
-      if FMetaResultSet.Next then
-        (CallableStatement as IZParamNamedCallableStatement).RegisterParamTypeAndName(
-          I, FMetaResultSet.GetString(ProcColTypeNameIndex),
-          Params[i].Name, FMetaResultSet.GetInt(ProcColPrecisionIndex),
-          FMetaResultSet.GetInt(ProcColLengthIndex));
-  end;
+  if not Connection.DbcConnection.UseMetadata then
+    for I := 0 to Params.Count - 1 do
+      with Params[I] do
+        CallableStatement.RegisterParameter(I, ConvertDatasetToDbcType(DataType),
+        DatasetTypeToProcColDbc[ParamType], Name, Precision, NumericScale);
   Result := CallableStatement;
 end;
 

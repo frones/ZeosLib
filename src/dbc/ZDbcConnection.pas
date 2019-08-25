@@ -1015,7 +1015,6 @@ end;
 
 {**
   Creates a regular statement object.
-  @param SQL a SQL query string.
   @param Info a statement parameters.
   @returns a created statement.
 }

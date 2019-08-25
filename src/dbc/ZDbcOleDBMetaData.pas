@@ -2232,7 +2232,7 @@ begin
     begin
       while Next do
       begin
-        Flags := GetWordByName('COLUMN_FLAGS');
+        Flags := GetUIntByName('COLUMN_FLAGS');
         if (Flags and DBCOLUMNFLAGS_ISROWVER) = 0 then
           Continue;
         Result.MoveToInsertRow;

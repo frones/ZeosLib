@@ -389,7 +389,7 @@ end;
 procedure TZAbstractOleDBResultSet.CreateAccessors;
 var I: Integer;
 begin
-  CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED, 8Byte alignments do NOT work with fixed width fields},
+  CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA,
     fpcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
     Pointer(FDBBINDSTATUSArray)));
   SetLength(FLobAccessors, Length(FLobColsIndex));
@@ -1823,7 +1823,6 @@ begin
   for I := Low(ParamBindings) to High(ParamBindings) do
     if ParamBindings[i].eParamIO <> DBPARAMIO_INPUT then
       Inc(J);
-//  FDBBindingArray := ParamBindings;
   FRowSize := Length(ParamBuffer);
   SetLength(FDBBindingArray,J);
   SetLength(FDBBINDSTATUSArray, J);
@@ -2023,9 +2022,7 @@ begin
     for I := prgInfo.iOrdinal-1 to fpcColumns-1 do
     begin
       ColumnInfo := TZColumnInfo.Create;
-      if (prgInfo^.pwszName=nil) or (prgInfo^.pwszName^=#0) then
-        ColumnInfo.ColumnLabel := 'col_'+ZFastCode.IntToStr(i)
-      else
+      if (prgInfo.pwszName<>nil) and (prgInfo.pwszName^<>#0) then
         ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
@@ -2101,7 +2098,7 @@ initialization
   LobDBBinding.dwMemOwner := DBMEMOWNER_CLIENTOWNED;
   LobDBBinding.eParamIO := DBPARAMIO_NOTPARAM;
   LobDBBinding.cbMaxLen := 0;
-  LobDBBinding.dwFlags := DBCOLUMNFLAGS_ISLONG;
+  LobDBBinding.dwFlags := 0;// DBCOLUMNFLAGS_ISLONG;  {}
   LobDBBinding.wType := DBTYPE_IUNKNOWN;
   LobDBBinding.bPrecision := 0;
   LobDBBinding.bScale := 0;

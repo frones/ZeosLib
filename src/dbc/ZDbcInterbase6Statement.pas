@@ -118,13 +118,6 @@ type
     procedure WriteLobBuffer(XSQLVAR: PXSQLVAR; Buffer: Pointer; Len: LengthInt);
 
     procedure InternalBindDouble(XSQLVAR: PXSQLVAR; const Value: Double);
-  protected //setters made by me ->
-    //need a effective way to flush them again (IZCallableStmt)
-    procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
-    procedure BindLob(Index: Integer; {%H-}SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
-    procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
-
   protected
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -138,16 +131,16 @@ type
     procedure SetBoolean(Index: Integer; Value: Boolean);
     procedure SetByte(Index: Integer; Value: Byte);
     procedure SetShort(Index: Integer; Value: ShortInt);
-    procedure SetWord(Index: Integer; Value: Word); reintroduce;
-    procedure SetSmall(Index: Integer; Value: SmallInt); reintroduce;
-    procedure SetUInt(Index: Integer; Value: Cardinal); reintroduce;
-    procedure SetInt(Index: Integer; Value: Integer); reintroduce;
-    procedure SetULong(Index: Integer; const Value: UInt64); reintroduce;
-    procedure SetLong(Index: Integer; const Value: Int64); reintroduce;
-    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
-    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
-    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetWord(Index: Integer; Value: Word);
+    procedure SetSmall(Index: Integer; Value: SmallInt);
+    procedure SetUInt(Index: Integer; Value: Cardinal);
+    procedure SetInt(Index: Integer; Value: Integer);
+    procedure SetULong(Index: Integer; const Value: UInt64);
+    procedure SetLong(Index: Integer; const Value: Int64);
+    procedure SetFloat(Index: Integer; Value: Single);
+    procedure SetDouble(Index: Integer; const Value: Double);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
 
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
@@ -176,7 +169,7 @@ type
 
   TZInterbase6CallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -1873,31 +1866,6 @@ begin
   PISC_QUAD(XSQLVAR.sqldata)^ := BlobId;
 end;
 
-procedure TZInterbase6PreparedStatement.BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt);
-begin
-  if SQLType = stGUID
-  then SetGUID(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGUID(Buf)^)
-  else SetPAnsiChar(Index, Buf, Len);
-end;
-
-procedure TZInterbase6PreparedStatement.BindLob(Index: Integer;
-  SQLType: TZSQLType; const Value: IZBlob);
-begin
-  SetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType, Value);
-end;
-
-procedure TZInterbase6PreparedStatement.BindRawStr(Index: Integer;
-  const Value: RawByteString);
-begin
-  SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-end;
-
-procedure TZInterbase6PreparedStatement.BindRawStr(Index: Integer;
-  Buf: PAnsiChar; Len: LengthInt);
-begin
-  SetPAnsiChar(Index, Buf, Len);
-end;
-
 { TZInterbase6Statement }
 
 constructor TZInterbase6Statement.Create(const Connection: IZConnection;
@@ -1909,7 +1877,7 @@ end;
 { TZInterbase6CallableStatement }
 
 function TZInterbase6CallableStatement.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   P: PChar;
   I: Integer;

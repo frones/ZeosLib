@@ -750,6 +750,7 @@ type
       sqlWarn9: array[0..0] of AnsiChar;
   end;
 
+  PPZASASQLCA = ^PZASASQLCA;
   PZASASQLCA = ^TZASASQLCA;
   TZASASQLCA = record
     sqlcaID: array[0..7] of AnsiChar;
@@ -811,7 +812,7 @@ type
     array_len        : Longword;
     stored_len       : Longword;
     untrunc_len      : Longword;
-    arr: array[0..312756] of AnsiChar;
+    arr: array[0..0] of AnsiChar;
   end;
 
   ZASA_db_callback_index = (             //Markus

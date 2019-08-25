@@ -529,7 +529,7 @@ begin
 *)
 procedure TZTestDbcInterbaseBugReport.TestTicket363;
 var
-  I, J: Integer;
+  I: Integer;
   Stmt: IZStatement;
   LStmt: IZPreparedStatement;
   LSet: IZResultSet;
@@ -557,7 +557,7 @@ begin
       if I > 20 then
         Break;
     end;
-    Check(I = 10, 'duplicated rows retrieved');
+    Check(I = 10, 'duplicate rows retrieved');
 //  LSet:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
     LStmt.ClearParameters;
     // trigger fix for ticket #228
@@ -573,7 +573,7 @@ begin
       if I > 20 then
         Break;
     end;
-    Check(I = 11, 'duplicated rows retrieved');
+    Check(I = 11, 'duplicate rows retrieved');
 
     LStmt.SetInt(FirstDbcIndex, 0);
     LSet:= LStmt.ExecuteQueryPrepared; // the transaction ID is not updated
@@ -584,7 +584,7 @@ begin
       if I > 20 then
         Break;
     end;
-    Check(I = 11, 'duplicated rows retrieved');
+    Check(I = 11, 'duplicate rows retrieved');
   finally
     if Assigned(LStmt) then begin
       LStmt.Close;

@@ -64,6 +64,25 @@ type
   PStrLen_or_IndArray = ^TStrLen_or_IndArray;
   TStrLen_or_IndArray = array[0..600] of SQLLEN;
 
+  PZODBCParamBind = ^TZODBCParamBind;
+  TZODBCParamBind = record
+    InputOutputType: SQLSMALLINT; //the InputOutputType of the Parameter
+    ValueType: SQLSMALLINT; //the C-DataType
+    ParameterType: SQLSMALLINT; //the SQL-DataType
+    ColumnSize: SQLULEN;
+    DecimalDigits: SQLSMALLINT;
+    ParameterValuePtr: SQLPOINTER;
+    StrLen_or_IndPtr: PSQLLEN;
+    Nullable: SQLSMALLINT;
+    BufferLength: SQLLEN;
+    ValueCount: Integer;
+    SQLType: TZSQLType;
+    Described, ExternalMem: Boolean;
+    ParamName: String;
+  end;
+  PZODBCParamBindArray = ^TZODBCParamBindArray;
+  TZODBCParamBindArray = array[Byte] of TZODBCParamBind;
+
 function ConvertODBCTypeToSQLType(ODBCType, Scale: SQLSMALLINT; Precision: Integer; UnSigned: Boolean;
   ConSettings: PZConSettings; ODBC_CType: PSQLSMALLINT): TZSQLType;
 
@@ -95,10 +114,12 @@ const
 
   ODBCInputOutputType: array[Boolean, TZProcedureColumnType] of SQLSMALLINT = (
     (SQL_PARAM_INPUT{pctUnknown}, SQL_PARAM_INPUT{pctIn}, SQL_PARAM_INPUT_OUTPUT{pctInOut},
-     SQL_PARAM_OUTPUT{pctOut}, SQL_PARAM_OUTPUT{pctReturn}, SQL_PARAM_TYPE_UNKNOWN{pctResultSet}),
+     SQL_PARAM_OUTPUT{pctOut}, SQL_PARAM_OUTPUT{SQL_RETURN_VALUE does not work with mssql}{pctReturn},
+     SQL_PARAM_TYPE_UNKNOWN{pctResultSet}),
 
     (SQL_PARAM_INPUT{pctUnknown}, SQL_PARAM_INPUT{pctIn}, SQL_PARAM_INPUT_OUTPUT_STREAM{pctInOut},
-     SQL_PARAM_OUTPUT_STREAM{pctOut}, SQL_RETURN_VALUE{pctReturn}, SQL_PARAM_TYPE_UNKNOWN{pctResultSet}));
+     SQL_PARAM_OUTPUT_STREAM{pctOut}, SQL_PARAM_OUTPUT{SQL_RETURN_VALUE does not work with mssql}{pctReturn},
+     SQL_PARAM_TYPE_UNKNOWN{pctResultSet}));
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation
@@ -604,10 +625,12 @@ begin
                                 else Result := Result*ClientCodePage^.CharWidth +1;
     stGUID:                     Result := SizeOf(TGUID);
     stDate:                     Result := SizeOf(TSQL_DATE_STRUCT);
-    stTime:                     if ODBC_CType = SQL_C_BINARY then
-                                  Result := SizeOf(TSQL_SS_TIME2_STRUCT) else
-                                  Result := SizeOf(TSQL_TIME_STRUCT);
-    stTimestamp:                Result := SizeOf(TSQL_TIMESTAMP_STRUCT);
+    stTime:                     if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType=SQL_C_SS_TIME2)
+                                then Result := SizeOf(TSQL_SS_TIME2_STRUCT)
+                                else Result := SizeOf(TSQL_TIME_STRUCT);
+    stTimestamp:                if (ODBC_CType = SQL_C_SS_TIMESTAMPOFFSET)
+                                then Result := SizeOf(TSQL_SS_TIMESTAMPOFFSET_STRUCT)
+                                else Result := SizeOf(TSQL_TIMESTAMP_STRUCT);
     stAsciiStream,
     stUnicodeStream,
     stBinaryStream:             Result := SizeOf(Pointer){we use SQL_DATA_AT_EXEC and this userdefined token points to our lob-interface};

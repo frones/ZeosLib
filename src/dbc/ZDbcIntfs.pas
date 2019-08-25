@@ -203,6 +203,7 @@ type
   IZResultSet = interface;
   IZResultSetMetadata = interface;
   IZBlob = interface;
+  IZClob = interface;
   IZNotification = interface;
   IZSequence = interface;
   IZDataSet = interface;
@@ -1199,6 +1200,48 @@ type
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 
+    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
+      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      {%H-}Scale: LengthInt = 0);
+
+    //======================================================================
+    // Methods for accessing out parameters by index
+    //======================================================================
+    function IsNull(Index: Integer): Boolean;
+    function GetBoolean(ParameterIndex: Integer): Boolean;
+    function GetByte(ParameterIndex: Integer): Byte;
+    function GetShort(ParameterIndex: Integer): ShortInt;
+    function GetWord(ParameterIndex: Integer): Word;
+    function GetSmall(ParameterIndex: Integer): SmallInt;
+    function GetUInt(ParameterIndex: Integer): Cardinal;
+    function GetInt(ParameterIndex: Integer): Integer;
+    function GetULong(ParameterIndex: Integer): UInt64;
+    function GetLong(ParameterIndex: Integer): Int64;
+    function GetFloat(ParameterIndex: Integer): Single;
+    function GetDouble(ParameterIndex: Integer): Double;
+    function GetCurrency(ParameterIndex: Integer): Currency;
+    procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
+    //procedure GetGUID(Index: Integer; var Result: TGUID);
+    function GetBytes(ParameterIndex: Integer): TBytes; overload;
+    function GetDate(ParameterIndex: Integer): TDateTime;
+    function GetTime(ParameterIndex: Integer): TDateTime;
+    function GetTimestamp(ParameterIndex: Integer): TDateTime; overload;
+    //procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
+    function GetValue(ParameterIndex: Integer): TZVariant;
+
+    function GetString(ParameterIndex: Integer): String;
+    {$IFNDEF NO_ANSISTRING}
+    function GetAnsiString(ParameterIndex: Integer): AnsiString;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    function GetUTF8String(ParameterIndex: Integer): UTF8String;
+    {$ENDIF}
+    function GetRawByteString(ParameterIndex: Integer): RawByteString;
+    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
+
+    function GetBLob(ParameterIndex: Integer): IZBlob;
+    //function GetCLob(ParameterIndex: Integer): IZClob;
+
     procedure ClearParameters;
   end;
 
@@ -1219,46 +1262,6 @@ type
 
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); //deprecated;
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); //deprecated;
-
-(*    procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
-      {%H-}Scale: LengthInt = 0);
-*)
-    function IsNull(ParameterIndex: Integer): Boolean;
-    function GetPChar(ParameterIndex: Integer): PChar;
-    function GetString(ParameterIndex: Integer): String;
-    {$IFNDEF NO_ANSISTRING}
-    function GetAnsiString(ParameterIndex: Integer): AnsiString;
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
-    function GetUTF8String(ParameterIndex: Integer): UTF8String;
-    {$ENDIF}
-    function GetRawByteString(ParameterIndex: Integer): RawByteString;
-    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
-    function GetBoolean(ParameterIndex: Integer): Boolean;
-    function GetByte(ParameterIndex: Integer): Byte;
-    function GetShort(ParameterIndex: Integer): ShortInt;
-    function GetWord(ParameterIndex: Integer): Word;
-    function GetSmall(ParameterIndex: Integer): SmallInt;
-    function GetUInt(ParameterIndex: Integer): Cardinal;
-    function GetInt(ParameterIndex: Integer): Integer;
-    function GetULong(ParameterIndex: Integer): UInt64;
-    function GetLong(ParameterIndex: Integer): Int64;
-    function GetFloat(ParameterIndex: Integer): Single;
-    function GetDouble(ParameterIndex: Integer): Double;
-    function GetCurrency(ParameterIndex: Integer): Currency;
-    procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
-    function GetBytes(ParameterIndex: Integer): TBytes;
-    function GetDate(ParameterIndex: Integer): TDateTime;
-    function GetTime(ParameterIndex: Integer): TDateTime;
-    function GetTimeStamp(ParameterIndex: Integer): TDateTime;
-    function GetValue(ParameterIndex: Integer): TZVariant;
-  end;
-
-  IZParamNamedCallableStatement = interface(IZCallableStatement)
-    ['{99882891-81B2-4F3E-A3D7-35B6DCAA7136}']
-    procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      const ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
   end;
 
   /// <summary>
@@ -1564,6 +1567,7 @@ type
 
     function IsSigned(ColumnIndex: Integer): Boolean;
     function GetColumnLabel(ColumnIndex: Integer): string;
+    function GetOrgColumnLabel(ColumnIndex: Integer): string;
     function GetColumnName(ColumnIndex: Integer): string;
     function GetColumnCodePage(ColumnIndex: Integer): Word;
     function GetSchemaName(ColumnIndex: Integer): string;
@@ -1580,16 +1584,25 @@ type
     function HasDefaultValue(ColumnIndex: Integer): Boolean;
   end;
 
-  /// <summary>
-  ///   External or internal blob wrapper object.
-  /// </summary>
-  IZBlob = interface(IZInterface)
-    ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
-
+  IZLob = interface(IZInterface)
+    ['{DCF816A4-F21C-4FBB-837B-A12DCF886A6F}']
     function IsEmpty: Boolean;
     function IsUpdated: Boolean;
     function IsClob: Boolean;
     function Length: Integer;
+    procedure Clear;
+    function GetBufferAddress: PPointer;
+    function GetLengthAddress: PInteger;
+    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
+    {$ENDIF}
+  end;
+  /// <summary>
+  ///   External or internal blob wrapper object.
+  /// </summary>
+  IZBlob = interface(IZLob)
+    ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
+
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
@@ -1603,7 +1616,6 @@ type
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal); overload;
     {$ENDIF}
 
-    procedure Clear;
     function Clone(Empty: Boolean = False): IZBlob;
 
     {Clob operations}
@@ -1628,12 +1640,12 @@ type
     procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
     function GetPWideChar: PWideChar;
     procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
-    function GetBufferAddress: PPointer;
-    function GetLengthAddress: PInteger;
-    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
-    {$ENDIF}
   end;
+
+  IZClob = interface(IZBlob)
+    ['{2E0ED2FE-5F9F-4752-ADCB-EFE92E39FF94}']
+  end;
+
   PIZLob = ^IZBlob;
   IZLobDynArray = array of IZBLob;
 

@@ -194,6 +194,7 @@ type
 
     function IsSigned(ColumnIndex: Integer): Boolean; virtual;
     function GetColumnLabel(ColumnIndex: Integer): string; virtual;
+    function GetOrgColumnLabel(ColumnIndex: Integer): string; virtual;
     function GetColumnName(ColumnIndex: Integer): string; virtual;
     function GetColumnCodePage(ColumnIndex: Integer): Word;
     function GetSchemaName(ColumnIndex: Integer): string; virtual;
@@ -618,6 +619,12 @@ begin
   if not Loaded then
      LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue;
+end;
+
+function TZAbstractResultSetMetadata.GetOrgColumnLabel(
+  ColumnIndex: Integer): string;
+begin
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).FColumnLabel;
 end;
 
 {**

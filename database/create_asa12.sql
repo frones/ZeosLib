@@ -209,6 +209,20 @@ create table default_values
    primary key (d_id)
 );
 
+/*==============================================================*/
+/* Table : default_values2                                      */
+/*==============================================================*/
+create table default_values2
+(
+   d_id                           INTEGER NOT NULL		default autoincrement,
+   d_fld1                         FLOAT DEFAULT 123.456,
+   d_fld2                         INTEGER DEFAULT 123456,
+   d_fld3                     	  DATE default '2003-12-11',
+   d_fld4                     	  VARCHAR(10) DEFAULT 'xyz',
+   d_fld5                     	  TIMESTAMP default '2003-12-11 23:12:11',
+   d_fld6                     	  TIME default '23:12:11',
+   primary key (d_id)
+);
 
 /*==============================================================*/
 /* Table : bcd_values                                           */
@@ -231,7 +245,7 @@ create table bcd_values
 /* Table : domain_values                                        */
 /*==============================================================*/
 
-/*create DOMAIN tinteger INTEGER default 123456;
+create DOMAIN tinteger INTEGER default 123456;
 create DOMAIN tfloat FLOAT default 123.456;
 create DOMAIN tstring VARCHAR(10) default 'xyz';
 
@@ -242,7 +256,7 @@ create table domain_values
    d_fld2                     tfloat null,
    d_fld3                     tstring null,
    primary key (d_id)
-);*/
+);
 
 
 alter table cargo

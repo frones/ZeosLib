@@ -65,11 +65,11 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
-  ZPlainODBCDriver, ZDbcODBCCon;
+  ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils;
 
 type
   { eh: improve missing meta informations of SQLColumns}
-  TODBCTResultSetMetadata = class(TZAbstractResultSetMetadata)
+  TZODBCResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
@@ -88,9 +88,9 @@ type
     property StrLen_or_IndArray: PSQLLENArray read fStrLen_or_IndArray write fStrLen_or_IndArray;
   end;
 
-  TAbstractODBCResultSet = Class(TZAbstractReadOnlyResultSet, IZResultSet)
+  TAbstractODBCResultSet = Class(TZAbstractReadOnlyResultSet)
   private
-    fPHSTMT: PSQLHSTMT; //direct reference the handle of the smt/metadata
+    fPHSTMT: PSQLHSTMT; //direct reference the handle of the stmt/metadata
     fConnection: IZODBCConnection;
     fPlainDriver: TZODBC3PlainDriver;
     fZBufferSize, fChunkSize: Integer;
@@ -99,7 +99,6 @@ type
     fMaxFetchableRows, fFetchedRowCount, fCurrentBufRowNo: SQLULEN;
     fStrLen_or_Ind: SQLLEN;
     fColDataPtr: Pointer;
-    //fSQLTypes: TZSQLTypeArray;
     fIsUnicodeDriver: Boolean;
     fFreeHandle, fCursorOpened: Boolean;
     fSQL_GETDATA_EXTENSIONS: SQLUINTEGER;
@@ -109,28 +108,16 @@ type
     procedure LoadUnBoundColumns;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
-    function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; virtual; abstract;
-    function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; virtual; abstract;
-    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); virtual; abstract;
   public
-    constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
-      ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
-      ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
-    constructor CreateForMetadataCall(out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
-      {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConneaction as IZODBCConnection) is different to dephi and crashs
-    procedure Open; override;
-    procedure BeforeClose; override;
-
-    function Next: Boolean; reintroduce;
-    procedure ResetCursor; override;
-
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
     function IsNull(ColumnIndex: Integer): Boolean;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetUInt(ColumnIndex: Integer): Cardinal;
@@ -151,7 +138,24 @@ type
     {$ENDIF USE_SYNCOMMONS}
   End;
 
-  TODBCResultSetW = class(TAbstractODBCResultSet)
+  TAbstractColumnODBCResultSet = class(TAbstractODBCResultSet, IZResultSet)
+  protected
+    function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; virtual; abstract;
+    function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; virtual; abstract;
+    procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); virtual; abstract;
+    procedure Open; override;
+  public
+    constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
+      ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
+      ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
+    constructor CreateForMetadataCall(out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
+      {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConnection as IZODBCConnection) is different to dephi and crashs
+    function Next: Boolean; reintroduce;
+    procedure ResetCursor; override;
+    procedure BeforeClose; override;
+  end;
+
+  TODBCResultSetW = class(TAbstractColumnODBCResultSet)
   private
     fPlainW: TODBC3UnicodePlainDriver;
   protected
@@ -164,7 +168,7 @@ type
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); override;
   end;
 
-  TODBCResultSetA = class(TAbstractODBCResultSet)
+  TODBCResultSetA = class(TAbstractColumnODBCResultSet)
   private
     fPlainA: TODBC3RawPlainDriver;
   protected
@@ -197,6 +201,23 @@ type
       ConSettings: PZConSettings);
   end;
 
+  TZODBCOutParamColumnInfo = class(TZODBCColumnInfo)
+  public
+    destructor Destroy; override;
+  end;
+
+  TZParamODBCResultSet = class(TAbstractODBCResultSet, IZResultSet)
+  private
+    FParamCount: Integer;
+    FODBCParamBindArray: PZODBCParamBindArray;
+  protected
+    procedure Open; override;
+  public
+    constructor Create(const Statement: IZStatement; const SQL: String;
+       ODBCParamBindArray: PZODBCParamBindArray; ParamCount: Integer);
+    function Next: Boolean; reintroduce;
+  end;
+
 const
   StringStreamTypes: Array[Boolean] of SQLSMALLINT = (SQL_C_CHAR, SQL_C_WCHAR);
 
@@ -206,7 +227,7 @@ implementation
 
 uses Math,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZMessages, ZDbcODBCUtils, ZEncoding, ZDbcProperties,
+  ZMessages, ZEncoding, ZDbcProperties,
   ZClasses, ZDbcUtils;
 
 { TAbstractODBCResultSet }
@@ -221,18 +242,6 @@ procedure TAbstractODBCResultSet.CheckStmtError(RETCODE: SQLRETURN);
 begin
   if RETCODE <> SQL_SUCCESS then
     HandleError;
-end;
-
-procedure TAbstractODBCResultSet.BeforeClose;
-var STMT: SQLHSTMT;
-begin
-  inherited BeforeClose;
-  if Assigned(fPHSTMT^) and fFreeHandle then begin// from metadata
-    STMT := fPHSTMT^;
-    fPHSTMT^ := nil;
-    CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT)); //free handle
-  end;
-  //CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart col bindings -> commented this kills our memory
 end;
 
 {$IFDEF USE_SYNCOMMONS}
@@ -384,42 +393,6 @@ begin
 end;
 {$ENDIF USE_SYNCOMMONS}
 
-constructor TAbstractODBCResultSet.Create(const Statement: IZStatement;
-  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
-  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
-  const EnhancedColInfo: Boolean = True);
-var Supported: SQLUSMALLINT;
-begin
-  inherited Create(Statement, SQL, TODBCTResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
-  fConnection := Connection;
-  fPlainDriver := TZODBC3PlainDriver(fConnection.GetPlainDriver.GetInstance);
-  fIsUnicodeDriver := Supports(fPlainDriver, IODBC3UnicodePlainDriver);
-  fPHSTMT := @StmtHandle;
-  fZBufferSize := ZBufferSize;
-  fChunkSize := ChunkSize;
-  fConnection.CheckDbcError(fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported));
-  fEnhancedColInfo := EnhancedColInfo and (Supported = SQL_TRUE);
-  fCurrentBufRowNo := 0;
-  fFreeHandle := not Assigned(StmtHandle);
-  Connection.CheckDbcError(fPlainDriver.SQLGetInfo(ConnectionHandle,
-    SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil));
-  ResultSetType := rtForwardOnly;
-  ResultSetConcurrency := rcReadOnly;
-  fCursorOpened := True;
-  FClientCP := ConSettings^.ClientCodePage.CP;
-  Open;
-end;
-
-constructor TAbstractODBCResultSet.CreateForMetadataCall(
-  out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
-begin
-  FIsMetaData := True;
-  StmtHandle := nil;
-  Create(nil, StmtHandle, ConnectionHandle, '', Connection,
-    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
-    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
-  Connection.CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
-end;
 {$IFNDEF NO_ANSISTRING}
 function TAbstractODBCResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var P: Pointer;
@@ -1337,7 +1310,7 @@ begin
                     L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
                   Result := UnicodeSQLTimeStampToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
                 end else begin
-                  L := fStrLen_or_Ind shr 1;
+                  L := fStrLen_or_Ind;
                   if FixedWidth then
                     L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
                   Result := RawSQLTimeStampToDateTime(fColDataPtr, L, ConSettings^.ReadFormatSettings, Failed);
@@ -1406,6 +1379,7 @@ begin
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
+{$IFNDEF NO_UTF8STRING}
 function TAbstractODBCResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: Pointer;
   L: NativeUInt;
@@ -1441,6 +1415,7 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
 function TAbstractODBCResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
@@ -1488,7 +1463,59 @@ begin
   end;
 end;
 
-function TAbstractODBCResultSet.Next: Boolean;
+{ TAbstractColumnODBCResultSet }
+
+procedure TAbstractColumnODBCResultSet.BeforeClose;
+var STMT: SQLHSTMT;
+begin
+  inherited BeforeClose;
+  if Assigned(fPHSTMT^) and fFreeHandle then begin// from metadata
+    STMT := fPHSTMT^;
+    fPHSTMT^ := nil;
+    CheckStmtError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT)); //free handle
+  end;
+  //CheckStmtError(fPlainDriver.SQLFreeStmt(fPHSTMT^,SQL_UNBIND)); //discart col bindings -> commented this kills our memory
+end;
+
+constructor TAbstractColumnODBCResultSet.Create(const Statement: IZStatement;
+  var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
+  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
+  const EnhancedColInfo: Boolean);
+var Supported: SQLUSMALLINT;
+begin
+  inherited Create(Statement, SQL, TZODBCResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
+  fConnection := Connection;
+  fPlainDriver := TZODBC3PlainDriver(fConnection.GetPlainDriver.GetInstance);
+  fIsUnicodeDriver := Supports(fPlainDriver, IODBC3UnicodePlainDriver);
+  fPHSTMT := @StmtHandle;
+  fZBufferSize := ZBufferSize;
+  fChunkSize := ChunkSize;
+  fConnection.CheckDbcError(fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported));
+  fEnhancedColInfo := EnhancedColInfo and (Supported = SQL_TRUE);
+  fCurrentBufRowNo := 0;
+  fFreeHandle := not Assigned(StmtHandle);
+  Connection.CheckDbcError(fPlainDriver.SQLGetInfo(ConnectionHandle,
+    SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil));
+  ResultSetType := rtForwardOnly;
+  ResultSetConcurrency := rcReadOnly;
+  fCursorOpened := True;
+  FClientCP := ConSettings^.ClientCodePage.CP;
+  Open;
+end;
+
+constructor TAbstractColumnODBCResultSet.CreateForMetadataCall(
+  out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
+  {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
+begin
+  FIsMetaData := True;
+  StmtHandle := nil;
+  Create(nil, StmtHandle, ConnectionHandle, '', Connection,
+    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
+    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
+  Connection.CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
+end;
+
+function TAbstractColumnODBCResultSet.Next: Boolean;
 //const FetchOrientation: array[Boolean] of SQLSMALLINT = (SQL_FETCH_FIRST, SQL_FETCH_NEXT); //using FetchScroll or ExtendedFetch??
 var RETCODE: SQLRETURN;
 label Fail, FetchData, cls_crs;  //ugly but faster and no double code
@@ -1556,7 +1583,7 @@ Fail:
     RowNo := LastRowNo + 1;
 end;
 
-procedure TAbstractODBCResultSet.Open;
+procedure TAbstractColumnODBCResultSet.Open;
 var
   bufSQLLEN: SQLLEN;
   ColumnNumber: SQLUSMALLINT;
@@ -1619,9 +1646,7 @@ begin
           ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf);
           if ColumnName = '' then
             ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf);
-          if ColumnName = '' then //aggregates like SUM() don't have a columname -> skip processing
-            ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
-          else begin
+          if ColumnName <> '' then begin//aggregates like SUM() don't have a columname -> skip processing
             TableName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_TABLE_NAME, StrBuf);
             if TableName = '' then
               TableName := ColStrAttribute(ColumnNumber, SQL_DESC_TABLE_NAME, StrBuf);
@@ -1736,7 +1761,7 @@ begin
   end;
 end;
 
-procedure TAbstractODBCResultSet.ResetCursor;
+procedure TAbstractColumnODBCResultSet.ResetCursor;
 begin
   if Assigned(fPHSTMT^) and fCursorOpened then begin
     CheckStmtError(fPlainDriver.SQLCloseCursor(fPHSTMT^)); //close cursor and discard pending result
@@ -1793,9 +1818,7 @@ var
 begin
   CheckStmtError(fPlainW.SQLDescribeColW(fPHSTMT^, ColumnNumber, Pointer(Buf), Length(Buf),
     @NameLength, @DataType, @ColumnSize, @DecimalDigits, @Nullable));
-  if NameLength = 0 then
-    ColumnInfo.ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
-  else begin
+  if NameLength > 0 then begin
     {$IFDEF UNICODE}
     System.SetString(ColName, PWideChar(Pointer(Buf)), NameLength);
     ColumnInfo.ColumnName := ColName;
@@ -1867,9 +1890,7 @@ var
 begin
   CheckStmtError(fPlainA.SQLDescribeCol(fPHSTMT^, ColumnNumber, Pointer(Buf), LEngth(Buf),
     @NameLength, @DataType, @ColumnSize, @DecimalDigits, @Nullable));
-  if NameLength = 0 then
-    ColumnInfo.ColumnName := 'Col_'+ZFastCode.IntToStr(ColumnNumber)
-  else begin
+  if NameLength > 0 then begin
     {$IFDEF UNICODE}
     ColumnInfo.ColumnName := PRawToUnicode(Pointer(Buf), NameLength, FClientCP);
     {$ELSE}
@@ -1893,9 +1914,9 @@ begin
     else ColumnInfo.ColumnCodePage := FClientCP;
 end;
 
-{ TODBCTResultSetMetadata }
+{ TZODBCResultSetMetadata }
 
-procedure TODBCTResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
+procedure TZODBCResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
 begin
   ColumnInfo.CatalogName := '';
   ColumnInfo.SchemaName := '';
@@ -2035,6 +2056,68 @@ begin
   if (fStrLen_or_IndArray <> nil) then
     FreeMem(fStrLen_or_IndArray);
   inherited;
+end;
+
+{ TZODBCOutParamColumnInfo }
+
+destructor TZODBCOutParamColumnInfo.Destroy;
+begin
+  fColumnBuffer := nil;
+  fStrLen_or_IndArray := nil;
+  inherited;
+end;
+
+{ TZParamODBCResultSet }
+
+constructor TZParamODBCResultSet.Create(const Statement: IZStatement; const SQL: String;
+  ODBCParamBindArray: PZODBCParamBindArray; ParamCount: Integer);
+begin
+  with Statement.GetConnection do begin
+    inherited Create(Statement, SQL, nil, GetConSettings);
+    fIsUnicodeDriver := Supports(GetIZPlainDriver, IODBC3UnicodePlainDriver);
+  end;
+  FParamCount := ParamCount;
+  FODBCParamBindArray := ODBCParamBindArray;
+  SetType(rtForwardOnly);
+  Open;
+end;
+
+function TZParamODBCResultSet.Next: Boolean;
+begin
+  Result := False;
+  if (RowNo = 1) then
+    Exit;
+  RowNo := 1;
+  Result := True;
+  FCurrentBufRowNo := 1;
+end;
+
+procedure TZParamODBCResultSet.Open;
+var I: Integer;
+  ColumnInfo: TZODBCOutParamColumnInfo;
+  Bind: PZODBCParamBind;
+begin
+  ColumnsInfo.Clear;
+  for i := 0 to FParamCount -1 do begin
+    {$R-}
+    Bind := @FODBCParamBindArray[I];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if Bind.InputOutputType in [SQL_PARAM_INPUT_OUTPUT, SQL_RESULT_COL,
+      SQL_PARAM_OUTPUT, SQL_RETURN_VALUE, SQL_PARAM_INPUT_OUTPUT_STREAM,
+      SQL_PARAM_OUTPUT_STREAM] then begin
+      ColumnInfo := TZODBCOutParamColumnInfo.Create;
+      ColumnInfo.fODBC_CType :=  Bind.ValueType;
+      ColumnInfo.fColumnBuffer := Bind.ParameterValuePtr;
+      ColumnInfo.fStrLen_or_IndArray := PSQLLENArray(Bind.StrLen_or_IndPtr);
+      ColumnInfo.ColumnLabel := Bind.ParamName;
+      ColumnInfo.ColumnType := Bind.SQLType;
+      ColumnInfo.Precision := Bind.ColumnSize;
+      ColumnInfo.Scale := Bind.DecimalDigits;
+      ColumnsInfo.Add(ColumnInfo);
+      Inc(fColumnCount);
+    end;
+  end;
+  inherited Open;
 end;
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit

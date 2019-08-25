@@ -146,7 +146,7 @@ type
   private
     FProcDescriptor: TZOraProcDescriptor_A;
   protected
-    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement2; override;
+    function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
     procedure PrepareInParameters; override;
   public
     procedure Unprepare; override;
@@ -840,7 +840,7 @@ end;
 { TZOracleCallableStatement_A }
 
 function TZOracleCallableStatement_A.CreateExecutionStatement(
-  const StoredProcName: String): TZAbstractPreparedStatement2;
+  const StoredProcName: String): TZAbstractPreparedStatement;
 var
   ProcSQL: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
   Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
@@ -944,10 +944,14 @@ var Idx: Integer;
           RegisterParameter(IDX,
             Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
               Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
-        else
+        else begin
+          RegisterParameter(IDX,
+            Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
+              Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
           FExecStatement.RegisterParameter(IDX,
             Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
               Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+        end;
         Inc(IDX);
       end;
     end;
