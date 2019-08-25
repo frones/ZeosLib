@@ -389,7 +389,7 @@ end;
 procedure TZAbstractOleDBResultSet.CreateAccessors;
 var I: Integer;
 begin
-  CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED, 8Byte alignments do NOT work with fixed width fields},
+  CheckError((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA,
     fpcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
     Pointer(FDBBINDSTATUSArray)));
   SetLength(FLobAccessors, Length(FLobColsIndex));
@@ -2098,7 +2098,7 @@ initialization
   LobDBBinding.dwMemOwner := DBMEMOWNER_CLIENTOWNED;
   LobDBBinding.eParamIO := DBPARAMIO_NOTPARAM;
   LobDBBinding.cbMaxLen := 0;
-  LobDBBinding.dwFlags := DBCOLUMNFLAGS_ISLONG;
+  LobDBBinding.dwFlags := 0;// DBCOLUMNFLAGS_ISLONG;  {}
   LobDBBinding.wType := DBTYPE_IUNKNOWN;
   LobDBBinding.bPrecision := 0;
   LobDBBinding.bScale := 0;
