@@ -80,8 +80,8 @@ type
 
   IZIBTransaction = interface(IZInterface)
     ['{FACB5CA2-4400-470E-A1DC-ECE29CDE4E6F}']
-    function Commit: Integer;
-    function Rollback: Integer;
+    procedure Commit;
+    procedure Rollback;
     procedure CloseTransaction;
     function StartTransaction: Integer;
     function GetTrHandle: PISC_TR_HANDLE;
@@ -112,17 +112,19 @@ type
   private
     fDoCommit, fDoLog: Boolean;
     FOpenCursors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    //FReadOnly, FAutoCommit: Boolean;
+    //FTransactIsolationLevel: TZTransactIsolationLevel;
     FTrHandle: TISC_TR_HANDLE;
+    //FTPB: RawByteString;
+    //FTEB: TISC_TEB;
     FExplicitTransactionCounter: Integer;
     {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZIBTransactionManager;
     function TestCachedResultsAndForceFetchAll: Boolean;
   public
-    function Commit: Integer;
-    function Rollback: Integer;
+    procedure Commit;
+    procedure Rollback;
     procedure CloseTransaction;
     function StartTransaction: Integer; overload;
-    function StartTransaction(UseAutoCommit, IsReadOnly: Boolean;
-      TIL: TZTransactIsolationLevel): Integer; overload;
     function GetTrHandle: PISC_TR_HANDLE;
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpencursor(const CursorRS: IZResultSet);
@@ -143,10 +145,6 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetActiveTransaction: IZIBTransaction;
     procedure RemoveTransactionFromList(const Transaction: IZIBTransaction);
-  public
-    function StartTransaction: Integer;
-    function Commit: Integer;
-    function Rollback: Integer;
   public
     Constructor Create(const Owner: TZInterbase6Connection);
     procedure BeforeDestruction; override;
@@ -429,7 +427,7 @@ begin
     Exit;
   if GetAutoCommit
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
-  FTransactionManager.Commit;
+  FTransactionManager.GetActiveTransaction.Commit;
 end;
 
 {**
@@ -922,7 +920,7 @@ begin
     Exit;
   if GetAutoCommit
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
-  FTransactionManager.Rollback;
+  FTransactionManager.GetActiveTransaction.Rollback;
 end;
 
 {**
@@ -958,7 +956,7 @@ end;
 }
 procedure TZInterbase6Connection.StartTransaction;
 begin
-  FTransactionManager.StartTransaction
+  FTransactionManager.GetActiveTransaction.StartTransaction
 end;
 
 function TZInterbase6Connection.StoredProcedureIsSelectable(
@@ -1313,11 +1311,6 @@ begin
   FreeAndNil(FTransactions);
 end;
 
-function TZIBTransactionManager.Commit: Integer;
-begin
-  Result := GetActiveTransaction.Commit;
-end;
-
 constructor TZIBTransactionManager.Create(const Owner: TZInterbase6Connection);
 begin
   FTransactions := TZCollection.Create;
@@ -1349,16 +1342,6 @@ begin
   FTransactions.Delete(I);
 end;
 
-function TZIBTransactionManager.Rollback: Integer;
-begin
-  Result := GetActiveTransaction.Rollback;
-end;
-
-function TZIBTransactionManager.StartTransaction: Integer;
-begin
-  Result := GetActiveTransaction.StartTransaction;
-end;
-
 { TZIBTransaction }
 
 procedure TZIBTransaction.BeforeDestruction;
@@ -1383,10 +1366,9 @@ begin
     else RollBack;
 end;
 
-function TZIBTransaction.Commit: Integer;
+procedure TZIBTransaction.Commit;
 var Status: ISC_STATUS;
 begin
-  Result := 0;
   if FTrHandle <> 0 then with FOwner.FOwner do try
     if (FOpenCursors.Count = 0) or FOwner.FOwner.FHardCommit or TestCachedResultsAndForceFetchAll then
       Status := FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle)
@@ -1396,13 +1378,13 @@ begin
       Status := FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
       FOwner.RemoveTransactionFromList(Self);
     end;
+    FExplicitTransactionCounter := 0;
     if Status <> 0 then
       CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcTransaction);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
   end;
-  FExplicitTransactionCounter := Result;
 end;
 
 constructor TZIBTransaction.Create(const Owner: TZIBTransactionManager);
@@ -1443,10 +1425,9 @@ begin
   FOpenCursors.Add(Pointer(CursorRS));
 end;
 
-function TZIBTransaction.Rollback: Integer;
+procedure TZIBTransaction.Rollback;
 var Status: ISC_STATUS;
 begin
-  Result := 0;
   if FTrHandle <> 0 then with FOwner.FOwner do try
     if (FOpenCursors.Count = 0) or FOwner.FOwner.FHardCommit or TestCachedResultsAndForceFetchAll then
       Status := FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle)
@@ -1456,35 +1437,28 @@ begin
       Status := FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
       FOwner.RemoveTransactionFromList(Self);
     end;
+    FExplicitTransactionCounter := 0;
     if Status <> 0 then
       CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcTransaction);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
   end;
-  FExplicitTransactionCounter := Result;
 end;
 
-function TZIBTransaction.StartTransaction(UseAutoCommit, IsReadOnly: Boolean;
-      TIL: TZTransactIsolationLevel): Integer;
+function TZIBTransaction.StartTransaction: Integer;
 begin
 //  {$IFDEF DEBUG}Assert(FTrHandle = 0, 'Wrong transaction behavior');{$ENDIF}
   Result := 1;
   if FTrHandle = 0 then
     with fOwner.FOwner do begin
-      if fTEBs[UseAutoCommit][IsReadOnly][TIL].tpb_address = nil then
-        fOwner.FOwner.GenerateTDBAndTEB(UseAutoCommit, IsReadOnly, TIL);
-      if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEBs[UseAutoCommit][IsReadOnly][TIL]) <> 0 then
+      if fTEBs[AutoCommit][ReadOnly][TransactIsolationLevel].tpb_address = nil then
+        fOwner.FOwner.GenerateTDBAndTEB(AutoCommit, ReadOnly, TransactIsolationLevel);
+      if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEBs[AutoCommit][ReadOnly][TransactIsolationLevel]) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcTransaction);
     DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
   end;
   FExplicitTransactionCounter := Result;
-end;
-
-function TZIBTransaction.StartTransaction: Integer;
-begin
-  Result := StartTransaction(fOwner.FOwner.AutoCommit,
-    fOwner.FOwner.ReadOnly, fOwner.FOwner.TransactIsolationLevel);
 end;
 
 function TZIBTransaction.TestCachedResultsAndForceFetchAll: Boolean;
