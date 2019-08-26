@@ -96,18 +96,15 @@
         <UnitName Value="ZODBCToken"/>
       </Item19>
     </Files>
-    <RequiredPkgs Count="3">
+    <RequiredPkgs Count="2">
       <Item1>
         <PackageName Value="zcore"/>
         <MinVersion Major="7" Minor="2" Valid="True"/>
       </Item1>
       <Item2>
-        <PackageName Value="LCL"/>
-      </Item2>
-      <Item3>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item3>
+      </Item2>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

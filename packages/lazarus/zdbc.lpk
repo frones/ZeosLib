@@ -274,7 +274,7 @@
         <UnitName Value="ZDbcUtils"/>
       </Item63>
     </Files>
-    <RequiredPkgs Count="5">
+    <RequiredPkgs Count="4">
       <Item1>
         <PackageName Value="zplain"/>
         <MinVersion Major="7" Minor="2" Valid="True"/>
@@ -288,12 +288,9 @@
         <MinVersion Major="7" Minor="2" Valid="True"/>
       </Item3>
       <Item4>
-        <PackageName Value="LCL"/>
-      </Item4>
-      <Item5>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item5>
+      </Item4>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
