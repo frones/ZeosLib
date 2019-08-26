@@ -305,16 +305,14 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if Protocol='ASA12' then exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
 
-  Statement.ExecuteUpdate('delete from DOMAIN_VALUES');
+  Statement.ExecuteUpdate('delete from domain_values');
 
-  ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3 FROM DOMAIN_VALUES');
+  ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3 FROM domain_values');
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
@@ -329,7 +327,7 @@ begin
   ResultSet.Close;
   ResultSet := nil;
 
-  ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3 FROM DOMAIN_VALUES');
+  ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3 FROM domain_values');
   CheckNotNull(ResultSet);
 
   ResultSet.Next;

@@ -19,8 +19,8 @@ drop table high_load;
 drop table default_values;
 drop table default_values2;
 drop table "Spaced Names";
-/*drop table domain_values;
+drop table domain_values;
 
 drop domain tinteger;
 drop domain tfloat;
-drop domain tstring;*/
+drop domain tstring;

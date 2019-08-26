@@ -1017,7 +1017,7 @@ begin
             if ( sqlind^ < 0 ) then
               break;
             Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
-            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len+ORd(sqlType and $FFFE <> DT_LONGBINARY)); //keep 1 byte for trailing #0 term
+            if Offs = 0 then ReallocMem(Buffer, PZASABlobStruct( sqlData)^.untrunc_len+Byte(ORd(sqlType and $FFFE <> DT_LONGBINARY))); //keep 1 byte for trailing #0 term
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PZASABlobStruct( sqlData)^.arr[0]), (PAnsiChar(Buffer)+Offs)^, PZASABlobStruct( sqlData)^.stored_len);
             if ( sqlind^ = 0 ) or ( RD = Length) then
               break;
