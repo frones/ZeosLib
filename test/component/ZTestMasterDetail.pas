@@ -399,24 +399,24 @@ begin
   SQLMonitor.Active := True;
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
   MasterQuery.Options := MasterQuery.Options + [doDontSortOnPost];
-  MasterQuery.Open;
-
-  CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.DbcConnection.GetConSettings);
-  CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.DbcConnection.GetConSettings);
-    //ASA curiousity: if NCHAR and VARCHAR fields set to UTF8-CodePage we get the LONG_Char types as fieldTypes for !some! fields
-  if (ProtocolType = protASA) and (Connection.DbcConnection.GetConSettings.ClientCodePage^.CP = 65001) then
-    CheckMemoFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings)
-  else
-    CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
-
-  DetailQuery.SQL.Text := 'SELECT * FROM people';
-  DetailQuery.MasterSource := MasterDataSource;
-  DetailQuery.MasterFields := 'dep_id';
-  DetailQuery.LinkedFields := 'p_dep_id';
-  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst, doDontSortOnPost];
-  DetailQuery.Open;
-  //CommitCount := 0;
   try
+    MasterQuery.Open;
+
+    CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.DbcConnection.GetConSettings);
+    CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.DbcConnection.GetConSettings);
+      //ASA curiousity: if NCHAR and VARCHAR fields set to UTF8-CodePage we get the LONG_Char types as fieldTypes for !some! fields
+    if (ProtocolType = protASA) and (Connection.DbcConnection.GetConSettings.ClientCodePage^.CP = 65001) then
+      CheckMemoFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings)
+    else
+      CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
+
+    DetailQuery.SQL.Text := 'SELECT * FROM people';
+    DetailQuery.MasterSource := MasterDataSource;
+    DetailQuery.MasterFields := 'dep_id';
+    DetailQuery.LinkedFields := 'p_dep_id';
+    DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst, doDontSortOnPost];
+    DetailQuery.Open;
+    //CommitCount := 0;
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
     MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
