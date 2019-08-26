@@ -811,7 +811,7 @@ type
     array_len        : Longword;
     stored_len       : Longword;
     untrunc_len      : Longword;
-    arr: array[0..312756] of AnsiChar;
+    arr: array[0..0] of AnsiChar;
   end;
 
   ZASA_db_callback_index = (             //Markus

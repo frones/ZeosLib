@@ -280,14 +280,15 @@ begin
        ( ASAType and $FFFE = DT_LONGVARCHAR) then
     begin
       if Assigned( sqlData) then
-        ReallocMem( sqlData, SizeOf( TZASABlobStruct) + Len)
+        ReallocMem( sqlData, SizeOf(TZASABlobStruct)+Len)
       else
-        GetMem( sqlData, SizeOf( TZASABlobStruct) + Len);
+        GetMem( sqlData, SizeOf( TZASABlobStruct)+Len);
       PZASABlobStruct( sqlData).array_len := Len;
       PZASABlobStruct( sqlData).stored_len := 0;
       PZASABlobStruct( sqlData).untrunc_len := 0;
       PZASABlobStruct( sqlData).arr[0] := AnsiChar(#0);
-      Inc( Len, SizeOf( TZASABlobStruct));
+      Len := SizeOf( TZASABlobStruct)-1;
+      //Inc( Len, SizeOf( TZASABlobStruct)-1);
     end
     else
     begin

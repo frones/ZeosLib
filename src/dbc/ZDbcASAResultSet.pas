@@ -1253,8 +1253,7 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
   ColumnsInfo.Clear;
-  for i := 0 to FSqlData.GetFieldCount - 1 do
-  begin
+  for i := 0 to FSqlData.GetFieldCount - 1 do begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo, FSqlData  do
     begin
@@ -1273,7 +1272,11 @@ begin
           CharOctedLength := Precision shl 1;
           ColumnDisplaySize := Precision;
         end;
-      end else
+      end else if FieldSqlType = stBytes then begin
+        Precision := GetFieldLength(I)-4;
+        CharOctedLength := Precision;
+      end;
+
         ColumnCodePage := High(Word);
 
       ReadOnly := False;
@@ -1291,7 +1294,6 @@ begin
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;
-  LastRowNo := MaxInt;
   inherited Open;
 end;
 
@@ -1317,7 +1319,7 @@ end;
 procedure TZASAAbstractResultSet.BeforeClose;
 begin
   FSqlData := nil;
-  inherited Close; //Calls ResetCursor so db_close is called!
+  inherited BeforeClose; //Calls ResetCursor so db_close is called!
 end;
 
 {**
@@ -1417,14 +1419,11 @@ begin
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
     FASAConnection.GetDBHandle, lcOther, ConSettings);
 
-  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
-  begin
+  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
     RowNo := Row;
     Result := True;
     FFetchStat := 0;
-  end
-  else
-  begin
+  end else begin
     FFetchStat := FASAConnection.GetDBHandle.sqlerrd[2];
     if FFetchStat > 0 then
       LastRowNo := Max(Row - FFetchStat, 0);
@@ -1461,15 +1460,17 @@ begin
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
   begin
     //if (RowNo > 0) or (RowNo + Rows < 0) then
-      RowNo := RowNo + Rows;
+    RowNo := RowNo + Rows;
+    if Rows > 0 then
+      LastRowNo := RowNo;
     Result := True;
     FFetchStat := 0;
-  end
-  else
-  begin
+  end else begin
     FFetchStat := FASAConnection.GetDBHandle.sqlerrd[2];
     if (FFetchStat > 0) and (RowNo > 0) then
       LastRowNo := Max(RowNo + Rows - FFetchStat, 0);
+    if Rows > 0 then
+      RowNo := LastRowNo + 1;
   end;
 end;
 
@@ -1729,8 +1730,7 @@ begin
     FASAConnection.GetDBHandle, lcOther, ConSettings, 'Delete row:' + IntToRaw(RowNo));
 
   FDelete := True;
-  if LastRowNo <> MaxInt then
-    LastRowNo := LastRowNo - FASAConnection.GetDBHandle.sqlerrd[2];
+  LastRowNo := LastRowNo - FASAConnection.GetDBHandle.sqlerrd[2];
 end;
 
 procedure TZASACachedResultSet.RefreshRow;

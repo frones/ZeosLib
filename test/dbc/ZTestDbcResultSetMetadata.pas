@@ -309,7 +309,9 @@ var
   end;
 begin
   Statement := Connection.CreateStatement;
-
+  Check(Statement <> nil);
+  if Pos('Sybase', Connection.GetIZPlainDriver.GetDescription) > 0 then
+    Exit; //Sybase simply does not allow duplicate columnlabel
   ResultSet := Statement.ExecuteQuery('SELECT T.dep_id AS DEP_NAME, T.dep_name AS DEP_ID,'
     + ' T.dep_shname as DEP_ADDRESS, 2+2 AS DEP_ADDRESS FROM department T WHERE T.dep_id < 100');
   Metadata := ResultSet.GetMetadata;

@@ -150,8 +150,6 @@ begin
   FetchSize := BlockSize;
   ResultSetType := rtScrollSensitive;
   CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+IntToRaw(FStatementId);
-  FParamSQLData := TZASASQLDA.Create(FPlainDriver,
-    FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
 end;
 
 {**
@@ -216,8 +214,7 @@ end;
 
 procedure TZASAPreparedStatement.UnPrepareInParameters;
 begin
-//  if assigned(FParamSQLData) then
-  //  FParamSQLData.FreeSQLDA;
+  FParamSQLData := nil;
 end;
 
 procedure TZASAPreparedStatement.Prepare;
@@ -237,8 +234,10 @@ begin
         FCursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
       if ResultSetType = rtScrollInsensitive then
         FCursorOptions := FCursorOptions + CUR_INSENSITIVE;
-      GetPlainDriver.db_prepare_describe(GetDBHandle, nil, @FStmtNum, Pointer(ASQL),
-        FParamSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
+      FParamSQLData := TZASASQLDA.Create(FPlainDriver,
+        FASAConnection.GetDBHandle, Pointer(CursorName), ConSettings);
+      FPlainDriver.db_prepare_describe(GetDBHandle, nil, @FStmtNum, Pointer(ASQL),
+          FParamSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
           SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
       ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, GetConSettings, ASQL);
       FMoreResults := GetDBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
