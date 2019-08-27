@@ -274,8 +274,18 @@ procedure TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var L, H, I: Integer;
     P: Pointer;
-    C, SQLCode: SmallInt;
+    C, SQLCode: ISC_SHORT;
     TempDate: TZTimeStamp;//TCTimeStructure;
+  procedure WConvert(P: PAnsiChar; L: ISC_SHORT; CP: word); //no _UStrClr in method
+  begin
+    FUniTemp := PRawToUnicode(P, L, CP);
+    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
+  end;
+  procedure RaiseConvertError; //no _U/LStrClr in method
+  begin
+    raise EZIBConvertError.Create(Format(SErrorConvertionField,
+      [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
+  end;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -287,7 +297,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     {$R-}
-    with FXSQLDA.sqlvar[C] do
+    with FXSQLDA.sqlvar[C], TZColumnInfo(ColumnsInfo[c]) do
       if (sqlind <> nil) and (sqlind^ = ISC_NULL) then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
@@ -305,24 +315,19 @@ begin
                             JSONWriter.WrBase64(sqldata, sqllen, True)
                           else begin
                             JSONWriter.Add('"');
-                            if TZColumnInfo(ColumnsInfo[c]).ColumnCodePage = zCP_UTF8 then
+                            if ColumnCodePage = zCP_UTF8 then
                               JSONWriter.AddJSONEscape(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen)
-                            else begin
-                              FUniTemp := PRawToUnicode(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, TZColumnInfo(ColumnsInfo[c]).ColumnCodePage);
-                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
-                            end;
+                            else WConvert(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, ColumnCodePage);
                             JSONWriter.Add('"');
                           end;
           SQL_TEXT      : if sqlsubtype = CS_BINARY then
                             JSONWriter.WrBase64(sqldata, sqllen, True)
                           else begin
                             JSONWriter.Add('"');
-                            if TZColumnInfo(ColumnsInfo[c]).ColumnCodePage = zCP_UTF8 then
-                              JSONWriter.AddJSONEscape(sqldata, L)
-                            else begin
-                              FUniTemp := PRawToUnicode(sqldata, L, TZColumnInfo(ColumnsInfo[c]).ColumnCodePage);
-                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
-                            end;
+                            L := GetAbsorbedTrailingSpacesLen(PAnsiChar(sqldata), sqllen);
+                            if ColumnCodePage = zCP_UTF8
+                            then JSONWriter.AddJSONEscape(sqldata, L)
+                            else WConvert(sqldata, L, ColumnCodePage);
                             JSONWriter.Add('"');
                           end;
           SQL_D_FLOAT,
@@ -375,12 +380,9 @@ begin
                                 JSONWriter.Add('"');
                                 ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
                                     PISC_QUAD(sqldata)^, L, P, False, Self);
-                                if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
-                                  JSONWriter.AddJSONEscape(P, L)
-                                else begin
-                                  fUniTemp := PRawToUnicode(P, L, ConSettings^.ClientCodePage^.CP);
-                                  JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
-                                end;
+                                if ColumnCodePage = zCP_UTF8
+                                then JSONWriter.AddJSONEscape(P, L)
+                                else WConvert(P, L, ColumnCodePage);
                                 JSONWriter.Add('"');
                               end else begin
                                 ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
@@ -391,7 +393,7 @@ begin
                               FreeMem(P);
                             end;
                           end;
-          SQL_ARRAY     : JSONWriter.AddShort('"Array"');
+          //SQL_ARRAY     : JSONWriter.AddShort('"Array"');
           SQL_TYPE_TIME : begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("0000-00-00')
@@ -424,9 +426,7 @@ begin
                           end;
           SQL_BOOLEAN   : JSONWriter.AddShort(JSONBool[PISC_BOOLEAN(sqldata)^ <> 0]);
           SQL_BOOLEAN_FB: JSONWriter.AddShort(JSONBool[PISC_BOOLEAN_FB(sqldata)^ <> 0]);
-          else
-            raise EZIBConvertError.Create(Format(SErrorConvertionField,
-              [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
+          else          RaiseConvertError;
         end;
         JSONWriter.Add(',');
       end;
@@ -1545,7 +1545,6 @@ begin
       LastRowNo := RowNo;
       Result := True;
     end else if Status = 100  then begin
-
       {no error occoured -> notify IsAfterLast and close the recordset}
       RowNo := RowNo + 1;
       if FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
