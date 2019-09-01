@@ -774,7 +774,7 @@ var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
-  ConnectionString: String;
+  ConnectionString, CSNoneCP, DBCP: String;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -794,10 +794,11 @@ var
       Move(P^, DBName[0], L);
     AnsiChar((PAnsiChar(@DBName[0])+L)^) := AnsiChar(#0);
   end;
+label reconnect;
 begin
   if not Closed then
     Exit;
-
+  DBCP := '';
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
   if ConSettings^.ClientCodePage = nil then
@@ -805,6 +806,7 @@ begin
 
   AssignISC_Parameters;
   ConnectionString := ConstructConnectionString;
+  CSNoneCP := Info.Values[DSProps_ResetCodePage];
 
   FHandle := 0;
   { Create new db if needed }
@@ -812,6 +814,10 @@ begin
     if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
       if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
         Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
+      if Database = '' then begin
+        DataBase := Info.Values[ConnProps_CreateNewDatabase];
+        ConnectionString := ConstructConnectionString;
+      end;
       PrepareDPB;
       if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(@DBName[0])),
           @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
@@ -824,10 +830,11 @@ begin
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
           'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
-      Info.Values[ConnProps_CreateNewDatabase] := '';
       FHandle := 0;
     end;
+    Info.Values[ConnProps_CreateNewDatabase] := '';
   end;
+reconnect:
   if FHandle = 0 then begin
     PrepareDPB;
     { Connect to Interbase6 database. }
@@ -849,7 +856,8 @@ begin
   { Start transaction }
   if not FHardCommit then
     StartTransaction;
-
+  if DBCP <> '' then
+    Exit;
   inherited Open;
 
   with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
@@ -861,26 +869,54 @@ begin
 
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
-    and no conversations where done except the collumns using collations}
+    and no convertions where done except the collumns using collations}
   with GetMetadata.GetCollationAndCharSet('', '', '', '') do begin
-    try
-      if Next then
-        if FCLientCodePage = '' then begin
-          FCLientCodePage := GetString(CollationAndCharSetNameIndex);
-          if Info.Values[DSProps_ResetCodePage] <> '' then begin
-            ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(FClientCodePage);
-            ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
-          end else
-            CheckCharEncoding(FClientCodePage);
-        end else if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
-           raise EZSQLException.Create('Unsupported database characterset "NONE" found!'+Lineending+
-            'Dump your database and recreate it with a "stable" characterset.')
-        else if Info.Values[DSProps_ResetCodePage] <> '' then
-          ResetCurrentClientCodePage(Info.Values[DSProps_ResetCodePage]);
-    finally
-      Close;
-    end;
+    Next;
+    DBCP := GetString(CollationAndCharSetNameIndex);
+    Close;
   end;
+  if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
+    EH: the server makes !NO! charset conversion if CS_NONE.
+    Attaching a CS "NONE" db with a characterset <> CS_NONE has this effect:
+    All field codepages are retrieved as the given client-characterset.
+    This works nice as long the fields have it's own charset definition.
+    But what's the encoding of the CS_NONE fields? The more what about CLOB encoding?
+
+    If we're attaching the db with CS "NONE" all userdefined field CP's are
+    returned gracefully. Zeos can convert everything to your Controls-CP.
+    Except the CP_NONE fields. And the text lob's where encoding is unknown too.
+    For the Unicode-IDE's this case is a nightmare. Jan's suggestion is to use
+    the fields as Byte/BlobFields only. My idea is to use such fields with the
+    CPWIN1252 Charset which maps each byte to words and vice versa.
+    So no information is lost and the data is still readable "somehow".
+
+    Side-note: see: https://firebirdsql.org/rlsnotesh/str-charsets.html
+    Any DDL/DML in non ASCII7 range will give a maleformed string if encoding is
+    different to UTF8/UNICODE_FSS because the RDB$-Tables have a
+    UNICODE_FSS collation}
+
+    {test if charset is not given or is CS_NONE }
+    if CSNoneCP = ''
+    then CSNoneCP := FClientCodePage
+    else if FCLientCodePage <> ''
+      then CSNoneCP := FCLientCodePage
+      else CSNoneCP := 'WIN1252'; {WIN1252 would be optimal propably}
+    ResetCurrentClientCodePage(CSNoneCP, False);
+    ConSettings^.ClientCodePage^.ID := 0;
+    //Now notify our metadata object all fields are retrieved in utf8 encoding
+    (FMetadata as TZInterbase6DatabaseMetadata).SetUTF8CodePageInfo;
+    if (FCLientCodePage <> DBCP) then begin
+      Info.Values['isc_dpb_lc_ctype'] := DBCP;
+      InternalClose;
+      goto reconnect; //build new TDB and reopen in SC_NONE mode
+    end;
+{        'Deprecated database characterset "NONE" found!'+Lineending+
+        'Either dump your database and recreate it with a "stable" characterset.(recommented)'+LineEnding+
+        'Or set a codepage which represents the encoding of CS_NONE.'+LineEnding+
+        'To avoid reconnect with CS_NONE attachment characterset for the subtypes'+LineEnding+
+        'use parameter: '''+DSProps_ResetCodePage+''' in your Connection.Properties'); }
+  end else if FClientCodePage = '' then
+    CheckCharEncoding(DBCP);
 end;
 
 {**
@@ -1082,6 +1118,7 @@ procedure TZInterbase6Connection.CreateNewDatabase(const SQL: RawByteString);
 var
   TrHandle: TISC_TR_HANDLE;
 begin
+  TrHandle := 0;
   if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
       Length(SQL), Pointer(sql), FDialect, nil) <> 0 then
     CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, SQL);
