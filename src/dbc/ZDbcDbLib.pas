@@ -245,7 +245,6 @@ begin
   FPlainDriver := TZDBLIBPLainDriver(PlainDriver.GetInstance);
   FSQLErrors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FSQLMessages := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  FDisposeCodePage := False;
   if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then begin
     FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
     FProvider := dpMsSQL;

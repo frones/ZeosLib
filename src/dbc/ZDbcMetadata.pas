@@ -112,9 +112,7 @@ type
     constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
-      ConSettings: PZConSettings); overload;
-    constructor CreateWithColumns(const Statement: IZStatement;
-      ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings); overload;
+      ConSettings: PZConSettings);
   public
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
@@ -138,7 +136,6 @@ type
     FUrl: TZURL;
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
-    FConSettings: PZConSettings;
     FIC: IZIdentifierConvertor;
     function GetInfo: TStrings;
     function GetURLString: String;
@@ -146,6 +143,7 @@ type
     fCurrentBufIndex: Byte;
     fBuf: Array[Byte] of Char;
   protected
+    FConSettings: PZConSettings;
     procedure InitBuf(FirstChar: Char); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure ClearBuf; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure FlushBuf(var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -165,7 +163,7 @@ type
     function GetResultSetFromCache(const Key: string): IZResultSet;
     function HasKey(const Key: String): Boolean;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
-      IZVirtualResultSet;
+      IZVirtualResultSet; virtual;
     function CopyToVirtualResultSet(const SrcResultSet: IZResultSet;
       const DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
     function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
@@ -2325,7 +2323,7 @@ begin
     end;
 
     Result := TZUnCloseableResultSet.CreateWithColumns(ColumnsInfo, '',
-      IZConnection(FConnection).GetConSettings);
+      FConSettings);
     with Result do begin
       SetType(rtScrollInsensitive);
       SetConcurrency(rcUpdatable);
@@ -5047,13 +5045,6 @@ end;
 
 
 { TZVirtualResultSet }
-
-constructor TZVirtualResultSet.CreateWithColumns(const Statement: IZStatement;
-  ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
-begin
-  fConSettings := ConSettings^;
-  inherited CreateWithColumns(Statement, ColumnsInfo, SQL, @fConSettings);
-end;
 
 {**
   Creates this object and assignes the main properties.
