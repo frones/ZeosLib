@@ -289,12 +289,11 @@ begin
   TypeNameLo := LowerCase(TypeName);
   if (TypeNameLo = 'interval') or (TypeNameLo = 'char') or (TypeNameLo = 'bpchar')
     or (TypeNameLo = 'varchar') or (TypeNameLo = 'bit') or (TypeNameLo = 'varbit')
-  then//EgonHugeist: Highest Priority Client_Character_set!!!!
-    if (Connection.GetConSettings.CPType = cCP_UTF16) then
+  then if (Connection.GetConSettings.CPType = cCP_UTF16) then
       Result := stUnicodeString
     else
       Result := stString
-  else if TypeNameLo = 'text' then
+  else if (TypeNameLo = 'text') or (TypeNameLo = 'citext') then
     Result := stAsciiStream
   else if TypeNameLo = 'oid' then
   begin
