@@ -400,7 +400,7 @@ type
       write SetUniDirectional default False;
     property Properties: TStrings read FProperties write SetProperties;
     property Options: TZDatasetOptions read FOptions write SetOptions
-      default [doCalcDefaults];
+      default [doCalcDefaults, doPreferPrepared];
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property MasterFields: string read GetMasterFields
       write SetMasterFields;
