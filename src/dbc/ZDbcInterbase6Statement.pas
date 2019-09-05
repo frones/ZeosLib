@@ -738,11 +738,10 @@ begin
               if (FDB_CP_ID = CS_NONE) and ( //all identifiers collate unicode_fss if CS_NONE
                  (Tokens[i].TokenType = ttQuotedIdentifier) or
                  ((Tokens[i].TokenType = ttWord) and (Tokens[i].L > 1) and (Tokens[i].P^ = '"')))
-              then Tmp := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, zCP_UTF8)
+              then Tmp := ZConvertStringToRawWithAutoEncode(Tokens.AsString(i), ConSettings^.CTRL_CP, zCP_UTF8)
               else Tmp := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, FClientCP);
-              Tmp := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, ConSettings^.FClientCP);
-              P := Pointer(tmp);
-              L := Length(tmp);
+              Tokens[i].P := Pointer(tmp);
+              Tokens[i].L := Length(tmp);
               List.Add(Tmp); //keep alive
             end;
         end
