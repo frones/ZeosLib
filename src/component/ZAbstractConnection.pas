@@ -877,9 +877,14 @@ begin
       try
         with FConnection do begin
           RegisterOnConnectionLostErrorHandler(ConnectionLost);
+          { assign main properties ... if a user did disconnect and clear the props the infos have been lost }
           SetAutoCommit(FAutoCommit);
           SetReadOnly(FReadOnly);
           SetCatalog(FCatalog);
+          SetClientCodePage(FClientCodePage);
+          {$IFNDEF UNICODE}
+          SetAutoEncode(FAutoEncode);
+          {$ENDIF}
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
           Open;
