@@ -78,14 +78,16 @@ type
     FBlobTemp: IZBlob;
     FPlainDriver: IZInterbasePlainDriver;
     FDialect: Word;
-    FCodePageArray: TWordDynArray;
     FStmtType: TZIbSqlStatementType;
     FIBConnection: IZInterbase6Connection;
     FIBTransaction: IZIBTransaction;
     FClientCP: Word;
+    FCodePageArray: TWordDynArray;
     function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function GetQuad(ColumnIndex: Integer): TISC_QUAD;
     procedure RegisterCursor;
+    procedure DeRegisterCursor;
+    function CreateIBConvertError(ColumnIndex: Integer; DataType: ISC_SHORT): EZIBConvertError;
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -108,7 +110,6 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -123,8 +124,13 @@ type
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
+    {$IFNDEF NO_ANSISTRING}
+    function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
+    {$ENDIF}
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
-
     function Next: Boolean; override;
   end;
 
@@ -254,6 +260,13 @@ begin
   Open;
 end;
 
+function TZInterbase6XSQLDAResultSet.CreateIBConvertError(
+  ColumnIndex: Integer; DataType: ISC_SHORT): EZIBConvertError;
+begin
+  Result := EZIBConvertError.Create(Format(SErrorConvertionField,
+        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(DataType and not(1))]));
+end;
+
 {**
   Releases this <code>ResultSet</code> object's database and
   JDBC resources immediately instead of waiting for
@@ -275,6 +288,83 @@ begin
   FStmtHandle := 0; //don't forget!
   inherited AfterClose;
 end;
+
+
+{$IFNDEF NO_ANSISTRING}
+function TZInterbase6XSQLDAResultSet.GetAnsiString(
+  ColumnIndex: Integer): AnsiString;
+var
+  SQLCode: SmallInt;
+  P: PAnsiChar;
+  Len: NativeUInt;
+  CP: Word;
+  procedure WConvert(var Result: AnsiString);
+  begin
+    fUniTemp := PRawToUnicode(P, Len, CP);
+    Result := ZUnicodeToRaw(fUniTemp, zOSCodePage);
+  end;
+begin
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := ''
+  else
+  begin
+    {$IFNDEF GENERIC_INDEX}
+    ColumnIndex := ColumnIndex -1;
+    {$ENDIF}
+    {$R-}
+    with FXSQLDA.sqlvar[ColumnIndex] do
+    begin
+      SQLCode := (sqltype and not(1));
+      if (sqlscale < 0)  then
+      begin
+        case SQLCode of
+          SQL_SHORT  : Result := FloatToRaw(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]);
+          SQL_LONG   : Result := FloatToRaw(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]);
+          SQL_INT64,
+          SQL_QUAD   : Result := FloatToRaw(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]);
+          SQL_DOUBLE : Result := FloatToRaw(PDouble(sqldata)^);
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
+        end;
+      end
+      else
+        case SQLCode of
+          SQL_DOUBLE    : Result := FloatToRaw(PDouble(sqldata)^);
+          SQL_LONG      : Result := IntToRaw(PInteger(sqldata)^);
+          SQL_D_FLOAT,
+          SQL_FLOAT     : Result := FloatToRaw(PSingle(sqldata)^);
+          SQL_BOOLEAN   : Result := BoolToRawEx(PSmallint(sqldata)^ <> 0);
+          SQL_BOOLEAN_FB: Result := BoolToRawEx(PByte(sqldata)^ <> 0);
+          SQL_SHORT     : Result := IntToRaw(PSmallint(sqldata)^);
+          SQL_INT64     : Result := IntToRaw(PInt64(sqldata)^);
+          SQL_TEXT,
+          SQL_VARYING   :
+            begin
+              GetPCharFromTextVar(SQLCode, sqldata, sqllen, P, Len);
+              if ConSettings^.ClientCodePage^.ID = CS_NONE
+              then CP := FCodePageArray[sqlsubtype and 255]
+              else CP := FClientCP;
+              if CP = ZOSCodePage
+              then ZSetString(P, Len, Result)
+              else WConvert(Result);
+            end;
+          SQL_BLOB      :
+            Begin
+              FBlobTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});  //localize interface to keep pointer alive
+              if FBlobTemp.IsClob then
+                Result := FBlobTemp.GetAnsiString
+              else
+                Result := FBlobTemp.GetString;
+            End;
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+        end;
+    end;
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  end;
+end;
+{$ENDIF NO_ANSISTRING}
 
 {**
   Gets the value of the designated column in the current row
@@ -315,9 +405,7 @@ begin
           SQL_INT64,
           SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
         end;
       end
       else
@@ -336,8 +424,7 @@ begin
                             ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
         else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -451,9 +538,7 @@ begin
             else
               goto Fail;
         else
-          Fail:
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+Fail:     raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -494,8 +579,7 @@ begin
         SQL_TEXT, SQL_VARYING:
           Result := BufferToBytes(sqldata, sqllen);
         else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          raise CreateIBConvertError(ColumnIndex, SQLCode)
       end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -520,16 +604,14 @@ var
   SQLCode: SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTimestamp);
+  CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
     Result := 0
   else
-  begin
     {$R-}
-    with FXSQLDA.sqlvar[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
-    begin
+    with FXSQLDA.sqlvar[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
       SQLCode := (sqltype and not(1));
       case SQLCode of
         SQL_TIMESTAMP :
@@ -560,7 +642,6 @@ begin
       end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  end;
 end;
 
 {**
@@ -601,9 +682,7 @@ begin
           SQL_INT64,
           SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
         end;
       end
       else
@@ -622,8 +701,7 @@ begin
                             ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
         else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -668,9 +746,7 @@ begin
           SQL_INT64,
           SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
         end;
       end
       else
@@ -689,8 +765,7 @@ begin
                             ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
         else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -735,9 +810,7 @@ begin
           SQL_INT64,
           SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
           SQL_DOUBLE : Result := PDouble(sqldata)^;
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
         end;
       end
       else
@@ -756,8 +829,7 @@ begin
                             ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                           end;
         else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -826,9 +898,7 @@ begin
             else
               goto Fail;
         else
-          Fail:
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+Fail:     raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -900,9 +970,7 @@ begin
             else
               goto Fail;
         else
-          Fail:
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+Fail:     raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -978,9 +1046,7 @@ begin
             else
               goto Fail;
         else
-          Fail:
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+Fail:     raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFOPT D+}
@@ -1252,9 +1318,7 @@ begin
           SQL_INT64,
           SQL_QUAD   : FRawTemp := FloatToRaw(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]);
           SQL_DOUBLE : FRawTemp := FloatToRaw(PDouble(sqldata)^);
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
         end;
       end
       else
@@ -1288,10 +1352,8 @@ begin
               End;
               Exit;
             End;
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
-        end;
+        else raise CreateIBConvertError(ColumnIndex, SQLCode)
+      end;
     end;
     Result := Pointer(FRawTemp);
     Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
@@ -1328,12 +1390,18 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFNDEF NO_UTF8STRING}
 function TZInterbase6XSQLDAResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var
   SQLCode: SmallInt;
   P: PAnsiChar;
   Len: NativeUInt;
   CP: Word;
+  procedure WConvert(var Result: UTF8String);
+  begin
+    fUniTemp := PRawToUnicode(P, Len, CP);
+    Result := ZUnicodeToRaw(fUniTemp, zCP_UTF8);
+  end;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
@@ -1355,9 +1423,7 @@ begin
           SQL_INT64,
           SQL_QUAD   : Result := FloatToRaw(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]);
           SQL_DOUBLE : Result := FloatToRaw(PDouble(sqldata)^);
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
         end;
       end
       else
@@ -1379,7 +1445,7 @@ begin
               else CP := FClientCP;
               if CP = zCP_UTF8
               then ZSetString(P, Len, Result)
-              else Result := ZConvertPRawToUTF8(P, Len, CP);
+              else WConvert(Result);
             end;
           SQL_BLOB      :
             Begin
@@ -1390,13 +1456,13 @@ begin
                 Result := FBlobTemp.GetString;
             End;
         else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          raise CreateIBConvertError(ColumnIndex, SQLCode)
         end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
+{$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -1437,9 +1503,7 @@ begin
           SQL_INT64,
           SQL_QUAD   : Result := FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]);
           SQL_DOUBLE : Result := FloatToStr(PDouble(sqldata)^);
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+          else raise CreateIBConvertError(ColumnIndex, SQLCode);
         end;
       end
       else
@@ -1485,10 +1549,8 @@ begin
                 Result := FBlobTemp.GetRawByteString;
                 {$ENDIF}
             End;
-        else
-          raise EZIBConvertError.Create(Format(SErrorConvertionField,
-            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
-        end;
+        else raise CreateIBConvertError(ColumnIndex, SQLCode)
+      end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
@@ -1570,15 +1632,14 @@ begin
       LastRowNo := RowNo;
       Result := True;
     end else if Status = 100  then begin
+
       {no error occoured -> notify IsAfterLast and close the recordset}
       RowNo := RowNo + 1;
       if FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
         goto CheckE;
       FStmtHandle := 0;
-      if (FIBTransaction <> nil) then begin
-        FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
-        FIBTransaction := nil;
-      end;
+      if (FIBTransaction <> nil) then
+        DeRegisterCursor;
     end else
 CheckE:CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
   end else if RowNo = 0 then begin
@@ -1723,15 +1784,19 @@ begin
          if (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then
           CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings, lcOther, 'isc_dsql_free_statement');
         FStmtHandle := 0;
-        if FIBTransaction <> nil then begin
-          FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
-          FIBTransaction := nil;
-        end;
+        if FIBTransaction <> nil then
+          DeRegisterCursor;
       end else
         FStmtHandle := 0;
     end;
     inherited ResetCursor;
   end;
+end;
+
+procedure TZInterbase6XSQLDAResultSet.DeRegisterCursor;
+begin
+  FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
+  FIBTransaction := nil;
 end;
 
 { TZInterbase6UnCachedBlob }

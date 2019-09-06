@@ -234,6 +234,7 @@ type
 
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
+    FMetaConSettings: TZConSettings;
     function GetPrivilege(const Privilege: string): string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
@@ -277,6 +278,8 @@ type
     function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
+  public
+    procedure SetUTF8CodePageInfo;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -284,7 +287,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
-  ZFastCode, ZSelectSchema, Math;
+  ZFastCode, ZSelectSchema, ZEncoding, Math;
 
 const
   DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');
@@ -1434,6 +1437,7 @@ const
   CHARACTER_SET_ID_Index= FirstDbcIndex +10;
 var
   SQL: string;
+  Len: NativeUInt;
   LProcedureNamePattern, LColumnNamePattern: string;
   TypeName, SubTypeName: Integer;
 begin
@@ -1482,10 +1486,8 @@ begin
         SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
 
       Result.MoveToInsertRow;
-      //Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
-      //Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
-      Result.UpdateString(ProcColProcedureNameIndex, GetString(PROCEDURE_NAME_Index));
-      Result.UpdateString(ProcColColumnNameIndex, GetString(PARAMETER_NAME_Index));
+      Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiChar(PARAMETER_NAME_Index, Len), @Len);
       case GetInt(PARAMETER_TYPE_Index) of
         0: Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctIn));
         1: Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut));
@@ -1496,14 +1498,13 @@ begin
       Result.UpdateInt(ProcColDataTypeIndex,
         Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName, GetInt(FIELD_SCALE_Index),
           ConSettings.CPType))); //DATA_TYPE
-      Result.UpdateString(ProcColTypeNameIndex,GetString(FIELD_TYPE_Index));
+      Result.UpdatePAnsiChar(ProcColTypeNameIndex,GetPAnsiChar(FIELD_TYPE_Index, Len),  @Len);
       Result.UpdateInt(ProcColPrecisionIndex, GetInt(FIELD_PRECISION_Index));
       Result.UpdateNull(ProcColLengthIndex);    //BUFFER_LENGTH
       Result.UpdateInt(ProcColScaleIndex, GetInt(FIELD_SCALE_Index));
       Result.UpdateInt(ProcColRadixIndex, 10);
       Result.UpdateInt(ProcColNullableIndex, GetInt(NULL_FLAG_Index));
-      //EH: ??? Result.UpdateString(12, GetString(FIELD_PRECISION_Index));
-      Result.UpdateString(ProcColRemarksIndex, GetString(DESCRIPTION_Index));
+      Result.UpdatePAnsiChar(ProcColRemarksIndex, GetPAnsiChar(DESCRIPTION_Index, Len), @Len);
       Result.InsertRow;
     end;
     Close;
@@ -1552,6 +1553,8 @@ var
   SQL, TableType: string;
   I: Integer;
   TableNameCondition: string;
+  P: PAnsiChar;
+  L: NativeUInt;
 begin
   Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
@@ -1572,17 +1575,25 @@ begin
 
       if Length(Types) = 0 then begin
         Result.MoveToInsertRow;
-        Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index)); //RDB$RELATION_NAME
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), @L); //RDB$RELATION_NAME
         Result.UpdateString(TableColumnsSQLType, TableType);
-        Result.UpdateString(TableColumnsRemarks, Copy(GetString(DESCRIPTION_Index),1,255)); //RDB$DESCRIPTION
+        P := GetPAnsiChar(DESCRIPTION_Index, L);
+        if P <> nil then begin
+          L := Min(L, 255);
+          Result.UpdatePAnsiChar(TableColumnsRemarks, P, @L); //RDB$DESCRIPTION
+        end;
         Result.InsertRow;
       end else
       for I := Low(Types) to High(Types) do
         if Types[I] = TableType then begin
           Result.MoveToInsertRow;
-          Result.UpdateString(TableNameIndex, GetString(RELATION_NAME_Index)); //RDB$RELATION_NAME
+          Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), @L);; //RDB$RELATION_NAME
           Result.UpdateString(TableColumnsSQLType, TableType);
-          Result.UpdateString(TableColumnsRemarks, Copy(GetString(DESCRIPTION_Index),1,255)); //RDB$DESCRIPTION
+          P := GetPAnsiChar(DESCRIPTION_Index, L);
+          if P <> nil then begin
+            L := Min(L, 255);
+            Result.UpdatePAnsiChar(TableColumnsRemarks, P, @L); //RDB$DESCRIPTION
+          end;
           Result.InsertRow;
         end;
     end;
@@ -1697,6 +1708,8 @@ var
   TypeName, SubTypeName, FieldScale, FieldLength, Precision: Integer;
   LTableNamePattern, LColumnNamePattern: string;
   SQLType: TZSQLType;
+  L: NativeUInt;
+  P: PAnsiChar;
 label Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
@@ -1779,36 +1792,39 @@ begin
       case TypeName of
         blr_short, blr_long, blr_int64: begin
             case SubTypeName of
-              RDB_NUMBERS_NUMERIC: Result.UpdateString(TableColColumnTypeNameIndex, 'NUMERIC');
-              RDB_NUMBERS_DECIMAL: Result.UpdateString(TableColColumnTypeNameIndex, 'DECIMAL');
+              RDB_NUMBERS_NUMERIC: Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'NUMERIC');
+              RDB_NUMBERS_DECIMAL: Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'DECIMAL');
               else case TypeName of
-                  blr_short:  Result.UpdateString(TableColColumnTypeNameIndex, 'SMALLINT');
-                  blr_long:   Result.UpdateString(TableColColumnTypeNameIndex, 'INTEGER' );
-                  blr_int64:  Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
+                  blr_short:  Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'SMALLINT');
+                  blr_long:   Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'INTEGER' );
+                  blr_int64:  Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), @L);
                 end;
             end;
             Result.UpdateInt(TableColColumnDecimalDigitsIndex, -FieldScale);
             Result.UpdateInt(TableColColumnSizeIndex, Precision);
         end;
         blr_varying: begin
-            Result.UpdateString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
+            Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'VARCHAR'); // Instead of VARYING
             goto Str_Size;
           end;
         blr_text: begin
-            Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
+            Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), @L);
 Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength*GetInt(CHARACTER_LENGTH_Index));   //CHAR_OCTET_LENGTH
             Result.UpdateInt(TableColColumnSizeIndex, FieldLength);
           end;
         else
-          Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
+          Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), @L);
       end;
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10);   //NUM_PREC_RADIX
 
       if GetInt(NULL_FLAG_Index) <> 0
       then Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls))   //NULLABLE
       else Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
-
-      Result.UpdateString(TableColColumnRemarksIndex, Copy(GetString(DESCRIPTION_Index),1,255));   //REMARKS
+      P := GetPAnsiChar(DESCRIPTION_Index, L);
+      if P <> nil then begin
+        L := min(L,255);
+        Result.UpdatePAnsiChar(TableColColumnRemarksIndex, P, @L);   //REMARKS
+      end;
       Result.UpdateString(TableColColumnColDefIndex, DefaultValue);   //COLUMN_DEF
       Result.UpdateInt(TableColColumnSQLDataTypeIndex, TypeName);   //SQL_DATA_TYPE
       //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);   //SQL_DATETIME_SUB
@@ -2786,6 +2802,20 @@ begin
       'D': Result := 'DELETE';
       'R': Result := 'REFERENCE';
     end;
+end;
+
+procedure TZInterbase6DatabaseMetadata.SetUTF8CodePageInfo;
+begin
+  FMetaConSettings := FConSettings^;
+  FMetaConSettings.ClientCodePage := GetConnection.GetIZPlainDriver.ValidateCharEncoding('UTF8');
+  FMetaConSettings.AutoEncode := true;
+
+  FConSettings := @FMetaConSettings;
+  {$IFDEF WITH_LCONVENCODING}
+  SetConvertFunctions(FConSettings^.CTRL_CP, FConSettings^.ClientCodePage.CP,
+    FConSettings^.PlainConvertFunc, FConSettings^.DbcConvertFunc);
+  {$ENDIF}
+  ZEncoding.SetConvertFunctions(FConSettings);
 end;
 
 {**

@@ -136,7 +136,8 @@ type
     {$ENDIF}
     procedure InternalCreate; virtual; abstract;
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
-    procedure ResetCurrentClientCodePage(const Name: String);
+    procedure ResetCurrentClientCodePage(const Name: String;
+      IsStringFieldCPConsistent: Boolean);
     function GetEncoding: TZCharEncoding;
     function GetClientVariantManager: IZClientVariantManager;
     procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
@@ -678,7 +679,8 @@ begin
     fRegisteredStatements.Add(Pointer(Value))
 end;
 
-procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);
+procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String;
+  IsStringFieldCPConsistent: Boolean);
 var NewCP, tmp: PZCodePage;
 begin
   FDisposeCodePage := True;
@@ -686,12 +688,12 @@ begin
   ConSettings^.ClientCodePage := New(PZCodePage);
   NewCP := GetIZPlainDriver.ValidateCharEncoding(Name);
   ConSettings^.ClientCodePage^.Name := Tmp^.Name;
-  ConSettings^.ClientCodePage^.ID := Tmp^.ID;
-  ConSettings^.ClientCodePage^.CharWidth := Tmp^.CharWidth;
+  ConSettings^.ClientCodePage^.ID := NewCP^.ID;
+  ConSettings^.ClientCodePage^.CharWidth := NewCP^.CharWidth;
   ConSettings^.ClientCodePage^.Encoding := NewCP^.Encoding;
   ConSettings^.ClientCodePage^.CP := NewCP^.CP;
   ConSettings^.ClientCodePage^.ZAlias := '';
-  ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := Tmp^.IsStringFieldCPConsistent;
+  ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := IsStringFieldCPConsistent;
   {Also reset the MetaData ConSettings}
   (FMetadata as TZAbstractDatabaseMetadata).ConSettings := ConSettings;
   {$IFDEF WITH_LCONVENCODING}

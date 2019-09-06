@@ -228,7 +228,6 @@ end;
 }
 procedure TZDBLibConnection.InternalCreate;
 begin
-  FDisposeCodePage := False;
   if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then
   begin
     FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);

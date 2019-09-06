@@ -101,8 +101,6 @@ type
 
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
-  private
-    fConSettings: TZConSettings;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -111,9 +109,7 @@ type
     constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
-      ConSettings: PZConSettings); overload;
-    constructor CreateWithColumns(const Statement: IZStatement;
-      ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings); overload;
+      ConSettings: PZConSettings);
   public
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
@@ -137,7 +133,6 @@ type
     FUrl: TZURL;
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
-    FConSettings: PZConSettings;
     FIC: IZIdentifierConvertor;
     function GetInfo: TStrings;
     function GetURLString: String;
@@ -145,6 +140,7 @@ type
     fCurrentBufIndex: Byte;
     fBuf: Array[Byte] of Char;
   protected
+    FConSettings: PZConSettings;
     procedure InitBuf(FirstChar: Char); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure ClearBuf; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure FlushBuf(var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -164,7 +160,7 @@ type
     function GetResultSetFromCache(const Key: string): IZResultSet;
     function HasKey(const Key: String): Boolean;
     function ConstructVirtualResultSet(ColumnsDefs: TZMetadataColumnDefs):
-      IZVirtualResultSet;
+      IZVirtualResultSet; virtual;
     function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
       DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
     function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
@@ -2289,7 +2285,7 @@ begin
     end;
 
     Result := TZUnCloseableResultSet.CreateWithColumns(ColumnsInfo, '',
-      IZConnection(FConnection).GetConSettings);
+      FConSettings);
     with Result do begin
       SetType(rtScrollInsensitive);
       SetConcurrency(rcUpdatable);
@@ -5008,13 +5004,6 @@ begin
   P := InitialRowsList[CurrentRowNo];
   InitialRowsList.Delete(CurrentRowNo);
   InitialRowsList.Insert(NewRowNo, P);
-end;
-
-constructor TZVirtualResultSet.CreateWithColumns(const Statement: IZStatement;
-  ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
-begin
-  fConSettings := ConSettings^;
-  inherited CreateWithColumns(Statement, ColumnsInfo, SQL, @fConSettings);
 end;
 
 {**
