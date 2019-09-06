@@ -524,7 +524,7 @@ begin
   if FCachedQueryRaw = nil then begin
     ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
     IsCS_NONE := (ConSettings^.ClientCodePage^.ID = CS_NONE);
-    if ParamFound or ConSettings^.AutoEncode or IsCS_NONE then begin
+    if ParamFound or {$IFNDEF UNICODE}ConSettings^.AutoEncode or {$ENDIF}IsCS_NONE then begin
       Tokens := Connection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
       Temp := '';
       for I := 0 to High(Tokens) do begin
