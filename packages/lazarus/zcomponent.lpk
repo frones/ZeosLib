@@ -105,7 +105,7 @@
         <UnitName Value="ZStreamBlob"/>
       </Item19>
     </Files>
-    <RequiredPkgs Count="7">
+    <RequiredPkgs Count="6">
       <Item1>
         <PackageName Value="zplain"/>
         <MaxVersion Major="7" Minor="2"/>
@@ -127,15 +127,12 @@
         <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item4>
       <Item5>
-        <PackageName Value="LCL"/>
+        <PackageName Value="IDEIntf"/>
       </Item5>
       <Item6>
-        <PackageName Value="IDEIntf"/>
-      </Item6>
-      <Item7>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item7>
+      </Item6>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

@@ -96,6 +96,8 @@ type
     procedure ReleaseConnection; override;
     function CreateResultSet: IZResultSet;
   public
+    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
+  public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure AfterClose; override;
 
@@ -178,7 +180,7 @@ implementation
 
 uses Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet, ZClasses,
-  ZDbcUtils, ZDbcResultSet;
+  ZDbcUtils, ZDbcResultSet, ZTokenizer;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
   Stmt: TZInterbase6PreparedStatement; ArrayOffSet, ArrayItersCount: Integer);
@@ -592,11 +594,9 @@ begin
       stCommit, stRollback, stUnknown: Result := -1;
       stSelect: if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
                   CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
-      stExecProc: begin
-        { Create ResultSet if possible }
+      stExecProc: { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
           FOutParamResultSet := CreateResultSet;
-      end;
     end;
   inherited ExecuteUpdatePrepared;
 end;
@@ -661,6 +661,125 @@ begin
                     end;
     else Result := 'unknown'
   end;
+end;
+
+function TZAbstractInterbase6PreparedStatement.GetRawEncodedSQL(
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+var
+  I, ParamCnt, FirstComposePos: Integer;
+  ParamFound: Boolean;
+  Tokens: TZTokenList;
+  {$IFNDEF UNICODE}
+  Tmp: String;
+  List: TStrings;
+  {$ELSE}
+  Tmp: RawByteString;
+  RemainderIdx: Integer;
+
+  procedure Concat(const Value: RawByteString);
+  begin
+    FCachedQueryRaw[RemainderIdx] := FCachedQueryRaw[RemainderIdx] + Value;
+    Result := Result + Value;
+  end;
+  {$ENDIF}
+
+  procedure Add(const Value: RawByteString; const Param: Boolean = False);
+  begin
+    SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
+    FCachedQueryRaw[High(FCachedQueryRaw)] := Value;
+    SetLength(FIsParamIndex, Length(FCachedQueryRaw));
+    IsParamIndex[High(IsParamIndex)] := Param;
+    Result := Result + Value;
+  end;
+
+begin
+  ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
+  if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode {$ENDIF}or (FDB_CP_ID = CS_NONE) then begin
+    ParamCnt := 0;
+    Result := '';
+    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    {$IFNDEF UNICODE}
+    if ConSettings^.AutoEncode
+    then List := TStringList.Create
+    else List := nil; //satisfy compiler
+    {$ENDIF}
+    try
+      FirstComposePos := 0;
+      FTokenMatchIndex := -1;
+      {$IFDEF UNICODE}RemainderIdx := -1;{$ENDIF}
+      for I := 0 to Tokens.Count -1 do begin
+        if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
+          if (FirstComposePos < Tokens.Count-1) then begin
+            {$IFDEF UNICODE}
+            Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP);
+            if RemainderIdx = -1
+            then Add(Tmp)
+            else begin
+              Concat(Tmp);
+              RemainderIdx := -1;
+            end;
+            {$ELSE}
+            Add(Tokens.AsString(FirstComposePos, I-1));
+            {$ENDIF}
+          end;
+          {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+          Add(ZUnicodeToRaw(Tokens.AsString(I, I), ConSettings^.ClientCodePage^.CP));
+          {$ELSE}
+          Add('?', True);
+          {$ENDIF}
+          Inc(ParamCnt);
+          FirstComposePos := i +1;
+        end
+        {$IFNDEF UNICODE}
+        else if ConSettings.AutoEncode then
+          case (Tokens[i].TokenType) of
+            ttQuoted, ttComment,
+            ttWord: with Tokens[i]^ do begin
+              if (FDB_CP_ID = CS_NONE) and ( //all identifiers collate unicode_fss if CS_NONE
+                 (Tokens[i].TokenType = ttQuotedIdentifier) or
+                 ((Tokens[i].TokenType = ttWord) and (Tokens[i].L > 1) and (Tokens[i].P^ = '"')))
+              then Tmp := ZConvertStringToRawWithAutoEncode(Tokens.AsString(i), ConSettings^.CTRL_CP, zCP_UTF8)
+              else Tmp := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, FClientCP);
+              Tokens[i].P := Pointer(tmp);
+              Tokens[i].L := Length(tmp);
+              List.Add(Tmp); //keep alive
+            end;
+        end
+        {$ELSE}
+        else if (FDB_CP_ID = CS_NONE) and (//all identifiers collate unicode_fss if CS_NONE
+                 (Tokens[i].TokenType = ttQuotedIdentifier) or
+                 ((Tokens[i].TokenType = ttWord) and (Tokens[i].L > 1) and (Tokens[i].P^ = '"'))) then begin
+          if (FirstComposePos < I) then begin
+            Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP);
+            if RemainderIdx = -1
+            then Add(Tmp)
+            else Concat(Tmp);
+          end;
+          RemainderIdx := High(FCachedQueryRaw);
+          Tmp := PUnicodeToRaw(Tokens[i].P, Tokens[i].L, zCP_UTF8);
+          Concat(Tmp);
+          FirstComposePos := I +1;
+        end;
+        {$ENDIF};
+      end;
+      if (FirstComposePos < Tokens.Count) then
+        {$IFDEF UNICODE}
+        if RemainderIdx <> -1 then begin
+          I := Tokens.Count -1;
+          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[i].P - Tokens[FirstComposePos].P)+Tokens[i].L, FClientCP);
+          Concat(Tmp);
+        end else {$ENDIF}
+        Add(ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(FirstComposePos, Tokens.Count -1), ConSettings^.CTRL_CP, FClientCP));
+    finally
+      Tokens.Free;
+      {$IFNDEF UNICODE}
+      if ConSettings^.AutoEncode then
+        List.Free;
+      {$ENDIF}
+    end;
+    SetBindCapacity(ParamCnt);
+  end else
+    Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
 end;
 
 procedure TZInterbase6PreparedStatement.EncodePData(XSQLVAR: PXSQLVAR;
@@ -737,8 +856,8 @@ begin
     //alloc space for lobs, arrays, param-types
     if ((FStatementType = stExecProc) and (FResultXSQLDA.GetFieldCount > 0)) or
        ((FStatementType = stSelect) and (BindList.HasOutOrInOutOrResultParam))
-    then BindList.SetCount(FParamXSQLDA^.sqld + FResultXSQLDA.GetFieldCount)
-    else BindList.SetCount(FParamXSQLDA^.sqld);
+    then SetParamCount(FParamXSQLDA^.sqld + FResultXSQLDA.GetFieldCount)
+    else SetParamCount(FParamXSQLDA^.sqld);
 
     { Resize XSQLDA structure if required }
     if FParamXSQLDA^.sqld <> FParamXSQLDA^.sqln then begin
@@ -775,6 +894,21 @@ end;
 procedure TZInterbase6PreparedStatement.SetAnsiString(Index: Integer;
   const Value: AnsiString);
 var XSQLVAR: PXSQLVAR;
+ CS_ID: ISC_SHORT;
+ L: LengthInt;
+ P: PAnsiChar;
+  procedure Convert(var P: PAnsiChar; Var L: LengthInt; ToCP: Word);
+  begin
+    FUniTemp := PRawToUnicode(P, L, ZOSCodePage); //localize it
+    FRawTemp := ZUnicodeToRaw(FUniTemp, ToCP);
+    P := Pointer(FRawTemp);
+    if P <> nil then
+      L := Length(FRawTemp)
+    else begin
+      L := 0;
+      P := PEmptyAnsiString;
+    end;
+  end;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -784,33 +918,29 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if Value <> '' then begin
+    L := Length(Value);
+    P := Pointer(Value);
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT,
-      SQL_VARYING   : if (ClientCP = ZOSCodePage) or (XSQLVAR.sqlsubtype and 255 = CS_BINARY)
-                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype and 255] = ZOSCodePage)) then
-                        EncodePData(XSQLVAR, Pointer(Value), Length(Value))
+      SQL_VARYING   : begin
+                      CS_ID := XSQLVAR.sqlsubtype and 255;
+                      if (CS_ID = CS_BINARY) or (FCodePageArray[CS_ID] = ZOSCodePage) then
+                        EncodePData(XSQLVAR, P, L)
                       else begin
-                        FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage); //localize it
-                        if (FDB_CP_ID = CS_NONE)
-                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype and 255])
-                        else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
-                        if FRawTemp <> ''
-                        then EncodePData(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
-                        else EncodePData(XSQLVAR, PEmptyAnsiString, 0);
+                        Convert(P, L, FCodePageArray[CS_ID]);
+                        EncodePData(XSQLVAR, P, L);
                       end;
+                    end;
       SQL_BLOB,
       SQL_QUAD      : if XSQLVAR.sqlsubtype = isc_blob_text then
                         if (ClientCP = ZOSCodePage) then
-                          WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value))
+                          WriteLobBuffer(XSQLVAR, Pointer(Value), L)
                         else begin
-                          FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage); //localize it
-                          FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
-                          if FRawTemp <> ''
-                          then WriteLobBuffer(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
-                          else WriteLobBuffer(XSQLVAR, PEmptyAnsiString, 0);
+                          Convert(P, L, ClientCP);
+                          WriteLobBuffer(XSQLVAR, P, L)
                         end
-                      else WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value));
-      else SetPAnsiChar(Index, Pointer(Value), Length(Value));
+                      else WriteLobBuffer(XSQLVAR, P, L);
+      else SetPAnsiChar(Index, Pointer(Value), L);
     end;
   end else
     SetPAnsiChar(Index, PEmptyAnsiString, 0)

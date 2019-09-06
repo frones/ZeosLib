@@ -220,6 +220,16 @@ type
     FResultSet: IZResultSet;
 
     FRefreshInProgress: Boolean;
+    FNativeFormatOverloadCalled: Boolean; //circumvent a TClientDataSet BCDField bug.
+      //The ClientDataSets do not call the Get/SetData overload with NativeFormat overload
+      //so they use the slow TBCD record instead (while we are in Currency range)
+      //and convert all values to/from the currency
+      //Zitat of DB.TBCDField.GetDataSize: Integer:
+      //"SizeOf(TBcd) is used here instead of SizeOf(Currency) because some
+      // datasets store the currency data in TBcd format in the record buffer.
+      // For these classes (TBDEDataset & TClientDataset) a call to
+      // TField.GetData(Buffer, True) will return a TBcd."
+
     {FFieldDefsInitialized: boolean;}  // commented out because this causes SF#286
 
     FDataLink: TDataLink;
@@ -240,8 +250,8 @@ type
     FSortRowBuffer1: PZRowBuffer;
     FSortRowBuffer2: PZRowBuffer;
     FPrepared: Boolean;
-    FDoNotCloseResultset: Boolean;
-    FUseCurrentStatment: Boolean;
+    FCursorOpened: Boolean;
+    FResultSetWalking: Boolean;
     FUseZFields: Boolean;
     FStringFieldSetter: TStringFieldSetter;
     FStringFieldGetter: TStringFieldGetter;
@@ -369,7 +379,7 @@ type
 
     property Statement: IZPreparedStatement read FStatement write FStatement;
     property ResultSet: IZResultSet read FResultSet write FResultSet;
-
+    property ResultSetWalking: Boolean read FResultSetWalking;
   protected { External protected properties. }
     property DataLink: TDataLink read FDataLink;
     property MasterLink: TMasterDataLink read FMasterLink;
@@ -390,7 +400,7 @@ type
       write SetUniDirectional default False;
     property Properties: TStrings read FProperties write SetProperties;
     property Options: TZDatasetOptions read FOptions write SetOptions
-      default [doCalcDefaults];
+      default [doCalcDefaults, doPreferPrepared];
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property MasterFields: string read GetMasterFields
       write SetMasterFields;
@@ -400,7 +410,6 @@ type
       write SetLinkedFields; {renamed by bangfauzan}
     property IndexFieldNames:String read GetIndexFieldNames
       write SetIndexFieldNames; {bangfauzan addition}
-    property DoNotCloseResultset: Boolean read FDoNotCloseResultset;
     {$IFNDEF WITH_NESTEDDATASETS}
     property NestedDataSets: TList read GetNestedDataSets;
     {$ENDIF}
@@ -2943,8 +2952,10 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
-  if Field.DataType in [ftWideString, ftBCD] then
+  if Field.DataType in [ftWideString, ftBCD] then begin
     NativeFormat := True;
+    FNativeFormatOverloadCalled := True;
+  end else FNativeFormatOverloadCalled := NativeFormat;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
 
@@ -2970,8 +2981,7 @@ begin
     else
       ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
-    if Buffer <> nil then
-    begin
+    if Buffer <> nil then begin
       case Field.DataType of
         { Processes DateTime fields. }
         ftTime: DateTimeToNative(Field.DataType,
@@ -3012,8 +3022,9 @@ begin
         { Processes all other fields. }
         ftCurrency: //sade TCurrencyField is Descendant of TFloatField and uses Double values
           PDouble(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
-        ftBcd:
-          PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result);
+        ftBcd: if FNativeFormatOverloadCalled
+          then PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result)
+          else RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^,  Result);
         ftFmtBcd: RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^, Result);
         else
           {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
@@ -3046,19 +3057,18 @@ end;
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean);
 begin
-  if Field.DataType in [ftWideString, ftBCD] then
+  if Field.DataType in [ftWideString, ftBCD] then begin
     NativeFormat := True;
+    FNativeFormatOverloadCalled := True;
+  end else FNativeFormatOverloadCalled := NativeFormat;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
-  inherited;
-  {$ELSE}   *)
+  inherited SetFieldData(Field, Buffer, NativeFormat);
+  {$ELSE}
   SetFieldData(Field, Buffer);
   {$ENDIF}
 end;
 
-{$IFNDEF CPU64}
-const IntTable: array[0..4] of Cardinal = (1, 10, 100, 1000, 10000);
-{$ENDIF}
 {**
   Stores the column value from the field buffer.
   @param Field an field object to be stored.
@@ -3124,11 +3134,12 @@ begin
         {$ENDIF}
         ftCurrency:
           RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
-        ftBCD: begin
-          if (Field.Size < 4) then //right truncation? Using the Tbcd record's behaves equal
-            PCurrency(Buffer)^ := RoundCurrTo(PCurrency(Buffer)^, Field.Size);
-          RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
-        end;
+        ftBCD: if FNativeFormatOverloadCalled then begin
+            if (Field.Size < 4) then //right truncation? Using the Tbcd record's behaves equal
+              PCurrency(Buffer)^ := RoundCurrTo(PCurrency(Buffer)^, Field.Size);
+            RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
+          end else
+            RowAccessor.SetBigDecimal(ColumnIndex, PBCD(Buffer)^);
         {$IFDEF WITH_FTEXTENDED}
         ftExtended:
           RowAccessor.SetDouble(ColumnIndex, PExtended(Buffer)^);
@@ -3164,7 +3175,7 @@ end;
 }
 function TZAbstractRODataset.IsCursorOpen: Boolean;
 begin
-  Result := ResultSet <> nil;
+  Result := (ResultSet <> nil) and FCursorOpened;
 end;
 
 {**
@@ -3440,35 +3451,34 @@ procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
   I: Integer;
+  OldRS: IZResultSet;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
     raise Exception.Create(SCanNotOpenDataSetWhenDestroying);
   {$ENDIF}
-  if not FUseCurrentStatment then Prepare;
+  if not FResultSetWalking then Prepare;
 
   CurrentRow := 0;
   FetchCount := 0;
   CurrentRows.Clear;
+  FNativeFormatOverloadCalled := False;
 
   Connection.ShowSQLHourGlass;
+  OldRS := FResultSet;
   try
     { Creates an SQL statement and resultsets }
-    if not FUseCurrentStatment then
-      if FSQL.StatementCount> 0 then
-        ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1)
-      else
-        ResultSet := CreateResultSet('', -1);
+    if not FResultSetWalking then
+      if FSQL.StatementCount> 0
+      then ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1)
+      else ResultSet := CreateResultSet('', -1);
       if not Assigned(ResultSet) then
-      begin
-        if not (doSmartOpen in FOptions) then
-          raise Exception.Create(SCanNotOpenResultSet)
-        else
-          Exit;
-      end;
-
+        if not (doSmartOpen in FOptions)
+        then raise Exception.Create(SCanNotOpenResultSet)
+        else Exit;
+    FCursorOpened := True;
     { Initializes field and index defs. }
-    if (not FRefreshInProgress) {and (not FFieldDefsInitialized)} then  // commented out because this causes SF#286
+    if (OldRS <> ResultSet) or FResultSetWalking {or (not FRefreshInProgress) {and (not FFieldDefsInitialized)} then  // commented out because this causes SF#286
       InternalInitFieldDefs;
 
     {$IFDEF WITH_LIFECYCLES}
@@ -3522,6 +3532,7 @@ begin
       InternalSort;
   finally
     Connection.HideSQLHourGlass;
+    OldRS := nil;
   end;
 end;
 
@@ -3531,9 +3542,11 @@ end;
 procedure TZAbstractRODataset.InternalClose;
 begin
   if ResultSet <> nil then
-    if not FDoNotCloseResultSet then
+    if not FResultSetWalking then
       ResultSet.ResetCursor;
-  ResultSet := nil;
+  FCursorOpened := False;
+  FNativeFormatOverloadCalled := False;
+  //ResultSet := nil;
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
@@ -3700,8 +3713,7 @@ end;
 }
 procedure TZAbstractRODataset.SetPrepared(Value: Boolean);
 begin
-  FUseCurrentStatment := False;
-  FDoNotCloseResultSet := False;
+  FResultSetWalking := False;
   If Value <> FPrepared then
     begin
       If Value then
@@ -3968,6 +3980,10 @@ end;
 }
 procedure TZAbstractRODataset.InternalUnPrepare;
 begin
+  if FResultSet <> nil then begin
+    FResultSet.Close;
+    FResultSet := nil;
+  end;
   if Statement <> nil then begin
     Statement.Close;
     Statement := nil;
@@ -4791,18 +4807,16 @@ begin
     closed.. Which is equal to cursor open}
   if Assigned(Value) and ( Value <> ResultSet ) then
   begin
-    FDoNotCloseResultSet := True; //hint for InternalClose
+    FResultSetWalking := True; //hint for InternalOpen
     SetState(dsInactive);
     CloseCursor; //Calls InternalOpen in his sequence so InternalClose must be prepared
-    FDoNotCloseResultSet := False; //reset hint for InternalClose
     ResultSet := Value; //Assign the new resultset
-    if not ResultSet.IsBeforeFirst then
+    if not ResultSet.IsBeforeFirst and (ResultSet.GetType <> rtForwardOnly) then
       ResultSet.BeforeFirst; //need this. All from dataset buffered resultsets are EOR
-    FUseCurrentStatment := True; //hint for InternalOpen
     {FFieldDefsInitialized := False;}  // commented out because it causes SF#286
     OpenCursor{$IFDEF FPC}(False){$ENDIF}; //Calls InternalOpen in his sequence so InternalOpen must be prepared
     OpenCursorComplete; //set DataSet to dsActive
-    FUseCurrentStatment := False; //reset hint for InternalOpen
+    FResultSetWalking := False; //reset hint for InternalOpen
   end;
 end;
 

@@ -234,7 +234,7 @@ type
 
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    function GetPrivilege(const Privilege: string): string;
+    FMetaConSettings: TZConSettings;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
     function ConstructNameCondition(const Pattern: string; const Column: string): string; override;
@@ -277,6 +277,8 @@ type
     function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
+  public
+    procedure SetUTF8CodePageInfo;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -1436,6 +1438,7 @@ const
   CHARACTER_SET_ID_Index = FirstDbcIndex + 11;
 var
   SQL: string;
+  Len: NativeUInt;
   LProcedureNamePattern, LColumnNamePattern, ColumnDomain, ColumnName: string;
   TypeName, SubTypeName, FieldLength: Integer;
   SQLType: TZSQLType;
@@ -1478,10 +1481,8 @@ begin
       FieldLength := GetInt(FIELD_LENGTH_Index);
 
       Result.MoveToInsertRow;
-      Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
-      Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
-      Result.UpdateString(ProcColProcedureNameIndex, GetString(PROCEDURE_NAME_Index));
-      Result.UpdateString(ProcColColumnNameIndex, ColumnName);
+      Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), Len);
+      Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiChar(PARAMETER_NAME_Index, Len), Len);
       case GetInt(PARAMETER_TYPE_Index) of
         0: Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctIn));
         1: Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut));
@@ -1494,14 +1495,13 @@ begin
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(ProcColDataTypeIndex, Ord(SQLType)); //DATA_TYPE
-      Result.UpdateString(ProcColTypeNameIndex,GetString(FIELD_TYPE_Index));
+      Result.UpdatePAnsiChar(ProcColTypeNameIndex,GetPAnsiChar(FIELD_TYPE_Index, Len), Len);
       Result.UpdateInt(ProcColPrecisionIndex, GetInt(FIELD_PRECISION_Index));
       Result.UpdateNull(ProcColLengthIndex);    //BUFFER_LENGTH
       Result.UpdateInt(ProcColScaleIndex, GetInt(FIELD_SCALE_Index));
       Result.UpdateInt(ProcColRadixIndex, 10);
       Result.UpdateInt(ProcColNullableIndex, GetInt(NULL_FLAG_Index));
-      //EH: ??? Result.UpdateString(12, GetString(FIELD_PRECISION_Index));
-      Result.UpdateString(ProcColRemarksIndex, GetString(DESCRIPTION_Index));
+      Result.UpdatePAnsiChar(ProcColRemarksIndex, GetPAnsiChar(DESCRIPTION_Index, Len), Len);
       Result.InsertRow;
     end;
     Close;
@@ -1541,62 +1541,41 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
-const
-  RELATION_NAME_Index = FirstDbcIndex + 0;
-  SYSTEM_FLAG_Index   = FirstDbcIndex + 1;
-  VIEW_SOURCE_Index   = FirstDbcIndex + 2;
-  DESCRIPTION_Index   = FirstDbcIndex + 3;
 var
-  SQL, TableType: string;
+  SQL, TableNameCondition: string;
   I: Integer;
-  TableNameCondition: string;
-  L: NativeUInt;
-  P: PAnsiChar;
 begin
   Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
   TableNameCondition := ConstructNameCondition(TableNamePattern,
-    'a.RDB$RELATION_NAME');
+    'RDB$RELATION_NAME');
 
-  SQL := 'SELECT DISTINCT a.RDB$RELATION_NAME, a.RDB$SYSTEM_FLAG, '
-    + ' a.RDB$VIEW_SOURCE, a.RDB$DESCRIPTION FROM RDB$RELATIONS a'
+  SQL := 'SELECT DISTINCT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM,'
+    + ' RDB$RELATION_NAME AS TABLE_NAME, '
+    + ' CASE WHEN RDB$VIEW_SOURCE IS NOT NULL THEN ''VIEW'' '
+    + '      WHEN RDB$SYSTEM_FLAG = 1 THEN ''SYSTEM TABLE'' '
+    + '      ELSE ''TABLE'' END AS TABLE_TYPE, '
+    + ' RDB$DESCRIPTION AS REMARKS FROM RDB$RELATIONS '
     + ' WHERE 1=1' + AppendCondition(TableNameCondition);
-
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do begin
-    while Next do begin
-      if GetInt(SYSTEM_FLAG_Index) = 0 then
-      begin
-        if IsNull(VIEW_SOURCE_Index) then //RDB$VIEW_SOURCE
-          TableType := 'TABLE'
-        else
-          TableType := 'VIEW';
-      end
+  if Types <> nil then begin
+    SQL := SQL + ' AND (';
+    for I := 0 to High(Types) do begin
+      if I > 0 then
+        SQL := SQL + ' OR ';
+      if Types[I] = 'VIEW' then
+        SQL := SQL + 'RDB$VIEW_SOURCE IS NOT NULL'
+      else if Types[I] = 'SYSTEM TABLE' then
+        SQL := SQL + 'RDB$SYSTEM_FLAG = 1'
       else
-        TableType := 'SYSTEM TABLE';
-
-      if Length(Types) = 0 then begin
-        Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L); //RDB$RELATION_NAME
-        Result.UpdateString(TableColumnsSQLType, TableType);
-        P := GetPAnsiChar(DESCRIPTION_Index, L);
-        L := Min(L, 255);
-        Result.UpdatePAnsiChar(TableColumnsRemarks, P, L); //RDB$DESCRIPTION
-        Result.InsertRow;
-      end
-      else
-        for I := Low(Types) to High(Types) do
-          if Types[I] = TableType then begin
-            Result.MoveToInsertRow;
-            Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L); //RDB$RELATION_NAME
-            Result.UpdateString(TableColumnsSQLType, TableType);
-            P := GetPAnsiChar(DESCRIPTION_Index, L);
-            L := Min(L, 255);
-            Result.UpdatePAnsiChar(TableColumnsRemarks, P, L); //RDB$DESCRIPTION
-            Result.InsertRow;
-          end;
+        SQL := SQL + '(RDB$SYSTEM_FLAG = 0 AND RDB$VIEW_SOURCE IS NULL)'
     end;
-    Close;
+    SQL := SQL +')';
   end;
+  SQL := SQL + 'ORDER BY RDB$RELATION_NAME';
+
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(TableColumnsDynArray));
 end;
 
 {**
@@ -1680,6 +1659,14 @@ end;
   @return <code>ResultSet</code> - each row is a column description
   @see #getSearchStringEscape
 }
+const
+  cDefault: RawByteString = 'DEFAULT';
+  cNowQ: RawByteString = '''NOW''';
+  cNowI: RawByteString = '"NOW"';
+  cCURRENT_DATE: RawByteString = 'CURRENT_DATE';
+  cCURRENT_TIME: RawByteString = 'CURRENT_TIME';
+  cCURRENT_TIMESTAMP: RawByteString = 'CURRENT_TIMESTAMP';
+
 function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
@@ -1701,13 +1688,15 @@ const
   DEFAULT_SOURCE_DOMAIN_Index = FirstDbcIndex + 14;
   COMPUTED_SOURCE_Index       = FirstDbcIndex + 15;
   CHARACTER_SET_ID_Index      = FirstDbcIndex + 16;
+
 var
-  SQL, ColumnName, DefaultValue, ColumnDomain: string;
-  TypeName, SubTypeName, FieldScale, FieldLength, Precision: Integer;
+  SQL, ColumnName, ColumnDomain: string;
+  BLRSubType, SubTypeName, FieldScale, FieldLength, Precision: Integer;
   LTableNamePattern, LColumnNamePattern: string;
   SQLType: TZSQLType;
   GUIDProps: TZInterbase6ConnectionGUIDProps;
   L: NativeUInt;
+  P: PAnsiChar;
 label GUID_Size, Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
@@ -1735,9 +1724,9 @@ begin
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do begin
     while Next do begin
-      TypeName := GetInt(FIELD_TYPE_Index);
+      BLRSubType := GetInt(FIELD_TYPE_Index);
       // For text fields subtype = 0, we get codepage number instead
-      if TypeName in [blr_text, blr_text2, blr_varying, blr_varying2, blr_cstring, blr_cstring2] then
+      if BLRSubType in [blr_text, blr_text2, blr_varying, blr_varying2, blr_cstring, blr_cstring2] then
         SubTypeName := GetInt(CHARACTER_SET_ID_Index)
       else
         SubTypeName := GetInt(FIELD_SUB_TYPE_Index);
@@ -1747,42 +1736,28 @@ begin
       FieldLength := GetInt(FIELD_LENGTH_Index);
       Precision   := GetInt(FIELD_PRECISION_Index);
 
-      if (GetString(COMPUTED_SOURCE_Index) <> '') then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
-      begin //Computed by Source  & Sub Selects  //AVZ
-        if ((TypeName = blr_int64) and (FieldScale < 0)) then SubTypeName := 1; // Fix for 0 subtype which removes decimals
-      end;
-      DefaultValue := GetString(DEFAULT_SOURCE_Index);
-      if DefaultValue = '' then
-        DefaultValue := GetString(DEFAULT_SOURCE_DOMAIN_Index);
-      if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
-        DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
-          [rfIgnoreCase]));
-
-      IF (UpperCase(DefaultValue)= '''NOW''') or (UpperCase(DefaultValue)= '"NOW"')then
-        case TypeName of
-          blr_sql_date:  DefaultValue := 'CURRENT_DATE';
-          blr_sql_time:  DefaultValue := 'CURRENT_TIME';
-          blr_timestamp: DefaultValue := 'CURRENT_TIMESTAMP';
-        end;
+      P := GetPAnsiChar(COMPUTED_SOURCE_Index, L);
+      if (P<>nil) and (L > 0) then  //AVZ -- not isNull(14) was not working correcly here could be ' ' - subselect
+        //Computed by Source  & Sub Selects  //AVZ
+        if ((BLRSubType = blr_int64) and (FieldScale < 0)) then
+          SubTypeName := RDB_NUMBERS_NUMERIC; // Fix for 0 subtype which removes decimals
 
       Result.MoveToInsertRow;
-      //Result.UpdateNull(CatalogNameIndex);    //TABLE_CAT
-      //Result.UpdateNull(SchemaNameIndex);    //TABLE_SCHEM
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L);    //TABLE_NAME
       Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
 
-      SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, FieldScale,
+      SQLType := ConvertInterbase6ToSqlType(BLRSubType, SubTypeName, FieldScale,
         Precision, ConSettings.CPType);
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
       // TYPE_NAME
-      case TypeName of
+      case BLRSubType of
         blr_short, blr_long, blr_int64: begin
             case SubTypeName of
               RDB_NUMBERS_NUMERIC: Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'NUMERIC');
               RDB_NUMBERS_DECIMAL: Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'DECIMAL');
-              else case TypeName of
+              else case BLRSubType of
                   blr_short:  Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'SMALLINT');
                   blr_long:   Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'INTEGER' );
                   blr_int64:  Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);
@@ -1806,17 +1781,48 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength*Get
             Result.UpdateInt(TableColColumnSizeIndex, FieldLength);
           end;
         else
-          Result.UpdateString(TableColColumnTypeNameIndex, GetString(TYPE_NAME_Index));
+          Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);
       end;
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10);   //NUM_PREC_RADIX
 
       if GetInt(NULL_FLAG_Index) <> 0
       then Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls))   //NULLABLE
       else Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
+      P := GetPAnsiChar(DESCRIPTION_Index, L);
+      if P <> nil then begin
+        L := min(L,255);
+        Result.UpdatePAnsiChar(TableColColumnRemarksIndex, P, L);   //REMARKS
+      end;
+      P := GetPAnsiChar(DEFAULT_SOURCE_Index, L);
+      if L = 0 then
+        P := GetPAnsiChar(DEFAULT_SOURCE_DOMAIN_Index, L);
+      if P <> nil then begin
+        {      if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
+          DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
+            [rfIgnoreCase]));}
+        if (L > 8) and SameText(P, Pointer(cDefault), Length(cDefault)) then begin
+          Inc(P, 8);
+          Dec(L, 8);
+          IF (L = 5) and (SameText(P, Pointer(cNowQ), 5) or SameText(P, Pointer(cNowI), 5)) then
+            case BLRSubType of
+              blr_sql_date:   begin
+                                P := Pointer(cCURRENT_DATE);
+                                L := Length(cCURRENT_DATE);
+                              end;
+              blr_sql_time:   begin
+                                P := Pointer(cCURRENT_TIME);
+                                L := Length(cCURRENT_TIME);
+                              end;
+              blr_timestamp:  begin
+                                P := Pointer(cCURRENT_TIMESTAMP);
+                                L := Length(cCURRENT_TIMESTAMP);
+                              end;
+            end;
+        end;
+        Result.UpdatePAnsiChar(TableColColumnColDefIndex, P, L);   //COLUMN_DEF
+      end;
 
-      Result.UpdateString(TableColColumnRemarksIndex, Copy(GetString(DESCRIPTION_Index),1,255));   //REMARKS
-      Result.UpdateString(TableColColumnColDefIndex, DefaultValue);   //COLUMN_DEF
-      Result.UpdateInt(TableColColumnSQLDataTypeIndex, TypeName);   //SQL_DATA_TYPE
+      Result.UpdateInt(TableColColumnSQLDataTypeIndex, BLRSubType);   //SQL_DATA_TYPE
       //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);   //SQL_DATETIME_SUB
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(FIELD_SCALE_Index));   //CHAR_OCTET_LENGTH
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(FIELD_POSITION_Index)+ 1);   //ORDINAL_POSITION
@@ -1871,82 +1877,34 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
-const
-  RDB_USER_Index           = FirstDbcIndex + 0;
-  RDB_GRANTOR_Index        = FirstDbcIndex + 1;
-  RDB_PRIVILEGE_Index      = FirstDbcIndex + 2;
-//GRANT_OPTION_Index       = FirstDbcIndex + 3; - not used
-  RDB_RELATION_NAME_Index  = FirstDbcIndex + 4;
-  RDB_FIELD_NAME_Index     = FirstDbcIndex + 5;
-var
-  SQL: string;
-  TableName, FieldName, Privilege: String;
-  Grantor, Grantee, Grantable: String;
-  LColumnNameCondition, LTable: String;
+var SQL, LColumnNameCondition, LTable: String;
 begin
-  Result := inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
-
   LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'a.RDB$RELATION_NAME');
-  LColumnNameCondition := AppendCondition(ConstructNameCondition(ColumnNamePattern, 'a.RDB$FIELD_NAME'));
+  LColumnNameCondition := AppendCondition(ConstructNameCondition(AddEscapeCharToWildcards(ColumnNamePattern), 'a.RDB$FIELD_NAME'));
 
-  SQL := 'SELECT a.RDB$USER, a.RDB$GRANTOR, a.RDB$PRIVILEGE,'
-    + ' a.RDB$GRANT_OPTION, a.RDB$RELATION_NAME, a.RDB$FIELD_NAME '
-    + ' FROM RDB$USER_PRIVILEGES a, RDB$TYPES b '
-    + ' WHERE a.RDB$OBJECT_TYPE = b.RDB$TYPE '
+  SQL := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, '
+    + ' a.RDB$RELATION_NAME AS TABLE_NAME, COALESCE(a.RDB$FIELD_NAME, RF.RDB$FIELD_NAME) AS COLUMN_NAME,'
+    + ' a.RDB$GRANTOR AS GRANTOR, a.RDB$USER AS GRANTEE, '
+    + ' CASE a.RDB$PRIVILEGE WHEN ''S'' THEN ''SELECT'' '
+    + '                      WHEN ''I'' THEN ''INSERT'' '
+    + '                      WHEN ''U'' THEN ''UPDATE'' '
+    + '                      WHEN ''D'' THEN ''DELETE'' '
+    + '                      WHEN ''R'' THEN ''REFERENCE'' '
+    + ' ELSE NULL END AS PRIVILEGE, '
+    + ' CASE WHEN a.RDB$GRANTOR = a.RDB$USER THEN ''YES'' ELSE ''NO'' END AS IS_GRANTABLE'
+    + ' FROM RDB$USER_PRIVILEGES a '
+    + ' INNER JOIN RDB$TYPES b on a.RDB$OBJECT_TYPE = b.RDB$TYPE '
+    + ' LEFT JOIN RDB$RELATION_FIELDS RF ON RF.RDB$RELATION_NAME = a.RDB$RELATION_NAME AND a.RDB$FIELD_NAME IS NULL'
+    + ' WHERE b.RDB$FIELD_NAME=''RDB$OBJECT_TYPE'''
     + AppendCondition(LTable) + LColumnNameCondition
     + ' and b.RDB$TYPE_NAME IN (''RELATION'', ''VIEW'','
-    + ' ''COMPUTED_FIELD'', ''FIELD'' ) AND b.RDB$FIELD_NAME'
-    + '=''RDB$OBJECT_TYPE'' ORDER BY a.RDB$FIELD_NAME, a.RDB$PRIVILEGE  ' ;
+    + ' ''COMPUTED_FIELD'', ''FIELD'' ) AND'
+    + ' RF.RDB$FIELD_NAME NOT IN (SELECT b.RDB$FIELD_NAME FROM RDB$USER_PRIVILEGES b where b.RDB$RELATION_NAME = a.RDB$RELATION_NAME AND b.RDB$FIELD_NAME IS NOT NULL)'
+    + ' ORDER BY a.RDB$FIELD_NAME, a.RDB$PRIVILEGE';
 
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
-      TableName := GetString(RDB_RELATION_NAME_Index); //RDB$RELATION_NAME
-      FieldName := GetString(RDB_FIELD_NAME_Index); //RDB$FIELD_NAME
-      Privilege := GetPrivilege(GetString(RDB_PRIVILEGE_Index)); //RDB$PRIVILEGE
-      Grantor := GetString(RDB_GRANTOR_Index); //RDB$GRANTOR
-      Grantee := GetString(RDB_USER_Index); //RDB$USER
-      Grantable := YesNoStrs[Grantor = Grantee];
-      if FieldName = '' then
-      begin
-        LTable := ConstructNameCondition(TableName, 'a.RDB$RELATION_NAME');
-        SQL := 'SELECT RDB$FIELD_NAME FROM RDB$RELATION_FIELDS A'
-          + ' WHERE ' + LTable + LColumnNameCondition;
-        with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-        begin
-          while Next do
-          begin
-            Result.MoveToInsertRow;
-            Result.UpdateNull(CatalogNameIndex);
-            Result.UpdateNull(SchemaNameIndex);
-            Result.UpdateString(TableNameIndex, TableName);
-            Result.UpdateString(ColumnNameIndex, GetString(FirstDbcIndex)); //RDB$FIELD_NAME
-            Result.UpdateString(TableColPrivGrantorIndex, Grantor);
-            Result.UpdateString(TableColPrivGranteeIndex, Grantee);
-            Result.UpdateString(TableColPrivPrivilegeIndex, Privilege);
-            Result.UpdateString(TableColPrivIsGrantableIndex, Grantable);
-            Result.InsertRow;
-          end;
-          Close;
-        end;
-      end
-      else
-      begin
-        Result.MoveToInsertRow;
-        Result.UpdateNull(CatalogNameIndex);
-        Result.UpdateNull(SchemaNameIndex);
-        Result.UpdateString(TableNameIndex, TableName);
-        Result.UpdateString(ColumnNameIndex, FieldName);
-        Result.UpdateString(TableColPrivGrantorIndex, Grantor);
-        Result.UpdateString(TableColPrivGranteeIndex, Grantee);
-        Result.UpdateString(TableColPrivPrivilegeIndex, Privilege);
-        Result.UpdateString(TableColPrivIsGrantableIndex, Grantable);
-        Result.InsertRow;
-      end;
-    end;
-    Close;
-  end;
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+     ConstructVirtualResultSet(TableColPrivColumnsDynArray));
 end;
 
 {**
@@ -1983,52 +1941,26 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
-const
-  RDB_USER_Index          = FirstDbcIndex + 0;
-  RDB_GRANTOR_Index       = FirstDbcIndex + 1;
-  RDB_PRIVILEGE_Index     = FirstDbcIndex + 2;
-//GRANT_OPTION_Index      = FirstDbcIndex + 3; - not used
-  RDB_RELATION_NAME_Index = FirstDbcIndex + 4;
-var
-  SQL: string;
-  TableName, Privilege, Grantor: String;
-  Grantee, Grantable: String;
-  LTableNamePattern: String;
+var SQL, LTableNamePattern: String;
 begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
   LTableNamePattern := ConstructNameCondition(TableNamePattern, 'a.RDB$RELATION_NAME');
 
-  SQL := 'SELECT a.RDB$USER, a.RDB$GRANTOR, a.RDB$PRIVILEGE,'
-    + ' a.RDB$GRANT_OPTION, a.RDB$RELATION_NAME FROM RDB$USER_PRIVILEGES a,'
+  SQL := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM, '
+    + ' a.RDB$RELATION_NAME as TABLE_NAME, a.RDB$GRANTOR AS GRANTOR, '
+    + ' a.RDB$USER AS GRANTEE, a.RDB$PRIVILEGE AS PRIVILEGE,'
+    + ' CASE WHEN a.RDB$USER = a.RDB$GRANTOR THEN ''YES'' ELSE ''NO'' END AS IS_GRANTABLE'
+    + ' FROM RDB$USER_PRIVILEGES a,'
     + ' RDB$TYPES b WHERE a.RDB$OBJECT_TYPE = b.RDB$TYPE AND '
     + ' b.RDB$TYPE_NAME IN (''RELATION'', ''VIEW'', ''COMPUTED_FIELD'','
     + ' ''FIELD'' ) AND a.RDB$FIELD_NAME IS NULL '
     + AppendCondition(LTableNamePattern)
     + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$PRIVILEGE';
 
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
-      TableName := GetString(RDB_RELATION_NAME_Index); //RDB$RELATION_NAME
-      Privilege := GetPrivilege(GetString(RDB_PRIVILEGE_Index)); //RDB$PRIVILEGE
-      Grantor := GetString(RDB_GRANTOR_Index); //RDB$GRANTOR
-      Grantee := GetString(RDB_USER_Index); //RDB$USER
-      Grantable := YesNoStrs[Grantor = Grantee];
-
-      Result.MoveToInsertRow;
-      Result.UpdateNull(CatalogNameIndex);
-      Result.UpdateNull(SchemaNameIndex);
-      Result.UpdateString(TableNameIndex, TableName);
-      Result.UpdateString(TablePrivGrantorIndex, Grantor);
-      Result.UpdateString(TablePrivGranteeIndex, Grantee);
-      Result.UpdateString(TablePrivPrivilegeIndex, Privilege);
-      Result.UpdateString(TablePrivIsGrantableIndex, Grantable);
-      Result.InsertRow;
-    end;
-    Close;
-  end;
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+     ConstructVirtualResultSet(TablePrivColumnsDynArray));
 end;
 
 {**
@@ -2122,20 +2054,27 @@ begin
     ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
 end;
 
-function GetRuleType(const Rule: String): TZImportedKey;
+function GetRuleTypeString(const RuleFieldWithAlias, AsField: String): String;
 begin
-  if Rule = 'RESTRICT' then
-    Result := ikRestrict
-  else if Rule = 'NO ACTION' then
-    Result := ikNoAction
-  else if Rule = 'CASCADE' then
-    Result := ikCascade
-  else if Rule = 'SET DEFAULT' then
-    Result := ikSetDefault
-  else if Rule = 'SET NULL' then
-    Result := ikSetNull
-  else
-    Result := ikNotDeferrable; //impossible!
+  RESULT := 'CASE '+RuleFieldWithAlias+
+    ' WHEN ''RESTRICT'' THEN '+IntToStr(Ord(ikRestrict))+
+    ' WHEN ''NO ACTION'' THEN '+IntToStr(Ord(ikNoAction))+
+    ' WHEN ''CASCADE'' THEN '+IntToStr(Ord(ikCascade))+
+    ' WHEN ''SET DEFAULT'' THEN '+IntToStr(Ord(ikSetDefault))+
+    ' WHEN ''SET NULL'' THEN '+IntToStr(Ord(ikSetNull))+
+    ' ELSE '+IntToStr(Ord(ikNotDeferrable))+ //impossible!
+    ' END AS '+AsField
+end;
+
+function GetDereferabilityTypeString(const RelationContraintAlias: String): String;
+begin
+  //usally a nop, just prepared, FB does not support deferrable constraints yet
+  Result := 'CASE '+RelationContraintAlias+'.RDB$INITIALLY_DEFERRED'+
+    ' WHEN ''YES'' THEN '+IntToStr(Ord(ikInitiallyDeferred))+
+    ' ELSE CASE '+RelationContraintAlias+'.RDB$DEFERRABLE'+
+    ' WHEN ''YES'' THEN '+IntToStr(Ord(ikInitiallyImmediate))+
+    ' ELSE '+IntToStr(Ord(ikNotDeferrable))+ ' END '+
+    ' END AS DEFERRABILITY'
 end;
 
 {**
@@ -2207,70 +2146,8 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-const
-  PK_RDB_RELATION_NAME_Index   = FirstDbcIndex + 0;
-  PK_RDB_FIELD_NAME_Index      = FirstDbcIndex + 1;
-  FK_RDB_RELATION_NAME_Index   = FirstDbcIndex + 2;
-  FK_RDB_FIELD_NAME_Index      = FirstDbcIndex + 3;
-  RDB_FIELD_POSITION_Index     = FirstDbcIndex + 4;
-  RDB_UPDATE_RULE_Index        = FirstDbcIndex + 5;
-  RDB_DELETE_RULE_Index        = FirstDbcIndex + 6;
-  FK_RDB_CONSTRAINT_NAME_Index = FirstDbcIndex + 7;
-  PK_RDB_CONSTRAINT_NAME_Index = FirstDbcIndex + 8;
-var
-  SQL: string;
-  LTable: string;
 begin
-  Result := inherited UncachedGetImportedKeys(Catalog, Schema, Table);
-
-  LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'RELC_FOR.RDB$RELATION_NAME'); // Modified by cipto 6/11/2007 4:53:02 PM
-
-  SQL := 'SELECT RELC_PRIM.RDB$RELATION_NAME, '    // 1 prim.RDB$ key table name
-    + ' IS_PRIM.RDB$FIELD_NAME, '         // 2 prim.RDB$ key column name
-    + ' RELC_FOR.RDB$RELATION_NAME, '     // 3 foreign key table name
-    + ' IS_FOR.RDB$FIELD_NAME, '          // 4 foreign key column name
-    + ' IS_FOR.RDB$FIELD_POSITION, '      // 5 key sequence
-    + ' REFC_PRIM.RDB$UPDATE_RULE, '      // 6
-    + ' REFC_PRIM.RDB$DELETE_RULE, '      // 7
-    + ' RELC_FOR.RDB$CONSTRAINT_NAME, '   // 8 foreign key constraint name
-    + ' RELC_PRIM.RDB$CONSTRAINT_NAME '   // 9 primary key constraint name
-    + ' FROM RDB$RELATION_CONSTRAINTS RELC_FOR, RDB$REF_CONSTRAINTS REFC_FOR, '
-    + ' RDB$RELATION_CONSTRAINTS RELC_PRIM, RDB$REF_CONSTRAINTS REFC_PRIM, '
-    + ' RDB$INDEX_SEGMENTS IS_PRIM,  RDB$INDEX_SEGMENTS IS_FOR '
-    + ' WHERE RELC_FOR.RDB$CONSTRAINT_TYPE = ''FOREIGN KEY'' '
-    + AppendCondition(LTable)
-    + ' AND RELC_FOR.RDB$CONSTRAINT_NAME=REFC_FOR.RDB$CONSTRAINT_NAME'
-    + ' and REFC_FOR.RDB$CONST_NAME_UQ = RELC_PRIM.RDB$CONSTRAINT_NAME and '
-    + ' RELC_PRIM.RDB$CONSTRAINT_TYPE = ''PRIMARY KEY'' and ' // useful check, anyay
-    + ' RELC_PRIM.RDB$INDEX_NAME = IS_PRIM.RDB$INDEX_NAME and '
-    + ' IS_FOR.RDB$INDEX_NAME = RELC_FOR.RDB$INDEX_NAME   and '
-    + ' IS_PRIM.RDB$FIELD_POSITION = IS_FOR.RDB$FIELD_POSITION  and '
-    + ' REFC_PRIM.RDB$CONSTRAINT_NAME = RELC_FOR.RDB$CONSTRAINT_NAME '
-    + ' ORDER BY RELC_PRIM.RDB$RELATION_NAME, IS_FOR.RDB$FIELD_POSITION ';
-
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
-      Result.MoveToInsertRow;
-      Result.UpdateNull(ImportedKeyColPKTableCatalogIndex); //PKTABLE_CAT
-      Result.UpdateNull(ImportedKeyColPKTableSchemaIndex); //PKTABLE_SCHEM
-      Result.UpdateString(ImportedKeyColPKTableNameIndex, GetString(PK_RDB_RELATION_NAME_Index)); //PKTABLE_NAME
-      Result.UpdateString(ImportedKeyColPKColumnNameIndex, GetString(PK_RDB_FIELD_NAME_Index)); //PKCOLUMN_NAME
-      Result.UpdateNull(ImportedKeyColFKTableCatalogIndex); //FKTABLE_CAT
-      Result.UpdateNull(ImportedKeyColFKTableSchemaIndex); //FKTABLE_SCHEM
-      Result.UpdateString(ImportedKeyColFKTableNameIndex, GetString(FK_RDB_RELATION_NAME_Index)); //FKTABLE_NAME
-      Result.UpdateString(ImportedKeyColFKColumnNameIndex, GetString(FK_RDB_FIELD_NAME_Index)); //FKCOLUMN_NAME
-      Result.UpdateInt(ImportedKeyColKeySeqIndex, GetInt(RDB_FIELD_POSITION_Index)+1); //KEY_SEQ
-      Result.UpdateInt(ImportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(RDB_UPDATE_RULE_Index))));
-      Result.UpdateInt(ImportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(RDB_DELETE_RULE_Index))));
-      Result.UpdateString(ImportedKeyColFKNameIndex, GetString(FK_RDB_CONSTRAINT_NAME_Index)); //FK_NAME
-      Result.UpdateString(ImportedKeyColPKNameIndex, GetString(PK_RDB_CONSTRAINT_NAME_Index)); //PK_NAME
-      Result.UpdateNull(ImportedKeyColDeferrabilityIndex); //DEFERABILITY
-      Result.InsertRow;
-    end;
-    Close;
-  end;
+  Result := UncachedGetCrossReference('', '', '', Catalog, Schema, Table);
 end;
 
 {**
@@ -2342,70 +2219,8 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
-const
-  PKTABLE_NAME_Index  = FirstDbcIndex + 0;
-  PKCOLUMN_NAME_Index = FirstDbcIndex + 1;
-  FKTABLE_NAME_Index  = FirstDbcIndex + 2;
-  FKCOLUMN_NAME_Index = FirstDbcIndex + 3;
-  KEY_SEQ_Index       = FirstDbcIndex + 4;
-  UPDATE_RULE_Index   = FirstDbcIndex + 5;
-  DELETE_RULE_Index   = FirstDbcIndex + 6;
-  FK_NAME_Index       = FirstDbcIndex + 7;
-  PK_NAME_Index       = FirstDbcIndex + 8;
-var
-  SQL: string;
-  LTable: string;
 begin
-  Result := inherited UncachedGetExportedKeys(Catalog, Schema, Table);
-
-  LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'RC_PRIM.RDB$RELATION_NAME'); // Modified by cipto 6/11/2007 4:54:02 PM
-
-  SQL := ' SELECT RC_PRIM.RDB$RELATION_NAME AS PKTABLE_NAME, ' // prim.RDB$ key Table name
-    + ' IS_PRIM.RDB$FIELD_NAME AS PKCOLUMN_NAME, '       // prim.RDB$ key column name
-    + ' RC_FOR.RDB$RELATION_NAME AS FKTABLE_NAME, '     // foreign key Table name
-    + ' IS_FOR.RDB$FIELD_NAME AS FKCOLUMN_NAME, '        // foreign key column name
-    + ' IS_FOR.RDB$FIELD_POSITION AS KEY_SEQ, '    // key sequence
-    + ' REFC_PRIM.RDB$UPDATE_RULE AS UPDATE_RULE, '    // if update or delete rule is null, interpret as RESTRICT
-    + ' REFC_PRIM.RDB$DELETE_RULE AS DELETE_RULE, '
-    + ' RC_FOR.RDB$CONSTRAINT_NAME AS FK_NAME, '   // foreign key constraint name
-    + ' RC_PRIM.RDB$CONSTRAINT_NAME AS PK_NAME '  // primary key constraint name
-    + ' FROM RDB$RELATION_CONSTRAINTS RC_FOR, RDB$REF_CONSTRAINTS REFC_FOR, '
-    + ' RDB$RELATION_CONSTRAINTS RC_PRIM, RDB$REF_CONSTRAINTS REFC_PRIM, '
-    + ' RDB$INDEX_SEGMENTS IS_PRIM, RDB$INDEX_SEGMENTS IS_FOR '
-    + ' WHERE RC_PRIM.RDB$CONSTRAINT_TYPE = ''PRIMARY KEY'' '
-    + AppendCondition(LTable)
-    + ' and REFC_FOR.RDB$CONST_NAME_UQ = RC_PRIM.RDB$CONSTRAINT_NAME'
-    + ' and RC_FOR.RDB$CONSTRAINT_NAME = REFC_FOR.RDB$CONSTRAINT_NAME and '
-    + ' RC_FOR.RDB$CONSTRAINT_TYPE = ''FOREIGN KEY'' and '// useful check, anyay
-    + ' RC_PRIM.RDB$INDEX_NAME = IS_PRIM.RDB$INDEX_NAME and '
-    + ' IS_FOR.RDB$INDEX_NAME = RC_FOR.RDB$INDEX_NAME   and '
-    + ' IS_PRIM.RDB$FIELD_POSITION = IS_FOR.RDB$FIELD_POSITION  and '
-    + ' REFC_PRIM.RDB$CONSTRAINT_NAME = RC_FOR.RDB$CONSTRAINT_NAME '
-    + ' ORDER BY RC_FOR.RDB$RELATION_NAME, IS_FOR.RDB$FIELD_POSITION ';
-
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
-      Result.MoveToInsertRow;
-      Result.UpdateNull(ExportedKeyColPKTableCatalogIndex); //PKTABLE_CAT
-      Result.UpdateNull(ExportedKeyColPKTableSchemaIndex); //PKTABLE_SCHEM
-      Result.UpdateString(ExportedKeyColPKTableNameIndex, GetString(PKTABLE_NAME_Index)); //PKTABLE_NAME_Index
-      Result.UpdateString(ExportedKeyColPKColumnNameIndex, GetString(PKCOLUMN_NAME_Index)); //PKCOLUMN_NAME_Index
-      Result.UpdateNull(ExportedKeyColFKTableCatalogIndex); //FKTABLE_CAT
-      Result.UpdateNull(ExportedKeyColFKTableSchemaIndex); //FKTABLE_SCHEM'
-      Result.UpdateString(ExportedKeyColFKTableNameIndex, GetString(FKTABLE_NAME_Index)); //FKTABLE_NAME_Index
-      Result.UpdateString(ExportedKeyColFKColumnNameIndex, GetString(FKCOLUMN_NAME_Index)); //FKCOLUMN_NAME_Index
-      Result.UpdateInt(ExportedKeyColKeySeqIndex, GetInt(KEY_SEQ_Index) + 1); //KEY_SEQ_Index
-      Result.UpdateInt(ExportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(UPDATE_RULE_Index))));
-      Result.UpdateInt(ExportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(DELETE_RULE_Index))));
-      Result.UpdateString(ExportedKeyColFKNameIndex, GetString(FK_NAME_Index)); //FK_NAME_Index
-      Result.UpdateString(ExportedKeyColPKNameIndex, GetString(PK_NAME_Index)); //PK_NAME_Index
-      Result.UpdateNull(ExportedKeyColDeferrabilityIndex); //DEFERABILITY
-      Result.InsertRow;
-    end;
-    Close;
-  end;
+  Result := UncachedGetCrossReference(Catalog, Schema, Table, '', '', '');
 end;
 
 {**
@@ -2488,81 +2303,38 @@ function TZInterbase6DatabaseMetadata.UncachedGetCrossReference(
   const PrimaryCatalog: string; const PrimarySchema: string;
   const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
   const ForeignTable: string): IZResultSet;
-const
-  PKTABLE_NAME_Index  = FirstDbcIndex + 0;
-  PKCOLUMN_NAME_Index = FirstDbcIndex + 1;
-  FKTABLE_NAME_Index  = FirstDbcIndex + 2;
-  FKCOLUMN_NAME_Index = FirstDbcIndex + 3;
-  UPDATE_RULE_Index   = FirstDbcIndex + 4;
-  DELETE_RULE_Index   = FirstDbcIndex + 5;
-  FK_NAME_Index       = FirstDbcIndex + 6;
-  PK_NAME_Index       = FirstDbcIndex + 7;
-  DEFERRABILITY_Index = FirstDbcIndex + 8;
 var
-  KeySeq: Integer;
-  LCatalog, SQL, LPTable, LFTable: String;
+  SQL, PKTable, FKTable: String;
 begin
-  if PrimaryCatalog = '' then
-    LCatalog := GetConnection.GetCatalog
-  else
-    LCatalog := PrimaryCatalog;
+  PKTable := ConstructNameCondition(AddEscapeCharToWildcards(PrimaryTable), 'RELC_PK.RDB$RELATION_NAME');
+  FKTable := ConstructNameCondition(AddEscapeCharToWildcards(ForeignTable), 'RELC_FK.RDB$RELATION_NAME');
 
-  LPTable := ConstructNameCondition(AddEscapeCharToWildcards(PrimaryTable), 'i2.RDB$RELATION_NAME');
-  LFTable := ConstructNameCondition(AddEscapeCharToWildcards(ForeignTable), 'rc.RDB$RELATION_NAME');
-
-  Result := inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
-                                                ForeignCatalog, ForeignSchema, ForeignTable);
-
-  SQL :=
-    'SELECT '+
-    'i2.RDB$RELATION_NAME AS PKTABLE_NAME, '+
-    's2.RDB$FIELD_NAME AS PKCOLUMN_NAME, '+
-    'rc.RDB$RELATION_NAME as FKTABLE_NAME, '+
-    's.RDB$FIELD_NAME AS FKCOLUMN_NAME, '+
-    'refc.RDB$UPDATE_RULE AS UPDATE_RULE, '+
-    'refc.RDB$DELETE_RULE AS DELETE_RULE, '+
-    'i.RDB$INDEX_NAME AS FK_NAME, '+
-    's2.RDB$INDEX_NAME as PK_NAME, '+
-    'rc.RDB$DEFERRABLE AS DEFERRABILITY '+
-    'FROM RDB$INDEX_SEGMENTS s '+
-    'LEFT JOIN RDB$INDICES i ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME '+
-    'LEFT JOIN RDB$RELATION_CONSTRAINTS rc ON rc.RDB$INDEX_NAME = s.RDB$INDEX_NAME '+
-    'LEFT JOIN RDB$REF_CONSTRAINTS refc ON rc.RDB$CONSTRAINT_NAME = refc.RDB$CONSTRAINT_NAME '+
-    'LEFT JOIN RDB$RELATION_CONSTRAINTS rc2 ON rc2.RDB$CONSTRAINT_NAME = refc.RDB$CONST_NAME_UQ '+
-    'LEFT JOIN RDB$INDICES i2 ON i2.RDB$INDEX_NAME = rc2.RDB$INDEX_NAME '+
-    'LEFT JOIN RDB$INDEX_SEGMENTS s2 ON i2.RDB$INDEX_NAME = s2.RDB$INDEX_NAME '+
-    'WHERE rc.RDB$CONSTRAINT_TYPE = ''FOREIGN KEY'' '+
-    'AND rc.RDB$CONSTRAINT_TYPE IS NOT NULL '+
-    AppendCondition(LPTable)+ AppendCondition(LFTable);
-
-  KeySeq := 0;
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
-      Inc(KeySeq);
-      Result.MoveToInsertRow;
-      Result.UpdateString(CrossRefKeyColPKTableCatalogIndex, LCatalog); //PKTABLE_CAT
-      Result.UpdateNull(CrossRefKeyColPKTableSchemaIndex); //PKTABLE_SCHEM
-      Result.UpdateString(CrossRefKeyColPKTableNameIndex, GetString(PKTABLE_NAME_Index)); //PKTABLE_NAME_Index
-      Result.UpdateString(CrossRefKeyColPKColumnNameIndex, GetString(PKCOLUMN_NAME_Index)); //PKCOLUMN_NAME_Index
-      Result.UpdateString(CrossRefKeyColFKTableCatalogIndex, LCatalog); //PKTABLE_CAT
-      Result.UpdateNull(CrossRefKeyColFKTableSchemaIndex); //FKTABLE_SCHEM
-      Result.UpdateString(CrossRefKeyColFKTableNameIndex, GetString(FKTABLE_NAME_Index)); //FKTABLE_NAME_Index
-      Result.UpdateString(CrossRefKeyColFKColumnNameIndex, GetString(FKCOLUMN_NAME_Index)); //FKCOLUMN_NAME_Index
-      Result.UpdateSmall(CrossRefKeyColKeySeqIndex, KeySeq); //KEY_SEQ
-      Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(UPDATE_RULE_Index)))); //UPDATE_RULE_Index
-      Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(DELETE_RULE_Index)))); //DELETE_RULE_Index
-      Result.UpdateString(CrossRefKeyColFKNameIndex, GetString(FK_NAME_Index)); //FK_NAME_Index
-      Result.UpdateString(CrossRefKeyColPKNameIndex, GetString(PK_NAME_Index)); //PK_NAME_Index
-      if GetString(DEFERRABILITY_Index) = YesNoStrs[False] then
-        Result.UpdateSmall(CrossRefKeyColDeferrabilityIndex, Ord(ikNotDeferrable)) //DEFERRABILITY_Index
-      else
-        Result.UpdateSmall(CrossRefKeyColDeferrabilityIndex, Ord(ikInitiallyDeferred)); //DEFERRABILITY_Index
-      Result.InsertRow;
-    end;
-    Close;
-  end;
+  SQL := 'SELECT '+
+    'NULL AS PKTABLE_CAT, '+
+    'NULL AS PKTABLE_SCHEM, '+
+    'RELC_PK.RDB$RELATION_NAME AS PKTABLE_NAME, '+
+    'IS_PK.RDB$FIELD_NAME AS PKCOLUMN_NAME, '+
+    'NULL AS FKTABLE_CAT, '+
+    'NULL AS FKTABLE_SCHEM, '+
+    'RELC_FK.RDB$RELATION_NAME as FKTABLE_NAME, '+
+    'IS_FK.RDB$FIELD_NAME AS FKCOLUMN_NAME, '+
+    'IS_FK.RDB$FIELD_POSITION+1 AS KEY_SEQ, '+
+    GetRuleTypeString('REFC_FK.RDB$UPDATE_RULE', 'UPDATE_RULE')+', '+
+    GetRuleTypeString('REFC_FK.RDB$DELETE_RULE', 'DELETE_RULE')+', '+
+    'RELC_FK.RDB$CONSTRAINT_NAME AS FK_NAME, '+
+    'RELC_PK.RDB$INDEX_NAME as PK_NAME, '+
+    GetDereferabilityTypeString('RELC_FK')+
+    ' FROM RDB$RELATION_CONSTRAINTS RELC_FK'+
+    ' INNER JOIN RDB$INDEX_SEGMENTS IS_FK ON IS_FK.RDB$INDEX_NAME = RELC_FK.RDB$INDEX_NAME'+
+    ' INNER JOIN RDB$REF_CONSTRAINTS REFC_FK ON RELC_FK.RDB$CONSTRAINT_NAME = REFC_FK.RDB$CONSTRAINT_NAME'+
+    ' INNER JOIN RDB$RELATION_CONSTRAINTS RELC_PK ON RELC_PK.RDB$CONSTRAINT_NAME = REFC_FK.RDB$CONST_NAME_UQ'+
+    ' INNER JOIN RDB$INDEX_SEGMENTS IS_PK ON IS_PK.RDB$INDEX_NAME = RELC_PK.RDB$INDEX_NAME'+
+    ' WHERE RELC_FK.RDB$CONSTRAINT_TYPE = ''FOREIGN KEY'' '+
+    AppendCondition(PKTable)+ AppendCondition(FKTable)+
+    ' ORDER BY RELC_FK.RDB$RELATION_NAME, IS_FK.RDB$FIELD_POSITION';
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(CrossRefColumnsDynArray));
 end;
 
 {**
@@ -2708,6 +2480,7 @@ const
 var
   SQL : string;
   LTable: String;
+  L: NativeUint;
 begin
   LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'I.RDB$RELATION_NAME');
 
@@ -2733,15 +2506,15 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateNull(CatalogNameIndex); //TABLE_CAT
-      Result.UpdateNull(SchemaNameIndex); //TABLE_SCHEM
-      Result.UpdateString(TableNameIndex, GetString(RDB_RELATION_NAME_Index)); //TABLE_NAME, RDB$RELATION_NAME
+      //Result.UpdateNull(CatalogNameIndex); //TABLE_CAT
+      //Result.UpdateNull(SchemaNameIndex); //TABLE_SCHEM
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RDB_RELATION_NAME_Index, L), L); //TABLE_NAME, RDB$RELATION_NAME
       Result.UpdateBoolean(IndexInfoColNonUniqueIndex, not GetBoolean(RDB_UNIQUE_FLAG_Index)); //NON_UNIQUE, RDB$UNIQUE_FLAG
       //Result.UpdateNull(IndexInfoColIndexQualifierIndex); //INDEX_QUALIFIER
-      Result.UpdateString(IndexInfoColIndexNameIndex, GetString(RDB_INDEX_NAME_Index)); //INDEX_NAME, RDB$INDEX_NAME
+      Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(RDB_INDEX_NAME_Index, L), L); //INDEX_NAME, RDB$INDEX_NAME
       Result.UpdateInt(IndexInfoColTypeIndex, Ord(ntNoNulls)); //TYPE
       Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(RDB_FIELD_POSITION_Index){$IFNDEF GENERIC_INDEX} + 1{$ENDIF}); //ORDINAL_POSITION, RDB$FIELD_POSITION
-      Result.UpdateString(IndexInfoColColumnNameIndex, GetString(RDB_FIELD_NAME_Index)); //COLUMN_NAME, RDB$FIELD_NAME
+      Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(RDB_FIELD_NAME_Index, L), L); //COLUMN_NAME, RDB$FIELD_NAME
       //Result.UpdateNull(IndexInfoColAscOrDescIndex); //ASC_OR_DESC
       //Result.UpdateNull(IndexInfoColCardinalityIndex); //CARDINALITY
       Result.UpdateInt(IndexInfoColPagesIndex, GetInt(RDB_PAGE_NUMBER_Index)); //PAGES, COUNT (DISTINCT P.RDB$PAGE_NUMBER)
@@ -2772,24 +2545,12 @@ begin
     ConstructVirtualResultSet(SequenceColumnsDynArray));
 end;
 
-{**
-  Gets a privilege name.
-  @param  Interbase privilege name
-  @returns a JDBC privilege name.
-}
-function TZInterbase6DatabaseMetadata.GetPrivilege(const Privilege: string): string;
-var P: PChar absolute Privilege;
+procedure TZInterbase6DatabaseMetadata.SetUTF8CodePageInfo;
 begin
-  Result := '';
-  // Accept only 1-char strings
-  if Length(Privilege) = 1 then
-    case P^ of
-      'S': Result := 'SELECT';
-      'I': Result := 'INSERT';
-      'U': Result := 'UPDATE';
-      'D': Result := 'DELETE';
-      'R': Result := 'REFERENCE';
-    end;
+  FMetaConSettings.AutoEncode := False;
+  FMetaConSettings.ClientCodePage := GetConnection.GetIZPlainDriver.ValidateCharEncoding('UTF8');
+  FMetaConSettings.AutoEncode := true; //Get/Set-String related
+  FConSettings := @FMetaConSettings;
 end;
 
 {**
@@ -2847,8 +2608,8 @@ begin
       if Next then
       begin
         Result.MoveToInsertRow;
-        Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
-        Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
+        //Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
+        //Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
         Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
         Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
         Result.UpdateString(CollationNameIndex, GetString(DEFAULT_COLLATE_NAME_Index)); //COLLATION_NAME

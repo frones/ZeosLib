@@ -423,7 +423,7 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
         ColumnsInfo.Add(ColumnInfo);
       end;
 
-      RS := TZVirtualResultSet.CreateWithColumns(Self, ColumnsInfo, '', ConSettings);
+      RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
       with RS do begin
         SetType(rtScrollInsensitive);
         SetConcurrency(rcReadOnly);

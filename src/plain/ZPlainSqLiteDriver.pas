@@ -291,6 +291,12 @@ type
     sqlite3_commit_hook: function(db: Psqlite; callback: Tsqlite_simple_callback; ptr: Pointer): Pointer; cdecl;
     sqlite3_rekey: function(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer; cdecl;
     sqlite3_key: function(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer; cdecl;
+
+    sqlite3_backup_init: function(pDest: Psqlite; const zDestName: PAnsiChar; pSource: Psqlite; const zSourceName: PAnsiChar):Pointer; cdecl;
+    sqlite3_backup_step: function(p: Psqlite; nPage: Integer): Integer; cdecl;
+    sqlite3_backup_finish: function(p: Psqlite): Integer; cdecl;
+    sqlite3_backup_remaining: function(p: Psqlite): Integer; cdecl;
+    sqlite3_backup_pagecount: function(p: Psqlite): Integer; cdecl;
   protected
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
@@ -352,8 +358,7 @@ end;
 procedure TZSQLite3PlainDriver.LoadApi;
 begin
 { ************** Load adresses of API Functions ************* }
-  with Loader do
-  begin
+  with Loader do begin
   @sqlite3_open                   := GetAddress('sqlite3_open');
   @sqlite3_close                  := GetAddress('sqlite3_close');
 
@@ -426,6 +431,12 @@ begin
   @sqlite3_commit_hook            := GetAddress('sqlite3_commit_hook');
   @sqlite3_rekey                  := GetAddress('sqlite3_rekey');
   @sqlite3_key                    := GetAddress('sqlite3_key');
+  { backup api }
+  @sqlite3_backup_init := GetAddress('sqlite3_backup_init');
+  @sqlite3_backup_step := GetAddress('sqlite3_backup_step');
+  @sqlite3_backup_finish := GetAddress('sqlite3_backup_finish');
+  @sqlite3_backup_remaining := GetAddress('sqlite3_backup_remaining');
+  @sqlite3_backup_pagecount := GetAddress('sqlite3_backup_pagecount');
   end;
 end;
 

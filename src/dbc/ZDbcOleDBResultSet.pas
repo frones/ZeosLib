@@ -361,7 +361,7 @@ begin
                               then JSONWriter.AddShort('Z")')
                               else JSONWriter.Add('"');
                             end;
-        DBTYPE_HCHAPTER:  JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PCHAPTER(FData)^));
+        DBTYPE_HCHAPTER:  JSONWriter.{$IFDEF CPU64}AddQ{$ELSE}AddU{$ENDIF}(PCHAPTER(FData)^);
         //DBTYPE_FILETIME = 64;
         //DBTYPE_PROPVARIANT = 138;
         DBTYPE_VARNUMERIC: begin

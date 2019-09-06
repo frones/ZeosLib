@@ -70,7 +70,7 @@ uses
 
 type
   {** Implements Interbase ResultSet. }
-  TZInterbase6XSQLDAResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
+  TZInterbase6XSQLDAResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
     FCachedBlob: boolean;
     FStmtHandle: TISC_STMT_HANDLE;
@@ -81,15 +81,16 @@ type
     FBlobTemp: IZBlob;
     FPlainDriver: TZInterbasePlainDriver;
     FDialect: Word;
-    FCodePageArray: TWordDynArray;
+    FCS_ID2CodePageArray: TWordDynArray;
     FStmtType: TZIbSqlStatementType;
     FGUIDProps: TZInterbase6StatementGUIDProps;
     FISC_TR_HANDLE: TISC_TR_HANDLE;
     FIBConnection: IZInterbase6Connection;
-    FClientCP: word;
     FIBTransaction: IZIBTransaction;
-    FSQL: String;
     procedure RegisterCursor;
+    procedure DeRegisterCursor;
+    function CreateIBConvertError(ColumnIndex: Integer; DataType: ISC_SHORT): EZIBConvertError;
+    function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): Pointer;
   protected
     procedure Open; override;
   public
@@ -124,8 +125,13 @@ type
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
     function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    {$IFNDEF NO_ANSISTRING}
+    function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    {$ENDIF}
     function GetBlob(ColumnIndex: Integer): IZBlob;
-
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF USE_SYNCOMMONS}
@@ -195,17 +201,6 @@ begin
   end;
 end;
 
-function GetRawFromTextVar(XSQLVAR: PXSQLVAR): RawByteString; {$IF defined(WITH_INLINE)} inline; {$IFEND}
-var
-  P: PAnsiChar;
-  Len: NativeUInt;
-begin
-  GetPCharFromTextVar(XSQLVAR, P, Len);
-  if Len > 0
-  then ZSetString(P, Len, Result{%H-})
-  else Result := '';
-end;
-
 { TZInterbase6XSQLDAResultSet }
 
 {**
@@ -223,7 +218,6 @@ constructor TZInterbase6XSQLDAResultSet.Create(const Statement: IZStatement;
 begin
   inherited Create(Statement, SQL, TZInterbaseResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
-  FClientCP := ConSettings.CTRL_CP;
   FIZSQLDA := XSQLDA; //localize the interface to avoid automatic free the object
   FXSQLDA := XSQLDA.GetData; // localize buffer for fast access
 
@@ -240,10 +234,17 @@ begin
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
 
-  FCodePageArray := FPlainDriver.GetCodePageArray;
-  FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
-  FSQL := SQL;
+  FCS_ID2CodePageArray := FPlainDriver.GetCodePageArray;
+  FCS_ID2CodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
   Open;
+end;
+
+function TZInterbase6XSQLDAResultSet.CreateIBConvertError(
+  ColumnIndex: Integer; DataType: ISC_SHORT): EZIBConvertError;
+begin
+  Result := EZIBConvertError.Create(Format(SErrorConvertionField,
+        [FIZSQLDA.GetFieldAliasName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}),
+        GetNameSqlType(DataType and not(1))]));
 end;
 
 {**
@@ -274,8 +275,18 @@ procedure TZInterbase6XSQLDAResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var L, H, I: Integer;
     P: Pointer;
-    C, SQLCode: SmallInt;
+    C, SQLCode: ISC_SHORT;
     TempDate: TZTimeStamp;//TCTimeStructure;
+  procedure WConvert(P: PAnsiChar; L: ISC_SHORT; CP: word); //no _UStrClr in method
+  begin
+    FUniTemp := PRawToUnicode(P, L, CP);
+    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
+  end;
+  procedure RaiseConvertError; //no _U/LStrClr in method
+  begin
+    raise EZIBConvertError.Create(Format(SErrorConvertionField,
+      [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
+  end;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -287,7 +298,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     {$R-}
-    with FXSQLDA.sqlvar[C] do
+    with FXSQLDA.sqlvar[C], TZColumnInfo(ColumnsInfo[c]) do
       if (sqlind <> nil) and (sqlind^ = ISC_NULL) then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
@@ -305,24 +316,19 @@ begin
                             JSONWriter.WrBase64(sqldata, sqllen, True)
                           else begin
                             JSONWriter.Add('"');
-                            if TZColumnInfo(ColumnsInfo[c]).ColumnCodePage = zCP_UTF8 then
-                              JSONWriter.AddJSONEscape(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen)
-                            else begin
-                              FUniTemp := PRawToUnicode(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, TZColumnInfo(ColumnsInfo[c]).ColumnCodePage);
-                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
-                            end;
+                            if ColumnCodePage = zCP_UTF8
+                            then JSONWriter.AddJSONEscape(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen)
+                            else WConvert(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, ColumnCodePage);
                             JSONWriter.Add('"');
                           end;
           SQL_TEXT      : if sqlsubtype = CS_BINARY then
                             JSONWriter.WrBase64(sqldata, sqllen, True)
                           else begin
                             JSONWriter.Add('"');
-                            if TZColumnInfo(ColumnsInfo[c]).ColumnCodePage = zCP_UTF8 then
-                              JSONWriter.AddJSONEscape(sqldata, L)
-                            else begin
-                              FUniTemp := PRawToUnicode(sqldata, L, TZColumnInfo(ColumnsInfo[c]).ColumnCodePage);
-                              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
-                            end;
+                            L := GetAbsorbedTrailingSpacesLen(PAnsiChar(sqldata), sqllen);
+                            if ColumnCodePage = zCP_UTF8
+                            then JSONWriter.AddJSONEscape(sqldata, L)
+                            else WConvert(sqldata, L, ColumnCodePage);
                             JSONWriter.Add('"');
                           end;
           SQL_D_FLOAT,
@@ -375,12 +381,9 @@ begin
                                 JSONWriter.Add('"');
                                 ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
                                     PISC_QUAD(sqldata)^, L, P, False, Self);
-                                if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
-                                  JSONWriter.AddJSONEscape(P, L)
-                                else begin
-                                  fUniTemp := PRawToUnicode(P, L, ConSettings^.ClientCodePage^.CP);
-                                  JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
-                                end;
+                                if ColumnCodePage = zCP_UTF8
+                                then JSONWriter.AddJSONEscape(P, L)
+                                else WConvert(P, L, ColumnCodePage);
                                 JSONWriter.Add('"');
                               end else begin
                                 ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
@@ -391,7 +394,7 @@ begin
                               FreeMem(P);
                             end;
                           end;
-          SQL_ARRAY     : JSONWriter.AddShort('"Array"');
+          //SQL_ARRAY     : JSONWriter.AddShort('"Array"');
           SQL_TYPE_TIME : begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("0000-00-00')
@@ -424,9 +427,7 @@ begin
                           end;
           SQL_BOOLEAN   : JSONWriter.AddShort(JSONBool[PISC_BOOLEAN(sqldata)^ <> 0]);
           SQL_BOOLEAN_FB: JSONWriter.AddShort(JSONBool[PISC_BOOLEAN_FB(sqldata)^ <> 0]);
-          else
-            raise EZIBConvertError.Create(Format(SErrorConvertionField,
-              [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
+          else          RaiseConvertError;
         end;
         JSONWriter.Add(',');
       end;
@@ -439,6 +440,78 @@ begin
   end;
 end;
 {$ENDIF USE_SYNCOMMONS}
+
+{$IFNDEF NO_ANSISTRING}
+function TZInterbase6XSQLDAResultSet.GetAnsiString(
+  ColumnIndex: Integer): AnsiString;
+var XSQLVAR: PXSQLVAR;
+  P: Pointer;
+  Len: NativeUint;
+  ColCP: Word;
+  CP_ID: ISC_SHORT;
+  procedure CPConvert(P: PAnsiChar; Len: NativeUint; ColCP: Word; var Result: AnsiString);
+  begin
+    FUniTemp := PRawToUnicode(P,Len,ColCP);
+    Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
+  end;
+  procedure FromLob(var Result: AnsiString);
+  var Lob: IZBlob;
+    P: Pointer;
+    Len: NativeUint;
+  begin
+    Lob := GetBlob(ColumnIndex);
+    if Lob.IsClob
+    then P := Lob.GetPAnsiChar(ZOSCodePage)
+    else P := Lob.GetBuffer;
+    Len := Lob.Length;
+    ZSetString(PAnsiChar(P), Len, Result);
+  end;
+label SetFromPChar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  {$R-}
+  XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
+    LastWasNull := True;
+    Result := ''
+  end else begin
+    LastWasNull := False;
+    CP_ID := XSQLVAR.sqlsubtype and 255;
+    case (XSQLVAR.sqltype and not(1)) of
+      SQL_TEXT      : begin
+                        P := XSQLVAR.sqldata;
+                        if (CP_ID = CS_BINARY) then begin
+                          Len := XSQLVAR.sqllen;
+                          goto SetFromPChar;
+                        end else begin
+                          ColCP := FCS_ID2CodePageArray[CP_ID];
+                          Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
+                          if (ColCP = ZOSCodePage)
+                          then goto SetFromPChar
+                          else CPConvert(P, Len, ColCP, Result);
+                        end;
+                      end;
+      SQL_VARYING   : begin
+                        P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
+                        Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
+                        ColCP := FCS_ID2CodePageArray[CP_ID];
+                        if (CP_ID = CS_BINARY) or (ColCP = ZOSCodePage)
+                        then goto SetFromPChar
+                        else CPConvert(P, Len, ColCP, Result);
+                      end;
+      SQL_BLOB:       FromLob(Result);
+      else  begin
+              P := GetPAnsiChar(Columnindex, Len);
+SetFromPChar: ZSetString(P, Len, Result);
+            end;
+    end;
+  end;
+end;
+{$ENDIF NO_ANSISTRING}
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -451,9 +524,9 @@ end;
 }
 procedure TZInterbase6XSQLDAResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var
-  TempDate: TZTimeStamp;
   XSQLVAR: PXSQLVAR;
-  dDT, tDT: TDateTime;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -467,44 +540,24 @@ begin
   end else begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
-      SQL_D_FLOAT,
-      SQL_DOUBLE    : Double2BCD(PDouble(XSQLVAR.sqldata)^, Result);
-      SQL_LONG      : ScaledOrdinal2Bcd(PISC_LONG(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
-      SQL_FLOAT     : Double2BCD(PSingle(XSQLVAR.sqldata)^, Result);
       SQL_BOOLEAN   : ScaledOrdinal2Bcd(Ord(PISC_BOOLEAN(XSQLVAR.sqldata)^ <> 0), 0, Result);
       SQL_BOOLEAN_FB: ScaledOrdinal2Bcd(Ord(PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ <> 0), 0, Result);
       SQL_SHORT     : ScaledOrdinal2Bcd(PISC_SHORT(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
+      SQL_LONG      : ScaledOrdinal2Bcd(PISC_LONG(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
       SQL_INT64     : ScaledOrdinal2Bcd(PISC_INT64(XSQLVAR.sqldata)^, Byte(-XSQLVAR.sqlscale), Result);
-      SQL_TEXT      : LastWasNull := not TryRawToBCD(XSQLVAR.sqldata, XSQLVAR.sqllen, Result, '.');
-      SQL_VARYING   : LastWasNull := not TryRawToBCD(@PISC_VARYING(XSQLVAR.sqldata).str[0], PISC_VARYING(XSQLVAR.sqldata).strlen, Result, '.');
-      SQL_TIMESTAMP : begin
-                       isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
-                          TempDate.Year, TempDate.Month, Tempdate.Day);
-                        isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
-                          TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        if not TryEncodeDate(TempDate.Year, TempDate.Month, TempDate.Day, dDT) then
-                          dDT := 0;
-                        if not TryEncodeTime(TempDate.Hour, TempDate.Minute,
-                                TempDate.Second, TempDate.Fractions div 10, tDT) then
-                          tDT :=0;
-                        if dDT < 0
-                        then dDT := dDT-tDT
-                        else dDT := dDT+tDT;
-                        Double2BCD(dDT, Result);
+      SQL_BLOB,
+      SQL_TEXT,
+      SQL_VARYING   : begin
+                        P := GetPAnsiChar(ColumnIndex, Len);
+                        LastWasNull := not TryRawToBCD(P, Len, Result, '.');
                       end;
-      SQL_TYPE_DATE : begin
-                        isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
-                          TempDate.Year, TempDate.Month, Tempdate.Day);
-                        Double2BCD(SysUtils.EncodeDate(TempDate.Year,TempDate.Month, TempDate.Day), Result);
-                      end;
-      SQL_TYPE_TIME : begin
-                        isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
-                          TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Double2BCD(SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10), Result);
-                      end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-          [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      SQL_D_FLOAT,
+      SQL_DOUBLE,
+      SQL_FLOAT,
+      SQL_TIMESTAMP,
+      SQL_TYPE_DATE,
+      SQL_TYPE_TIME : Double2BCD(GetDouble(ColumnIndex), Result);
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -575,7 +628,7 @@ var
   XSQLVAR: PXSQLVAR;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -595,14 +648,13 @@ begin
       SQL_SHORT     : Result := PISC_SHORT(XSQLVAR.sqldata)^ <> 0;
       SQL_QUAD,
       SQL_INT64     : Result := PISC_INT64(XSQLVAR.sqldata)^ <> 0;
+      SQL_BLOB,
       SQL_TEXT,
       SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
+                        P := GetPAnsiChar(ColumnIndex, Len);
                         Result := StrToBoolEx(P, P+Len);
                       end;
-      SQL_BLOB      : Result := StrToBoolEx(GetBlob(ColumnIndex).GetString);
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -622,7 +674,7 @@ var
   XSQLVAR: PXSQLVAR;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBigDecimal);
+  CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -661,7 +713,7 @@ var
   XSQLVAR: PXSQLVAR;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTimestamp);
+  CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -670,10 +722,8 @@ begin
   if LastWasNull then
     Result := 0
   else
-  begin
     {$R-}
-    with FXSQLDA.sqlvar[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
-    begin
+    with FXSQLDA.sqlvar[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
       SQLCode := (sqltype and not(1));
       case SQLCode of
         SQL_TIMESTAMP :
@@ -702,7 +752,6 @@ begin
       end;
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  end;
 end;
 
 {**
@@ -748,9 +797,10 @@ begin
       SQL_INT64     : if XSQLVAR.sqlscale = 0
                       then Result := PISC_INT64(XSQLVAR.sqldata)^
                       else Result := PISC_INT64(XSQLVAR.sqldata)^    / IBScaleDivisor[XSQLVAR.sqlscale];
+      SQL_BLOB,
       SQL_TEXT,
       SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
+                        P := GetPAnsiChar(ColumnIndex, Len);
                         ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                       end;
       SQL_TIMESTAMP : begin
@@ -778,8 +828,7 @@ begin
                         Result := SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions div 10);
                       end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-          [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -835,13 +884,13 @@ begin
                         I64 := PISC_INT64(XSQLVAR.sqldata)^ * IBScaleDivisor[-4-XSQLVAR.sqlscale]
                       else
                         I64 := PISC_INT64(XSQLVAR.sqldata)^ div IBScaleDivisor[-4-XSQLVAR.sqlscale];
+      SQL_BLOB,
       SQL_TEXT,
       SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
+                        P := GetPAnsiChar(ColumnIndex, Len);
                         ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                       end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-          [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType((XSQLVAR.sqltype and not(1)))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -889,9 +938,10 @@ begin
       SQL_INT64     : if XSQLVAR.sqlscale = 0
                       then Result := PISC_INT64(XSQLVAR.sqldata)^
                       else Result := PISC_INT64(XSQLVAR.sqldata)^    / IBScaleDivisor[XSQLVAR.sqlscale];
+      SQL_BLOB,
       SQL_TEXT,
       SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
+                        P := GetPAnsiChar(ColumnIndex, Len);
                         ZSysUtils.SQLStrToFloatDef(P, 0, Result, Len);
                       end;
       SQL_TIMESTAMP : begin
@@ -919,8 +969,7 @@ begin
                         Result := SysUtils.EncodeTime(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions div 10);
                       end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-          [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -941,7 +990,7 @@ var
   XSQLVAR: PXSQLVAR;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -952,8 +1001,8 @@ begin
   end else begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
-      SQL_DOUBLE    : Result := Trunc(PDouble(XSQLVAR.sqldata)^);
       SQL_D_FLOAT,
+      SQL_DOUBLE    : Result := Trunc(PDouble(XSQLVAR.sqldata)^);
       SQL_FLOAT     : Result := Trunc(PSingle(XSQLVAR.sqldata)^);
       SQL_BOOLEAN   : Result := PISC_BOOLEAN(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PISC_BOOLEAN_FB(XSQLVAR.sqldata)^;
@@ -967,16 +1016,23 @@ begin
       SQL_INT64     : if XSQLVAR.sqlscale = 0
                       then Result := PISC_INT64(XSQLVAR.sqldata)^
                       else Result := PISC_INT64(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
+      SQL_BLOB,
       SQL_TEXT,
       SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
+                        P := GetPAnsiChar(ColumnIndex, Len);
                         Result := RawToIntDef(P, P+Len, 0);
                       end;
-      SQL_BLOB      : Result := RawToIntDef(GetBlob(ColumnIndex).GetString, 0);
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
+end;
+
+function TZInterbase6XSQLDAResultSet.GetLobBufAndLen(ColumnIndex: Integer;
+  out Len: NativeUInt): Pointer;
+begin
+  FBlobTemp := GetBlob(ColumnIndex);
+  Result := FBlobTemp.GetBuffer;
+  Len := FBlobTemp.Length;
 end;
 
 {**
@@ -1021,14 +1077,13 @@ begin
       SQL_INT64     : if XSQLVAR.sqlscale = 0
                       then Result := PISC_INT64(XSQLVAR.sqldata)^
                       else Result := PISC_INT64(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
+      SQL_BLOB,
       SQL_TEXT,
       SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
+                        P := GetPAnsiChar(ColumnIndex, Len);
                         Result := RawToInt64Def(P, P+Len, 0);
                       end;
-      SQL_BLOB      : Result := RawToInt64Def(GetBlob(ColumnIndex).GetString, 0);
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -1051,7 +1106,7 @@ var
   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -1111,7 +1166,7 @@ var
   DT: TDateTime;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stTimeStamp);
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -1267,11 +1322,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       end;
       SQL_TEXT,
       SQL_VARYING   : GetPCharFromTextVar(XSQLVAR, Result, Len);
-      SQL_BLOB      : Begin
-                        FBlobTemp := GetBlob(ColumnIndex);  //localize interface to keep pointer alive
-                        Result := FBlobTemp.GetBuffer;
-                        Len := FBlobTemp.Length;
-                      End;
+      SQL_BLOB      : Result := GetLobBufAndLen(ColumnIndex, Len);
       SQL_TIMESTAMP : begin
                         isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
@@ -1298,8 +1349,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                           TempDate.Second, TempDate.Fractions div 10,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -1385,9 +1435,9 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
       SQL_TEXT,
       SQL_VARYING   : begin
                         GetPCharFromTextVar(XSQLVAR, P, Len);
-                        if XSQLVAR.sqlsubtype = CS_BINARY
+                        if XSQLVAR.sqlsubtype and 255 = CS_BINARY
                         then fUniTemp := Ascii7ToUnicodeString(P, Len)
-                        else fUniTemp := PRawToUnicode(P, Len, ConSettings^.ClientCodePage.CP);
+                        else fUniTemp := PRawToUnicode(P, Len, FCS_ID2CodePageArray[XSQLVAR.sqlsubtype and 255]);
                         Len := Length(fUniTemp);
                         if Len <> 0
                         then Result := Pointer(fUniTemp)
@@ -1430,8 +1480,7 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                           TempDate.Second, TempDate.Fractions div 10,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False);
                       end;
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
@@ -1468,7 +1517,7 @@ var
   XSQLVAR: PXSQLVAR;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stLong);
+  CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
@@ -1479,8 +1528,8 @@ begin
   end else begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
-      SQL_DOUBLE    : Result := Trunc(PDouble(XSQLVAR.sqldata)^);
       SQL_D_FLOAT,
+      SQL_DOUBLE    : Result := Trunc(PDouble(XSQLVAR.sqldata)^);
       SQL_FLOAT     : Result := Trunc(PSingle(XSQLVAR.sqldata)^);
       SQL_BOOLEAN   : Result := PISC_BOOLEAN(XSQLVAR.sqldata)^;
       SQL_BOOLEAN_FB: Result := PISC_BOOLEAN_FB(XSQLVAR.sqldata)^;
@@ -1494,17 +1543,88 @@ begin
       SQL_INT64     : if XSQLVAR.sqlscale = 0
                       then Result := PISC_INT64(XSQLVAR.sqldata)^
                       else Result := PISC_INT64(XSQLVAR.sqldata)^ div IBScaleDivisor[XSQLVAR.sqlscale];
+      SQL_BLOB,
       SQL_TEXT,
       SQL_VARYING   : begin
-                        GetPCharFromTextVar(XSQLVAR, P, Len);
+                        P := GetPAnsiChar(ColumnIndex, Len);
                         Result := RawToUInt64Def(P, P+Len, 0);
                       end;
-      SQL_BLOB      : Result := RawToUInt64Def(GetBlob(ColumnIndex).GetString, 0);
-      else raise EZIBConvertError.Create(Format(SErrorConvertionField,
-        [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(XSQLVAR.sqltype and not(1))]));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
   end;
 end;
+
+{$IFNDEF NO_UTF8STRING}
+function TZInterbase6XSQLDAResultSet.GetUTF8String(
+  ColumnIndex: Integer): UTF8String;
+var XSQLVAR: PXSQLVAR;
+  P: Pointer;
+  Len: NativeUint;
+  ColCP: Word;
+  CP_ID: ISC_SHORT;
+  procedure CPConvert(P: PAnsiChar; Len: NativeUint; ColCP: Word; var Result: UTF8String);
+  begin
+    FUniTemp := PRawToUnicode(P,Len,ColCP);
+    Result := ZUnicodeToRaw(FUniTemp, zCP_UTF8);
+  end;
+  procedure FromLob(var Result: UTF8String);
+  var Lob: IZBlob;
+    P: Pointer;
+    Len: NativeUint;
+  begin
+    Lob := GetBlob(ColumnIndex);
+    if Lob.IsClob
+    then P := Lob.GetPAnsiChar(zCP_UTF8)
+    else P := Lob.GetBuffer;
+    Len := Lob.Length;
+    ZSetString(PAnsiChar(P), Len, Result);
+  end;
+label SetFromPChar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  {$R-}
+  XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
+    LastWasNull := True;
+    Result := ''
+  end else begin
+    LastWasNull := False;
+    CP_ID := XSQLVAR.sqlsubtype and 255;
+    case (XSQLVAR.sqltype and not(1)) of
+      SQL_TEXT      : begin
+                        P := XSQLVAR.sqldata;
+                        if (CP_ID = CS_BINARY) then begin
+                          Len := XSQLVAR.sqllen;
+                          goto SetFromPChar;
+                        end else begin
+                          ColCP := FCS_ID2CodePageArray[CP_ID];
+                          Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
+                          if (ColCP = zCP_UTF8)
+                          then goto SetFromPChar
+                          else CPConvert(P, Len, ColCP, Result);
+                        end;
+                      end;
+      SQL_VARYING   : begin
+                        P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
+                        Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
+                        ColCP := FCS_ID2CodePageArray[CP_ID];
+                        if (CP_ID = CS_BINARY) or (ColCP = zCP_UTF8)
+                        then goto SetFromPChar
+                        else CPConvert(P, Len, ColCP, Result);
+                      end;
+      SQL_BLOB:       FromLob(Result);
+      else  begin
+              P := GetPAnsiChar(Columnindex, Len);
+SetFromPChar: ZSetString(P, Len, Result);
+            end;
+    end;
+  end;
+end;
+{$ENDIF NO_UTF8STRING}
+
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
@@ -1551,10 +1671,8 @@ begin
       if FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
         goto CheckE;
       FStmtHandle := 0;
-      if (FIBTransaction <> nil) then begin
-        FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
-        FIBTransaction := nil;
-      end;
+      if (FIBTransaction <> nil) then
+        DeRegisterCursor;
     end else
 CheckE:CheckInterbase6Error(FPlainDriver, StatusVector, Self);
   end else if RowNo = 0 then begin
@@ -1663,15 +1781,19 @@ begin
          if (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then
           CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcOther, 'isc_dsql_free_statement');
         FStmtHandle := 0;
-        if FIBTransaction <> nil then begin
-          FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
-          FIBTransaction := nil;
-        end;
+        if FIBTransaction <> nil then
+          DeRegisterCursor;
       end else
         FStmtHandle := 0;
     end;
     inherited ResetCursor;
   end;
+end;
+
+procedure TZInterbase6XSQLDAResultSet.DeRegisterCursor;
+begin
+  FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
+  FIBTransaction := nil;
 end;
 
 { TZInterbase6UnCachedBlob }
