@@ -60,7 +60,7 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseConstants, ZCompatibility,
-  ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet;
+  ZDbcLogging, ZVariant, ZMessages;
 
 type
   {** Implements Prepared SQL Statement for Interbase or FireBird. }
@@ -92,6 +92,8 @@ type
     procedure UnPrepareInParameters; override;
     function CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
     procedure ReleaseConnection; override;
+  public
+    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings); overload;
     constructor Create(const Connection: IZConnection; Info: TStrings); overload;
@@ -142,7 +144,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZSysUtils, ZDbcUtils, ZFastCode, ZPlainFirebirdDriver,
-  ZDbcInterbase6ResultSet, ZClasses;
+  ZDbcInterbase6ResultSet, ZClasses, ZTokenizer, ZEncoding;
 
 { TZInterbase6PreparedStatement }
 
@@ -497,6 +499,59 @@ begin
 
     end;
   inherited ExecuteUpdatePrepared;
+end;
+
+function TZInterbase6PreparedStatement.GetRawEncodedSQL(
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+var
+  I: Integer;
+  Temp: RawByteString;
+  ParamFound, IsCS_NONE: Boolean;
+  Tokens: TZTokenDynArray;
+  P: PChar;
+
+  procedure Add(const Value: RawByteString; const Param: Boolean = False);
+  begin
+    SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
+    FCachedQueryRaw[High(FCachedQueryRaw)] := Value;
+    SetLength(FIsParamIndex, Length(FCachedQueryRaw));
+    FIsParamIndex[High(FIsParamIndex)] := Param;
+    ToBuff(Value, Result);
+  end;
+begin
+  Result := '';
+  {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
+  if FCachedQueryRaw = nil then begin
+    ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
+    IsCS_NONE := (ConSettings^.ClientCodePage^.ID = CS_NONE);
+    if ParamFound or ConSettings^.AutoEncode or IsCS_NONE then begin
+      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
+      Temp := '';
+      for I := 0 to High(Tokens) do begin
+        if ParamFound and (Tokens[I].Value = '?') then begin
+          Add(Temp);
+          Add('?', True);
+          Temp := '';
+        end else case (Tokens[i].TokenType) of
+          ttQuoted, ttComment,
+          ttWord, ttQuotedIdentifier, ttKeyword: begin
+            P := Pointer(Tokens[i].Value);
+            if IsCS_NONE and ((Tokens[i].TokenType = ttQuotedIdentifier) or
+               ((Tokens[i].TokenType = ttWord) and (P^ = '"')))
+            then Temp := Temp + ZConvertStringToRawWithAutoEncode(Tokens[i].Value, ConSettings^.CTRL_CP, zCP_UTF8)
+            else Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+          end else
+            Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
+        end;
+      end;
+      if (Temp <> '') then
+        Add(Temp);
+    end else
+      Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
+  end else
+    for I := low(FCachedQueryRaw) to high(FCachedQueryRaw) do
+      ToBuff(FCachedQueryRaw[i], Result);
+  FlushBuff(Result);
 end;
 
 { TZInterbase6CallableStatement }

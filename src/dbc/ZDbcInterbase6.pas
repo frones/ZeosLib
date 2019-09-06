@@ -62,7 +62,7 @@ uses
   ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs,
   ZDbcConnection, ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging,
   ZDbcInterbase6Utils, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser,
-  ZDbcCache, ZURL, ZClasses, ZCollections;
+  ZURL, ZClasses, ZCollections;
 
 type
 
@@ -692,7 +692,6 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZInterbase6Connection.Open;
-const sCS_NONE = 'NONE';
 var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
