@@ -378,13 +378,13 @@ begin
       FPlainDriver.dbsetlsecure(LoginRec);
       LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
     end else begin
-      FPlainDriver.dbsetluser(LoginRec, Pointer(ConSettings^.User));
+      FPlainDriver.dbsetluser(LoginRec, PAnsiChar(ConSettings^.User));
       {$IFDEF UNICODE}
       RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Password, ConSettings.CTRL_CP, ZOSCodePage);
       {$ELSE}
       RawTemp := Password;
       {$ENDIF}
-      FPlainDriver.dbsetlpwd(LoginRec, Pointer(RawTemp));
+      FPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(RawTemp));
       LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
     end;
     if FFreeTDS or (FProvider = dpSybase) then begin
