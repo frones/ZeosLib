@@ -321,7 +321,7 @@ begin
         if FplainDriver.DBLibraryVendorType = lvtMS then
           TDSVersion := TDSDBVERSION_42
         else begin {as long we left the protocol names this workaraound is possible}
-          lLogFile := plainDriver.GetDescription;
+          lLogFile := plainDriver.GetProtocol;
           if (ZFastCode.Pos('MsSQL 7.0', lLogFile) > 0) or (ZFastCode.Pos('MsSQL 2000', lLogFile) > 0) then
             TDSVersion := DBVERSION_70
           else if ZFastCode.Pos('MsSQL 2005+', lLogFile) > 0 then
