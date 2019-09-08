@@ -404,8 +404,9 @@ type
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbVaryLen(dbProc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    {$ENDIF}
   public
-    {$ELSE}
+    {$IFNDEF WINDOWS}
     dbadata: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): PByte; cdecl;
     dbadlen: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; cdecl;
     dbaltbind: function(dbproc: PDBPROCESS; ComputeId, Column, VarType: Integer;
@@ -2395,6 +2396,7 @@ end;
 procedure TSybaseDBLibPLainDriver.LoadApi;
 begin
   inherited LoadApi;
+  {$IFDEF WINDOWS}
   if assigned(FdbSetVersion) then begin
     if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then
       Assert(FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
@@ -2402,6 +2404,10 @@ begin
     if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then
       Assert(FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
   end;
+  {$ELSE}
+    if dbSetVersion(TDSDBVERSION_100) = DBFAIL then
+      Assert(dbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
+  {$ENDIF}
 end;
 
 { TZFreeTDS50PlainDriver }
