@@ -390,7 +390,7 @@ begin
     if FFreeTDS or (FProvider = dpSybase) then begin
       RawTemp := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_CodePage]);
       if Pointer(RawTemp) <> nil then begin
-        FPlainDriver.dbSetLCharSet(LoginRec, Pointer(RawTemp));
+        FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(RawTemp));
         CheckCharEncoding(Info.Values[ConnProps_CodePage]);
       end;
     end;
@@ -400,7 +400,7 @@ begin
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
     if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
       RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
-    FHandle := FPlainDriver.dbOpen(LoginRec, Pointer(RawTemp));
+    FHandle := FPlainDriver.dbOpen(LoginRec, PAnsiChar(RawTemp));
     CheckDBLibError(lcConnect, LogMessage);
     if not Assigned(FHandle) then
       raise EZSQLException.Create('The connection to the server failed, no proper handle was returned. Insufficient memory, unable to connect for any reason. ');
