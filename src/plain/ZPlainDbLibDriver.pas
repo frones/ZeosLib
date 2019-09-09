@@ -245,6 +245,7 @@ type
     FdbNumCols_stdcall: function(dbProc: PDBPROCESS): DBINT; stdcall;
     FdbOpen: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; cdecl;
     FdbOpen_stdcall: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; stdcall;
+    FtdsDbOpen: function(Login: PLOGINREC; server: PAnsiChar; msdblib: Integer): PDBPROCESS; cdecl;
 
     FdbResults: function(dbProc: PDBPROCESS): RETCODE; cdecl;
     FdbResults_stdcall: function(dbProc: PDBPROCESS): RETCODE; stdcall;
@@ -377,7 +378,9 @@ type
     function dbgetcharset(dbproc: PDBPROCESS): PAnsiChar;{$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbHasRetStat(dbProc: PDBPROCESS): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    {$ENDIF}
     function dbOpen(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    {$IFDEF MSWINDOWS}
     procedure dbloginfree(loginptr: PLOGINREC); {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbMoreCmds(dbProc: PDBPROCESS): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbname(dbProc: PDBPROCESS): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -401,8 +404,9 @@ type
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbVaryLen(dbProc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    {$ENDIF}
   public
-    {$ELSE}
+    {$IFNDEF MSWINDOWS}
     dbadata: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): PByte; cdecl;
     dbadlen: function(dbproc: PDBPROCESS; ComputeId, Column: Integer): DBINT; cdecl;
     dbaltbind: function(dbproc: PDBPROCESS; ComputeId, Column, VarType: Integer;
@@ -460,7 +464,10 @@ type
     dbGetRow: function(dbProc: PDBPROCESS; Row: DBINT): STATUS; cdecl;
     FdbInit: function: RETCODE; cdecl;
 
-    dbOpen: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; cdecl;
+//    Jan: renamed this to FdbOpen. I don't know how wo decide between calling
+//    tdsdbopen and dbopen otherwise.?
+    FdbOpen: function(Login: PLOGINREC; server: PAnsiChar): PDBPROCESS; cdecl;
+    FtdsDbOpen: function(Login: PLOGINREC; server: PAnsiChar; msdblib: Integer): PDBPROCESS; cdecl;
 
     dbloginfree: procedure(loginptr: PLOGINREC); cdecl;
     dbMoreCmds: function(dbProc: PDBPROCESS): RETCODE; cdecl;
@@ -1416,16 +1423,24 @@ begin
   then Result := FdbNumCols(dbProc)
   else Result := FdbNumCols_stdcall(dbProc);
 end;
+{$ENDIF}
 
 {** Create and initialize a DBPROCESS structure. *}
 function TZDBLIBPLainDriver.dbOpen(Login: PLOGINREC;
   server: PAnsiChar): PDBPROCESS;
 begin
-  if Assigned(FdbOpen)
-  then Result := FdbOpen(Login, server)
-  else Result := FdbOpen_stdcall(Login, server);
+  if Assigned(FTdsDbOpen) then
+    Result := FTdsDbOpen(Login, server, 1)
+  else
+    if Assigned(FdbOpen)
+    then Result := FdbOpen(Login, server)
+    {$IFDEF MSWINDOWS}
+    else Result := FdbOpen_stdcall(Login, server)
+    {$ENDIF}
+    ;
 end;
 
+{$IFDEF MSWINDOWS}
 {** Set up the results of the next query. *}
 function TZDBLIBPLainDriver.dbResults(dbProc: PDBPROCESS): RETCODE;
 begin
@@ -2029,7 +2044,8 @@ begin
       @{$IFDEF MSWINDOWS}FdbNextRow{$ELSE}dbNextRow{$ENDIF} := GetAddress('dbnextrow');
       @{$IFDEF MSWINDOWS}FdbNumCols{$ELSE}dbnumcols{$ENDIF} := GetAddress('dbnumcols');
       @{$IFDEF MSWINDOWS}FdbResults{$ELSE}dbResults{$ENDIF} := GetAddress('dbresults');
-      @{$IFDEF MSWINDOWS}Fdbopen{$ELSE}dbopen{$ENDIF} := GetAddress('dbopen');
+      @Fdbopen := GetAddress('dbopen');
+      @FtdsDbOpen := GetAddress('tdsdbopen');
       @{$IFDEF MSWINDOWS}Fdbretdata{$ELSE}dbretdata{$ENDIF} := GetAddress('dbretdata');
       @{$IFDEF MSWINDOWS}Fdbretlen{$ELSE}dbretlen{$ENDIF} := GetAddress('dbretlen');
       @{$IFDEF MSWINDOWS}Fdbretname{$ELSE}dbretname{$ENDIF} := GetAddress('dbretname');
@@ -2381,11 +2397,16 @@ procedure TSybaseDBLibPLainDriver.LoadApi;
 begin
   inherited LoadApi;
   {$IFDEF MSWINDOWS}
-  if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then
-    Assert(FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
+  if assigned(FdbSetVersion) then begin
+    if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then
+      Assert(FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
+  end else begin
+    if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then
+      Assert(FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
+  end;
   {$ELSE}
-  if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then
-    Assert(FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
+    if dbSetVersion(TDSDBVERSION_100) = DBFAIL then
+      Assert(dbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
   {$ENDIF}
 end;
 

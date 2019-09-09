@@ -321,7 +321,7 @@ begin
         if FplainDriver.DBLibraryVendorType = lvtMS then
           TDSVersion := TDSDBVERSION_42
         else begin {as long we left the protocol names this workaraound is possible}
-          lLogFile := plainDriver.GetDescription;
+          lLogFile := plainDriver.GetProtocol;
           if (ZFastCode.Pos('MsSQL 7.0', lLogFile) > 0) or (ZFastCode.Pos('MsSQL 2000', lLogFile) > 0) then
             TDSVersion := DBVERSION_70
           else if ZFastCode.Pos('MsSQL 2005+', lLogFile) > 0 then
@@ -378,19 +378,19 @@ begin
       FPlainDriver.dbsetlsecure(LoginRec);
       LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
     end else begin
-      FPlainDriver.dbsetluser(LoginRec, Pointer(ConSettings^.User));
+      FPlainDriver.dbsetluser(LoginRec, PAnsiChar(ConSettings^.User));
       {$IFDEF UNICODE}
       RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Password, ConSettings.CTRL_CP, ZOSCodePage);
       {$ELSE}
       RawTemp := Password;
       {$ENDIF}
-      FPlainDriver.dbsetlpwd(LoginRec, Pointer(RawTemp));
+      FPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(RawTemp));
       LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
     end;
     if FFreeTDS or (FProvider = dpSybase) then begin
       RawTemp := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_CodePage]);
       if Pointer(RawTemp) <> nil then begin
-        FPlainDriver.dbSetLCharSet(LoginRec, Pointer(RawTemp));
+        FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(RawTemp));
         CheckCharEncoding(Info.Values[ConnProps_CodePage]);
       end;
     end;
@@ -400,7 +400,7 @@ begin
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
     if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
       RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
-    FHandle := FPlainDriver.dbOpen(LoginRec, Pointer(RawTemp));
+    FHandle := FPlainDriver.dbOpen(LoginRec, PAnsiChar(RawTemp));
     CheckDBLibError(lcConnect, LogMessage);
     if not Assigned(FHandle) then
       raise EZSQLException.Create('The connection to the server failed, no proper handle was returned. Insufficient memory, unable to connect for any reason. ');
