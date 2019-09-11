@@ -1609,7 +1609,7 @@ end;
   a request for a DBPROCESS connection. *}
 function TZDBLIBPLainDriver.dbSetLoginTime(Seconds: Integer): RETCODE;
 begin
-  if Assigned(Fdbgetcharset)
+  if Assigned(FdbSetLoginTime)
   then Result := FdbSetLoginTime(Seconds)
   else Result := FdbSetLoginTime_stdcall(Seconds);
 end;
