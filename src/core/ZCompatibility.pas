@@ -253,6 +253,9 @@ type
     {$ENDIF}
   {$ENDIF}
 
+  {$If not declared(UnicodeString)}
+  UnicodeString = WideString;
+  {$IFEND}
   ZWideString = {$IFDEF PWIDECHAR_IS_PUNICODECHAR}UnicodeString{$ELSE}WideString{$ENDIF};
 
   {$IF not declared(TBooleanDynArray)}
