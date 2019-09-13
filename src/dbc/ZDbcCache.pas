@@ -2757,9 +2757,13 @@ procedure TZRowAccessor.GetGUID(ColumnIndex: Integer; var Result: TGUID;
   out IsNull: Boolean);
 var Data: PPointer;
 label zero_guid;
+  procedure FromString;
+  begin
+    Result := StringToGUID(GetString(ColumnIndex, IsNull))
+  end;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stDouble);
+  CheckColumnConvertion(ColumnIndex, stGUID);
 {$ENDIF}
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
@@ -2767,7 +2771,7 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString,
-      stAsciiStream, stUnicodeStream: StringToGUID(GetString(ColumnIndex, IsNull));
+      stAsciiStream, stUnicodeStream: FromString;
       stBytes:    if PWord(PAnsiChar(Data)+SizeOf(Pointer))^ = SizeOf(TGUID)
                   then Result := PGUID(Data^)^
                   else goto zero_guid;

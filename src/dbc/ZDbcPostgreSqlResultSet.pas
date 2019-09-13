@@ -60,10 +60,12 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFNDEF FPC}{$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
-  ZDbcResultSetMetadata, ZCompatibility;
+  ZDbcResultSetMetadata, ZCompatibility, ZDbcCache, ZDbcGenericResolver,
+  ZClasses;
 
 type
   TZPGColumnInfo = class(TZColumnInfo)
@@ -191,6 +193,18 @@ type
     constructor Create(const PlainDriver: TZPostgreSQLPlainDriver; Data: PAnsiChar);
   end;
 
+  {** Implements a specialized cached resolver for PostgreSQL. }
+  TZPostgreSQLCachedResolver = class(TZGenericCachedResolver)
+  protected
+    function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
+  end;
+
+  {** Implements a specialized cached resolver for PostgreSQL version 7.4 and up. }
+  TZPostgreSQLCachedResolverV74up = class(TZPostgreSQLCachedResolver)
+  public
+    procedure FormWhereClause(Columns: TObjectList;
+      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+  end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
@@ -199,7 +213,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
   ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
-  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZClasses, ZDbcUtils, ZDbcProperties,
+  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties,
   ZVariant;
 
 
@@ -2284,6 +2298,45 @@ function TZServerCursorPostgreSQLStringResultSet.PGRowNo: Integer;
 begin
   Result := 0;
 end;
+
+{ TZPostgreSQLCachedResolver }
+
+{**
+  Checks is the specified column can be used in where clause.
+  @param ColumnIndex an index of the column.
+  @returns <code>true</code> if column can be included into where clause.
+}
+function TZPostgreSQLCachedResolver.CheckKeyColumn(ColumnIndex: Integer): Boolean;
+begin
+  Result := (Metadata.GetTableName(ColumnIndex) <> '')
+    and (Metadata.GetColumnName(ColumnIndex) <> '')
+    and Metadata.IsSearchable(ColumnIndex)
+    and not (Metadata.GetColumnType(ColumnIndex) in [stUnknown, stBinaryStream]);
+end;
+
+{ TZPostgreSQLCachedResolverV74up }
+
+procedure TZPostgreSQLCachedResolverV74up.FormWhereClause(Columns: TObjectList;
+  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+  var Result: SQLString);
+var
+  I: Integer;
+  Tmp: SQLString;
+begin
+  if WhereColumns.Count > 0 then
+    SQLWriter.AddText(' WHERE ', Result);
+  for I := 0 to WhereColumns.Count - 1 do
+    with TZResolverParameter(WhereColumns[I]) do begin
+      if I > 0 then
+        SQLWriter.AddText(' AND ', Result);
+      Tmp := IdentifierConvertor.Quote(ColumnName);
+      SQLWriter.AddText(Tmp, Result);
+      if (Metadata.IsNullable(ColumnIndex) = ntNullable)
+      then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
+      else SQLWriter.AddText('=?', Result);
+    end;
+end;
+
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.

@@ -60,13 +60,15 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages, ZPlainDriver,
-  ZDbcInterbase6Utils, ZSelectSchema, ZDbcUtils;
+  ZDbcInterbase6Utils, ZSelectSchema, ZDbcUtils, ZClasses, ZDbcCache,
+  ZDbcGenericResolver, ZDbcCachedResultSet;
 
 type
   {** Implements Interbase ResultSet. }
@@ -180,6 +182,27 @@ type
     function IsAutoIncrement({%H-}ColumnIndex: Integer): Boolean; override;
   End;
 
+  {** Implements a specialized cached resolver for Interbase/Firebird. }
+  TZInterbase6CachedResolver = class(TZGenericCachedResolver)
+  private
+    FInsertReturningFields: TStrings;
+  public
+    constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
+    destructor Destroy; override;
+    function FormCalculateStatement(Columns: TObjectList): string; override;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
+  end;
+
+  {** Implements a specialized cached resolver for Firebird version 2.0 and up. }
+  TZCachedResolverFirebird2up = class(TZInterbase6CachedResolver)
+  public
+    procedure FormWhereClause(Columns: TObjectList;
+      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+  end;
+
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -188,7 +211,8 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses, ZDbcLogging, ZVariant;
+  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZDbcLogging, ZVariant,
+  ZDbcProperties;
 
 procedure GetPCharFromTextVar(XSQLVAR: PXSQLVAR; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -1980,6 +2004,102 @@ begin
       ColumnInfo.ColumnType := stCurrency;
   end else
     inherited SetColumnTypeFromGetColumnsRS(ColumnInfo, TableColumns);
+end;
+
+{ TZInterbase6CachedResolver }
+
+constructor TZInterbase6CachedResolver.Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
+var
+  Fields: string;
+begin
+  inherited;
+  Fields := Statement.GetParameters.Values[DSProps_InsertReturningFields];
+  if Fields <> '' then
+    FInsertReturningFields := ExtractFields(Fields, [';', ',']);
+end;
+
+destructor TZInterbase6CachedResolver.Destroy;
+begin
+  inherited;
+  FreeAndNil(FInsertReturningFields);
+end;
+
+{**
+  Forms a where clause for SELECT statements to calculate default values.
+  @param Columns a collection of key columns.
+  @param OldRowAccessor an accessor object to old column values.
+}
+function TZInterbase6CachedResolver.FormCalculateStatement(
+  Columns: TObjectList): string;
+// --> ms, 30/10/2005
+var
+   iPos: Integer;
+begin
+  Result := inherited FormCalculateStatement(Columns);
+  if Result <> '' then begin
+    iPos := ZFastCode.pos('FROM', uppercase(Result));
+    if iPos > 0
+    then Result := copy(Result, 1, iPos+3) + ' RDB$DATABASE'
+    else Result := Result + ' FROM RDB$DATABASE';
+  end;
+// <-- ms
+end;
+
+procedure TZInterbase6CachedResolver.PostUpdates(const Sender: IZCachedResultSet;
+  UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor);
+begin
+  inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
+
+  if (UpdateType = utInserted) then
+    UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
+end;
+
+procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
+var
+  I, ColumnIdx: Integer;
+  RS: IZResultSet;
+begin
+  //inherited;
+
+  RS := InsertStatement.GetResultSet;
+  if RS = nil then
+    Exit;
+
+  for I := 0 to FInsertReturningFields.Count - 1 do
+  begin
+    ColumnIdx := Metadata.FindColumn(FInsertReturningFields[I]);
+    if ColumnIdx = InvalidDbcIndex then
+      raise EZSQLException.Create(Format(SColumnWasNotFound, [FInsertReturningFields[I]]));
+    NewRowAccessor.SetValue(ColumnIdx, RS.GetValueByName(FInsertReturningFields[I]));
+  end;
+
+  RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
+end;
+
+{ TZCachedResolverFirebird2up }
+
+procedure TZCachedResolverFirebird2up.FormWhereClause(Columns: TObjectList;
+  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+  var Result: SQLString);
+var
+  I: Integer;
+  Tmp: SQLString;
+begin
+  if WhereColumns.Count > 0 then
+    SQLWriter.AddText(' WHERE ', Result);
+  for I := 0 to WhereColumns.Count - 1 do
+    with TZResolverParameter(WhereColumns[I]) do begin
+      if I > 0 then
+        SQLWriter.AddText(' AND ', Result);
+      Tmp := IdentifierConvertor.Quote(ColumnName);
+      SQLWriter.AddText(Tmp, Result);
+      if (Metadata.IsNullable(ColumnIndex) = ntNullable)
+      then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
+      else SQLWriter.AddText('=?', Result);
+    end;
 end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit

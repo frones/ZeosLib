@@ -353,14 +353,14 @@ begin
   else begin
     NativeResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
       FResultXSQLDA, CachedLob, FStatementType);
-    if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
-    begin
-      CachedResolver  := TZInterbase6CachedResolver.Create(Self,  NativeResultSet.GetMetadata);
+    if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then begin
+      if FIBConnection.IsFirebirdLib and (FIBConnection.GetHostVersion >= 2000000) //is the SQL2003 st. IS DISTINCT FROM supported?
+      then CachedResolver  := TZCachedResolverFirebird2up.Create(Self, NativeResultSet.GetMetadata)
+      else CachedResolver  := TZInterbase6CachedResolver.Create(Self, NativeResultSet.GetMetadata);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
       Result := CachedResultSet;
-    end
-    else
+    end else
       Result := NativeResultSet;
     NativeResultSet.TransactionResultSet := Pointer(Result);
     FOpenResultSet := Pointer(Result);

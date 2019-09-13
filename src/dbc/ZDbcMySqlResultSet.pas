@@ -64,10 +64,10 @@ uses
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZClasses,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement, ZDbcMySqlUtils,
-  ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema;
+  ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema, ZVariant;
 
 type
   {** Implements MySQL ResultSet Metadata. }
@@ -144,10 +144,12 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
+    procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
     function GetBlob(ColumnIndex: Integer): IZBlob;
 
     {$IFDEF USE_SYNCOMMONS}
@@ -186,14 +188,11 @@ type
       MYSQL_STMT: PPMYSQL_STMT; const Statement: IZStatement;
       const Metadata: IZResultSetMetadata);
 
-    function FormWhereClause(Columns: TObjectList;
-      OldRowAccessor: TZRowAccessor): string; override;
+    procedure FormWhereClause(Columns: TObjectList;
+      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
-    // --> ms, 31/10/2005
-    function FormCalculateStatement(Columns: TObjectList): string; override;
-    // <-- ms
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor; const {%H-}Resolver: IZCachedResolver); override;
@@ -218,7 +217,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZSysUtils, ZMessages, ZEncoding, {$IFNDEF NO_UNIT_CONTNRS}ZClasses,{$ENDIF}
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding,
   ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 { TZMySQLResultSetMetadata }
@@ -1734,6 +1733,12 @@ begin
   Result := GetDouble(ColumnIndex);
 end;
 
+procedure TZAbstractMySQLResultSet.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+begin
+
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -2188,6 +2193,12 @@ begin
   end;
 end;
 
+procedure TZAbstractMySQLResultSet.GetTimeStamp(ColumnIndex: Integer;
+  var Result: TZTimeStamp);
+begin
+
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -2486,94 +2497,47 @@ begin
     end;
 end;
 
-function TZMySQLCachedResolver.FormCalculateStatement(
-  Columns: TObjectList): string;
-var
-  I: Integer;
-  Current: TZResolverParameter;
-begin
-  Result := '';
-  if Columns.Count = 0 then
-     Exit;
-
-  for I := 0 to Columns.Count - 1 do
-  begin
-    Current := TZResolverParameter(Columns[I]);
-    if Result <> '' then
-      Result := Result + ',';
-    if Current.DefaultValue <> '' then
-      Result := Result + Current.DefaultValue
-    else
-      Result := Result + 'NULL';
-  end;
-  Result := 'SELECT ' + Result;
-end;
-
 {**
   Forms a where clause for UPDATE or DELETE DML statements.
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
 }
-function TZMySQLCachedResolver.FormWhereClause(Columns: TObjectList;
-  OldRowAccessor: TZRowAccessor): string;
+procedure TZMySQLCachedResolver.FormWhereClause(Columns: TObjectList;
+  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString);
 var
-  I, N: Integer;
+  I: Integer;
   Current: TZResolverParameter;
+  Tmp: SQLString;
+  IsDate: Boolean;
 begin
-  Result := '';
-  N := Columns.Count - WhereColumns.Count;
-
-  for I := 0 to WhereColumns.Count - 1 do
-  begin
+  if WhereColumns.Count > 0 then
+    SQLWriter.AddText(' WHERE ', Result);
+  for I := 0 to WhereColumns.Count - 1 do begin
     Current := TZResolverParameter(WhereColumns[I]);
-    if Result <> '' then
-      Result := Result + ' AND ';
-
-    Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
-    if OldRowAccessor.IsNull(Current.ColumnIndex) then
-    begin
-      if not (Metadata.IsNullable(Current.ColumnIndex) = ntNullable) then
+    if I > 0 then
+      SQLWriter.AddText(' AND ', Result);
+    if (Metadata.IsNullable(Current.ColumnIndex) = ntNullable) then begin
+      IsDate := OldRowAccessor.GetColumnType(Current.ColumnIndex) in [stDate, stTime, stTimeStamp];
+      if IsDate then
+        SQLWriter.AddChar('(', Result);
+      Tmp := IdentifierConvertor.Quote(Current.ColumnName);
+      SQLWriter.AddText(Tmp, Result);
+      SQLWriter.AddText('<=>?', Result); //"null safe equals" operator
+      if IsDate then begin
+        SQLWriter.AddText(' OR ', Result);
+        SQLWriter.AddText(Tmp, Result);
         case OldRowAccessor.GetColumnType(Current.ColumnIndex) of
-          stDate:
-            if I > 0 then
-            begin
-              Current := TZResolverParameter(WhereColumns[I-1]);
-              Result := Result+ '=''0000-00-00'' OR '+Result + ' IS NULL';
-              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
-              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
-            end;
-          stTime:
-            if I > 0 then
-            begin
-              Current := TZResolverParameter(WhereColumns[I-1]);
-              Result := Result+ '=''00:00:00'' OR '+Result + ' IS NULL';
-              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
-              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
-            end;
-          stTimeStamp:
-            if I > 0 then
-            begin
-              Current := TZResolverParameter(WhereColumns[I-1]);
-              Result := Result+ '=''0000-00-00 00:00:00'' OR '+Result + ' IS NULL';
-              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
-              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
-            end;
-          else
-            Result := Result + ' IS NULL';
-        end
-      else
-        Result := Result + ' IS NULL ';
-      Columns.Delete(N);
-    end
-    else
-    begin
-      Result := Result + '=?';
-      Inc(N);
+          stDate: SQLWriter.AddText('=''0000-00-00'')', Result);
+          stTime: SQLWriter.AddText('=''00:00:00'')', Result);
+          else SQLWriter.AddText('=''0000-00-00 00:00:00'')', Result);
+        end;
+      end;
+    end else begin
+      Tmp := IdentifierConvertor.Quote(Current.ColumnName);
+      SQLWriter.AddText(Tmp, Result);
+      SQLWriter.AddText('=?', Result);
     end;
   end;
-
-  if Result <> '' then
-    Result := ' WHERE ' + Result;
 end;
 {**
   Posts updates to database.

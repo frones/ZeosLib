@@ -673,11 +673,11 @@ procedure TZRawSQLStringWriter.AddChar(Value: AnsiChar; var Result: RawByteStrin
 var P: PAnsiChar;
 begin
   if FPos < FEnd then begin
-    FPos^ := Value;
+    PByte(FPos)^ := Byte(Value);
     Inc(FPos);
   end else begin
     P := FlushBuff(Result, 1);
-    P^ := Value;
+    PByte(P)^ := Byte(Value);
   end;
 end;
 
@@ -756,7 +756,7 @@ begin
   SetLength(Dest, LRes+(FPos-FBuf)+ReservedLen{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
   Result := Pointer(Dest);
   {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  (Result+LRes+(FPos-FBuf)+ReservedLen)^ := Ord(#0);
+  PByte(Result+LRes+(FPos-FBuf)+ReservedLen)^ := Ord(#0);
   {$ENDIF}
   Inc(Result, LRes);
   if FPos > FBuf then begin

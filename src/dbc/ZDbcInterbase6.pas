@@ -103,6 +103,8 @@ type
     function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     function GetActiveTransaction: IZIBTransaction;
+    function IsFirebirdLib: Boolean;
+    function IsInterbaseLib: Boolean;
   end;
 
   TGUIDDetectFlag = (gfByType, gfByDomain, gfByFieldName);
@@ -277,20 +279,6 @@ type
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
-  end;
-
-  {** Implements a specialized cached resolver for Interbase/Firebird. }
-  TZInterbase6CachedResolver = class(TZGenericCachedResolver)
-  private
-    FInsertReturningFields: TStrings;
-  public
-    constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
-    destructor Destroy; override;
-    function FormCalculateStatement(Columns: TObjectList): string; override;
-    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
-    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
   end;
 
   {** Implements a Interbase 6 sequence. }
@@ -1315,81 +1303,6 @@ begin
     inherited SetReadOnly(Value);
     //restart automatically happens on GetTrHandle
   end;
-end;
-
-{ TZInterbase6CachedResolver }
-
-constructor TZInterbase6CachedResolver.Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
-var
-  Fields: string;
-begin
-  inherited;
-  Fields := Statement.GetParameters.Values[DSProps_InsertReturningFields];
-  if Fields <> '' then
-    FInsertReturningFields := ExtractFields(Fields, [';', ',']);
-end;
-
-destructor TZInterbase6CachedResolver.Destroy;
-begin
-  inherited;
-  FreeAndNil(FInsertReturningFields);
-end;
-
-{**
-  Forms a where clause for SELECT statements to calculate default values.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
-function TZInterbase6CachedResolver.FormCalculateStatement(
-  Columns: TObjectList): string;
-// --> ms, 30/10/2005
-var
-   iPos: Integer;
-begin
-  Result := inherited FormCalculateStatement(Columns);
-  if Result <> '' then
-  begin
-    iPos := ZFastCode.pos('FROM', uppercase(Result));
-    if iPos > 0 then
-      Result := copy(Result, 1, iPos+3) + ' RDB$DATABASE'
-    else
-      Result := Result + ' FROM RDB$DATABASE';
-  end;
-// <-- ms
-end;
-
-procedure TZInterbase6CachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor);
-begin
-  inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
-
-  if (UpdateType = utInserted) then
-    UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
-end;
-
-procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
-  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
-var
-  I, ColumnIdx: Integer;
-  RS: IZResultSet;
-begin
-  //inherited;
-
-  RS := InsertStatement.GetResultSet;
-  if RS = nil then
-    Exit;
-
-  for I := 0 to FInsertReturningFields.Count - 1 do
-  begin
-    ColumnIdx := Metadata.FindColumn(FInsertReturningFields[I]);
-    if ColumnIdx = InvalidDbcIndex then
-      raise EZSQLException.Create(Format(SColumnWasNotFound, [FInsertReturningFields[I]]));
-    NewRowAccessor.SetValue(ColumnIdx, RS.GetValueByName(FInsertReturningFields[I]));
-  end;
-
-  RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
 end;
 
 { TZInterbase6Sequence }

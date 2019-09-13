@@ -307,20 +307,26 @@ function TZAbstractMySQLPreparedStatement.ComposeRawSQLQuery: RawByteString;
 var
   I: Integer;
   ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter;
 begin
   ParamIndex := 0;
   Result := '';
-  for I := 0 to High(FCachedQueryRaw) do
-    if IsParamIndex[i] then begin
-      if BindList[ParamIndex].BindType = zbtNull
-      then if FInParamDefaultValues[ParamIndex] <> '' then
-        ToBuff(FInParamDefaultValues[ParamIndex], Result)
-        else ToBuff('null', Result)
-      else ToBuff(FEmulatedValues[ParamIndex], Result);
-      Inc(ParamIndex);
-    end else
-      ToBuff(FCachedQueryRaw[I], Result);
-  FlushBuff(Result);
+  SQLWriter := TZRawSQLStringWriter.Create(Length(FASQL)+(BindList.Count shl 5));
+  try
+    for I := 0 to High(FCachedQueryRaw) do
+      if IsParamIndex[i] then begin
+        if BindList[ParamIndex].BindType = zbtNull
+        then if FInParamDefaultValues[ParamIndex] <> ''
+          then SQLWriter.AddText(FInParamDefaultValues[ParamIndex], Result)
+          else SQLWriter.AddText('null', Result)
+        else SQLWriter.AddText(FEmulatedValues[ParamIndex], Result);
+        Inc(ParamIndex);
+      end else
+        SQLWriter.AddText(FCachedQueryRaw[I], Result);
+    SQLWriter.Finalize(Result);
+  finally
+    FreeAndNil(SQLWriter);
+  end;
 end;
 
 {**

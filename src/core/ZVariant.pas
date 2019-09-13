@@ -86,7 +86,7 @@ type
   TZVariantType = (vtNull, vtBoolean, vtInteger, vtUInteger,
     vtDouble, vtCurrency, vtBigDecimal, vtGUID, vtBytes,
     vtString, {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}{$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF} vtRawByteString, vtUnicodeString, //String Types
-    vtTimeStamp, vtDateTime, vtPointer, vtInterface, vtCharRec,
+    {$IFDEF TEST_RECORD_REFACTORING}vtDate, vtTime, vtTimeStamp{$ELSE}vtDateTime{$ENDIF}, vtPointer, vtInterface, vtCharRec,
     vtArray{a dynamic array of [vtNull ... vtCharRec]} );
 
   PZArray =^TZArray;
@@ -100,7 +100,7 @@ type
   end;
 
   { TZSQLTimeStamp }
-  TZTimeStamp = {packed} record
+  TZTimeStamp = record
     Year: Word;
     Month: Word;
     Day: Word;
@@ -108,6 +108,21 @@ type
     Minute: Word;
     Second: Word;
     Fractions: Cardinal;
+    IsNeagative: WordBool;
+    UTC_Offset_MUL100: SmallInt;
+  end;
+  TZDate = record
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    IsNeagative: WordBool;
+  end;
+  TZTime = Record
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: Cardinal;
+    IsNeagative: WordBool; //MySQL allows negative time values
   end;
   {** Defines a variant structure. }
   TZVariant = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
@@ -130,12 +145,17 @@ type
       vtDouble: (VDouble: Double);
       vtCurrency: (VCurrency: Currency);
       vtBigDecimal: (VBigDecimal: TBCD);
-      vtTimeStamp: (VTimeStamp: TZTimeStamp);
       vtGUID: (VGUID: TGUID);
-      {$IFDEF BCC32_vtDateTime_ERROR}
-      vtDateTime: (VDateTime: Double);
+      {$IFDEF TEST_RECORD_REFACTORING}
+      vtDate: (VDate: TZDate);
+      vtTime: (VTime: TZTime);
+      vtTimeStamp: (VTimeStamp: TZTimeStamp);
       {$ELSE}
-      vtDateTime: (VDateTime: TDateTime);
+        {$IFDEF BCC32_vtDateTime_ERROR}
+        vtDateTime: (VDateTime: Double);
+        {$ELSE}
+        vtDateTime: (VDateTime: TDateTime);
+        {$ENDIF}
       {$ENDIF}
       vtPointer: (VPointer: Pointer);
       vtCharRec: (VCharRec: TZCharRec);
@@ -169,7 +189,15 @@ type
     function GetAsUInteger(const Value: TZVariant): UInt64;
     function GetAsDouble(const Value: TZVariant): Double;
     function GetAsCurrency(const Value: TZVariant): Currency;
+    {$IFDEF TEST_RECORD_REFACTORING}
+    procedure GetAsBigDecimal(const Value: TZVariant; Var Result: TBCD);
+    procedure GetAsDate(const Value: TZVariant; Var Result: TZDate);
+    procedure GetAsTime(const Value: TZVariant; Var Result: TZTime);
+    procedure GetAsTimeStamp(const Value: TZVariant; Var Result: TZTimeStamp);
+    procedure GetAsGUID(const Value: TZVariant; Var Result: TGUID);
+    {$ELSE}
     function GetAsBigDecimal(const Value: TZVariant): TBCD;
+    {$ENDIF}
     function GetAsString(const Value: TZVariant): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
@@ -258,8 +286,16 @@ type
     function GetAsUInteger(const Value: TZVariant): UInt64;
     function GetAsDouble(const Value: TZVariant): Double;
     function GetAsCurrency(const Value: TZVariant): Currency;
+    {$IFDEF TEST_RECORD_REFACTORING}
+    procedure GetAsBigDecimal(const Value: TZVariant; Var Result: TBCD);
+    procedure GetAsDate(const Value: TZVariant; Var Result: TZDate);
+    procedure GetAsTime(const Value: TZVariant; Var Result: TZTime);
+    procedure GetAsTimeStamp(const Value: TZVariant; Var Result: TZTimeStamp);
+    procedure GetAsGUID(const Value: TZVariant; Var Result: TGUID);
+    {$ELSE}
     function GetAsBigDecimal(const Value: TZVariant): TBCD;
     function GetAsGUID(const Value: TZVariant): TGUID;
+    {$ENDIF}
     function GetAsString(const Value: TZVariant): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
@@ -655,8 +691,13 @@ begin
 {$ENDIF}
     vtCharRec: DstValue.VCharRec := SrcValue.VCharRec;
     vtUnicodeString: DstValue.VUnicodeString := SrcValue.VUnicodeString;
-    vtTimeStamp: DstValue.VDateTime := SrcValue.VDateTime;
+    {$IFDEF TEST_RECORD_REFACTORING}
+    vtDate: DstValue.VDate := SrcValue.VDate;
+    vtTime: DstValue.VTime := SrcValue.VTime;
+    vtTimeStamp: DstValue.VTimeStamp := SrcValue.VTimeStamp;
+    {$ELSE}
     vtDateTime: DstValue.VDateTime := SrcValue.VDateTime;
+    {$ENDIF}
     vtPointer: DstValue.VPointer := SrcValue.VPointer;
     vtInterface: DstValue.VInterface := SrcValue.VInterface;
   end;
@@ -1046,6 +1087,13 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
   Value2: TZVariant): Integer;
 var
   i: Int64;
+  {$IFDEF TEST_RECORD_REFACTORING}
+  ABCD: TBCD;
+  AGUID: TGUID absolute ABCD;
+  ATimeStamp: TZTimeStamp absolute ABCD;
+  ADate: TZDate absolute ABCD;
+  ATime: TZTime absolute ABCD;
+  {$ENDIF}
   TempDateTime: TDateTime;
   function CompareDiff(const Diff: Double): Integer;
   begin
@@ -1070,7 +1118,14 @@ begin
       end;
     vtDouble: Result := CompareDiff(Value1.VDouble-GetAsDouble(Value2));
     vtCurrency: Result := CompareCurr(Value1.VCurrency, GetAsCurrency(Value2));
+    {$IFDEF TEST_RECORD_REFACTORING}
+    vtBigDecimal: begin
+                    GetAsBigDecimal(Value2, ABCD);
+                    Result := BCDCompare(Value1.VBigDecimal, ABCD);
+                  end;
+    {$ELSE}
     vtBigDecimal: Result := BCDCompare(Value1.VBigDecimal, GetAsBigDecimal(Value2));
+    {$ENDIF}
     vtString:
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
 {$IFNDEF NO_ANSISTRING}
@@ -1112,6 +1167,45 @@ DoWideCompare:
       Result := WideCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
 //      Result := AnsiCompareStr(AnsiString(Value1.VUnicodeString), GetAsString(Value2));
 {$ENDIF}
+    {$IFDEF TEST_RECORD_REFACTORING}
+    vtDate: begin
+              GetAsDate(Value2, ADate);
+              Result := Ord(Value1.VDate.Year > ADate.Year)-Ord(Value1.VDate.Year < ADate.Year);
+              if Result = 0 then begin
+                Result := Ord(Value1.VDate.Month > ADate.Month)-Ord(Value1.VDate.Month < ADate.Month);
+                if Result = 0 then
+                  Result := Ord(Value1.VDate.Day > ADate.Day)-Ord(Value1.VDate.Day < ADate.Day);
+              end;
+            end;
+    vtTime: begin
+              GetAsTime(Value2, ATime);
+              Result := Ord(Value1.VTime.Hour > ATime.Hour)-Ord(Value1.VTime.Hour < ATime.Hour);
+              if Result = 0 then begin
+                Result := Ord(Value1.VTime.Minute > ATime.Minute)-Ord(Value1.VTime.Minute < ATime.Minute);
+                if Result = 0 then begin
+                  Result := Ord(Value1.VTime.Second > ATime.Second)-Ord(Value1.VTime.Second < ATime.Second);
+                  if Result = 0 then
+                    Result := Ord(Value1.VTime.Fraction > ATime.Fraction)-Ord(Value1.VTime.Fraction < ATime.Fraction);
+                end;
+              end;
+            end;
+    vtTimeStamp: begin
+              GetAsTime(Value2, ATimeStamp);
+              Result := Ord(Value1.VDate.Year > ADate.Year)-Ord(Value1.VDate.Year < ADate.Year);
+              if Result = 0 then
+                Result := Ord(Value1.VDate.Month > ADate.Month)-Ord(Value1.VDate.Month < ADate.Month);
+              if Result = 0 then
+                Result := Ord(Value1.VDate.Day > ADate.Day)-Ord(Value1.VDate.Day < ADate.Day);
+              if Result = 0 then
+                Result := Ord(Value1.VTimeStamp.Hour > ATimeStamp.Hour)-Ord(Value1.VTimeStamp.Hour < ATimeStamp.Hour);
+              if Result = 0 then
+                Result := Ord(Value1.VTimeStamp.Minute > ATimeStamp.Minute)-Ord(Value1.VTimeStamp.Minute < ATimeStamp.Minute);
+              if Result = 0 then
+                Result := Ord(Value1.VTimeStamp.Second > ATimeStamp.Second)-Ord(Value1.VTimeStamp.Second < ATimeStamp.Second);
+              if Result = 0 then
+                Result := Ord(Value1.VTimeStamp.Fraction > ATimeStamp.Fraction)-Ord(Value1.VTimeStamp.Fraction < ATimeStamp.Fraction);
+            end;
+    {$ELSE}
     vtDateTime:
       begin
         TempDateTime := GetAsDateTime(Value2);
@@ -1122,6 +1216,7 @@ DoWideCompare:
         else
           Result := 0;
       end;
+    {$ENDIF}
     vtPointer:
       Result := sign(Int64({%H-}NativeUInt(Value1.VPointer) - GetAsUInteger(Value2)));
     else
