@@ -261,7 +261,7 @@ var
     StrLen: function(Str: PChar): sizeint;
     {$ELSE}
     StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
-    {$ENDIF}
+    {$IFEND}
   {$ELSE}
   StrLen: function(const Str: PAnsiChar): Cardinal;
   {$ENDIF}
