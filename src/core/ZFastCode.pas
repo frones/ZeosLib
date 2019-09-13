@@ -453,6 +453,30 @@ const Int64Tower: array[0..18] of Int64 = (
 
 {$IF defined(NEED_TYPED_UINT64_CONSTANTS) or defined(WITH_UINT64_C1118_ERROR)}
 //Handle FPC(up to year 2019) and very old delphi problems with the large constants...
+  {$IF DEFINED(FPC) and DEFINED(ENDIAN_BIG)}
+  cUInt64Tower: array[0..19] of Int64Rec = (
+    (hi: $00000000; lo: $00000001), {                   1}
+    (hi: $00000000; lo: $0000000A), {                  10}
+    (hi: $00000000; lo: $00000064), {                 100}
+    (hi: $00000000; lo: $000003E8), {                1000}
+    (hi: $00000000; lo: $00002710), {               10000}
+    (hi: $00000000; lo: $000186A0), {              100000}
+    (hi: $00000000; lo: $000F4240), {             1000000}
+    (hi: $00000000; lo: $00989680), {            10000000}
+    (hi: $00000000; lo: $05F5E100), {           100000000}
+    (hi: $00000000; lo: $3B9ACA00), {          1000000000}
+    (hi: $00000002; lo: $540BE400), {         10000000000}
+    (hi: $00000017; lo: $4876E800), {        100000000000}
+    (hi: $000000E8; lo: $D4A51000), {       1000000000000}
+    (hi: $00000918; lo: $4E72A000), {      10000000000000}
+    (hi: $00005AF3; lo: $107A4000), {     100000000000000}
+    (hi: $00038D7E; lo: $A4C68000), {    1000000000000000}
+    (hi: $002386F2; lo: $6FC10000), {   10000000000000000}
+    (hi: $01634578; lo: $5D8A0000), {  100000000000000000}
+    (hi: $0DE0B6B3; lo: $A7640000), { 1000000000000000000}
+    (hi: $8AC72304; lo: $89E80000));{10000000000000000000}
+  _10Trillion: Int64Rec = (hi: $8AC72304; lo: $89E80000);
+  {$ELSE}
   cUInt64Tower: array[0..19] of Int64Rec = (
     (lo: $00000001; hi: $00000000), {                   1}
     (lo: $0000000A; hi: $00000000), {                  10}
@@ -475,6 +499,7 @@ const Int64Tower: array[0..18] of Int64 = (
     (lo: $A7640000; hi: $0DE0B6B3), { 1000000000000000000}
     (lo: $89E80000; hi: $8AC72304));{10000000000000000000}
   _10Trillion: Int64Rec = (lo: $89E80000; hi: $8AC72304);
+  {$IFEND}
 var
   UInt64Tower: array[0..19] of UInt64 absolute cUInt64Tower;
 {$ELSE}
