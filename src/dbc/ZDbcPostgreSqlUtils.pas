@@ -1224,7 +1224,9 @@ begin
   {$ENDIF}
 {$ELSE}
 begin
-  Reverse4Bytes(Buf)
+  //2019-09-13 Jan: Reverse4 bytes is only used in other functions when they are little endian.
+  //I assume, it is used wrongly here.
+  //Reverse4Bytes(Buf)
 {$ENDIF}
 end;
 

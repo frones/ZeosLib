@@ -351,6 +351,20 @@ const
   NVU_CurrencyExponents: array[0..10] of Integer =
     (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
 {$IF defined(NEED_TYPED_UINT64_CONSTANTS) or defined(WITH_UINT64_C1118_ERROR)}
+  {$IF DEFINED(FPC) and DEFINED(ENDIAN_BIG)}
+  cInt64Divisor: array[0..10] of Int64Rec = (
+    (hi: $00000000; lo: $00000001), {                   1}
+    (hi: $00000000; lo: $00000064), {                 100}
+    (hi: $00000000; lo: $00002710), {               10000}
+    (hi: $00000000; lo: $000F4240), {             1000000}
+    (hi: $00000000; lo: $05F5E100), {           100000000}
+    (hi: $00000002; lo: $540BE400), {         10000000000}
+    (hi: $000000E8; lo: $D4A51000), {       1000000000000}
+    (hi: $00005AF3; lo: $107A4000), {     100000000000000}
+    (hi: $002386F2; lo: $6FC10000), {   10000000000000000}
+    (hi: $0DE0B6B3; lo: $A7640000), { 1000000000000000000}
+    (hi: $8AC72304; lo: $89E80000));{10000000000000000000}  
+  {$ELSE}
   cInt64Divisor: array[0..10] of Int64Rec = (
     (lo: $00000001; hi: $00000000), {                   1}
     (lo: $00000064; hi: $00000000), {                 100}
@@ -363,6 +377,7 @@ const
     (lo: $6FC10000; hi: $002386F2), {   10000000000000000}
     (lo: $A7640000; hi: $0DE0B6B3), { 1000000000000000000}
     (lo: $89E80000; hi: $8AC72304));{10000000000000000000}
+  {$IFEND}
 var
   UInt64Divisor:   array[0..10] of UInt64 absolute cInt64Divisor;
 {$ELSE}
