@@ -1694,7 +1694,7 @@ begin
         ConvertFixedTypesToUnicode(Value, Result.VUnicodeString);
         Goto AsVCharRecFromVString;
         {$ELSE}
-        ConvertFixedTypesToRaw(Value, Result.VRawByteString);
+        ConvertFixedTypesToRaw(Value, Result.VRawByteString{$IFDEF WITH_RAWBYTESTRING}, ZOSCodePage{$ENDIF});
         Result.VCharRec.CP := ZOSCodePage;
         goto AsVCharRecFromRaw;
         {$ENDIF}
@@ -1835,7 +1835,7 @@ begin
         Tmp := PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP);
         {$ENDIF}
       end;
-    else {$IFDEF UNICODE}ConvertFixedTypesToUnicode{$ELSE}ConvertFixedTypesToRaw{$ENDIF}(Value, Tmp);
+    else {$IFDEF UNICODE}ConvertFixedTypesToUnicode{$ELSE}ConvertFixedTypesToRaw{$ENDIF}(Value, Tmp{$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}, ZOSCodePage{$IFEND});
   end;
   {$IFDEF UNICODE}
   Result.VUnicodeString := Tmp;
@@ -2000,12 +2000,12 @@ begin
                 end;
     vtInteger:  begin
                   IntToUnicode(Value.VInteger, @Buff[0], @P);
-                  L := P - PAnsiChar(@Buff[0]);
+                  L := P - PWideChar(@Buff[0]);
                   P := @Buff[0];
                 end;
     vtUInteger: begin
                   IntToUnicode(Value.VUInteger, @Buff[0], @P);
-                  L := P - PAnsiChar(@Buff[0]);
+                  L := P - PWideChar(@Buff[0]);
                   P := @Buff[0];
                 end;
     vtDouble:   begin
@@ -2014,7 +2014,7 @@ begin
                 end;
     vtCurrency: begin
                   ZFastCode.CurrToUnicode(Value.VDouble, @Buff[0], @P);
-                  L := P - PAnsiChar(@Buff[0]);
+                  L := P - PWideChar(@Buff[0]);
                   P := @Buff[0];
                 end;
     vtBigDecimal:begin

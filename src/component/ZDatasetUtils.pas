@@ -1232,7 +1232,7 @@ begin
           if L2 < L1 then
             Exit;
           {$IFDEF MSWINDOWS}
-          Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = CSTR_EQUAL;
+          Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
           {$ELSE}
             {$IFDEF UNICODE}
             Result := SysUtils.AnsiStrLComp(P2, P1, L) = 0;
