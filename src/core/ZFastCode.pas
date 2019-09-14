@@ -257,7 +257,7 @@ var
 
 var
   {$IFDEF FPC}
-    {$IFDEF cpuarm}
+    {$IF DEFINED(cpuarm) or DEFINED(CPUPOWERPC32)}
     StrLen: function(Str: PChar): sizeint;
     {$ELSE}
     StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
