@@ -4556,13 +4556,16 @@ begin
     vtUInteger: SetULong(ColumnIndex, Value.VUInteger);
     vtBigDecimal: SetBigDecimal(ColumnIndex, Value.VBigDecimal);
     //vtGUID:  Self.SetBytes(ColumnIndex, Value.VGUID);
-    vtBytes: SetBytes(ColumnIndex, Value.VBytes);
-    vtString: SetString(ColumnIndex, Value.VString);
+    vtBytes: begin
+              Len := Length(Value.VRawByteString);
+              SetPAnsichar(ColumnIndex, Pointer(Value.VRawByteString), Len);
+            end;
+    vtString: SetString(ColumnIndex, Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
     {$IFNDEF NO_ANSISTRING}
-    vtAnsiString: SetAnsiString(ColumnIndex, Value.VAnsiString);
+    vtAnsiString: SetAnsiString(ColumnIndex, Value.VRawByteString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    vtUTF8String: SetUTF8String(ColumnIndex, Value.VUTF8String);
+    vtUTF8String: SetUTF8String(ColumnIndex, Value.VRawByteString);
     {$ENDIF}
     vtRawByteString: SetRawByteString(ColumnIndex, Value.VRawByteString);
     vtUnicodeString: SetUnicodeString(ColumnIndex, Value.VUnicodeString);

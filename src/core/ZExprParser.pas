@@ -358,7 +358,7 @@ begin
             TokenType := ttConstant;
             Temp := Tokenizer.GetQuoteState.DecodeToken(Tokens[TokenIndex]^, Tokens[TokenIndex]^.P^);
             TokenValue:= EncodeDateTime(StrToDateTime(Temp));
-            TokenValue.VString := Temp; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
+            TokenValue.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF} := Temp; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;
       end;
 

@@ -385,7 +385,7 @@ begin
   CheckParamsCount(Stack, 2);
   Value1 := Stack.GetParameter(2);
   Value2 := Stack.GetParameter(1);
-  VariantManager.SetAsString(Result, LeftStr(Value1.VString, Value2.VInteger));
+  VariantManager.SetAsString(Result, LeftStr(Value1.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, Value2.VInteger));
 end;
 
 { TZRightFunction }
@@ -397,7 +397,7 @@ begin
   CheckParamsCount(Stack, 2);
   Value1 := Stack.GetParameter(2);
   Value2 := Stack.GetParameter(1);
-  VariantManager.SetAsString(Result, RightStr(Value1.VString, Value2.VInteger));
+  VariantManager.SetAsString(Result, RightStr(Value1.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, Value2.VInteger));
 end;
 
 { TZStrPosFunction }
@@ -492,7 +492,7 @@ var
 begin
   CheckParamsCount(Stack, 1);
   Value := Stack.GetParameter(1);
-  VariantManager.SetAsString(Result, Trim(Value.VString));
+  VariantManager.SetAsString(Result, Trim(Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}));
 end;
 
 { TZLTrimFunction }
@@ -504,7 +504,7 @@ var
 begin
   CheckParamsCount(Stack, 1);
   Value := Stack.GetParameter(1);
-  VariantManager.SetAsString(Result, TrimLeft(Value.VString));
+  VariantManager.SetAsString(Result, TrimLeft(Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}));
 end;
 
 { TZRTrimFunction }
@@ -516,7 +516,7 @@ var
 begin
   CheckParamsCount(Stack, 1);
   Value := Stack.GetParameter(1);
-  VariantManager.SetAsString(Result, TrimRight(Value.VString));
+  VariantManager.SetAsString(Result, TrimRight(Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}));
 end;
 
 { TZSoundexFunction }

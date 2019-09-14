@@ -257,7 +257,7 @@ var
 
 var
   {$IFDEF FPC}
-    {$IF DEFINED(cpuarm) or DEFINED(CPUPOWERPC32)}
+    {$IFDEF cpuarm}
     StrLen: function(Str: PChar): sizeint;
     {$ELSE}
     StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
@@ -526,6 +526,13 @@ var
     $8AC7230489E80000 {10000000000000000000});
   _10Trillion = UInt64(10000000000000000000);
 {$IFEND}
+
+{$IFDEF WITH_UINT64_C1118_ERROR}
+function UInt64ToCardinal(const Src: UInt64): Cardinal;
+function UInt64ToInt64(const Src: UInt64): Int64;
+function CardinalToUint64(Src: Cardinal): UInt64;
+function Int64ToUInt64(const Src: Int64): UInt64;
+{$ENDIF}
 
 implementation
 
@@ -6761,6 +6768,29 @@ asm
 end;}
 
 {$ENDIF USE_FAST_TRUNC}
+
+{$IFDEF WITH_UINT64_C1118_ERROR}
+function UInt64ToCardinal(const Src: UInt64): Cardinal;
+begin
+  Result := Int64Rec(Src).Lo;
+end;
+
+function UInt64ToInt64(const Src: UInt64): Int64;
+begin
+  Result := Src;
+end;
+
+function CardinalToUint64(Src: Cardinal): UInt64;
+begin
+  Int64Rec(Result).Lo := Result;
+  Int64Rec(Result).Hi := 0;
+end;
+
+function Int64ToUInt64(const Src: Int64): UInt64;
+begin
+  Result := Src;
+end;
+{$ENDIF}
 
 function GetOrdinalDigits(const Value: UInt64): Byte;
 var I64Rec: Int64Rec absolute Value;

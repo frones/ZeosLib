@@ -2942,6 +2942,36 @@ begin
   {$ENDIF UNICODE}
 end;
 
+{$IFNDEF UNICODE}
+function ZConvertPCharToRawWithDedectEncoding(Src: PChar; Len: LengthInt; CtrlsCP, RawCP: Word): RawByteString;
+var WS: ZWideString; //guesswork func!
+label FromW, SetRaw;
+begin
+  if (Src = nil) or (Len <= 0) then
+    Result := EmptyRaw
+  else case ZDetectUTF8Encoding(Src, Len) of
+    etUSASCII: goto SetRaw;
+    etAnsi: if (RawCP = zCP_UTF8) then
+              if (CtrlsCP = zCP_UTF8 ) then begin
+                if (ZOSCodePage = zCP_UTF8) //Random success unknown String CP
+                then WS := ZWideString(Src)
+                else WS := PRawToUnicode(Src, Len, ZOSCodePage);
+                goto FromW;
+              end else begin
+                WS := PRawToUnicode(Src, Len, ZOSCodePage);
+                goto FromW;
+              end
+            else goto SetRaw;
+    else if (RawCP = zCP_UTF8) {etUTF8} then
+SetRaw: ZSetString(Src, Len, Result)
+      else begin
+        WS := PRawToUnicode(Src, Len, zCP_UTF8);
+FromW:  Result := ZUnicodeToRaw(WS, RawCP);
+      end;
+  end;
+end;
+{$ENDIF}
+
 {$IFNDEF NO_UTF8STRING}
 function ZConvertUTF8ToString(const Src: UTF8String;
   const StringCP: Word): String;

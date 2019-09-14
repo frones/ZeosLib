@@ -1846,13 +1846,15 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZInterbase6PreparedStatement.SetULong(Index: Integer;
   const Value: UInt64);
 begin
+  {$IFDEF WITH_UINT64_C1118_ERROR}
+  SetLong(Index, UInt64ToInt64(Value));
+  {$ELSE}
   SetLong(Index, Value);
+  {$ENDIF}
 end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Sets the designated parameter to a Java <code>UnicodeString</code> value.

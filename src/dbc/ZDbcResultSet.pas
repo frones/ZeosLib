@@ -700,10 +700,10 @@ begin
   else if Null1 then Result := -1
   else if Null2 then Result := 1 else
   begin
-    Result := Length(TZVariant(V1).VBytes) - Length(TZVariant(V2).VBytes); //overflow save!
+    Result := Length(TZVariant(V1).VRawByteString) - Length(TZVariant(V2).VRawByteString); //overflow save!
     if Result = 0 then
-      Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
-        Length(TZVariant(V1).VBytes));
+      Result := ZMemLComp(Pointer(TZVariant(V1).VRawByteString), Pointer(TZVariant(V2).VRawByteString),
+        Length(TZVariant(V1).VRawByteString));
   end;
 end;
 
@@ -2388,6 +2388,7 @@ end;
 procedure TZAbstractResultSet.UpdateValue(ColumnIndex: Integer;
   const Value: TZVariant);
 var Lob: IZBLob;
+  Len: NativeUInt;
 begin
   case Value.VType of
     vtBoolean: IZResultSet(FWeakIntfPtrOfSelf).UpdateBoolean(ColumnIndex, Value.VBoolean);
@@ -2396,15 +2397,18 @@ begin
     vtDouble: IZResultSet(FWeakIntfPtrOfSelf).UpdateDouble(ColumnIndex, Value.VDouble);
     vtCurrency: IZResultSet(FWeakIntfPtrOfSelf).UpdateCurrency(ColumnIndex, Value.VCurrency);
     vtBigDecimal: IZResultSet(FWeakIntfPtrOfSelf).UpdateBigDecimal(ColumnIndex, Value.VBigDecimal);
-    vtString: IZResultSet(FWeakIntfPtrOfSelf).UpdateString(ColumnIndex, Value.VString);
+    vtString: IZResultSet(FWeakIntfPtrOfSelf).UpdateString(ColumnIndex, Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
 {$IFNDEF NO_ANSISTRING}
-    vtAnsiString: IZResultSet(FWeakIntfPtrOfSelf).UpdateAnsiString(ColumnIndex, Value.VAnsiString);
+    vtAnsiString: IZResultSet(FWeakIntfPtrOfSelf).UpdateAnsiString(ColumnIndex, Value.VRawByteString);
 {$ENDIF}
 {$IFNDEF NO_UTF8STRING}
-    vtUTF8String: IZResultSet(FWeakIntfPtrOfSelf).UpdateUTF8String(ColumnIndex, Value.VUTF8String);
+    vtUTF8String: IZResultSet(FWeakIntfPtrOfSelf).UpdateUTF8String(ColumnIndex, Value.VRawByteString);
 {$ENDIF}
     vtRawByteString: IZResultSet(FWeakIntfPtrOfSelf).UpdateRawByteString(ColumnIndex, Value.VRawByteString);
-    vtBytes: IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(ColumnIndex, Value.VBytes);
+    vtBytes: begin
+              Len := Length(Value.VRawByteString);
+              IZResultSet(FWeakIntfPtrOfSelf).UpdatePAnsiChar(ColumnIndex, Pointer(Value.VRawByteString), Len);
+            end;
     vtDateTime: IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtUnicodeString: IZResultSet(FWeakIntfPtrOfSelf).UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
     vtInterface: begin
