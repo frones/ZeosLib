@@ -1978,7 +1978,7 @@ begin
   try
     if not FHasLoggingListener then
       Exit;
-    Event := TZLoggingEvent.Create(Category, Protocol, Msg, 0, '');
+    Event := TZLoggingEvent.Create(Category, Protocol, Msg, 0, EmptyRaw);
     InternalLogEvent(Event);
   finally
     FreeAndNil(Event);
