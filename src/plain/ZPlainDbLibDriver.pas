@@ -1430,14 +1430,15 @@ function TZDBLIBPLainDriver.dbOpen(Login: PLOGINREC;
   server: PAnsiChar): PDBPROCESS;
 begin
   if Assigned(FTdsDbOpen) then
-    Result := FTdsDbOpen(Login, server, 1)
+    Result := FTdsDbOpen(Login, server, Ord(Pos('Sybase', GetDescription) > 0))
   else
+    {$IFNDEF MSWINDOWS}
+    Result := FdbOpen(Login, server);
+    {$ELSE}
     if Assigned(FdbOpen)
     then Result := FdbOpen(Login, server)
-    {$IFDEF MSWINDOWS}
-    else Result := FdbOpen_stdcall(Login, server)
+    else Result := FdbOpen_stdcall(Login, server);
     {$ENDIF}
-    ;
 end;
 
 {$IFDEF MSWINDOWS}
