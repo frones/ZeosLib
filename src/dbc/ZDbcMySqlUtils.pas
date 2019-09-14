@@ -142,11 +142,6 @@ procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
   out FieldType: TZSQLType; out ColumnSize: Integer; out Scale: Integer;
   MySQL_FieldType_Bit_1_IsBoolean: Boolean);
 
-function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection;
-  const Value: TZVariant; const DefaultValue: String;
-  const ClientVarManager: IZClientVariantManager;
-  InParamType: TZSQLType; UseDefaults: Boolean): RawByteString;
-
 function GetMySQLOptionValue(Option: TMySQLOption): string;
 
 function ReverseWordBytes(Src: Pointer): Word;
@@ -730,78 +725,6 @@ SetLobSize:
     stString: if ( ConSettings^.CPType = cCP_UTF16) then FieldType := stUnicodeString;
     stAsciiStream: if ( ConSettings^.CPType = cCP_UTF16) then FieldType := stUnicodeStream;
     stUnknown: raise Exception.Create('Unknown MySQL data type!'+String(TypeName));
-  end;
-end;
-
-function MySQLPrepareAnsiSQLParam(const Connection: IZMySQLConnection;
-  const Value: TZVariant; const DefaultValue: String;
-  const ClientVarManager: IZClientVariantManager;
-  InParamType: TZSQLType; UseDefaults: Boolean): RawByteString;
-var
-  TempBytes: TBytes;
-  TempBlob: IZBlob;
-  CharRec: TZCharRec;
-  ConSettings: PZConSettings;
-  TempVar: TZVariant;
-label SetDefaultVal;
-begin
-  ConSettings := Connection.GetConSettings;
-  if ClientVarManager.IsNull(Value) then
-SetDefaultVal:
-    if UseDefaults and (DefaultValue <> '') then
-      Result := ConSettings^.ConvFuncs.ZStringToRaw(DefaultValue,
-        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-    else
-      Result := 'NULL'
-  else
-  begin
-    case InParamType of
-      stBoolean:
-        if Connection.MySQL_FieldType_Bit_1_IsBoolean
-        then Result := ZSysUtils.BoolStrIntsRaw[ClientVarManager.GetAsBoolean(Value)]
-        else if ClientVarManager.GetAsBoolean(Value)
-          then Result := '''Y'''
-          else Result := '''N''';
-      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
-      stFloat, stDouble, stCurrency, stBigDecimal:
-        Result := ClientVarManager.GetAsRawByteString(Value);
-      stBytes:
-        begin
-          TempBytes := ClientVarManager.GetAsBytes(Value);
-          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
-        end;
-      stString, stUnicodeString: begin
-          ClientVarManager.Assign(Value, TempVar);
-          CharRec := ClientVarManager.GetAsCharRec(TempVar, Connection.GetConSettings^.ClientCodePage^.CP);
-          Connection.GetEscapeString(CharRec.P, CharRec.Len, Result);
-        end;
-      stDate:
-        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stTime:
-        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stTimestamp:
-        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
-      stAsciiStream, stUnicodeStream, stBinaryStream:
-        begin
-          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
-          if not TempBlob.IsEmpty then
-            if InParamType  = stBinaryStream
-            then Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length)
-            else if TempBlob.IsClob then begin
-              CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-              Connection.GetEscapeString(CharRec.P, TempBlob.Length, Result);
-            end else
-              Result := Connection.EscapeString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                TempBlob.Length, ConSettings))
-          else
-            goto SetDefaultVal;
-        end;
-      else
-        RaiseUnsupportedParameterTypeException(InParamType);
-    end;
   end;
 end;
 
