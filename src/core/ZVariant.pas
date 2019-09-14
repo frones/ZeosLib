@@ -257,7 +257,9 @@ type
     procedure ConvertFixedTypesToUnicode(const Value: TZVariant; var Result: UnicodeString);
     procedure ConvertFixedTypesToRaw(const Value: TZVariant; var Result: RawByteString{$IFDEF WITH_RAWBYTESTRING}; CP: Word{$ENDIF});
     procedure PRawCPConvert(Src: PAnsiChar; L: LengthInt; var Dest: RawByteString; FromCP, ToCP: Word);
+    {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
     procedure RawCPConvert(const Src: RawByteString; var Dest: RawByteString; FromCP, ToCP: Word);
+    {$ENDIF}
     {FrOst: !!! Performance note !!!
       This method is executed VERY often so it must be fast as possible.
     But if all the code is placed as one single piece, compiler will add LOTS
@@ -722,11 +724,13 @@ begin
   raise EZVariantException.Create(SUnsupportedOperation);
 end;
 
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
 procedure TZSoftVariantManager.RawCPConvert(const Src: RawByteString;
   var Dest: RawByteString; FromCP, ToCP: Word);
 begin
   PRawCPConvert(Pointer(Src), Length(Src), Dest, FromCP, ToCP);
 end;
+{$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
 
 {**
   Compares two variant values.
@@ -877,7 +881,7 @@ end;
 function TZSoftVariantManager.GetAsBytes(
   const Value: TZVariant): TBytes;
 begin
-  Result := StrToBytes(Convert(Value, vtBytes).VRawByteString);
+  Result := {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}StrToBytes{$ENDIF}(Convert(Value, vtBytes).VRawByteString);
 end;
 
 {**
@@ -1614,7 +1618,6 @@ begin
   end;
 end;
 
-{$IFNDEF NO_ANSISTRING}
 procedure TZSoftVariantManager.PRawCPConvert(Src: PAnsiChar; L: LengthInt;
   var Dest: RawByteString; FromCP, ToCP: Word);
 var W: UnicodeString;
@@ -1623,6 +1626,7 @@ begin
   Dest := ZUnicodeToRaw(W, ToCP);
 end;
 
+{$IFNDEF NO_ANSISTRING}
 procedure TZSoftVariantManager.ProcessAnsiString(const Value: TZVariant;
   out Result: TZVariant);
 label FromW;
@@ -1658,6 +1662,7 @@ FromW:    ResTmp := ZUnicodeToRaw(Result.VUnicodeString, ZOSCodePage);
   end;
   Result.VRawByteString := ResTmp;
 end;
+{$ENDIF NO_ANSISTRING}
 
 procedure TZSoftVariantManager.ProcessCharRec(const Value: TZVariant;
   out Result: TZVariant);
@@ -1825,8 +1830,6 @@ begin
   Result.VRawByteString := Tmp;
   {$ENDIF}
 end;
-
-{$ENDIF NO_ANSISTRING}
 
 procedure TZSoftVariantManager.ProcessUnicodeString(const Value: TZVariant;
   out Result: TZVariant);
@@ -2057,7 +2060,7 @@ function TZSoftVariantManager.Convert(const Value: TZVariant;
   begin
     Result.VType := vtBytes;
     case Value.VType of
-      vtNull: Result.VRawByteString := '';
+      vtNull: Result.VRawByteString := EmptyRaw;
       vtInteger, vtUInteger, vtDouble: ZSetString(PAnsiChar(@Value.VInteger), 8, Result.VRawByteString);
       vtBytes{$IFNDEF UNICODE}, vtString{$ENDIF},
       {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
@@ -2431,12 +2434,16 @@ begin
               then ResTmp := ZConvertStringToRawWithAutoEncode(Value.VRawByteString, FCtrlsCP, FClientCP)
               else ResTmp := Value.VRawByteString;
     {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
     vtAnsiString: if FClientCP = ZOSCodePage
                   then ResTmp := Value.VRawByteString
                   else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, FClientCP);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
     vtUTF8String: if FClientCP = zCP_UTF8
                   then ResTmp := Value.VRawByteString
                   else RawCPConvert(Value.VRawByteString, ResTmp, zCP_UTF8, FClientCP);
+    {$ENDIF}
     vtRawByteString: ResTmp := Value.VRawByteString;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString:
@@ -2524,7 +2531,7 @@ begin
   Result.VType := vtUnicodeString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: if FConSettings.AutoEncode 
+    vtString: if FConSettings.AutoEncode
               then ResTmp := ZConvertStringToUnicodeWithAutoEncode(Value.VRawByteString, FCtrlsCP)
               else ResTmp := ZRawToUnicode(Value.VRawByteString, FCtrlsCP);
     {$ENDIF}

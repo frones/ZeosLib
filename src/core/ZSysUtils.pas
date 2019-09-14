@@ -562,8 +562,10 @@ function StrToBytes(const Value: UnicodeString): TBytes; overload;
   @param Value an array of bytes to be converted.
   @return a converted variant.
 }
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
 function BytesToVar(const Value: TBytes): Variant; overload;
-function BytesToVar(const Value: RawByteString): Variant; overload;
+{$ENDIF}
+function BytesToVar(const Value: RawByteString): Variant; {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}overload;{$ENDIF}
 
 {**
   Converts variant into an array of bytes.
@@ -2628,7 +2630,8 @@ begin
     Result[I] := Value[I];
 end;
 
-function BytesToVar(const Value: RawByteString): Variant; overload;
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+function BytesToVar(const Value: RawByteString): Variant;
 var
   I: Integer;
   P: PByte;
@@ -2640,6 +2643,7 @@ begin
     Inc(P);
   end;
 end;
+{$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
 
 {**
   Converts variant into an array of bytes.
