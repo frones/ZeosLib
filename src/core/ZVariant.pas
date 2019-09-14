@@ -156,8 +156,12 @@ type
 
   PZVariant = ^TZVariant;
 
-  {** Defines an array of variants. }
+  {** Defines an dynamic array of variants. }
   TZVariantDynArray = array of TZVariant;
+
+  PZVariantArray = ^TZVariantArray;
+  {** Defines an array of variants. }
+  TZVariantArray = array[Byte] of TZVariant;
 
   {** Defines a variant processing exception. }
   EZVariantException = class (Exception);
@@ -623,6 +627,10 @@ function EncodeInterface(const Value: IZInterface): TZVariant; {$IFDEF WITH_INLI
 }
 function EncodeArray(const Value: TZArray): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+function ZCompareDate(const Value1, Value2: TZDate): Integer;
+function ZCompareTime(const Value1, Value2: TZTime): Integer;
+function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
+
 var
   {** Declares a variant manager with soft convertion rules. }
   SoftVarManager: IZVariantManager;
@@ -675,8 +683,8 @@ begin
     vtCharRec: DstValue.VCharRec := SrcValue.VCharRec;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: DstValue.VUnicodeString := SrcValue.VUnicodeString;
-    {$IFDEF TEST_RECORD_REFACTORING}
     vtGUID: DstValue.VGUID := SrcValue.VGUID;
+    {$IFDEF TEST_RECORD_REFACTORING}
     vtDate: DstValue.VDate := SrcValue.VDate;
     vtTime: DstValue.VTime := SrcValue.VTime;
     vtTimeStamp: DstValue.VTimeStamp := SrcValue.VTimeStamp;
@@ -809,43 +817,9 @@ DoWideCompare:
       Result := WideCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
     {$ENDIF}
     {$IFDEF TEST_RECORD_REFACTORING}
-    vtDate: begin
-              GetAsDate(Value2, ADate);
-              Result := Ord(Value1.VDate.Year > ADate.Year)-Ord(Value1.VDate.Year < ADate.Year);
-              if Result = 0 then begin
-                Result := Ord(Value1.VDate.Month > ADate.Month)-Ord(Value1.VDate.Month < ADate.Month);
-                if Result = 0 then
-                  Result := Ord(Value1.VDate.Day > ADate.Day)-Ord(Value1.VDate.Day < ADate.Day);
-              end;
-            end;
-    vtTime: begin
-              GetAsTime(Value2, ATime);
-              Result := Ord(Value1.VTime.Hour > ATime.Hour)-Ord(Value1.VTime.Hour < ATime.Hour);
-              if Result = 0 then begin
-                Result := Ord(Value1.VTime.Minute > ATime.Minute)-Ord(Value1.VTime.Minute < ATime.Minute);
-                if Result = 0 then begin
-                  Result := Ord(Value1.VTime.Second > ATime.Second)-Ord(Value1.VTime.Second < ATime.Second);
-                  if Result = 0 then
-                    Result := Ord(Value1.VTime.Fraction > ATime.Fraction)-Ord(Value1.VTime.Fraction < ATime.Fraction);
-                end;
-              end;
-            end;
-    vtTimeStamp: begin
-              GetAsTime(Value2, ATimeStamp);
-              Result := Ord(Value1.VDate.Year > ADate.Year)-Ord(Value1.VDate.Year < ADate.Year);
-              if Result = 0 then
-                Result := Ord(Value1.VDate.Month > ADate.Month)-Ord(Value1.VDate.Month < ADate.Month);
-              if Result = 0 then
-                Result := Ord(Value1.VDate.Day > ADate.Day)-Ord(Value1.VDate.Day < ADate.Day);
-              if Result = 0 then
-                Result := Ord(Value1.VTimeStamp.Hour > ATimeStamp.Hour)-Ord(Value1.VTimeStamp.Hour < ATimeStamp.Hour);
-              if Result = 0 then
-                Result := Ord(Value1.VTimeStamp.Minute > ATimeStamp.Minute)-Ord(Value1.VTimeStamp.Minute < ATimeStamp.Minute);
-              if Result = 0 then
-                Result := Ord(Value1.VTimeStamp.Second > ATimeStamp.Second)-Ord(Value1.VTimeStamp.Second < ATimeStamp.Second);
-              if Result = 0 then
-                Result := Ord(Value1.VTimeStamp.Fraction > ATimeStamp.Fraction)-Ord(Value1.VTimeStamp.Fraction < ATimeStamp.Fraction);
-            end;
+    vtDate: Result := ZCompareDate(Value1.VDate, Value2.VDate);
+    vtTime: Result := ZCompareTime(Value1.VTime, Value2.VTime);
+    vtTimeStamp: Result := ZCompareTimeStamp(Value1.VTimeStamp, Value2.VTimeStamp);
     {$ELSE}
     vtDateTime:
       begin
@@ -944,7 +918,11 @@ end;
   @param Value a variant to be converted.
   @param a result value.
 }
+{$IFDEF TEST_RECORD_REFACTORING}
+procedure TZSoftVariantManager.GetAsGUID(const Value: TZVariant; Var Result: TGUID);
+{$ELSE}
 function TZSoftVariantManager.GetAsGUID(const Value: TZVariant): TGUID;
+{$ENDIF}
 begin
   Result := Convert(Value, vtGUID).VGUID;
 end;
@@ -965,8 +943,12 @@ end;
   @param Value a variant to be converted.
   @param a result value.
 }
-function TZSoftVariantManager.GetAsBigDecimal(
-  const Value: TZVariant): TBCD;
+{$IFDEF TEST_RECORD_REFACTORING}
+procedure TZSoftVariantManager.GetAsBigDecimal(const Value: TZVariant;
+  Var Result: TBCD);
+{$ELSE}
+function TZSoftVariantManager.GetAsBigDecimal(const Value: TZVariant): TBCD;
+{$ENDIF}
 begin
   Result := Convert(Value, vtBigDecimal).VBigDecimal;
 end;
@@ -1803,7 +1785,7 @@ begin
       {$ELSE}
       if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8)
       then Tmp := Value.VRawByteString
-      else RawCPConvert(Value.VUnicodeString, Tmp, zCP_UTF8, ZOSCodePage);
+      else RawCPConvert(Value.VRawByteString, Tmp, zCP_UTF8, ZOSCodePage);
       {$ENDIF}
     {$ENDIF}
     {$IFDEF UNICODE}vtString,{$ENDIF}
@@ -2512,7 +2494,7 @@ begin
       {$ELSE}
       //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
       //this hint means a cast instead of convert. The user should better use WideString constants!
-      ResTmp := ZRawToUnicode(Value.VUnicodeString, FCtrlsCP);
+      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, FCtrlsCP);
       {$ENDIF}
     vtCharRec: if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
         {$IFDEF UNICODE}
@@ -2717,17 +2699,13 @@ function TZAnyValue.Equals(const Value: IZInterface): Boolean;
 var
   Temp: IZAnyValue;
 begin
-  if Value <> nil then
-  begin
-    if Value.QueryInterface(IZAnyValue, Temp) = 0 then
-    begin
+  if Value <> nil then begin
+    if Value.QueryInterface(IZAnyValue, Temp) = 0 then begin
       Result := SoftVarManager.Compare(FValue, Temp.GetValue) = 0;
       Temp := nil;
-    end
-    else
+    end else
       Result := inherited Equals(Value);
-  end
-  else
+  end else
     Result := False;
 end;
 
@@ -3185,6 +3163,60 @@ begin
   Result.VArray := Value;
 end;
 
+function ZCompareDate(const Value1, Value2: TZDate): Integer;
+begin
+  Result := Ord(Value1.IsNeagative)-Ord(Value2.IsNeagative);
+  if Result = 0 then begin
+    Result := Value1.Year-Value2.Year;
+    if Result = 0 then begin
+      Result := Value1.Month - Value2.Month;
+      if Result = 0 then
+        Result := Value1.Day - Value2.Day;
+    end;
+  end;
+end;
+
+function ZCompareTime(const Value1, Value2: TZTime): Integer;
+begin
+  Result := Ord(Value1.IsNeagative)-Ord(Value2.IsNeagative);
+  if Result = 0 then begin
+    Result := Value1.Hour - Value2.Hour;
+    if Result = 0 then begin
+      Result := Value1.Minute - Value2.Minute;
+      if Result = 0 then begin
+        Result := Value1.Second - Value2.Second;
+        if Result = 0 then
+          Result := Ord(Value1.Fractions > Value2.Fractions)-Ord(Value1.Fractions < Value2.Fractions);
+      end;
+    end;
+  end;
+end;
+
+function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
+begin
+  Result := Ord(Value1.IsNeagative)-Ord(Value2.IsNeagative);
+  if Result = 0 then begin
+    Result := Value1.Year-Value2.Year;
+    if Result = 0 then begin
+      Result := Value1.Month - Value2.Month;
+      if Result = 0 then begin
+        Result := Value1.Day - Value2.Day;
+        if Result = 0 then begin
+          Result := (Value1.Hour + Value1.UTC_Offset_MUL100) - (Value2.Hour + Value2.UTC_Offset_MUL100);
+          if Result = 0 then begin
+            Result := Value1.Minute - Value2.Minute;
+            if Result = 0 then begin
+              Result := Value1.Second - Value2.Second;
+              if Result = 0 then
+                Result := Ord(Value1.Fractions > Value2.Fractions)-Ord(Value1.Fractions < Value2.Fractions);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
 procedure RawFiller;
 var B: Boolean;
@@ -3198,7 +3230,6 @@ initialization
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   RawFiller;
 {$ENDIF}
-
   {$IFDEF ZEOS_TEST_ONLY}
   DefVarManager  := TZDefaultVariantManager.Create;
   {$ENDIF ZEOS_TEST_ONLY}
