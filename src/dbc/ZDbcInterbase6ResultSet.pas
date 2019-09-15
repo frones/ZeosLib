@@ -146,12 +146,15 @@ type
   private
     FBlobId: TISC_QUAD;
     FPlainDriver: TZInterbasePlainDriver;
+    FTransaction: IZIBTransaction;
     FIBConnection: IZInterbase6Connection;
   protected
     procedure ReadLob; override;
   public
     constructor Create(const PlainDriver: TZInterbasePlainDriver;
-      var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
+      var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+      const Connection: IZInterbase6Connection);
+    procedure BeforeDestruction; override;
   end;
 
   TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob, IZUnCachedLob)
@@ -159,11 +162,14 @@ type
     FBlobId: TISC_QUAD;
     FPlainDriver: TZInterbasePlainDriver;
     FIBConnection: IZInterbase6Connection;
+    FTransaction: IZIBTransaction;
   protected
     procedure ReadLob; override;
   public
     constructor Create(const PlainDriver: TZInterbasePlainDriver;
-      var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
+      var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+      const Connection: IZInterbase6Connection);
+    procedure BeforeDestruction; override;
   end;
 
   {** Implements Interbase ResultSetMetadata object. }
@@ -625,14 +631,14 @@ begin
           ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
             BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, Self);
         end else
-          Result := TZInterbase6UnCachedBlob.Create(FPlainDriver, BlobId, FIBConnection);
+          Result := TZInterbase6UnCachedBlob.Create(FPlainDriver, BlobId, FIBConnection.GetActiveTransaction, FIBConnection);
       stAsciiStream, stUnicodeStream:
         if FCachedBlob then begin
           Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
           ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
             BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, Self);
         end else
-          Result := TZInterbase6UnCachedClob.Create(FPlainDriver, BlobId, FIBConnection);
+          Result := TZInterbase6UnCachedClob.Create(FPlainDriver, BlobId, FIBConnection.GetActiveTransaction, FIBConnection);
       end
   end;
 end;
@@ -1874,27 +1880,38 @@ begin
 end;
 
 { TZInterbase6UnCachedBlob }
+
+procedure TZInterbase6UnCachedBlob.BeforeDestruction;
+begin
+  FTransaction.DeRegisterOpenUnCachedLob(Self);
+  inherited;
+end;
+
+constructor TZInterbase6UnCachedBlob.Create(const PlainDriver: TZInterbasePlainDriver;
+  var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+  const Connection: IZInterbase6Connection);
+begin
+  FBlobId := BlobId;
+  FPlainDriver := PlainDriver;
+  FTransaction := Transaction;
+  FTransaction.RegisterOpenUnCachedLob(Self);
+  FIBConnection := Connection;
+end;
+
 {**
   Reads the blob information by blob handle.
   @param handle a Interbase6 database connect handle.
   @param the statement previously prepared
 }
-constructor TZInterbase6UnCachedBlob.Create(const PlainDriver: TZInterbasePlainDriver;
-  var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
-begin
-  FBlobId := BlobId;
-  FPlainDriver := PlainDriver;
-  FIBConnection := Connection;
-end;
-
 procedure TZInterbase6UnCachedBlob.ReadLob;
 var
   Size: Integer;
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
-    FBlobId, Size, Buffer, True, FIBConnection as IImmediatelyReleasable);
+  if FIBConnection <> nil then
+    ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
+      FBlobId, Size, Buffer, True, FIBConnection as IImmediatelyReleasable);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -1907,11 +1924,20 @@ end;
   @param handle a Interbase6 database connect handle.
   @param the statement previously prepared
 }
+procedure TZInterbase6UnCachedClob.BeforeDestruction;
+begin
+  FTransaction.DeRegisterOpenUnCachedLob(Self);
+  inherited;
+end;
+
 constructor TZInterbase6UnCachedClob.Create(const PlainDriver: TZInterbasePlainDriver;
-  var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
+  var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+  const Connection: IZInterbase6Connection);
 begin
   inherited CreateWithData(nil, 0, Connection.GetConSettings^.ClientCodePage^.CP,
     Connection.GetConSettings);
+  FTransaction := Transaction;
+  FTransaction.RegisterOpenUnCachedLob(Self);
   FIBConnection := Connection;
   FBlobId := BlobId;
   FPlainDriver := PlainDriver;
@@ -1923,7 +1949,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
+  ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
     FBlobId, Size, Buffer, False, FIBConnection as IImmediatelyReleasable);
   AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;

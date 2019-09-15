@@ -88,7 +88,9 @@ type
     function StartTransaction: Integer;
     function GetTrHandle: PISC_TR_HANDLE;
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
-    procedure DeRegisterOpencursor(const CursorRS: IZResultSet);
+    procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
+    procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
+    procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
     function GetExplicitTransactionCount: Integer;
     function GetOpenCursorCount: Integer;
   end;
@@ -167,7 +169,7 @@ type
   private
     fSavepoints: TObjectList;
     fDoCommit, fDoLog: Boolean;
-    FOpenCursors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FOpenCursors, FOpenUncachedLobs: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     //FReadOnly, FAutoCommit: Boolean;
     //FTransactIsolationLevel: TZTransactIsolationLevel;
     FTrHandle: TISC_TR_HANDLE;
@@ -184,7 +186,9 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
-    procedure DeRegisterOpencursor(const CursorRS: IZResultSet);
+    procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
+    procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
+    procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
     function GetExplicitTransactionCount: Integer;
     function GetOpenCursorCount: Integer;
   public
@@ -1542,6 +1546,7 @@ procedure TZIBTransaction.BeforeDestruction;
 begin
   try
     FOpenCursors.Clear;
+    FOpenUncachedLobs.Clear;
     fSavepoints.Clear;
     if FTrHandle <> 0 then
       if fDoCommit
@@ -1550,6 +1555,7 @@ begin
   finally
     FreeAndNil(FOpenCursors);
     FreeAndNil(fSavepoints);
+    FreeAndNil(FOpenUncachedLobs);
     inherited BeforeDestruction;
   end;
 end;
@@ -1572,8 +1578,10 @@ begin
     IBSavePoint.Release;
     FExplicitTransactionCounter := fSavepoints.Count +1;
   end else if FTrHandle <> 0 then with FOwner.FOwner do try
-    if (FOpenCursors.Count = 0) or FOwner.FOwner.FHardCommit or TestCachedResultsAndForceFetchAll then
-      Status := FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle)
+    if FOwner.FOwner.FHardCommit or
+      ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
+      ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
+    then Status := FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle)
     else begin
       fDoCommit := True;
       fDoLog := False;
@@ -1593,6 +1601,7 @@ constructor TZIBTransaction.Create(const Owner: TZIBTransactionManager);
 begin
   FOwner := Owner;
   FOpenCursors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FOpenUncachedLobs := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   fSavepoints := TObjectList.Create(True);
   fDoLog := True;
 end;
@@ -1604,6 +1613,15 @@ begin
   I := FOpenCursors.IndexOf(Pointer(CursorRS));
   {$IFDEF DEBUG}Assert(I > -1, 'Wrong DeRegisterOpenCursor beahvior'); {$ENDIF DEBUG}
   FOpenCursors.Delete(I);
+end;
+
+procedure TZIBTransaction.DeRegisterOpenUnCachedLob(const Lob: IZBlob);
+var I: Integer;
+begin
+  {$IFDEF DEBUG}Assert(FOpenUncachedLobs <> nil, 'Wrong DeRegisterOpenUnCachedLob beahvior'); {$ENDIF DEBUG}
+  I := FOpenUncachedLobs.IndexOf(Pointer(Lob));
+  {$IFDEF DEBUG}Assert(I > -1, 'Wrong DeRegisterOpenUnCachedLob beahvior'); {$ENDIF DEBUG}
+  FOpenUncachedLobs.Delete(I);
 end;
 
 function TZIBTransaction.GetExplicitTransactionCount: Integer;
@@ -1628,6 +1646,11 @@ begin
   FOpenCursors.Add(Pointer(CursorRS));
 end;
 
+procedure TZIBTransaction.RegisterOpenUnCachedLob(const Lob: IZBlob);
+begin
+  FOpenUncachedLobs.Add(Pointer(Lob));
+end;
+
 procedure TZIBTransaction.ReleaseImmediat(const Sender: IImmediatelyReleasable;
   var AError: EZSQLConnectionLost);
 var I: Integer;
@@ -1648,8 +1671,10 @@ begin
     IBSavePoint.RollBackTo;
     FExplicitTransactionCounter := fSavepoints.Count+1;
   end else if FTrHandle <> 0 then with FOwner.FOwner do try
-    if (FOpenCursors.Count = 0) or FOwner.FOwner.FHardCommit or TestCachedResultsAndForceFetchAll then
-      Status := FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle)
+    if FOwner.FOwner.FHardCommit or
+      ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
+      ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
+    then Status := FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle)
     else begin
       fDoCommit := False;
       fDoLog := False;
