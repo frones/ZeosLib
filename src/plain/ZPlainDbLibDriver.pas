@@ -459,7 +459,6 @@ type
   TZFreeTDS42SybasePlainDriver = class(TZFreeTDSBasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-    procedure LoadCodePages; override;
   public
     constructor Create; override;
     function GetProtocol: string; override;
@@ -471,7 +470,6 @@ type
   TZFreeTDS50PlainDriver = class(TZFreeTDS42SybasePlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-    procedure LoadCodePages; override;
   public
     constructor Create; override;
     function GetProtocol: string; override;
@@ -483,7 +481,6 @@ type
   TZFreeTDS70PlainDriver = class(TZFreeTDS42MsSQLPlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-    procedure LoadCodePages; override;
   public
     function GetProtocol: string; override;
     function GetDescription: string; override;
@@ -494,7 +491,6 @@ type
   TZFreeTDS71PlainDriver = class(TZFreeTDS70PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-    procedure LoadCodePages; override;
   public
     function GetProtocol: string; override;
     function GetDescription: string; override;
@@ -504,7 +500,6 @@ type
   TZFreeTDS72PlainDriver = class(TZFreeTDS70PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
-    procedure LoadCodePages; override;
   public
     function GetProtocol: string; override;
     function GetDescription: string; override;
@@ -2418,11 +2413,6 @@ begin
   Result := TZFreeTDS42SybasePlainDriver.Create;
 end;
 
-procedure TZFreeTDS42SybasePlainDriver.LoadCodePages;
-begin
-  inherited;
-end;
-
 constructor TZFreeTDS42SybasePlainDriver.Create;
 begin
   inherited Create;
@@ -2463,11 +2453,6 @@ begin
   Result := TZFreeTDS50PlainDriver.Create;
 end;
 
-procedure TZFreeTDS50PlainDriver.LoadCodePages;
-begin
-  inherited;
-end;
-
 constructor TZFreeTDS50PlainDriver.Create;
 begin
   inherited Create;
@@ -2495,14 +2480,10 @@ begin
 end;
 
 { TZFreeTDS70PlainDriver }
+
 function TZFreeTDS70PlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZFreeTDS70PlainDriver.Create;
-end;
-
-procedure TZFreeTDS70PlainDriver.LoadCodePages;
-begin
-  inherited;
 end;
 
 function TZFreeTDS70PlainDriver.GetProtocol: string;
@@ -2531,11 +2512,6 @@ begin
   Result := TZFreeTDS71PlainDriver.Create;
 end;
 
-procedure TZFreeTDS71PlainDriver.LoadCodePages;
-begin
-  Inherited;
-end;
-
 function TZFreeTDS71PlainDriver.GetProtocol: string;
 begin
   Result := 'FreeTDS_MsSQL-2000';
@@ -2552,14 +2528,10 @@ begin
 end;
 
 { TZFreeTDS72PlainDriver }
+
 function TZFreeTDS72PlainDriver.Clone: IZPlainDriver;
 begin
   Result := TZFreeTDS72PlainDriver.Create;
-end;
-
-procedure TZFreeTDS72PlainDriver.LoadCodePages;
-begin
-  inherited;
 end;
 
 function TZFreeTDS72PlainDriver.GetProtocol: string;

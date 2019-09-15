@@ -354,7 +354,7 @@ begin
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
     if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
       RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
-    FHandle := GetPlainDriver.dbOpen(LoginRec, Pointer(RawTemp));
+    FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(RawTemp));
     CheckDBLibError(lcConnect, LogMessage);
     if not Assigned(FHandle) then raise EZSQLException.Create('The connection to the server failed, no proper handle was returned. Insufficient memory, unable to connect for any reason. ');
 
