@@ -1430,7 +1430,7 @@ function TZDBLIBPLainDriver.dbOpen(Login: PLOGINREC;
   server: PAnsiChar): PDBPROCESS;
 begin
   if Assigned(FTdsDbOpen) then
-    Result := FTdsDbOpen(Login, server, Ord(Pos('Sybase', GetDescription) > 0))
+    Result := FTdsDbOpen(Login, server, Ord(ZFastCode.Pos('Sybase', GetDescription) > 0))
   else
     {$IFNDEF MSWINDOWS}
     Result := FdbOpen(Login, server);
