@@ -424,6 +424,7 @@ begin
   if QueryHandle <> nil then
   begin
     Result := RawToIntDef(FPlainDriver.GetCommandTuples(QueryHandle), 0);
+    LastUpdateCount := Result;
     FPlainDriver.PQclear(QueryHandle);
   end;
 
