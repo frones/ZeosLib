@@ -89,6 +89,8 @@ type
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
   end;
 
+  { Interbase Error Class}
+  EZMySQLConvertError = class(EZSQLException);
   {** Implements MySQL ResultSet. }
 
   { TZAbstractMySQLResultSet }
@@ -118,7 +120,7 @@ type
     FTempBlob: IZBlob; //temporary Lob
     FClosing: Boolean;
     FClientCP: Word;
-    procedure RaiseConversionError(Index: Integer);
+    function CreateMySQLConvertError(ColumnIndex: Integer; DataType: TMysqlFieldType): EZMySQLConvertError;
   protected
     procedure Open; override;
   public
@@ -647,6 +649,13 @@ begin
     AffectedRows^ := LastRowNo;
 end;
 
+function TZAbstractMySQLResultSet.CreateMySQLConvertError(ColumnIndex: Integer;
+  DataType: TMysqlFieldType): EZMySQLConvertError;
+begin
+  Result := EZMySQLConvertError.Create(Format(SErrorConvertionField,
+        [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel, IntToStr(Ord(DataType))]));
+end;
+
 destructor TZAbstractMySQLResultSet.Destroy;
 begin
   //ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, Ord(fBindBufferAllocated));
@@ -735,13 +744,6 @@ begin
     if (FPlainDriver.mysql_stmt_bind_result(FMYSQL_STMT,FMYSQL_Col_BIND_Address^)<>0) then
       checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcOther, 'mysql_stmt_bind_result', Self);
   end;
-end;
-
-procedure TZAbstractMySQLResultSet.RaiseConversionError(Index: Integer);
-begin
-  raise EZSQLException.Create(Format(SErrorConvertionField,
-    ['Field '+ZFastCode.IntToStr(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}),
-      DefineColumnTypeName(GetMetadata.GetColumnType(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))]));
 end;
 
 procedure TZAbstractMySQLResultSet.ReleaseImmediat(
@@ -1004,7 +1006,7 @@ set_Results:Len := Result - PAnsiChar(@FTinyBuffer);
               Len := FTempBlob.Length;
               Result := FTempBlob.GetBuffer;
             end;
-        else RaiseConversionError(ColumnIndex);
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end;
     end;
   end else begin
@@ -1154,7 +1156,7 @@ set_Results:Len := Result - PWideChar(@FTinyBuffer);
                 goto set_from_tmp;
               end;
             end;
-        else RaiseConversionError(ColumnIndex);
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end;
     end;
   end else begin
@@ -1441,6 +1443,7 @@ begin
             ColBind^.buffer_Length_address^ := 0;
             Result := RawToIntDef(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
   end else begin
     {$R-}
@@ -1528,6 +1531,7 @@ begin
             ColBind^.buffer_Length_address^ := 0;
             Result := RawToInt64Def(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
   end else begin
     {$R-}
@@ -1617,6 +1621,7 @@ begin
             ColBind^.buffer_Length_address^ := 0;
             Result := RawToUInt64Def(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
   end else begin
     {$R-}
@@ -1698,6 +1703,7 @@ begin
             ColBind^.buffer_Length_address^ := 0;
             Result := RawToUInt64Def(@FTinyBuffer[0], @FTinyBuffer[ColBind^.Length[0]], 0);
           end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
   end else begin
     {$R-}
@@ -1733,10 +1739,76 @@ begin
   Result := GetDouble(ColumnIndex);
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UUID</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>Zero-UUID</code>
+}
 procedure TZAbstractMySQLResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
+var
+  ColBind: PMYSQL_aligned_BIND;
+  Len: ULong;
+  P: PAnsiChar;
+label Fail, Fill, DoMove, FromChar;
 begin
+  {$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (fBindBufferAllocated and (FMYSQL_STMT = nil)) or
+     (not fBindBufferAllocated and (FRowHandle = nil)) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+  {$ENDIF}
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stGUID);
+{$ENDIF}
+  {$R-}
+  ColBind := @FMYSQL_aligned_BINDs[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if fBindBufferAllocated then begin
+    LastWasNull := ColBind^.is_null =1;
+    if LastWasNull then
+Fill: FillChar(Result, SizeOf(TGUID), #0)
+    else case ColBind^.buffer_type_address^ of
+        FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+        FIELD_TYPE_BLOB, FIELD_TYPE_STRING:
+          begin
+            if ColBind.buffer = nil then
+              goto Fail;
+            P := ColBind^.buffer;
+            if ColBind^.binary and (ColBind^.length[0] = SizeOf(TGUID))
+            then goto DoMove
+            else if not ColBind^.binary and ((ColBind^.length[0] = 36) or (ColBind^.length[0] = 38))
+            then goto FromChar
+            else goto Fail;
+          end;
+        else goto Fail;
+    end;
+  end else begin
+    {$R-}
+    P := PMYSQL_ROW(FRowHandle)[ColumnIndex];
+    LastWasNull := P = nil;
+    if LastWasNull then
+      goto Fill
+    else begin
+      Len := FLengthArray^[ColumnIndex];
+      case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
+        stBytes: if Len = SizeOf(TGUID) then
+DoMove:          Move(P^, Result.D1, SizeOf(TGUID))
+                 else goto Fail;
+        stString, stUnicodeString: if (Len = 36) or (Len = 38) then
+FromChar:        ValidGUIDToBinary(P, @Result.D1)
+                 else goto Fail;
+       else
+Fail:           raise CreateMySQLConvertError(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, ColBind^.buffer_type_address^);
+      end;
 
+      end;
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  end;
 end;
 
 {**
@@ -1806,6 +1878,7 @@ begin
             FTinyBuffer[ColBind^.Length[0]] := 0;
             RawToFloatDef(PAnsichar(@FTinyBuffer[0]), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), 0, Result);
           end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
   end else begin
     {$R-}
@@ -1883,10 +1956,7 @@ begin
             LastWasNull := not TryRawToBCD(@FTinyBuffer[0], ColBind^.Length[0], Result, '.');
           end else
             Result := nullbcd;
-        else begin
-            Result := nullbcd;
-            RaiseConversionError(ColumnIndex);
-          end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
     else Result := nullbcd;
   end else begin
@@ -1944,7 +2014,8 @@ begin
             Result := BufferToBytes(@FTinyBuffer[0], ColBind^.Length[0] );
           end else
             Result := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetBytes;
-      end
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
+      End;
   end else begin
     {$R-}
     Buffer := PMYSQL_ROW(FRowHandle)[ColumnIndex];
@@ -2024,6 +2095,7 @@ begin
             FTinyBuffer[ColBind^.Length[0]] := 0;
             RawToFloatDef(PAnsichar(@FTinyBuffer[0]), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), 0, Result);
           end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
   end else begin
     {$R-}
@@ -2277,6 +2349,7 @@ begin
               Result := RawSQLDateToDateTime(PAnsiChar(ColBind^.buffer), ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed);
             LastWasNull := Failed;
           end;
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end
   end else begin
     {$R-}

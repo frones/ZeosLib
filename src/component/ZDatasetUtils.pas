@@ -543,6 +543,12 @@ begin
       ftExtended:
         RowAccessor.SetDouble(FieldIndex, ResultSet.GetDouble(ColumnIndex));
       {$ENDIF}
+      {$IFDEF WITH_FTGUID}
+      ftGUID: begin
+          ResultSet.GetGUID(ColumnIndex, PGUID(@RowAccessor.TinyBuffer[0])^);
+          RowAccessor.SetGUID(FieldIndex, PGUID(@RowAccessor.TinyBuffer[0])^);
+        end;
+      {$ENDIF}
       ftFmtBCD: begin
           ResultSet.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
           RowAccessor.SetBigDecimal(FieldIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
@@ -556,7 +562,7 @@ begin
           RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), Len)
         else
           RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
-      ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
+      ftBytes, ftVarBytes:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
         RowAccessor.SetDate(FieldIndex, ResultSet.GetDate(ColumnIndex));
@@ -1145,6 +1151,8 @@ begin
               DecodedKeyValues[I].VUnicodeString :=
                 {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(DecodedKeyValues[I].VUnicodeString);
           end;
+        stGUID: DecodedKeyValues[I] := VariantManager.Convert(
+            DecodedKeyValues[I], vtGUID);
         stDate, stTime, stTimestamp:
           DecodedKeyValues[I] := VariantManager.Convert(
             DecodedKeyValues[I], vtDateTime);
@@ -1188,7 +1196,14 @@ var
   {$ENDIF}
   WValue1, WValue2: ZWideString;
   CurrentType : TZSQLType;
-  TinyBuffer: array[Byte] of Byte;
+  BCD: TBCD;
+  UID: TGUID absolute BCD;
+  U64: UInt64 absolute BCD;
+  I64: Int64 absolute BCD;
+  C: Currency absolute i64;
+  D: Double absolute C;
+  DT: TDateTime absolute D;
+  B: Boolean absolute C;
   P1, P2: Pointer;
   L1, L2: LengthInt;
 begin
@@ -1266,26 +1281,44 @@ begin
       {$ENDIF}
     end else
       case CurrentType of
-        stBoolean: Result := KeyValues[I].VBoolean = ResultSet.GetBoolean(ColumnIndex);
-        stByte, stWord, stLongWord, stUlong:
-          Result := KeyValues[I].VUInteger = ResultSet.GetULong(ColumnIndex);
-        stShort, stSmall, stInteger, stLong:
-          Result := KeyValues[I].VInteger = ResultSet.GetLong(ColumnIndex);
-        stFloat:
-          Result := Abs(KeyValues[I].VDouble -
-            ResultSet.GetDouble(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
-        stDouble:
-          Result := Abs(KeyValues[I].VDouble -
-            ResultSet.GetDouble(ColumnIndex)) < FLOAT_COMPARE_PRECISION;
-        stCurrency: Result := KeyValues[I].VCurrency = ResultSet.GetCurrency(ColumnIndex);
+        stBoolean: begin
+              B := ResultSet.GetBoolean(ColumnIndex);
+              Result := KeyValues[I].VBoolean = B;
+            end;
+        stByte, stWord, stLongWord, stUlong: begin
+              U64 := ResultSet.GetULong(ColumnIndex);
+              Result := KeyValues[I].VUInteger = U64;
+            end;
+        stShort, stSmall, stInteger, stLong: begin
+              I64 := ResultSet.GetLong(ColumnIndex);
+              Result := KeyValues[I].VInteger = I64;
+            end;
+        stFloat:  begin
+              D := ResultSet.GetDouble(ColumnIndex);
+              Result := Abs(KeyValues[I].VDouble - D) < FLOAT_COMPARE_PRECISION_SINGLE;
+            end;
+        stDouble: begin
+              D := ResultSet.GetDouble(ColumnIndex);
+              Result := Abs(KeyValues[I].VDouble - D) < FLOAT_COMPARE_PRECISION;
+            end;
+        stCurrency: begin
+              C := ResultSet.GetCurrency(ColumnIndex);
+              Result := KeyValues[I].VCurrency = C;
+            end;
         stBigDecimal: begin
-                        ResultSet.GetBigDecimal(ColumnIndex, PBCD(@TinyBuffer[0])^);
-                        Result := BCDCompare(KeyValues[I].VBigDecimal, PBCD(@TinyBuffer[0])^) = 0;
+                        ResultSet.GetBigDecimal(ColumnIndex, BCD);
+                        Result := BCDCompare(KeyValues[I].VBigDecimal, BCD) = 0;
                       end;
         stDate,
         stTime,
-        stTimestamp:
-          Result := KeyValues[I].VDateTime = ResultSet.GetTimestamp(ColumnIndex);
+        stTimestamp:  begin
+            DT := ResultSet.GetTimestamp(ColumnIndex);
+            Result := KeyValues[I].VDateTime = D;
+          end;
+        stGUID: begin
+                  ResultSet.GetGUID(ColumnIndex, UID);
+                  Result := CompareMem(@KeyValues[I].VGUID.D1, @UID.D1, SizeOf(TGUID));
+                end
         else if (CurrentType in [stUnicodeString, stUnicodeStream]) or
              ((CurrentType in [stString, stAsciiStream]) and (VariantManager.UseWComparsions)) then begin
             WValue2 := ResultSet.GetUnicodeString(ColumnIndex);
@@ -1448,7 +1481,7 @@ begin
       ftWideString:
         Result := ResultSet.GetUnicodeString(ColumnIndex) =
           Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsWideString{$ENDIF};
-      else
+      else //includes ftGUID
         Result := ResultSet.GetString(ColumnIndex) = Field2.AsString;
     end;
   end;

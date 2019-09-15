@@ -1249,7 +1249,7 @@ const
 
 implementation
 
-uses DateUtils, StrUtils,
+uses DateUtils,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   SysConst,{keep it after RTLConst -> deprecated warning}
   {$IFDEF WITH_DBCONSTS}DBConsts,{$ENDIF}

@@ -123,6 +123,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -994,6 +995,58 @@ begin
                           TempDate.Second, TempDate.Fractions div 10);
                       end;
       else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
+    end;
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UUID</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>Zero-UUID</code>
+}
+procedure TZInterbase6XSQLDAResultSet.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+var XSQLVAR: PXSQLVAR;
+  P: PAnsiChar;
+  Len: NativeUint;
+  CP_ID: ISC_SHORT;
+label SetFromPChar, Fail;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stGUID);
+{$ENDIF}
+  {$R-}
+  XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
+    LastWasNull := True;
+    FillChar(Result, SizeOf(TGUID), #0);
+  end else begin
+    LastWasNull := False;
+    CP_ID := XSQLVAR.sqlsubtype and 255;
+    case (XSQLVAR.sqltype and not(1)) of
+      SQL_TEXT      : begin
+                        P := XSQLVAR.sqldata;
+                        if (CP_ID = CS_BINARY)
+                        then Len := XSQLVAR.sqllen
+                        else Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
+                        goto SetFromPChar;
+                      end;
+      SQL_VARYING   : begin
+                        P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
+                        Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
+SetFromPChar:           if (CP_ID = CS_BINARY) and (Len = SizeOf(TGUID))
+                        then Move(P^, Result.D1, SizeOf(TGUID))
+                        else if (CP_ID <> CS_BINARY) and ((Len = 36) or (Len = 38))
+                          then ValidGUIDToBinary(P, @Result.D1)
+                          else goto Fail;
+                      end;
+      else
+Fail:   raise Self.CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype)
     end;
   end;
 end;

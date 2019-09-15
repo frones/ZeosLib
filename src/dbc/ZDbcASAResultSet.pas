@@ -104,6 +104,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -672,6 +673,42 @@ begin
         FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(columnIndex), ConvertASATypeToString(sqlType)]));
       end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UUID</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>Zero-UUID</code>
+}
+procedure TZASAAbstractResultSet.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+label Fail;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stGUID);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    FillChar(Result, SizeOf(TGUID), #0)
+  else with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
+    case sqlType and $FFFE of
+      DT_VARCHAR    : if (PZASASQLSTRING(sqlData).length = 36) or (PZASASQLSTRING(sqlData).length = 38)
+                      then ValidGUIDToBinary(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), @Result.D1)
+                      else goto Fail;
+      DT_BINARY     : if PZASASQLSTRING(sqlData).length = SizeOf(TGUID) then
+                      Move(PZASASQLSTRING(sqlData).data[0], Result.D1, SizeOf(TGUID))
+                      else goto Fail;
+    else begin
+fail:  FillChar(Result, SizeOf(TGUID), #0);
+        FSqlData.CreateException(Format(SErrorConvertionField,
+          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+      end;
+    end;
+  end;
 end;
 
 {**

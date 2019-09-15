@@ -1223,7 +1223,7 @@ type
     function GetDouble(ParameterIndex: Integer): Double;
     function GetCurrency(ParameterIndex: Integer): Currency;
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
-    //procedure GetGUID(Index: Integer; var Result: TGUID);
+    procedure GetGUID(Index: Integer; var Result: TGUID);
     function GetBytes(ParameterIndex: Integer): TBytes; overload;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;
@@ -1328,6 +1328,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -1372,6 +1373,7 @@ type
     function GetDoubleByName(const ColumnName: string): Double;
     function GetCurrencyByName(const ColumnName: string): Currency;
     procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
+    procedure GetGUIDByName(const ColumnName: string; var Result: TGUID);
     function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
     function GetTimeByName(const ColumnName: string): TDateTime;
@@ -1449,6 +1451,7 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+    procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
@@ -1492,6 +1495,7 @@ type
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency);
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: TBCD);
+    procedure UpdateGUIDByName(const ColumnName: string; const Value: TGUID);
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload; deprecated;
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; var Len: NativeUInt); overload;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar); deprecated;

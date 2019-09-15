@@ -197,6 +197,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -232,6 +233,7 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+    procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUint); overload;
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUint); overload;
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
@@ -1057,6 +1059,24 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>UUID</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>Zero-UUID</code>
+}
+procedure TZAbstractCachedResultSet.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  FRowAccessor.GetGUID(ColumnIndex, Result, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>double</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1430,6 +1450,16 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetFloat(ColumnIndex, Value);
+end;
+
+procedure TZAbstractCachedResultSet.UpdateGUID(ColumnIndex: Integer;
+  const Value: TGUID);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetGUID(ColumnIndex, Value);
 end;
 
 {**
@@ -2226,12 +2256,16 @@ begin
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
         stCurrency: RowAccessor.SetCurrency(I, ResultSet.GetCurrency(I));
+        stGUID: begin
+                          ResultSet.GetGUID(I, PGUID(@RowAccessor.TinyBuffer[0])^);
+                          RowAccessor.SetGUID(I, PGUID(@RowAccessor.TinyBuffer[0])^);
+                        end;
         stBigDecimal: begin
                           ResultSet.GetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                           RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                         end;
         stString, stUnicodeString: FStringFieldAssignFromResultSet(i);
-        stBytes,stGUID: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
+        stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));
         stTimestamp: RowAccessor.SetTimestamp(I, ResultSet.GetTimestamp(I));

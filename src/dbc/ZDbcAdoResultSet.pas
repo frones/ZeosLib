@@ -66,7 +66,7 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZClasses,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
 type
@@ -75,6 +75,9 @@ type
   protected
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
+
+  { ADO Error Class}
+  EZADOConvertError = class(EZSQLException);
 
   {** Implements Ado ResultSet. }
   TZAdoResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
@@ -88,6 +91,7 @@ type
     FValueAddr: Pointer;
     FValueType: Word;
     FColValue: OleVariant;
+    function CreateAdoConvertError(ColumnIndex: Integer; DataType: Word): EZADOConvertError;
   protected
     procedure Open; override;
   public
@@ -146,7 +150,7 @@ implementation
 uses
   Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ActiveX,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZClasses, ZDbcUtils;
+  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZDbcUtils;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
@@ -284,6 +288,14 @@ begin
     Statement.GetConnection.GetConSettings);
   FAdoRecordSet := AdoRecordSet;
   Open;
+end;
+
+function TZAdoResultSet.CreateAdoConvertError(ColumnIndex: Integer;
+  DataType: Word): EZADOConvertError;
+begin
+  Result := EZADOConvertError.Create(Format(SErrorConvertionField,
+        [TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnLabel,
+        IntToStr(DataType)]));
 end;
 
 {**
@@ -1111,15 +1123,21 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>double</code> in the Java programming language.
+  a <code>UUID</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>zerouid</code>
+    value returned is <code>Zero-UUID</code>
 }
 procedure TZAdoResultSet.GetGUID(ColumnIndex: Integer; var Result: TGUID);
 begin
-
+  LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
+  if LastWasNull then
+    FillChar(Result, SizeOf(TGUID), #0)
+  else with FField20 do
+    if Type_ = adGUID then
+      ZSysUtils.ValidGUIDToBinary(PWideChar(FValueAddr), @Result.D1)
+    else  raise CreateAdoConvertError(ColumnIndex, Type_);
 end;
 
 {**
@@ -1221,18 +1239,11 @@ begin
   else with FField20 do
     case FValueType of
       VT_ARRAY or VT_UI1: Result := BufferToBytes(TVarData(FColValue).VArray.Data, ActualSize);
-    end;
-    (*case Type_ of
-      adGUID:  begin
-          SetLength(Result, 16);
-          ValidGUIDToBinary(PWideChar(FValueAddr), Pointer(Result));
-        end;
-      adBinary, //8209
-      adVarBinary,
-      adLongVarBinary:
-          Result := BufferToBytes(TVarData(FColValue).VArray.Data, ActualSize);
-      else Result := BufferToBytes(FValueAddr, ActualSize);
-    end;*)
+    else if Type_ = adGUID then begin
+        SetLength(Result, 16);
+        ValidGUIDToBinary(PWideChar(FValueAddr), Pointer(Result));
+      end else raise Self.CreateAdoConvertError(ColumnIndex, Type_);
+  end;
 end;
 
 function TZAdoResultSet.GetCurrency(ColumnIndex: Integer): Currency;
@@ -1265,11 +1276,7 @@ begin
                   P := GetPWidechar(ColumnIndex, Len);
                   UnicodeToFloatDef(P, WideChar('.'), Len);
                 end;
-    else        try   //should not happen
-                  Result := FColValue;
-                except
-                  Result := 0;
-                end;
+    else raise CreateAdoConvertError(ColumnIndex, FField20.Type_);
   end;
 end;
 

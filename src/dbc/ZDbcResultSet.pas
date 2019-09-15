@@ -181,6 +181,7 @@ type
     function GetDoubleByName(const ColumnName: string): Double;
     function GetCurrencyByName(const ColumnName: string): Currency;
     procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
+    procedure GetGUIDByName(const ColumnName: string; var Result: TGUID);
     function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
     function GetTimeByName(const ColumnName: string): TDateTime;
@@ -267,6 +268,7 @@ type
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency);
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: TBCD);
+    procedure UpdateGUIDByName(const ColumnName: string; const Value: TGUID);
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload;
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; var Len: NativeUInt); overload;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar);
@@ -335,6 +337,7 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+    procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt); overload;
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
@@ -393,6 +396,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double; virtual;
     function GetCurrency(ColumnIndex: Integer): Currency; virtual;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); virtual;
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID); virtual;
     function GetBytes(ColumnIndex: Integer): TBytes; virtual;
     function GetDate(ColumnIndex: Integer): TDateTime; virtual;
     function GetTime(ColumnIndex: Integer): TDateTime; virtual;
@@ -1646,6 +1650,12 @@ begin
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetFloat(GetColumnIndex(ColumnName));
 end;
 
+procedure TZAbstractResultSet.GetGUIDByName(const ColumnName: string;
+  var Result: TGUID);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).GetGUID(GetColumnIndex(ColumnName), Result);
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -2595,6 +2605,12 @@ procedure TZAbstractResultSet.UpdateFloatByName(const ColumnName: string;
   Value: Single);
 begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateFloat(GetColumnIndex(ColumnName), Value);
+end;
+
+procedure TZAbstractResultSet.UpdateGUIDByName(const ColumnName: string;
+  const Value: TGUID);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateGUID(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -4569,6 +4585,12 @@ begin
   RaiseReadOnlyException;
 end;
 
+procedure TZAbstractReadOnlyResultSet.UpdateGUID(ColumnIndex: Integer;
+  const Value: TGUID);
+begin
+  RaiseReadOnlyException;
+end;
+
 {**
   Updates the designated column with an <code>signed long</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
@@ -5140,6 +5162,18 @@ begin
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetDouble(ColumnIndex);
+end;
+
+procedure TZSimpleResultSet.GetGUID(ColumnIndex: Integer; var Result: TGUID);
+var Bts: TBytes;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stGUID);
+{$ENDIF}
+  Bts := IZResultSet(FWeakIntfPtrOfSelf).GetBytes(ColumnIndex);
+  if not LastWasNull and (Length(Bts) = SizeOf(TGUID))
+  then Move(Pointer(Bts)^, Result.D1, SizeOf(TGUID))
+  else LastWasNull := True;
 end;
 
 {**

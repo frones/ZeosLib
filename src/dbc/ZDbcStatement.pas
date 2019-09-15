@@ -384,7 +384,7 @@ type
     function GetDouble(ParameterIndex: Integer): Double;
     function GetCurrency(ParameterIndex: Integer): Currency;
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
-    procedure GetGUID(Index: Integer; var Result: TGUID);
+    procedure GetGUID(ParameterIndex: Integer; var Result: TGUID);
     function GetBytes(ParameterIndex: Integer): TBytes; overload;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;
@@ -2920,11 +2920,13 @@ begin
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetFloat(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
-procedure TZAbstractPreparedStatement.GetGUID(Index: Integer;
+procedure TZAbstractPreparedStatement.GetGUID(ParameterIndex: Integer;
   var Result: TGUID);
 begin
-  ParamterIndex2ResultSetIndex(Index);
-  RaiseUnsupportedException
+  {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
+  fOutParamResultSet.GetGUID(ParamterIndex2ResultSetIndex(ParameterIndex), Result);
+  if (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
+    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetGUID(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
 function TZAbstractPreparedStatement.GetTime(

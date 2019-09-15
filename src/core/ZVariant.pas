@@ -630,9 +630,9 @@ function EncodeInterface(const Value: IZInterface): TZVariant; {$IFDEF WITH_INLI
 function EncodeArray(const Value: TZArray): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function ZCompareDate(const Value1, Value2: TZDate): Integer;
+//function ZAddDate(const Value1, Value2: TZDate; Var Result: TZDate): Integer;
 function ZCompareTime(const Value1, Value2: TZTime): Integer;
 function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
-
 var
   {** Declares a variant manager with soft convertion rules. }
   SoftVarManager: IZVariantManager;
@@ -1026,11 +1026,13 @@ end;
   @param Value a variant to be converted.
   @param a result value.
 }
+{$IFNDEF TEST_RECORD_REFACTORING}
 function TZSoftVariantManager.GetAsDateTime(
   const Value: TZVariant): TDateTime;
 begin
   Result := Convert(Value, vtDateTime).VDateTime;
 end;
+{$ENDIF}
 
 {**
   Gets a variant to pointer value.
@@ -1275,35 +1277,57 @@ end;
 }
 function TZSoftVariantManager.OpAdd(const Value1,
   Value2: TZVariant): TZVariant;
+var BCD: TBCD;
+  i: Int64 absolute BCD;
+  u: UInt64 absolute I;
+  D: Double absolute I;
+  C: Currency absolute i;
 begin
+  InitializeVariant(Result, Value1.VType);
   case Value1.VType of
-    vtNull: Result := EncodeNull;
-    vtInteger: Result := EncodeInteger(Value1.VInteger + GetAsInteger(Value2));
+    vtNull: ;
+    vtInteger: begin
+                i := GetAsInteger(Value2);
+                Result.VInteger := Value1.VInteger + i;
+              end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger + GetAsUInteger(Value2));
+    vtUInteger: begin
+                  U := GetAsUInteger(Value2);
+                  Result.VUInteger := Value1.VUInteger + U;
+                end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    vtDouble: Result := EncodeDouble(Value1.VDouble + GetAsDouble(Value2));
-    vtCurrency: Result := EncodeCurrency(Value1.VCurrency + GetAsCurrency(Value2));
+    vtDouble:   begin
+                  D := GetAsDouble(Value2);
+                  Result.VDouble := Value1.VDouble + D;
+                end;
+    vtCurrency: begin
+                  D := GetAsCurrency(Value2);
+                  Result.VCurrency := Value1.VCurrency + C;
+                end;
     vtBigDecimal: begin
-                    InitializeVariant(Result, vtBigDecimal);
-                    BCDAdd(Value1.VBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
+                    {$IFDEF TEST_RECORD_REFACTORING}
+                    GetAsBigDecimal(Value2, BCD);
+                    {$ELSE}
+                    BCD := GetAsBigDecimal(Value2);
+                    {$ENDIF}
+                    BCDAdd(Value1.VBigDecimal, BCD, Result.VBigDecimal);
                   end;
     {$IFNDEF UNICODE}
-    vtString: Result := EncodeString(Value1.VRawByteString + GetAsString(Value2));
+    vtString: Result.VRawByteString := Value1.VRawByteString + GetAsString(Value2);
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
-    vtAnsiString: Result := EncodeAnsiString(Value1.VRawByteString + GetAsAnsiString(Value2));
+    vtAnsiString: Result.VRawByteString := Value1.VRawByteString + GetAsAnsiString(Value2);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    vtUTF8String: Result := EncodeUTF8String(Value1.VRawByteString + GetAsUTF8String(Value2));
+    vtUTF8String: Result.VRawByteString := Value1.VRawByteString + GetAsUTF8String(Value2);
     {$ENDIF}
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    vtRawByteString: Result := EncodeRawByteString(RawConcat([Value1.VRawByteString,GetAsRawByteString(Value2)]));
+    vtRawByteString: Result.VRawByteString := RawConcat([Value1.VRawByteString,GetAsRawByteString(Value2)]);
     {$ELSE}
-    vtRawByteString: Result := EncodeRawByteString(Value1.VRawByteString + GetAsRawByteString(Value2));
+    vtRawByteString: Result.VRawByteString := Value1.VRawByteString + GetAsRawByteString(Value2);
     {$ENDIF}
     {$IFDEF UNICODE}vtString,{$ENDIF}
-    vtUnicodeString: Result := EncodeUnicodeString(Value1.VUnicodeString + GetAsUnicodeString(Value2));
+    vtUnicodeString: Result.VUnicodeString := Value1.VUnicodeString + GetAsUnicodeString(Value2);
     vtDateTime: Result := EncodeDateTime(Value1.VDateTime + GetAsDateTime(Value2));
     else RaiseUnsupportedOperation;
   end;
@@ -1337,24 +1361,45 @@ end;
 }
 function TZSoftVariantManager.OpDiv(const Value1,
   Value2: TZVariant): TZVariant;
-var i64: Int64;
+var {$IFDEF TEST_RECORD_REFACTORING}
+  BCD: TBCD;
+  i64: Int64 absolute BCD;
+  {$ELSE}
+  i64: Int64;
+  {$ENDIF}
+  u: UInt64 absolute I64;
+  D: Double absolute I64;
   C: Currency absolute i64;
 begin
+  InitializeVariant(Result, Value1.VType);
   case Value1.VType of
     vtNull: Result := EncodeNull;
-    vtInteger: Result := EncodeInteger(Value1.VInteger div GetAsInteger(Value2));
+    vtInteger: begin
+                i64 := GetAsInteger(Value2);
+                Result.VInteger := Value1.VInteger div i64;
+              end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger div GetAsUInteger(Value2));
+    vtUInteger: begin
+                  U := GetAsUInteger(Value2);
+                  Result.VUInteger := Value1.VUInteger div U;
+                end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    vtDouble: Result := EncodeDouble(Value1.VDouble / GetAsDouble(Value2));
+    vtDouble: begin
+                D := GetAsDouble(Value2);
+                Result.VDouble := Value1.VDouble / D;
+              end;
     vtCurrency: begin
                   c := GetAsCurrency(Value2);
-                  i64 := PInt64(@Value1.VCurrency)^ div i64;
-                  Result := EncodeCurrency(C);
+                  PInt64(@Result.VCurrency)^ := PInt64(@Value1.VCurrency)^ div PInt64(@C)^;
                 end;
     vtBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
+                    {$IFDEF TEST_RECORD_REFACTORING}
+                    GetAsBigDecimal(Value2, BCD);
+                    BcdDivide(Value1.vBigDecimal, BCD, Result.VBigDecimal);
+                    {$ELSE}
                     BcdDivide(Value1.vBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
+                    {$ENDIF}
                   end;
     else RaiseUnsupportedOperation;
   end;
@@ -1447,18 +1492,40 @@ end;
 }
 function TZSoftVariantManager.OpMul(const Value1,
   Value2: TZVariant): TZVariant;
+var BCD: TBCD;
+  i: Int64 absolute BCD;
+  u: UInt64 absolute I;
+  D: Double absolute I;
+  C: Currency absolute i;
 begin
+  InitializeVariant(Result, Value1.VType);
   case Value1.VType of
-    vtNull: Result := EncodeNull;
-    vtInteger: Result := EncodeInteger(Value1.VInteger * GetAsInteger(Value2));
+    vtNull: ;
+    vtInteger: begin
+                I := GetAsInteger(Value2);
+                Result.VInteger := Value1.VInteger * I;
+              end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger * GetAsUInteger(Value2));
+    vtUInteger: begin
+                  U := GetAsUInteger(Value2);
+                  Result.VUInteger := Value1.VUInteger * U;
+                end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    vtDouble: Result := EncodeDouble(Value1.VDouble * GetAsDouble(Value2));
-    vtCurrency: Result := EncodeCurrency(Value1.VCurrency * GetAsCurrency(Value2));
+    vtDouble:   begin
+                  D := GetAsDouble(Value2);
+                  Result.VDouble := Value1.VDouble * D;
+                end;
+    vtCurrency: begin
+                  C := GetAsCurrency(Value2);
+                  Result.VCurrency := Value1.VCurrency * C;
+                end;
     vtBigDecimal: begin
-                    InitializeVariant(Result, vtBigDecimal);
-                    BcdMultiply(Value1.vBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
+                    {$IFDEF TEST_RECORD_REFACTORING}
+                    GetAsBigDecimal(Value2, BCD);
+                    {$ELSE}
+                    BCD := GetAsBigDecimal(Value2);
+                    {$ENDIF}
+                    BcdMultiply(Value1.vBigDecimal, BCD, Result.VBigDecimal);
                   end;
     else RaiseUnsupportedOperation;
   end;
@@ -1559,18 +1626,40 @@ end;
 }
 function TZSoftVariantManager.OpSub(const Value1,
   Value2: TZVariant): TZVariant;
+var BCD: TBCD;
+  I: Int64 absolute BCD;
+  u: UInt64 absolute I;
+  D: Double absolute I;
+  C: Currency absolute I;
 begin
+  InitializeVariant(Result, Value1.VType);
   case Value1.VType of
-    vtNull: Result := EncodeNull;
-    vtInteger: Result := EncodeInteger(Value1.VInteger - GetAsInteger(Value2));
+    vtNull: ;
+    vtInteger: begin
+                I := GetAsInteger(Value2);
+                Result.VInteger := Value1.VInteger - I;
+              end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-    vtUInteger: Result := EncodeUInteger(Value1.VUInteger - GetAsUInteger(Value2));
+    vtUInteger: begin
+                  U := GetAsUInteger(Value2);
+                  Result.VUInteger := Value1.VUInteger - U;
+                end;
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    vtDouble: Result := EncodeDouble(Value1.VDouble - GetAsDouble(Value2));
-    vtCurrency: Result := EncodeCurrency(Value1.VCurrency - GetAsCurrency(Value2));
+    vtDouble:   begin
+                  D := GetAsDouble(Value2);
+                  Result.VDouble := Value1.VDouble - D;
+                end;
+    vtCurrency: begin
+                  C := GetAsCurrency(Value2);
+                  Result.VCurrency := Value1.VCurrency - C;
+                end;
     vtBigDecimal: begin
-                    InitializeVariant(Result, vtBigDecimal);
-                    BcdSubtract(Value1.VBigDecimal, GetAsBigDecimal(Value2), Result.VBigDecimal);
+                    {$IFDEF TEST_RECORD_REFACTORING}
+                    GetAsBigDecimal(Value2, BCD);
+                    {$ELSE}
+                    BCD := GetAsBigDecimal(Value2);
+                    {$ENDIF}
+                    BcdSubtract(Value1.VBigDecimal, BCD, Result.VBigDecimal);
                   end;
     else RaiseUnsupportedOperation;
   end;
@@ -3012,8 +3101,8 @@ end;
 }
 function EncodeGUID(const Value: TGUID): TZVariant;
 begin
-  Result.VType := vtBytes;
-  ZSetString(@Value.D1, SizeOf(TGUID), Result.VRawByteString);
+  Result.VType := vtGUID;
+  Result.VGUID := Value;
 end;
 
 {**
