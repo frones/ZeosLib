@@ -1352,7 +1352,7 @@ begin
             end;
           ComparePrefixTokens := nil; //stop compare sequence
         end;
-        if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = '$') and (Tokens.Count > i) and (Tokens[I+1].TokenType = ttWord))) then begin
+        if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = '$') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttWord))) then begin
           Inc(ParamsCnt);
           {$IFDEF UNICODE}
           Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, FClientCP);
