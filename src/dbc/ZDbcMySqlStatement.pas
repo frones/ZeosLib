@@ -2470,25 +2470,30 @@ function TZMySQLCallableStatement56up.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
-  P: PChar;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQLWriter: TZSQLStringWriter;
 begin
   SQL := '';
+  I := Length(StoredProcName);
+  i := I + 20+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
   if IsFunction //see http://ftp.nchu.edu.tw/MySQL/doc/refman/4.1/en/sql-syntax-prepared-statements.html
-  then ToBuff('SELECT ', SQL) //EH: How todo a SET ? = function ??
-  else ToBuff('CALL ', SQL);
-  ToBuff(StoredProcName, SQL);
-  ToBuff(Char('('), SQL);
+  then SQLWriter.AddText('SELECT ', SQL) //EH: How todo a SET ? = function ??
+  else SQLWriter.AddText('CALL ', SQL);
+  SQLWriter.AddText(StoredProcName, SQL);
+  if BindList.Count > 0 then
+    SQLWriter.AddChar('(', SQL);
   for i := 0 to BindList.Count-1 do
     if BindList.ParamTypes[i] <> pctReturn then
-      ToBuff('?,', SQL);
-  FlushBuff(SQL);
-  P := Pointer(SQL);
-  if (P+Length(SQL)-1)^ = ','
-  then (P+Length(SQL)-1)^ := ')' //cancel last comma
-  else (P+Length(SQL)-1)^ := ' ';
+      SQLWriter.AddText('?,', SQL);
+  if BindList.Count > 0 then begin
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.AddChar(')', SQL);
+  end;
   if IsFunction then
-    SQL := SQL +' as ReturnValue';
+    SQLWriter.AddText(' as ReturnValue', SQL);;
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
   TZMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
   TZMySQLPreparedStatement(Result).InternalRealPrepare;
@@ -2507,28 +2512,31 @@ procedure TZMySQLCallableStatement56down.BindInParameters;
 var SQL: RawByteString;
   I: Integer;
   Stmt: TZMySQLPreparedStatement;
+  SQLWriter: TZRawSQLStringWriter;
 begin
   inherited BindInParameters;
   if (BindList.Count = 0) then
     Exit;
   SQL := 'SET ';
+  SQLWriter := TZRawSQLStringWriter.Create(4+BindList.Count shl 5);
   Stmt := TZMySQLPreparedStatement(FExecStatement);
   for I := 0 to BindList.Count -1 do
     if Ord(BindList[i].ParamType) < Ord(pctOut) then begin
-      ToBuff('@', SQL);
+      SQLWriter.AddChar(AnsiChar('@'), SQL);
       {$IFDEF UNICODE}
-      ToBuff(ZUnicodeToRaw(FInParamNames[i], FClientCP), SQL);
+      SQLWriter.AddText(ZUnicodeToRaw(FInParamNames[i], FClientCP), SQL);
       {$ELSE}
-      ToBuff(FInParamNames[i], SQL);
+      SQLWriter.AddText(FInParamNames[i], SQL);
       {$ENDIF}
-      ToBuff('=', SQL);
-      ToBuff(Stmt.FEmulatedValues[i], SQL);
-      ToBuff(',', SQL);
+      SQLWriter.AddChar(AnsiChar('='), SQL);
+      SQLWriter.AddText(Stmt.FEmulatedValues[i], SQL);
+      SQLWriter.AddChar(AnsiChar(','), SQL);
     end;
-  FlushBuff(SQL);
-  if Length(SQL) = 4 then //no inparams ?
+  SQLWriter.Finalize(SQL);
+  I := Length(SQL);
+  if i = 4 then //no inparams ?
     Exit;
-  if FplainDriver.mysql_real_query(Stmt.FPMYSQL^, Pointer(SQL), Length(SQL)-1) <> 0 then
+  if FplainDriver.mysql_real_query(Stmt.FPMYSQL^, Pointer(SQL), I-1) <> 0 then
     CheckMySQLError(FPlainDriver, Stmt.FPMYSQL^, nil, lcExecute, SQL, Self);
 end;
 
@@ -2536,52 +2544,57 @@ function TZMySQLCallableStatement56down.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
-  P: PChar;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQLWriter: TZSQLStringWriter;
 begin
-  if BindList.HasReturnParam //see http://ftp.nchu.edu.tw/MySQL/doc/refman/4.1/en/sql-syntax-prepared-statements.html
-  then SQL := 'SELECT ' //EH: How todo a SET ? = function ??
-  else SQL := 'CALL ';
-  ToBuff(StoredProcName, SQL);
-  ToBuff('(', SQL);
-  for i := Ord(BindList.HasReturnParam) to BindList.Count-1 do begin
-    ToBuff('@', SQL);
-    ToBuff(FInParamNames[i], SQL);
-    ToBuff(',', SQL);
-  end;
-  FlushBuff(SQL);
-  P := Pointer(SQL);
-  I := Length(SQL);
-  if (P+I-1)^ = ','
-  then (P+I-1)^ := ')' //cancel last comma
-  else (P+I-1)^ := ' ';
-  if IsFunction then
-    SQL := SQL + ' as ReturnValue';
-
-  FStmt := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
-  Result := FStmt;
-  FStmt.FMinExecCount2Prepare := -1; //prepare never
-  FStmt.FEmulatedParams := True;
-  FStmt.FInitial_emulate_prepare := True;
-  FStmt.FUseDefaults := False;
-  FStmt.Prepare;
-  SQL := 'SELECT ';
-  for i := Ord(BindList.HasReturnParam) to BindList.Count-1 do
-    if Ord(BindList[I].ParamType) >= Ord(pctInOut) then begin
-      ToBuff('@', SQL);
-      ToBuff(FInParamNames[i], SQL);
-      ToBuff(',', SQL);
+  I := Length(StoredProcName);
+  i := I + 20+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
+  try
+    if BindList.HasReturnParam //see http://ftp.nchu.edu.tw/MySQL/doc/refman/4.1/en/sql-syntax-prepared-statements.html
+    then SQL := 'SELECT ' //EH: How todo a SET ? = function ??
+    else SQL := 'CALL ';
+    SQLWriter.AddText(StoredProcName, SQL);
+    if BindList.Count-Ord(BindList.HasReturnParam) > 0 then
+      SQLWriter.AddChar('(', SQL);
+    for i := Ord(BindList.HasReturnParam) to BindList.Count-1 do begin
+      SQLWriter.AddChar('@', SQL);
+      SQLWriter.AddText(FInParamNames[i], SQL);
+      SQLWriter.AddChar(',', SQL);
     end;
-  FlushBuff(SQL);
-  if SQL <> 'SELECT ' then begin
-    P := Pointer(SQL);
-    (P+Length(SQL)-1)^ := ' ';
+    if BindList.Count-Ord(BindList.HasReturnParam) > 0 then begin
+      SQLWriter.CancelLastComma(SQL);
+      SQLWriter.AddChar(')', SQL);
+    end;
+    if IsFunction then
+      SQLWriter.AddText(' as ReturnValue', SQL);
+    SQLWriter.Finalize(SQL);
 
-    FGetOutParmStmt := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
-    FGetOutParmStmt.FMinExecCount2Prepare := -1; //prepare never
-    FGetOutParmStmt.FEmulatedParams := True;
-    FGetOutParmStmt.FInitial_emulate_prepare := True;
-    FGetOutParmStmt._AddRef;
+    FStmt := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
+    Result := FStmt;
+    FStmt.FMinExecCount2Prepare := -1; //prepare never
+    FStmt.FEmulatedParams := True;
+    FStmt.FInitial_emulate_prepare := True;
+    FStmt.FUseDefaults := False;
+    FStmt.Prepare;
+    SQL := 'SELECT ';
+    for i := Ord(BindList.HasReturnParam) to BindList.Count-1 do
+      if Ord(BindList[I].ParamType) >= Ord(pctInOut) then begin
+        SQLWriter.AddChar('@', SQL);
+        SQLWriter.AddText(FInParamNames[i], SQL);
+        SQLWriter.AddChar(',', SQL);
+      end;
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.Finalize(SQL);
+    if SQL <> 'SELECT ' then begin
+      FGetOutParmStmt := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
+      FGetOutParmStmt.FMinExecCount2Prepare := -1; //prepare never
+      FGetOutParmStmt.FEmulatedParams := True;
+      FGetOutParmStmt.FInitial_emulate_prepare := True;
+      FGetOutParmStmt._AddRef;
+    end;
+  finally
+    FreeAndNil(SQLWriter);
   end;
 end;
 

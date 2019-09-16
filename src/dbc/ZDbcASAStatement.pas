@@ -833,21 +833,26 @@ function TZASACallableStatement.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
-  P: PChar;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQLWriter: TZSQLStringWriter;
 begin
   SQL := '';
-  ToBuff('CALL ', SQL);
-  ToBuff(StoredProcName, SQL);
-  ToBuff(Char('('), SQL);
+  I := Length(StoredProcName);
+  i := I + 6+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
+  SQLWriter.AddText('CALL ', SQL);
+  SQLWriter.AddText(StoredProcName, SQL);
+  if BindList.Count > 0 then
+    SQLWriter.AddChar('(', SQL);
   for i := 0 to BindList.Count-1 do
     if BindList.ParamTypes[i] <> pctReturn then
-      ToBuff('?,', SQL);
-  FlushBuff(SQL);
-  P := Pointer(SQL);
-  if (P+Length(SQL)-1)^ = ','
-  then (P+Length(SQL)-1)^ := ')' //cancel last comma
-  else (P+Length(SQL)-1)^ := ' ';
+      SQLWriter.AddText('?,', SQL);
+  if BindList.Count > 0 then begin
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.AddChar(')', SQL);
+  end;
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZASAPreparedStatement.Create(Connection , SQL, Info);
   TZASAPreparedStatement(Result).Prepare;
 end;

@@ -325,6 +325,7 @@ type
     procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
     procedure Finalize(var Result: RawByteString);
     procedure CancelLastComma(var Result: RawByteString);
+    procedure CancelLastCharIfExists(Value: AnsiChar; var Result: RawByteString);
   end;
 
   {** EH: implements a buffered UTF16 encoded writer }
@@ -360,7 +361,8 @@ type
     procedure AddTime(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
     procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
     procedure Finalize(var Result: UnicodeString);
-    procedure CancelLastComma(var Result: RawByteString);
+    procedure CancelLastComma(var Result: UnicodeString);
+    procedure CancelLastCharIfExists(Value: WideChar; var Result: UnicodeString);
   end;
 
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
@@ -711,6 +713,23 @@ begin
   AddOrd32(C, Digits, Negative, Result);
 end;
 
+procedure TZRawSQLStringWriter.CancelLastCharIfExists(Value: AnsiChar;
+  var Result: RawByteString);
+var P: PAnsichar;
+  L: LengthInt;
+begin
+  if (FPos > FBuf) then begin
+    if PByte(FPos-1)^ = Byte(Value) then
+      Dec(FPos);
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
+    Inc(P, L);
+    if (L >= 1) and (PByte(P)^ = Byte(Value)) then
+      SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+  end;
+end;
+
 procedure TZRawSQLStringWriter.CancelLastComma(var Result: RawByteString);
 var P: PAnsichar;
   L: LengthInt;
@@ -720,10 +739,10 @@ begin
       Dec(FPos);
   end else begin
     P := Pointer(Result);
-    L := Length(Result)-1;
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
     Inc(P, L);
     if (L >= 1) and (PByte(P)^ = Ord(',')) then
-      SetLength(Result, L);
+      SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
   end;
 end;
 
@@ -1207,21 +1226,37 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.CancelLastComma(var Result: RawByteString);
-var P: PAnsichar;
+procedure TZUnicodeSQLStringWriter.CancelLastCharIfExists(Value: WideChar;
+  var Result: UnicodeString);
+var P: PWideChar;
   L: LengthInt;
 begin
   if (FPos > FBuf) then begin
-    if PByte(FPos-1)^ = Ord(',') then
+    if PWord(FPos-1)^ = Word(Value) then
       Dec(FPos);
   end else begin
     P := Pointer(Result);
     L := Length(Result)-1;
     Inc(P, L);
-    if (L >= 1) and (PByte(P)^ = Ord(',')) then
+    if (L >= 1) and (PWord(P)^ = Word(',')) then
       SetLength(Result, L);
   end;
+end;
 
+procedure TZUnicodeSQLStringWriter.CancelLastComma(var Result: UnicodeString);
+var P: PWideChar;
+  L: LengthInt;
+begin
+  if (FPos > FBuf) then begin
+    if PWord(FPos-1)^ = Ord(',') then
+      Dec(FPos);
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-1;
+    Inc(P, L);
+    if (L >= 1) and (PWord(P)^ = Ord(',')) then
+      SetLength(Result, L);
+  end;
 end;
 
 constructor TZUnicodeSQLStringWriter.Create(WideCharCapacity: Integer);

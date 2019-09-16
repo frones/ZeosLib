@@ -283,7 +283,7 @@ type
     {$IFNDEF NO_ANSISTRING}procedure ProcessAnsiString(const Value: TZVariant; out Result: TZVariant); virtual; {$ENDIF NO_ANSISTRING}
     {$IFNDEF NO_UTF8STRING}procedure ProcessUTF8String(const Value: TZVariant; out Result: TZVariant); virtual; {$ENDIF NO_UTF8STRING}
     procedure ProcessCharRec(const Value: TZVariant; out Result: TZVariant); virtual;
-    procedure ProcessDateTime(const Value: TZVariant; out Result: TZVariant); virtual;
+    procedure ProcessDateTime(const Value: TZVariant; {$IFDEF TEST_RECORD_REFACTORING}ResultType: TZVariantType;{$ENDIF} out Result: TZVariant); virtual;
   protected
     procedure RaiseTypeMismatchError;
     procedure RaiseUnsupportedOperation;
@@ -1328,7 +1328,9 @@ begin
     {$ENDIF}
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: Result.VUnicodeString := Value1.VUnicodeString + GetAsUnicodeString(Value2);
+    {$IFNDEF TEST_RECORD_REFACTORING}
     vtDateTime: Result := EncodeDateTime(Value1.VDateTime + GetAsDateTime(Value2));
+    {$ENDIF TEST_RECORD_REFACTORING}
     else RaiseUnsupportedOperation;
   end;
 end;
@@ -1765,7 +1767,7 @@ begin
         Result.VCharRec.P := nil;
       end;
     vtBoolean, vtInteger, vtUInteger, vtDouble, vtCurrency, vtBigDecimal,
-    vtBytes, vtDateTime: begin
+    vtBytes, {$IFDEF TEST_RECORD_REFACTORING}vtDate, vtTime, vtTimeStamp{$ELSE}vtDateTime{$ENDIF}: begin
         {$IFDEF UNICODE}
         ConvertFixedTypesToUnicode(Value, Result.VUnicodeString);
         Goto AsVCharRecFromVString;
@@ -1825,8 +1827,11 @@ AsVCharRecFromRaw:
 end;
 
 procedure TZSoftVariantManager.ProcessDateTime(const Value: TZVariant;
-  out Result: TZVariant);
+  {$IFDEF TEST_RECORD_REFACTORING}ResultType: TZVariantType;{$ENDIF} out Result: TZVariant);
 begin
+  {$IF defined(TEST_RECORD_REFACTORING) and defined(DEBUG)}
+  Assert(ResultType in [vtDate, vtTime, vtTimeStamp], 'Invalid VariantType');
+  {$IFEND}
   Result.VType := vtDateTime;
   case Value.VType of
     vtNull, vtBoolean, vtInteger, vtUInteger, vtDouble, vtCurrency,
@@ -2028,9 +2033,9 @@ begin
                   P := @Buff[0];
                   L := ZSysUtils.DateTimeToRawSQLTime(Value.VTime.Hour,
                     Value.VTime.Minute, Value.VTime.Second,
-                    Value.VTime.NanoSeconds div 1000000, P, FFormatSettings, False)
+                    Value.VTime.Fractions div 1000000, P, FFormatSettings, False)
                 end;
-    vtDate      begin
+    vtDate:     begin
                   P := @Buff[0];
                   L := ZSysUtils.DateTimeToRawSQLDate(Value.VDate.Year,
                     Value.VDate.Month, Value.VDate.Day, P, FFormatSettings, False, Value.VDate.IsNeagative);
@@ -2040,7 +2045,7 @@ begin
                   L := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VTimeStamp.Year,
                     Value.VTimeStamp.Month, Value.VTimeStamp.Day,
                     Value.VTimeStamp.Hour, Value.VTimeStamp.Minute, Value.VTimeStamp.Second,
-                    Value.VTimeStamp.NanoSeconds div 1000000, P, FFormatSettings, False, Value.VTimeStamp.IsNeagative);
+                    Value.VTimeStamp.Fractions div 1000000, P, FFormatSettings, False, Value.VTimeStamp.IsNeagative);
                 end;
     {$ELSE}
     vtDateTime: begin
@@ -2107,7 +2112,7 @@ begin
                     Value.VTime.Minute, Value.VTime.Second,
                     Value.VTime.Fractions div 1000000, P, FFormatSettings, False)
                 end;
-    vtDate      begin
+    vtDate:     begin
                   P := @Buff[0];
                   L := ZSysUtils.DateTimeToUnicodeSQLDate(Value.VDate.Year,
                     Value.VDate.Month, Value.VDate.Day, P, FFormatSettings, False, Value.VDate.IsNeagative);

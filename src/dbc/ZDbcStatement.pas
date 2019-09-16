@@ -70,7 +70,7 @@ type
   TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject,
     IImmediatelyReleasable)
   private
-    fABufferIndex, fWBufferIndex: Integer;
+    //fABufferIndex, fWBufferIndex: Integer;
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
     FEscapeProcessing: Boolean;
@@ -137,11 +137,6 @@ type
     property ClientCP: word read FClientCP;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: RawByteString=EmptyRaw): TZLoggingEvent;
-  public
-    procedure ToBuff(const Value: ZWideString; var Result: ZWideString); overload;
-    procedure ToBuff(const Value: RawByteString; var Result: RawByteString); overload;
-    procedure FlushBuff(var Result: ZWideString); overload;
-    procedure FlushBuff(var Result: RawByteString); overload;
   public
     constructor Create(const Connection: IZConnection; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
     destructor Destroy; override;
@@ -754,60 +749,6 @@ begin
     {$ENDIF UNICODE}
 end;
 
-procedure TZAbstractStatement.ToBuff(const Value: RawByteString;
-  var Result: RawByteString);
-var
-  P: PAnsiChar;
-  L: Integer;
-begin
-  L := Length(Value);
-  if L = 0 then Exit;
-  if L < (SizeOf(fABuffer)-fABufferIndex) then begin
-    P := Pointer(Value);
-    if L = 1 //happens very often (comma,space etc) -> no move
-    then fABuffer[fABufferIndex] := AnsiChar(P^)
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, fABuffer[fABufferIndex], L);
-    Inc(fABufferIndex, L);
-  end else begin
-    SetLength(Result, Length(Result)+fABufferIndex+L);
-    P := Pointer(Result);
-    Inc(P, Length(Result)-fABufferIndex-L);
-    if fABufferIndex > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fABuffer[0], P^, fABufferIndex);
-      Inc(P, fABufferIndex);
-      fABufferIndex := 0;
-    end;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L);
-  end;
-end;
-
-procedure TZAbstractStatement.ToBuff(const Value: ZWideString;
-  var Result: ZWideString);
-var
-  P: PWideChar;
-  L: Integer;
-begin
-  L := Length(Value);
-  if L = 0 then Exit;
-  if L < ((SizeOf(fWBuffer) shr 1)-fWBufferIndex) then begin
-    P := Pointer(Value);
-    if L = 1 //happens very often (comma,space etc) -> no move
-    then fWBuffer[fWBufferIndex] := P^
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, fWBuffer[fWBufferIndex], L shl 1);
-    Inc(fWBufferIndex, L);
-  end else begin
-    SetLength(Result, Length(Result)+fWBufferIndex+L);
-    P := Pointer(Result);
-    Inc(P, Length(Result)-fWBufferIndex-L);
-    if fWBufferIndex > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
-      Inc(P, fWBufferIndex);
-      fWBufferIndex := 0;
-    end;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L shl 1);
-  end;
-end;
-
 procedure TZAbstractStatement.SetASQL(const Value: RawByteString);
 begin
   if FASQL <> Value then begin
@@ -895,30 +836,6 @@ begin
       FLastResultSet.Close;
       FLastResultSet := nil;
     end;
-end;
-
-procedure TZAbstractStatement.FlushBuff(var Result: RawByteString);
-var P: PAnsiChar;
-begin
-  if fABufferIndex > 0 then begin
-    SetLength(Result, Length(Result)+fABufferIndex);
-    P := Pointer(Result);
-    Inc(P, Length(Result)-fABufferIndex);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fABuffer[0], P^, fABufferIndex);
-    fABufferIndex := 0;
-  end;
-end;
-
-procedure TZAbstractStatement.FlushBuff(var Result: ZWideString);
-var P: PWideChar;
-begin
-  if fWBufferIndex > 0 then begin
-    SetLength(Result, Length(Result)+fWBufferIndex);
-    P := Pointer(Result);
-    Inc(P, Length(Result)-fWBufferIndex);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(fWBuffer[0], P^, fWBufferIndex shl 1);
-    fWBufferIndex := 0;
-  end;
 end;
 
 procedure TZAbstractStatement.FreeOpenResultSetReference(const ResultSet: IZResultSet);

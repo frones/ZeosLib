@@ -78,6 +78,7 @@ type
     FStatementType: ub2;
     FServerStmtCache: Boolean;
     FCanBindInt64: Boolean;
+    FParamNames: TRawByteStringDynArray;
   protected
     procedure InitBuffer(SQLType: TZSQLType; OCIBind: PZOCIParamBind; Index, ElementCnt: Cardinal; ActualLength: LengthInt = 0);
     function CreateResultSet: IZResultSet;
@@ -498,44 +499,32 @@ end;
 function TZAbstractOraclePreparedStatement_A.GetRawEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var
-  I, C, N, FirstComposePos, ParamsCnt: Integer;
+  I, C, FirstComposePos: Integer;
+  ParamsCnt: Cardinal;
   Tokens: TZTokenList;
   Token: PZToken;
-  {$IFNDEF UNICODE}
-  tmp: RawByteString;
-  List: TStrings;
-  {$ENDIF}
+  tmp{$IFNDEF UNICODE}, Fraction{$ENDIF}: RawByteString;
+  SQLWriter, ParamWriter: TZRawSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
-  procedure Add(const Value: RawByteString; const Param: Boolean = False);
+  procedure Add(const Value: RawByteString; const Param: Boolean);
+  var H: Integer;
   begin
-    SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
-    FCachedQueryRaw[High(FCachedQueryRaw)] := Value;
-    SetLength(FIsParamIndex, Length(FCachedQueryRaw));
-    FIsParamIndex[High(FIsParamIndex)] := Param;
-    ToBuff(Value, Result);
-  end;
-  function IsNumeric(P, PEnd: PChar): Boolean;
-  begin
-    Result := P<= PEnd;
-    repeat
-      Result := Result and ((Ord(P^) >= Ord('0')) and (Ord(P^) <= Ord('9')));
-      if not Result
-      then Break
-      else Inc(P);
-    until P > PEnd;
+    H := Length(FCachedQueryRaw);
+    SetLength(FCachedQueryRaw, H+1);
+    FCachedQueryRaw[H] := Value;
+    SetLength(FIsParamIndex, H+1);
+    FIsParamIndex[H] := Param;
+    SQLWriter.AddText(Value, Result);
   end;
 begin
-  Result := '';
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
+    Result := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-    {$IFNDEF UNICODE}
-    if ConSettings.AutoEncode
-    then List := TStringList.Create
-    else List := nil; //satisfy comiler
-    {$ENDIF}
+    C := Length(SQL);
+    SQLWriter := TZRawSQLStringWriter.Create(C);
+    ParamWriter := TZRawSQLStringWriter.Create({$IFDEF UNICODE}16{$ELSE}C shr 4{$ENDIF});
     try
       ComparePrefixTokens := OraPreparableTokens;
-      N := -1;
       FTokenMatchIndex := -1;
       ParamsCnt := 0;
       FirstComposePos := 0;
@@ -543,68 +532,72 @@ begin
         Token := Tokens[I];
         {check if we've a preparable statement. If ComparePrefixTokens = nil then
           comparing is not required or already done }
-        if Assigned(ComparePrefixTokens) and (Token.TokenType = ttWord) then
-          if N = -1 then begin
-            for C := 0 to high(ComparePrefixTokens) do
-              if Tokens.IsEqual(i, ComparePrefixTokens[C].MatchingGroup, tcInsensitive) then begin
-                if Length(ComparePrefixTokens[C].ChildMatches) = 0 then begin
-                  FTokenMatchIndex := C;
-                  ComparePrefixTokens := nil;
-                end else
-                  N := C; //save group
-                Break;
-              end;
-            if N = -1 then //no sub-tokens ?
-              ComparePrefixTokens := nil; //stop compare sequence
-          end else begin //we already got a group
-            FTokenMatchIndex := -1;
-            for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
-              if Tokens.IsEqual(i, ComparePrefixTokens[N].ChildMatches[C], tcInsensitive) then begin
-                FTokenMatchIndex := N;
-                Break;
-              end;
-            ComparePrefixTokens := nil; //stop compare sequence
-          end;
-        if ((Token.P^ = '?') and (Token.L = 1)) or
-           ((Token.TokenType = ttWord) and (Token.P^ = ':') and (Token.L > 2) and
-           (Ord((Token.P+1)^) or $20 = Ord('p')){lowercase 'P'} and IsNumeric(Token.P+2, Token.P+Token.L-2)) then begin
+        if Assigned(ComparePrefixTokens) and (Token.TokenType = ttWord) then begin
+          for C := 0 to high(ComparePrefixTokens) do
+            if Tokens.IsEqual(i, ComparePrefixTokens[C].MatchingGroup, tcInsensitive) then begin
+              FTokenMatchIndex := C;
+              Break;
+            end;
+          ComparePrefixTokens := nil; //stop compare sequence
+        end;
+        if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = ':') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttWord))) then begin
           Inc(ParamsCnt);
           {$IFDEF UNICODE}
-          Add(ZUnicodeToRaw(Tokens.AsString(FirstComposePos, I-1), ConSettings^.ClientCodePage^.CP));
-          if (Token.P^ = '?')
-          then Add(':P'+IntToRaw(ParamsCnt), True)
-          else Add(UnicodeStringToAscii7(Token.P, Token.L), True);
+          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, FClientCP);
           {$ELSE}
-          Add(Tokens.AsString(FirstComposePos, I-1));
-          if (Token.P^ = '?')
-          then Add(':P'+IntToRaw(ParamsCnt), True)
-          else Add(TokenAsString(Token^), True);
+          if Consettings.AutoEncode
+          then ParamWriter.Finalize(Tmp)
+          else Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
-          FirstComposePos := i + 1;
-        end {$IFNDEF UNICODE}
-        else if ConSettings.AutoEncode then
+          Add(Tmp, False);
+          if (Token.P^ = '?') then begin
+            Tmp := '';
+            ParamWriter.AddChar(':', Tmp);
+            if (FParamNames <> nil) and (Cardinal(Length(FParamNames)) >= ParamsCnt) and (FParamNames[ParamsCnt-1] <> '')
+            then ParamWriter.AddText(FParamNames[ParamsCnt-1], Tmp)
+            else begin
+              ParamWriter.AddChar('P', Tmp);
+              ParamWriter.AddOrd(ParamsCnt, Tmp);
+            end;
+            ParamWriter.Finalize(Tmp);
+            FirstComposePos := i + 1;
+          end else begin
+            {$IFDEF UNICODE}
+            Tmp := UnicodeStringToAscii7(Token.P, Tokens[i+1].L+1);
+            {$ELSE}
+            ZSetString(Token.P, Tokens[i+1].L+1, Tmp);
+            {$ENDIF}
+            FirstComposePos := i + 2;
+          end;
+          Add(Tmp, True);
+          Tmp := '';
+        end {$IFNDEF UNICODE} else if ConSettings.AutoEncode then
           case (Token.TokenType) of
             ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier: begin
-              tmp := ConSettings^.ConvFuncs.ZStringToRaw(TokenAsString(Token^), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-              Token^.P := Pointer(tmp);
-              Token^.L := Length(tmp);
-              List.Add(tmp); //keep alive
-            end;
-        end
+                Fraction := ConSettings^.ConvFuncs.ZStringToRaw(TokenAsString(Token^), ConSettings^.CTRL_CP, FClientCP);
+                ParamWriter.AddText(Fraction, Tmp);
+              end;
+            else ParamWriter.AddText(Token.P, Token.L, tmp);
+          end
         {$ENDIF};
       end;
-      if (FirstComposePos <= Tokens.Count-1) then
-        Add(ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(FirstComposePos, Tokens.Count -1), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+      I := Tokens.Count -1;
+      if (FirstComposePos <= I) then begin
+        {$IFDEF UNICODE}
+        Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, FClientCP);
+        {$ELSE}
+        Tmp := Tokens.AsString(FirstComposePos, I);
+        {$ENDIF}
+        Add(Tmp, False);
+      end;
       SetBindCapacity(ParamsCnt);
       FServerStmtCache := (FTokenMatchIndex > -1) and (FTokenMatchIndex < OCI_STMT_CREATE) and (ParamsCnt > 0);
     finally
-      FlushBuff(Result);
-      Tokens.Free;
-      {$IFNDEF UNICODE}
-      if ConSettings.AutoEncode then
-        List.Free;
-      {$ENDIF}
+      SQLWriter.Finalize(Result);
+      FreeAndNil(SQLWriter);
+      FreeAndNil(ParamWriter);
+      FreeAndNil(Tokens);
     end;
   end else
     Result := ASQL;
@@ -800,6 +793,7 @@ begin
         FreeMem(Bind.indp, SizeOf(SB2)*Bind.curelen);
     end;
     ReallocMem(FOraVariables, Capacity * SizeOf(TZOCIParamBind));
+    SetLength(FParamNames, Capacity);
     if FOraVariables <> nil then
       FillChar((PAnsichar(FOraVariables)+(OldCapacity*SizeOf(TZOCIParamBind)))^,
         (Capacity-OldCapacity)*SizeOf(TZOCIParamBind), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});

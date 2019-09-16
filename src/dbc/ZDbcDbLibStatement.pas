@@ -509,25 +509,30 @@ var
   I: Integer;
   ParamIndex: Integer;
   Bind: PZBindValue;
+  SQLWriter: TZRawSQLStringWriter;
 begin
   ParamIndex := 0;
   Result := EmptyRaw;
+  I := Length(FASQL);
+  I := I + BindList.Count shl 5; //add 32 bytes/param by default
+  SQLWriter := TZRawSQLStringWriter.Create(I);
   for I := 0 to High(FCachedQueryRaw) do
     if IsParamIndex[i] then begin
       Bind := BindList[ParamIndex];
       if Bind.BindType = zbtNull
       then if FInParamDefaultValues[ParamIndex] <> '' then
-        ToBuff(FInParamDefaultValues[ParamIndex], Result)
-        else ToBuff('null', Result)
+        SQLWriter.AddText(FInParamDefaultValues[ParamIndex], Result)
+        else SQLWriter.AddText('null', Result)
       else begin
         if (Bind.SQLType in [stString, stAsciiStream]) and (Bind.BindType = zbtUTF8String) and not FIsNCharIndex[ParamIndex] then
-          ToBuff('N', Result);
-        ToBuff(RawByteString(Bind.Value), Result);
+          SQLWriter.AddChar('N', Result);
+        SQLWriter.AddText(RawByteString(Bind.Value), Result);
       end;
       Inc(ParamIndex);
     end else
-      ToBuff(FCachedQueryRaw[I], Result);
-  FlushBuff(Result);
+      SQLWriter.AddText(FCachedQueryRaw[I], Result);
+  SQLWriter.Finalize(Result);
+  FreeAndNil(SQLWriter);
 end;
 
 {$IFNDEF NO_ANSISTRING}

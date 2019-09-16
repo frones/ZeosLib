@@ -2011,24 +2011,29 @@ end;
 function TZInterbase6CallableStatement.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
-  P: PChar;
   I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQLWriter: TZSQLStringWriter;
 begin
   SQL := '';
+  I := Length(StoredProcName);
+  i := I + 6+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
   if (Connection as IZInterbase6Connection).StoredProcedureIsSelectable(StoredProcName)
-  then ToBuff('SELECT * FROM ', SQL)
-  else ToBuff('EXECUTE PROCEDURE ', SQL);
-  ToBuff(StoredProcName, SQL);
-  ToBuff('(', SQL);
+  then SQLWriter.AddText('SELECT * FROM ', SQL)
+  else SQLWriter.AddText('EXECUTE PROCEDURE ', SQL);
+  SQLWriter.AddText(StoredProcName, SQL);
+  if BindList.Capacity >0 then
+    SQLWriter.AddChar('(', SQL);
   for I := 0 to BindList.Capacity -1 do
     if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then
-      ToBuff('?,', SQL);
-  FlushBuff(SQL);
-  P := Pointer(SQL);
-  if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
-  then (P+Length(SQL)-1)^ := ')' //cancel last comma
-  else (P+Length(SQL)-1)^ := ' '; //cancel bracket
+      SQLWriter.AddText('?,', SQL);
+  if BindList.Capacity > 0 then begin
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.AddChar(')', SQL);
+  end;
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZInterbase6PreparedStatement.Create(Connection, SQL, Info);
 end;
 

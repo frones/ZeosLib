@@ -1365,7 +1365,9 @@ begin
           if (Token.P^ = '?') then begin
             Tmp := '';
             ParamWriter.AddChar('$', Tmp);
-            ParamWriter.AddOrd(ParamsCnt, Tmp);
+            if (FParamNames <> nil) and (Cardinal(Length(FParamNames)) >= ParamsCnt) and (FParamNames[ParamsCnt-1] <> '')
+            then ParamWriter.AddText(FParamNames[ParamsCnt-1], Tmp)
+            else ParamWriter.AddOrd(ParamsCnt, Tmp);
             ParamWriter.Finalize(Tmp);
             FirstComposePos := i + 1;
           end else begin
@@ -1382,7 +1384,7 @@ begin
           case (Token.TokenType) of
             ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier: begin
-                Fraction := ConSettings^.ConvFuncs.ZStringToRaw(TokenAsString(Token^), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+                Fraction := ConSettings^.ConvFuncs.ZStringToRaw(TokenAsString(Token^), ConSettings^.CTRL_CP, FClientCP);
                 ParamWriter.AddText(Fraction, Tmp);
               end;
             else ParamWriter.AddText(Token.P, Token.L, tmp);
@@ -1671,27 +1673,30 @@ end;
 function TZPostgreSQLCallableStatement.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
-  P: PChar;
-  I, J: Integer;
+  I: Integer;
+  J: Cardinal;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQLWriter: TZSQLStringWriter;
 begin
-  SQL := '';
-  ToBuff('SELECT * FROM ',SQL);
-  ToBuff(StoredProcName, SQL);
-  ToBuff(Char('('), SQL);
+  SQL := 'SELECT * FROM ';
+  I := Length(StoredProcName);
+  i := I + 14+BindList.Count shl 2;
+  SQLWriter := TZSQLStringWriter.Create(I);
+  SQLWriter.AddText(StoredProcName, SQL);
+  SQLWriter.AddChar('(', SQL);
   J := 1;
   for I := 0 to BindList.Capacity -1 do
     if Ord(BindList.ParamTypes[I]) < Ord(pctOut) then begin
-      ToBuff(Char('$'), SQL);
-      ToBuff(ZFastCode.IntToStr(J), SQL);
-      ToBuff(Char(','), SQL);
+      SQLWriter.AddChar('$', SQL);
+      SQLWriter.AddOrd(J, SQL);
+      SQLWriter.AddChar(',', SQL);
       Inc(J);
     end;
-  FlushBuff(SQL);
-  P := Pointer(SQL);
-  if J > 1
-  then (P+Length(SQL)-1)^ := ')' //cancel last comma
-  else SQL := SQL + ')';
+  if J > 1 then
+    SQLWriter.CancelLastComma(SQL);
+  SQLWriter.AddChar(')', SQL);
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZPostgreSQLPreparedStatementV3.Create(Connection as IZPostgreSQLConnection, SQL, Info);
 end;
 
