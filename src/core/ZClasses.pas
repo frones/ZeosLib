@@ -57,7 +57,7 @@ interface
 
 uses
   SysUtils, Classes, SyncObjs, FmtBCD,
-  ZCompatibility
+  ZCompatibility, ZSysUtils
   {$IF defined(MSWINDOWS) and not defined(FPC)}, Windows{$IFEND} //some old comp. -> INFINITE
   {$IFDEF NO_UNIT_CONTNRS},System.Generics.Collections{$ENDIF};
 
@@ -308,6 +308,11 @@ type
     procedure AddChar(Value: AnsiChar;      var Result: RawByteString);
     procedure AddText(Value: PAnsiChar; L: LengthInt; var Result: RawByteString); overload;
     procedure AddText(const Value: RawByteString; var Result: RawByteString); overload;
+    procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: RawByteString); overload;
+    procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: RawByteString); overload;
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    procedure AddText(const AsciiValue: UnicodeString; var Result: RawByteString); overload;
+    {$ENDIF}
     procedure AddOrd(Value: Byte;           var Result: RawByteString); overload;
     procedure AddOrd(Value: ShortInt;       var Result: RawByteString); overload;
     procedure AddOrd(Value: Word;           var Result: RawByteString); overload;
@@ -323,6 +328,7 @@ type
     procedure AddDate(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
     procedure AddTime(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
     procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
+    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: RawByteString);
     procedure Finalize(var Result: RawByteString);
     procedure CancelLastComma(var Result: RawByteString);
     procedure CancelLastCharIfExists(Value: AnsiChar; var Result: RawByteString);
@@ -344,6 +350,8 @@ type
   public
     procedure AddText(Value: PWideChar; L: LengthInt; var Result: UnicodeString); overload;
     procedure AddText(const Value: UnicodeString; var Result: UnicodeString); overload;
+    procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: UnicodeString); overload;
+    procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: UnicodeString); overload;
     procedure AddChar(Value: WideChar;      var Result: UnicodeString);
     procedure AddOrd(Value: Byte;           var Result: UnicodeString); overload;
     procedure AddOrd(Value: ShortInt;       var Result: UnicodeString); overload;
@@ -360,6 +368,7 @@ type
     procedure AddDate(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
     procedure AddTime(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
     procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
+    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: UnicodeString);
     procedure Finalize(var Result: UnicodeString);
     procedure CancelLastComma(var Result: UnicodeString);
     procedure CancelLastCharIfExists(Value: WideChar; var Result: UnicodeString);
@@ -368,7 +377,7 @@ type
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
 implementation
 
-uses ZMessages, ZFastCode, ZSysUtils
+uses ZMessages, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF}; //need for inlined FloatToText;
 
 {$IFDEF oldFPC}
@@ -671,6 +680,36 @@ end;
 
 { TZRawSQLStringWriter }
 
+procedure TZRawSQLStringWriter.AddHexBinary(Value: PByte; L: LengthInt;
+  ODBC: Boolean; var Result: RawByteString);
+var P: PAnsiChar;
+  LTotal: LengthInt;
+begin
+  LTotal := ((L+1) shl 1) + Ord(not ODBC);
+  if (FPos+LTotal <= FEnd) then begin
+    P := FPos;
+    Inc(FPos, LTotal);
+  end else
+    P := FlushBuff(Result, LTotal);
+  If ODBC then begin
+    PByte(P  )^ := Ord('0');
+    PByte(P+1)^ := Ord('x');
+  end else begin
+    PByte(P  )^ := Ord('x');
+    PByte(P+1)^ := Ord(#39);
+  end;
+  if Value <> nil then
+    ZBinToHex(PAnsiChar(Value), P+2, L);
+  if not ODBC then
+    PByte(P+LTotal-1)^ := Ord(#39);
+end;
+
+procedure TZRawSQLStringWriter.AddHexBinary(const Value: TBytes; ODBC: Boolean;
+  var Result: RawByteString);
+begin
+  AddHexBinary(Pointer(Value), Length(Value), ODBC, Result);
+end;
+
 procedure TZRawSQLStringWriter.AddChar(Value: AnsiChar; var Result: RawByteString);
 var P: PAnsiChar;
 begin
@@ -688,7 +727,7 @@ procedure TZRawSQLStringWriter.AddText(Value: PAnsiChar; L: LengthInt;
 var P: PAnsiChar;
 begin
   if (Value = nil) or (L = 0) then Exit;
-  if L < (FEnd-FPos) then begin
+  if (FPos + L <= FEnd) then begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, FPos^, L);
     Inc(FPos, L);
   end else begin
@@ -963,6 +1002,25 @@ begin
   else AddText(P, L, Result);
 end;
 
+procedure TZRawSQLStringWriter.AddGUID(const Value: TGUID;
+  Options: TGUIDConvOptions; var Result: RawByteString);
+var
+  L: LengthInt;
+  P: PAnsiChar;
+begin
+  L := 36;
+  if guidWithBrackets in Options then
+    Inc(L, 2);
+  if guidQuoted in Options then
+    Inc(L, 2);
+  if (FPos + L <= FEnd) then begin
+    P := FPos;
+    Inc(FPos, L);
+  end else
+    P := FlushBuff(Result, L);
+  ZSysUtils.GUIDToBuffer(@Value.D1, P, Options);
+end;
+
 procedure TZRawSQLStringWriter.AddDecimal(const Value: Currency; var Result: RawByteString);
 var L: LengthInt;
   P, P2: PAnsiChar;
@@ -977,6 +1035,30 @@ begin
   then Inc(FPos, L)
   else AddText(P, L, Result);
 end;
+
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+procedure TZRawSQLStringWriter.AddText(const AsciiValue: UnicodeString;
+  var Result: RawByteString);
+var PW: PWidechar;
+  PA: PAnsiChar
+  L: LengthInt;
+begin
+  PW := Pointer(AsciiValue);
+  if PW = nil then Exit;
+  L := Length(AsciiValue);
+  if L < (FEnd-FPos) then begin
+    PA := FPos;
+    Inc(FPos, L);
+  end else
+    PA := FlushBuff(Result, L);
+  while L > 0 do begin
+    PByte(PA)^ := PWord(PW)^;
+    Inc(PA);
+    Inc(PW);
+    Dec(L);
+  end;
+end;
+{$ENDIF}
 
 { TZUnicodeSQLStringWriter }
 
@@ -1080,6 +1162,55 @@ begin
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddGUID(const Value: TGUID;
+  Options: TGUIDConvOptions; var Result: UnicodeString);
+var
+  L: LengthInt;
+  P: PWideChar;
+begin
+  L := 36;
+  if guidWithBrackets in Options then
+    Inc(L, 2);
+  if guidQuoted in Options then
+    Inc(L, 2);
+  if (FPos + L <= FEnd) then begin
+    P := FPos;
+    Inc(FPos, L);
+  end else
+    P := FlushBuff(Result, L);
+  ZSysUtils.GUIDToBuffer(@Value.D1, P, Options);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddHexBinary(Value: PByte; L: LengthInt;
+  ODBC: Boolean; var Result: UnicodeString);
+var P: PWideChar;
+  LTotal: LengthInt;
+begin
+  LTotal := ((L+1) shl 1) + Ord(not ODBC);
+  if (FPos+LTotal <= FEnd) then begin
+    P := FPos;
+    Inc(FPos, LTotal);
+  end else
+    P := FlushBuff(Result, LTotal);
+  If ODBC then begin
+    PWord(P  )^ := Ord('0');
+    PWord(P+1)^ := Ord('x');
+  end else begin
+    PWord(P  )^ := Ord('x');
+    PWord(P+1)^ := Ord(#39);
+  end;
+  if Value <> nil then
+    ZBinToHex(PAnsiChar(Value), P+2, L);
+  if not ODBC then
+    PWord(P+LTotal-1)^ := Ord(#39);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddHexBinary(const Value: TBytes;
+  ODBC: Boolean; var Result: UnicodeString);
+begin
+  AddHexBinary(Pointer(Value), Length(Value), ODBC, Result);
 end;
 
 procedure TZUnicodeSQLStringWriter.AddOrd(Value: ShortInt;
