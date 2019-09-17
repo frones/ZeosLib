@@ -3546,7 +3546,7 @@ begin
       ResultSet.ResetCursor;
   FCursorOpened := False;
   FNativeFormatOverloadCalled := False;
-  //ResultSet := nil;
+  ResultSet := nil;
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
