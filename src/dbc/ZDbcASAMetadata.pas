@@ -1622,6 +1622,7 @@ function TZASADatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var Len: NativeUInt;
+  P: PAnsiChar;
   function ObjectToSearchString(const S, LikePattern: String): String;
   begin
     if S='' then
@@ -1660,7 +1661,7 @@ begin
       Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
       Result.UpdatePAnsiChar(TableColColumnIsNullableIndex, GetPAnsiCharByName('IS_NULLABLE', Len), Len);
       Result.UpdateBoolean(TableColColumnAutoIncIndex,
-        CompareText( Trim(GetStringByName('COLUMN_DEF')), 'autoincrement') = 0 );
+        CompareText(Trim(GetStringByName('COLUMN_DEF')), 'autoincrement') = 0 );
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(GetStringByName('COLUMN_NAME')));
       Result.UpdateBoolean(TableColColumnSearchableIndex, False);
       Result.UpdateBoolean(TableColColumnWritableIndex, True);
@@ -1678,17 +1679,19 @@ begin
         'c.column_name like '+ObjectToSearchString(ColumnNamePattern, '''%''')+' and c.column_type=''C'' '+
         'order by USER_NAME(t.creator) asc,t.table_name asc,c.column_id asc') do
   begin
-    while Next do
-    begin
+    while Next do begin
       while Result.GetInt(TableColColumnOrdPosIndex) <> GetIntByName( 'column_id') do
         Result.Next;
       Result.UpdateBoolean(TableColColumnWritableIndex, False);
       Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, False);
       Result.UpdateBoolean(TableColColumnReadonlyIndex, True);
-      if GetRawByteStringByName( 'nulls') = 'N' then
-      begin
-        Result.UpdateSmall(TableColColumnNullableIndex, 0);
-        Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
+      P := GetPAnsiCharByName('nulls', Len);
+      if (P <> nil) and (Len = 1) and (PByte(P)^ = Ord('N')) then begin
+        Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNoNulls));
+        Result.UpdateRawByteString(TableColColumnIsNullableIndex, YesNoStrsRaw[False]);
+      end else begin
+        Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNullable));
+        Result.UpdateRawByteString(TableColColumnIsNullableIndex, YesNoStrsRaw[False]);
       end;
       Result.UpdateRow;
     end;

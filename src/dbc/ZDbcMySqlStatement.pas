@@ -803,6 +803,7 @@ begin
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP),Self);
   end;
+  LastUpdateCount := Result;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.FetchCallResults(

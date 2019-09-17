@@ -1318,7 +1318,7 @@ end;
 }
 procedure TZASAAbstractResultSet.AfterClose;
 begin
-  FCursorName := '';
+  FCursorName := EmptyRaw;
   inherited AfterClose;
 end;
 
@@ -1334,7 +1334,7 @@ end;
 }
 procedure TZASAAbstractResultSet.ResetCursor;
 begin
-  if FCursorName <> '' then
+  if FCursorName <> EmptyRaw then
     FPLainDriver.dbpp_close(FASAConnection.GetDBHandle, Pointer(FCursorName));
   inherited ResetCursor;
 end;
@@ -1461,7 +1461,7 @@ begin
   FPlainDriver.dbpp_fetch(FASAConnection.GetDBHandle,
     Pointer(FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
     ZDbcASAUtils.CheckASAError(FPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, ConSettings, '', SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
+      FASAConnection.GetDBHandle, lcOther, ConSettings, EmptyRaw, SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
   if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
     //if (RowNo > 0) or (RowNo + Rows < 0) then

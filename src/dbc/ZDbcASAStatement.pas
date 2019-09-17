@@ -161,7 +161,13 @@ begin
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
   FetchSize := BlockSize;
   ResultSetType := rtScrollSensitive;
-  CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+'_'+IntToRaw(FStatementId);
+  with ZClasses.TZRawSQLStringWriter.Create(40) do begin
+    AddOrd(Pointer(FASAConnection.GetDBHandle), FCursorName);
+    AddChar(AnsiChar('_'), FCursorName);
+    AddOrd(FStatementId, FCursorName);
+    Finalize(FCursorName);
+    Free;
+  end;
 end;
 
 destructor TZAbstractASAStatement.Destroy;
@@ -302,7 +308,7 @@ begin
       ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings);
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE
       then Result := false
-      else DescribeCursor(FASAConnection, FSQLData, CursorName, '');
+      else DescribeCursor(FASAConnection, FSQLData, CursorName, EmptyRaw);
     end;
   end;
 end;
@@ -648,7 +654,7 @@ begin
   CheckParameterIndex(ParamIndex);
   SQLVAR := @FInParamSQLDA.sqlvar[ParamIndex];
   if (SQLVar.sqlInd <> nil) and (SQLVar.sqlInd^ = -1) then
-    Result := '(NULL)'
+    SQLWriter.AddText('(NULL)', Result)
   else case SQLVar.sqlType and $FFFE of
     DT_SMALLINT         : SQLWriter.AddOrd(PSmallInt(SQLVAR.sqlData)^, Result);
     DT_INT              : SQLWriter.AddOrd(PInteger(SQLVAR.sqlData)^, Result);

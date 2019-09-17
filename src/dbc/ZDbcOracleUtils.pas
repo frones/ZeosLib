@@ -60,7 +60,7 @@ uses
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, ZDbcUtils, ZSelectSchema,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}ZClasses, ZDbcUtils, ZSelectSchema,
   ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
   ZCompatibility, ZPlainOracleConstants, FmtBCD;
 
@@ -413,11 +413,8 @@ type
     procedure Describe(_Type: UB4; const Connection: IZConnection;
       const Name: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF});
 
-    {$IFDEF UNICODE}
-    procedure ConcatParentName(NotArgName: Boolean; var Buf: TUCS2Buff; var Result: String; const IC: IZIdentifierConvertor);
-    {$ELSE}
-    procedure ConcatParentName(NotArgName: Boolean; var Buf: TRawBuff; var Result: RawByteString; const IC: IZIdentifierConvertor);
-    {$ENDIF}
+    procedure ConcatParentName(NotArgName: Boolean; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      SQLWriter: TZSQLStringWriter; var Result: SQLString; const IC: IZIdentifierConvertor);
     constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_A);
     destructor Destroy; override;
   public
@@ -438,8 +435,7 @@ type
 implementation
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet,
-  ZEncoding, ZFastCode {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  ZEncoding, ZFastCode {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF UNICODE},StrUtils{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
 Oracle stores values of the NUMBER datatype in a variable-length format.
@@ -1731,23 +1727,18 @@ end;
 
 Const ArgListType: array[Boolean] of ub4 = (OCI_ATTR_LIST_ARGUMENTS, OCI_ATTR_LIST_SUBPROGRAMS);
 
-{$IFDEF UNICODE}
 procedure TZOraProcDescriptor_A.ConcatParentName(NotArgName: Boolean;
-  var Buf: TUCS2Buff; var Result: String; const IC: IZIdentifierConvertor);
-{$ELSE}
-procedure TZOraProcDescriptor_A.ConcatParentName(NotArgName: Boolean;
-  var Buf: TRawBuff; var Result: RawByteString; const IC: IZIdentifierConvertor);
-{$ENDIF}
+  SQLWriter: TZSQLStringWriter; var Result: SQLString; const IC: IZIdentifierConvertor);
 begin
   if (FParent <> nil) then begin
-    FParent.ConcatParentName(NotArgName, Buf, Result, IC);
+    FParent.ConcatParentName(NotArgName, SQLWriter, Result, IC);
     if NotArgName then begin
-      ZDbcUtils.ToBuff(IC.Quote(FParent.AttributeName), Buf, Result);
-      ZDbcUtils.ToBuff('.', Buf, Result);
+      SQLWriter.AddText(IC.Quote(FParent.AttributeName), Result);
+      SQLWriter.AddChar('.', Result);
     end else if ((ObjType = OCI_PTYPE_ARG) and (FParent.Parent <> nil) and (FParent.Parent.ObjType = OCI_PTYPE_PKG) and (FParent.Parent.Args.Count > 1)) {or
        ((FParent.ObjType = OCI_PTYPE_PKG) and (FParent.Args.Count > 1)) }then begin
-      ZDbcUtils.ToBuff(FParent.AttributeName, Buf, Result);
-      ZDbcUtils.ToBuff('_', Buf, Result);
+      SQLWriter.AddText(FParent.AttributeName, Result);
+      SQLWriter.AddChar('_', Result);
     end;
   end;
 end;

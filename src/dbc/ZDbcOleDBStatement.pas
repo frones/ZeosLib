@@ -2863,21 +2863,21 @@ function TZOleDBCallableStatementMSSQL.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
-  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  SQLWriter: TZSQLStringWriter;
 begin
   //https://docs.microsoft.com/en-us/sql/relational-databases/native-client-ole-db-how-to/results/execute-stored-procedure-with-rpc-and-process-output?view=sql-server-2017
-  Buf.Pos := 0;
-  SQL := '';
-  ZDbcUtils.ToBuff('{? = CALL ', Buf, SQL);
-  ZDbcUtils.ToBuff(StoredProcName, Buf, SQL);
+  SQL := '{? = CALL ';
+  SQLWriter := TZSQLStringWriter.Create(Length(StoredProcName)+BindList.Count shl 2);
+  SQLWriter.AddText(StoredProcName, SQL);
   if BindList.Count > 1 then
-    ZDbcUtils.ToBuff(Char('('), Buf, SQL);
+    SQLWriter.AddChar(Char('('), SQL);
   for i := 1 to BindList.Count-1 do
-    ZDbcUtils.ToBuff('?,', Buf, SQL);
+    SQLWriter.AddText('?,', SQL);
   if BindList.Count > 1 then
-    ReplaceOrAddLastChar(',', ')', Buf, SQL);
-  ZDbcUtils.ToBuff(Char('}'), Buf, SQL);
-  ZDbcUtils.FlushBuff(Buf, SQL);
+    SQLWriter.ReplaceOrAddLastChar(',', ')', SQL);
+  SQLWriter.AddChar('}', SQL);
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZOleDBPreparedStatement.Create(Connection, SQL, Info);
   TZOleDBPreparedStatement(Result).Prepare;
 end;

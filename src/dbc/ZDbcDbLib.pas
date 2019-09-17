@@ -437,7 +437,7 @@ var I: Integer;
   R: RawByteString;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
-  Buf: TRawBuff;
+  SQLWriter: TZRawSQLStringWriter;
   procedure IntToBuf(Value: Integer);
   var C: Cardinal;
     Digits: Byte;
@@ -446,10 +446,10 @@ var I: Integer;
   begin
     Digits := GetOrdinalDigits(Value, C, Negative);
     if Negative then
-      ToBuff('-', Buf, R);
+      SQLWriter.AddChar(AnsiChar('-'), R);
     PCardinal(@IntBuf[0])^ := Cardinal(808464432);//'0000'
     IntToRaw(C, @IntBuf[5-Digits], Digits);
-    ToBuff(PAnsiChar(@IntBuf[0]), 5, Buf, r);
+    SQLWriter.AddText(PAnsiChar(@IntBuf[0]), 5, r);
   end;
 begin
   {$IFNDEF TEST_CALLBACK}
@@ -457,26 +457,24 @@ begin
   {$ENDIF}
   if (FSQLErrors.Count = 0) and (FSQLMessages.Count = 0) then
     Exit;
-  Buf.Pos := 0;
   R := EmptyRaw;
+  SQLWriter := TZRawSQLStringWriter.Create(1024);
   for I := 0 to FSQLErrors.Count -1 do begin
     lErrorEntry := PDBLibError(FSQLErrors[I]);
     if (lErrorEntry <> nil) then begin
       if lErrorEntry^.Severity > EXINFO then begin
-        if (Buf.Pos <> 0) or (r <> EmptyRaw) then
-          ToBuff(LineEnding, Buf, R);
-        ToBuff('DBError : [', Buf, r);
+        SQLWriter.AddLineFeedIfNotEmpty(R);
+        SQLWriter.AddText('DBError : [', r);
         IntToBuf(lErrorEntry^.DbErr);
-        ToBuff('] : ', Buf, r);
-        ToBuff(lErrorEntry^.DbErrStr, Buf, r);
+        SQLWriter.AddText('] : ', r);
+        SQLWriter.AddText(lErrorEntry^.DbErrStr, r);
       end;
       if lErrorEntry^.OsErr > EXINFO then begin
-        if (Buf.Pos <> 0) or (r <> EmptyRaw) then
-          ToBuff(LineEnding, Buf, R);
-        ToBuff('OSError : [', Buf, r);
+        SQLWriter.AddLineFeedIfNotEmpty(R);
+        SQLWriter.AddText('OSError : [', r);
         IntToBuf(lErrorEntry^.OsErr);
-        ToBuff('] : ', Buf, r);
-        ToBuff(lErrorEntry^.OsErrStr, Buf, r);
+        SQLWriter.AddText('] : ', r);
+        SQLWriter.AddText(lErrorEntry^.OsErrStr, r);
       end;
       Dispose(lErrorEntry);
     end;
@@ -487,16 +485,16 @@ begin
     if (lMesageEntry <> nil) then begin
       if lMesageEntry^.Severity > EXINFO then begin
         if lMesageEntry^.MsgNo <> 5701 then begin
-          if (Buf.Pos <> 0) or (r <> EmptyRaw) then
-            ToBuff(LineEnding, Buf, R);
-          ToBuff(lMesageEntry^.MsgText, Buf, R);
+          SQLWriter.AddLineFeedIfNotEmpty(R);
+          SQLWriter.AddText(lMesageEntry^.MsgText, R);
         end;
       end;
       Dispose(lMesageEntry);
     end;
   end;
   FSQLMessages.Count := 0;
-  FlushBuff(Buf, R);
+  SQLWriter.Finalize(R);
+  FreeAndNil(SQLWriter);
   if R <> '' then begin
     DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage, 0, R);
     FPlainDriver.dbcancel(fHandle);

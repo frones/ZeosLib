@@ -324,6 +324,7 @@ type
     procedure AddOrd(Value: Integer;        var Result: RawByteString); overload;
     procedure AddOrd(const Value: UInt64;   var Result: RawByteString); overload;
     procedure AddOrd(const Value: Int64;    var Result: RawByteString); overload;
+    procedure AddOrd(Value: Pointer;        var Result: RawByteString); overload;
     procedure AddFloat(Value: Single;       var Result: RawByteString); overload;
     procedure AddFloat(const Value: Double; var Result: RawByteString); overload;
     procedure AddDecimal(const Value: Currency;   var Result: RawByteString); overload;
@@ -335,6 +336,8 @@ type
     procedure Finalize(var Result: RawByteString);
     procedure CancelLastComma(var Result: RawByteString);
     procedure CancelLastCharIfExists(Value: AnsiChar; var Result: RawByteString);
+    procedure ReplaceOrAddLastChar(OldChar, NewChar: AnsiChar; var Result: RawByteString);
+    procedure AddLineFeedIfNotEmpty(var Result: RawByteString);
   end;
 
   {** EH: implements a buffered UTF16 encoded writer }
@@ -376,9 +379,13 @@ type
     procedure Finalize(var Result: UnicodeString);
     procedure CancelLastComma(var Result: UnicodeString);
     procedure CancelLastCharIfExists(Value: WideChar; var Result: UnicodeString);
+    procedure ReplaceOrAddLastChar(OldChar, NewChar: WideChar; var Result: UnicodeString);
+    procedure AddLineFeedIfNotEmpty(var Result: UnicodeString);
   end;
 
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
+  SQLString = {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
+
 implementation
 
 uses ZMessages, ZFastCode
@@ -714,6 +721,12 @@ begin
   AddHexBinary(Pointer(Value), Length(Value), ODBC, Result);
 end;
 
+procedure TZRawSQLStringWriter.AddLineFeedIfNotEmpty(var Result: RawByteString);
+begin
+  if (Pointer(Result) <> nil) or (FPos > FBuf) then
+    AddText(LineEnding, Result);
+end;
+
 procedure TZRawSQLStringWriter.AddChar(Value: AnsiChar; var Result: RawByteString);
 var P: PAnsiChar;
 begin
@@ -840,6 +853,30 @@ begin
   GetMem(FBuf, AnsiCharCapacity);
   FPos := FBuf;
   FEnd := FBuf+AnsiCharCapacity;
+end;
+
+procedure TZRawSQLStringWriter.ReplaceOrAddLastChar(OldChar, NewChar: AnsiChar;
+  var Result: RawByteString);
+var P: PAnsichar;
+  L: LengthInt;
+  label setp;
+begin
+  if (FPos > FBuf) then begin
+    P := FPos-1;
+    if PByte(P)^ = Byte(OldChar)
+    then PByte(P)^ := Ord(NewChar)
+    else goto setp
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
+    Inc(P, L);
+    if (L >= 1) and (PByte(P)^ = Byte(OldChar)) then
+      PByte(P)^ := Byte(NewChar)
+    else begin
+setp: PByte(FPos)^ := Byte(NewChar);
+      Inc(FPos);
+    end;
+  end;
 end;
 
 procedure TZRawSQLStringWriter.AddOrd32(Value: Cardinal; Digits: Byte;
@@ -1119,7 +1156,7 @@ end;
 procedure TZRawSQLStringWriter.AddText(const AsciiValue: UnicodeString;
   var Result: RawByteString);
 var PW: PWidechar;
-  PA: PAnsiChar
+  PA: PAnsiChar;
   L: LengthInt;
 begin
   PW := Pointer(AsciiValue);
@@ -1138,6 +1175,12 @@ begin
   end;
 end;
 {$ENDIF}
+
+procedure TZRawSQLStringWriter.AddOrd(Value: Pointer;
+  var Result: RawByteString);
+begin
+  AddOrd({$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF}(Value), Result);
+end;
 
 { TZUnicodeSQLStringWriter }
 
@@ -1290,6 +1333,13 @@ procedure TZUnicodeSQLStringWriter.AddHexBinary(const Value: TBytes;
   ODBC: Boolean; var Result: UnicodeString);
 begin
   AddHexBinary(Pointer(Value), Length(Value), ODBC, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddLineFeedIfNotEmpty(
+  var Result: UnicodeString);
+begin
+  if (Pointer(Result) <> nil) or (FPos > FBuf) then
+    AddText(LineEnding, Result);
 end;
 
 procedure TZUnicodeSQLStringWriter.AddOrd(Value: ShortInt;
@@ -1517,6 +1567,30 @@ begin
   GetMem(FBuf, WideCharCapacity shl 1);
   FPos := FBuf;
   FEnd := FBuf+WideCharCapacity;
+end;
+
+procedure TZUnicodeSQLStringWriter.ReplaceOrAddLastChar(OldChar,
+  NewChar: WideChar; var Result: UnicodeString);
+var P: PWidechar;
+  L: LengthInt;
+  label setp;
+begin
+  if (FPos > FBuf) then begin
+    P := FPos-1;
+    if PWord(P)^ = Ord(OldChar)
+    then PWord(P)^ := Ord(NewChar)
+    else goto setp
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
+    Inc(P, L);
+    if (L >= 1) and (PWord(P)^ = Ord(OldChar)) then
+      PWord(P)^ := Ord(NewChar)
+    else begin
+setp: PWord(FPos)^ := Ord(NewChar);
+      Inc(FPos);
+    end;
+  end;
 end;
 
 end.

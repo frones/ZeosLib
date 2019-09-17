@@ -81,7 +81,6 @@ type
     property DefaultValue: string read FDefaultValue write FDefaultValue;
   end;
 
-  SQLString = {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
   {**
     Implements a generic cached resolver object which generates
     DML SQL statements and posts resultset updates to database.

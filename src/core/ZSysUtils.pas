@@ -112,6 +112,7 @@ const
   {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolStrIntsRaw: array[Boolean] of RawByteString = ('0', '1');
   BoolStrsRaw: array[Boolean] of RawByteString = (RawByteString(StrFalse), RawByteString(StrTrue));
+  YesNoStrsRaw: array[Boolean] of RawByteString = ('NO', 'YES');
   {$ENDIF}
   BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
   BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
@@ -125,6 +126,7 @@ var
   {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} //can not be initialized ...
   BoolStrIntsRaw: array[Boolean] of RawByteString;
   BoolStrsRaw: array[Boolean] of RawByteString;
+  YesNoStrsRaw: array[Boolean] of RawByteString;
   {$ENDIF}
 
 {**
@@ -7467,6 +7469,7 @@ begin
   for B := False to True do begin
     BoolStrIntsRaw[B] := UnicodeStringToASCII7(BoolStrInts[B]);
     BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
+    YesNoStrsRaw[B] := UnicodeStringToASCII7(YesNoStrs[b]);
   end;
 end;
 {$ENDIF}

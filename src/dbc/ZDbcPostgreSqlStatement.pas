@@ -824,11 +824,10 @@ var
   Stmt: TZPostgreSQLPreparedStatementV3;
   I: Cardinal;
   function CreateBatchDMLStmt: TZPostgreSQLPreparedStatementV3;
-  var I, OffSet: Cardinal;
+  var I, OffSet, N: Cardinal;
     aOID: OID;
-    N: Integer; //the ParameterIndex
     SQL: RawByteString;
-    Buf: TRawBuff;
+    SQLWriter: TZRawSQLStringWriter;
   begin
 //EgonHugeist: introduction
 // the posgres server support bulk ops since 8.4
@@ -917,31 +916,31 @@ unnest(array[$1]::int8[])
 *)
 //my final and fastest approch bind binary arrays and pass data once per param and one prepared stmt:
     SQL := '';
+    SQLWriter := TZRawSQLStringWriter.Create(Length(fASQL) shl 1);
     N := 1;
-    Buf.Pos := 0;
     OffSet := 0;
     //first build up a new string with unnest($n)::xyz[] surrounded params
     for I := 0 to high(FCachedQueryRaw) do
       if IsParamIndex[i] then begin
         if BindList[OffSet].BindType in [zbtArray, zbtRefArray] then begin
-          ZDbcUtils.ToBuff('unnest($', buf, SQL);
-          fRawTemp := IntToRaw(N);
-          ZDbcUtils.ToBuff(fRawTemp, buf, SQL);
-          ZDbcUtils.ToBuff('::', buf, SQL);
+          SQLWriter.AddText('unnest($', SQL);
+          SQLWriter.AddOrd(N, SQL);
+          SQLWriter.AddText('::', SQL);
           SQLTypeToPostgreSQL(TZSQLType(BindList.Arrays[Offset].VArrayType), FOidAsBlob, aOID);
-          ZDbcUtils.ToBuff({$IFDEF UNICODE}ZSysUtils.UnicodeStringToASCII7{$ENDIF}(FPostgreSQLConnection.GetTypeNameByOid(aOID)), buf, SQL);
-          ZDbcUtils.ToBuff('[])', buf, SQL);
+          fRawTemp := {$IFDEF UNICODE}ZSysUtils.UnicodeStringToASCII7{$ENDIF}(FPostgreSQLConnection.GetTypeNameByOid(aOID));
+          SQLWriter.AddText(fRawTemp, SQL);
+          SQLWriter.AddText('[])', SQL);
           Inc(OffSet);
         end else begin
-          ZDbcUtils.ToBuff('$', buf, SQL);
-          fRawTemp := IntToRaw(N);
-          ZDbcUtils.ToBuff(fRawTemp, buf, SQL);
-          ZDbcUtils.ToBuff(',', buf, SQL);
+          SQLWriter.AddChar('$', SQL);
+          SQLWriter.AddOrd(N, SQL);
+          SQLWriter.AddChar(',', SQL);
         end;
         Inc(N);
       end else
-        ZDbcUtils.ToBuff(FCachedQueryRaw[i], buf, SQL);
-    ZDbcUtils.FlushBuff(buf, SQL);
+        SQLWriter.AddText(FCachedQueryRaw[i], SQL);
+    SQLWriter.Finalize(SQL);
+    FreeAndNil(SQLWriter);
   (* gives such a string:
   insert into public.SampleRecord (ID,FirstName,LastName,Amount,BirthDate,LastChange,CreatedAt) values (
   unnest($1::int8[])

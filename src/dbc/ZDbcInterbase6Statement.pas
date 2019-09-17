@@ -1301,6 +1301,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZInterbase6PreparedStatement.AddParamLogValue(ParamIndex: Integer;
   SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
 var XSQLVAR: PXSQLVAR;
@@ -1312,7 +1313,7 @@ begin
   CheckParameterIndex(ParamIndex);
   {$R-}
   XSQLVAR := @FParamXSQLDA.sqlvar[ParamIndex];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  {$IF definde(RangeCheckEnabled and not defined(WITH_UINT64_C1118_ERROR)}{$R+} {$ENDIF}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then
     Result := '(NULL)'
   else case XSQLVAR.sqltype and not(1) of
@@ -1385,6 +1386,7 @@ begin
     else            SQLWriter.AddText('(UNKNOWN)', Result);
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZInterbase6PreparedStatement.SetInt(Index, Value: Integer);
 var XSQLVAR: PXSQLVAR;

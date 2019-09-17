@@ -306,28 +306,28 @@ procedure IntToUnicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWideChar = 
 procedure IntToUnicode(Value: Cardinal; Buf: PWideChar; Digits: Byte); overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure IntToUnicode(Value: UInt64; Buf: PWideChar; Digits: Byte); overload;
 
-function IntToUnicode(Value: Byte): ZWideString; overload;
-function IntToUnicode(Value: ShortInt): ZWideString; overload;
-function IntToUnicode(Value: Word): ZWideString; overload;
-function IntToUnicode(Value: SmallInt): ZWideString; overload;
-function IntToUnicode(Value: Cardinal): ZWideString; overload;
-function IntToUnicode(Value: Integer): ZWideString; overload;
-function IntToUnicode(const Value: Int64): ZWideString; overload;
-function IntToUnicode(const Value: UInt64): ZWideString; overload;
+function IntToUnicode(Value: Byte): UnicodeString; overload;
+function IntToUnicode(Value: ShortInt): UnicodeString; overload;
+function IntToUnicode(Value: Word): UnicodeString; overload;
+function IntToUnicode(Value: SmallInt): UnicodeString; overload;
+function IntToUnicode(Value: Cardinal): UnicodeString; overload;
+function IntToUnicode(Value: Integer): UnicodeString; overload;
+function IntToUnicode(const Value: Int64): UnicodeString; overload;
+function IntToUnicode(const Value: UInt64): UnicodeString; overload;
 
 procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
 function CurrToRaw(const Value: Currency): RawByteString; overload;
 
 procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
-function CurrToUnicode(const Value: Currency): ZWideString; overload;
+function CurrToUnicode(const Value: Currency): UnicodeString; overload;
 
 function RawToInt(const Value: RawByteString): Integer; overload;
 function RawToInt(const Value: PAnsiChar): Integer; overload;
 function RawToInt64(const Value: RawByteString): Int64;
 function RawToUInt64(const Value: RawByteString): UInt64;
-function UnicodeToInt(const Value: ZWideString): Integer;
-function UnicodeToInt64(const Value: ZWideString): Int64;
-function UnicodeToUInt64(const Value: ZWideString): UInt64;
+function UnicodeToInt(const Value: UnicodeString): Integer;
+function UnicodeToInt64(const Value: UnicodeString): Int64;
+function UnicodeToUInt64(const Value: UnicodeString): UInt64;
 
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; overload;
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
@@ -339,13 +339,13 @@ function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64; ove
 function RawToUInt64Def(Buf, PEnd: PAnsiChar; const Default: UInt64) : UInt64; overload;
 function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64; overload;
 
-function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
+function UnicodeToIntDef(const S: UnicodeString; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(Buf, PEnd: PWideChar; Default: Integer) : Integer; overload;
-function UnicodeToInt64Def(const S: ZWideString; const Default: Int64) : Int64; overload;
+function UnicodeToInt64Def(const S: UnicodeString; const Default: Int64) : Int64; overload;
 function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64; overload;
 function UnicodeToInt64Def(Buf, PEnd: PWideChar; Default: Integer) : Int64; overload;
-function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt64; overload;
+function UnicodeToUInt64Def(const S: UnicodeString; const Default: UInt64) : UInt64; overload;
 function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64; overload;
 function UnicodeToUInt64Def(Buf, PEnd: PWideChar; Default: Integer) : UInt64; overload;
 
@@ -408,15 +408,15 @@ function Trunc(const X: Single): Int64; overload;
 {$ENDIF USE_FAST_TRUNC}
 
 function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; overload;
-function Pos(const SubStr, Str: ZWideString): Integer; overload;
+function Pos(const SubStr, Str: UnicodeString): Integer; overload;
 
 function PosEx(const SubStr: RawByteString; Str: PAnsiChar; len: LengthInt; Offset: Integer = 1): Integer; overload;
 function PosEx(SubStr, Str: PAnsiChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer; overload;
 function PosEx(const SubStr, S: RawByteString; Offset: Integer = 1): Integer; overload;
 
-function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer; overload;
+function PosEx(const SubStr: UnicodeString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer; overload;
 function PosEx(SubStr, Str: PWideChar; SubStrLen, Strlen: LengthInt; Offset: Integer = 1): Integer; overload;
-function PosEx(const SubStr, S: ZWideString; Offset: Integer = 1): Integer; overload;
+function PosEx(const SubStr, S: UnicodeString; Offset: Integer = 1): Integer; overload;
 
 function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$IFDEF HAVE_TRUE_NATIVE_TYPES}//some newer delphi's can't determine the correct overload ):
@@ -3299,7 +3299,7 @@ begin
   else PWord(Buf)^ := Ord(#0);
 end;
 
-function CurrToUnicode(const Value: Currency): ZWideString;
+function CurrToUnicode(const Value: Currency): UnicodeString;
 var buf: array[0..31] of WideChar;
   P: PWideChar;
 begin
@@ -3438,27 +3438,27 @@ cardinal_range:
   else PWord(Buf)^ := Word(I32 or ord('0'));
 end;
 
-function IntToUnicode(Value: Byte): ZWideString;
+function IntToUnicode(Value: Byte): UnicodeString;
 begin
   Result := IntToUnicode(Cardinal(Value));
 end;
 
-function IntToUnicode(Value: ShortInt): ZWideString;
+function IntToUnicode(Value: ShortInt): UnicodeString;
 begin
   Result := IntToUnicode(Integer(Value));
 end;
 
-function IntToUnicode(Value: Word): ZWideString;
+function IntToUnicode(Value: Word): UnicodeString;
 begin
   Result := IntToUnicode(Cardinal(Value));
 end;
 
-function IntToUnicode(Value: SmallInt): ZWideString;
+function IntToUnicode(Value: SmallInt): UnicodeString;
 begin
   Result := IntToUnicode(Integer(Value));
 end;
 
-function IntToUnicode(Value: Cardinal): ZWideString;
+function IntToUnicode(Value: Cardinal): UnicodeString;
 var
   Digits: Byte;
 begin
@@ -3467,7 +3467,7 @@ begin
   IntToUnicode(Value, Pointer(Result), Digits);
 end;
 
-function IntToUnicode(Value: Integer): ZWideString;
+function IntToUnicode(Value: Integer): UnicodeString;
 var C: Cardinal;
   Digits: Byte;
   Negative: Boolean;
@@ -3481,7 +3481,7 @@ begin
   IntToUnicode(C, P+Ord(Negative), Digits);
 end;
 
-function IntToUnicode(const Value: Int64): ZWideString;
+function IntToUnicode(const Value: Int64): UnicodeString;
 var U: UInt64;
   Digits: Byte;
   Negative: Boolean;
@@ -3495,7 +3495,7 @@ begin
   IntToUnicode(U, P+Ord(Negative), Digits);
 end;
 
-function IntToUnicode(const Value: UInt64): ZWideString;
+function IntToUnicode(const Value: UInt64): UnicodeString;
 var Digits: Byte;
 begin
   Digits := GetOrdinalDigits(Value);
@@ -3915,7 +3915,7 @@ end;
 {$WARNINGS ON}
 
 {$WARNINGS OFF}
-function UnicodeToInt(const Value: ZWideString): Integer;
+function UnicodeToInt(const Value: UnicodeString): Integer;
 //function StrToInt32_JOH_PAS_7_c(const s: string): Integer;
 //originally wrtten by John O'Harrow
 //http://fastcode.sourceforge.net/
@@ -4315,7 +4315,7 @@ begin
 end;
 {$WARNINGS ON}
 
-function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer;
+function UnicodeToIntDef(const S: UnicodeString; const Default: Integer) : Integer;
 var
   E: Integer;
 begin
@@ -4992,7 +4992,7 @@ begin
 end;
 {$WARNINGS ON}
 
-function UnicodeToInt64Def(const S: ZWideString; const Default: Int64) : Int64;
+function UnicodeToInt64Def(const S: UnicodeString; const Default: Int64) : Int64;
 var
   E: Integer;
 begin
@@ -5002,7 +5002,7 @@ begin
       Result := Default;
 end;
 
-function UnicodeToInt64(const Value: ZWideString) : Int64;
+function UnicodeToInt64(const Value: UnicodeString) : Int64;
 var
   E: Integer;
 begin
@@ -5030,7 +5030,7 @@ begin
     Result := Default;
 end;
 
-function UnicodeToUInt64(const Value: ZWideString) : UInt64;
+function UnicodeToUInt64(const Value: UnicodeString) : UInt64;
 var
   E: Integer;
 begin
@@ -5039,7 +5039,7 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
-function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt64;
+function UnicodeToUInt64Def(const S: UnicodeString; const Default: UInt64) : UInt64;
 var
   E: Integer;
 begin
@@ -7465,9 +7465,9 @@ end;
 //Match - [esp+$10]
 
 //function PosUnicode32_DKC_IA32_3_a(const SubStr, Str: UnicodeString): Integer; overload;
-//changes by EgonHugeist: ZWideString might be a WideString(D7-D007, old FPC)
+//changes by EgonHugeist: UnicodeString might be a WideString(D7-D007, old FPC)
 //where length address returns size in bytes -> shrink to codepoints
-function Pos(const SubStr, Str: ZWideString): Integer; overload;
+function Pos(const SubStr, Str: UnicodeString): Integer; overload;
 asm
  push  ebx
  push  esi
@@ -7751,7 +7751,7 @@ Ret:
 //Author:            Dennis Kjaer Christensen
 //Date:              18/07 2012
 //faster than Delphi and FPC RTL
-function Pos(const SubStr, Str: ZWideString): Integer;
+function Pos(const SubStr, Str: UnicodeString): Integer;
 {$IFDEF ZERO_BASED_STRINGS}
 begin
   Result := PosEx(SubStr, Pointer(Str), Length(Str));
@@ -7877,14 +7877,14 @@ end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
 // changed to a unicode pointer version
-function PosEx(const SubStr: ZWideString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer;
+function PosEx(const SubStr: UnicodeString; Str: PWideChar; len: LengthInt; Offset: Integer = 1): Integer;
 begin;
   Result := PosEx(Pointer(SubStr), Str, Length(SubStr), len, OffSet);
 end;
 
 // from Aleksandr Sharahov's PosEx_Sha_Pas_2()
 // changed to a unicode version
-function PosEx(const SubStr, S: ZWideString; Offset: Integer = 1): Integer;
+function PosEx(const SubStr, S: UnicodeString; Offset: Integer = 1): Integer;
 begin;
   Result := PosEx(SubStr, Pointer(S), Length(S), Offset);
 end;

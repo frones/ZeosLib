@@ -789,48 +789,48 @@ end;
 function TZOracleCallableStatement_A.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
-  ProcSQL: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
-  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  ProcSQL: SQLString;
+  SQLWriter: TZSQLStringWriter;
   IC: IZIdentifierConvertor;
 
   procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Params: TObjectList);
   var I: Integer;
   begin
-    ZDbcUtils.ToBuff('(', Buf, ProcSQL);
+    SQLWriter.AddChar('(', ProcSQL);
     for I := 0 to Params.Count-1 do
       if TZOraProcDescriptor_A(Params[i]).OrdPos > 0 then begin
-        ZDbcUtils.ToBuff(':', Buf, ProcSQL);
-        TZOraProcDescriptor_A(Params[i]).ConcatParentName(False, buf, ProcSQL, IC);
-        ZDbcUtils.ToBuff(TZOraProcDescriptor_A(Params[i]).AttributeName, Buf, ProcSQL);
-        ZDbcUtils.ToBuff(',', Buf, ProcSQL);
+        SQLWriter.AddChar(':', ProcSQL);
+        TZOraProcDescriptor_A(Params[i]).ConcatParentName(False, SQLWriter, ProcSQL, IC);
+        SQLWriter.AddText(TZOraProcDescriptor_A(Params[i]).AttributeName, ProcSQL);
+        SQLWriter.AddChar(',', ProcSQL);
       end;
-    ReplaceOrAddLastChar(',',')',Buf,ProcSQL);
+    SQLWriter.ReplaceOrAddLastChar(',',')',ProcSQL);
   end;
 
   procedure BuildFunction({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
   begin
-    ZDbcUtils.ToBuff(':', Buf, ProcSQL);
-    TZOraProcDescriptor_A(Descriptor.Args[0]).ConcatParentName(False, buf, ProcSQL, IC);
-    ZDbcUtils.ToBuff(TZOraProcDescriptor_A(Descriptor.Args[0]).AttributeName, Buf, ProcSQL);
-    ZDbcUtils.ToBuff(' := ', Buf, ProcSQL);
-    Descriptor.ConcatParentName(True, Buf, ProcSQL, IC);
-    ZDbcUtils.ToBuff(IC.Quote(Descriptor.AttributeName), Buf, ProcSQL);
+    SQLWriter.AddChar(':', ProcSQL);
+    TZOraProcDescriptor_A(Descriptor.Args[0]).ConcatParentName(False, SQLWriter, ProcSQL, IC);
+    SQLWriter.AddText(TZOraProcDescriptor_A(Descriptor.Args[0]).AttributeName, ProcSQL);
+    SQLWriter.AddText(' := ', ProcSQL);
+    Descriptor.ConcatParentName(True, SQLWriter, ProcSQL, IC);
+    SQLWriter.AddText(IC.Quote(Descriptor.AttributeName), ProcSQL);
     AddArgs(Descriptor.Args);
-    ZDbcUtils.ToBuff(';', Buf, ProcSQL);
+    SQLWriter.AddChar(';', ProcSQL);
   end;
   procedure BuildProcedure({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
   begin
-    Descriptor.ConcatParentName(True, Buf, ProcSQL, IC);
-    ZDbcUtils.ToBuff(IC.Quote(Descriptor.AttributeName), Buf, ProcSQL);
+    Descriptor.ConcatParentName(True, SQLWriter, ProcSQL, IC);
+    SQLWriter.AddText(IC.Quote(Descriptor.AttributeName), ProcSQL);
     AddArgs(Descriptor.Args);
-    ZDbcUtils.ToBuff(';', Buf, ProcSQL);
+    SQLWriter.AddChar(';', ProcSQL);
   end;
   procedure BuildPackage({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
   var I: Integer;
   begin
     for I := 0 to Descriptor.Args.Count -1 do begin
       if Descriptor.Parent <> nil then
-        ZDbcUtils.ToBuff('BEGIN'#10, Buf, ProcSQL);
+        SQLWriter.AddText('BEGIN'#10, ProcSQL);
       if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PKG then
         BuildPackage(TZOraProcDescriptor_A(Descriptor.Args[I]))
       else if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PROC then
@@ -840,27 +840,31 @@ var
       else
         AddArgs(Descriptor.Args);
       if Descriptor.Parent <> nil then
-        ZDbcUtils.ToBuff(#10'END;', Buf, ProcSQL);
+        SQLWriter.AddText(#10'END;', ProcSQL);
     end;
   end;
 begin
   IC := Connection.GetMetadata.GetIdentifierConvertor;
-  if FProcDescriptor = nil then
-    { describe the object: }
-    FProcDescriptor := TZOraProcDescriptor_A.Create(nil);
-  if FProcDescriptor.ObjType = OCI_PTYPE_UNK then
-    FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
-  ProcSQL := '';
-  Buf.Pos := 0;
-  ZDbcUtils.ToBuff('BEGIN'#10, Buf, ProcSQL);
-  if FProcDescriptor.ObjType = OCI_PTYPE_PKG then
-    BuildPackage(FProcDescriptor)
-  else if FProcDescriptor.ObjType = OCI_PTYPE_PROC then
-    BuildProcedure(FProcDescriptor)
-  else
-    BuildFunction(FProcDescriptor);
-  ZDbcUtils.ToBuff(#10'END;', Buf, ProcSQL);
-  ZDbcUtils.FlushBuff(Buf,ProcSQL);
+  SQLWriter := TZSQLStringWriter.Create(1024);
+  try
+    if FProcDescriptor = nil then
+      { describe the object: }
+      FProcDescriptor := TZOraProcDescriptor_A.Create(nil);
+    if FProcDescriptor.ObjType = OCI_PTYPE_UNK then
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
+    ProcSQL := '';
+    SQLWriter.AddText('BEGIN'#10, ProcSQL);
+    if FProcDescriptor.ObjType = OCI_PTYPE_PKG then
+      BuildPackage(FProcDescriptor)
+    else if FProcDescriptor.ObjType = OCI_PTYPE_PROC then
+      BuildProcedure(FProcDescriptor)
+    else
+      BuildFunction(FProcDescriptor);
+    SQLWriter.AddText(#10'END;', ProcSQL);
+    SQLWriter.Finalize(ProcSQL);
+  finally
+    FreeAndNil(SQLWriter);
+  end;
   Result := TZOraclePreparedStatement_A.Create(Connection, '', Info);
   TZOraclePreparedStatement_A(Result).FASQL := {$IFDEF UNICODE}ZUnicodeToRaw(ProcSQL, FClientCP){$ELSE}ProcSQL{$ENDIF};
   TZOraclePreparedStatement_A(Result).Prepare;
@@ -874,33 +878,37 @@ var Idx: Integer;
     var IDX: Integer);
   var i: Integer;
     Descriptor: TZOraProcDescriptor_A;
-    Tmp: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
-    Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+    Tmp: SQLString;
+    SQLWriter: TZSQLStringWriter;
   begin
-    for I := 0 to ParentDescriptor.Args.Count-1 do begin
-      Descriptor := TZOraProcDescriptor_A(ParentDescriptor.Args[i]);
-      if Descriptor.ObjType <> OCI_PTYPE_ARG then
-        RegisterFromDescriptor(Descriptor, IDX)
-      else begin
-        Tmp := '';
-        Buf.Pos := 0;
-        Descriptor.ConcatParentName(False, Buf, Tmp, nil);
-        ZDbcUtils.ToBuff(Descriptor.AttributeName, Buf, Tmp);
-        ZDbcUtils.FlushBuff(Buf,tmp);
-        if FExecStatement = nil then
-          RegisterParameter(IDX,
-            Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
-              Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
+    SQLWriter := TZSQLStringWriter.Create(1024);
+    try
+      for I := 0 to ParentDescriptor.Args.Count-1 do begin
+        Descriptor := TZOraProcDescriptor_A(ParentDescriptor.Args[i]);
+        if Descriptor.ObjType <> OCI_PTYPE_ARG then
+          RegisterFromDescriptor(Descriptor, IDX)
         else begin
-          RegisterParameter(IDX,
-            Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
-              Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
-          FExecStatement.RegisterParameter(IDX,
-            Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
-              Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+          Tmp := '';
+          Descriptor.ConcatParentName(False, SQLWriter, Tmp, nil);
+          SQLWriter.AddText(Descriptor.AttributeName, Tmp);
+          SQLWriter.Finalize(tmp);
+          if FExecStatement = nil then
+            RegisterParameter(IDX,
+              Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
+                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
+          else begin
+            RegisterParameter(IDX,
+              Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
+                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+            FExecStatement.RegisterParameter(IDX,
+              Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], tmp,
+                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+          end;
+          Inc(IDX);
         end;
-        Inc(IDX);
       end;
+    finally
+      FreeAndNil(SQLWriter);
     end;
   end;
 begin

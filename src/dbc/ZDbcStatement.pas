@@ -2979,11 +2979,22 @@ end;
 }
 procedure TZAbstractPreparedStatement.LogPrepStmtMessage(
   Category: TZLoggingCategory; const Msg: RawByteString);
+var SQLWriter: TZRawSQLStringWriter;
+  LogMsg: RawByteString;
 begin
-  if DriverManager.HasLoggingListener then
-    if msg <> ''
-    then DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
-    else DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId));
+  if DriverManager.HasLoggingListener then begin
+    SQLWriter := TZRawSQLStringWriter.Create(30+Length(Msg));
+    LogMsg := EmptyRaw;
+    SQLWriter.AddText('Statement ', LogMsg);
+    SQLWriter.AddOrd(FStatementId, LogMsg);
+    if msg <> EmptyRaw then begin
+      SQLWriter.AddText(' : ', LogMsg);
+      SQLWriter.AddText(Msg, LogMsg);
+    end;
+    SQLWriter.Finalize(LogMsg);
+    FreeAndNil(SQLWriter);
+    DriverManager.LogMessage(Category, ConSettings^.Protocol, LogMsg);
+  end;
 end;
 
 {**
@@ -3438,7 +3449,7 @@ begin
     {$ENDIF}
     vtCharRec:       IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetCharRec(ParameterIndex, Value.VCharRec);
     vtDateTime:      IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimestamp(ParameterIndex, Value.VDateTime);
-    vtBytes:         IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBytes(ParameterIndex, StrToBytes(Value.VRawByteString));
+    vtBytes:         IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBytes(ParameterIndex, {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}StrToBytes{$ENDIF}(Value.VRawByteString));
     vtArray:  begin
                 IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDataArray(ParameterIndex, Value.VArray.VArray, TZSQLType(Value.VArray.VArrayType), Value.VArray.VArrayVariantType);
                 if Value.VArray.VIsNullArray <> nil then
@@ -3902,7 +3913,7 @@ begin
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
       GetCompareFirstKeywordStrings, FTokenMatchIndex);
     FCountOfQueryParams := 0;
-    Result := ''; //init Result
+    Result := EmptyRaw; //init Result
     SQLWriter := TZRawSQLStringWriter.Create(Length(SQL));
     for I := 0 to High(FCachedQueryRaw) do begin
       SQLWriter.AddText(FCachedQueryRaw[i], Result);
