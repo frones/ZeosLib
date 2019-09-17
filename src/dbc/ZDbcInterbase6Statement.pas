@@ -1313,7 +1313,7 @@ begin
   CheckParameterIndex(ParamIndex);
   {$R-}
   XSQLVAR := @FParamXSQLDA.sqlvar[ParamIndex];
-  {$IF definde(RangeCheckEnabled and not defined(WITH_UINT64_C1118_ERROR)}{$R+} {$ENDIF}
+  {$IF defined(RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+} {$ENDIF}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then
     Result := '(NULL)'
   else case XSQLVAR.sqltype and not(1) of
