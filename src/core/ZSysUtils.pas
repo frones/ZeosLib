@@ -554,7 +554,10 @@ function VarToBytes(const Value: Variant): TBytes;
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
-function AnsiSQLDateToDateTime(const Value: string): TDateTime;
+function AnsiSQLDateToDateTime(const Value: UnicodeString): TDateTime; overload;
+function AnsiSQLDateToDateTime(P: PWideChar; L: LengthInt): TDateTime; overload;
+function AnsiSQLDateToDateTime(const Value: RawByteString): TDateTime; overload;
+function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime; overload;
 
 {**
   Converts Ansi SQL Date (DateFormat) to TDateTime
@@ -1089,6 +1092,7 @@ Type TCurrRoundToScale = 0..4;
 function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;const
   // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
   FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: {%H-}'.' );
+  MSecMulTable: array[1..3] of Word = (100,10,1);
 
 implementation
 
@@ -2416,40 +2420,35 @@ end;
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
-function AnsiSQLDateToDateTime(const Value: string): TDateTime;
+function AnsiSQLDateToDateTime(P: PWideChar; L: LengthInt): TDateTime;
 var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
-  Temp: string;
   DateFound: Boolean;
   tmp: TDateTime;
-
-  procedure ExtractTime(const AString: String);
-  var dotPos: Integer;
+  procedure ExtractTime(P: PWideChar; L: LengthInt);
   begin
-    Hour := StrToIntDef(Copy(AString, 1, 2), 0);
-    Min := StrToIntDef(Copy(AString, 4, 2), 0);
-    Sec := StrToIntDef(Copy(AString, 7, 2), 0);
+    Hour := UnicodeToIntDef(P, P+2, 0);
+    Min := UnicodeToIntDef((P+3), (P+5), 0);
+    Sec := UnicodeToIntDef((P+6), (p+8), 0);
 
     //if the time Length is bigger than 8, it can have milliseconds and it ...
-    dotPos := 0;
     MSec := 0;
-    if Length(AString) > 8 then
-      dotPos := ZFastCode.Pos('.', AString);
-
-    //if the dot are found, milliseconds are present.
-    if dotPos > 0 then
-      MSec := StrToIntDef(LeftStr(RightStr(AString,Length(AString)-dotPos)+'000',3),0);
+    if (L > 8) and ((P+8)^ = '.') then begin
+      MSec := UnicodeToIntDef(P+9, (P+L), 0);
+      L := L-9;
+      if L < 3
+      then MSec := MSec * MSecMulTable[L]
+      else if L > 3 then
+        MSec := MSec div MSecMulTable[3-L]
+    end;
   end;
 begin
-  Temp := Value;
   Result := 0;
   DateFound := False;
-
-  if Length(Temp) >= 10 then
-  begin
-    Year := StrToIntDef(Copy(Temp, 1, 4), 0);
-    Month := StrToIntDef(Copy(Temp, 6, 2), 0);
-    Day := StrToIntDef(Copy(Temp, 9, 2), 0);
+  if L >= 10 then begin
+    Year := UnicodeToIntDef(P, (P+4), 0);
+    Month := UnicodeToIntDef((P+5), (P+7), 0);
+    Day := UnicodeToIntDef((P+8), (P+10), 0);
 
     if (Year <> 0) and (Month <> 0) and (Day <> 0) then begin
       if TryEncodeDate(Year, Month, Day, tmp) then begin
@@ -2457,18 +2456,90 @@ begin
         DateFound := True;
       end;
     end;
-    Temp := RightStr(Temp, Length(Temp)-11);
   end;
 
-  if (Length(Temp) >= 8) or ( not DateFound ) then begin
+  if (L >= 18) or ( not DateFound ) then begin
     if DateFound
-    then ExtractTime(Temp)
-    else ExtractTime(Value);
+    then ExtractTime(P+11, L-11)
+    else ExtractTime(P, L);
     if TryEncodeTime(Hour, Min, Sec, MSec, tmp) then
       if Result >= 0
-      then Result := Result + EncodeTime(Hour, Min, Sec, MSec)
-      else Result := Result - EncodeTime(Hour, Min, Sec, MSec)
+      then Result := Result + Tmp
+      else Result := Result - Tmp
   end;
+end;
+
+function AnsiSQLDateToDateTime(const Value: UnicodeString): TDateTime;
+var P: PWideChar;
+begin
+  P := Pointer(Value);
+  if P = nil
+  then Result := 0
+  else Result := AnsiSQLDateToDateTime(P, Length(Value));
+end;
+
+{**
+  Converts Ansi SQL Date/Time (yyyy-mm-dd hh:nn:ss or yyyy-mm-dd hh:nn:ss.zzz)
+  to TDateTime
+  @param Value a date and time string.
+  @return a decoded TDateTime value.
+}
+function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime;
+var
+  Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  DateFound: Boolean;
+  tmp: TDateTime;
+  procedure ExtractTime(P: PAnsiChar; L: LengthInt);
+  begin
+    Hour := RawToIntDef(P, P+2, 0);
+    Min := RawToIntDef((P+3), (P+5), 0);
+    Sec := RawToIntDef((P+6), (p+8), 0);
+
+    //if the time Length is bigger than 8, it can have milliseconds and it ...
+    MSec := 0;
+    if (L > 8) and ((P+8)^ = '.') then begin
+      MSec := RawToIntDef(P+9, (P+L), 0);
+      L := L-9;
+      if L < 3
+      then MSec := MSec * MSecMulTable[L]
+      else if L > 3 then
+        MSec := MSec div MSecMulTable[3-L]
+    end;
+  end;
+begin
+  Result := 0;
+  DateFound := False;
+  if L >= 10 then begin
+    Year := RawToIntDef(P, (P+4), 0);
+    Month := RawToIntDef((P+5), (P+7), 0);
+    Day := RawToIntDef((P+8), (P+10), 0);
+
+    if (Year <> 0) and (Month <> 0) and (Day <> 0) then begin
+      if TryEncodeDate(Year, Month, Day, tmp) then begin
+        Result := tmp;
+        DateFound := True;
+      end;
+    end;
+  end;
+
+  if (L >= 18) or ( not DateFound ) then begin
+    if DateFound
+    then ExtractTime(P+11, L-11)
+    else ExtractTime(P, L);
+    if TryEncodeTime(Hour, Min, Sec, MSec, tmp) then
+      if Result >= 0
+      then Result := Result + Tmp
+      else Result := Result - Tmp
+  end;
+end;
+
+function AnsiSQLDateToDateTime(const Value: RawByteString): TDateTime;
+var P: PAnsiChar;
+begin
+  P := Pointer(Value);
+  if P = nil
+  then Result := 0
+  else Result := AnsiSQLDateToDateTime(P, Length(Value));
 end;
 
 function CheckNumberRange(Value: AnsiChar; out Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -2650,7 +2721,6 @@ begin
   Result := RawSQLDateToDateTime(Pointer(UnicodeStringToASCII7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
 end;
-const MSecMulTable: array[1..3] of Word = (100,10,1);
 
 {**
   Converts Ansi SQL Time (TimeFormat)
