@@ -305,6 +305,7 @@ type
     constructor Create(AnsiCharCapacity: Integer);
     destructor Destroy; override;
   public
+    procedure IncreaseCapacityTo(AnsiCharCapacity: Integer; var Result: RawByteString);
     procedure AddChar(Value: AnsiChar;      var Result: RawByteString);
     procedure AddText(Value: PAnsiChar; L: LengthInt; var Result: RawByteString); overload;
     procedure AddText(const Value: RawByteString; var Result: RawByteString); overload;
@@ -313,6 +314,8 @@ type
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     procedure AddText(const AsciiValue: UnicodeString; var Result: RawByteString); overload;
     {$ENDIF}
+    procedure AddTextQuoted(Value: PAnsiChar; L: LengthInt; QuoteChar: AnsiChar; var Result: RawByteString); overload;
+    procedure AddTextQuoted(const Value: RawByteString; QuoteChar: AnsiChar; var Result: RawByteString); overload;
     procedure AddOrd(Value: Byte;           var Result: RawByteString); overload;
     procedure AddOrd(Value: ShortInt;       var Result: RawByteString); overload;
     procedure AddOrd(Value: Word;           var Result: RawByteString); overload;
@@ -348,6 +351,7 @@ type
     constructor Create(WideCharCapacity: Integer);
     destructor Destroy; override;
   public
+    procedure IncreaseCapacityTo(WideCharCapacity: Integer; var Result: UnicodeString);
     procedure AddText(Value: PWideChar; L: LengthInt; var Result: UnicodeString); overload;
     procedure AddText(const Value: UnicodeString; var Result: UnicodeString); overload;
     procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: UnicodeString); overload;
@@ -825,6 +829,19 @@ begin
   end;
 end;
 
+procedure TZRawSQLStringWriter.IncreaseCapacityTo(AnsiCharCapacity: Integer;
+  var Result: RawByteString);
+begin
+  if AnsiCharCapacity < FEnd-FBuf then
+    Exit;
+  if FPos > FBuf then
+    FlushBuff(Result,0);
+  FreeMem(FBuf);
+  GetMem(FBuf, AnsiCharCapacity);
+  FPos := FBuf;
+  FEnd := FBuf+AnsiCharCapacity;
+end;
+
 procedure TZRawSQLStringWriter.AddOrd32(Value: Cardinal; Digits: Byte;
   Negative: Boolean; var Result: RawByteString);
 var P: PAnsiChar;
@@ -865,6 +882,68 @@ procedure TZRawSQLStringWriter.AddText(const Value: RawByteString;
   var Result: RawByteString);
 begin
   AddText(Pointer(Value), Length(Value), Result);
+end;
+
+procedure TZRawSQLStringWriter.AddTextQuoted(const Value: RawByteString;
+  QuoteChar: AnsiChar; var Result: RawByteString);
+begin
+  AddTextQuoted(Pointer(Value), Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, QuoteChar, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddTextQuoted(Value: PAnsiChar; L: LengthInt;
+  QuoteChar: AnsiChar; var Result: RawByteString);
+var
+  P, Dest, PEnd, PFirst: PAnsiChar;
+begin
+  Dest := nil;
+  P := Value;
+  PEnd := P + L;
+  PFirst := nil;
+  while P < PEnd do begin
+    if (AnsiChar(P^)=QuoteChar) then begin
+      if Dest = nil then
+        PFirst := P;
+      Inc(Dest);
+    end;
+    Inc(P);
+  end;
+  if Dest = nil then begin //no quoteChars found?
+    if (FPos+L+2 <= FEnd) then begin
+      Dest := FPos;
+      Inc(FPos, L+2);
+    end else
+      Dest := FlushBuff(Result, L+2);
+    AnsiChar(Dest^) := QuoteChar;
+    if L > 0 then begin
+      System.Move(Value^, (Dest+1)^, L);
+      Inc(Dest, L+1);
+    end else
+      Inc(Dest);
+    AnsiChar(Dest^) := QuoteChar;
+    Exit;
+  end;
+  if (FPos+L+{%H-}NativeInt(Dest) +2 <= FEnd) then begin
+    Dest := FPos;
+    Inc(FPos, L+{%H-}NativeInt(Dest)+2);
+  end else
+    Dest := FlushBuff(Result, L+{%H-}NativeInt(Dest)+2);
+  AnsiChar(Dest^) := QuoteChar;
+  Inc(Dest);
+  P := PFirst;
+  repeat
+    Inc(P);
+    Move(Value^, Dest^, (P - Value));
+    Inc(Dest, P - Value);
+    AnsiChar(Dest^) := QuoteChar;
+    Inc(Dest);
+    Value := P;
+    while (P<PEnd) do if AnsiChar(P^)=QuoteChar
+      then Break
+      else Inc(P);
+  until P = PEnd;
+  Move(Value^, Dest^, (PEnd - Value));
+  Inc(Dest, PEnd - Value);
+  AnsiChar(Dest^) := QuoteChar;
 end;
 
 procedure TZRawSQLStringWriter.AddTime(const Value: TDateTime; const Format: String;
@@ -1425,6 +1504,19 @@ begin
     Inc(PAnsiChar(Result), LRes);
     FPos := FBuf;
   end;
+end;
+
+procedure TZUnicodeSQLStringWriter.IncreaseCapacityTo(WideCharCapacity: Integer;
+  var Result: UnicodeString);
+begin
+  if WideCharCapacity < FEnd-FBuf then
+    Exit;
+  if FPos > FBuf then
+    FlushBuff(Result,0);
+  FreeMem(FBuf);
+  GetMem(FBuf, WideCharCapacity shl 1);
+  FPos := FBuf;
+  FEnd := FBuf+WideCharCapacity;
 end;
 
 end.

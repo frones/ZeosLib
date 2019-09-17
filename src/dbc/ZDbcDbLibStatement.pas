@@ -108,7 +108,7 @@ type
   private
     function GetRawSQL: RawByteString; override;
   protected
-    function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
@@ -485,25 +485,6 @@ end;
 
 { TZDBLibPreparedStatementEmulated }
 
-function TZDBLibPreparedStatementEmulated.GetInParamLogValue(
-  ParamIndex: Integer): RawByteString;
-var Bind: PZBindValue;
-begin
-  Bind := BindList[ParamIndex];
-  if Bind.BindType = zbtNull then
-    Result := '(NULL)'
-  else if Bind.BindType = zbtArray then
-    Result := '(ARRAY)'
-  else case Bind.SQLType of
-    stBoolean:      if PByte(Bind.Value)^ = Ord('0')
-                    then Result := '(FALSE)'
-                    else Result := '(TRUE)';
-    stAsciiStream:  Result := '(CLOB)';
-    stBinaryStream: Result := '(BLOB)';
-    else            Result := RawByteString(Bind.Value);
-  end;
-end;
-
 function TZDBLibPreparedStatementEmulated.GetRawSQL: RawByteString;
 var
   I: Integer;
@@ -694,6 +675,26 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   BindList.Put(ParameterIndex, stGUID, GUIDToRaw(Value, [guidWithBrackets, guidQuoted]), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.AddParamLogValue(
+  ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter;
+  var Result: RawByteString);
+var Bind: PZBindValue;
+begin
+  Bind := BindList[ParamIndex];
+  if Bind.BindType = zbtNull then
+    SQLWriter.AddText('(NULL)', Result)
+  else if Bind.BindType = zbtArray then
+    SQLWriter.AddText('(ARRAY)', Result)
+  else case Bind.SQLType of
+    stBoolean:      if PByte(Bind.Value)^ = Ord('0')
+                    then SQLWriter.AddText('(FALSE)', Result)
+                    else SQLWriter.AddText('(TRUE)', Result);
+    stAsciiStream:  SQLWriter.AddText('(CLOB)', Result);
+    stBinaryStream: SQLWriter.AddText('(BLOB)', Result);
+    else            SQLWriter.AddText(RawByteString(Bind.Value), Result);
+  end;
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetInt(ParameterIndex, Value: Integer);

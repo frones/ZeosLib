@@ -120,7 +120,6 @@ type
     function PGExecutePrepared: TPGresult;
     procedure PGExecuteUnPrepare;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
-    function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
   public
     constructor Create(const Connection: IZPostgreSQLConnection;
       const SQL: string; Info: TStrings);
@@ -151,6 +150,7 @@ type
   protected
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     procedure ClearParameters; reintroduce;
 
@@ -1252,62 +1252,6 @@ begin
   Result := @PGPreparableTokens;
 end;
 
-function TZAbstractPostgreSQLPreparedStatementV3.GetInParamLogValue(
-  ParamIndex: Integer): RawByteString;
-var P: Pointer;
-  BindValue: PZBindValue;
-  BCD: TBCD;
-begin
-  BindValue := BindList[ParamIndex];
-  case BindValue.BindType of
-    zbtNull: Result := '(NULL)';
-    zbt4Byte: begin
-        P := BindList._4Bytes[ParamIndex];
-        case FPQParamOIDs[ParamIndex] of
-          BOOLOID:  if BindValue.Value <> nil then Result := '(TRUE)' else Result := '(FALSE)';
-          INT2OID:  Result := IntToRaw(PG2SmallInt(P));
-          INT4OID:  Result := IntToRaw(PG2Integer(P));
-          OIDOID:   Result := IntToRaw(PG2Cardinal(P));
-          FLOAT4OID:Result := FloatToRaw(PG2Single(P));
-          DATEOID:  Result := DateTimeToRawSQLDate(PG2Date(PInteger(P)^), ConSettings^.WriteFormatSettings, True);
-        end;
-      end;
-    zbt8Byte: begin
-        P := BindList._8Bytes[ParamIndex];
-        case FPQParamOIDs[ParamIndex] of
-          INT8OID:  Result := IntToRaw(PG2Int64(P));
-          FLOAT8OID:Result := FloatToRaw(PG2Double(P));
-          CASHOID:  Result := FloatToRaw(PG2Int64(P)/100);
-          TIMEOID:  if Finteger_datetimes
-                    then Result := DateTimeToRawSQLTime(PG2Time(PInt64(P)^), ConSettings^.WriteFormatSettings, True)
-                    else Result := DateTimeToRawSQLTime(PG2Time(PDouble(P)^), ConSettings^.WriteFormatSettings, True);
-          TIMESTAMPOID: if Finteger_datetimes
-                    then Result := DateTimeToRawSQLTimeStamp(PG2DateTime(PInt64(P)^), ConSettings^.WriteFormatSettings, True)
-                    else Result := DateTimeToRawSQLTimeStamp(PG2DateTime(PDouble(P)^), ConSettings^.WriteFormatSettings, True);
-        end;
-      end;
-    zbtRawString, zbtUTF8String {$IFNDEF NEXTGEN}, zbtAnsiString{$ENDIF}: Connection.GetEscapeString(PAnsiChar(BindValue.Value), Length(RawByteString(BindValue.Value)), Result);
-    zbtCharByRef: Connection.GetEscapeString(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, Result);
-    zbtBinByRef: Connection.GetBinaryEscapeString(PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len, Result);
-    zbtGUID:     GUIDToRaw(BindValue.Value, [guidWithBrackets, guidQuoted], Result);
-    zbtBytes: Connection.GetBinaryEscapeString(BindValue.Value, Length(TBytes(BindValue.Value)), Result);
-    zbtLob: if BindValue.SQLType = stBinaryStream
-            then Result := '(BLOB)'
-            else Result := '(CLOB)';
-    zbtPointer: Result := BoolStrIntsRaw[BindValue.Value <> nil];
-    zbtCustom: if BindValue.SQLType = stArray
-                then Result := '(Array)'
-                else if BindValue.SQLType = stCurrency
-                then Result := CurrToRaw(PGNumeric2Currency(PAnsiChar(BindValue.Value)+SizeOf(LengthInt)))
-                else begin
-                  PGNumeric2BCD(PAnsiChar(BindValue.Value)+SizeOf(LengthInt), BCD{%H-});
-                  Result := BCDToSQLRaw(BCD);
-                end;
-    //zbtBCD: Result := '';
-    else Result := '';
-  end;
-end;
-
 function TZAbstractPostgreSQLPreparedStatementV3.GetRawEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var
@@ -2135,6 +2079,66 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+procedure TZPostgreSQLPreparedStatementV3.AddParamLogValue(
+  ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter;
+  var Result: RawByteString);
+var P: Pointer;
+  BindValue: PZBindValue;
+  BCD: TBCD;
+begin
+  CheckParameterIndex(ParamIndex);
+  BindValue := BindList[ParamIndex];
+  case BindValue.BindType of
+    zbtNull: Result := '(NULL)';
+    zbt4Byte: begin
+        P := BindList._4Bytes[ParamIndex];
+        case FPQParamOIDs[ParamIndex] of
+          BOOLOID:  if BindValue.Value <> nil
+                    then SQLWriter.AddText('(TRUE)', Result)
+                    else SQLWriter.AddText('(FALSE)', Result);
+          INT2OID:  SQLWriter.AddOrd(PG2SmallInt(P), Result);
+          INT4OID:  SQLWriter.AddOrd(PG2Integer(P), Result);
+          OIDOID:   SQLWriter.AddOrd(PG2Cardinal(P), Result);
+          FLOAT4OID:SQLWriter.AddFloat(PG2Single(P), Result);
+          DATEOID:  SQLWriter.AddDate(PG2Date(PInteger(P)^), ConSettings^.WriteFormatSettings.DateFormat, Result);
+        end;
+      end;
+    zbt8Byte: begin
+        P := BindList._8Bytes[ParamIndex];
+        case FPQParamOIDs[ParamIndex] of
+          INT8OID:  SQLWriter.AddOrd(PG2Int64(P), Result);
+          FLOAT8OID:SQLWriter.AddFloat(PG2Double(P), Result);
+          CASHOID:  SQLWriter.AddFloat(PG2Int64(P)/100, Result);
+          TIMEOID:  if Finteger_datetimes
+                    then SQLWriter.AddTime(PG2Time(PInt64(P)^), ConSettings^.WriteFormatSettings.TimeFormat, Result)
+                    else SQLWriter.AddTime(PG2Time(PDouble(P)^), ConSettings^.WriteFormatSettings.TimeFormat, Result);
+          TIMESTAMPOID: if Finteger_datetimes
+                    then SQLWriter.AddDateTime(PG2DateTime(PInt64(P)^), ConSettings^.WriteFormatSettings.DateTimeFormat, Result)
+                    else SQLWriter.AddDateTime(PG2DateTime(PDouble(P)^), ConSettings^.WriteFormatSettings.DateTimeFormat, Result);
+        end;
+      end;
+    zbtRawString, zbtUTF8String {$IFNDEF NEXTGEN}, zbtAnsiString{$ENDIF}: SQLWriter.AddTextQuoted(RawByteString(BindValue.Value), AnsiChar(#39), Result);
+    zbtCharByRef: SQLWriter.AddTextQuoted(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, AnsiChar(#39), Result);
+    zbtBinByRef: SQLWriter.AddHexBinary(PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len, False, Result);
+    zbtGUID:     SQLWriter.AddGUID(PGUID(BindValue.Value)^, [guidWithBrackets, guidQuoted], Result);
+    zbtBytes:    SQLWriter.AddHexBinary(TBytes(BindValue.Value), False, Result);
+    zbtLob: if BindValue.SQLType = stBinaryStream
+            then SQLWriter.AddText('(BLOB)', Result)
+            else SQLWriter.AddText('(CLOB)', Result);
+    zbtPointer: Result := BoolStrIntsRaw[BindValue.Value <> nil];
+    zbtCustom: if BindValue.SQLType = stArray
+                then SQLWriter.AddText('(ARRAY)', Result)
+                else if BindValue.SQLType = stCurrency
+                then SQLWriter.AddDecimal(PGNumeric2Currency(PAnsiChar(BindValue.Value)+SizeOf(LengthInt)), Result)
+                else begin
+                  PGNumeric2BCD(PAnsiChar(BindValue.Value)+SizeOf(LengthInt), BCD{%H-});
+                  SQLWriter.AddDecimal(BCD, Result);
+                end;
+    //zbtBCD: Result := '';
+    else Result := '';
+  end;
+end;
+
 procedure TZPostgreSQLPreparedStatementV3.SetInt(Index, Value: Integer);
 begin
   InternalBindInt(Index, stInteger, Value);

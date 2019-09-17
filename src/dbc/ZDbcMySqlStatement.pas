@@ -116,7 +116,6 @@ type
     procedure UnPrepareInParameters; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     procedure InternalSetInParamCount(NewParamCount: Integer);
-    function GetInParamLogValue(Index: Integer): RawByteString; override;
     procedure CheckParameterIndex(var Value: Integer); override;
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure ReleaseConnection; override;
@@ -152,6 +151,7 @@ type
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
     procedure BindInParameters; override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
@@ -643,86 +643,6 @@ begin
         FCallResultCache.Delete(I);
         Break;
       end;
-end;
-
-function TZAbstractMySQLPreparedStatement.GetInParamLogValue(
-  Index: Integer): RawByteString;
-var
-  Bind: PMYSQL_aligned_BIND;
-  TmpDateTime, TmpDateTime2: TDateTime;
-begin
-  if FEmulatedParams then
-    Result := FEmulatedValues[Index]
-  else begin
-    {$R-}
-    Bind := @FMYSQL_aligned_BINDs[Index];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    case Bind^.buffer_type_address^ of
-      FIELD_TYPE_TINY:
-        if Bind^.is_unsigned_address^ = 0
-        then Result := IntToRaw(PShortInt(Bind^.buffer_address^)^)
-        else Result := IntToRaw(PByte(Bind^.buffer_address^)^);
-      FIELD_TYPE_SHORT:
-        if Bind^.is_unsigned_address^ = 0
-        then Result := IntToRaw(PSmallInt(Bind^.buffer_address^)^)
-        else Result := IntToRaw(PWord(Bind^.buffer_address^)^);
-      FIELD_TYPE_LONG:
-        if Bind^.is_unsigned_address^ = 0
-        then Result := IntToRaw(PInteger(Bind^.buffer_address^)^)
-        else Result := IntToRaw(PCardinal(Bind^.buffer_address^)^);
-      FIELD_TYPE_FLOAT:
-        Result := FloatToSQLRaw(PSingle(Bind^.buffer_address^)^);
-      FIELD_TYPE_DOUBLE:
-        Result := FloatToSQLRaw(PDouble(Bind^.buffer_address^)^);
-      FIELD_TYPE_NULL:
-        Result := 'null';
-      FIELD_TYPE_TIMESTAMP:
-        begin
-          if not sysUtils.TryEncodeDate(
-            PMYSQL_TIME(Bind^.buffer_address^)^.Year,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Month,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
-              TmpDateTime := encodeDate(1900, 1, 1);
-          if not sysUtils.TryEncodeTime(
-            PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Second,
-            0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part} , TmpDateTime2 ) then
-              TmpDateTime2 := 0;
-          Result := DateTimeToRawSQLTimeStamp(TmpDateTime+TmpDateTime2, ConSettings^.ReadFormatSettings, True);
-        end;
-      FIELD_TYPE_LONGLONG:
-        if Bind^.is_unsigned_address^ = 0
-        then Result := IntToRaw(PInt64(Bind^.buffer_address^)^)
-        else Result := IntToRaw(PUInt64(Bind^.buffer_address^)^);
-      FIELD_TYPE_DATE: begin
-          if not sysUtils.TryEncodeDate(
-            PMYSQL_TIME(Bind^.buffer_address^)^.Year,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Month,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
-              TmpDateTime := encodeDate(1900, 1, 1);
-          Result := DateTimeToRawSQLDate(TmpDateTime, ConSettings^.ReadFormatSettings, True);
-        end;
-      FIELD_TYPE_TIME: begin
-          if not sysUtils.TryEncodeTime(
-            PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
-            PMYSQL_TIME(Bind^.buffer_address^)^.Second,
-            0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part}, TmpDateTime) then
-              TmpDateTime := 0;
-          Result := DateTimeToRawSQLTime(TmpDateTime, ConSettings^.ReadFormatSettings, True);
-        end;
-      FIELD_TYPE_YEAR:
-        Result := IntToRaw(PWord(Bind^.buffer_address^)^);
-      FIELD_TYPE_NEWDECIMAL:
-        ZSetString(PAnsiChar(Bind^.buffer), Bind^.length[0], Result);
-      FIELD_TYPE_STRING:
-          Result := SQLQuotedStr(PAnsiChar(Bind^.buffer), Bind^.length[0], {$IFDEF NO_ANSICHAR}Ord{$ENDIF}(#39));
-      FIELD_TYPE_TINY_BLOB,
-      FIELD_TYPE_BLOB: Result := '(Blob)';
-      else Result := '(unknown)';
-    end;
-  end;
 end;
 
 function TZAbstractMySQLPreparedStatement.GetLastResultSet: IZResultSet;
@@ -2196,6 +2116,95 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+procedure TZMySQLPreparedStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var
+  Bind: PMYSQL_aligned_BIND;
+  TmpDateTime, TmpDateTime2: TDateTime;
+begin
+  CheckParameterIndex(ParamIndex);
+  if FEmulatedParams then
+    if BindList[ParamIndex].SQLType in [stAsciiStream, stUnicodeStream]
+    then SQLWriter.AddText('(CLOB)', Result)
+    else if BindList[ParamIndex].SQLType = stBinaryStream
+      then SQLWriter.AddText('(BLOB)', Result)
+      else SQLWriter.AddText(FEmulatedValues[ParamIndex], Result)
+  else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[ParamIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    case Bind^.buffer_type_address^ of
+      FIELD_TYPE_TINY:
+        if Bind^.is_unsigned_address^ = 0
+        then SQLWriter.AddOrd(PShortInt(Bind^.buffer_address^)^, Result)
+        else SQLWriter.AddOrd(PByte(Bind^.buffer_address^)^, Result);
+      FIELD_TYPE_SHORT:
+        if Bind^.is_unsigned_address^ = 0
+        then SQLWriter.AddOrd(PSmallInt(Bind^.buffer_address^)^, Result)
+        else SQLWriter.AddOrd(PWord(Bind^.buffer_address^)^, Result);
+      FIELD_TYPE_LONG:
+        if Bind^.is_unsigned_address^ = 0
+        then SQLWriter.AddOrd(PInteger(Bind^.buffer_address^)^, Result)
+        else SQLWriter.AddOrd(PCardinal(Bind^.buffer_address^)^, Result);
+      FIELD_TYPE_FLOAT:
+        SQLWriter.AddFloat(PSingle(Bind^.buffer_address^)^, Result);
+      FIELD_TYPE_DOUBLE:
+        SQLWriter.AddFloat(PDouble(Bind^.buffer_address^)^, Result);
+      FIELD_TYPE_NULL:
+        SQLWriter.AddText('(NULL)', Result);
+      FIELD_TYPE_TIMESTAMP:
+        begin
+          if not sysUtils.TryEncodeDate(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Year,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Month,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
+              TmpDateTime := encodeDate(1900, 1, 1);
+          if not sysUtils.TryEncodeTime(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Second,
+            0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part} , TmpDateTime2 ) then
+              TmpDateTime2 := 0;
+          if TmpDateTime < 0
+          then TmpDateTime := TmpDateTime - TmpDateTime2
+          else TmpDateTime := TmpDateTime + TmpDateTime2;
+          SQLWriter.AddDateTime(TmpDateTime, ConSettings^.WriteFormatSettings.DateTimeFormat, Result);
+        end;
+      FIELD_TYPE_LONGLONG:
+        if Bind^.is_unsigned_address^ = 0
+        then SQLWriter.AddOrd(PInt64(Bind^.buffer_address^)^, Result)
+        else SQLWriter.AddOrd(PUInt64(Bind^.buffer_address^)^, Result);
+      FIELD_TYPE_DATE: begin
+          if not sysUtils.TryEncodeDate(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Year,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Month,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Day, TmpDateTime) then
+              TmpDateTime := encodeDate(1900, 1, 1);
+          SQLWriter.AddDate(TmpDateTime, ConSettings^.WriteFormatSettings.DateTimeFormat, Result);
+        end;
+      FIELD_TYPE_TIME: begin
+          if not sysUtils.TryEncodeTime(
+            PMYSQL_TIME(Bind^.buffer_address^)^.Hour,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Minute,
+            PMYSQL_TIME(Bind^.buffer_address^)^.Second,
+            0{PMYSQL_TIME(Bind^.buffer_address^)^.second_part}, TmpDateTime) then
+              TmpDateTime := 0;
+          SQLWriter.AddTime(TmpDateTime, ConSettings^.WriteFormatSettings.DateTimeFormat, Result);
+        end;
+      FIELD_TYPE_YEAR:
+        SQLWriter.AddOrd(PWord(Bind^.buffer_address^)^, Result);
+      FIELD_TYPE_NEWDECIMAL:
+        SQLWriter.AddText(PAnsiChar(Bind^.buffer), Bind^.length[0], Result);
+      FIELD_TYPE_STRING: if BindList[ParamIndex].SQLType in [stAsciiStream, stUnicodeStream]
+          then SQLWriter.AddText('(CLOB)', Result)
+          else SQLWriter.AddTextQuoted(PAnsiChar(Bind^.buffer), Bind^.length[0], AnsiChar(#39), Result);
+      FIELD_TYPE_TINY_BLOB: SQLWriter.AddHexBinary(Bind^.buffer, Bind^.length[0], False, Result);
+      FIELD_TYPE_BLOB: SQLWriter.AddText('(BLOB)', Result);
+      else SQLWriter.AddText('(UNKNOWN)', Result);
+    end;
+  end;
+end;
+
 procedure TZMySQLPreparedStatement.SetInt(ParameterIndex, Value: Integer);
 begin
   BindSInteger(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);

@@ -346,7 +346,7 @@ type
     procedure SetBindCapacity(Capacity: Integer); virtual;
 
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = EmptyRaw);
-    function GetInParamLogValue(ParamIndex: Integer): RawByteString; virtual;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
     function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
   protected //Properties
@@ -1150,10 +1150,27 @@ end;
 
 function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
   const Msg: RawByteString = EmptyRaw): TZLoggingEvent;
+var SQLWriter: TZRawSQLStringWriter;
+  L: LengthInt;
+  EventMsg: RawByteString;
 begin
-  if msg <> EmptyRaw
-  then result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, EmptyRaw)
-  else result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, EmptyRaw);
+  L := Length(Msg);
+  L := L + 40;
+  SQLWriter := TZRawSQLStringWriter.Create(L);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  EventMsg := EmptyRaw;
+  SQLWriter.AddText('Statement ', EventMsg);
+  {$ELSE}
+  EventMsg := 'Statement ';
+  {$ENDIF}
+  SQLWriter.AddOrd(FStatementId, EventMsg);
+  if msg <> EmptyRaw then begin
+    SQLWriter.AddText(' : ', EventMsg);
+    SQLWriter.AddText(Msg, EventMsg);
+  end;
+  SQLWriter.Finalize(EventMsg);
+  FreeAndNil(SQLWriter);
+  Result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, EventMsg, 0, EmptyRaw)
 end;
 
 function TZAbstractStatement.CreateLogEvent(
@@ -1692,7 +1709,7 @@ begin
         zbtRawString,
         zbtUTF8String
         {$IFNDEF NO_ANSISTRING}
-        ,zbtAnsiString{$ENDIF}: RawByteString(BindValue.Value) := ''; //dec refcnt
+        ,zbtAnsiString{$ENDIF}: RawByteString(BindValue.Value) := EmptyRaw; //dec refcnt
         zbtUniString: ZWideString(BindValue.Value) := '';
         zbtBytes:     TBytes(BindValue.Value) := nil;
         zbtLob:       IZBlob(BindValue.Value) := nil;
@@ -2375,7 +2392,7 @@ end;
 function TZAbstractPreparedStatement.CreateLogEvent(
   const Category: TZLoggingCategory): TZLoggingEvent;
 var
-  I : integer;
+  I: integer;
   LogString : RawByteString;
   SQLWriter: TZRawSQLStringWriter;
 begin
@@ -2384,17 +2401,23 @@ begin
       if (FBindList.Count=0) then
         result := nil
       else begin { Prepare Log Output}
-        SQLWriter := TZRawSQLStringWriter.Create(FBindList.Count shl 4);
-        LogString := '';
-        For I := 0 to FBindList.Count - 1 do
-          SQLWriter.AddText(GetInParamLogValue(I), LogString);
+        SQLWriter := TZRawSQLStringWriter.Create(FBindList.Count shl 5);
+        LogString := EmptyRaw;
+        For I := 0 to FBindList.Count - 1 do begin
+          if BindList[I].ParamType = pctOut then
+            SQLWriter.AddText('(OUTPARAM)', LogString)
+          else if BindList[I].ParamType = pctReturn then
+            SQLWriter.AddText('(RETURN_VALUE)', LogString)
+          else
+            AddParamLogValue(I, SQLWriter, LogString);
+          SQLWriter.AddChar(AnsiChar(','), LogString);
+        end;
         SQLWriter.CancelLastComma(LogString);
         SQLWriter.Finalize(LogString);
-        result := CreateStmtLogEvent(Category, Logstring);
         FreeAndNil(SQLWriter);
+        result := CreateStmtLogEvent(Category, Logstring);
      end;
-  else
-    result := inherited CreatelogEvent(Category);
+    else result := inherited CreatelogEvent(Category);
   end;
 end;
 
@@ -2647,41 +2670,6 @@ begin
     if BindList.SQLTypes[ParameterIndex] = stFloat
     then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetFloat(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
     else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
-end;
-
-function TZAbstractPreparedStatement.GetInParamLogValue(
-  ParamIndex: Integer): RawByteString;
-var Value: TZVariant;
-begin
-  if FBindList.Count = 0 then
-    Exit;
-  Value := FBindList.Variants[ParamIndex];
-  With Value do
-    case VType of
-      vtNull : result := '(NULL)';
-      vtBoolean : if VBoolean then result := '(TRUE)' else result := '(FALSE)';
-      vtBytes : Result := GetSQLHexAnsiString(Pointer(VRawByteString), Length(VRawByteString), False);
-      vtInteger : result := IntToRaw(VInteger);
-      vtUInteger : result := IntToRaw(VUInteger);
-      vtDouble: Result := FloatToRaw(VDouble);
-      vtCurrency: Result := CurrToRaw(VCurrency);
-      vtBigDecimal: Result := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(BCDToStr(VBigDecimal));
-      {$IFNDEF UNICODE}vtString,{$ENDIF}
-      {$IFNDEF NO_ANSISTRING}
-      vtAnsiString,
-      {$ENDIF}
-      {$IFNDEF NO_UTF8STRING}
-      vtUTF8String,
-      {$ENDIF}
-      vtRawByteString: Result := Connection.GetEscapeString(VRawByteString);
-      {$IFDEF UNICODE}vtString,{$ENDIF}
-      vtUnicodeString: Result := Connection.GetEscapeString(ZUnicodeToRaw(VUnicodeString, ConSettings^.ClientCodePage^.CP));
-      vtPointer : result := '(POINTER)';
-      vtInterface : result := '(INTERFACE)';
-      vtArray: Result := '(ARRAY)';
-    else
-      result := '(UNKNOWN TYPE)'
-    end;
 end;
 
 function TZAbstractPreparedStatement.GetInt(ParameterIndex: Integer): Integer;
@@ -3218,6 +3206,64 @@ procedure TZAbstractPreparedStatement.SetGUID(ParameterIndex: Integer;
 begin
   BindBinary(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stGUID, @Value.D1,
     SizeOf(TGUID));
+end;
+
+procedure TZAbstractPreparedStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var BindValue: PZBindValue;
+begin
+  BindValue := FBindList[ParamIndex];
+  case BindValue.BindType of
+    zbt4Byte: case BindValue.SQLType of
+                stBoolean: if BindValue.Value <> nil
+                    then SQLWriter.AddText('(TRUE)', Result)
+                    else SQLWriter.AddText('(FALSE)', Result);
+                stByte, stWord, stLongWord:
+                    SQLWriter.AddOrd(PCardinal(@BindValue.Value)^, Result);
+                stShort, stSmall, stInteger:
+                  SQLWriter.AddOrd(PInteger(@BindValue.Value)^, Result);
+                stFloat:
+                  SQLWriter.AddFloat(PSingle(@BindValue.Value)^, Result);
+                else SQLWriter.AddText('(NULL)', Result)
+              end;
+    zbt8Byte: case BindValue.SQLType of
+                stBoolean: if PInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^ <> 0
+                    then SQLWriter.AddText('(TRUE)', Result)
+                    else SQLWriter.AddText('(FALSE)', Result);
+                stByte, stWord, stLongWord, stULong:
+                    SQLWriter.AddOrd(PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, Result);
+                stShort, stSmall, stInteger, stLong:
+                    SQLWriter.AddOrd(PInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, Result);
+                stCurrency:
+                    SQLWriter.AddDecimal(PCurrency({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, Result);
+                stFloat, stDouble:
+                    SQLWriter.AddDecimal(PDouble({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, Result);
+                stTime:
+                    SQLWriter.AddTime(PDateTime({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, ConSettings.WriteFormatSettings.TimeFormat, Result);
+                stDate:
+                    SQLWriter.AddDate(PDateTime({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, ConSettings.WriteFormatSettings.DateFormat, Result);
+                else
+                    SQLWriter.AddDateTime(PDateTime({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
+              end;
+    {$IFNDEF NO_UTF8STRING}zbtUTF8String,{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}zbtAnsiString,{$ENDIF}
+    zbtRawString: SQLWriter.AddText(SQLQuotedStr(RawByteString(BindValue.Value), AnsiChar(#39)), Result);
+    zbtBCD:       SQLWriter.AddDecimal(PBCD(BindValue.Value)^, Result);
+    zbtUniString: SQLWriter.AddText(SQLQuotedStr(ZUnicodeToRaw(UnicodeString(BindValue.Value), FClientCP), AnsiChar(#39)), Result);
+    zbtCharByRef: if PZCharRec(BindValue.Value)^.CP = zCP_UTF16
+                  then SQLWriter.AddText(SQLQuotedStr(PUnicodeToRaw(PZCharRec(BindValue.Value)^.P, PZCharRec(BindValue.Value)^.Len, FClientCP), AnsiChar(#39)), Result)
+                  else SQLWriter.AddText(SQLQuotedStr(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, AnsiChar(#39)), Result);
+    zbtBinByRef:  SQLWriter.AddHexBinary(PZBufRec(BindValue.Value)^.Buf, PZBufRec(BindValue.Value)^.Len, False, Result);
+    zbtGUID:      SQLWriter.AddGUID(PGUID(BindValue.Value)^, [guidWithBrackets, guidQuoted], Result);
+    zbtBytes:     SQLWriter.AddHexBinary(TBytes(BindValue.Value), False, Result);
+    zbtArray:     SQLWriter.AddText('(ARRAY)', Result);
+    zbtLob:       if BindValue.SQLType = stbinaryStream
+                  then SQLWriter.AddText('(BLOB)', Result)
+                  else SQLWriter.AddText('(CLOB)', Result);
+    zbtPointer:   SQLWriter.AddText('(POINTER)', Result);
+    zbtNull:      SQLWriter.AddText('(NULL)', Result);
+    else          SQLWriter.AddText('(CUSTOM)', Result);
+  end;
 end;
 
 {**

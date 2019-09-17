@@ -60,7 +60,7 @@ uses
   {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainOracleDriver,
-  ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants,
+  ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants, ZClasses,
   ZDbcUtils, ZDbcOracle;
 
 type
@@ -84,7 +84,6 @@ type
     function CreateResultSet: IZResultSet;
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure CheckParameterIndex(var Index: Integer); override;
-    function GetInParamLogValue(Index: Integer): RawByteString; override;
     procedure ReleaseConnection; override;
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
@@ -113,6 +112,8 @@ type
     procedure BindSInteger(Index: Integer; SQLType: TZSQLType; Value: NativeInt);
     procedure BindUInteger(Index: Integer; SQLType: TZSQLType; Value: NativeUInt);
     procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
+  protected
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(Index: Integer; Value: Boolean);
@@ -158,7 +159,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZFastCode, ZDbcOracleResultSet, ZTokenizer, ZDbcCachedResultSet,
-  ZEncoding, ZDbcProperties, ZMessages, ZClasses, ZDbcResultSet,
+  ZEncoding, ZDbcProperties, ZMessages, ZDbcResultSet,
   ZSelectSchema;
 
 const
@@ -446,54 +447,6 @@ begin
   { logging execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-end;
-
-function TZAbstractOraclePreparedStatement_A.GetInParamLogValue(
-  Index: Integer): RawByteString;
-var
-  Bind: PZOCIParamBind;
-  TS: TZTimeStamp;
-begin
-  {$R-}
-  Bind := @FOraVariables[Index];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if Bind.curelen > 1 then
-    Result := '(Array)'
-  else if Bind.indp[0] = -1 then
-    Result := 'null'
-  else case Bind.dty of
-    SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
-                Result := IntToRaw(PInt64(Bind.valuep)^)
-              else if Bind.value_sz = SizeOf(Integer) then
-                Result := IntToRaw(PInteger(Bind.valuep)^)
-              else
-                Result := IntToRaw(PSmallInt(Bind.valuep)^);
-    SQLT_UIN: if Bind.value_sz = SizeOf(UInt64) then
-                Result := IntToRaw(PUInt64(Bind.valuep)^)
-              else if Bind.value_sz = SizeOf(Cardinal) then
-                Result := IntToRaw(PCardinal(Bind.valuep)^)
-              else
-                Result := IntToRaw(PWord(Bind.valuep)^);
-    SQLT_BFLOAT: Result := FloatToSqlRaw(PSingle(Bind.valuep)^);
-    SQLT_BDOUBLE: Result := FloatToSqlRaw(PDouble(Bind.valuep)^);
-    SQLT_DAT: Result := DateTimeToRawSQLDate(EncodeDate((POraDate(Bind.valuep).Cent-100)*100+(POraDate(Bind.valuep).Year-100),
-      POraDate(Bind.valuep).Month,POraDate(Bind.valuep).Day), ConSettings.DisplayFormatSettings, True);
-    SQLT_TIMESTAMP: begin
-            FPlainDriver.OCIDateTimeGetDate(FOracleConnection.GetConnectionHandle, FOCIError,
-              PPOCIDescriptor(Bind.valuep)^, PSB2(@TS.Year)^, PUB1(@TS.Month)^, PUB1(@Ts.Day)^);
-            FPlainDriver.OCIDateTimeGetTime(FOracleConnection.GetConnectionHandle, FOCIError,
-              PPOCIDescriptor(Bind.valuep)^, PUB1(@Ts.Hour)^, PUB1(@Ts.Minute)^, PUB1(@Ts.Second)^, Ts.Fractions);
-            Result := DateTimeToRawSQLTimeStamp(EncodeDate(PSB2(@TS.Year)^, PUB1(@TS.Month)^, PUB1(@Ts.Day)^)+
-              EncodeTime(PUB1(@Ts.Hour)^, PUB1(@Ts.Minute)^, PUB1(@Ts.Second)^, Ts.Fractions div 1000000), ConSettings.DisplayFormatSettings, True);
-      end;
-    SQLT_AFC: Result := SQLQuotedStr(Bind.valuep, Bind.Value_sz, AnsiChar(#39));
-    SQLT_VCS: ZSetString(@POCIVary(Bind.valuep).data[0], POCIVary(Bind.valuep).Len, Result); //used for big (s/u) ordinals on old oracle
-    SQLT_LVC: Result := SQLQuotedStr(PAnsiChar(@POCILong(Bind.valuep).data[0]), POCILong(Bind.valuep).Len, AnsiChar(#39));
-    SQLT_LVB: Result := GetSQLHexAnsiString(@POCILong(Bind.valuep).data[0], POCILong(Bind.valuep).Len, False);
-    SQLT_CLOB: Result := '(CLOB)';
-    SQLT_BLOB: Result := '(BLOB)';
-    else Result := 'unknown'
-  end;
 end;
 
 function TZAbstractOraclePreparedStatement_A.GetRawEncodedSQL(
@@ -1615,6 +1568,66 @@ end;
 procedure TZOraclePreparedStatement_A.SetFloat(Index: Integer; Value: Single);
 begin
   InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value);
+end;
+
+procedure TZOraclePreparedStatement_A.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var
+  Bind: PZOCIParamBind;
+  BCD: TBCD;
+  TS: TZTimeStamp absolute BCD;
+  DT: TDateTime;
+begin
+  {$R-}
+  Bind := @FOraVariables[ParamIndex];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if Bind.curelen > 1 then
+    Result := '(ARRAY)'
+  else if Bind.indp[0] = -1 then
+    Result := '(NULL)'
+  else case Bind.dty of
+    SQLT_VNU: begin
+                Nvu2BCD(POCINumber(Bind.valuep), Bcd);
+                SQLWriter.AddDecimal(Bcd, Result);
+              end;
+    SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
+                SQLWriter.AddOrd(PInt64(Bind.valuep)^, Result)
+              else if Bind.value_sz = SizeOf(Integer) then
+                SQLWriter.AddOrd(PInteger(Bind.valuep)^, Result)
+              else
+                SQLWriter.AddOrd(PSmallInt(Bind.valuep)^, Result);
+    SQLT_UIN: if Bind.value_sz = SizeOf(UInt64) then
+                SQLWriter.AddOrd(PUInt64(Bind.valuep)^, Result)
+              else if Bind.value_sz = SizeOf(Cardinal) then
+                SQLWriter.AddOrd(PCardinal(Bind.valuep)^, Result)
+              else
+                SQLWriter.AddOrd(PWord(Bind.valuep)^, Result);
+    SQLT_BFLOAT: SQLWriter.AddFloat(PSingle(Bind.valuep)^, Result);
+    SQLT_BDOUBLE: SQLWriter.AddFloat(PDouble(Bind.valuep)^, Result);
+    SQLT_DAT: begin
+                DT := EncodeDate((POraDate(Bind.valuep).Cent-100)*100+(POraDate(Bind.valuep).Year-100),
+                  POraDate(Bind.valuep).Month,POraDate(Bind.valuep).Day);
+                SQLWriter.AddDate(DT, ConSettings.WriteFormatSettings.DateFormat, Result);
+              end;
+    SQLT_TIMESTAMP: begin
+            FPlainDriver.OCIDateTimeGetDate(FOracleConnection.GetConnectionHandle, FOCIError,
+              PPOCIDescriptor(Bind.valuep)^, PSB2(@TS.Year)^, PUB1(@TS.Month)^, PUB1(@Ts.Day)^);
+            FPlainDriver.OCIDateTimeGetTime(FOracleConnection.GetConnectionHandle, FOCIError,
+              PPOCIDescriptor(Bind.valuep)^, PUB1(@Ts.Hour)^, PUB1(@Ts.Minute)^, PUB1(@Ts.Second)^, Ts.Fractions);
+            DT := EncodeDate(PSB2(@TS.Year)^, PUB1(@TS.Month)^, PUB1(@Ts.Day)^);
+            if DT < 0
+            then DT := DT - EncodeTime(PUB1(@Ts.Hour)^, PUB1(@Ts.Minute)^, PUB1(@Ts.Second)^, Ts.Fractions div 1000000)
+            else DT := DT + EncodeTime(PUB1(@Ts.Hour)^, PUB1(@Ts.Minute)^, PUB1(@Ts.Second)^, Ts.Fractions div 1000000);
+            SQLWriter.AddDateTime(DT, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
+          end;
+    SQLT_AFC: SQLWriter.AddTextQuoted(Bind.valuep, Bind.Value_sz, AnsiChar(#39), Result);
+    SQLT_VCS: SQLWriter.AddTextQuoted(@POCIVary(Bind.valuep).data[0], POCIVary(Bind.valuep).Len, AnsiChar(#39), Result); //used for big (s/u) ordinals on old oracle
+    SQLT_LVC: Result := SQLQuotedStr(PAnsiChar(@POCILong(Bind.valuep).data[0]), POCILong(Bind.valuep).Len, AnsiChar(#39));
+    SQLT_LVB: Result := GetSQLHexAnsiString(@POCILong(Bind.valuep).data[0], POCILong(Bind.valuep).Len, False);
+    SQLT_CLOB: SQLWriter.AddText('(CLOB)', Result);
+    SQLT_BLOB: SQLWriter.AddText('(BLOB)', Result);
+    else       SQLWriter.AddText('(UNKNOWN)', Result);
+  end;
 end;
 
 {**
