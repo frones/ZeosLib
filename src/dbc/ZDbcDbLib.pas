@@ -304,6 +304,7 @@ var
   lLogFile  : String;
   TDSVersion: DBINT;
   Ret: RETCODE;
+  P: PChar;
 begin
   LogMessage := 'CONNECT TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage)+'"';
   LoginRec := FPlainDriver.dbLogin;
@@ -318,6 +319,21 @@ begin
       lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
       TDSVersion := StrToIntDef(lLogFile, TDSDBVERSION_UNKNOWN);
       if TDSVersion = TDSDBVERSION_UNKNOWN then begin
+        lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
+        if (lLogFile <> '') and (FplainDriver.DBLibraryVendorType <> lvtMS) then begin
+          P := Pointer(lLogFile);
+          if P^ = Char('5') then
+            TDSVersion := TDSDBVERSION_100
+          else if P^ = Char('4') then
+            TDSVersion := TDSDBVERSION_42
+          else if P^ = Char('7') then begin
+            Inc(P, 1+Ord(Length(lLogFile) = 3));
+            TDSVersion := DBVERSION_70 + (Ord(P^)-Ord('0'));
+            if (TDSVersion < TDSDBVERSION_UNKNOWN) or (TDSVersion > DBVERSION_73) then
+              TDSVersion := TDSDBVERSION_UNKNOWN;
+          end;
+        end;
+
         if FplainDriver.DBLibraryVendorType = lvtMS then
           TDSVersion := TDSDBVERSION_42
         else begin {as long we left the protocol names this workaraound is possible}

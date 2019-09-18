@@ -175,6 +175,11 @@ const
   // If set, the TDS version will be set on connect
   // or dbinit (sybase-lib only)
   ConnProps_TDSVersion = 'TDSVersion';
+  // Type: String
+  // If set, the TDS version will be set on connect. Lower precedence than 'TDSVersion'
+  // or dbinit (sybase-lib only)
+  // see: https://www.freetds.org/userguide/choosingtdsprotocol.htm
+  ConnProps_TDSProtocolVersion = 'TDSProtocolVersion';
   // Type: BOOLEAN
   // If set, executes 'SET ANSI_PADDING ON' on connect
   ConnProps_AnsiPadding = 'ANSI_PADDING';
