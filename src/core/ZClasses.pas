@@ -697,7 +697,7 @@ var P: PAnsiChar;
   LTotal: LengthInt;
 begin
   LTotal := ((L+1) shl 1) + Ord(not ODBC);
-  if (FPos+LTotal <= FEnd) then begin
+  if (FPos+LTotal < FEnd) then begin
     P := FPos;
     Inc(FPos, LTotal);
   end else
@@ -744,7 +744,7 @@ procedure TZRawSQLStringWriter.AddText(Value: PAnsiChar; L: LengthInt;
 var P: PAnsiChar;
 begin
   if (Value = nil) or (L = 0) then Exit;
-  if (FPos + L <= FEnd) then begin
+  if (FPos + L < FEnd) then begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, FPos^, L);
     Inc(FPos, L);
   end else begin
@@ -825,13 +825,16 @@ end;
 
 function TZRawSQLStringWriter.FlushBuff(var Dest: RawByteString;
   ReservedLen: LengthInt): PAnsiChar;
-var LRes: LengthInt;
+var LRes, L2: LengthInt;
 begin
   LRes := Length(Dest);
-  SetLength(Dest, LRes+(FPos-FBuf)+ReservedLen{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+  L2 := (FPos-FBuf);
+  L2 := L2 + LRes;
+  L2 := L2 + ReservedLen;
+  SetLength(Dest, L2{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
   Result := Pointer(Dest);
   {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  PByte(Result+LRes+(FPos-FBuf)+ReservedLen)^ := Ord(#0);
+  PByte(Result+L2)^ := Ord(#0);
   {$ENDIF}
   Inc(Result, LRes);
   if FPos > FBuf then begin
@@ -885,7 +888,7 @@ var P: PAnsiChar;
   D2: Byte;
 begin
   D2 := Digits+Ord(Negative);
-  if (FPos+D2 <= FEnd) then begin
+  if (FPos+D2 < FEnd) then begin
     P := FPos;
     Inc(FPos, D2);
   end else
@@ -903,7 +906,7 @@ var P: PAnsiChar;
   D2: Byte;
 begin
   D2 := Digits+Ord(Negative);
-  if (FPos+D2 <= FEnd) then begin
+  if (FPos+D2 < FEnd) then begin
     P := FPos;
     Inc(FPos, D2);
   end else
@@ -945,7 +948,7 @@ begin
     Inc(P);
   end;
   if Dest = nil then begin //no quoteChars found?
-    if (FPos+L+2 <= FEnd) then begin
+    if (FPos+L+2 < FEnd) then begin
       Dest := FPos;
       Inc(FPos, L+2);
     end else
@@ -959,7 +962,7 @@ begin
     AnsiChar(Dest^) := QuoteChar;
     Exit;
   end;
-  if (FPos+L+{%H-}NativeInt(Dest) +2 <= FEnd) then begin
+  if (FPos+L+{%H-}NativeInt(Dest) +2 < FEnd) then begin
     Dest := FPos;
     Inc(FPos, L+{%H-}NativeInt(Dest)+2);
   end else
@@ -990,7 +993,7 @@ var H, M, S, MS: Word;
   P: PAnsiChar;
   Buffer: Array[0..15] of AnsiChar;
 begin
-  if (FPos + 14 <= FEnd) //'00:00:00.123'
+  if (FPos + 14 < FEnd) //'00:00:00.123'
   then P := FPos
   else P := @Buffer[0];
   DecodeTime(Value, H, M, S, MS);
@@ -1061,7 +1064,7 @@ var Y, M, D: Word;
   P: PAnsiChar;
   Buffer: Array[0..15] of AnsiChar;
 begin
-  if (FPos + 12 <= FEnd) //'2019-09-11'
+  if (FPos + 12 < FEnd) //'2019-09-11'
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, M, D);
@@ -1078,7 +1081,7 @@ var Y, MO, D, H, M, S, MS: Word;
   P: PAnsiChar;
   Buffer: Array[0..27] of AnsiChar;
 begin
-  if (FPos + 25 <= FEnd) //'2019-09-11 00:00:00.999'
+  if (FPos + 25 < FEnd) //'2019-09-11 00:00:00.999'
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, MO, D);
@@ -1095,7 +1098,7 @@ var L: LengthInt;
   P: PAnsiChar;
   Buffer: array[0..MaxFMTBcdFractionSize+2] of AnsiChar;
 begin
-  if (FPos+ MaxFMTBcdFractionSize+2 <= FEnd)
+  if (FPos+ MaxFMTBcdFractionSize+2 < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := ZSysUtils.BcdToRaw(Value, P, '.');
@@ -1109,7 +1112,7 @@ var L: LengthInt;
   P: PAnsiChar;
   Buffer: array[0..63] of AnsiChar;
 begin
-  if (FPos+64 <= FEnd)
+  if (FPos+64 < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := ZSysUtils.FloatToSqlRaw(Value, P);
@@ -1129,7 +1132,7 @@ begin
     Inc(L, 2);
   if guidQuoted in Options then
     Inc(L, 2);
-  if (FPos + L <= FEnd) then begin
+  if (FPos + L < FEnd) then begin
     P := FPos;
     Inc(FPos, L);
   end else
@@ -1142,7 +1145,7 @@ var L: LengthInt;
   P, P2: PAnsiChar;
   Buffer: array[0..23] of AnsiChar;
 begin
-  if (FPos + 24 <= FEnd)
+  if (FPos + 24 < FEnd)
   then P := FPos
   else P := @Buffer[0];
   CurrToRaw(Value, P, @P2);
@@ -1204,7 +1207,7 @@ var Y, M, D: Word;
   P: PWideChar;
   Buffer: Array[0..15] of WideChar;
 begin
-  if (FPos+12 <= FEnd) //'2019-09-11'
+  if (FPos+12 < FEnd) //'2019-09-11'
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, M, D);
@@ -1221,7 +1224,7 @@ var Y, MO, D, H, M, S, MS: Word;
   P: PWideChar;
   Buffer: Array[0..27] of WideChar;
 begin
-  if (FPos+25 <= FEnd) //'2019-09-11 00:00:00.999'
+  if (FPos+25 < FEnd) //'2019-09-11 00:00:00.999'
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, MO, D);
@@ -1238,7 +1241,7 @@ var L: LengthInt;
   P: PWideChar;
   Buffer: array[0..MaxFMTBcdFractionSize+2] of WideChar;
 begin
-  if (FPos+MaxFMTBcdFractionSize+2 <= FEnd)
+  if (FPos+MaxFMTBcdFractionSize+2 < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := ZSysUtils.BcdToUni(Value, P, '.');
@@ -1253,7 +1256,7 @@ var L: LengthInt;
   P, P2: PWideChar;
   Buffer: array[0..23] of WideChar;
 begin
-  if (FPos+24 <= FEnd)
+  if (FPos+24 < FEnd)
   then P := FPos
   else P := @Buffer[0];
   CurrToUnicode(Value, P, @P2);
@@ -1277,7 +1280,7 @@ var L: LengthInt;
   P: PWideChar;
   Buffer: array[0..63] of WideChar;
 begin
-  if (FPos+64 <= FEnd)
+  if (FPos+64 < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := ZSysUtils.FloatToSqlUnicode(Value, P);
@@ -1297,7 +1300,7 @@ begin
     Inc(L, 2);
   if guidQuoted in Options then
     Inc(L, 2);
-  if (FPos + L <= FEnd) then begin
+  if (FPos + L < FEnd) then begin
     P := FPos;
     Inc(FPos, L);
   end else
@@ -1311,7 +1314,7 @@ var P: PWideChar;
   LTotal: LengthInt;
 begin
   LTotal := ((L+1) shl 1) + Ord(not ODBC);
-  if (FPos+LTotal <= FEnd) then begin
+  if (FPos+LTotal < FEnd) then begin
     P := FPos;
     Inc(FPos, LTotal);
   end else
@@ -1419,7 +1422,7 @@ var P: PWideChar;
   D2: Byte;
 begin
   D2 := Digits+Ord(Negative);
-  if (FPos+D2 <= FEnd) then begin
+  if (FPos+D2 < FEnd) then begin
     P := FPos;
     Inc(FPos, D2);
   end else
@@ -1437,7 +1440,7 @@ var P: PWideChar;
   D2: Byte;
 begin
   D2 := Digits+Ord(Negative);
-  if (FPos+D2 <= FEnd) then begin
+  if (FPos+D2 < FEnd) then begin
     P := FPos;
     Inc(FPos, D2);
   end else
@@ -1454,7 +1457,7 @@ procedure TZUnicodeSQLStringWriter.AddText(Value: PWideChar; L: LengthInt;
 var P: PWideChar;
 begin
   if (Value = nil) or (L = 0) then Exit;
-  if (FPos + L <= FEnd) then begin
+  if (FPos + L < FEnd) then begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, FPos^, L shl 1);
     Inc(FPos, L);
   end else begin
@@ -1476,7 +1479,7 @@ var H, M, S, MS: Word;
   P: PWideChar;
   Buffer: Array[0..15] of WideChar;
 begin
-  if (FPos+14 <= FEnd) //'00:00:00.123'
+  if (FPos+14 < FEnd) //'00:00:00.123'
   then P := FPos
   else P := @Buffer[0];
   DecodeTime(Value, H, M, S, MS);
