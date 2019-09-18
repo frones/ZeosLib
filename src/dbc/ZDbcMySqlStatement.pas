@@ -1096,7 +1096,7 @@ begin
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
   FBindAgain := True;
   FStmtHandleIsExecuted := False;
-  if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(ASQL), length(ASQL)) <> 0) then
+  if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(FASQL), length(ASQL)) <> 0) then
     checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcPrepStmt,
       ConvertZMsgToRaw(SFailedtoPrepareStmt,
       ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), Self);
@@ -1110,7 +1110,7 @@ begin
       then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY)
       else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY);
 
-  if (FClientVersion >= 50060) and ((TokenMatchIndex = Ord(mySelect)) or (TokenMatchIndex = Ord(myCall))) then //supported since 5.0.6
+  if (FClientVersion >= 50060) and (FPrefetchRows <> 1) and ((TokenMatchIndex = Ord(mySelect)) or (TokenMatchIndex = Ord(myCall))) then //supported since 5.0.6
     //try achieve best performnce. No idea how to calculate it
     if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) and (FPrefetchRows <> 1)
     then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows)
