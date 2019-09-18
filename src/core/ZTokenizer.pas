@@ -424,7 +424,6 @@ type
   {** Implements a default tokenizer object. }
   TZTokenizer = class (TZAbstractObject, IZTokenizer)
   private
-    FCharacterStates: array[0..ord(high(char))] of TZTokenizerState;
     FCommentState: TZCommentState;
     FNumberState: TZNumberState;
     FQuoteState: TZQuoteState;
@@ -433,6 +432,7 @@ type
     FWordState: TZWordState;
     FStream: TTokenizerStream;
   protected
+    FCharacterStates: array[0..ord(high(char))] of TZTokenizerState;
     procedure CreateTokenStates; virtual;
   public
     constructor Create;

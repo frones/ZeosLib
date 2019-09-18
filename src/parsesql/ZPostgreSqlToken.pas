@@ -370,7 +370,6 @@ function TZPostgreSQLSymbolState.NextToken(Stream: TStream; FirstChar: Char;
 var
   NumRead: Integer;
   ReadChar: Char;
-  NumToken: TZToken;
   Tag, TempTag: string;
   TagState: integer;
 begin
@@ -379,47 +378,43 @@ begin
   if (Result.Value = '$') then begin
     NumRead := Stream.Read(ReadChar{%H-}, SizeOf(Char));
     if (NumRead > 0) then begin
-      if ((Ord(ReadChar) >= Ord('0')) and (Ord(ReadChar) <= Ord('9'))) then begin
-        NumToken := fNumberState.NextToken(Stream, ReadChar, Tokenizer);
-        if NumToken.TokenType = ttInteger then begin
-          Result.TokenType := ttWord;
-          Result.Value := Result.Value+NumToken.Value;
-          Exit;
-        end;
-      end;
       Stream.Seek(-SizeOf(Char), soFromCurrent);
       //detect body tags as ttQuoted
       //eg. $body$ .... $body$ or $$ .... $$
-      Result.TokenType := ttQuoted;
       TagState := 0;
       InitBuf(FirstChar);
       Result.Value := '';
-      while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
-      begin
-        if (ReadChar = '$') then
-        begin
+      NumRead := 0;
+      while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do begin
+        Inc(NumRead, SizeOf(char));
+        if (TagState = 0) and (ReadChar = ',') then
+          Break;
+
+        if (ReadChar = '$') then begin
           if (TagState = 0) then begin
             TagState := 1;
             FlushBuf(Result.Value);
             Tag := Result.Value;
-          end else if (TagState = 1) then
-          begin
+          end else if (TagState = 1) then begin
             TagState := 2;
             TempTag := '';
           end else if (TagState = 2) then
-            if TempTag = Tag then
-              TagState := 3
-            else
-              TempTag := '';
+            if TempTag = Tag
+            then TagState := 3
+            else TempTag := '';
         end;
         ToBuf(ReadChar, Result.Value);
 
         if TagState = 2 then
           TempTag := TempTag + ReadChar
-        else if TagState = 3 then
-          Break;
+        else if TagState = 3 then begin
+          FlushBuf(Result.Value);
+          Result.TokenType := ttQuoted;
+          Exit;
+        end;
       end;
-      FlushBuf(Result.Value);
+      Result.Value := '$';
+      Stream.Seek(-NumRead, soFromCurrent);
     end;
   end;
 end;

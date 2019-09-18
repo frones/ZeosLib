@@ -1033,7 +1033,6 @@ end;
     value returned is <code>null</code>
 }
 function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-label ProcessFixedChar;
 var
   Len: NativeUint;
 begin

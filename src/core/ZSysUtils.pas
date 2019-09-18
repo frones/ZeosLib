@@ -540,7 +540,8 @@ function StrToBytes(const Value: UnicodeString): TBytes; overload;
   @param Value an array of bytes to be converted.
   @return a converted variant.
 }
-function BytesToVar(const Value: TBytes): Variant;
+function BytesToVar(const Value: TBytes): Variant; overload;
+function BytesToVar(const Value: RawByteString): Variant; overload;
 
 {**
   Converts variant into an array of bytes.
@@ -554,7 +555,7 @@ function VarToBytes(const Value: Variant): TBytes;
   @param Value a date and time string.
   @return a decoded TDateTime value.
 }
-function AnsiSQLDateToDateTime(const Value: UnicodeString): TDateTime; overload;
+function AnsiSQLDateToDateTime(const Value: ZWideString): TDateTime; overload;
 function AnsiSQLDateToDateTime(P: PWideChar; L: LengthInt): TDateTime; overload;
 function AnsiSQLDateToDateTime(const Value: RawByteString): TDateTime; overload;
 function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime; overload;
@@ -1096,7 +1097,7 @@ function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;
 
 implementation
 
-uses DateUtils, StrUtils,
+uses DateUtils,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   SysConst,{keep it after RTLConst -> deprecated warning}
   ZFastCode;
@@ -2396,6 +2397,19 @@ begin
     Result[I] := Value[I];
 end;
 
+function BytesToVar(const Value: RawByteString): Variant; overload;
+var
+  I: Integer;
+  P: PByte;
+begin
+  Result := VarArrayCreate([0, Length(Value) - 1], varByte);
+  P := Pointer(Value);
+  for I := 0 to Length(Value) - 1 do begin
+    Result[I] := P^;
+    Inc(P);
+  end;
+end;
+
 {**
   Converts variant into an array of bytes.
   @param Value a varaint to be converted.
@@ -2469,7 +2483,7 @@ begin
   end;
 end;
 
-function AnsiSQLDateToDateTime(const Value: UnicodeString): TDateTime;
+function AnsiSQLDateToDateTime(const Value: ZWideString): TDateTime;
 var P: PWideChar;
 begin
   P := Pointer(Value);
