@@ -538,7 +538,6 @@ begin
   // prepare sample table
   Stmt := Connection.CreateStatement;
   try
-    Stmt.ExecuteUpdate('create table TestTicket363 (id integer primary key, "value" BLOB SUB_TYPE TEXT)');
     // generate test data
     for I:= 1 to 10 do
       Stmt.ExecuteUpdate('insert into TestTicket363 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')');
@@ -590,7 +589,6 @@ begin
       LStmt.Close;
       LStmt:= nil;
     end;
-    Stmt.ExecuteUpdate('drop table TestTicket363');
     Stmt.Close;
     Stmt := nil;
   end;
