@@ -69,7 +69,6 @@ type
     FHandle: PDBPROCESS;
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
-    FLastOptainedRS: IZResultSet;
     FClientCP: Word;
   protected
     procedure InternalExecuteStatement(const SQL: RawByteString);
@@ -83,7 +82,6 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
     function GetMoreResults: Boolean; override;
-    function GetUpdateCount: Integer; override;
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
@@ -191,19 +189,19 @@ function TZDBLibPreparedStatementEmulated.GetMoreResults: Boolean;
 var
   ResultSet: IZResultSet;
   UpdateCount: IZAnyValue;
-  I: Integer;
 begin
-  FLastOptainedRS := nil;
-  Result := False;
-  for i := 0 to FResults.Count -1 do begin
-    Result := FResults.Items[I].QueryInterface(IZResultSet, ResultSet) = S_OK;
-    if Result then begin
-      FLastOptainedRS := ResultSet;
-      FResults.Delete(I);
-      Break;
-    end else//else TestStatement can't be resolved
-      if FResults.Items[I].QueryInterface(IZAnyValue, UpdateCount) = S_OK then
+  Result := FResults.Count > 0;
+  if Result then begin
+    if FResults.Items[0].QueryInterface(IZResultSet, ResultSet) = S_OK then begin
+      LastResultSet := ResultSet;
+      FOpenResultSet := Pointer(ResultSet);
+    end else begin
+      LastResultSet := nil;
+      FOpenResultSet := nil;
+      if FResults.Items[0].QueryInterface(IZAnyValue, UpdateCount) = S_OK then
         LastUpdateCount := UpdateCount.GetInteger;
+    end;
+    FResults.Delete(0);
   end;
 end;
 
@@ -221,34 +219,6 @@ begin
      (FDBLibConnection.GetProvider = dpMsSQL) and FDBLibConnection.FreeTDS and
      (PByte(P+Length(Result)-1)^ = Ord(#39)) and (FClientCP = zCP_UTF8)
   then Result := 'N' + Result;
-end;
-
-{**
-  Returns the current result as an update count;
-  if the result is a <code>ResultSet</code> object or there are no more results, -1
-  is returned. This method should be called only once per result.
-
-  @return the current result as an update count; -1 if the current result is a
-    <code>ResultSet</code> object or there are no more results
-  @see #execute
-}
-function TZDBLibPreparedStatementEmulated.GetUpdateCount: Integer;
-var
-  UpdateCount: IZAnyValue;
-  I: Integer;
-begin
-  Result := inherited GetUpdateCount;
-  if (Result = -1) and (FResults.Count > 0) then
-    for i := 0 to FResults.Count -1 do
-      try
-        if FResults.Items[I].QueryInterface(IZAnyValue, UpdateCount) = S_OK then begin
-          Result := UpdateCount.GetInteger;
-          FResults.Delete(I);
-          Break;
-        end;
-      finally
-        UpdateCount := nil;
-      end;
 end;
 
 {**
@@ -319,10 +289,7 @@ begin
   Prepare;
   InternalExecuteStatement(ComposeRawSQLQuery);
   FetchResults;
-  LastUpdateCount := GetUpdateCount;
-  Result := GetMoreResults;
-  LastResultSet := FLastOptainedRS;
-  FLastOptainedRS := nil;
+  Result := GetMoreResults and (LastResultSet <> nil);
 end;
 
 {**
@@ -337,11 +304,8 @@ begin
   Prepare;
   InternalExecuteStatement(ComposeRawSQLQuery);
   FetchResults;
-  if GetMoreResults then begin
-    Result := FLastOptainedRS;
-    FOpenResultSet := Pointer(Result);
-    FLastOptainedRS := nil;
-  end;
+  while GetMoreResults and (LastResultSet = nil) do ;
+  Result := GetResultSet;
 end;
 
 {**
@@ -359,6 +323,7 @@ begin
   Prepare;
   InternalExecuteStatement(ComposeRawSQLQuery);
   FetchResults;
+  while GetMoreResults and (LastResultSet <> nil) do ;
   Result := GetUpdateCount;
 end;
 
@@ -419,17 +384,13 @@ end;
 
 procedure TZDBLibPreparedStatementEmulated.FlushPendingResults;
 var I: Integer;
+  ResultSet: IZResultSet;
 begin
-  if FLastOptainedRS <> nil then begin
-    FLastOptainedRS.Close;
-    FLastOptainedRS := nil;
-  end;
-  FLastOptainedRS := nil;
+  if LastResultSet <> nil then
+    LastResultSet := nil;
   for I := 0 to FResults.Count -1 do
-    if Supports(FResults[I], IZResultSet, FLastOptainedRS) then begin
-      FLastOptainedRS.Close;
-      FLastOptainedRS := nil;
-    end;
+    if Supports(FResults[I], IZResultSet, ResultSet) then
+      ResultSet.Close;
   FResults.Clear;
 end;
 
