@@ -1856,6 +1856,9 @@ begin
 { ************** Load adresses of API Functions ************* }
   with Loader do
   begin
+    if GetAddress('dbcoltypeinfo') <> nil then
+      raise Exception.Create('Wrong library bound. Propably a FreeTDS-Lib.'+LineEnding+
+         'Use the FreeTDS protocols instead!');
     //@MsSQLAPI.dbtablecolinfo  := GetAddress('dbtablecolinfo');
     @MsSQLAPI.dbdataready           := GetAddress('dbdataready');
     @MsSQLAPI.dbdatecrack           := GetAddress('dbdatecrack');
