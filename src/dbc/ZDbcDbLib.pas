@@ -333,20 +333,20 @@ begin
               TDSVersion := TDSDBVERSION_UNKNOWN;
           end;
         end;
-
-        if FplainDriver.DBLibraryVendorType = lvtMS then
-          TDSVersion := TDSDBVERSION_42
-        else begin {as long we left the protocol names this workaraound is possible}
-          lLogFile := plainDriver.GetProtocol;
-          if (ZFastCode.Pos('MsSQL 7.0', lLogFile) > 0) or (ZFastCode.Pos('MsSQL 2000', lLogFile) > 0) then
-            TDSVersion := DBVERSION_70
-          else if ZFastCode.Pos('MsSQL 2005+', lLogFile) > 0 then
-            TDSVersion := DBVERSION_72
-          else if ZFastCode.Pos('Sybase-10+', lLogFile) > 0 then
-            TDSVersion := TDSDBVERSION_100
-          else //old sybase and MSSQL <= 6.5
-            TDSVersion := TDSDBVERSION_42;
-        end;
+        if TDSVersion = TDSDBVERSION_UNKNOWN then
+          if FplainDriver.DBLibraryVendorType = lvtMS then
+            TDSVersion := TDSDBVERSION_42
+          else begin {as long we left the protocol names this workaraound is possible}
+            lLogFile := plainDriver.GetProtocol;
+            if (ZFastCode.Pos('MsSQL 7.0', lLogFile) > 0) or (ZFastCode.Pos('MsSQL 2000', lLogFile) > 0) then
+              TDSVersion := DBVERSION_70
+            else if ZFastCode.Pos('MsSQL 2005+', lLogFile) > 0 then
+              TDSVersion := DBVERSION_72
+            else if ZFastCode.Pos('Sybase-10+', lLogFile) > 0 then
+              TDSVersion := TDSDBVERSION_100
+            else //old sybase and MSSQL <= 6.5
+              TDSVersion := TDSDBVERSION_42;
+          end;
       end;
       if TDSVersion <> TDSDBVERSION_UNKNOWN then begin
         if FPLainDriver.DBLibraryVendorType = lvtFreeTDS

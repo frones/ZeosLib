@@ -1303,7 +1303,11 @@ begin
                   end;
     stDate, stTime, stTimestamp:
       Result := EncodeDateTime(IZResultSet(FWeakIntfPtrOfSelf).GetTimestamp(ColumnIndex));
-    stBytes, stBinaryStream, stGUID:
+    stGUID: begin
+              InitializeVariant(Result, vtGUID);
+              IZResultSet(FWeakIntfPtrOfSelf).GetGUID(ColumnIndex, Result.VGUID);
+            end;
+    stBytes, stBinaryStream:
       Result := EncodeBytes(IZResultSet(FWeakIntfPtrOfSelf).GetBytes(ColumnIndex));
     stString, stAsciiStream, stUnicodeString, stUnicodeStream:
       {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
@@ -2407,6 +2411,7 @@ begin
     vtDouble: IZResultSet(FWeakIntfPtrOfSelf).UpdateDouble(ColumnIndex, Value.VDouble);
     vtCurrency: IZResultSet(FWeakIntfPtrOfSelf).UpdateCurrency(ColumnIndex, Value.VCurrency);
     vtBigDecimal: IZResultSet(FWeakIntfPtrOfSelf).UpdateBigDecimal(ColumnIndex, Value.VBigDecimal);
+    vtGUID:    IZResultSet(FWeakIntfPtrOfSelf).UpdateGUID(ColumnIndex, Value.VGUID);
     vtString: IZResultSet(FWeakIntfPtrOfSelf).UpdateString(ColumnIndex, Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
 {$IFNDEF NO_ANSISTRING}
     vtAnsiString: IZResultSet(FWeakIntfPtrOfSelf).UpdateAnsiString(ColumnIndex, Value.VRawByteString);

@@ -916,7 +916,7 @@ unnest(array[$1]::int8[])
 *)
 //my final and fastest approch bind binary arrays and pass data once per param and one prepared stmt:
     SQL := '';
-    SQLWriter := TZRawSQLStringWriter.Create(Length(fASQL) shl 1);
+    SQLWriter := TZRawSQLStringWriter.Create(Length(fASQL)+BindList.Count shl 4);
     N := 1;
     OffSet := 0;
     //first build up a new string with unnest($n)::xyz[] surrounded params
