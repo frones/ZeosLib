@@ -371,12 +371,16 @@ var
                     FTempRaws[j] := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(D)[j], ConSettings.CTRL_CP, CP);
       {$ENDIF}
       {$IFNDEF NO_ANSISTRING}
-      vtAnsiString: for J := 0 to DynArrayLen -1 do
-                      FTempRaws[j] := Consettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(D)[j], CP);
+      vtAnsiString: for J := 0 to DynArrayLen -1 do begin
+                      FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(D)[j]), Length(TRawByteStringDynArray(D)[j]), zOSCodePage);
+                      FTempRaws[j] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUnitemp), CP);
+                    end;
       {$ENDIF}
       {$IFNDEF NO_UTF8STRING}
-      vtUTF8String: for J := 0 to DynArrayLen -1 do
-                      FTempRaws[j] := Consettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(D)[j], CP);
+      vtUTF8String: for J := 0 to DynArrayLen -1 do begin
+                      FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(D)[j]), Length(TRawByteStringDynArray(D)[j]), zCP_UTF8);
+                      FTempRaws[j] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUnitemp), CP);
+                    end;
       {$ENDIF}
       {$IFDEF UNICODE}
       vtString,

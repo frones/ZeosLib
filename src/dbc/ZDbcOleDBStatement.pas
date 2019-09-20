@@ -2162,7 +2162,6 @@ procedure TZOleDBPreparedStatement.AddParamLogValue(ParamIndex: Integer;
 var Bind: PDBBINDING;
   Data: Pointer;
   Len: NativeUInt;
-label Set_buf_len, Set_Raw;
 begin
   case BindList.ParamTypes[ParamIndex] of
     pctReturn: SQLWriter.AddText('(RETURN_VALUE)', Result);

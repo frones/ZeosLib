@@ -743,7 +743,7 @@ begin
       if (ConSettings^.ClientCodePage^.Encoding = ceUTF16)
       then CP := ConSettings^.CTRL_CP
       else CP := FClientCP;
-      FaSQL := GetRawEncodedSQL(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, CP)); //required for the resultsets
+      FaSQL := GetRawEncodedSQL(ZUnicodeToRaw(Value, CP)); //required for the resultsets
       FWSQL := Value;
     end;
     {$ENDIF UNICODE}
@@ -754,8 +754,8 @@ begin
   if FASQL <> Value then begin
     FClosed := False;
     {$IFDEF UNICODE}
-    FASQL := Value;
     FWSQL := ZRawToUnicode(FASQL, FClientCP); //required for the resultsets
+    FASQL := GetRawEncodedSQL(Value);
     {$ELSE !UNICODE}
     if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
@@ -1076,7 +1076,7 @@ function TZAbstractStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and d
 {$IFDEF UNICODE}
 begin
   FWSQL := SQL;
-  Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
+  Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
 {$ELSE}
 var
   SQLTokens: TZTokenList;
@@ -3609,8 +3609,10 @@ procedure TZRawPreparedStatement.SetAnsiString(ParameterIndex: Integer;
 begin
   if ZCompatibleCodePages(ZOSCodePage, FClientCP)
   then BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
-  else BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-    ConSettings^.ConvFuncs.ZAnsiToRaw(Value, FClientCP));
+  else begin
+    fUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage);
+    SetUnicodeString(ParameterIndex, fUniTemp);
+  end;
 end;
 {$ENDIF}
 
@@ -3735,8 +3737,10 @@ procedure TZRawPreparedStatement.SetUTF8String(ParameterIndex: Integer;
 begin
   if ZCompatibleCodepages(zCP_UTF8, FClientCP)
   then BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value)
-  else BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
-    ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, FClientCP));
+  else begin
+    ZEncoding.PRawToRawConvert(Pointer(Value), Length(Value), zCP_UTF8, FClientCP, fRawTemp);
+    BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, fRawTemp);
+  end;
 end;
 {$ENDIF}
 
@@ -5238,7 +5242,10 @@ procedure TZAbstractCallableStatement_A.SetAnsiString(ParameterIndex: Integer;
 begin
   if ZCompatibleCodepages(zOSCodePage, FClientCP)
   then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetRawByteString(ParameterIndex, Value)
-  else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, FClientCP));
+  else begin
+    fUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage);
+    fRawTemp := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), FClientCP);
+  end;
 end;
 {$ENDIF}
 
@@ -5287,7 +5294,10 @@ procedure TZAbstractCallableStatement_A.SetUTF8String(ParameterIndex: Integer;
 begin
   if ZCompatibleCodepages(zCP_UTF8, FClientCP)
   then SetRawByteString(ParameterIndex, Value)
-  else SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, FClientCP));
+  else begin
+    fUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8);
+    fRawTemp := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), FClientCP);
+  end;
 end;
 {$ENDIF}
 

@@ -4117,11 +4117,12 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else if fRaw then begin
-    fRawTemp := ConSettings^.ConvFuncs.ZAnsiToRaw(Value, FClientCP);
+    FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage);
+    fRawTemp := ZUnicodeToRaw(FUniTemp, FClientCP);
     Len := Length(fRawTemp);
     SetPAnsiChar(ColumnIndex, Pointer(fRawTemp), Len);
   end else begin
-    fUniTemp := ZEncoding.ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
+    fUniTemp := ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;
@@ -4148,11 +4149,11 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else if fRaw then begin
-    fRawTemp := ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, FClientCP);
+    ZEncoding.PRawToRawConvert(Pointer(Value), Length(Value), zCP_UTF8, FClientCP, fRawTemp);
     Len := Length(fRawTemp);
     SetPAnsiChar(ColumnIndex, Pointer(fRawTemp), Len);
   end else begin
-    fUniTemp := ZEncoding.ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
+    fUniTemp := ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;

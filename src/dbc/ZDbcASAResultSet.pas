@@ -1653,7 +1653,7 @@ end;
 procedure TZASACachedResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
 begin
   PrepareUpdateSQLData;
-  FRawTemp := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
+  FRawTemp := ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
   FUpdateSqlData.UpdatePRaw(ColumnIndex, Pointer(FRawTemp), Length(FRawTemp));
 end;
 

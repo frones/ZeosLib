@@ -62,7 +62,7 @@ uses
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
   ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils,
   ZCollections;
-
+                                                                                   
 type
   TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, mySet, myCall);
   TOpenCursorCallback = procedure of Object;
@@ -1761,7 +1761,6 @@ var
   procedure BindRawFromConvertion;
   var I: Integer;
     ClientStrings: TRawByteStringDynArray;
-    UniTemp: ZWideString;
     BufferSize: ULong;
   label move_from_temp;
   begin
@@ -1780,7 +1779,8 @@ var
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString: begin
           for I := 0 to BatchDMLArrayCount -1 do begin
-            ClientStrings[i] := ConSettings^.ConvFuncs.ZAnsiToRaw(TAnsiStringDynArray(Value)[i], ClientCP);
+            fUniTemp := ZRawToUnicode(TRawByteStringDynArray(Value)[i], ZOSCodePage);
+            ClientStrings[i] := ZUnicodeToRaw(fUniTemp, ClientCP);
             BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
           end;
           goto move_from_temp;
@@ -1789,7 +1789,8 @@ var
       {$IFNDEF NO_UTF8STRING}
       vtUTF8String: begin
           for I := 0 to BatchDMLArrayCount -1 do begin
-            ClientStrings[i] := ConSettings^.ConvFuncs.ZUTF8ToRaw(TUTF8StringDynArray(Value)[i], ClientCP);
+            fUniTemp := ZRawToUnicode(TRawByteStringDynArray(Value)[i], zCP_UTF8);
+            ClientStrings[i] := ZUnicodeToRaw(fUniTemp, ClientCP);
             BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
           end;
           goto move_from_temp;
@@ -1828,8 +1829,8 @@ move_from_temp:
               BufferSize := BufferSize + Cardinal(Length(ClientStrings[i])) +1;
               {$R-}Bind^.length[i] := Length(ClientStrings[i]);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
             end else begin
-              UniTemp := PRawToUnicode(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, TZCharRecDynArray(Value)[i].CP);
-              ClientStrings[i] := ZUnicodeToRaw(UniTemp, ClientCP);
+              fUniTemp := PRawToUnicode(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, TZCharRecDynArray(Value)[i].CP);
+              ClientStrings[i] := ZUnicodeToRaw(fUniTemp, ClientCP);
               BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
               {$R-}Bind^.length[i] := Length(ClientStrings[i]);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
             end;

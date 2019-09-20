@@ -576,11 +576,11 @@ begin
       RowAccessor := OldRowAccessor;
     ColumnIndex := Current.ColumnIndex;
 
-    if FCalcDefaults then
-      Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
-    if RowAccessor.IsNull(ColumnIndex) then
-      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex))
-    else case Metadata.GetColumnType(ColumnIndex) of
+      if FCalcDefaults then
+        Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
+    if RowAccessor.IsNull(ColumnIndex) then begin
+      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex));
+    end else case Metadata.GetColumnType(ColumnIndex) of
       stBoolean:
         Statement.SetBoolean(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetBoolean(ColumnIndex, WasNull));

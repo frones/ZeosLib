@@ -559,9 +559,9 @@ var ErrorCode, L: Integer;
   P: PAnsiChar;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  if FBindLater or FHasLoggingListener
-  then BindList.Put(ParameterIndex, Value)
-  else CheckParameterIndex(ParameterIndex);
+  CheckParameterIndex(ParameterIndex);
+  if FBindLater or FHasLoggingListener then
+    BindList.Put(ParameterIndex, Value);
   if not FBindLater then begin
     P := BindList.AquireCustomValue(ParameterIndex, stBigDecimal, MaxFmtBCDFractionSize+3{#0});
     L := BCDToRaw(Value, P, '.');
@@ -615,9 +615,9 @@ var ErrorCode: Integer;
   i64: Int64 absolute Value;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-  if FBindLater or FHasLoggingListener
-  then BindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value))
-  else CheckParameterIndex(ParameterIndex);
+  CheckParameterIndex(ParameterIndex);
+  if FBindLater or FHasLoggingListener then
+    BindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, ParameterIndex+1, i64);
     if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
@@ -638,9 +638,9 @@ procedure TZSQLiteCAPIPreparedStatement.SetDouble(ParameterIndex: Integer;
 var ErrorCode: Integer;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-  if FBindLater or FHasLoggingListener
-  then BindList.Put(ParameterIndex, stDouble, P8Bytes(@Value))
-  else CheckParameterIndex(ParameterIndex);
+  CheckParameterIndex(ParameterIndex);
+  if FBindLater or FHasLoggingListener then
+    BindList.Put(ParameterIndex, stDouble, P8Bytes(@Value));
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, ParameterIndex+1, Value);
     if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
@@ -674,9 +674,9 @@ procedure TZSQLiteCAPIPreparedStatement.SetInt(ParameterIndex, Value: Integer);
 var ErrorCode: Integer;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-  if FBindLater or FHasLoggingListener
-  then BindList.Put(ParameterIndex, stInteger, P4Bytes(@Value))
-  else CheckParameterIndex(ParameterIndex);
+  CheckParameterIndex(ParameterIndex);
+  if FBindLater or FHasLoggingListener then
+    BindList.Put(ParameterIndex, stInteger, P4Bytes(@Value));
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int(FStmtHandle, ParameterIndex+1, Value);
     if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
@@ -697,9 +697,9 @@ procedure TZSQLiteCAPIPreparedStatement.SetLong(ParameterIndex: Integer;
 var ErrorCode: Integer;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-  if FBindLater or FHasLoggingListener
-  then BindList.Put(ParameterIndex, stLong, P8Bytes(@Value))
-  else CheckParameterIndex(ParameterIndex);
+  CheckParameterIndex(ParameterIndex);
+  if FBindLater or FHasLoggingListener then
+    BindList.Put(ParameterIndex, stLong, P8Bytes(@Value));
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, ParameterIndex+1, Value);
     if ErrorCode <> SQLITE_OK then CheckBindError({ParameterIndex, }ErrorCode);
