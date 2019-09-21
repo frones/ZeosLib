@@ -1,4 +1,6 @@
-\documentclass[a4paper,12pt,oneside]{article}
+%please generate this document using xelatex. Underscores (_) will not be generated correctly otherwise.
+
+\documentclass[a4paper,12pt,oneside]{book}
 %\usepackage{geometry}
 %\usepackage{fancyhdr}
 %\usepackage{amsmath,amsthm,amssymb }
@@ -28,25 +30,301 @@
 
 \pagestyle{plain}
 
-\title{Zeos 7.2.4 Release Notes}
+\title{Zeos 7.2.6 Release Notes}
 \author{Jan Baumgarten}
 \date{\today}
 %\overfullrule=2mm
+\chardef\_=`_
+
 \begin{document}
 \maketitle
 
-\section{Zeos 7.2}
-The Zeos Team is proud to announce the availability of Zeos 7.2.4 as a stable release.
+\section*{Zeos 7.2}
+The Zeos Team is proud to announce the availability of Zeos 7.2.6 as a stable release.
 This is the newest stable version of Zeos.
-It deprecates Zeos 7.1, which will not be supported anymore.
+It deprecates Zeos 7.1, and all prior versions of Zeos 7.2 which will not be supported anymore.
 Zeos 7.2 has seen tons of bug fixes and improvements.
 We urge all people still using older versions of Zeos to upgrade.
 If you have any problems with Zeos 7.2, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
 
+\chapter{Zeos 7.2.6 Release Notes}
+
+\section{General}
+\label{sec:Rev6_General}
+
+\subsection{Fixed Bugs}
+\label{sec:Rev6_General_FixedBugs}
+
+\begin{itemize}
+\item 253: Zeos had an issue that prevented it from filtering on computed columns which was fixed.
+\item 252: TZConnection.AutoEncodeStrings was not restored correctly on ANSI Delphis (anything until Delphi 2007) and on Lazarus.
+\item 	
+  A bug about metadata caching was fixed that could lead to the TZSQLMetadata not giving correct results if meta data for the same object was queried a second time.
+	See \url{http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=73973} for more information.
+\end{itemize}
+
+\subsection{Changes}
+\label{sec:Rev6_General_Changes}
+
+\subsubsection{binary connection strings are deprecated}
+\label{sec:Rev6_General_Changes_BinaryConnectonStringsDeprecated}
+
+Use of character sets that move the correct interpretation of strings to the client side is deprecated with this release.
+We will discontinue support for these connection strings with the Zeos 7.3 release.
+In Zeos 7.3 usage of these character sets as connection character sets will lead to an exception.
+Background:
+Zeos tries to preserve your data.
+The database systems usually are better at character set conversions than we are.
+So we decided to fully rely on them.
+On Firebird and Interbase these are the character sets "`none"' and "`octetts"'.
+On PostgreSQL this is the character set SQL\_ASCII.
+On MySQL and MariaDB this is the character set "`BINARY"'.
+
+\subsubsection{Limited support for TGraphicField}
+\label{sec:Rev6_General_Changes_TGrapgicField}
+
+Zeos now supports the use of persistent TGraphicField components with drivers that support BLOB fields.
+
+\subsection{Known problems}
+\label{sec:Rev6_General_KnownProblems}
+
+\subsubsection{Filtering on computed columns or lookup columns does not work}
+\label{sec:Rev6_General_KnownProblems_FilteringComputeColumnsLookupColumns}
+
+Filtering on computed columns or lookup columns will generate an exception: "`Column with index -1 is not accessible"'.
+This will not be fixed in Zeos 7.2 because it requires a major rewrite of the filtering mechanism.
+
+\subsubsection{No support for BCD type columns}
+\label{sec:Rev6_General_KnownProblems_BCD}
+
+Zeos currently doesn't support the BCD type columns of Delphi.
+NUMERIC and DECIMAL columns still get mapped to floating point types.
+This will be adressed in Zeos 7.3 because it requires a lot of changes in the Zeos core.
+
+\subsubsection{Metadata Caching}
+\label{sec:Rev6_General_KnownProblems_MetadataCaching}
+
+Zeos will usually agressively cache metadata of your database.
+Because of this scenarios where your database structure is changing constantly, are not well supported.
+You can call ZConncection.\-DbcConnection.\-GetMetadata.\-ClearCache to clear out the caches.
+You can also disable the UseMetadata property of the TZConnection object.
+All data sets will become readonly in that case.
+Use TZUpdateSQL if you need them to be writable again.
+
+\subsubsection{Blob fields are read as a whole}
+\label{sec:Rev6_General_KnownProblems_BlobFields}
+
+As soon as you touch a blob field for reading, Zeos will fetch the whole blob contents from the database server.
+This may lead to high memory consumption.
+
+\section{Firebird / Interbase}
+\label{sec:Rev6_FirebirdInterbase}
+
+\subsection{Fixed Bugs}
+\label{sec:Rev6_FirebirdInterbase_FixedBugs}
+
+\begin{itemize}
+\item 
+  249: In previous versions of Zeos the Firebird driver silently only copied parts of string parameters to the server if the client library didn't provide enough buffer space for the whole string.
+	This has been rectified.
+	Zeos will now throw an exception in these cases.
+	As a workaround you might want to explicitly cast your parameters - i.e. where :param = 'x' becomes where cast(:param as varchar(50)) = 'x'.
+\item
+  351: Firebird: A bug has been fixed where NUMERIC and DECIMAL columns could be converted to different field types depending an the way they were selected.
+\end{itemize}
+
+\subsection{Breaking Changes}
+\label{sec:Rev6_FirebirdInterbase_BreakingChanges}
+
+\subsubsection{field types for NUMERIC and DECIMAL}
+\label{sec:Rev6_FirebirdInterbase_BreakingChanges_FieldTypesNumericDecimal}
+
+There was a bug in the interbase / firebird driver where NUMERIC and DECIMAL fields could be assigned different field types.
+This bug has been fixed but can lead to problems because now on persistent fields and typecasts in your cource code because Zeos might assign a different field type to your fields than it assigned before.
+
+\subsection{Changes}
+\label{sec:Rev6_FirebirdInterbase_Changes}
+
+\subsubsection{new connection parameter fb\_protocol}
+\label{sec:Rev6_FirebirdInterbase_Changes_FBProtocol}
+
+The new parameter "`fb\_protocol"' was introduced as a connection parameter.
+With Firebird 3 this paramater switches Zeos to use url style connection strings.
+This enables you to force the library to use xnet for connecting to the server, bypassing a local engine12.
+This parameter also allows you to use the wnet (Named Pipes) protocol on older versions of Firebird and on Interbase.
+For possible values of fb\_protocol see table \ref{tbl:Rev6_ValuesFbprotocol} on Page \pageref{tbl:Rev6_ValuesFbprotocol}.
+
+\begin{table}
+    \begin{tabular}{ p{1cm} p{13cm} }
+    Value & Description \\ \hline
+    inet & This will create a connection string to be used with TCP/IP. If the server name is empty, localhost will be used as the server name. \\ %\hline
+    wnet & This will create a connection string to be used with named pipes. If the server name is empty, a connection to a local server will be created. \\ %\hline
+    xnet & On Firebird 3 this will force the client library to use an xnet (shared memory) connection to a local server. On Interbase and Firebird 2.5 and below the embedded server cannot be forced to use xnet, while the regular client library will always use xnet in that case. The server name will be ignored with this setting. \\
+    local & This value will try to do a local connection. This will only work with embedded servers. Regular client libraries will usually fall back into using xnet. \\
+		\end{tabular}
+    \caption{values for fb\char`_protocol}
+    \label{tbl:Rev6_ValuesFbprotocol}
+\end{table}
+
+\subsubsection{reading the client library version}
+\label{sec:Rev6_FirebirdInterbase_Changes_ReadingLibraryVersion}
+
+The firebird/interbase driver now can read the client library version of Firebird 1.5+ and Interbase 7.0+.
+
+\subsubsection{Unicode characters in database name}
+\label{sec:Rev6_FirebirdInterbase_Changes_UnicodeDatabaseName}
+
+If a firebird 2.5+ library is detected, Zeos passes the database name using UTF8, allowing all Unicode characters to be used.
+
+\subsubsection{new default mode for read committed on Firebird 4.0}
+\label{sec:Rev6_FirebirdInterbase_Changes_FB4ReadCommitted}
+
+On Firebird 4.0 Zeos uses the new read committed default mode "READ COMMITTED READ CONSISTENCY" when it detects a Firebird 4.0+ server version.
+
+\subsection{Known Problems}
+\label{sec:Rev6_FirebirdInterbase_KnownProblems}
+
+\subsubsection{no support for identity columns}
+\label{sec:Rev6_FirebirdInterbase_KnownProblems_IdentityColumns}
+
+Firebird 3.0 introduced a new feature called "`IDENTITY columns"'.
+These columns can use an internal generator to automatically create their values.
+Zeos currently does not support using these columns.
+It cannot read back values that were assigned to these columns automatically.
+
+\section{SQLite}
+\label{sec:Rev6_SQLite}
+
+\subsection{Fixed Bugs}
+\label{sec:Rev6_SQLite_FixedBugs}
+
+\begin{itemize}
+\item	
+  248: selecting the rowid in a table made Zeos move a Query into ReadOnly mode bacause it thought that rowid was not part of the table.
+	This has been fixed.
+\end{itemize}
+
+\subsection{Breaking Changes}
+\label{sec:Rev6_SQLite_BreakingChanges}
+
+\subsubsection{Varchar fields without a length specifier}
+\label{sec:Rev6_SQLite_BreakingChanges_VarcharWithoutLength}
+
+In previous versions of Zeos Varchar fields without a length specifier were mapped as TStringField fields.
+Zeos now maps them as TMemoField since Zeos doesn't have any idea on how long you want the contents of these fields to be.
+Use the parameter Undefined\_Varchar\_AsString\_Length to get the old behaviour and specify a length that you are comfortable with.
+I.e. use Undefined\_Varchar\_AsString\_Length=40.
+
+
+\subsection{Changes}
+\label{sec:Rev6_SQLite_Changes}
+
+\subsubsection{extended error information}
+\label{sec:Rev6_SQLite_Changes_ExtendedErrorInfo}
+The SQLite driver of Zeos 7.2 now can get extended error information from SQLite and provide much better error descriptions.
+In Zeos 7.3 this will be the default.
+In Zeos 7.2 we introduced the new parameter ExtendedErrorMessage to enable the behaviour.
+Setting this parameter to 1 / Yes / true will get you the extended error messages.
+This parameter will not exist in Zeos 7.3 anymore.
+
+\subsubsection{backup API}
+\label{sec:Rev6_SQLite_Changes_BackupApi}
+
+We added the SQLite backup API to the plain driver.
+A working example how to use it can be found on \url{http://zeoslib.sourceforge.net/viewtopic.php?f=40&p=126408}
+
+\section{MySQL / MariaDB}
+\label{sec:Rev6_MysqlMariadb}
+
+\subsection{Fixed Bugs}
+\label{sec:Rev6_MysqlMariadb_FixedBugs}
+
+\begin{itemize}
+\item 255:
+  The ability to use the Bit(1) datatype as a boolean data type is now correctly determined even if the MariaDB client and MySQL server are mixed with each other.
+\item 
+  Reading metadata about stored procedures from MySQL 8.0 now works. This had side effects on the way Metadata is read.
+	For more information see \ref{sec:Rev6_MysqlMariadb_BreakingChanges_StoredProcMetadata} \nameref{sec:Rev6_MysqlMariadb_BreakingChanges_StoredProcMetadata}, Page \pageref{sec:Rev6_MysqlMariadb_BreakingChanges_StoredProcMetadata}.
+\end{itemize}
+
+\subsection{Breaking Changes}
+\label{sec:Rev6_MysqlMariadb_BreakingChanges}
+
+\subsubsection{stored procedures metadata}
+\label{sec:Rev6_MysqlMariadb_BreakingChanges_StoredProcMetadata}
+
+Until Zeos 7.2.4 when querying for procedure columns (parameters) the database name was returned in the PROCEDURE\_CAT column.
+PROCEDURE\_CAT now always returns "`def"' while the database is returned in the PROCEDURE\_SCHEM column.
+This is more in line with other MySQL metadata queries and also with MySQL / MariaDb themselves.
+Also the scale for NUMERIC and DECIMAL now is returned in the SCALE column and not in the LENGTH column anymore.
+If you relied on this behavior your code might break!
+
+\subsection{Known Problems}
+\label{sec:Rev6_MysqlMariadb_KnownProblems}
+
+\subsubsection{using TZUpdateSQL}
+\label{sec:Rev6_MysqlMariadb_KnownProblems_TZUpdateSQL}
+
+The TZUpdateSQL component will raise an error if a record is posted to the connected Dataset where no values were changed.
+This is because MySQL / MariaDB returns the number of changed records by default.
+If a record didn't change, 0 is returned instead.
+See \url{https://dev.mysql.com/doc/refman/8.0/en/mysql-affected-rows.html} for more information.
+This can be mitigated by adding "`CLIENT\_FOUND\_ROWS=1"' to the TZConnection.Properties property.
+
+\section{SAP / Sybase ASE}
+\label{sec:Rev6_sybase}
+
+\subsection{Known Problems}
+\label{sec:Rev6_sybase_KnownProblems}
+
+\subsubsection{unichar / univarchar / unitext doesn't work}
+Using unichar / univarchar / unitext columns with the sybase driver doesn't work. Use freetds if you need this to work.
+
+\section{Sybase / SAP ASA}
+\label{sec:Rev6_asa}
+
+We did a large amount of improvements that have no ticket number assigned. Please let us know if you find problems in the ASA driver.
+
+\section{PostgreSQL}
+\label{sec:Rev6_postgresql}
+
+\subsection{Fixed Bugs}
+\label{sec:Rev6_postgresql_FixedBugs}
+
+\begin{itemize}
+\item	
+  246: Zeos had a problem where it couldn't clean up its internal state correctly in the event of a connection loss to the server.
+	This has been fixed.
+\item	
+  274: The TZPGEventAlerter component now works correctly in a 64 bits environment.
+\item
+  350: PostgreSQL: It wasn't possible to correctly execute stored functions on PostgreSQL without unpreparing them first.
+\end{itemize}
+
+\subsection{Changes}
+\label{sec:Rev6_postgresql_Changes}
+
+\subsubsection{support for citext}
+\label{sec:Rev6_postgresql_Changes_citext}
+
+We added support for the citext module.
+See \url{https://www.postgresql.org/docs/current/citext.html} for more information on citext.
+
+\subsection{Known problems}
+\label{sec:Rev6_postgresql_KnownProblems}
+
+\subsubsection{using stored procedure is not possible}
+\label{sec:Rev6_postgresql_KnownProblems_storedprocedures}
+Recent versions of PostgreSQL introduced the new stored procedures - as opposed to stored functions, which have been part of PostgreSQL for quite some time now.
+Zeos 7.2.6 does not support using PostgreSQL stored procedures with the TZStoredProc component.
+Stored functions continue to work as before.
+
+\chapter{Zeos 7.2.4 Release Notes}
+
 \section{General Changes}
-\label{sec:GeneralChanges}
+\label{sec:Rev4_GeneralChanges}
 \subsection{Supported compilers}
-\label{sec:GeneralChanges_SupportedCompilers}
+\label{sec:Rev4_GeneralChanges_SupportedCompilers}
 Zeos 7.2 supports Delphi versions from Delphi 7 to XE 10.2 Tokyo.
 Only the Win32 and Win64 compilers are supported.
 Other platforms utilizing the NextGen compiler are not (yet) supported.
@@ -54,7 +332,7 @@ The Free Pascal compiler is supported from version 2.6 to version 3.0.
 Older versions might work but don't get official suport by us anymore.
 
 \subsection{Date and Time format settings}
-\label{sec:GeneralChanges_DateAndTimeFormatSettings}
+\label{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}
 Zeos now supports specifying date and time format settings that will be used if Zeos doesn't know how to correctly format date and time settings for the DBMS to understand them.
 This feature gets used with emulated parameters in ADO - if the FoxPro driver is used for example.
 These new parameters can be set in the TZConnection.Properties property.
@@ -79,11 +357,11 @@ These settings can be used to solve problems on the following drivers:
 \item dblib (FreeTDS, mssql, sybase)
 \item postgresql
 \item mysql (depending on parameter preferprepared, used if preferprepared is not set)
-\item ado (emulated parameters, see \ref{sec:DriverSpecificChanges_Ado} \nameref{sec:DriverSpecificChanges_Ado}, Page \pageref{sec:DriverSpecificChanges_Ado})
+\item ado (emulated parameters, see \ref{sec:Rev4_DriverSpecificChanges_Ado} \nameref{sec:Rev4_DriverSpecificChanges_Ado}, Page \pageref{sec:Rev4_DriverSpecificChanges_Ado})
 \end{itemize}
 
 \subsection{Batch Loading}
-\label{sec:GeneralChanges_BatchLoading}
+\label{sec:Rev4_GeneralChanges_BatchLoading}
 We added API support for batch loading of data into databases that support this feature.
 Currently this feature is only available at the DBC layer.
 Assume the following example:
@@ -157,9 +435,9 @@ One where the column index starts with 1 and one where the colulmn index starts 
 FirstDbcIndex will be set accordingly.
 
 \section{Behaviour changes}
-\label{sec:BreakingChanges}
+\label{sec:Rev4_BreakingChanges}
 \subsection{Case sensitivity of the TZMetadata object and DBC layer meta data functions}
-\label{sec:BreakingChanges_MetadataCaseSensitivity}
+\label{sec:Rev4_BreakingChanges_MetadataCaseSensitivity}
 If you call Metadata functions on the DBC layer or use the TZMetadata object be sure that the case of the object name that you retrieve information for is in the correct case.
 Zeos will not do any guesswork - it will simply query the underlying database for the identifier that you supply.
 Example: In former versions of Zeos the call GetColumns('PEOPLE') might have returned information for the table people.
@@ -169,7 +447,7 @@ If you want the former behavior restored, your call has to be like this:\\
 GetColumns(\-IZConnection.\-GetMetadata.\-NormalizePatternCase('PEOPLE'))
 
 \subsection{PostgreSQL autocommit and OID columns}
-\label{sec:BreakingChanges_PostgresqlAutocommitOids}
+\label{sec:Rev4_BreakingChanges_PostgresqlAutocommitOids}
 The postgresql driver now uses the native autocommit of PostgreSQL.
 Writing to OID BLOBs only works in explicit transactions because of this. 
 This is a limitation in PostgreSQL and cannot be fixed in Zeos.
@@ -177,12 +455,12 @@ The proposed workaround is to use the bytea data type.
 For more information see \url{https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod}.
 
 \subsection{FreeTDS default library name}
-\label{sec:BreakingChanges_FreetdsDefaultLIbraryName}
+\label{sec:Rev4_BreakingChanges_FreetdsDefaultLIbraryName}
 The FreeTDS drivers now uses sybdb.dll / sybdb.so as the default library to load.
 Watch out if your program doesn't set the LibraryPath property in TZConnection.
 
 \subsection{Automatic opening of connections}
-\label{BreakingChanges_AutomaticOpeningOfConnections}
+\label{Rev4_BreakingChanges_AutomaticOpeningOfConnections}
 In the past the drivers for MySQL, ADO and SQLite automatically opened a connection as soon as the connection object was created.
 This is changed.
 No driver will connect automatically anymore.
@@ -190,20 +468,20 @@ Call the connect method to open the connection.
 This change only affects users of the DBC layer.
 
 \subsection{IZConnection.GetMetadata will automatically connect now}
-\label{BreakingChanges_IZConnectionGetMetadataAutoconnect}
+\label{Rev4_BreakingChanges_IZConnectionGetMetadataAutoconnect}
 This change is on the DBC layer.
 Calling IZConnection.GetMetadata will connect to the database now in all cases.
 In previous versions of Zeos this wasn't guaranteed, leading to undefined behaviour, depending on wether the IZConnection was already connected or not.
 
 \section{Driver specific changes}
-\label{sec:DriverSpecificChanges}
+\label{sec:Rev4_DriverSpecificChanges}
 \subsection{PostgreSQL}
-\label{sec:DriverSpecificChanges_Postgresql}
+\label{sec:Rev4_DriverSpecificChanges_Postgresql}
 \begin{itemize}
 \item 
   The postgresql driver now uses the native autocommit of PostgreSQL. 
 	OID columns can no longer be written to in autocommit mode.
-	See \ref{sec:BreakingChanges_PostgresqlAutocommitOids} \nameref{sec:BreakingChanges_PostgresqlAutocommitOids}, Page \pageref{sec:BreakingChanges_PostgresqlAutocommitOids}.
+	See \ref{sec:Rev4_BreakingChanges_PostgresqlAutocommitOids} \nameref{sec:Rev4_BreakingChanges_PostgresqlAutocommitOids}, Page \pageref{sec:Rev4_BreakingChanges_PostgresqlAutocommitOids}.
 \item GUID columns are now supported.
 \item 
   New parameters, so PostgreSQL can connect using SSL (sslmode, requiressl, sslcompression, sslcert, sslkey, sslrootcert, sslcrl). 
@@ -223,14 +501,14 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
   Using date and time format settings with PostgreSQL is now supported.
   Since Zeos sends date and time paramaters to the server as strings, problems with formatting can arise.
 	If you have problems, try changing the date and time format settings.
-	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
+	For more information see \ref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}.
 \item
   If you still use PostgreSQL 7 databases, we urge you to move on to a newer version.
 	PostgreSQL 7 is deprecated with this version and will be removed with Zeos 7.3.
 \end{itemize}
 
 \subsection{Firebird / Interbase}
-\label{sec:DriverSpecificChanges_FirebirdInterbase}
+\label{sec:Rev4_DriverSpecificChanges_FirebirdInterbase}
 \begin{itemize}
 \item We added support for Firebird 3.0.
 \item 
@@ -242,14 +520,14 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
   We reenabled the use of Firebird and Interbase autocommit.
 \item
   We added support for the new DBC layer batch loading API to the Firebird / Interbase driver.
-	For more information see \ref{sec:GeneralChanges_BatchLoading} \nameref{sec:GeneralChanges_BatchLoading}, Page \pageref{sec:GeneralChanges_BatchLoading}.
+	For more information see \ref{sec:Rev4_GeneralChanges_BatchLoading} \nameref{sec:Rev4_GeneralChanges_BatchLoading}, Page \pageref{sec:Rev4_GeneralChanges_BatchLoading}.
 \item 
   If you still use Interbase 5 databases, we urge you to move on to a newer version.
 	Interbase 5 is deprecated with this version and will be removed with Zeos 7.3.	
 \end{itemize}
 
 \subsection{MySQL / MariaDB}
-\label{sec:DriverSpecificChanges_MysqlMariadb}
+\label{sec:Rev4_DriverSpecificChanges_MysqlMariadb}
 \begin{itemize}
 \item
   TZQuery and TZReadOnlyQuery now support the use of multiple statements in the query.
@@ -270,14 +548,14 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
   In this mode Zeos sends date and time paramaters to the server as strings.
 	Problems with formatting can arise.
 	If you have problems, try changing the date and time format settings.
-	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
+	For more information see \ref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}.
 \item
   The MySQL driver will not automatically connect to the database when the DBC layer connection object is created anymore.
 	This only affects users of the DBC layer.
 \end{itemize}
 
 \subsection{MS SQL / SAP ASE (Sybase ASE)}
-\label{sec:DriverSpecificChanges_MssqlAse}
+\label{sec:Rev4_DriverSpecificChanges_MssqlAse}
 \begin{itemize}
 \item 
   We reenabled Sybase support.
@@ -296,14 +574,14 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
   Using date and time format settings with Microsoft SQL Server and SAP Adaptive Server Enterprise is now supported.
   Since Zeos sends date and time paramaters to the server as strings, problems with formatting can arise.
 	If you have problems, try changing the date and time format settings.
-	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
+	For more information see \ref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}.
 \item 
   If you still use the mssql protocol using ntwdblib.dll to connect to MS SQL Server, we urge you to move on to either use ADO or FreeTDS.
 	The mssql protocol using ntwdblib.dll is not supported by Microsoft for ages now and we will discontinue its support with Zeos 7.3.
 \end{itemize}
 
 \subsection{Oracle}
-\label{sec:DriverSpecificChanges_Oracle}
+\label{sec:Rev4_DriverSpecificChanges_Oracle}
 \begin{itemize}
 \item
   Performance improvement: The oracle driver now supports block cursor reads.
@@ -311,22 +589,22 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 	The parameter for setting the block size is internal\_buffer\_size.
 \item
   We added support for the new DBC layer batch loading API to the Oracle driver.
-	For more information see \ref{sec:GeneralChanges_BatchLoading} \nameref{sec:GeneralChanges_BatchLoading}, Page \pageref{sec:GeneralChanges_BatchLoading}.
+	For more information see \ref{sec:Rev4_GeneralChanges_BatchLoading} \nameref{sec:Rev4_GeneralChanges_BatchLoading}, Page \pageref{sec:Rev4_GeneralChanges_BatchLoading}.
 \end{itemize}
 
 \subsection{ADO}
-\label{sec:DriverSpecificChanges_Ado}
+\label{sec:Rev4_DriverSpecificChanges_Ado}
 \begin{itemize}
 \item
   The ADO driver now also supports Free Pascal.
 \item
   We added support for the new DBC layer batch loading API to the ADO driver.
-	For more information see \ref{sec:GeneralChanges_BatchLoading} \nameref{sec:GeneralChanges_BatchLoading}, Page \pageref{sec:GeneralChanges_BatchLoading}.
+	For more information see \ref{sec:Rev4_GeneralChanges_BatchLoading} \nameref{sec:Rev4_GeneralChanges_BatchLoading}, Page \pageref{sec:Rev4_GeneralChanges_BatchLoading}.
 \item
   Zeos emulates named parameters for ADO drivers that don't support parameters.
 	Unfortunately this means Zeos doesn't know how to correctly format timestamps and similar data types to be correctly recognized by the underlying database.
 	Please use the new connection parameters ReadFormatSettings, WriteFormatSettings, DisplayFormatSettings.
-	For more information see \ref{sec:GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:GeneralChanges_DateAndTimeFormatSettings}.
+	For more information see \ref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}.
 \item
   The ADO driver will not automatically connect to the database when the DBC layer connection object is created anymore.
 	This only affects users of the DBC layer.	
@@ -340,7 +618,7 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 \end{itemize}
 
 \section{Known Problems}
-\label{sec:KnownProblems}
+\label{sec:Rev4_KnownProblems}
 \begin{itemize}
 \item 
   Zeos currently doesn't support the BCD type columns of Delphi.
@@ -358,8 +636,8 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 	This may lead to high memory consumption.
 \end{itemize}
 
-\section{The future development of Zeos}
-\label{sec:FutureDevelopmentOfZeos}
+\chapter{The future development of Zeos}
+\label{chap:FutureDevelopmentOfZeosRev}
 The next version of Zeos will be Zeos 7.3 which currently is in the making.
 Currently the following changes and features are planned:
 \begin{itemize}
@@ -376,6 +654,9 @@ Currently the following changes and features are planned:
 \item
   Protocols with version numbers will not be used in Zeos 7.3 anymore (i.e. firebird-2.5 will become firebird).
   Please migrate.
+\item
+  Zeos 7.3 will have support for the Delphi Nextgen compilers - i.e. Android, iOS, MacOS X and Linux.
 \end{itemize}
+If you use any of these new features, please get in contact on the forums (\url{http://zeoslib.sourceforge.net}).
 
 \end{document}
