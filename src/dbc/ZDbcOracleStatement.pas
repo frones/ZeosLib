@@ -505,11 +505,11 @@ begin
           Add(Tmp, False);
           if (Token.P^ = '?') then begin
             Tmp := '';
-            ParamWriter.AddChar(':', Tmp);
+            ParamWriter.AddChar(AnsiChar(':'), Tmp);
             if (FParamNames <> nil) and (Cardinal(Length(FParamNames)) >= ParamsCnt) and (FParamNames[ParamsCnt-1] <> '')
             then ParamWriter.AddText(FParamNames[ParamsCnt-1], Tmp)
             else begin
-              ParamWriter.AddChar('P', Tmp);
+              ParamWriter.AddChar(AnsiChar('P'), Tmp);
               ParamWriter.AddOrd(ParamsCnt, Tmp);
             end;
             ParamWriter.Finalize(Tmp);

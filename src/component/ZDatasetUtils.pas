@@ -1157,7 +1157,7 @@ begin
           DecodedKeyValues[I] := VariantManager.Convert(
             DecodedKeyValues[I], vtDateTime);
         else {$IFNDEF NEXTGEN} if (CurrentType in [stString, stAsciiStream]) then
-          if VariantManager.UseWComparsions then begin {$ENDIF NEXTGEN}
+          if VariantManager.UseWComparsions then {$ENDIF NEXTGEN}begin
             DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtUnicodeString);
             if CaseInsensitive then
               DecodedKeyValues[I].VUnicodeString :=
@@ -1250,7 +1250,7 @@ begin
           Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
           {$ELSE}
             {$IFDEF UNICODE}
-            Result := SysUtils.AnsiStrLComp(P2, P1, L) = 0;
+            Result := SysUtils.AnsiStrLComp(P2, P1, L1) = 0;
             {$ELSE} //EH: what are the fpc non windows wide comparision here?
               AValue1 := AnsiString(WValue1);
               AValue2 := AnsiString(WValue2);
@@ -1319,17 +1319,19 @@ begin
                   ResultSet.GetGUID(ColumnIndex, UID);
                   Result := CompareMem(@KeyValues[I].VGUID.D1, @UID.D1, SizeOf(TGUID));
                 end
-        else if (CurrentType in [stUnicodeString, stUnicodeStream]) or
-             ((CurrentType in [stString, stAsciiStream]) and (VariantManager.UseWComparsions)) then begin
+        else {$IFNDEF NEXTGEN}if (CurrentType in [stUnicodeString, stUnicodeStream]) or
+             ((CurrentType in [stString, stAsciiStream]) and (VariantManager.UseWComparsions)) then {$ENDIF NEXTGEN} begin
             WValue2 := ResultSet.GetUnicodeString(ColumnIndex);
             if CaseInsensitive then
               WValue2 := {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(WValue2);
             Result := KeyValues[I].VUnicodeString = WValue2;
+        {$IFNDEF NEXTGEN}
           end else begin
             AValue2 := ResultSet.GetAnsiString(ColumnIndex);
             if CaseInsensitive then
               AValue2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
             Result := KeyValues[I].VRawByteString = AValue2;
+        {$ENDIF !NEXTGEN}
           end;
       end;
 
