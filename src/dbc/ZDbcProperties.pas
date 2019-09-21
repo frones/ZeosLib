@@ -275,6 +275,11 @@ const
     (see comment above) }
 
   // Type: BOOLEAN
+  // compatibility option for users who bind double values to the params
+  // even if it should by a NUMERIC complient such as Currency or TBCD
+  // If set, we'll bind the Doubles as string with then Unknown OID e.g. 0
+  ConnProps_BindDoublesAsString = 'BindDoubleAsString';
+  // Type: BOOLEAN
   // Is Oid type treated as Large Object handle (blob) or as a regular integer
   DSProps_OidAsBlob = 'OidAsBlob';
   // Type: BOOLEAN

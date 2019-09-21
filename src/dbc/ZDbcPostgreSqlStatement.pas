@@ -82,6 +82,7 @@ type
     Fres: TPGresult; //Current query handle we'd obtained
     FRawPlanName: RawByteString; //a name we use to prepare (oddly PG still has no handle instead)
     FOidAsBlob: Boolean; //are blob's threaded as oid-lobs?
+    FBindDoubleAsString: Boolean; //compatibility for users who use doubles for the BCD fields
     Findeterminate_datatype, //did PG Fail to determine the datatypes? (mostly just because of bad queries)
     fAsyncQueries, //get the GetMoreResults logic with multiple results or SingleRowMode running
     fServerCursor, //PQsingleRowMode? is implizit the Async api
@@ -778,6 +779,7 @@ begin
     the pgBouncer does not support the RealPrepareds.... }
   FUseEmulatedStmtsOnly := not Assigned(FplainDriver.PQexecParams) or not Assigned(FplainDriver.PQexecPrepared) or
     StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EmulatePrepares, 'FALSE'));
+  FBindDoubleAsString := FUseEmulatedStmtsOnly or StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, ConnProps_BindDoublesAsString, 'FALSE'));
   Findeterminate_datatype := FUseEmulatedStmtsOnly;
   Finteger_datetimes := Connection.integer_datetimes;
   if Assigned(FPlainDriver.PQexecParams) and StrToBoolEx(DefineStatementParameter(Self, DSProps_BinaryWireResultMode, 'TRUE'))
@@ -1403,7 +1405,11 @@ function TZAbstractPostgreSQLPreparedStatementV3.OIDToSQLType(var Index: Integer
 begin
   CheckParameterIndex(Index);
   if (FPQParamOIDs[Index] = INVALIDOID) or (FRawPlanname = '') or Findeterminate_datatype then begin
-    FPQParamOIDs[Index] := ZSQLType2OID[FOidAsBlob][SQLType];
+    if FBindDoubleAsString and (SQLType = stDouble) then begin
+      FPQParamOIDs[Index] := INVALIDOID;
+      Result := stUnknown;
+      Exit;
+    end else FPQParamOIDs[Index] := ZSQLType2OID[FOidAsBlob][SQLType];
     if (Ord(SQLType) > Ord(stBoolean)) and (Ord(SQLType) < Ord(stLongWord)) and not Odd(Ord(SQLType))
     then Result := TZSQLType(Ord(SQLType)+3)
     else Result := SQLType
