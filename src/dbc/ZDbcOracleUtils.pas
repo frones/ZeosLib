@@ -363,7 +363,7 @@ const
     (hi: $00005AF3; lo: $107A4000), {     100000000000000}
     (hi: $002386F2; lo: $6FC10000), {   10000000000000000}
     (hi: $0DE0B6B3; lo: $A7640000), { 1000000000000000000}
-    (hi: $8AC72304; lo: $89E80000));{10000000000000000000}  
+    (hi: $8AC72304; lo: $89E80000));{10000000000000000000}
   {$ELSE}
   cInt64Divisor: array[0..10] of Int64Rec = (
     (lo: $00000001; hi: $00000000), {                   1}
@@ -1728,7 +1728,8 @@ end;
 Const ArgListType: array[Boolean] of ub4 = (OCI_ATTR_LIST_ARGUMENTS, OCI_ATTR_LIST_SUBPROGRAMS);
 
 procedure TZOraProcDescriptor_A.ConcatParentName(NotArgName: Boolean;
-  SQLWriter: TZSQLStringWriter; var Result: SQLString; const IC: IZIdentifierConvertor);
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF} SQLWriter: TZSQLStringWriter;
+  var Result: SQLString; const IC: IZIdentifierConvertor);
 begin
   if (FParent <> nil) then begin
     FParent.ConcatParentName(NotArgName, SQLWriter, Result, IC);

@@ -1561,7 +1561,7 @@ begin
       if FDBUPARAMS > 0 then begin
         OleCheck(FCommand.QueryInterface(IID_IAccessor, FParameterAccessor));
         FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
-          FParamInfoArray, fSupportsByRef);
+          FParamInfoArray);
         CalcParamSetsAndBufferSize;
         if not (FDBParams.hAccessor = 1) then
           raise EZSQLException.Create('Accessor handle should be unique!');

@@ -936,9 +936,9 @@ unnest(array[$1]::int8[])
           SQLWriter.AddText('[])', SQL);
           Inc(OffSet);
         end else begin
-          SQLWriter.AddChar('$', SQL);
+          SQLWriter.AddChar(AnsiChar('$'), SQL);
           SQLWriter.AddOrd(N, SQL);
-          SQLWriter.AddChar(',', SQL);
+          SQLWriter.AddChar(AnsiChar(','), SQL);
         end;
         Inc(N);
       end else
@@ -1311,7 +1311,7 @@ begin
           Add(Tmp, False);
           if (Token.P^ = '?') then begin
             Tmp := '';
-            ParamWriter.AddChar('$', Tmp);
+            ParamWriter.AddChar(AnsiChar('$'), Tmp);
             if (FParamNames <> nil) and (Cardinal(Length(FParamNames)) >= ParamsCnt) and (FParamNames[ParamsCnt-1] <> '')
             then ParamWriter.AddText(FParamNames[ParamsCnt-1], Tmp)
             else ParamWriter.AddOrd(ParamsCnt, Tmp);

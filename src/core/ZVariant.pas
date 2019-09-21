@@ -2659,9 +2659,11 @@ begin
               then ResTmp := ZConvertStringToUTF8WithAutoEncode(Value.VRawByteString, FCtrlsCP)
               else ResTmp := Value.VRawByteString;
     {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
     vtAnsiString: if ZOSCodePage = zCP_UTF8
                   then ResTmp := Value.VRawByteString
                   else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, zCP_UTF8);
+    {$ENDIF}
     vtUTF8String: ResTmp := Value.VRawByteString;
     vtRawByteString: if ZOSCodePage = FClientCP
                      then ResTmp := Value.VRawByteString

@@ -467,7 +467,7 @@ begin
         else SQLWriter.AddText('null', Result)
       else begin
         if (Bind.SQLType in [stString, stAsciiStream]) and (Bind.BindType = zbtUTF8String) and not FIsNCharIndex[ParamIndex] then
-          SQLWriter.AddChar('N', Result);
+          SQLWriter.AddChar(AnsiChar('N'), Result);
         SQLWriter.AddText(RawByteString(Bind.Value), Result);
       end;
       Inc(ParamIndex);
