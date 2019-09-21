@@ -669,7 +669,7 @@ begin
         ConnectionString := ConnectionString + Database;
       end else if Protocol = 'wnet' then begin
         if HostName = ''
-        then ConnectionString := '\\localhost'
+        then ConnectionString := '\\.'
         else ConnectionString := '\\' + HostName;
         if Port <> 0 then begin
           ConnectionString := ConnectionString + '@' + ZFastCode.IntToStr(Port);
