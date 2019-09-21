@@ -1121,7 +1121,6 @@ begin
       P := Pointer(FInParamDefaultValues[i]);
       if (P<>nil) and (PByte(P)^ = Ord(#39)) and (PByte(P+Length(FInParamDefaultValues[i])-1)^=Ord(#39))
       then FInParamDefaultValues[i] := Copy(FInParamDefaultValues[i], 2, Length(FInParamDefaultValues[i])-2)
-      else FInParamDefaultValues[i] := FInParamDefaultValues[i];
     end;
   SetLength(FEmulatedValues, 0);
   if (BindList.Capacity > 0) and (FMYSQL_BINDs = nil) then
@@ -2287,8 +2286,9 @@ begin
   if FEmulatedParams then begin
     if FTokenMatchIndex <> -1
     then BindList.SetNull(ParameterIndex, SQLType);
+    //we always need a new copy of the defult values else we'll write into the metadata default values for the non unicode compilers
     if FUseDefaults and (FInParamDefaultValues[ParameterIndex] <> '')
-    then FEmulatedValues[ParameterIndex] := FInParamDefaultValues[ParameterIndex]
+    then FEmulatedValues[ParameterIndex] := Copy(FInParamDefaultValues[ParameterIndex], 1, Length(FInParamDefaultValues[ParameterIndex]))
     else FEmulatedValues[ParameterIndex] := 'null'
   end else begin
     {$R-}
