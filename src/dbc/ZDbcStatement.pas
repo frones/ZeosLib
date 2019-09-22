@@ -754,8 +754,10 @@ begin
   if FASQL <> Value then begin
     FClosed := False;
     {$IFDEF UNICODE}
-    FWSQL := ZRawToUnicode(FASQL, FClientCP); //required for the resultsets
-    FASQL := GetRawEncodedSQL(FWSQL);
+    FWSQL := ZRawToUnicode(Value, FClientCP); //required for the resultsets
+    if ConSettings^.ClientCodePage^.Encoding <> ceUTF16 //params, CS_NONE ?
+    then FASQL := GetRawEncodedSQL(FWSQL)
+    else FASQL := Value;
     {$ELSE !UNICODE}
     if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
@@ -1075,7 +1077,6 @@ end;
 function TZAbstractStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 {$IFDEF UNICODE}
 begin
-  FWSQL := SQL;
   Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
 {$ELSE}
 var
