@@ -54,6 +54,7 @@ unit ZDbcOracleUtils;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -432,7 +433,9 @@ type
     property Parent: TZOraProcDescriptor_A read FParent;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet,
   ZEncoding, ZFastCode {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
@@ -1997,4 +2000,5 @@ begin
     FreeAndNil(Args);
 end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

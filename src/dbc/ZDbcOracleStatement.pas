@@ -54,6 +54,7 @@ unit ZDbcOracleStatement;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
@@ -154,7 +155,9 @@ type
     procedure Unprepare; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
@@ -1915,4 +1918,5 @@ OraPreparableTokens[OCI_STMT_ALTER-1].MatchingGroup   := 'ALTER';
 OraPreparableTokens[OCI_STMT_BEGIN-1].MatchingGroup   := 'BEGIN';
 OraPreparableTokens[OCI_STMT_DECLARE-1].MatchingGroup := 'DECLARE';
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

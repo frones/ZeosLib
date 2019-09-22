@@ -54,6 +54,7 @@ unit ZDbcOracleResultSet;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
 {$IFDEF USE_SYNCOMMONS}
@@ -208,7 +209,9 @@ type
     procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
@@ -2379,5 +2382,6 @@ begin
     {%H-}OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
       FChunkSize, Int64(Len)+1, False, FConSettings);
 end;
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.

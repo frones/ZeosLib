@@ -54,6 +54,7 @@ unit ZDbcOracle;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -163,7 +164,9 @@ var
   {** The common driver manager object. }
   OracleDriver: IZDriver;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZFastCode,
@@ -876,4 +879,5 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OracleDriver);
   OracleDriver := nil;
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.
