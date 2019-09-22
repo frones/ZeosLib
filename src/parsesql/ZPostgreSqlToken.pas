@@ -211,24 +211,12 @@ end;
 function TZPostgreSQLSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 var
-  WordToken: TZToken;
   DollarCount, BodyTagLen: Integer;
   TempTag: PChar;
 begin
   Result := inherited NextToken(SPos, NTerm, Tokenizer);
   //detecting Postgre Parameters as one ttWordState:
   if (Result.P^ = '$') and (SPos < NTerm) then begin
-    if ((SPos+1)^ <> '$') then begin
-      Inc(SPos);
-      if Tokenizer.WordState <> nil then
-      WordToken := Tokenizer.WordState.NextToken(SPos, NTerm, Tokenizer);
-      if (WordToken.TokenType = ttWord) and (SPos^ <> '$') then begin
-        Result.TokenType := ttWord;
-        Result.L := Result.L+WordToken.L;
-        Exit;
-      end else
-        SPos := Result.P;
-    end;
     //detect body tags as ttQuoted
     //eg. $body$ .... $body$ or $$ .... $$
     DollarCount := 1;

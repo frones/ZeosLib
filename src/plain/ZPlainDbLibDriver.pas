@@ -1430,14 +1430,15 @@ function TZDBLIBPLainDriver.dbOpen(Login: PLOGINREC;
   server: PAnsiChar): PDBPROCESS;
 begin
   if Assigned(FTdsDbOpen) then
-    Result := FTdsDbOpen(Login, server, 1)
+    Result := FTdsDbOpen(Login, server, Ord(ZFastCode.Pos('Sybase', GetDescription) > 0))
   else
+    {$IFNDEF MSWINDOWS}
+    Result := FdbOpen(Login, server);
+    {$ELSE}
     if Assigned(FdbOpen)
     then Result := FdbOpen(Login, server)
-    {$IFDEF MSWINDOWS}
-    else Result := FdbOpen_stdcall(Login, server)
+    else Result := FdbOpen_stdcall(Login, server);
     {$ENDIF}
-    ;
 end;
 
 {$IFDEF MSWINDOWS}
@@ -1609,7 +1610,7 @@ end;
   a request for a DBPROCESS connection. *}
 function TZDBLIBPLainDriver.dbSetLoginTime(Seconds: Integer): RETCODE;
 begin
-  if Assigned(Fdbgetcharset)
+  if Assigned(FdbSetLoginTime)
   then Result := FdbSetLoginTime(Seconds)
   else Result := FdbSetLoginTime_stdcall(Seconds);
 end;

@@ -69,7 +69,6 @@ type
     FHandle: PDBPROCESS;
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
-    FLastOptainedRS: IZResultSet;
     FIsNCharIndex: TBooleanDynArray;
     procedure CreateOutParamResultSet; virtual;
     procedure InternalExecute; virtual; abstract;
@@ -82,7 +81,6 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
     function GetMoreResults: Boolean; override;
-    function GetUpdateCount: Integer; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -108,7 +106,7 @@ type
   private
     function GetRawSQL: RawByteString; override;
   protected
-    function GetInParamLogValue(ParamIndex: Integer): RawByteString; override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
@@ -288,48 +286,20 @@ function TZAbstractDBLibStatement.GetMoreResults: Boolean;
 var
   ResultSet: IZResultSet;
   UpdateCount: IZAnyValue;
-  I: Integer;
 begin
-  FLastOptainedRS := nil;
-  Result := False;
-  for i := 0 to FResults.Count -1 do begin
-    Result := FResults.Items[I].QueryInterface(IZResultSet, ResultSet) = S_OK;
-    if Result then begin
-      FLastOptainedRS := ResultSet;
-      FResults.Delete(I);
-      Break;
-    end else//else TestStatement can't be resolved
-      if FResults.Items[I].QueryInterface(IZAnyValue, UpdateCount) = S_OK then
+  Result := FResults.Count > 0;
+  if Result then begin
+    if FResults.Items[0].QueryInterface(IZResultSet, ResultSet) = S_OK then begin
+      LastResultSet := ResultSet;
+      FOpenResultSet := Pointer(FLastResultSet);
+    end else begin
+      LastResultSet := nil;
+      FOpenResultSet := nil;
+      if FResults.Items[0].QueryInterface(IZAnyValue, UpdateCount) = S_OK then
         LastUpdateCount := UpdateCount.GetInteger;
+    end;
+    FResults.Delete(0);
   end;
-end;
-
-{**
-  Returns the current result as an update count;
-  if the result is a <code>ResultSet</code> object or there are no more results, -1
-  is returned. This method should be called only once per result.
-
-  @return the current result as an update count; -1 if the current result is a
-    <code>ResultSet</code> object or there are no more results
-  @see #execute
-}
-function TZAbstractDBLibStatement.GetUpdateCount: Integer;
-var
-  UpdateCount: IZAnyValue;
-  I: Integer;
-begin
-  Result := inherited GetUpdateCount;
-  if (Result = -1) and (FResults.Count > 0) then
-    for i := 0 to FResults.Count -1 do
-      try
-        if FResults.Items[I].QueryInterface(IZAnyValue, UpdateCount) = S_OK then begin
-          Result := UpdateCount.GetInteger;
-          FResults.Delete(I);
-          Break;
-        end;
-      finally
-        UpdateCount := nil;
-      end;
 end;
 
 procedure TZAbstractDBLibStatement.Prepare;
@@ -356,10 +326,7 @@ begin
   Prepare;
   InternalExecute;
   FetchResults;
-  LastUpdateCount := GetUpdateCount;
-  Result := GetMoreResults;
-  LastResultSet := FLastOptainedRS;
-  FLastOptainedRS := nil;
+  Result := GetMoreResults and (FLastResultSet <> nil);
 end;
 
 {**
@@ -374,11 +341,8 @@ begin
   Prepare;
   InternalExecute;
   FetchResults;
-  if GetMoreResults then begin
-    Result := FLastOptainedRS;
-    FOpenResultSet := Pointer(Result);
-    FLastOptainedRS := nil;
-  end;
+  while GetMoreResults and (FlastResultSet = nil) do ;
+  Result := GetResultSet;
 end;
 
 {**
@@ -396,6 +360,7 @@ begin
   Prepare;
   InternalExecute;
   FetchResults;
+  while GetMoreResults and (FlastResultSet <> nil) do ;
   Result := GetUpdateCount;
 end;
 
@@ -443,16 +408,12 @@ end;
 procedure TZAbstractDBLibStatement.FlushPendingResults;
 var I: Integer;
 begin
-  if FLastOptainedRS <> nil then begin
-    FLastOptainedRS.Close;
-    FLastOptainedRS := nil;
-  end;
-  FLastOptainedRS := nil;
+  if FLastResultSet <> nil then
+    FLastResultSet.Close;
   for I := 0 to FResults.Count -1 do
-    if Supports(FResults[I], IZResultSet, FLastOptainedRS) then begin
-      FLastOptainedRS.Close;
-      FLastOptainedRS := nil;
-    end;
+    if Supports(FResults[I], IZResultSet, FLastResultSet) then
+      FLastResultSet.Close;
+  FLastResultSet := nil;
   FResults.Clear;
 end;
 
@@ -485,49 +446,35 @@ end;
 
 { TZDBLibPreparedStatementEmulated }
 
-function TZDBLibPreparedStatementEmulated.GetInParamLogValue(
-  ParamIndex: Integer): RawByteString;
-var Bind: PZBindValue;
-begin
-  Bind := BindList[ParamIndex];
-  if Bind.BindType = zbtNull then
-    Result := '(NULL)'
-  else if Bind.BindType = zbtArray then
-    Result := '(ARRAY)'
-  else case Bind.SQLType of
-    stBoolean:      if PByte(Bind.Value)^ = Ord('0')
-                    then Result := '(FALSE)'
-                    else Result := '(TRUE)';
-    stAsciiStream:  Result := '(CLOB)';
-    stBinaryStream: Result := '(BLOB)';
-    else            Result := RawByteString(Bind.Value);
-  end;
-end;
-
 function TZDBLibPreparedStatementEmulated.GetRawSQL: RawByteString;
 var
   I: Integer;
   ParamIndex: Integer;
   Bind: PZBindValue;
+  SQLWriter: TZRawSQLStringWriter;
 begin
   ParamIndex := 0;
   Result := EmptyRaw;
+  I := Length(FASQL);
+  I := I + BindList.Count shl 5; //add 32 bytes/param by default
+  SQLWriter := TZRawSQLStringWriter.Create(I);
   for I := 0 to High(FCachedQueryRaw) do
     if IsParamIndex[i] then begin
       Bind := BindList[ParamIndex];
       if Bind.BindType = zbtNull
       then if FInParamDefaultValues[ParamIndex] <> '' then
-        ToBuff(FInParamDefaultValues[ParamIndex], Result)
-        else ToBuff('null', Result)
+        SQLWriter.AddText(FInParamDefaultValues[ParamIndex], Result)
+        else SQLWriter.AddText('null', Result)
       else begin
         if (Bind.SQLType in [stString, stAsciiStream]) and (Bind.BindType = zbtUTF8String) and not FIsNCharIndex[ParamIndex] then
-          ToBuff('N', Result);
-        ToBuff(RawByteString(Bind.Value), Result);
+          SQLWriter.AddChar(AnsiChar('N'), Result);
+        SQLWriter.AddText(RawByteString(Bind.Value), Result);
       end;
       Inc(ParamIndex);
     end else
-      ToBuff(FCachedQueryRaw[I], Result);
-  FlushBuff(Result);
+      SQLWriter.AddText(FCachedQueryRaw[I], Result);
+  SQLWriter.Finalize(Result);
+  FreeAndNil(SQLWriter);
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -689,6 +636,26 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   BindList.Put(ParameterIndex, stGUID, GUIDToRaw(Value, [guidWithBrackets, guidQuoted]), FClientCP);
+end;
+
+procedure TZDBLibPreparedStatementEmulated.AddParamLogValue(
+  ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter;
+  var Result: RawByteString);
+var Bind: PZBindValue;
+begin
+  Bind := BindList[ParamIndex];
+  if Bind.BindType = zbtNull then
+    SQLWriter.AddText('(NULL)', Result)
+  else if Bind.BindType = zbtArray then
+    SQLWriter.AddText('(ARRAY)', Result)
+  else case Bind.SQLType of
+    stBoolean:      if PByte(Bind.Value)^ = Ord('0')
+                    then SQLWriter.AddText('(FALSE)', Result)
+                    else SQLWriter.AddText('(TRUE)', Result);
+    stAsciiStream:  SQLWriter.AddText('(CLOB)', Result);
+    stBinaryStream: SQLWriter.AddText('(BLOB)', Result);
+    else            SQLWriter.AddText(RawByteString(Bind.Value), Result);
+  end;
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetInt(ParameterIndex, Value: Integer);

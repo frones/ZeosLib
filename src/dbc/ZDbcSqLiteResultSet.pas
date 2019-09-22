@@ -134,6 +134,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -911,6 +912,40 @@ begin
   Result := GetDouble(ColumnIndex);
 end;
 
+procedure TZSQLiteResultSet.GetGUID(ColumnIndex: Integer; var Result: TGUID);
+var ColType, l: Integer;
+  Buf: PAnsiChar;
+label Fill;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBigDecimal);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
+  LastWasNull := ColType = SQLITE_NULL;
+  if LastWasNull then begin
+Fill:FillChar(Result, SizeOf(TGUID), #0);
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do case ColType of
+    SQLITE3_TEXT:    begin
+                      Buf := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
+                      L := ZFastCode.StrLen(Buf);
+                      if (L = 36) or (L = 38)
+                      then ZSysUtils.ValidGUIDToBinary(Buf, @Result.D1)
+                      else goto Fill;
+                    end;
+    SQLITE_BLOB: begin
+      L := FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex);
+      if L = SizeOf(TGUID) then begin
+        Buf := FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt, ColumnIndex);
+        Move(Buf^, Result.D1, SizeOf(TGUID));
+      end else
+        goto Fill;
+    end;
+  end;
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -944,7 +979,7 @@ begin
                       else Result := i64;
                   end;
     SQLITE_FLOAT:   Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
-    SQLITE_TEXT:    SQLStrToFloatDef(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), 0, Result);
+    SQLITE3_TEXT:    SQLStrToFloatDef(FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex), 0, Result);
     else Result := 0;
   end;
 end;
@@ -1006,7 +1041,7 @@ Fill:FillChar(Result, SizeOf(TBCD), #0);
   end else with TZColumnInfo(ColumnsInfo[ColumnIndex]) do case ColType of
     SQLITE_INTEGER: ScaledOrdinal2BCD(FPlainDriver.sqlite3_column_Int64(Fsqlite3_stmt, ColumnIndex), BCDScales[ColumnType = stCurrency], Result);
     SQLITE_FLOAT:   ZSysUtils.Double2BCD(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex), Result);
-    SQLITE_TEXT:    begin
+    SQLITE3_TEXT:    begin
                       Buf := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
                       if not TryRawToBcd(Buf, ZFastCode.StrLen(Buf), Result, '.') then begin
                         LastWasNull := True;
@@ -1075,7 +1110,7 @@ begin
   else case ColType of
     SQLITE_INTEGER: I64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
     SQLITE_FLOAT:   Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex);
-    SQLITE_TEXT:    begin
+    SQLITE3_TEXT:   begin
                       P := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
                       SQLStrToFloatDef(P, 0, FCurrDecimalSep, Result, ZFastcode.StrLen(P));
                     end;

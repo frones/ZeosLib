@@ -109,7 +109,7 @@ type
     procedure BindTimeStampStruct(Index: Integer; ASAType: SmallInt; const Value: TDateTime);
   protected
     procedure UnPrepareInParameters; override;
-    function GetInParamLogValue(Index: Integer): RawByteString; override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(Index: Integer; Value: Boolean);
@@ -161,7 +161,13 @@ begin
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
   FetchSize := BlockSize;
   ResultSetType := rtScrollSensitive;
-  CursorName := IntToRaw(NativeUInt(FASAConnection.GetDBHandle))+'_'+IntToRaw(FStatementId);
+  with ZClasses.TZRawSQLStringWriter.Create(40) do begin
+    AddOrd(Pointer(FASAConnection.GetDBHandle), FCursorName);
+    AddChar(AnsiChar('_'), FCursorName);
+    AddOrd(FStatementId, FCursorName);
+    Finalize(FCursorName);
+    Free;
+  end;
 end;
 
 destructor TZAbstractASAStatement.Destroy;
@@ -302,7 +308,7 @@ begin
       ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings);
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE
       then Result := false
-      else DescribeCursor(FASAConnection, FSQLData, CursorName, '');
+      else DescribeCursor(FASAConnection, FSQLData, CursorName, EmptyRaw);
     end;
   end;
 end;
@@ -491,54 +497,6 @@ begin
   PSmallInt(PAnsiChar(SQLVAR.sqlData)+SizeOf(TZASASQLDateTime))^ := ASAType; //save declared type for the logs
 end;
 
-function TZASAPreparedStatement.GetInParamLogValue(
-  Index: Integer): RawByteString;
-var SQLVAR: PZASASQLVAR;
-  DT: TDateTime;
-begin
-  SQLVAR := @FInParamSQLDA.sqlvar[Index];
-  if (SQLVar.sqlInd <> nil) and (SQLVar.sqlInd^ = -1) then
-    Result := '(NULL)'
-  else case SQLVar.sqlType and $FFFE of
-    DT_SMALLINT         : Result := IntToRaw(PSmallInt(SQLVAR.sqlData)^);
-    DT_INT              : Result := IntToRaw(PInteger(SQLVAR.sqlData)^);
-    //DT_DECIMAL          : ;
-    DT_FLOAT            : Result := FloatToRaw(PSingle(SQLVAR.sqldata)^);
-    DT_DOUBLE           : Result := FloatToRaw(PDouble(SQLVAR.sqldata)^);
-    DT_VARCHAR          : Result := SQLQuotedStr(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39));
-    DT_LONGVARCHAR      : Result := '(CLOB)';
-    DT_TIMESTAMP_STRUCT : case PSmallInt(PAnsiChar(SQLVAR.sqlData)+SizeOf(TZASASQLDateTime))^ of
-                            DT_DATE: Result := ZSysUtils.DateTimeToRawSQLDate(EncodeDate(PZASASQLDateTime(SQLVAR.sqlData).Year,
-                              PZASASQLDateTime(SQLVAR.sqlData).Month +1, PZASASQLDateTime(SQLVAR.sqlData).Day), ConSettings.WriteFormatSettings, True);
-                            DT_TIME: Result := ZSysUtils.DateTimeToRawSQLTime(EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
-                              PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000), ConSettings.WriteFormatSettings, True);
-                            else {DT_TIMESTAMP} begin
-                              DT := EncodeDate(PZASASQLDateTime(SQLVAR.sqlData).Year,
-                                PZASASQLDateTime(SQLVAR.sqlData).Month +1, PZASASQLDateTime(SQLVAR.sqlData).Day);
-                              if DT < 0
-                              then DT := DT-EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
-                                PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000)
-                              else DT := DT+EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
-                                PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000);
-                              Result := ZSysUtils.DateTimeToRawSQLTimeStamp(DT, ConSettings.WriteFormatSettings, True);
-                            end;
-                          end;
-    DT_BINARY           : Result := ZDbcUtils.GetSQLHexAnsiString(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length);
-    DT_LONGBINARY       : Result := '(BLOB)';
-    DT_TINYINT          : Result := IntToRaw(PByte(SQLVAR.sqlData)^);
-    DT_BIGINT           : Result := IntToRaw(PInt64(SQLVAR.sqlData)^);
-    DT_UNSINT           : Result := IntToRaw(PCardinal(SQLVAR.sqlData)^);
-    DT_UNSSMALLINT      : Result := IntToRaw(PWord(SQLVAR.sqlData)^);
-    DT_UNSBIGINT        : Result := IntToRaw(PUInt64(SQLVAR.sqlData)^);
-    DT_BIT              : If PByte(SQLVAR.sqlData)^ = 0
-                          then Result := '(FALSE)'
-                          else Result := '(TRUE)';
-    DT_NVARCHAR         : Result := SQLQuotedStr(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39));
-    DT_LONGNVARCHAR     : Result := '(CLOB)';
-    else Result := 'unkown';
-  end;
-end;
-
 procedure TZASAPreparedStatement.InitBind(SQLVAR: PZASASQLVAR;
   ASAType: Smallint; Len: Cardinal);
 begin
@@ -688,6 +646,61 @@ begin
   ZSysUtils.GUIDToBuffer(@Value.D1, PAnsiChar(SQLVAR.sqlData), []);
 end;
 
+procedure TZASAPreparedStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var SQLVAR: PZASASQLVAR;
+  DT: TDateTime;
+begin
+  CheckParameterIndex(ParamIndex);
+  SQLVAR := @FInParamSQLDA.sqlvar[ParamIndex];
+  if (SQLVar.sqlInd <> nil) and (SQLVar.sqlInd^ = -1) then
+    SQLWriter.AddText('(NULL)', Result)
+  else case SQLVar.sqlType and $FFFE of
+    DT_SMALLINT         : SQLWriter.AddOrd(PSmallInt(SQLVAR.sqlData)^, Result);
+    DT_INT              : SQLWriter.AddOrd(PInteger(SQLVAR.sqlData)^, Result);
+    //DT_DECIMAL          : ;
+    DT_FLOAT            : SQLWriter.AddFloat(PSingle(SQLVAR.sqldata)^, Result);
+    DT_DOUBLE           : SQLWriter.AddFloat(PDouble(SQLVAR.sqldata)^, Result);
+    DT_VARCHAR          : SQLWriter.AddTextQuoted(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39), Result);
+    DT_LONGVARCHAR      : SQLWriter.AddText('(CLOB)', Result);
+    DT_TIMESTAMP_STRUCT : case PSmallInt(PAnsiChar(SQLVAR.sqlData)+SizeOf(TZASASQLDateTime))^ of
+                            DT_DATE: begin
+                                DT := EncodeDate(PZASASQLDateTime(SQLVAR.sqlData).Year,
+                                  PZASASQLDateTime(SQLVAR.sqlData).Month +1, PZASASQLDateTime(SQLVAR.sqlData).Day);
+                                SQLWriter.AddDate(DT, ConSettings.WriteFormatSettings.DateFormat, Result);
+                              end;
+                            DT_TIME: begin
+                                DT := EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
+                                  PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000);
+                                SQLWriter.AddTime(DT, ConSettings.WriteFormatSettings.TimeFormat, Result);
+                              end
+                            else {DT_TIMESTAMP} begin
+                              DT := EncodeDate(PZASASQLDateTime(SQLVAR.sqlData).Year,
+                                PZASASQLDateTime(SQLVAR.sqlData).Month +1, PZASASQLDateTime(SQLVAR.sqlData).Day);
+                              if DT < 0
+                              then DT := DT-EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
+                                PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000)
+                              else DT := DT+EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
+                                PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000);
+                              SQLWriter.AddDateTime(DT, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
+                            end;
+                          end;
+    DT_BINARY           : SQLWriter.AddHexBinary(@PZASASQLSTRING(SQLVAR.sqldata).data[0], PZASASQLSTRING(SQLVAR.sqldata).length, True, Result);
+    DT_LONGBINARY       : SQLWriter.AddText('(BLOB)', Result);
+    DT_TINYINT          : SQLWriter.AddOrd(PByte(SQLVAR.sqlData)^, Result);
+    DT_BIGINT           : SQLWriter.AddOrd(PInt64(SQLVAR.sqlData)^, Result);
+    DT_UNSINT           : SQLWriter.AddOrd(PCardinal(SQLVAR.sqlData)^, Result);
+    DT_UNSSMALLINT      : SQLWriter.AddOrd(PWord(SQLVAR.sqlData)^, Result);
+    DT_UNSBIGINT        : SQLWriter.AddOrd(PUInt64(SQLVAR.sqlData)^, Result);
+    DT_BIT              : If PByte(SQLVAR.sqlData)^ = 0
+                          then SQLWriter.AddText('(FALSE)', Result)
+                          else SQLWriter.AddText('(TRUE)', Result);
+    DT_NVARCHAR         : Result := SQLQuotedStr(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39));
+    DT_LONGNVARCHAR     : SQLWriter.AddText('(NCLOB)', Result);
+    else                  SQLWriter.AddText('(UNKNOWN)', Result);
+  end;
+end;
+
 procedure TZASAPreparedStatement.SetInt(Index, Value: Integer);
 var SQLVAR: PZASASQLVAR;
 begin
@@ -833,21 +846,26 @@ function TZASACallableStatement.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
   I: Integer;
-  P: PChar;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQLWriter: TZSQLStringWriter;
 begin
   SQL := '';
-  ToBuff('CALL ', SQL);
-  ToBuff(StoredProcName, SQL);
-  ToBuff(Char('('), SQL);
+  I := Length(StoredProcName);
+  i := I + 6+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
+  SQLWriter.AddText('CALL ', SQL);
+  SQLWriter.AddText(StoredProcName, SQL);
+  if BindList.Count > 0 then
+    SQLWriter.AddChar('(', SQL);
   for i := 0 to BindList.Count-1 do
     if BindList.ParamTypes[i] <> pctReturn then
-      ToBuff('?,', SQL);
-  FlushBuff(SQL);
-  P := Pointer(SQL);
-  if (P+Length(SQL)-1)^ = ','
-  then (P+Length(SQL)-1)^ := ')' //cancel last comma
-  else (P+Length(SQL)-1)^ := ' ';
+      SQLWriter.AddText('?,', SQL);
+  if BindList.Count > 0 then begin
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.AddChar(')', SQL);
+  end;
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZASAPreparedStatement.Create(Connection , SQL, Info);
   TZASAPreparedStatement(Result).Prepare;
 end;

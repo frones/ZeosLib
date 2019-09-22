@@ -4473,6 +4473,7 @@ var
   RowValues: TZVariantDynArray;
   PartialKey: Boolean;
   CaseInsensitive: Boolean;
+  VariantManager: IZClientVariantManager;
 begin
   OnlyDataFields := False;
   CheckBrowseMode;
@@ -4537,17 +4538,15 @@ begin
         FreeRecBuf(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
         {$ENDIF}
     end;
-  end
-  else
-  begin
+  end else begin
+    VariantManager := Connection.DbcConnection.GetClientVariantManager;
     PrepareValuesForComparison(FieldRefs, DecodedKeyValues,
-      ResultSet, PartialKey, CaseInsensitive);
+      ResultSet, PartialKey, CaseInsensitive, VariantManager);
 
     { Processes only data fields. }
     I := 0;
     RowCount := CurrentRows.Count;
-    while True do
-    begin
+    while True do begin
       while (I >= RowCount) and FetchOneRow do
         RowCount := CurrentRows.Count;
       if I >= RowCount then
@@ -4557,8 +4556,7 @@ begin
       ResultSet.MoveAbsolute(RowNo);
 
       if CompareFieldsFromResultSet(FieldRefs, DecodedKeyValues,
-        ResultSet, PartialKey, CaseInsensitive) then
-      begin
+        ResultSet, PartialKey, CaseInsensitive, VariantManager) then begin
         Result := I + 1;
         Break;
       end;

@@ -56,10 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} StrUtils, FmtBCD,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} FmtBCD,
   ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
-  ZSelectSchema, {$IF defined(OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND} ZCollections;
+  ZSelectSchema, ZClasses, ZCollections;
 
 type
 
@@ -74,7 +74,6 @@ type
   public
     constructor Create(ColumnIndex: Integer; const ColumnName: string;
       ColumnType: TZSQLType; NewValue: Boolean; const DefaultValue: string);
-
     property ColumnIndex: Integer read FColumnIndex write FColumnIndex;
     property ColumnName: string read FColumnName write FColumnName;
     property ColumnType: TZSQLType read FColumnType write FColumnType;
@@ -116,8 +115,9 @@ type
     DeleteStatement   : IZPreparedStatement;
 
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
-    function ComposeFullTableName(const Catalog, Schema, Table: string): string;
-    function DefineTableName: string;
+    function ComposeFullTableName(const Catalog, Schema, Table: SQLString;
+      SQLWriter: TZSQLStringWriter): SQLString;
+    function DefineTableName: SQLString;
 
     function CreateResolverStatement(const SQL : String):IZPreparedStatement;
 
@@ -152,15 +152,15 @@ type
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
 
-    function FormWhereClause(Columns: TObjectList;
-      OldRowAccessor: TZRowAccessor): string; virtual;
+    procedure FormWhereClause(Columns: TObjectList;
+      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); virtual;
     function FormInsertStatement(Columns: TObjectList;
-      {%H-}NewRowAccessor: TZRowAccessor): string; virtual;
+      {%H-}NewRowAccessor: TZRowAccessor): SQLString; virtual;
     function FormUpdateStatement(Columns: TObjectList;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor): string; virtual;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString; virtual;
     function FormDeleteStatement(Columns: TObjectList;
-      OldRowAccessor: TZRowAccessor): string;
-    function FormCalculateStatement(Columns: TObjectList): string; virtual;
+      OldRowAccessor: TZRowAccessor): SQLString;
+    function FormCalculateStatement(Columns: TObjectList): SQLString; virtual;
 
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
       RowAccessor: TZRowAccessor);
@@ -179,7 +179,6 @@ type
 implementation
 
 uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZDbcProperties
-  {$IF not defined(OLDFPC) and not defined(NO_UNIT_CONTNRS)},ZClasses{$IFEND}
   {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZResolverParameter }
@@ -293,56 +292,67 @@ end;
   @return a fully qualified table name.
 }
 function TZGenericCachedResolver.ComposeFullTableName(const Catalog, Schema,
-  Table: string): string;
+  Table: SQLString; SQLWriter: TZSQLStringWriter): SQLString;
+var tmp: SQLString;
 begin
+  Result := '';
   if Table <> '' then begin
-    Result := IdentifierConvertor.Quote(Table);
-    if (Schema <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsSchemasInDataManipulation then
-      Result := IdentifierConvertor.Quote(Schema) + '.' + Result;
-    if (Catalog <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsCatalogsInDataManipulation then
-      Result := IdentifierConvertor.Quote(Catalog) + '.' + Result;
-  end else
-    Result := '';
+    if (Catalog <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsCatalogsInDataManipulation then begin
+      Tmp := IdentifierConvertor.Quote(Catalog);
+      SQLWriter.AddText(Tmp, Result);
+      SQLWriter.AddChar('.', Result);
+    end;
+    if (Schema <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsSchemasInDataManipulation then begin
+      Tmp := IdentifierConvertor.Quote(Schema);
+      SQLWriter.AddText(Tmp, Result);
+      SQLWriter.AddChar('.', Result);
+    end;
+    Tmp := IdentifierConvertor.Quote(Table);
+    SQLWriter.AddText(Tmp, Result);
+    SQLWriter.Finalize(Result);
+  end;
 end;
 
 {**
   Defines a table name from the select statement.
 }
-function TZGenericCachedResolver.DefineTableName: string;
+function TZGenericCachedResolver.DefineTableName: SQLString;
 var
   I: Integer;
   Temp: string;
+  SQLWriter: TZSQLStringWriter;
 begin
   Result := '';
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-  begin
-    Temp := ComposeFullTableName(Metadata.GetCatalogName(I),
-      Metadata.GetSchemaName(I), Metadata.GetTableName(I));
-    if (Result = '') and (Temp <> '') then
-      Result := Temp
-    else if (Result <> '') and (Temp <> '') and (Temp <> Result) then
-      raise EZSQLException.Create(SCanNotUpdateComplexQuery);
+  SQLWriter := TZSQLStringWriter.Create(512);
+  try
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
+      Temp := ComposeFullTableName(Metadata.GetCatalogName(I),
+        Metadata.GetSchemaName(I), Metadata.GetTableName(I), SQLWriter);
+      if (Result = '') and (Temp <> '') then
+        Result := Temp
+      else if (Result <> '') and (Temp <> '') and (Temp <> Result) then
+        raise EZSQLException.Create(SCanNotUpdateComplexQuery);
+    end;
+    if Result = '' then
+      raise EZSQLException.Create(SCanNotUpdateThisQueryType);
+  finally
+    FreeAndNil(SQLWriter);
   end;
-  if Result = '' then
-    raise EZSQLException.Create(SCanNotUpdateThisQueryType);
 end;
 
 function TZGenericCachedResolver.CreateResolverStatement(const SQL: String): IZPreparedStatement;
 var
   Temp : TStrings;
 begin
-  if StrToBoolEx(FStatement.GetParameters.Values[DSProps_PreferPrepared]) then
-    begin
-      Temp := TStringList.Create;
-      Temp.Values[DSProps_PreferPrepared] := 'true';
-      if not ( Connection.GetParameters.Values[DSProps_ChunkSize] = '' ) then //ordered by precedence
-        Temp.Values[DSProps_ChunkSize] := Connection.GetParameters.Values[DSProps_ChunkSize]
-      else
-        Temp.Values[DSProps_ChunkSize] := FStatement.GetParameters.Values[DSProps_ChunkSize];
-      Result := Connection.PrepareStatementWithParams(SQL, Temp);
-      Temp.Free;
-    end
-  else
+  if StrToBoolEx(FStatement.GetParameters.Values[DSProps_PreferPrepared]) then begin
+    Temp := TStringList.Create;
+    Temp.Values[DSProps_PreferPrepared] := 'true';
+    if ( FStatement.GetParameters.Values[DSProps_ChunkSize] = '' ) //ordered by precedence
+    then Temp.Values[DSProps_ChunkSize] := Connection.GetParameters.Values[DSProps_ChunkSize]
+    else Temp.Values[DSProps_ChunkSize] := FStatement.GetParameters.Values[DSProps_ChunkSize];
+    Result := Connection.PrepareStatementWithParams(SQL, Temp);
+    Temp.Free;
+  end else
     Result := Connection.PrepareStatement(SQL);
 
 end;
@@ -358,12 +368,9 @@ begin
   { Precache insert parameters. }
   if InsertColumns.Count = 0 then
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-      if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
-        and Metadata.IsWritable(I) then
-      begin
-        InsertColumns.Add(TZResolverParameter.Create(I,
+      if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '') and Metadata.IsWritable(I)
+      then InsertColumns.Add(TZResolverParameter.Create(I,
           Metadata.GetColumnName(I), Metadata.GetColumnType(I), True, ''));
-      end;
   { Use cached insert parameters }
   CopyResolveParameters(InsertColumns, Columns);
 end;
@@ -413,11 +420,9 @@ procedure TZGenericCachedResolver.DefineWhereKeyColumns(Columns: TObjectList);
     I: Integer;
   begin
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-      if (ColumnName = Metadata.GetColumnName(I))
-        and (Table = Metadata.GetTableName(I)) then
-      begin
+      if (ColumnName = Metadata.GetColumnName(I)) and (Table = Metadata.GetTableName(I)) then begin
         WhereColumns.Add(TZResolverParameter.Create(I, ColumnName,
-          stUnknown, False, ''));
+          Metadata.GetColumnType(I), False, ''));
         Result := True;
         Exit;
       end;
@@ -433,19 +438,15 @@ var
   Fields: TStrings;
 begin
   { Use precached values. }
-  if WhereColumns.Count > 0 then
-  begin
+  if WhereColumns.Count > 0 then begin
     CopyResolveParameters(WhereColumns, Columns);
     Exit;
   end;
-
+  Table := '';
   { Defines catalog, schema and a table. }
-  Table := DefineTableName;
-  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-  begin
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
     Table := Metadata.GetTableName(I);
-    if Table <> '' then
-    begin
+    if Table <> '' then begin
       Schema := Metadata.GetSchemaName(I);
       Catalog := Metadata.GetCatalogName(I);
       Break;
@@ -453,12 +454,10 @@ begin
   end;
 
   { Tryes to define primary keys. }
-  if not WhereAll then
-  begin
+  if not WhereAll then begin
     KeyFields := FStatement.GetParameters.Values[DSProps_KeyFields];
     { Let user define key fields }
-    if KeyFields <> '' then
-    begin
+    if KeyFields <> '' then begin
       Fields := ExtractFields(KeyFields, [',', ';']);
       try
         for I := 0 to Fields.Count - 1 do
@@ -467,10 +466,7 @@ begin
       finally
         Fields.Free;
       end;
-    end
-    else
-    { Ask DB for key fields }
-    begin
+    end else begin { Ask DB for key fields }
       {For exact results: quote all identifiers SEE: http://sourceforge.net/p/zeoslib/tickets/81/
       If table names have mixed case ConstructNameCondition will return wrong results
       and we fall back to WhereAll}
@@ -482,10 +478,9 @@ begin
     end;
   end;
 
-  if WhereColumns.Count > 0 then
-    CopyResolveParameters(WhereColumns, Columns)
-  else
-    DefineWhereAllColumns(Columns);
+  if WhereColumns.Count > 0
+  then CopyResolveParameters(WhereColumns, Columns)
+  else DefineWhereAllColumns(Columns);
 end;
 
 {**
@@ -498,28 +493,22 @@ var
   I: Integer;
 begin
   { Use precached values. }
-  if WhereColumns.Count > 0 then
-  begin
+  if WhereColumns.Count > 0 then begin
     CopyResolveParameters(WhereColumns, Columns);
     Exit;
   end;
 
-  { Takes a a key all non-blob fields. }
+  { Takes a key all non-blob fields. }
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-  begin
-    if CheckKeyColumn(I) then
-      WhereColumns.Add(TZResolverParameter.Create(I,
+    if CheckKeyColumn(I)
+    then WhereColumns.Add(TZResolverParameter.Create(I,
         Metadata.GetColumnName(I), Metadata.GetColumnType(I), False, ''))
-    else
-      if IgnoreKeyColumn then
-        WhereColumns.Add(TZResolverParameter.Create(I,
-          Metadata.GetColumnName(I), Metadata.GetColumnType(I), False, ''));
-  end;
-  if ( WhereColumns.Count = 0 ) and ( not IgnoreKeyColumn ) then
-    DefineWhereAllColumns(Columns, True)
-  else
-    { Copy defined parameters to target columns }
-    CopyResolveParameters(WhereColumns, Columns);
+    else if IgnoreKeyColumn then
+      WhereColumns.Add(TZResolverParameter.Create(I,
+        Metadata.GetColumnName(I), Metadata.GetColumnType(I), False, ''));
+  if ( WhereColumns.Count = 0 ) and ( not IgnoreKeyColumn )
+  then DefineWhereAllColumns(Columns, True)
+  else CopyResolveParameters(WhereColumns, Columns);
 end;
 
 {**
@@ -547,10 +536,8 @@ var
   I: Integer;
 begin
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-  begin
     if RowAccessor.IsNull(I) and (Metadata.GetTableName(I) <> '')
       and ((Metadata.GetDefaultValue(I) <> '') or (RowAccessor.GetColumnDefaultExpression(I) <> '')) then
-    begin
       // DefaultExpression takes takes precedence on database default value
       if RowAccessor.GetColumnDefaultExpression(I) <> '' then
         Columns.Add(TZResolverParameter.Create(I,
@@ -560,8 +547,6 @@ begin
         Columns.Add(TZResolverParameter.Create(I,
           Metadata.GetColumnName(I), Metadata.GetColumnType(I),
           True, Metadata.GetDefaultValue(I)));
-    end;
-  end;
 end;
 
 {**
@@ -591,11 +576,11 @@ begin
       RowAccessor := OldRowAccessor;
     ColumnIndex := Current.ColumnIndex;
 
-    if FCalcDefaults then
-      Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
-    if RowAccessor.IsNull(ColumnIndex) then
-      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex))
-    else case Metadata.GetColumnType(ColumnIndex) of
+      if FCalcDefaults then
+        Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
+    if RowAccessor.IsNull(ColumnIndex) then begin
+      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex));
+    end else case Metadata.GetColumnType(ColumnIndex) of
       stBoolean:
         Statement.SetBoolean(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetBoolean(ColumnIndex, WasNull));
@@ -659,36 +644,32 @@ end;
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
 }
-function TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
-  OldRowAccessor: TZRowAccessor): string;
+procedure TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
+  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+  var Result: SQLString);
 var
   I, N: Integer;
   Current: TZResolverParameter;
-  Condition: string;
+  Condition: SQLString;
 begin
-  Result := '';
   N := Columns.Count - WhereColumns.Count;
 
-  for I := 0 to WhereColumns.Count - 1 do
-  begin
+  if WhereColumns.Count > 0 then
+    SQLWriter.AddText(' WHERE ', Result);
+  for I := 0 to WhereColumns.Count - 1 do begin
     Current := TZResolverParameter(WhereColumns[I]);
-
+    if I > 0 then
+      SQLWriter.AddText(' AND ', Result);
     Condition := IdentifierConvertor.Quote(Current.ColumnName);
-    if OldRowAccessor.IsNull(Current.ColumnIndex) then
-    begin
-      Condition := Condition + ' IS NULL';
+    SQLWriter.AddText(Condition, Result);
+    if OldRowAccessor.IsNull(Current.ColumnIndex) then begin
+      SQLWriter.AddText(' IS NULL', Result);
       Columns.Delete(N);
-    end
-    else
-    begin
-      Condition := Condition + '=?';
+    end else begin
+      SQLWriter.AddText('=?', Result);
       Inc(N);
     end;
-    AppendSepString(Result, Condition, ' AND ');
   end;
-
-  if Result <> '' then
-    Result := ' WHERE ' + Result;
 end;
 
 {**
@@ -697,45 +678,62 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList;
-  NewRowAccessor: TZRowAccessor): string;
+  NewRowAccessor: TZRowAccessor): SQLString;
 var
   I: Integer;
-  Current: TZResolverParameter;
-  TableName: string;
-  Temp1: string;
+  Tmp: SQLString;
   // NB: INSERT..RETURNING is only aclual for several drivers so we must ensure
   // this unit is compilable with all these drivers disabled.
   {$IF DECLARED(DSProps_InsertReturningFields)}
   Fields: TStrings;
   {$IFEND}
+  SQLWriter: TZSQLStringWriter;
 begin
-  TableName := DefineTableName;
-  DefineInsertColumns(Columns);
-  if Columns.Count = 0 then begin
-    Result := '';
-    Exit;
-  end;
+  SQLWriter := TZSQLStringWriter.Create(512+(MetaData.GetColumnCount shl 5));
+  Result := 'INSERT INTO ';
+  try
+    Tmp := DefineTableName;
+    SQLWriter.AddText(Tmp, Result);
+    DefineInsertColumns(Columns);
+    if Columns.Count = 0 then begin
+      Result := '';
+      Exit;
+    end;
 
-  Temp1 := '';
-  for I := 0 to Columns.Count - 1 do begin
-    Current := TZResolverParameter(Columns[I]);
-    AppendSepString(Temp1, IdentifierConvertor.Quote(Current.ColumnName), ',');
-  end;
+    SQLWriter.AddChar(' ', Result);
+    SQLWriter.AddChar('(', Result);
+    for I := 0 to Columns.Count - 1 do begin
+      if I > 0 then
+        SQLWriter.AddChar(',', Result);
+      Tmp := IdentifierConvertor.Quote(TZResolverParameter(Columns[I]).ColumnName);
+      SQLWriter.AddText(Tmp, Result);
+    end;
+    SQLWriter.AddText(') VALUES (', Result);
+    for I := 0 to Columns.Count - 1 do begin
+      if I > 0 then
+        SQLWriter.AddChar(',', Result);
+      SQLWriter.AddChar('?', Result);
+    end;
+    SQLWriter.AddChar(')', Result);
 
-  Result := 'INSERT INTO '+TableName+' ('+Temp1+') VALUES ('+
-    DupeString('?,', Columns.Count - 1) + '?' +')';
-
-  {$IF DECLARED(DSProps_InsertReturningFields)}
-  Temp1 := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
-  if Temp1 <> '' then begin
-    Fields := ExtractFields(Temp1, [',', ';']);
-    Temp1 := '';
-    for I := 0 to Fields.Count - 1 do
-      AppendSepString(Temp1, IdentifierConvertor.Quote(Fields[I]), ',');
-    Fields.Free;
-    Result := Result + ' RETURNING ' + Temp1;
+    {$IF DECLARED(DSProps_InsertReturningFields)}
+    Tmp := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
+    if Tmp <> '' then begin
+      SQLWriter.AddText(' RETURNING ', Result);
+      Fields := ExtractFields(Tmp, [',', ';']);
+      for I := 0 to Fields.Count - 1 do begin
+        if I > 0 then
+          SQLWriter.AddChar(',', Result);
+        Tmp := IdentifierConvertor.Quote(Fields[I]);
+        SQLWriter.AddText(Tmp, Result);
+      end;
+      Fields.Free;
+    end;
+    SQLWriter.Finalize(Result);
+    {$IFEND}
+  finally
+    FreeAndNil(SQLWriter);
   end;
-  {$IFEND}
 end;
 
 {**
@@ -745,31 +743,39 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 function TZGenericCachedResolver.FormUpdateStatement(Columns: TObjectList;
-  OldRowAccessor, NewRowAccessor: TZRowAccessor): string;
+  OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
 var
   I: Integer;
   Current: TZResolverParameter;
-  TableName: string;
-  Temp: string;
+  Temp: SQLString;
+  SQLWriter: TZSQLStringWriter;
 begin
-  TableName := DefineTableName;
-  DefineUpdateColumns(Columns, OldRowAccessor, NewRowAccessor);
-  if Columns.Count = 0 then
-  begin
-    Result := '';
-    Exit;
-  end;
+  SQLWriter := TZSQLStringWriter.Create(512+(MetaData.GetColumnCount shl 5));
+  Result := 'UPDATE ';
+  try
+    Temp := DefineTableName;
+    DefineUpdateColumns(Columns, OldRowAccessor, NewRowAccessor);
+    if Columns.Count = 0 then begin
+      Result := '';
+      Exit;
+    end;
+    SQLWriter.AddText(Temp, Result);
+    SQLWriter.AddText(' SET ', Result);
+    for I := 0 to Columns.Count - 1 do begin
+      Current := TZResolverParameter(Columns[I]);
+      if I > 0 then
+        SQLWriter.AddChar(',', Result);
+      Temp := IdentifierConvertor.Quote(Current.ColumnName);
+      SQLWriter.AddText(Temp, Result);
+      SQLWriter.AddText('=?', Result);
+    end;
 
-  Temp := '';
-  for I := 0 to Columns.Count - 1 do
-  begin
-    Current := TZResolverParameter(Columns[I]);
-    AppendSepString(Temp, IdentifierConvertor.Quote(Current.ColumnName) + '=?', ',');
+    DefineWhereKeyColumns(Columns);
+    FormWhereClause(Columns, SQLWriter, OldRowAccessor, Result);
+    SQLWriter.Finalize(Result);
+  finally
+    FreeAndNil(SQLWriter);
   end;
-
-  Result := 'UPDATE '+TableName+' SET '+Temp;
-  DefineWhereKeyColumns(Columns);
-  Result := Result + FormWhereClause(Columns, OldRowAccessor);
 end;
 
 {**
@@ -778,11 +784,23 @@ end;
   @param OldRowAccessor an accessor object to old column values.
 }
 function TZGenericCachedResolver.FormDeleteStatement(Columns: TObjectList;
-  OldRowAccessor: TZRowAccessor): string;
+  OldRowAccessor: TZRowAccessor): SQLString;
+var
+  SQLWriter: TZSQLStringWriter;
+  Tmp: SQLString;
 begin
-  Result := 'DELETE FROM '+ DefineTableName;
-  DefineWhereKeyColumns(Columns);
-  Result := Result + FormWhereClause(Columns, OldRowAccessor);
+  SQLWriter := TZSQLStringWriter.Create(512+(MetaData.GetColumnCount shl 5));
+  Result := 'DELETE FROM ';
+  try
+    Tmp := DefineTableName;
+    SQLWriter.AddText(Tmp, Result);
+    DefineWhereKeyColumns(Columns);
+    FormWhereClause(Columns, SQLWriter, OldRowAccessor, Result);
+    SQLWriter.Finalize(Result);
+  finally
+    FreeAndNil(SQLWriter);
+    Tmp := '';
+  end;
 end;
 
 {**
@@ -791,24 +809,28 @@ end;
   @param OldRowAccessor an accessor object to old column values.
 }
 function TZGenericCachedResolver.FormCalculateStatement(
-  Columns: TObjectList): string;
+  Columns: TObjectList): SQLString;
 var
   I: Integer;
   Current: TZResolverParameter;
+  SQLWriter: TZSQLStringWriter;
 begin
-  Result := '';
   if Columns.Count = 0 then
-     Exit;
-
-  for I := 0 to Columns.Count - 1 do
-  begin
-    Current := TZResolverParameter(Columns[I]);
-    if Current.DefaultValue <> '' then
-      AppendSepString(Result, Current.DefaultValue, ',')
-    else
-      AppendSepString(Result, 'NULL', ',');
+    Result := ''
+  else begin
+    Result := 'SELECT ';
+    SQLWriter := TZSQLStringWriter.Create(512+(Columns.Count shl 5));
+    for I := 0 to Columns.Count - 1 do begin
+      Current := TZResolverParameter(Columns[I]);
+      if I > 0 then
+         SQLWriter.AddChar(',', Result);
+      if Current.DefaultValue <> ''
+      then SQLWriter.AddText(Current.DefaultValue, Result)
+      else SQLWriter.AddText('NULL', Result);
+    end;
+    SQLWriter.Finalize(Result);
+    FreeAndNil(SQLWriter);
   end;
-  Result := 'SELECT ' + Result;
 end;
 
 {**
@@ -926,6 +948,8 @@ begin
   SQLParams := TObjectList.Create(True);
   try
     DefineCalcColumns(SQLParams, RowAccessor);
+    if SQLParams.Count = 0 then
+       Exit;
     SQL := FormCalculateStatement(SQLParams);
     if SQL = '' then
        Exit;

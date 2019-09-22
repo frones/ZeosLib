@@ -314,8 +314,13 @@ begin
     SetLength(FValues, FCapacity);
   end;
   SoftVarManager.Assign(Value, FValues[FCount]);
-  if Value.VString <> '' then
-    FValues[FCount].VString := Value.VString; //keep parsed value alive
+  {$IFDEF UNICODE}
+  if Value.VUnicodeString <> '' then
+    FValues[FCount].VUnicodeString := Value.VUnicodeString; //keep parsed value alive
+  {$ELSE}
+  if Value.VRawByteString <> '' then
+    FValues[FCount].VRawByteString := Value.VRawByteString; //keep parsed value alive
+  {$ENDIF}
   Inc(FCount);
 end;
 
@@ -467,9 +472,9 @@ end;
 Function TZExpression.NormalizeValues(var Val1, Val2: TZVariant): Boolean;
 begin
   Result := (Val1.VType in [vtString..vtUnicodeString]) and
-        not (Val2.VType in [vtString..vtUnicodeString]) and (Val2.VString <> '');
+        not (Val2.VType in [vtString..vtUnicodeString]) and (Val2.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF} <> '');
   if Result then
-    Val2 := EncodeString(Val2.VString);
+    Val2 := EncodeString(Val2.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
 end;
 
 {**
@@ -601,11 +606,11 @@ begin
         begin
           if Current.Value.VType = vtString then
           begin
-            Index := Variables.FindByName(Current.Value.VString);
+            Index := Variables.FindByName(Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
             if Index < 0 then
             begin
               raise TZExpressionError.Create(
-                Format(SVariableWasNotFound, [Current.Value.VString]));
+                Format(SVariableWasNotFound, [Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}]));
             end;
            Current.Value := EncodeInteger(Index);
           end;
@@ -636,11 +641,11 @@ begin
         begin
           if Current.Value.VType = vtString then
           begin
-            Index := Functions.FindByName(Current.Value.VString);
+            Index := Functions.FindByName(Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
             if Index < 0 then
             begin
               raise TZExpressionError.Create(
-                Format(SFunctionWasNotFound, [Current.Value.VString]));
+                Format(SFunctionWasNotFound, [Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}]));
             end;
             Current.Value := EncodeInterface(Functions.Functions[Index]);
           end;

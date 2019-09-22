@@ -63,9 +63,13 @@ uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZOleDB, ZDbcOleDBUtils, ZDbcCache,
-  ZDbcCachedResultSet, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
+  ZDbcCachedResultSet, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility,
+  ZClasses;
 
 type
+  { Interbase Error Class}
+  EZOleDBConvertError = class(EZSQLException);
+
   {** Implements Ado ResultSet. }
   TZAbstractOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
@@ -95,7 +99,7 @@ type
     procedure ReleaseFetchedRows;
     procedure CreateAccessors;
     procedure CheckError(Status: HResult); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    procedure RaiseConversionError(ColumnIndex: Integer; CurrenctType, ExpectedType: TZSQLType);
+    function CreateOleDbConvertError(ColumnIndex: Integer; wType: DBTYPE): EZOleDBConvertError;
   public
     //reintroduce is a performance thing (self tested and confirmed for OLE the access is pushed x2!):
     //direct dispatched methods for the interfaces makes each call as fast as using a native object!
@@ -203,7 +207,7 @@ uses
   Variants, Math, DateUtils,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode, ZClasses,
+  ZDbcOleDB, ZDbcOleDBStatement, ZMessages, ZEncoding, ZFastCode,
   ZDbcMetaData, ZDbcUtils;
 
 var
@@ -400,10 +404,12 @@ begin
   end;
 end;
 
-procedure TZAbstractOleDBResultSet.RaiseConversionError(ColumnIndex: Integer;
-  CurrenctType, ExpectedType: TZSQLType);
+function TZAbstractOleDBResultSet.CreateOleDbConvertError(ColumnIndex: Integer;
+  wType: DBTYPE): EZOleDBConvertError;
 begin
-
+  Result := EZOleDBConvertError.Create(Format(SErrorConvertionField,
+        [TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnLabel,
+        IntToStr(WType)]));
 end;
 
 procedure TZAbstractOleDBResultSet.ReleaseFetchedRows;
@@ -652,10 +658,7 @@ set_from_num:         Result := @fTinyBuffer[0];
     //DBTYPE_UDT	= 132;
     //DBTYPE_FILETIME	= 64;
     //DBTYPE_PROPVARIANT	= 138;
-    else begin
-      Result := PEmptyAnsiString;
-      Len := 0;
-    end;
+    else raise CreateOleDbConvertError(ColumnIndex, fwType);
   end;
 end;
 
@@ -803,10 +806,7 @@ set_from_num:         Result := @fTinyBuffer[0];
     //DBTYPE_UDT	= 132;
     //DBTYPE_FILETIME	= 64;
     //DBTYPE_PROPVARIANT	= 138;
-    else begin
-      Result := PEmptyUnicodeString;
-      Len := 0;
-    end;
+    else raise CreateOleDbConvertError(ColumnIndex, fwType);
   end;
 end;
 
@@ -855,6 +855,7 @@ begin
           Result := StrToBoolEx(PWideChar(FData),
             True, FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^ <> 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end;
 end;
 
@@ -908,7 +909,7 @@ begin
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
-      else Result := 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else Result := 0;
 end;
@@ -961,7 +962,7 @@ begin
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
-      else Result := 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else Result := 0;
 end;
@@ -1015,7 +1016,7 @@ begin
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT = 138;
       //DBTYPE_VARNUMERIC = 139;
-      else Result := 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else Result := 0;
 end;
@@ -1060,7 +1061,7 @@ begin
       //DBTYPE_FILETIME = 64;
       //DBTYPE_PROPVARIANT = 138;
       //DBTYPE_VARNUMERIC = 139;
-      else Result := 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else Result := 0;
 end;
@@ -1106,7 +1107,7 @@ begin
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
-      else Result := 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else Result := 0;
 end;
@@ -1122,14 +1123,28 @@ end;
 }
 procedure TZAbstractOleDBResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
+label Fail;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FwType of
       DBTYPE_GUID: Result := PGUID(FData)^;
-      DBTYPE_STR:       ;
-      DBTYPE_WSTR:      ;
-      else RaiseConversionError(ColumnIndex,
-        TZColumnInfo(ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType, stGUID);
+      DBTYPE_STR: if FColBind.cbMaxLen = 0 then
+                    goto Fail
+                  else begin
+                    if FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+                      FLength := GetAbsorbedTrailingSpacesLen(PAnsiChar(FData), FLength);
+                    ValidGUIDToBinary(PAnsiChar(FData), @Result.D1);
+                  end;
+      DBTYPE_WSTR: if FColBind.cbMaxLen = 0 then
+                    goto Fail
+                  else begin
+                    FLength := FLength shr 1;
+                    if FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+                      FLength := GetAbsorbedTrailingSpacesLen(PWideChar(FData), FLength);
+                    ValidGUIDToBinary(PWideChar(FData), @Result.D1);
+                  end;
+      else
+Fail:        raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else FillChar(Result, SizeOf(TGUID), #0);
 end;
@@ -1174,7 +1189,7 @@ begin
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
-      else Result := 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else Result := 0;
 end;
@@ -1192,7 +1207,7 @@ end;
 procedure TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var P: Pointer;
   L: NativeUInt;
-label NBCD;
+label Fail;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FwType of
@@ -1207,12 +1222,12 @@ begin
       DBTYPE_STR: begin
           P := GetPAnsichar(ColumnIndex, L);
           if not ZSysUtils.TryRawToBcd(P, L, Result, '.') then
-            goto NBCD;
+            goto fail;
         end;
       DBTYPE_WSTR: begin
           P := GetPWidechar(ColumnIndex, L);
           if not ZSysUtils.TryUniToBcd(P, L, Result, '.') then
-            goto NBCD;
+            goto fail;
         end;
       DBTYPE_VARIANT:   Result := VarToBCD(POleVariant(FData)^);
       DBTYPE_ERROR:     ScaledOrdinal2Bcd(PInteger(FData)^, 0, Result);
@@ -1232,10 +1247,11 @@ begin
       //DBTYPE_PROPVARIANT	= 138;
       DBTYPE_NUMERIC:   SQLNumeric2BCD(FData, Result, SQL_MAX_NUMERIC_LEN);
       DBTYPE_VARNUMERIC:SQLNumeric2BCD(FData, Result, FLength);
-      else goto NBCD;
+      else
+Fail:    raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else
-NBCD: Result := NullBcd;
+    FillChar(Result, SizeOf(TBCD), #0)
 end;
 
 {**
@@ -1306,7 +1322,7 @@ begin
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
-      else Result := 0;
+      else raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else Result := 0;
 end;

@@ -93,6 +93,8 @@ type
     //finally the object types
     stArray, stDataSet);
 
+  TZSQLTypeArray = array of TZSQLType;
+
   /// <summary>
   ///  Defines a transaction isolation level.
   /// </summary>
@@ -1221,7 +1223,7 @@ type
     function GetDouble(ParameterIndex: Integer): Double;
     function GetCurrency(ParameterIndex: Integer): Currency;
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
-    //procedure GetGUID(Index: Integer; var Result: TGUID);
+    procedure GetGUID(Index: Integer; var Result: TGUID);
     function GetBytes(ParameterIndex: Integer): TBytes; overload;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;
@@ -1326,6 +1328,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -1370,6 +1373,7 @@ type
     function GetDoubleByName(const ColumnName: string): Double;
     function GetCurrencyByName(const ColumnName: string): Currency;
     procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
+    procedure GetGUIDByName(const ColumnName: string; var Result: TGUID);
     function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
     function GetTimeByName(const ColumnName: string): TDateTime;
@@ -1447,6 +1451,7 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+    procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
@@ -1490,6 +1495,7 @@ type
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency);
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: TBCD);
+    procedure UpdateGUIDByName(const ColumnName: string; const Value: TGUID);
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload; deprecated;
     procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; var Len: NativeUInt); overload;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar); deprecated;
@@ -1711,7 +1717,8 @@ type
     FLoggingListeners: IZCollection;
     FGarbageCollector: IZCollection;
     FHasLoggingListener: Boolean;
-    procedure LogEvent(const Event: TZLoggingEvent);
+    procedure InternalLogEvent(const Event: TZLoggingEvent);
+    function InternalGetDriver(const Url: string): IZDriver;
   public
     constructor Create;
     destructor Destroy; override;
@@ -1805,22 +1812,11 @@ begin
 end;
 
 function TZDriverManager.GetDriver(const Url: string): IZDriver;
-var
-  I: Integer;
-  Current: IZDriver;
 begin
   FDriversCS.Enter;
   Result := nil;
   try
-    for I := 0 to FDrivers.Count - 1 do
-    begin
-      Current := FDrivers[I] as IZDriver;
-      if Current.AcceptsURL(Url) then
-      begin
-        Result := Current;
-        Exit;
-      end;
-    end;
+    Result := InternalGetDriver(URL);
   finally
     FDriversCS.Leave;
   end;
@@ -1831,34 +1827,53 @@ function TZDriverManager.GetConnectionWithParams(const Url: string; Info: TStrin
 var
   Driver: IZDriver;
 begin
-  Driver := GetDriver(Url);
-  if Driver = nil then
-    raise EZSQLException.Create(SDriverWasNotFound);
-  Result := Driver.Connect(Url, Info);
+  FDriversCS.Enter;
+  Driver := nil;
+  try
+    Driver := InternalGetDriver(URL);
+    if Driver = nil then
+      raise EZSQLException.Create(SDriverWasNotFound);
+    Result := Driver.Connect(Url, Info);
+  finally
+    FDriversCS.Leave;
+  end;
 end;
 
 function TZDriverManager.GetClientVersion(const Url: string): Integer;
 var
   Driver: IZDriver;
 begin
-  Driver := GetDriver(Url);
-  if Driver = nil then
-    raise EZSQLException.Create(SDriverWasNotFound);
-  Result := Driver.GetClientVersion(Url);
+  FDriversCS.Enter;
+  Result := 0;
+  try
+    Driver := InternalGetDriver(URL);
+    if Driver = nil then
+      raise EZSQLException.Create(SDriverWasNotFound);
+    Result := GetClientVersion(Url);
+  finally
+    FDriversCS.Leave;
+  end;
 end;
 
 function TZDriverManager.GetConnectionWithLogin(const Url: string; const User: string;
   const Password: string): IZConnection;
 var
   Info: TStrings;
+  Driver: IZDriver;
 begin
+  FDriversCS.Enter;
   Info := TStringList.Create;
+  Result := nil;
   try
     Info.Values[ConnProps_Username] := User;
     Info.Values[ConnProps_Password] := Password;
-    Result := GetConnectionWithParams(Url, Info);
+    Driver := InternalGetDriver(URL);
+    if Driver = nil then
+      raise EZSQLException.Create(SDriverWasNotFound);
+    Result := Driver.Connect(Url, Info);
   finally
-    Info.Free;
+    FreeAndNil(Info);
+    FDriversCS.Leave;
   end;
 end;
 
@@ -1904,24 +1919,51 @@ begin
   Result := FHasLoggingListener;
 end;
 
+function TZDriverManager.InternalGetDriver(const Url: string): IZDriver;
+var I: Integer;
+begin
+  Result := nil;
+  for I := 0 to FDrivers.Count - 1 do
+    if (FDrivers[I].QueryInterface(IZDriver, Result) = S_OK) and Result.AcceptsURL(Url) then
+      Exit;
+  Result := nil;
+end;
+
+{**
+  Logs an error message about event with error result code.
+  @param Category a category of the message.
+  @param Protocol a name of the protocol.
+  @param Msg a description message.
+  @param ErrorCode an error code.
+  @param Error an error message.
+}
 procedure TZDriverManager.LogError(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer;
   const Error: RawByteString);
 var
   Event: TZLoggingEvent;
 begin
-  if not FHasLoggingListener then
-    Exit;
-  Event := TZLoggingEvent.Create(Category, Protocol, Msg, ErrorCode, Error);
+  Event := nil;
+  FLogCS.Enter;
   try
-    LogEvent(Event);
+    if not FHasLoggingListener then
+      Exit;
+    Event := TZLoggingEvent.Create(Category, Protocol, Msg, ErrorCode, Error);
+    InternalLogEvent(Event);
   finally
-    {$IFDEF AUTOREFCOUNT}
-    Event := nil;
-    {$ELSE}
-    Event.Free;
-    {$ENDIF}
+    FreeAndNil(Event);
+    FLogCS.Leave;
   end;
+end;
+
+procedure TZDriverManager.InternalLogEvent(const Event: TZLoggingEvent);
+var
+  I: Integer;
+  Listener: IZLoggingListener;
+begin
+  for I := 0 to FLoggingListeners.Count - 1 do
+    if FLoggingListeners[I].QueryInterface(IZLoggingListener, Listener) = S_OK then
+      Listener.LogEvent(Event);
 end;
 
 {**
@@ -1929,37 +1971,23 @@ end;
   @param Category a category of the message.
   @param Protocol a name of the protocol.
   @param Msg a description message.
-  @param ErrorCode an error code.
-  @param Error an error message.
 }
-procedure TZDriverManager.LogEvent(const Event: TZLoggingEvent);
-var
-  I: Integer;
-  Listener: IZLoggingListener;
-begin
-  if not FHasLoggingListener then
-    Exit;
-  FLogCS.Enter;
-  try
-    for I := 0 to FLoggingListeners.Count - 1 do
-    begin
-      Listener := FLoggingListeners[I] as IZLoggingListener;
-      try
-        Listener.LogEvent(Event);
-      except
-      end;
-    end;
-  finally
-    FLogCS.Leave;
-  end;
-end;
-
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString);
+var
+  Event: TZLoggingEvent;
 begin
-  if not FHasLoggingListener then
-    Exit;
-  LogError(Category, Protocol, Msg, 0, EmptyRaw);
+  Event := nil;
+  FLogCS.Enter;
+  try
+    if not FHasLoggingListener then
+      Exit;
+    Event := TZLoggingEvent.Create(Category, Protocol, Msg, 0, EmptyRaw);
+    InternalLogEvent(Event);
+  finally
+    FreeAndNil(Event);
+    FLogCS.Leave;
+  end;
 end;
 
 procedure TZDriverManager.LogMessage(const Category: TZLoggingCategory;
@@ -1967,13 +1995,17 @@ procedure TZDriverManager.LogMessage(const Category: TZLoggingCategory;
 var
   Event: TZLoggingEvent;
 begin
-  if not FHasLoggingListener then
-    Exit;
-  Event := Sender.CreateLogEvent(Category);
-  If Assigned(Event) then
-  begin
-    LogEvent(Event);
-    Event.Free;
+  Event := nil;
+  FLogCS.Enter;
+  try
+    if not FHasLoggingListener then
+      Exit;
+    Event := Sender.CreateLogEvent(Category);
+    if Event <> nil then
+      InternalLogEvent(Event);
+  finally
+    FreeAndNil(Event);
+    FLogCS.Leave;
   end;
 end;
 
@@ -1996,18 +2028,23 @@ function TZDriverManager.ConstructURL(const Protocol, HostName, Database,
   const Properties: TStrings = nil; const LibLocation: String = ''): String;
 var ZURL: TZURL;
 begin
+  FDriversCS.Enter;
   ZURL := TZURL.Create;
-  ZURL.Protocol := Protocol;
-  ZURL.HostName := HostName;
-  ZURL.Database := DataBase;
-  ZURL.UserName := UserName;
-  ZURL.Password := Password;
-  ZURL.Port := Port;
-  if Assigned(Properties) then
-    ZURL.Properties.AddStrings(Properties);
-  ZURL.LibLocation := LibLocation;
-  Result := ZURL.URL;
-  ZURL.Free;
+  try
+    ZURL.Protocol := Protocol;
+    ZURL.HostName := HostName;
+    ZURL.Database := DataBase;
+    ZURL.UserName := UserName;
+    ZURL.Password := Password;
+    ZURL.Port := Port;
+    if Assigned(Properties) then
+      ZURL.Properties.AddStrings(Properties);
+    ZURL.LibLocation := LibLocation;
+    Result := ZURL.URL;
+  finally
+    FDriversCS.Leave;
+    FreeAndNil(ZURL);
+  end;
 end;
 
 initialization

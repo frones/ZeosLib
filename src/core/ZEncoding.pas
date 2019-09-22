@@ -168,8 +168,6 @@ const
     );
 
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
-procedure SetConvertFunctions(const CTRL_CP, DB_CP: Word;
-  out PlainConvert, DbcConvert: TConvertEncodingFunction); overload;
 {$ENDIF}
 
 type
@@ -179,10 +177,10 @@ type
 
 function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PRawToUnicode(Source: PAnsiChar; const SourceBytes: LengthInt; CP: Word): ZWideString;
-procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; SourceBytes, BufCodePoints: LengthInt; CP: Word); overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; SourceBytes, DestWords: LengthInt; CP: Word); overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer; SourceBytes: LengthInt; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, BufCodePoints: LengthInt; var Dest: Pointer; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
-function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, BufCodePoints: LengthInt): LengthInt; overload; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, DestWords: LengthInt; var Dest: Pointer; CP: Word): LengthInt; overload; //{$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, DestWords: LengthInt): LengthInt; overload; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
 function PUnicodeToRaw(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word): RawByteString;
 function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcCodePoints, MaxDestBytes: LengthInt; CP: Word): LengthInt;
@@ -193,61 +191,11 @@ function PUnicodeToString(Source: PWideChar; SrcCodePoints: LengthInt; CP: Word)
 function ZUnicodeToString(const Source: ZWideString; CP: Word): String;
 
 {converter functions for the String-types}
-{$IFDEF WITH_LCONVENCODING}
-function ZConvertRaw28591ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw28591(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw28592ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw28592(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1250ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1250(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1251ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1251(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1252ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1252(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1253ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1253(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1254ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1254(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1255ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1255(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1256ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1256(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1257ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1257(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw1258ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw1258(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw437ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw437(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw850ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw850(Const Src: UTF8String; const CP: Word): RawByteString;
-{$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
-function ZConvertRaw852ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw852(Const Src: UTF8String; const CP: Word): RawByteString;
-{$ENDIF}
-function ZConvertRaw866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw866(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw874ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw874(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertRaw20866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw20866(Const Src: UTF8String; const CP: Word): RawByteString;
-{$ENDIF}
 {$IFNDEF NO_ANSISTRING}
-function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
-function ZConvertRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
-function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String;
-function ZConvertUTF8ToAnsi(const Src: UTF8String): AnsiString;
-function ZConvertStringToAnsi(const Src: String; const StringCP: Word): AnsiString;
 function ZConvertStringToAnsiWithAutoEncode(const Src: String; const {%H-}StringCP: Word): AnsiString;
-function ZConvertAnsiToString(const Src: AnsiString; const StringCP: Word): String;
 {$ENDIF}
 {$IFNDEF NO_UTF8STRING}
-function ZConvertRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-function ZConvertUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
-function ZConvertPRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
-function ZConvertUTF8ToString(const Src: UTF8String; const StringCP: Word): String;
-function ZConvertStringToUTF8(const Src: String; const StringCP: Word): UTF8String;
 function ZConvertStringToUTF8WithAutoEncode(const Src: String; const StringCP: Word): UTF8String;
-function ZMovePRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const {%H-}RawCP: Word): UTF8String;
 {$ENDIF}
 function ZConvertRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String;
 function ZConvertStringToRaw(const Src: String; const StringCP, RawCP: Word): RawByteString;
@@ -257,26 +205,10 @@ function ZConvertUnicodeToString_CPUTF8(const Src: ZWideString; const {%H-}Strin
 function ZConvertStringToUnicode(const Src: String; const StringCP: Word): ZWideString;
 function ZConvertString_CPUTF8ToUnicode(const Src: String; const {%H-}StringCP: Word): ZWideString;
 function ZConvertStringToUnicodeWithAutoEncode(const Src: String; const StringCP: Word): ZWideString;
-{$IFNDEF NO_ANSISTRING}
-function ZMoveAnsiToRaw(const Src: AnsiString; const {%H-}RawCP: Word): RawByteString;
-function ZMoveRawToAnsi(const Src: RawByteString; const {%H-}RawCP: Word): AnsiString;
-function ZMoveAnsiToUTF8(const Src: AnsiString): UTF8String;
-function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
-function ZMoveStringToAnsi(Const Src: String; const {%H-}StringCP: Word): AnsiString;
-function ZMoveAnsiToString(const Src: AnsiString; const {%H-}StringCP: Word): String;
-{$ENDIF}
-{$IFNDEF NO_UTF8STRING}
-function ZMoveRawToUTF8(const Src: RawByteString; const {%H-}CP: Word): UTF8String;
-function ZMoveUTF8ToRaw(Const Src: UTF8String; const {%H-}CP: Word): RawByteString;
-function ZMoveUTF8ToString(const Src: UTF8String; {%H-}StringCP: Word): String;
-function ZMoveStringToUTF8(const Src: String; const {%H-}StringCP: Word): UTF8String;
-{$ENDIF}
+
 function ZMoveRawToString(const Src: RawByteString; const {%H-}RawCP, {%H-}StringCP: Word): String;
 function ZMoveStringToRaw(const Src: String; const {%H-}StringCP, {%H-}RawCP: Word): RawByteString;
 
-function ZUnknownRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
-function ZUnknownRawToUnicodeWithAutoEncode(const S: RawByteString;
-  const CP: Word): ZWideString;
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 
 {**
@@ -294,7 +226,7 @@ function IsMBCSCodePage(CP: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
   The Results should be as optimal as possible to speed up the behavior
   @param ConSettings a Pointer to the ConnectionSetting
 }
-procedure SetConvertFunctions(ConSettings: PZConSettings); {$IFDEF WITH_LCONVENCODING}overload;{$ENDIF}
+procedure SetConvertFunctions(ConSettings: PZConSettings);
 
 Type
   TEncodeType = (etUSASCII, etUTF8, etANSI);
@@ -327,6 +259,8 @@ procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt; overload;
 function PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, MaxDestBytes: LengthInt; SrcCP, DestCP: Word): LengthInt;
+
+procedure PRawToRawConvert(Source: PAnsiChar; SourceBytes: LengthInt; SrcCP, DestCP: Word; var Result: RawByteString);
 
 const
   CP437ToUnicodeMap: TSBCS_MAP = ( {generated with MultiByteToWideChar}
@@ -1174,31 +1108,6 @@ const
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // encoding unknown - parameter not used intentionally
 
-function ZUnknownRawToUnicode(const S: RawByteString;
-  const CP: Word): ZWideString;
-begin
-  Result := ZWideString(S);
-end;
-
-function ZUnknownRawToUnicodeWithAutoEncode(const S: RawByteString;
-  const CP: Word): ZWideString;
-var L: LengthInt;
-begin
-  if Pointer(s) = nil then
-    Result := ''
-  else begin
-    L := Length(S);
-    case ZDetectUTF8Encoding(Pointer(S), L) of
-      etUSASCII: Result := USASCII7ToUnicodeString(S);
-      etUTF8: Result := PRawToUnicode(Pointer(S), L, zCP_UTF8);
-      else if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8) then
-        Result := ZWideString(S) //random success, we don't know the CP here
-      else
-        Result := PRawToUnicode(Pointer(S), L, ZOSCodePage);
-    end;
-  end;
-end;
-
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 begin
   Result := RawByteString(US);
@@ -1208,10 +1117,9 @@ end;
 
 function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 begin
-  if Pointer(S) = nil then
-    Result := ''
-  else
-    Result := PRawToUnicode(Pointer(S), {%H-}PLengthInt(NativeUInt(S) - StringLenOffSet)^, CP);
+  if Pointer(S) = nil
+  then Result := ''
+  else Result := PRawToUnicode(Pointer(S), {%H-}PLengthInt(NativeUInt(S) - StringLenOffSet)^, CP);
 end;
 
 {**
@@ -1455,7 +1363,7 @@ NoSource:
   PWord(dest)^ := Ord(#0); // always append a WideChar(0) to the end of the buffer
 end;
 
-function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, BufCodePoints: LengthInt): LengthInt; overload;
+function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, DestWords: LengthInt): LengthInt; overload;
 // faster than System.UTF8Decode()
 var c: cardinal;
     begd, endDest: pWideChar;
@@ -1466,7 +1374,7 @@ begin
   begd := dest;
   endSource := Source+SourceBytes;
   endSourceBy4 := endSource-4;
-  endDest := Dest+BufCodePoints;
+  endDest := Dest+DestWords;
   if SourceBytes < 4 then
     goto By1;
   repeat
@@ -1664,6 +1572,37 @@ begin
     end;
 end;
 
+procedure PRawToRawConvert(Source: PAnsiChar; SourceBytes: LengthInt;
+  SrcCP, DestCP: Word; var Result: RawByteString);
+var L, NL: LengthInt;
+  Dest: PAnsiChar;
+label Jmp;
+begin
+  if (Source = nil) or (SourceBytes = 0) then
+    Result := EmptyRaw
+  else if SrcCP = DestCP then
+    ZSetString(Source, SourceBytes, Result)
+  else begin
+    if IsMBCSCodePage(SrcCP) and not IsMBCSCodePage(DestCP) then
+      NL := SourceBytes
+    else if not IsMBCSCodePage(SrcCP) and IsMBCSCodePage(DestCP) then
+      NL := SourceBytes shl 2
+    else if not IsMBCSCodePage(SrcCP) and not IsMBCSCodePage(DestCP) then
+      NL := SourceBytes
+    else
+      NL := SourceBytes shl 1;
+Jmp:ZSetString(nil, NL, Result);
+    Dest := Pointer(Result);
+    L := PRawToPRawBuf(Source, Dest, SourceBytes, NL, SrcCP, DestCP);
+    if L < NL then
+      SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF})
+    else if L > NL then begin
+      NL := L;
+      goto Jmp;
+    end;
+  end;
+end;
+
 function PRawToUnicode(Source: PAnsiChar; const SourceBytes: LengthInt;
   CP: Word): ZWideString;
 var
@@ -1698,7 +1637,7 @@ end;
   Space must be reserved to fill the trailing #0 term
 }
 procedure PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar;
-  SourceBytes, BufCodePoints: LengthInt; CP: Word);
+  SourceBytes, DestWords: LengthInt; CP: Word);
 var
   C: Cardinal;
   PEnd: PAnsiChar;
@@ -1711,60 +1650,60 @@ var
 label A2U;
 begin
   if Dest=nil then exit;
-  if (SourceBytes = 0) or (BufCodePoints = 0) then
+  if (SourceBytes = 0) or (DestWords = 0) then
     PWord(Dest)^ := Ord(#0)
   else
 A2U:
     case CP of
-      zCP_DOS437:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP437ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS708:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP708ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS720:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP720ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS737:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP737ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS775:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP775ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS850:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP850ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS852:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP852ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS855:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP855ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS857:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP857ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS858:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP858ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS860:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP860ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS861:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP861ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS862:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP862ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS863:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP863ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS864:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP864ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS865:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP865ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS866:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_DOS869:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP869ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN874:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP874ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1250:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1250ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1251:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1251ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1252:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1252ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1253:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1253ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1254:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1254ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1255:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1255ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1256:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1256ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1257:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1257ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_WIN1258:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1258ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_macintosh:      AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP10000ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_x_mac_ce:       AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP10029ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_x_IA5_Swedish:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20107ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_KOI8R:          AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_us_ascii:       AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20127ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_KOI8U:          AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP21866ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L1_ISO_8859_1:  MapByteToUTF16(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
-      zCP_L2_ISO_8859_2:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28592ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L3_ISO_8859_3:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28593ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L4_ISO_8859_4:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28594ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L5_ISO_8859_5:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28595ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L6_ISO_8859_6:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28596ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L7_ISO_8859_7:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28597ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L8_ISO_8859_8:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28598ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L5_ISO_8859_9:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28599ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L7_ISO_8859_13: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28603ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L9_ISO_8859_15: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28605ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_DOS437:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP437ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS708:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP708ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS720:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP720ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS737:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP737ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS775:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP775ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS850:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP850ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS852:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP852ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS855:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP855ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS857:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP857ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS858:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP858ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS860:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP860ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS861:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP861ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS862:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP862ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS863:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP863ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS864:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP864ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS865:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP865ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS866:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP866ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_DOS869:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP869ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN874:         AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP874ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1250:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1250ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1251:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1251ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1252:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1252ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1253:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1253ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1254:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1254ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1255:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1255ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1256:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1256ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1257:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1257ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_WIN1258:        AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP1258ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_macintosh:      AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP10000ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_x_mac_ce:       AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP10029ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_x_IA5_Swedish:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20107ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_KOI8R:          AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20866ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_us_ascii:       AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP20127ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_KOI8U:          AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP21866ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L1_ISO_8859_1:  MapByteToUTF16(Pointer(Source), Min(SourceBytes, DestWords), Pointer(Dest));
+      zCP_L2_ISO_8859_2:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28592ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L3_ISO_8859_3:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28593ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L4_ISO_8859_4:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28594ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L5_ISO_8859_5:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28595ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L6_ISO_8859_6:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28596ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L7_ISO_8859_7:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28597ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L8_ISO_8859_8:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28598ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L5_ISO_8859_9:  AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28599ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L7_ISO_8859_13: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28603ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L9_ISO_8859_15: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28605ToUnicodeMap, Min(SourceBytes, DestWords));
       {not supported codepages by Windows MultiByteToWideChar}
-      zCP_L6_ISO_8859_10: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28600ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L8_ISO_8859_14: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28604ToUnicodeMap, Min(SourceBytes, BufCodePoints));
-      zCP_L10_ISO_8859_16:AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28606ToUnicodeMap, Min(SourceBytes, BufCodePoints));
+      zCP_L6_ISO_8859_10: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28600ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L8_ISO_8859_14: AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28604ToUnicodeMap, Min(SourceBytes, DestWords));
+      zCP_L10_ISO_8859_16:AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), @CP28606ToUnicodeMap, Min(SourceBytes, DestWords));
       (* remaing fast conversion for MBCS encodings
       zCP_MSWIN921 = 921;
       zCP_MSWIN923 = 923;
@@ -1782,14 +1721,13 @@ A2U:
       zCP_GB18030 = 54936;	{Windows XP and later: GB18030 Simplified Chinese (4 byte); Chinese Simplified (GB18030)}
       zCP_UTF7 = 65000;
       *)
-      zCP_UTF8:           if BufCodePoints <= SourceBytes then
-                            UTF8ToWideChar(Source, SourceBytes, Dest)
-                          else
-                            UTF8ToWideChar(Source, Dest, SourceBytes, BufCodePoints);
+      zCP_UTF8:           if DestWords <= SourceBytes
+                          then UTF8ToWideChar(Source, SourceBytes, Dest)
+                          else UTF8ToWideChar(Source, Dest, SourceBytes, DestWords);
       else begin//for these where we do not have a conversion routine...
         PEnd := Source+SourceBytes-4;
         {first handle leading ASCII if possible }
-        while (Source < PEnd ) and (PCardinal(Source)^ and $80808080 = 0) and (BufCodePoints > 3)  do
+        while (Source < PEnd ) and (PCardinal(Source)^ and $80808080 = 0) and (DestWords > 3)  do
         begin
           C := PCardinal(Source)^;
           PCardinal(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
@@ -1797,41 +1735,41 @@ A2U:
           PCardinal(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
           inc(Source,4);
           inc(Dest,4);
-          Dec(BufCodePoints, 4);
+          Dec(DestWords, 4);
         end;
         inc(PEnd, 4);
-        while (Source < PEnd) and (PByte(Source)^ and $80 = 0) and (BufCodePoints > 0)  do
+        while (Source < PEnd) and (PByte(Source)^ and $80 = 0) and (DestWords > 0)  do
         begin
           PWord(Dest)^ := PByte(Source)^; //Shift Byte to Word
           inc(Source);
           inc(Dest);
-          Dec(BufCodePoints);
+          Dec(DestWords);
         end;
         SourceBytes := PEnd-Source;
         if CP = zCP_NONE then
           case ZDetectUTF8Encoding(Source, SourceBytes) of
             etUTF8: begin
-                      if BufCodePoints <= SourceBytes then
+                      if DestWords <= SourceBytes then
                         UTF8ToWideChar(Source, SourceBytes, Dest)
                       else
-                        UTF8ToWideChar(Source, Dest, SourceBytes, BufCodePoints);
+                        UTF8ToWideChar(Source, Dest, SourceBytes, DestWords);
                       Exit;
                     end;
             else
               if ZCompatibleCodePages(ZOSCodePage,zCP_UTF8) then begin //random success, we don't know ANY proper CP here
-                MapByteToUTF16(Pointer(Source), Min(SourceBytes, BufCodePoints), Pointer(Dest));
+                MapByteToUTF16(Pointer(Source), Min(SourceBytes, DestWords), Pointer(Dest));
                 Exit;
               end else begin
                 CP := ZOSCodePage; //still a random success here!
                 goto A2U;
               end;
           end;
-        if (Source < PEnd) and (BufCodePoints > 0) then begin//convert remaining characters with codepage agnostic
+        if (Source < PEnd) and (DestWords > 0) then begin//convert remaining characters with codepage agnostic
           {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-          Inc(Dest, UnicodeFromLocaleChars(CP, 0, Pointer(Source), SourceBytes, Dest, BufCodePoints));
+          Inc(Dest, UnicodeFromLocaleChars(CP, 0, Pointer(Source), SourceBytes, Dest, DestWords));
           {$ELSE}
             {$IFDEF MSWINDOWS}
-            Inc(Dest, MultiByteToWideChar(CP, 0, Source, SourceBytes, Dest, BufCodePoints)); //Convert Ansi to Wide with supported Chars
+            Inc(Dest, MultiByteToWideChar(CP, 0, Source, SourceBytes, Dest, DestWords)); //Convert Ansi to Wide with supported Chars
             {$ELSE}
               {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
               WidestringManager.Ansi2UnicodeMoveProc(Source, CP, W, SourceBytes);
@@ -1839,9 +1777,9 @@ A2U:
               ZSetString(Source, SourceBytes, S);
               W := ZWideString(S); //random success
               {$ENDIF}
-              BufCodePoints := Min(Length(W), BufCodePoints);
-              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(W)^, Dest^, BufCodePoints shl 1);
-              Inc(Dest, BufCodePoints);
+              DestWords := Min(Length(W), DestWords);
+              {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(W)^, Dest^, DestWords shl 1);
+              Inc(Dest, DestWords);
             {$ENDIF}
           {$ENDIF}
         end;
@@ -1859,7 +1797,7 @@ function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer;
 var
   C: Cardinal;
   PEnd: PAnsiChar;
-  wlen, BufCodePoints: LengthInt;
+  wlen, DestWords: LengthInt;
   {$IF not defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
     {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
     S: RawByteString;
@@ -1968,7 +1906,7 @@ begin
           if CP = zCP_NONE then
             case ZDetectUTF8Encoding(Source, PEnd-Source) of
               etUTF8: begin
-                        BufCodePoints := UTF8ToWideChar(Source, wlen, Dest);
+                        DestWords := UTF8ToWideChar(Source, wlen, Dest);
                         goto A2U;
                       end;
               else
@@ -1979,10 +1917,10 @@ begin
                   CP := ZOSCodePage; //still a random success here!
             end;
           {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-          BufCodePoints := UnicodeFromLocaleChars(CP, 0, Pointer(Source), wlen, Dest, wlen);
+          DestWords := UnicodeFromLocaleChars(CP, 0, Pointer(Source), wlen, Dest, wlen);
           {$ELSE}
             {$IFDEF MSWINDOWS}
-            BufCodePoints := MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen); //Convert Ansi to Wide with supported Chars
+            DestWords := MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen); //Convert Ansi to Wide with supported Chars
             {$ELSE}
               {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
               WidestringManager.Ansi2UnicodeMoveProc(Source, CP, W, wlen);
@@ -1990,13 +1928,13 @@ begin
               ZSetString(Source, wlen, S);
               W := ZWideString(S); //random success
               {$ENDIF}
-              BufCodePoints := Min(Length(W), wlen);
-              if BufCodePoints > 0 then
-                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(W)^, Dest^, BufCodePoints shl 1);
+              DestWords := Min(Length(W), wlen);
+              if DestWords > 0 then
+                {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(W)^, Dest^, DestWords shl 1);
             {$ENDIF}
           {$ENDIF}
-A2U:      Result := SourceBytes - wlen + BufCodePoints;
-          Inc(PWideChar(Dest), BufCodePoints);
+A2U:      Result := SourceBytes - wlen + DestWords;
+          Inc(PWideChar(Dest), DestWords);
         end;
         PWord(Dest)^ := Ord(#0); //allways append the term
       end;
@@ -2007,7 +1945,7 @@ end;
   convert a raw string into a Unicode buffer
   initial idea to use: IZCLob conversions
 }
-function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, BufCodePoints: LengthInt;
+function PRaw2PUnicodeBuf(Source: PAnsiChar; SourceBytes, DestWords: LengthInt;
   var Dest: Pointer; CP: Word): LengthInt;
 var
   Buf: Pointer;
@@ -2049,31 +1987,31 @@ begin
       end
     end
   else begin
-    if SourceBytes > BufCodePoints then begin
+    if SourceBytes > DestWords then begin
       //skip buf move
       if Dest <> nil then
         FreeMem(Dest);
       Dest := AllocMem((SourceBytes+1) shl 1);
-      BufCodePoints := SourceBytes;
+      DestWords := SourceBytes;
     end;
     Result := PRaw2PUnicodeBuf(Source, Dest, SourceBytes, CP);
-    if Result <> BufCodePoints then
+    if Result <> DestWords then
       ReallocMem(Dest, (Result+1) shl 1);
   end;
 end;
 
-function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, BufCodePoints: LengthInt): LengthInt;
+function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, DestWords: LengthInt): LengthInt;
 var Buf: Pointer;
   sBuf: Array[0..dsMaxWStringSize] of WideChar; //avoid mem allocs -> stack
 begin
-  if BufCodePoints <= SourceBytes then //no buffer overrun possible
+  if DestWords <= SourceBytes then //no buffer overrun possible
     Result := PRaw2PUnicodeBuf(Source, Dest, SourceBytes, CP)
   else begin
     if SourceBytes <= dsMaxWStringSize
     then Buf := @sBuf[0]
     else Buf := AllocMem((SourceBytes+1) shl 1);
     Result := PRaw2PUnicodeBuf(Source, Buf, SourceBytes, CP);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Dest^, (Min(Result, BufCodePoints)+1) shl 1);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, Dest^, (Min(Result, DestWords)+1) shl 1);
     if Buf <> @sBuf[0] then
       FreeMem(Buf, (SourceBytes+1) shl 1);
   end;
@@ -2128,12 +2066,13 @@ end;
 {$ELSE}
 begin
   {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
-  Result := PUnicodeToRaw(Pointer(US), Length(US), CP);
+  if CP <> zCP_NONE
+  then Result := PUnicodeToRaw(Pointer(US), Length(US), CP)
+  else Result := RawByteString(US); //random success
   {$ELSE}
-    if ZCompatibleCodePages(CP, zCP_UTF8) then
-      Result := UTF8Encode(US)
-    else
-      Result := RawByteString(US); //random success
+  if ZCompatibleCodePages(CP, zCP_UTF8)
+  then Result := UTF8Encode(US)
+  else Result := RawByteString(US); //random success
   {$IFEND}
 end;
 {$ENDIF}
@@ -2327,178 +2266,6 @@ begin
 end;
 
 {$IFDEF WITH_LCONVENCODING}
-function ZConvertRaw28591ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := ISO_8859_1ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw28591(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToISO_8859_1(PAnsiChar(Src));
-end;
-
-function ZConvertRaw28592ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := ISO_8859_2ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw28592(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToISO_8859_2(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1250ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1250ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1250(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1250(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1251ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1251ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1251(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1251(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1252ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1252ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1252(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1252(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1253ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1253ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1253(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1253(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1254ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1254ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1254(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1254(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1255ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1255ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1255(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1255(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1256ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1256ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1256(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1256(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1257ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1257ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1257(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1257(PAnsiChar(Src));
-end;
-
-function ZConvertRaw1258ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP1258ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw1258(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP1258(PAnsiChar(Src));
-end;
-
-function ZConvertRaw437ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP437ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw437(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP437(PAnsiChar(Src));
-end;
-
-function ZConvertRaw850ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP850ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw850(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP850(PAnsiChar(Src));
-end;
-
-{$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
-function ZConvertRaw852ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP852ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw852(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP852(PAnsiChar(Src));
-end;
-{$ENDIF}
-
-function ZConvertRaw866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP866ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw866(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP866(PAnsiChar(Src));
-end;
-
-function ZConvertRaw874ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := CP874ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw874(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToCP874(PAnsiChar(Src));
-end;
-
-function ZConvertRaw20866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  Result := KOI8ToUTF8(PAnsiChar(Src));
-end;
-
-function ZConvertUTF8ToRaw20866(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  Result := UTF8ToKOI8(PAnsiChar(Src));
-end;
-
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
 var
   I: Integer;
@@ -2507,118 +2274,6 @@ begin
   begin
     Result := CP = ZLConvCodepages[i];
     if Result then Break;
-  end;
-end;
-
-function NoConvert(const s: string): string;
-begin
-  Result := s;
-end;
-
-procedure SetConvertFunctions(const CTRL_CP, DB_CP: Word;
-  out PlainConvert, DbcConvert: TConvertEncodingFunction);
-begin
-  if CTRL_CP = DB_CP then
-  begin
-    PlainConvert := @NoConvert;
-    DbcConvert := @NoConvert;
-  end
-  else
-  begin
-    case DB_CP of
-      28591: //ISO_8859_1
-        begin
-          DbcConvert := @ISO_8859_1ToUTF8;
-          PlainConvert := @UTF8ToISO_8859_1;
-        end;
-      28592:  //ISO_8859_2
-        begin
-          DbcConvert := @ISO_8859_2ToUTF8;
-          PlainConvert := @UTF8ToISO_8859_2;
-        end;
-      1250: //WIN1250
-        begin
-          DbcConvert := @CP1250ToUTF8;
-          PlainConvert := @UTF8ToCP1250;
-        end;
-      1251: //WIN1251
-        begin
-          DbcConvert := @CP1251ToUTF8;
-          PlainConvert := @UTF8ToCP1251;
-        end;
-      1252: //WIN1252
-        begin
-          DbcConvert := @CP1252ToUTF8;
-          PlainConvert := @UTF8ToCP1252;
-        end;
-      1253: //WIN1253
-        begin
-          DbcConvert := @CP1253ToUTF8;
-          PlainConvert := @UTF8ToCP1253;
-        end;
-      1254: //WIN1254
-        begin
-          DbcConvert := @CP1254ToUTF8;
-          PlainConvert := @UTF8ToCP1254;
-        end;
-      1255: //WIN1255
-        begin
-          DbcConvert := @CP1255ToUTF8;
-          PlainConvert := @UTF8ToCP1255;
-        end;
-      1256: //WIN1256
-        begin
-          DbcConvert := @CP1256ToUTF8;
-          PlainConvert := @UTF8ToCP1256;
-        end;
-      1257: //WIN1257
-        begin
-          DbcConvert := @CP1257ToUTF8;
-          PlainConvert := @UTF8ToCP1257;
-        end;
-      1258: //WIN1258
-        begin
-          DbcConvert := @CP1258ToUTF8;
-          PlainConvert := @UTF8ToCP1258;
-        end;
-      437: //CP437
-        begin
-          DbcConvert := @CP437ToUTF8;
-          PlainConvert := @UTF8ToCP437;
-        end;
-      850: //CP850
-        begin
-          DbcConvert := @CP850ToUTF8;
-          PlainConvert := @UTF8ToCP850;
-        end;
-      {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
-      852: //CP852
-        begin
-          DbcConvert := @CP852ToUTF8;
-          PlainConvert := @UTF8ToCP852;
-        end;
-      {$ENDIF}
-      866: //CP866
-        begin
-          DbcConvert := @CP866ToUTF8;
-          PlainConvert := @UTF8ToCP866;
-        end;
-      874: //CP874
-        begin
-          DbcConvert := @CP874ToUTF8;
-          PlainConvert := @UTF8ToCP874;
-        end;
-      20866: //KOI8 (Russian)
-        begin
-          DbcConvert := @KOI8ToUTF8;
-          PlainConvert := @UTF8ToKOI8;
-        end
-      else
-        begin
-          DbcConvert := @NoConvert;
-          PlainConvert := @NoConvert;
-        end;
-    end;
   end;
 end;
 {$ENDIF}
@@ -2666,102 +2321,6 @@ function IsMBCSCodePage(CP: Word): Boolean;
 begin
   Result := (CP >= zCP_csISO2022JP) or ((CP >=zCP_MSWIN921) and (CP <=zCP_Big5)) or (CP = ZCP_JOHAB) or (CP=zCP_EUC_JP)
 end;
-
-{$IFNDEF NO_UTF8STRING}
-function ZConvertPRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
-var US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-begin
-  if (Src = nil) or (Len = 0) then
-    Result := ''
-  else
-  begin
-    US := PRawToUnicode(Src, Len, RawCP);
-    {$IFDEF WITH_RAWBYTESTRING}
-    Result := UTF8String(US);
-    {$ELSE}
-    Result := UTF8Encode(US);
-    {$ENDIF}
-  end;
-end;
-{$ENDIF}
-
-{$IFNDEF NO_ANSISTRING}
-function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
-var US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-begin
-  if Src = '' then
-    Result := ''
-  else
-  begin
-    US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZOSCodePage);
-    Result := ZUnicodeToRaw(US, RawCP);
-  end;
-end;
-
-function ZConvertRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
-var US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-begin
-  if Src = '' then
-    Result := ''
-  else
-  begin
-    US := ZRawToUnicode(Src, RawCP);
-    Result := ZUnicodeToRaw(US, ZOSCodePage); //use compiler convertation
-  end;
-end;
-
-function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String;
-var US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-begin
-  if Src = '' then
-    Result := ''
-  else
-  begin
-    US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZOSCodePage);
-    Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
-  end;
-end;
-
-function ZConvertUTF8ToAnsi(const Src: UTF8String): AnsiString;
-var US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-begin
-  if Src = '' then
-    Result := ''
-  else
-  begin
-    US := PRawToUnicode(Pointer(Src), Length(Src), zCP_UTF8);
-    Result := ZUnicodeToRaw(US, ZOSCodePage);
-  end;
-end;
-{$ENDIF}
-
-{$IFNDEF NO_UTF8STRING}
-function ZConvertRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-var
-  US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-begin
-  if Src = '' then
-    Result := ''
-  else
-  begin
-    US := ZRawToUnicode(Src, CP);
-    Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
-  end;
-end;
-
-function ZConvertUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
-var
-  US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-begin
-  if Src = '' then
-    Result := ''
-  else
-  begin
-    US := PRawToUnicode(Pointer(Src), Length(Src), zCP_UTF8);
-    Result := ZUnicodeToRaw(US, CP);
-  end;
-end;
-{$ENDIF}
 
 function ZConvertRawToString(const Src: RawByteString;
   const RawCP, StringCP: Word): String;
@@ -2942,47 +2501,72 @@ begin
   {$ENDIF UNICODE}
 end;
 
+{$IFNDEF UNICODE}
+function ZConvertPCharToRawWithDedectEncoding(Src: PChar; Len: LengthInt; CtrlsCP, RawCP: Word): RawByteString;
+var WS: ZWideString; //guesswork func!
+label FromW, SetRaw;
+begin
+  if (Src = nil) or (Len <= 0) then
+    Result := EmptyRaw
+  else case ZDetectUTF8Encoding(Src, Len) of
+    etUSASCII: goto SetRaw;
+    etAnsi: if (RawCP = zCP_UTF8) then
+              if (CtrlsCP = zCP_UTF8 ) then begin
+                if (ZOSCodePage = zCP_UTF8) //Random success unknown String CP
+                then WS := ZWideString(Src)
+                else WS := PRawToUnicode(Src, Len, ZOSCodePage);
+                goto FromW;
+              end else begin
+                WS := PRawToUnicode(Src, Len, ZOSCodePage);
+                goto FromW;
+              end
+            else goto SetRaw;
+    else if (RawCP = zCP_UTF8) {etUTF8} then
+SetRaw: ZSetString(Src, Len, Result)
+      else begin
+        WS := PRawToUnicode(Src, Len, zCP_UTF8);
+FromW:  Result := ZUnicodeToRaw(WS, RawCP);
+      end;
+  end;
+end;
+{$ENDIF}
+
+{$IFNDEF NO_ANSISTRING}
+function ZConvertStringToAnsiWithAutoEncode(const Src: String;
+  const StringCP: Word): AnsiString;
+{$IFNDEF UNICODE}
+var Tmp: ZWideString; //COM based. Localize the Value to avoid buffer overrun
+{$ENDIF}
+begin
+  if Src = '' then
+    Result := ''
+  else
+    {$IFDEF UNICODE}
+    Result := AnsiString(Src);
+    {$ELSE}
+    case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^) of
+      etUSASCII: Result := Src;
+      etAnsi:
+        if ZOSCodePage = zCP_UTF8 then
+        begin
+          Tmp := ZWideString(Src);
+          Result := UTF8Encode(Src);
+        end else
+          Result := Src;
+      else
+        if ZOSCodePage = zCP_UTF8 then
+          Result := Src
+        else begin
+          Tmp := PRawToUnicode(Pointer(Src),
+            {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, zCP_UTF8);
+          Result := ZUnicodeToRaw(Tmp, ZOSCodePage);
+        end;
+    end;
+    {$ENDIF}
+end;
+{$ENDIF NO_ANSISTRING}
+
 {$IFNDEF NO_UTF8STRING}
-function ZConvertUTF8ToString(const Src: UTF8String;
-  const StringCP: Word): String;
-{$IFNDEF UNICODE}
-var
-  US: ZWideString; //COM based. Localize the Value to avoid buffer overrun
-{$ENDIF}
-begin
-  if Src = '' then
-    Result := ''
-  else
-    {$IFDEF UNICODE}
-    Result := String(Src);
-    {$ELSE}
-    begin
-      US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, zCP_UTF8);
-      Result := ZUnicodeToString(US, StringCP);
-    end;
-    {$ENDIF}
-end;
-
-function ZConvertStringToUTF8(const Src: String;
-  const StringCP: Word): UTF8String;
-{$IFNDEF UNICODE}
-var
-  US: ZWideString; //COM based. Localize the Value to avoid buffer overrun
-{$ENDIF}
-begin
-  if Src = '' then
-    Result := ''
-  else
-    {$IFDEF UNICODE}
-    Result := UTF8String(Src);
-    {$ELSE}
-    begin
-      US := ZRawToUnicode(Src, StringCP);
-      Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
-    end;
-    {$ENDIF}
-end;
-
 function ZConvertStringToUTF8WithAutoEncode(const Src: String;
   const StringCP: Word): UTF8String;
 {$IFNDEF UNICODE}
@@ -3016,78 +2600,6 @@ begin
 end;
 {$ENDIF}
 
-{$IFNDEF NO_ANSISTRING}
-function ZConvertStringToAnsi(const Src: String;
-  const StringCP: Word): AnsiString;
-{$IFNDEF UNICODE}
-var Tmp: ZWideString; //COM based. Localize the Value to avoid buffer overrun
-{$ENDIF}
-begin
-  if Src = '' then
-    Result := ''
-  else
-    {$IFDEF UNICODE}
-    Result := AnsiString(Src);
-    {$ELSE}
-    Tmp := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, StringCP);
-    Result := PUnicodeToRaw(Pointer(Tmp), Length(Tmp), ZOSCodePage);
-    {$ENDIF}
-end;
-
-function ZConvertStringToAnsiWithAutoEncode(const Src: String;
-  const StringCP: Word): AnsiString;
-{$IFNDEF UNICODE}
-var Tmp: ZWideString; //COM based. Localize the Value to avoid buffer overrun
-{$ENDIF}
-begin
-  if Src = '' then
-    Result := ''
-  else
-    {$IFDEF UNICODE}
-    Result := AnsiString(Src);
-    {$ELSE}
-    case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^) of
-      etUSASCII: Result := Src;
-      etAnsi:
-        if ZOSCodePage = zCP_UTF8 then
-        begin
-          Tmp := ZWideString(Src);
-          Result := UTF8Encode(Src);
-        end else
-          Result := Src;
-      else
-        if ZOSCodePage = zCP_UTF8 then
-          Result := Src
-        else begin
-          Tmp := PRawToUnicode(Pointer(Src),
-            {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, zCP_UTF8);
-          Result := ZUnicodeToRaw(Tmp, ZOSCodePage);
-        end;
-    end;
-    {$ENDIF}
-end;
-
-function ZConvertAnsiToString(const Src: AnsiString;
-  const StringCP: Word): String;
-{$IFNDEF UNICODE}
-var
-  UniTmp: ZWideString; //COM based. Localize the Value to avoid buffer overrun
-{$ENDIF}
-begin
-  if Src = '' then
-    Result := ''
-  else
-    {$IFDEF UNICODE}
-    Result := String(Src);
-    {$ELSE}
-    begin
-      UniTmp := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZOSCodePage);
-      Result := ZUnicodeToString(UniTmp, StringCP);
-    end;
-    {$ENDIF}
-end;
-{$ENDIF}
-
 function ZConvertUnicodeToString(const Src: ZWideString;
   const StringCP: Word): String;
 begin
@@ -3114,12 +2626,9 @@ begin
   {$IFDEF UNICODE}
   Result := Src;
   {$ELSE}
-  if Src = '' then
-    Result := ''
-  else
-  begin
-    Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, StringCP);
-  end;
+  if Src = ''
+  then Result := ''
+  else Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, StringCP);
   {$ENDIF}
 end;
 
@@ -3129,10 +2638,9 @@ begin
   {$IFDEF UNICODE}
   Result := Src;
   {$ELSE}
-  if Src = '' then
-    Result := ''
-  else
-    Result := PRawToUnicode(Pointer(Src),
+  if Src = ''
+  then Result := ''
+  else Result := PRawToUnicode(Pointer(Src),
       {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, zCP_UTF8);
   {$ENDIF}
 end;
@@ -3146,117 +2654,22 @@ begin
   {$ELSE}
   if Src = '' then
     Result := ''
-  else
-  begin
-    case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^) of
-      etUSASCII: Result := USASCII7ToUnicodeString(Pointer(Src),
-        {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^);
-      etUTF8: Result := PRawToUnicode(Pointer(Src),
-        {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, zCP_UTF8);
-      else
-        if ZCompatibleCodePages(StringCP, zCP_UTF8)  then
-          if ZCompatibleCodePages(StringCP, ZOSCodePage) then
-             Result := ZWideString(Src)
-          else
-            Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, ZOSCodePage)
+  else case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^) of
+    etUSASCII: Result := USASCII7ToUnicodeString(Pointer(Src),
+      {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^);
+    etUTF8: Result := PRawToUnicode(Pointer(Src),
+      {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, zCP_UTF8);
+    else
+      if ZCompatibleCodePages(StringCP, zCP_UTF8)  then
+        if ZCompatibleCodePages(StringCP, ZOSCodePage) then
+           Result := ZWideString(Src)
         else
-          Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, StringCP);
+          Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, ZOSCodePage)
+      else
+        Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, StringCP);
     end;
-  end;
   {$ENDIF}
 end;
-
-{$IFNDEF NO_UTF8STRING}
-function ZMovePRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
-begin
-  ZSetString(Src, Len, Result{%H-});
-end;
-{$ENDIF}
-
-{$IFNDEF NO_ANSISTRING}
-function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
-begin
-  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
-  ZSetString(Pointer(Src), Length(Src), Result{%H-});
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function ZMoveRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
-begin
-  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
-  ZSetString(Pointer(Src), Length(Src), Result{%H-});
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function ZMoveAnsiToUTF8(const Src: AnsiString): UTF8String;
-begin
-  {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(Pointer(Src), Length(Src), Result{%H-});
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
-begin
-  {$IFDEF WITH_RAWBYTESTRING}
-  System.SetString(Result, PAnsiChar(Src), Length(Src));
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-{$ENDIF}
-
-{$IFNDEF NO_UTF8STRING}
-function ZMoveRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
-begin
-  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
-  ZSetString(Pointer(Src), Length(Src), Result{%H-});
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function ZMoveUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
-begin
-  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
-  ZSetString(Pointer(Src), Length(Src), Result{%H-});
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-{$ENDIF}
-{$IFNDEF NO_ANSISTRING}
-function ZMoveStringToAnsi(Const Src: String; const StringCP: Word): AnsiString;
-begin
-  {$IFDEF UNICODE}
-  Result := AnsiString(Src);
-  {$ELSE}
-    {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
-    ZSetString(Pointer(Src), Length(Src), Result{%H-});
-    {$ELSE}
-    Result := Src;
-    {$ENDIF}
-  {$ENDIF}
-end;
-
-function ZMoveAnsiToString(const Src: AnsiString; const StringCP: Word): String;
-begin
-  {$IFDEF UNICODE}
-  Result := String(Src);
-  {$ELSE}
-    {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(Pointer(Src), Length(Src), Result{%H-});
-    {$ELSE}
-    Result := Src;
-    {$ENDIF}
-  {$ENDIF}
-end;
-{$ENDIF}
 
 function ZMoveRawToString(const Src: RawByteString;
   const RawCP, StringCP: Word): String;
@@ -3286,239 +2699,14 @@ begin
   {$ENDIF}
 end;
 
-{$IFNDEF NO_UTF8STRING}
-function ZMoveUTF8ToString(const Src: UTF8String; StringCP: Word): String;
-begin
-  {$IFDEF UNICODE}
-  Result := String(Src);
-  {$ELSE}
-    {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(Pointer(Src), Length(Src), Result{%H-});
-    {$ELSE}
-    Result := Src;
-    {$ENDIF}
-  {$ENDIF}
-end;
-
-function ZMoveStringToUTF8(const Src: String; const StringCP: Word): UTF8String;
-begin
-  {$IFDEF UNICODE}
-  Result := UTF8String(Src);
-  {$ELSE}
-    {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(Pointer(Src), Length(Src), Result{%H-});
-    {$ELSE}
-    Result := Src;
-    {$ENDIF}
-  {$ENDIF}
-end;
-{$ENDIF}
-
 procedure SetConvertFunctions(ConSettings: PZConSettings);
 begin
   FillChar(ConSettings^.ConvFuncs, SizeOf(ConSettings^.ConvFuncs), #0);
 
   //Let's start with the AnsiTo/From types..
-  // Ansi to/from UTF8String
-  {$IFNDEF NO_ANSISTRING}
-  if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8) then
-  begin
-    ConSettings^.ConvFuncs.ZAnsiToUTF8 := @ZMoveAnsiToUTF8;
-    ConSettings^.ConvFuncs.ZUTF8ToAnsi := @ZMoveUTF8ToAnsi;
-  end
-  else
-  begin
-    ConSettings^.ConvFuncs.ZAnsiToUTF8 := @ZConvertAnsiToUTF8;
-    ConSettings^.ConvFuncs.ZUTF8ToAnsi := @ZConvertUTF8ToAnsi;
-  end;
-
-  // Ansi to/from String
-  if ZCompatibleCodePages(ZOSCodePage, ConSettings^.CTRL_CP) then
-  begin
-    ConSettings^.ConvFuncs.ZAnsiToString := @ZMoveAnsiToString;
-    if ConSettings^.AutoEncode then
-      ConSettings^.ConvFuncs.ZStringToAnsi := @ZConvertStringToAnsiWithAutoEncode
-    else
-      ConSettings^.ConvFuncs.ZStringToAnsi := @ZMoveStringToAnsi;
-  end
-  else
-  begin
-    ConSettings^.ConvFuncs.ZAnsiToString := @ZConvertAnsiToString;
-    if ConSettings^.AutoEncode then
-      ConSettings^.ConvFuncs.ZStringToAnsi := @ZConvertStringToAnsiWithAutoEncode
-    else
-      ConSettings^.ConvFuncs.ZStringToAnsi := @ZConvertStringToAnsi;
-  end;
-  {$ENDIF}
-  {$IFNDEF NO_UTF8STRING}
-  { PRaw to UTTF8 string}
-  if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) and
-    ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-    ConSettings^.ConvFuncs.ZPRawToUTF8 := @ZMovePRawToUTF8
-  else
-    ConSettings^.ConvFuncs.ZPRawToUTF8 := @ZConvertPRawToUTF8;
-  {$ENDIF}
-  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-  begin
-    {$IFNDEF NO_UTF8STRING}
-    // raw to/from UTF8
-    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) then
-    begin
-      ConSettings^.ConvFuncs.ZRawToUTF8 := @ZMoveRawToUTF8;
-      ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZMoveUTF8ToRaw;
-    end
-    else
-    begin
-      {$IFDEF WITH_LCONVENCODING}
-      case ConSettings^.ClientCodePage^.CP of
-        28591:  //ISO_8859_1
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw28591ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw28591;
-          end;
-        28592:  //ISO_8859_2
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw28592ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw28592;
-          end;
-        1250:   //WIN1250
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1250ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1250;
-          end;
-        1251:   //WIN1251
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1251ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1251;
-          end;
-        1252:   //WIN1252
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1252ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1252;
-          end;
-        1253:   //WIN1253
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1253ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1253;
-          end;
-        1254:   //WIN1254
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1254ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1254;
-          end;
-        1255:   //WIN1255
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1255ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1255;
-          end;
-        1256:   //WIN1256
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1256ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1256;
-          end;
-        1257:   //WIN1257
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1257ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1257;
-          end;
-        1258:   //WIN1258
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1258ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1258;
-          end;
-        437:    //CP437
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw437ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw437;
-          end;
-        850:    //CP850
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw850ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw850;
-          end;
-        {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
-        852:    //CP852
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw852ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw852;
-          end;
-        {$ENDIF}
-        866:    //CP866
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw866ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw866;
-          end;
-        874:    //CP874
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw874ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw874;
-          end;
-        20866:   //KOI8 (Russian)
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw20866ToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw20866;
-          end;
-        else
-          begin
-            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
-            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
-          end;
-      end;
-      {$ELSE}
-      ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
-      ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
-      {$ENDIF}
-    end;
-    {$ENDIF}
-
-    // raw to/from ansi
-    {$IFNDEF NO_ANSISTRING}
-    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ZOSCodePage) then
-    begin
-      ConSettings^.ConvFuncs.ZAnsiToRaw := @ZMoveAnsiToRaw;
-      ConSettings^.ConvFuncs.ZRawToAnsi := @ZMoveRawToAnsi;
-    end
-    else
-    begin
-      ConSettings^.ConvFuncs.ZAnsiToRaw := @ZConvertAnsiToRaw;
-      ConSettings^.ConvFuncs.ZRawToAnsi := @ZConvertRawToAnsi;
-    end;
-    {$ENDIF}
-    // raw to/from unicode
-    if ConSettings^.ClientCodePage^.CP = zCP_NONE then
-    begin
-      if ConSettings^.AutoEncode then
-        ConSettings^.ConvFuncs.ZRawToUnicode := @ZUnknownRawToUnicodeWithAutoEncode
-      else
-        ConSettings^.ConvFuncs.ZRawToUnicode := @ZUnknownRawToUnicode;
-      ConSettings^.ConvFuncs.ZUnicodeToRaw := @ZUnicodeToUnknownRaw;
-    end
-    else
-      begin
-        ConSettings^.ConvFuncs.ZRawToUnicode := @ZRawToUnicode;
-        ConSettings^.ConvFuncs.ZUnicodeToRaw := @ZUnicodeToRaw;
-      end;
-
+  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then begin
     //last but not least the String to/from converters
     //string represents the DataSet/IZResultSet Strings
-    {$IFNDEF NO_UTF8STRING}
-    if ZCompatibleCodePages(ConSettings^.CTRL_CP, zCP_UTF8) then
-    begin
-      ConSettings^.ConvFuncs.ZUTF8ToString := @ZMoveUTF8ToString;
-      if ConSettings^.AutoEncode then
-        ConSettings^.ConvFuncs.ZStringToUTF8 := @ZConvertStringToUTF8WithAutoEncode
-      else
-        ConSettings^.ConvFuncs.ZStringToUTF8 := @ZMoveStringToUTF8;
-    end
-    else
-    begin
-      ConSettings^.ConvFuncs.ZUTF8ToString := @ZConvertUTF8ToString;
-      if ConSettings^.AutoEncode then
-        ConSettings^.ConvFuncs.ZStringToUTF8 := @ZConvertStringToUTF8WithAutoEncode
-      else
-        ConSettings^.ConvFuncs.ZStringToUTF8 := @ZConvertStringToUTF8
-    end;
-    {$ENDIF}
 
     {$IFDEF UNICODE}
     Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRaw;
@@ -3527,58 +2715,34 @@ begin
     ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
     Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
     {$ELSE}
-      {String To/From Raw}
-      if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
-      begin
-        Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
-        if ConSettings^.AutoEncode then
-          Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode
-        else
-          Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
-      end
-      else
-        if ConSettings^.AutoEncode then
-        begin
-          Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
-          Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
-        end
-        else
-        begin
-          Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
-          Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
-        end;
+    {String To/From Raw}
+    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then begin
+      Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
+      if ConSettings^.AutoEncode
+      then Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode
+      else Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+    end else if ConSettings^.AutoEncode then begin
+      Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+      Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+    end else begin
+      Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+      Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
+    end;
 
-      {String To/From Unicode}
-      if ConSettings^.CTRL_CP = zCP_UTF8 then
-        Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString_CPUTF8
-      else
-        Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+    {String To/From Unicode}
+    if ConSettings^.CTRL_CP = zCP_UTF8
+    then Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString_CPUTF8
+    else Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
 
-      if ConSettings^.AutoEncode then
-        Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode
-      else
-        if ConSettings^.CTRL_CP = zCP_UTF8 then
-          Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertString_CPUTF8ToUnicode
-        else
-          Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
+    if ConSettings^.AutoEncode
+    then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode
+    else if ConSettings^.CTRL_CP = zCP_UTF8
+      then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertString_CPUTF8ToUnicode
+      else Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
     {$ENDIF}
-  end
-  else //autoencode strings is allways true
-  begin
-    {$IFNDEF NO_UTF8STRING}
-    ConSettings^.ConvFuncs.ZUTF8ToString := @ZConvertUTF8ToString;
-    ConSettings^.ConvFuncs.ZStringToUTF8 := @ZConvertStringToUTF8WithAutoEncode;
-    ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
-    ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
-    {$ENDIF}
-    {$IFNDEF NO_ANSISTRING}
-    ConSettings^.ConvFuncs.ZAnsiToRaw := @ZConvertAnsiToRaw;
-    ConSettings^.ConvFuncs.ZRawToAnsi := @ZConvertRawToAnsi;
-    {$ENDIF}
+  end else begin //autoencode strings is allways true
     Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
     Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
-    Consettings^.ConvFuncs.ZUnicodeToRaw := @ZUnicodeToRaw;
-    Consettings^.ConvFuncs.ZRawToUnicode := @ZRawToUnicode;
     ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
     Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
   end;

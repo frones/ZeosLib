@@ -132,7 +132,7 @@ function TZValFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
-  VariantManager.SetAsDouble(Result, StrToFloatDef(Stack.GetParameter(1).VString, 0, InternalDefaultFormatSettings));
+  VariantManager.SetAsDouble(Result, StrToFloatDef(Stack.GetParameter(1).{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, 0, InternalDefaultFormatSettings));
 end;
 
 { TZCtodFunction }
@@ -144,7 +144,7 @@ var
 begin
   CheckParamsCount(Stack, 1);
   Value := Stack.GetParameter(1);
-  VariantManager.SetAsDateTime(Result, StrToDateDef(Value.VString, 0));
+  VariantManager.SetAsDateTime(Result, StrToDateDef(Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, 0));
 end;
 
 { TZDtosFunction }
@@ -165,7 +165,7 @@ function TZFormatDateTimeFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
-  VariantManager.SetAsString(Result, FormatDateTime(Stack.GetParameter(2).VString, Stack.GetParameter(1).VDateTime));
+  VariantManager.SetAsString(Result, FormatDateTime(Stack.GetParameter(2).{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, Stack.GetParameter(1).VDateTime));
 end;
 
 procedure AddConvertFunctions(Functions : TZFunctionsList);

@@ -121,45 +121,44 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 
 var DefaultLoggingFormatter: TZLoggingFormatter;
 
-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-procedure ToBuff(const Value: String; var Buf: TRawBuff; var Result: RawByteString); overload;
-begin
-  ZDbcUtils.ToBuff(UnicodeStringToAscii7(Value), Buf, Result);
-end;
-{$ENDIF}
 { TZLoggingFormatter }
 
 function TZLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): RawByteString;
-var Buf: TRawBuff;
+var SQLWriter: TZRawSQLStringWriter;
 begin
-  Result := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FormatDateTime('yyyy-mm-dd hh:mm:ss', LoggingEvent.Timestamp));
-  Buf.Pos := 0;
-  ToBuff(' cat: ', Buf, Result);
-  case LoggingEvent.Category of
-    lcConnect: ToBuff('Connect', Buf, Result);
-    lcDisconnect: ToBuff('Disconnect', Buf, Result);
-    lcTransaction: ToBuff('Transaction', Buf, Result);
-    lcExecute: ToBuff('Execute', Buf, Result);
-    lcPrepStmt: ToBuff('Prepare', Buf, Result);
-    lcBindPrepStmt: ToBuff('Bind prepared', Buf, Result);
-    lcExecPrepStmt: ToBuff('Execute prepared', Buf, Result);
-    lcUnprepStmt: ToBuff('Unprepare prepared', Buf, Result);
-  else
-    ToBuff('Other', Buf, Result);
+  Result := EmptyRaw;
+  SQLWriter := TZRawSQLStringWriter.Create(100+Length(LoggingEvent.Message)+Length(LoggingEvent.Error));
+  try
+    SQLWriter.AddDateTime(LoggingEvent.Timestamp, 'yyyy-mm-dd hh:mm:ss', Result);
+    SQLWriter.AddText(' cat: ', Result);
+    case LoggingEvent.Category of
+      lcConnect: SQLWriter.AddText('Connect', Result);
+      lcDisconnect: SQLWriter.AddText('Disconnect', Result);
+      lcTransaction: SQLWriter.AddText('Transaction', Result);
+      lcExecute: SQLWriter.AddText('Execute', Result);
+      lcPrepStmt: SQLWriter.AddText('Prepare', Result);
+      lcBindPrepStmt: SQLWriter.AddText('Bind prepared', Result);
+      lcExecPrepStmt: SQLWriter.AddText('Execute prepared', Result);
+      lcUnprepStmt: SQLWriter.AddText('Unprepare prepared', Result);
+    else
+      SQLWriter.AddText('Other', Result);
+    end;
+    if LoggingEvent.Protocol <> EmptyRaw then begin
+      SQLWriter.AddText(', proto: ', Result);
+      SQLWriter.AddText(LoggingEvent.Protocol, Result);
+    end;
+    SQLWriter.AddText(', msg: ', Result);
+    SQLWriter.AddText(LoggingEvent.Message, Result);
+    if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> EmptyRaw) then begin
+      SQLWriter.AddText(', errcode: ', Result);
+      SQLWriter.AddOrd(LoggingEvent.ErrorCode, Result);
+      SQLWriter.AddText(', error: ', Result);
+      SQLWriter.AddText(LoggingEvent.Error, Result);
+    end;
+    SQLWriter.Finalize(Result);
+  finally
+    FreeAndNil(SQLWriter);
   end;
-  if LoggingEvent.Protocol <> EmptyRaw then begin
-    ToBuff(', proto: ', Buf, Result);
-    ToBuff(LoggingEvent.Protocol, Buf, Result);
-  end;
-  ToBuff(', msg: ', Buf, Result);
-  ToBuff(LoggingEvent.Message, Buf, Result);
-  if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> EmptyRaw) then begin
-    ToBuff(', errcode: ', Buf, Result);
-    ToBuff(IntToRaw(LoggingEvent.ErrorCode), Buf, Result);
-    ToBuff(', error: ', Buf, Result);
-    ToBuff(LoggingEvent.Error, Buf, Result);
-  end;
-  FlushBuff(Buf, Result);
 end;
 
 { TZLoggingEvent }

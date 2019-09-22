@@ -175,6 +175,11 @@ const
   // If set, the TDS version will be set on connect
   // or dbinit (sybase-lib only)
   ConnProps_TDSVersion = 'TDSVersion';
+  // Type: String
+  // If set, the TDS version will be set on connect. Lower precedence than 'TDSVersion'
+  // or dbinit (sybase-lib only)
+  // see: https://www.freetds.org/userguide/choosingtdsprotocol.htm
+  ConnProps_TDSProtocolVersion = 'TDSProtocolVersion';
   // Type: BOOLEAN
   // If set, executes 'SET ANSI_PADDING ON' on connect
   ConnProps_AnsiPadding = 'ANSI_PADDING';
@@ -269,6 +274,11 @@ const
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
+  // Type: BOOLEAN
+  // compatibility option for users who bind double values to the params
+  // even if it should by a NUMERIC complient such as Currency or TBCD
+  // If set, we'll bind the Doubles as string with then Unknown OID e.g. 0
+  ConnProps_BindDoublesAsString = 'BindDoubleAsString';
   // Type: BOOLEAN
   // Is Oid type treated as Large Object handle (blob) or as a regular integer
   DSProps_OidAsBlob = 'OidAsBlob';

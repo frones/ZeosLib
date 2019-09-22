@@ -2757,9 +2757,13 @@ procedure TZRowAccessor.GetGUID(ColumnIndex: Integer; var Result: TGUID;
   out IsNull: Boolean);
 var Data: PPointer;
 label zero_guid;
+  procedure FromString;
+  begin
+    Result := StringToGUID(GetString(ColumnIndex, IsNull))
+  end;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stDouble);
+  CheckColumnConvertion(ColumnIndex, stGUID);
 {$ENDIF}
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
@@ -2767,7 +2771,7 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString,
-      stAsciiStream, stUnicodeStream: StringToGUID(GetString(ColumnIndex, IsNull));
+      stAsciiStream, stUnicodeStream: FromString;
       stBytes:    if PWord(PAnsiChar(Data)+SizeOf(Pointer))^ = SizeOf(TGUID)
                   then Result := PGUID(Data^)^
                   else goto zero_guid;
@@ -4113,11 +4117,12 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else if fRaw then begin
-    fRawTemp := ConSettings^.ConvFuncs.ZAnsiToRaw(Value, FClientCP);
+    FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage);
+    fRawTemp := ZUnicodeToRaw(FUniTemp, FClientCP);
     Len := Length(fRawTemp);
     SetPAnsiChar(ColumnIndex, Pointer(fRawTemp), Len);
   end else begin
-    fUniTemp := ZEncoding.ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
+    fUniTemp := ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;
@@ -4144,11 +4149,11 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else if fRaw then begin
-    fRawTemp := ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, FClientCP);
+    ZEncoding.PRawToRawConvert(Pointer(Value), Length(Value), zCP_UTF8, FClientCP, fRawTemp);
     Len := Length(fRawTemp);
     SetPAnsiChar(ColumnIndex, Pointer(fRawTemp), Len);
   end else begin
-    fUniTemp := ZEncoding.ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
+    fUniTemp := ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;
@@ -4552,13 +4557,16 @@ begin
     vtUInteger: SetULong(ColumnIndex, Value.VUInteger);
     vtBigDecimal: SetBigDecimal(ColumnIndex, Value.VBigDecimal);
     //vtGUID:  Self.SetBytes(ColumnIndex, Value.VGUID);
-    vtBytes: SetBytes(ColumnIndex, Value.VBytes);
-    vtString: SetString(ColumnIndex, Value.VString);
+    vtBytes: begin
+              Len := Length(Value.VRawByteString);
+              SetPAnsichar(ColumnIndex, Pointer(Value.VRawByteString), Len);
+            end;
+    vtString: SetString(ColumnIndex, Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
     {$IFNDEF NO_ANSISTRING}
-    vtAnsiString: SetAnsiString(ColumnIndex, Value.VAnsiString);
+    vtAnsiString: SetAnsiString(ColumnIndex, Value.VRawByteString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    vtUTF8String: SetUTF8String(ColumnIndex, Value.VUTF8String);
+    vtUTF8String: SetUTF8String(ColumnIndex, Value.VRawByteString);
     {$ENDIF}
     vtRawByteString: SetRawByteString(ColumnIndex, Value.VRawByteString);
     vtUnicodeString: SetUnicodeString(ColumnIndex, Value.VUnicodeString);

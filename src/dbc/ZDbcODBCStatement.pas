@@ -1428,9 +1428,7 @@ begin
       SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Trunc(Value);
       SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Trunc(Value);
       SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := Trunc(Value);
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := Trunc(Value);
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^ := {$IFDEF WITH_UINT64_C1118_ERROR}Int64ToUint64{$ENDIF}(Trunc(Value));
       SQL_C_TYPE_DATE, SQL_C_DATE: begin
           DecodeDate(Value, Year, PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.month,
             PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.day);
@@ -1695,11 +1693,9 @@ begin
       SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := BCD2Int64(Value);
       SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := BCD2Int64(Value);
       SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := BCD2Int64(Value);
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := BCD2UInt64(Value);
-      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := BCD2UInt64(Value);
-      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := BCD2UInt64(Value);
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      SQL_C_UTINYINT: PByte(Bind.ParameterValuePtr)^     := BCD2Int64(Value);
+      SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := BCD2Int64(Value);
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := BCD2Int64(Value);
       SQL_C_SBIGINT:  BCD2Int64(Value, PInt64(Bind.ParameterValuePtr)^);
       SQL_C_UBIGINT:  BCD2UInt64(Value, PUInt64(Bind.ParameterValuePtr)^);
       SQL_C_FLOAT:    PSingle(Bind.ParameterValuePtr)^   := BCDToDouble(Value);
@@ -1889,9 +1885,7 @@ begin
       SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := Trunc(Value);
       SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Trunc(Value);
       SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := Trunc(Value);
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := Trunc(Value);
-      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := {$IFDEF WITH_UINT64_C1118_ERROR}Int64ToUint64{$ENDIF}(Trunc(Value));
       SQL_C_FLOAT:    PSingle(Bind.ParameterValuePtr)^   := Value;
       SQL_C_DOUBLE:   PDouble(Bind.ParameterValuePtr)^   := Value;
       SQL_C_NUMERIC:  Curr2ODBCNumeric(Value, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
@@ -2103,7 +2097,6 @@ begin
     BindList.SetNull(Index, SQLType);
 end;
 
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZAbstractODBCPreparedStatement.SetPAnsiChar(Index: Integer;
   Value: PAnsiChar; BLen: LengthInt);
 var Bind: PZODBCParamBind;
@@ -2112,7 +2105,7 @@ begin
   if fBindImmediat then begin
     {$R-}
     Bind := @fParamBindings[Index];
-    {$IF defined(RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.BufferLength <= BLen)) then
       InitBind(Index, 1, stString);
     if Bind.SQLType in [stAsciiStream, stUnicodeStream] then begin
@@ -2126,9 +2119,11 @@ begin
       SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^ := RawToIntDef(Value, Value+BLen, 0);
       SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^     := RawToIntDef(Value, Value+BLen, 0);
       SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^  := RawToIntDef(Value, Value+BLen, 0);
-      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Cardinal(RawToUInt64Def(Value, Value+BLen, 0));
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^ := Cardinal(RawToInt64Def(Value, Value+BLen, 0));
       SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^    := RawToInt64Def(Value, Value+BLen, 0);
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^   := RawToUInt64Def(Value, Value+BLen, 0);
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       {SQL_C_TYPE_DATE, SQL_C_DATE,
       SQL_C_TYPE_TIME, SQL_C_TIME, SQL_C_SS_TIME2,
       SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_C_SS_TIMESTAMPOFFSET,}
@@ -2164,7 +2159,6 @@ begin
     BindList.Put(Index, stString, fRawTemp, FClientCP);
   end;
 end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZAbstractODBCPreparedStatement.SetPWideChar(Index: Integer;
   Value: PWideChar; WLen: LengthInt);
@@ -2188,7 +2182,7 @@ begin
       SQL_C_SSHORT:   PSmallInt(Bind.ParameterValuePtr)^  := UnicodeToIntDef(Value, Value+WLen, 0);
       SQL_C_USHORT:   PWord(Bind.ParameterValuePtr)^      := UnicodeToIntDef(Value, Value+WLen, 0);
       SQL_C_SLONG:    PInteger(Bind.ParameterValuePtr)^   := UnicodeToIntDef(Value, Value+WLen, 0);
-      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^  := Cardinal(UnicodeToUInt64Def(Value, Value+WLen, 0));
+      SQL_C_ULONG:    PCardinal(Bind.ParameterValuePtr)^  := Cardinal(UnicodeToInt64Def(Value, Value+WLen, 0));
       SQL_C_SBIGINT:  PInt64(Bind.ParameterValuePtr)^     := UnicodeToInt64Def(Value, Value+WLen, 0);
       SQL_C_UBIGINT:  PUInt64(Bind.ParameterValuePtr)^    := UnicodeToUInt64Def(Value, Value+WLen, 0);
       {SQL_C_TYPE_DATE, SQL_C_DATE,
@@ -2494,19 +2488,25 @@ function TZODBCCallableStatementW.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
-  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  SQLWriter: TZSQLStringWriter;
 begin
   //https://docs.microsoft.com/en-us/sql/relational-databases/native-client-ole-db-how-to/results/execute-stored-procedure-with-rpc-and-process-output?view=sql-server-2017
-  Buf.Pos := 0;
-  SQL := '';
-  ZDbcUtils.ToBuff('{? = CALL ', Buf, SQL);
-  ZDbcUtils.ToBuff(StoredProcName, Buf, SQL);
-  ZDbcUtils.ToBuff('(', Buf, SQL);
+  SQL := '{? = CALL ';
+  I := Length(StoredProcName);
+  i := I + 20+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
+  SQLWriter.AddText(StoredProcName, SQL);
+  if BindList.Count > 1 then
+    SQLWriter.AddChar('(', SQL);
   for i := 1 to BindList.Count-1 do
-    ZDbcUtils.ToBuff('?,', Buf, SQL);
-  ReplaceOrAddLastChar(',', ')', Buf, SQL);
-  ZDbcUtils.ToBuff('}', Buf, SQL);
-  ZDbcUtils.FlushBuff(Buf, SQL);
+    SQLWriter.AddText('?,', SQL);
+  if BindList.Count > 1 then begin
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.AddChar(')', SQL);
+  end;
+  SQLWriter.AddChar('}', SQL);
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZODBCPreparedStatementW.Create(Connection as IZODBCConnection, fPHDBC^, SQL, Info);
   TZODBCPreparedStatementW(Result).Prepare;
 end;

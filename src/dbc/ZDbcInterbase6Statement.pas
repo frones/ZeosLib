@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
+  ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils, ZClasses,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
   ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet;
 
@@ -92,7 +92,6 @@ type
     procedure ExceuteBatch;
   protected
     procedure CheckParameterIndex(var Value: Integer); override;
-    function GetInParamLogValue(Index: Integer): RawByteString; override;
     procedure ReleaseConnection; override;
     function CreateResultSet: IZResultSet;
   public
@@ -123,6 +122,7 @@ type
   protected
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public //setters
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
@@ -179,7 +179,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet, ZClasses,
+  ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet,
   ZDbcUtils, ZDbcResultSet, ZTokenizer;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -353,14 +353,14 @@ begin
   else begin
     NativeResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL, @FStmtHandle,
       FResultXSQLDA, CachedLob, FStatementType);
-    if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
-    begin
-      CachedResolver  := TZInterbase6CachedResolver.Create(Self,  NativeResultSet.GetMetadata);
+    if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then begin
+      if FIBConnection.IsFirebirdLib and (FIBConnection.GetHostVersion >= 2000000) //is the SQL2003 st. IS DISTINCT FROM supported?
+      then CachedResolver  := TZCachedResolverFirebird2up.Create(Self, NativeResultSet.GetMetadata)
+      else CachedResolver  := TZInterbase6CachedResolver.Create(Self, NativeResultSet.GetMetadata);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
       Result := CachedResultSet;
-    end
-    else
+    end else
       Result := NativeResultSet;
     NativeResultSet.TransactionResultSet := Pointer(Result);
     FOpenResultSet := Pointer(Result);
@@ -599,68 +599,6 @@ begin
           FOutParamResultSet := CreateResultSet;
     end;
   inherited ExecuteUpdatePrepared;
-end;
-
-function TZAbstractInterbase6PreparedStatement.GetInParamLogValue(
-  Index: Integer): RawByteString;
-var XSQLVAR: PXSQLVAR;
-  TempDate: TZTimeStamp;
-  dDT, tDT: TDateTime;
-begin
-  CheckParameterIndex(Index);
-  {$R-}
-  XSQLVAR := @FParamXSQLDA.sqlvar[Index];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then
-    Result := 'null'
-  else case XSQLVAR.sqltype and not(1) of
-    SQL_D_FLOAT,
-    SQL_DOUBLE    : Result := FloatToRaw(PDouble(XSQLVAR.sqldata)^);
-    SQL_LONG      : if XSQLVAR.sqlscale = 0
-                    then Result := IntToRaw(PISC_LONG(XSQLVAR.sqldata)^)
-                    else Result := FloatToRaw(PISC_LONG(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_FLOAT     : Result := FloatToRaw(PSingle(XSQLVAR.sqldata)^);
-    SQL_BOOLEAN   : Result := BoolToRawEx(PISC_BOOLEAN(XSQLVAR.sqldata)^ <> 0);
-    SQL_BOOLEAN_FB: Result := BoolToRawEx(PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ <> 0);
-    SQL_SHORT     : if XSQLVAR.sqlscale = 0
-                    then Result := IntToRaw(PISC_SHORT(XSQLVAR.sqldata)^)
-                    else Result := FloatToRaw(PISC_SHORT(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_QUAD,
-    SQL_INT64     : if XSQLVAR.sqlscale = 0
-                    then Result := IntToRaw(PISC_INT64(XSQLVAR.sqldata)^)
-                    else Result := FloatToRaw(PISC_INT64(XSQLVAR.sqldata)^ / IBScaleDivisor[XSQLVAR.sqlscale]);
-    SQL_TEXT      : Result := SQLQuotedStr(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen, AnsiChar(#39));
-    SQL_VARYING   : Result := SQLQuotedStr(PAnsiChar(@PISC_VARYING(XSQLVAR.sqldata).str[0]), PISC_VARYING(XSQLVAR.sqldata).strlen, AnsiChar(#39));
-    SQL_BLOB      : Result := '(LOB)';
-    SQL_TYPE_TIME : begin
-                      isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
-                        TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                      if TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, tDT)
-                      then Result := ZSysUtils.DateTimeToRawSQLTime(tDT, ConSettings.WriteFormatSettings, True)
-                      else Result := '(time)';
-                    end;
-    SQL_TYPE_DATE : begin
-                      isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
-                        TempDate.Year, TempDate.Month, Tempdate.Day);
-                      if TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, dDT)
-                      then Result := ZSysUtils.DateTimeToRawSQLDate(dDT, ConSettings.WriteFormatSettings, True)
-                      else Result := '(date)';
-                    end;
-    SQL_TIMESTAMP : begin
-                      isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
-                        TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                      isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
-                        TempDate.Year, TempDate.Month, Tempdate.Day);
-                      if not TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, tDT) then
-                        tDT := 0;
-                      if not TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, dDT) then
-                        dDT := 0;
-                      if dDT < 0
-                      then Result := ZSysUtils.DateTimeToRawSQLTimeStamp(dDT-tDT, ConSettings.WriteFormatSettings, True)
-                      else Result := ZSysUtils.DateTimeToRawSQLTimeStamp(dDT+tDT, ConSettings.WriteFormatSettings, True)
-                    end;
-    else Result := 'unknown'
-  end;
 end;
 
 function TZAbstractInterbase6PreparedStatement.GetRawEncodedSQL(
@@ -1363,6 +1301,93 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZInterbase6PreparedStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var XSQLVAR: PXSQLVAR;
+  TempDate: TZTimeStamp;
+  Buffer: array[0..SizeOf(TZTimeStamp)-1] of AnsiChar absolute TempDate;
+  dDT, tDT: TDateTime;
+  P: PAnsiChar;
+begin
+  CheckParameterIndex(ParamIndex);
+  {$R-}
+  XSQLVAR := @FParamXSQLDA.sqlvar[ParamIndex];
+  {$IF defined(RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+} {$IFEND}
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then
+    Result := '(NULL)'
+  else case XSQLVAR.sqltype and not(1) of
+    SQL_ARRAY     : SQLWriter.AddText('(ARRAY)', Result);
+    SQL_D_FLOAT,
+    SQL_DOUBLE    : SQLWriter.AddFloat(PDouble(XSQLVAR.sqldata)^, Result);
+    SQL_FLOAT     : SQLWriter.AddFloat(PSingle(XSQLVAR.sqldata)^, Result);
+    SQL_BOOLEAN   : if PISC_BOOLEAN(XSQLVAR.sqldata)^ <> 0
+                    then SQLWriter.AddText('(TRUE)', Result)
+                    else SQLWriter.AddText('(FALSE)', Result);
+    SQL_BOOLEAN_FB: if PISC_BOOLEAN_FB(XSQLVAR.sqldata)^ <> 0
+                    then SQLWriter.AddText('(TRUE)', Result)
+                    else SQLWriter.AddText('(FALSE)', Result);
+    SQL_SHORT     : if XSQLVAR.sqlscale = 0
+                    then SQLWriter.AddOrd(PISC_SHORT(XSQLVAR.sqldata)^, Result)
+                    else begin
+                      ScaledOrdinal2Raw(Integer(PISC_SHORT(XSQLVAR.sqldata)^), @Buffer[0], @P, -IBScaleDivisor[XSQLVAR.sqlscale]);
+                      SQLWriter.AddText(@Buffer[0], P - PAnsiChar(@Buffer[0]), Result);
+                    end;
+    SQL_LONG      : if XSQLVAR.sqlscale = 0
+                    then SQLWriter.AddOrd(PISC_LONG(XSQLVAR.sqldata)^, Result)
+                    else begin
+                      ScaledOrdinal2Raw(PISC_LONG(XSQLVAR.sqldata)^, @Buffer[0], @P, -IBScaleDivisor[XSQLVAR.sqlscale]);
+                      SQLWriter.AddText(@Buffer[0], P - PAnsiChar(@Buffer[0]), Result);
+                    end;
+    SQL_QUAD,
+    SQL_INT64     : if XSQLVAR.sqlscale = 0
+                    then SQLWriter.AddOrd(PInt64(XSQLVAR.sqldata)^, Result)
+                    else begin
+                      ScaledOrdinal2Raw(PInt64(XSQLVAR.sqldata)^, @Buffer[0], @P, -IBScaleDivisor[XSQLVAR.sqlscale]);
+                      SQLWriter.AddText(@Buffer[0], P - PAnsiChar(@Buffer[0]), Result);
+                    end;
+    SQL_TEXT      : if XSQLVAR.sqlsubtype and 255 = CS_BINARY
+                    then SQLWriter.AddHexBinary(PByte(XSQLVAR.sqldata), XSQLVAR.sqllen, False, Result)
+                    else SQLWriter.AddTextQuoted(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen, AnsiChar(#39), Result);
+    SQL_VARYING   : if XSQLVAR.sqlsubtype and 255 = CS_BINARY
+                    then SQLWriter.AddHexBinary(PByte(@PISC_VARYING(XSQLVAR.sqldata).str[0]), PISC_VARYING(XSQLVAR.sqldata).strlen, False, Result)
+                    else SQLWriter.AddTextQuoted(PAnsiChar(@PISC_VARYING(XSQLVAR.sqldata).str[0]), PISC_VARYING(XSQLVAR.sqldata).strlen, AnsiChar(#39), Result);
+    SQL_BLOB      : if XSQLVAR.sqlsubtype = isc_blob_text
+                    then SQLWriter.AddText('(CLOB)', Result)
+                    else SQLWriter.AddText('(BLOB)', Result);
+    SQL_TYPE_TIME : begin
+                      isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
+                        TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+                      if TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, tDT)
+                      then SQLWriter.AddTime(tDT, ConSettings.WriteFormatSettings.TimeFormat, Result)
+                      else SQLWriter.AddText('(TIME)', Result);
+                    end;
+    SQL_TYPE_DATE : begin
+                      isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
+                        TempDate.Year, TempDate.Month, Tempdate.Day);
+                      if TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, dDT)
+                      then SQLWriter.AddDate(dDT, ConSettings.WriteFormatSettings.DateFormat, Result)
+                      else SQLWriter.AddText('(DATE)', Result);
+                    end;
+    SQL_TIMESTAMP : begin
+                      isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
+                        TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+                      isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
+                        TempDate.Year, TempDate.Month, Tempdate.Day);
+                      if not TryEncodeTime(TempDate.Hour, TempDate.Minute, TempDate.Second, TempDate.Fractions div 10, tDT) then
+                        tDT := 0;
+                      if not TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, dDT) then
+                        dDT := 0;
+                      if dDT < 0
+                      then dDT := dDT-tDT
+                      else dDT := dDT+tDT;
+                      SQLWriter.AddDateTime(dDT, ConSettings.WriteFormatSettings.DateTimeFormat, Result)
+                    end;
+    else            SQLWriter.AddText('(UNKNOWN)', Result);
+  end;
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
 procedure TZInterbase6PreparedStatement.SetInt(Index, Value: Integer);
 var XSQLVAR: PXSQLVAR;
   P: PAnsiChar;
@@ -1846,13 +1871,15 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZInterbase6PreparedStatement.SetULong(Index: Integer;
   const Value: UInt64);
 begin
+  {$IFDEF WITH_UINT64_C1118_ERROR}
+  SetLong(Index, UInt64ToInt64(Value));
+  {$ELSE}
   SetLong(Index, Value);
+  {$ENDIF}
 end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Sets the designated parameter to a Java <code>UnicodeString</code> value.
@@ -2009,24 +2036,29 @@ end;
 function TZInterbase6CallableStatement.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
-  P: PChar;
   I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQLWriter: TZSQLStringWriter;
 begin
   SQL := '';
+  I := Length(StoredProcName);
+  i := I + 6+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
   if (Connection as IZInterbase6Connection).StoredProcedureIsSelectable(StoredProcName)
-  then ToBuff('SELECT * FROM ', SQL)
-  else ToBuff('EXECUTE PROCEDURE ', SQL);
-  ToBuff(StoredProcName, SQL);
-  ToBuff('(', SQL);
+  then SQLWriter.AddText('SELECT * FROM ', SQL)
+  else SQLWriter.AddText('EXECUTE PROCEDURE ', SQL);
+  SQLWriter.AddText(StoredProcName, SQL);
+  if BindList.Capacity >0 then
+    SQLWriter.AddChar('(', SQL);
   for I := 0 to BindList.Capacity -1 do
     if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then
-      ToBuff('?,', SQL);
-  FlushBuff(SQL);
-  P := Pointer(SQL);
-  if (BindList.Capacity > 0) and ((P+Length(SQL)-1)^ = ',')
-  then (P+Length(SQL)-1)^ := ')' //cancel last comma
-  else (P+Length(SQL)-1)^ := ' '; //cancel bracket
+      SQLWriter.AddText('?,', SQL);
+  if BindList.Capacity > 0 then begin
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.AddChar(')', SQL);
+  end;
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZInterbase6PreparedStatement.Create(Connection, SQL, Info);
 end;
 

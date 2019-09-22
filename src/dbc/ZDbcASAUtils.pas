@@ -208,7 +208,7 @@ function ConvertASAJDBCToSqlType(const FieldType: SmallInt;
 }
 procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
   const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
-  const ConSettings: PZConSettings; const LogMessage: RawByteString = '';
+  const ConSettings: PZConSettings; const LogMessage: RawByteString = EmptyRaw;
   const SupressExceptionID: Integer = 0);
 
 procedure DescribeCursor(const ASAConnection: IZASAConnection; const SQLData: IZASASQLDA;
@@ -254,8 +254,7 @@ uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 
 procedure TZASASQLDA.CreateException(const Msg: string);
 begin
-  DriverManager.LogError( lcOther, FConSettings^.Protocol, '', -1, ConvertEMsgToRaw(Msg, FConSettings^.ClientCodePage^.CP));
-  raise EZSQLException.Create( Format( SSQLError1, [ Msg]));
+  DriverManager.LogError( lcOther, FConSettings^.Protocol, EmptyRaw, -1, ConvertEMsgToRaw(Msg, FConSettings^.ClientCodePage^.CP));  raise EZSQLException.Create( Format( SSQLError1, [ Msg]));
 end;
 
 {**
@@ -1082,7 +1081,7 @@ begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
   begin
-    Str := '';
+    Str := EmptyRaw;
     if (sqlind^ < 0) then
        Exit;
 
@@ -1270,7 +1269,7 @@ end;
 }
 procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
   const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
-  const ConSettings: PZConSettings; const LogMessage: RawByteString = '';
+  const ConSettings: PZConSettings; const LogMessage: RawByteString = EmptyRaw;
   const SupressExceptionID: Integer = 0);
 var
   ErrorBuf: array[0..1024] of AnsiChar;

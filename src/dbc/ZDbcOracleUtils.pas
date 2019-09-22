@@ -54,13 +54,14 @@ unit ZDbcOracleUtils;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, ZDbcUtils, ZSelectSchema,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}ZClasses, ZDbcUtils, ZSelectSchema,
   ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
   ZCompatibility, ZPlainOracleConstants, FmtBCD;
 
@@ -351,6 +352,20 @@ const
   NVU_CurrencyExponents: array[0..10] of Integer =
     (-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
 {$IF defined(NEED_TYPED_UINT64_CONSTANTS) or defined(WITH_UINT64_C1118_ERROR)}
+  {$IF DEFINED(FPC) and DEFINED(ENDIAN_BIG)}
+  cInt64Divisor: array[0..10] of Int64Rec = (
+    (hi: $00000000; lo: $00000001), {                   1}
+    (hi: $00000000; lo: $00000064), {                 100}
+    (hi: $00000000; lo: $00002710), {               10000}
+    (hi: $00000000; lo: $000F4240), {             1000000}
+    (hi: $00000000; lo: $05F5E100), {           100000000}
+    (hi: $00000002; lo: $540BE400), {         10000000000}
+    (hi: $000000E8; lo: $D4A51000), {       1000000000000}
+    (hi: $00005AF3; lo: $107A4000), {     100000000000000}
+    (hi: $002386F2; lo: $6FC10000), {   10000000000000000}
+    (hi: $0DE0B6B3; lo: $A7640000), { 1000000000000000000}
+    (hi: $8AC72304; lo: $89E80000));{10000000000000000000}
+  {$ELSE}
   cInt64Divisor: array[0..10] of Int64Rec = (
     (lo: $00000001; hi: $00000000), {                   1}
     (lo: $00000064; hi: $00000000), {                 100}
@@ -363,6 +378,7 @@ const
     (lo: $6FC10000; hi: $002386F2), {   10000000000000000}
     (lo: $A7640000; hi: $0DE0B6B3), { 1000000000000000000}
     (lo: $89E80000; hi: $8AC72304));{10000000000000000000}
+  {$IFEND}
 var
   UInt64Divisor:   array[0..10] of UInt64 absolute cInt64Divisor;
 {$ELSE}
@@ -398,11 +414,8 @@ type
     procedure Describe(_Type: UB4; const Connection: IZConnection;
       const Name: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF});
 
-    {$IFDEF UNICODE}
-    procedure ConcatParentName(NotArgName: Boolean; var Buf: TUCS2Buff; var Result: String; const IC: IZIdentifierConvertor);
-    {$ELSE}
-    procedure ConcatParentName(NotArgName: Boolean; var Buf: TRawBuff; var Result: RawByteString; const IC: IZIdentifierConvertor);
-    {$ENDIF}
+    procedure ConcatParentName(NotArgName: Boolean; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      SQLWriter: TZSQLStringWriter; var Result: SQLString; const IC: IZIdentifierConvertor);
     constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_A);
     destructor Destroy; override;
   public
@@ -420,11 +433,12 @@ type
     property Parent: TZOraProcDescriptor_A read FParent;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet,
-  ZEncoding, ZFastCode {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  ZEncoding, ZFastCode {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF UNICODE},StrUtils{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
 Oracle stores values of the NUMBER datatype in a variable-length format.
@@ -1716,23 +1730,19 @@ end;
 
 Const ArgListType: array[Boolean] of ub4 = (OCI_ATTR_LIST_ARGUMENTS, OCI_ATTR_LIST_SUBPROGRAMS);
 
-{$IFDEF UNICODE}
 procedure TZOraProcDescriptor_A.ConcatParentName(NotArgName: Boolean;
-  var Buf: TUCS2Buff; var Result: String; const IC: IZIdentifierConvertor);
-{$ELSE}
-procedure TZOraProcDescriptor_A.ConcatParentName(NotArgName: Boolean;
-  var Buf: TRawBuff; var Result: RawByteString; const IC: IZIdentifierConvertor);
-{$ENDIF}
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF} SQLWriter: TZSQLStringWriter;
+  var Result: SQLString; const IC: IZIdentifierConvertor);
 begin
   if (FParent <> nil) then begin
-    FParent.ConcatParentName(NotArgName, Buf, Result, IC);
+    FParent.ConcatParentName(NotArgName, SQLWriter, Result, IC);
     if NotArgName then begin
-      ZDbcUtils.ToBuff(IC.Quote(FParent.AttributeName), Buf, Result);
-      ZDbcUtils.ToBuff('.', Buf, Result);
+      SQLWriter.AddText(IC.Quote(FParent.AttributeName), Result);
+      SQLWriter.AddChar('.', Result);
     end else if ((ObjType = OCI_PTYPE_ARG) and (FParent.Parent <> nil) and (FParent.Parent.ObjType = OCI_PTYPE_PKG) and (FParent.Parent.Args.Count > 1)) {or
        ((FParent.ObjType = OCI_PTYPE_PKG) and (FParent.Args.Count > 1)) }then begin
-      ZDbcUtils.ToBuff(FParent.AttributeName, Buf, Result);
-      ZDbcUtils.ToBuff('_', Buf, Result);
+      SQLWriter.AddText(FParent.AttributeName, Result);
+      SQLWriter.AddChar('_', Result);
     end;
   end;
 end;
@@ -1990,4 +2000,5 @@ begin
     FreeAndNil(Args);
 end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

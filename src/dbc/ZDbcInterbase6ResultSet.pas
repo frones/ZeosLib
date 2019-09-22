@@ -60,13 +60,15 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages, ZPlainDriver,
-  ZDbcInterbase6Utils, ZSelectSchema, ZDbcUtils;
+  ZDbcInterbase6Utils, ZSelectSchema, ZDbcUtils, ZClasses, ZDbcCache,
+  ZDbcGenericResolver, ZDbcCachedResultSet;
 
 type
   {** Implements Interbase ResultSet. }
@@ -121,6 +123,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -143,12 +146,15 @@ type
   private
     FBlobId: TISC_QUAD;
     FPlainDriver: TZInterbasePlainDriver;
+    FTransaction: IZIBTransaction;
     FIBConnection: IZInterbase6Connection;
   protected
     procedure ReadLob; override;
   public
     constructor Create(const PlainDriver: TZInterbasePlainDriver;
-      var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
+      var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+      const Connection: IZInterbase6Connection);
+    procedure BeforeDestruction; override;
   end;
 
   TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob, IZUnCachedLob)
@@ -156,11 +162,14 @@ type
     FBlobId: TISC_QUAD;
     FPlainDriver: TZInterbasePlainDriver;
     FIBConnection: IZInterbase6Connection;
+    FTransaction: IZIBTransaction;
   protected
     procedure ReadLob; override;
   public
     constructor Create(const PlainDriver: TZInterbasePlainDriver;
-      var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
+      var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+      const Connection: IZInterbase6Connection);
+    procedure BeforeDestruction; override;
   end;
 
   {** Implements Interbase ResultSetMetadata object. }
@@ -180,6 +189,27 @@ type
     function IsAutoIncrement({%H-}ColumnIndex: Integer): Boolean; override;
   End;
 
+  {** Implements a specialized cached resolver for Interbase/Firebird. }
+  TZInterbase6CachedResolver = class(TZGenericCachedResolver)
+  private
+    FInsertReturningFields: TStrings;
+  public
+    constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
+    destructor Destroy; override;
+    function FormCalculateStatement(Columns: TObjectList): string; override;
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
+  end;
+
+  {** Implements a specialized cached resolver for Firebird version 2.0 and up. }
+  TZCachedResolverFirebird2up = class(TZInterbase6CachedResolver)
+  public
+    procedure FormWhereClause(Columns: TObjectList;
+      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+  end;
+
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -188,7 +218,8 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses, ZDbcLogging, ZVariant;
+  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZDbcLogging, ZVariant,
+  ZDbcProperties;
 
 procedure GetPCharFromTextVar(XSQLVAR: PXSQLVAR; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -600,14 +631,14 @@ begin
           ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
             BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, Self);
         end else
-          Result := TZInterbase6UnCachedBlob.Create(FPlainDriver, BlobId, FIBConnection);
+          Result := TZInterbase6UnCachedBlob.Create(FPlainDriver, BlobId, FIBConnection.GetActiveTransaction, FIBConnection);
       stAsciiStream, stUnicodeStream:
         if FCachedBlob then begin
           Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
           ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
             BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, Self);
         end else
-          Result := TZInterbase6UnCachedClob.Create(FPlainDriver, BlobId, FIBConnection);
+          Result := TZInterbase6UnCachedClob.Create(FPlainDriver, BlobId, FIBConnection.GetActiveTransaction, FIBConnection);
       end
   end;
 end;
@@ -970,6 +1001,58 @@ begin
                           TempDate.Second, TempDate.Fractions div 10);
                       end;
       else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
+    end;
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UUID</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>Zero-UUID</code>
+}
+procedure TZInterbase6XSQLDAResultSet.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+var XSQLVAR: PXSQLVAR;
+  P: PAnsiChar;
+  Len: NativeUint;
+  CP_ID: ISC_SHORT;
+label SetFromPChar, Fail;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stGUID);
+{$ENDIF}
+  {$R-}
+  XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
+    LastWasNull := True;
+    FillChar(Result, SizeOf(TGUID), #0);
+  end else begin
+    LastWasNull := False;
+    CP_ID := XSQLVAR.sqlsubtype and 255;
+    case (XSQLVAR.sqltype and not(1)) of
+      SQL_TEXT      : begin
+                        P := XSQLVAR.sqldata;
+                        if (CP_ID = CS_BINARY)
+                        then Len := XSQLVAR.sqllen
+                        else Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
+                        goto SetFromPChar;
+                      end;
+      SQL_VARYING   : begin
+                        P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
+                        Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
+SetFromPChar:           if (CP_ID = CS_BINARY) and (Len = SizeOf(TGUID))
+                        then Move(P^, Result.D1, SizeOf(TGUID))
+                        else if (CP_ID <> CS_BINARY) and ((Len = 36) or (Len = 38))
+                          then ValidGUIDToBinary(P, @Result.D1)
+                          else goto Fail;
+                      end;
+      else
+Fail:   raise Self.CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype)
     end;
   end;
 end;
@@ -1797,27 +1880,38 @@ begin
 end;
 
 { TZInterbase6UnCachedBlob }
+
+procedure TZInterbase6UnCachedBlob.BeforeDestruction;
+begin
+  FTransaction.DeRegisterOpenUnCachedLob(Self);
+  inherited;
+end;
+
+constructor TZInterbase6UnCachedBlob.Create(const PlainDriver: TZInterbasePlainDriver;
+  var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+  const Connection: IZInterbase6Connection);
+begin
+  FBlobId := BlobId;
+  FPlainDriver := PlainDriver;
+  FTransaction := Transaction;
+  FTransaction.RegisterOpenUnCachedLob(Self);
+  FIBConnection := Connection;
+end;
+
 {**
   Reads the blob information by blob handle.
   @param handle a Interbase6 database connect handle.
   @param the statement previously prepared
 }
-constructor TZInterbase6UnCachedBlob.Create(const PlainDriver: TZInterbasePlainDriver;
-  var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
-begin
-  FBlobId := BlobId;
-  FPlainDriver := PlainDriver;
-  FIBConnection := Connection;
-end;
-
 procedure TZInterbase6UnCachedBlob.ReadLob;
 var
   Size: Integer;
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
-    FBlobId, Size, Buffer, True, FIBConnection as IImmediatelyReleasable);
+  if FIBConnection <> nil then
+    ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
+      FBlobId, Size, Buffer, True, FIBConnection as IImmediatelyReleasable);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -1830,11 +1924,20 @@ end;
   @param handle a Interbase6 database connect handle.
   @param the statement previously prepared
 }
+procedure TZInterbase6UnCachedClob.BeforeDestruction;
+begin
+  FTransaction.DeRegisterOpenUnCachedLob(Self);
+  inherited;
+end;
+
 constructor TZInterbase6UnCachedClob.Create(const PlainDriver: TZInterbasePlainDriver;
-  var BlobId: TISC_QUAD; const Connection: IZInterbase6Connection);
+  var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
+  const Connection: IZInterbase6Connection);
 begin
   inherited CreateWithData(nil, 0, Connection.GetConSettings^.ClientCodePage^.CP,
     Connection.GetConSettings);
+  FTransaction := Transaction;
+  FTransaction.RegisterOpenUnCachedLob(Self);
   FIBConnection := Connection;
   FBlobId := BlobId;
   FPlainDriver := PlainDriver;
@@ -1846,7 +1949,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FIBConnection.GetTrHandle,
+  ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
     FBlobId, Size, Buffer, False, FIBConnection as IImmediatelyReleasable);
   AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
   FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
@@ -1980,6 +2083,102 @@ begin
       ColumnInfo.ColumnType := stCurrency;
   end else
     inherited SetColumnTypeFromGetColumnsRS(ColumnInfo, TableColumns);
+end;
+
+{ TZInterbase6CachedResolver }
+
+constructor TZInterbase6CachedResolver.Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
+var
+  Fields: string;
+begin
+  inherited;
+  Fields := Statement.GetParameters.Values[DSProps_InsertReturningFields];
+  if Fields <> '' then
+    FInsertReturningFields := ExtractFields(Fields, [';', ',']);
+end;
+
+destructor TZInterbase6CachedResolver.Destroy;
+begin
+  inherited;
+  FreeAndNil(FInsertReturningFields);
+end;
+
+{**
+  Forms a where clause for SELECT statements to calculate default values.
+  @param Columns a collection of key columns.
+  @param OldRowAccessor an accessor object to old column values.
+}
+function TZInterbase6CachedResolver.FormCalculateStatement(
+  Columns: TObjectList): string;
+// --> ms, 30/10/2005
+var
+   iPos: Integer;
+begin
+  Result := inherited FormCalculateStatement(Columns);
+  if Result <> '' then begin
+    iPos := ZFastCode.pos('FROM', uppercase(Result));
+    if iPos > 0
+    then Result := copy(Result, 1, iPos+3) + ' RDB$DATABASE'
+    else Result := Result + ' FROM RDB$DATABASE';
+  end;
+// <-- ms
+end;
+
+procedure TZInterbase6CachedResolver.PostUpdates(const Sender: IZCachedResultSet;
+  UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor);
+begin
+  inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
+
+  if (UpdateType = utInserted) then
+    UpdateAutoIncrementFields(Sender, UpdateType, OldRowAccessor, NewRowAccessor, Self);
+end;
+
+procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
+var
+  I, ColumnIdx: Integer;
+  RS: IZResultSet;
+begin
+  //inherited;
+
+  RS := InsertStatement.GetResultSet;
+  if RS = nil then
+    Exit;
+
+  for I := 0 to FInsertReturningFields.Count - 1 do
+  begin
+    ColumnIdx := Metadata.FindColumn(FInsertReturningFields[I]);
+    if ColumnIdx = InvalidDbcIndex then
+      raise EZSQLException.Create(Format(SColumnWasNotFound, [FInsertReturningFields[I]]));
+    NewRowAccessor.SetValue(ColumnIdx, RS.GetValueByName(FInsertReturningFields[I]));
+  end;
+
+  RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
+end;
+
+{ TZCachedResolverFirebird2up }
+
+procedure TZCachedResolverFirebird2up.FormWhereClause(Columns: TObjectList;
+  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+  var Result: SQLString);
+var
+  I: Integer;
+  Tmp: SQLString;
+begin
+  if WhereColumns.Count > 0 then
+    SQLWriter.AddText(' WHERE ', Result);
+  for I := 0 to WhereColumns.Count - 1 do
+    with TZResolverParameter(WhereColumns[I]) do begin
+      if I > 0 then
+        SQLWriter.AddText(' AND ', Result);
+      Tmp := IdentifierConvertor.Quote(ColumnName);
+      SQLWriter.AddText(Tmp, Result);
+      if (Metadata.IsNullable(ColumnIndex) = ntNullable)
+      then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
+      else SQLWriter.AddText('=?', Result);
+    end;
 end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit

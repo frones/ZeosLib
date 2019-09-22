@@ -56,7 +56,8 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, Classes, SyncObjs
+  SysUtils, Classes, SyncObjs, FmtBCD,
+  ZCompatibility, ZSysUtils
   {$IF defined(MSWINDOWS) and not defined(FPC)}, Windows{$IFEND} //some old comp. -> INFINITE
   {$IFDEF NO_UNIT_CONTNRS},System.Generics.Collections{$ENDIF};
 
@@ -270,17 +271,17 @@ type
     property OnTimer: TThreadMethod read FOnTimer write SetOnTimer;
   end;
 
-  TCallbackPatch = packed record
-    popEax          : byte;     //$58 pop EAX
-    pushSelf_opcode : byte;     //$B8
-    pushSelf_self   : Pointer;  //self
-    pushEax         : byte;     //$50 push EAX
-    jump_opcode     : byte;     //$E9
-    jump_target     : Pointer;  //@TObject.DummyCallback
+  TCallbackPatch = packed record   //does the job nice .. with stdcall
+    popEax          : byte;     // $58 pop EAX
+    pushSelf_opcode : byte;     // $B8
+    pushSelf_self   : Pointer;  // self
+    pushEax         : byte;     // $50 push EAX
+    jump_opcode     : byte;     // $E9
+    jump_target     : Pointer;  // @TObject.DummyCallback
   end;
 
   {** implements a dispatcher to map C-DLL callbacks
-      to pascal a TMethod of Object}
+      to a pascal TMethod of Object}
   TZMethodToDllCallbackDispatcher = class(TInterfacedObject)
   private
     FProcedure: TCallbackPatch;
@@ -290,9 +291,105 @@ type
     constructor Create(const Instance: TObject; methodAddr: pointer);
   end;
 
+  {** EH: implements a buffered raw encoded writer }
+  TZRawSQLStringWriter = class(TObject)
+  private
+    function FlushBuff(Var Dest: RawByteString; ReservedLen: LengthInt): PAnsiChar; overload;
+    procedure AddOrd32(Value: Cardinal; Digits: Byte; Negative: Boolean; var Result: RawByteString);
+    procedure AddOrd64(const Value: UInt64; Digits: Byte; Negative: Boolean; var Result: RawByteString);
+  protected
+    FBuf, //the buffer we use as temporary storage
+    FPos, //the current position of the buffer. Points always to the next writable char
+    FEnd: PAnsiChar; //the end of the buffer
+  public
+    constructor Create(AnsiCharCapacity: Integer);
+    destructor Destroy; override;
+  public
+    procedure IncreaseCapacityTo(AnsiCharCapacity: Integer; var Result: RawByteString);
+    procedure AddChar(Value: AnsiChar;      var Result: RawByteString);
+    procedure AddText(Value: PAnsiChar; L: LengthInt; var Result: RawByteString); overload;
+    procedure AddText(const Value: RawByteString; var Result: RawByteString); overload;
+    procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: RawByteString); overload;
+    procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: RawByteString); overload;
+    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    procedure AddText(const AsciiValue: UnicodeString; var Result: RawByteString); overload;
+    {$ENDIF}
+    procedure AddTextQuoted(Value: PAnsiChar; L: LengthInt; QuoteChar: AnsiChar; var Result: RawByteString); overload;
+    procedure AddTextQuoted(const Value: RawByteString; QuoteChar: AnsiChar; var Result: RawByteString); overload;
+    procedure AddOrd(Value: Byte;           var Result: RawByteString); overload;
+    procedure AddOrd(Value: ShortInt;       var Result: RawByteString); overload;
+    procedure AddOrd(Value: Word;           var Result: RawByteString); overload;
+    procedure AddOrd(Value: SmallInt;       var Result: RawByteString); overload;
+    procedure AddOrd(Value: Cardinal;       var Result: RawByteString); overload;
+    procedure AddOrd(Value: Integer;        var Result: RawByteString); overload;
+    procedure AddOrd(const Value: UInt64;   var Result: RawByteString); overload;
+    procedure AddOrd(const Value: Int64;    var Result: RawByteString); overload;
+    procedure AddOrd(Value: Pointer;        var Result: RawByteString); overload;
+    procedure AddFloat(Value: Single;       var Result: RawByteString); overload;
+    procedure AddFloat(const Value: Double; var Result: RawByteString); overload;
+    procedure AddDecimal(const Value: Currency;   var Result: RawByteString); overload;
+    procedure AddDecimal(const Value: TBCD; var Result: RawByteString); overload;
+    procedure AddDate(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
+    procedure AddTime(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
+    procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
+    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: RawByteString);
+    procedure Finalize(var Result: RawByteString);
+    procedure CancelLastComma(var Result: RawByteString);
+    procedure CancelLastCharIfExists(Value: AnsiChar; var Result: RawByteString);
+    procedure ReplaceOrAddLastChar(OldChar, NewChar: AnsiChar; var Result: RawByteString);
+    procedure AddLineFeedIfNotEmpty(var Result: RawByteString);
+  end;
+
+  {** EH: implements a buffered UTF16 encoded writer }
+  TZUnicodeSQLStringWriter = class(TObject)
+  private
+    function FlushBuff(Var Dest: UnicodeString; ReservedLen: LengthInt): PWideChar; overload;
+    procedure AddOrd32(Value: Cardinal; Digits: Byte; Negative: Boolean; var Result: UnicodeString);
+    procedure AddOrd64(const Value: UInt64; Digits: Byte; Negative: Boolean; var Result: UnicodeString);
+  protected
+    FBuf, //the buffer we use as temporary storage
+    FPos, //the current position of the buffer. Points always to the next writable char
+    FEnd: PWideChar; //the end of the buffer
+  public
+    constructor Create(WideCharCapacity: Integer);
+    destructor Destroy; override;
+  public
+    procedure IncreaseCapacityTo(WideCharCapacity: Integer; var Result: UnicodeString);
+    procedure AddText(Value: PWideChar; L: LengthInt; var Result: UnicodeString); overload;
+    procedure AddText(const Value: UnicodeString; var Result: UnicodeString); overload;
+    procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: UnicodeString); overload;
+    procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: UnicodeString); overload;
+    procedure AddChar(Value: WideChar;      var Result: UnicodeString);
+    procedure AddOrd(Value: Byte;           var Result: UnicodeString); overload;
+    procedure AddOrd(Value: ShortInt;       var Result: UnicodeString); overload;
+    procedure AddOrd(Value: Word;           var Result: UnicodeString); overload;
+    procedure AddOrd(Value: SmallInt;       var Result: UnicodeString); overload;
+    procedure AddOrd(Value: Cardinal;       var Result: UnicodeString); overload;
+    procedure AddOrd(Value: Integer;        var Result: UnicodeString); overload;
+    procedure AddOrd(const Value: UInt64;   var Result: UnicodeString); overload;
+    procedure AddOrd(const Value: Int64;    var Result: UnicodeString); overload;
+    procedure AddFloat(Value: Single;       var Result: UnicodeString); overload;
+    procedure AddFloat(const Value: Double; var Result: UnicodeString); overload;
+    procedure AddDecimal(const Value: Currency; var Result: UnicodeString); overload;
+    procedure AddDecimal(const Value: TBCD; var Result: UnicodeString); overload;
+    procedure AddDate(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
+    procedure AddTime(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
+    procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
+    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: UnicodeString);
+    procedure Finalize(var Result: UnicodeString);
+    procedure CancelLastComma(var Result: UnicodeString);
+    procedure CancelLastCharIfExists(Value: WideChar; var Result: UnicodeString);
+    procedure ReplaceOrAddLastChar(OldChar, NewChar: WideChar; var Result: UnicodeString);
+    procedure AddLineFeedIfNotEmpty(var Result: UnicodeString);
+  end;
+
+  TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
+  SQLString = {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
+
 implementation
 
-uses ZMessages, ZCompatibility;
+uses ZMessages, ZFastCode
+  {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF}; //need for inlined FloatToText;
 
 {$IFDEF oldFPC}
 
@@ -592,5 +689,913 @@ begin
   Result := @FProcedure;
 end;
 
+{ TZRawSQLStringWriter }
+
+procedure TZRawSQLStringWriter.AddHexBinary(Value: PByte; L: LengthInt;
+  ODBC: Boolean; var Result: RawByteString);
+var P: PAnsiChar;
+  LTotal: LengthInt;
+begin
+  LTotal := ((L+1) shl 1) + Ord(not ODBC);
+  if (FPos+LTotal < FEnd) then begin
+    P := FPos;
+    Inc(FPos, LTotal);
+  end else
+    P := FlushBuff(Result, LTotal);
+  If ODBC then begin
+    PByte(P  )^ := Ord('0');
+    PByte(P+1)^ := Ord('x');
+  end else begin
+    PByte(P  )^ := Ord('x');
+    PByte(P+1)^ := Ord(#39);
+  end;
+  if Value <> nil then
+    ZBinToHex(PAnsiChar(Value), P+2, L);
+  if not ODBC then
+    PByte(P+LTotal-1)^ := Ord(#39);
+end;
+
+procedure TZRawSQLStringWriter.AddHexBinary(const Value: TBytes; ODBC: Boolean;
+  var Result: RawByteString);
+begin
+  AddHexBinary(Pointer(Value), Length(Value), ODBC, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddLineFeedIfNotEmpty(var Result: RawByteString);
+begin
+  if (Pointer(Result) <> nil) or (FPos > FBuf) then
+    AddText(LineEnding, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddChar(Value: AnsiChar; var Result: RawByteString);
+var P: PAnsiChar;
+begin
+  if FPos < FEnd then begin
+    PByte(FPos)^ := Byte(Value);
+    Inc(FPos);
+  end else begin
+    P := FlushBuff(Result, 1);
+    PByte(P)^ := Byte(Value);
+  end;
+end;
+
+procedure TZRawSQLStringWriter.AddText(Value: PAnsiChar; L: LengthInt;
+  var Result: RawByteString);
+var P: PAnsiChar;
+begin
+  if (Value = nil) or (L = 0) then Exit;
+  if (FPos + L < FEnd) then begin
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, FPos^, L);
+    Inc(FPos, L);
+  end else begin
+    P := FlushBuff(Result, L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, P^, L);
+  end;
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(Value: Cardinal; var Result: RawByteString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd32(Value, Digits, False, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(Value: Integer; var Result: RawByteString);
+var Digits: Byte;
+  C: Cardinal;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, C, Negative);
+  AddOrd32(C, Digits, Negative, Result);
+end;
+
+procedure TZRawSQLStringWriter.CancelLastCharIfExists(Value: AnsiChar;
+  var Result: RawByteString);
+var P: PAnsichar;
+  L: LengthInt;
+begin
+  if (FPos > FBuf) then begin
+    if PByte(FPos-1)^ = Byte(Value) then
+      Dec(FPos);
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
+    Inc(P, L);
+    if (L >= 1) and (PByte(P)^ = Byte(Value)) then
+      SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+  end;
+end;
+
+procedure TZRawSQLStringWriter.CancelLastComma(var Result: RawByteString);
+var P: PAnsichar;
+  L: LengthInt;
+begin
+  if (FPos > FBuf) then begin
+    if PByte(FPos-1)^ = Ord(',') then
+      Dec(FPos);
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
+    Inc(P, L);
+    if (L >= 1) and (PByte(P)^ = Ord(',')) then
+      SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+  end;
+end;
+
+constructor TZRawSQLStringWriter.Create(AnsiCharCapacity: Integer);
+begin
+  if AnsiCharCapacity < High(Byte) then
+    AnsiCharCapacity := High(Byte);
+  GetMem(FBuf, AnsiCharCapacity);
+  FPos := FBuf;
+  FEnd := FBuf+AnsiCharCapacity;
+end;
+
+destructor TZRawSQLStringWriter.Destroy;
+begin
+  if FBuf <> nil then
+    FreeMem(FBuf);
+end;
+
+procedure TZRawSQLStringWriter.Finalize(var Result: RawByteString);
+begin
+  if FPos > FBuf then
+    FlushBuff(Result, 0);
+end;
+
+function TZRawSQLStringWriter.FlushBuff(var Dest: RawByteString;
+  ReservedLen: LengthInt): PAnsiChar;
+var LRes, L2: LengthInt;
+begin
+  LRes := Length(Dest);
+  L2 := (FPos-FBuf);
+  L2 := L2 + LRes;
+  L2 := L2 + ReservedLen;
+  SetLength(Dest, L2{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+  Result := Pointer(Dest);
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  PByte(Result+L2)^ := Ord(#0);
+  {$ENDIF}
+  Inc(Result, LRes);
+  if FPos > FBuf then begin
+    LRes := (FPos-FBuf);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBuf^, Result^, LRes);
+    Inc(Result, LRes);
+    FPos := FBuf;
+  end;
+end;
+
+procedure TZRawSQLStringWriter.IncreaseCapacityTo(AnsiCharCapacity: Integer;
+  var Result: RawByteString);
+begin
+  if AnsiCharCapacity < FEnd-FBuf then
+    Exit;
+  if FPos > FBuf then
+    FlushBuff(Result,0);
+  FreeMem(FBuf);
+  GetMem(FBuf, AnsiCharCapacity);
+  FPos := FBuf;
+  FEnd := FBuf+AnsiCharCapacity;
+end;
+
+procedure TZRawSQLStringWriter.ReplaceOrAddLastChar(OldChar, NewChar: AnsiChar;
+  var Result: RawByteString);
+var P: PAnsichar;
+  L: LengthInt;
+  label setp;
+begin
+  if (FPos > FBuf) then begin
+    P := FPos-1;
+    if PByte(P)^ = Byte(OldChar)
+    then PByte(P)^ := Ord(NewChar)
+    else goto setp
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
+    Inc(P, L);
+    if (L >= 1) and (PByte(P)^ = Byte(OldChar)) then
+      PByte(P)^ := Byte(NewChar)
+    else begin
+setp: PByte(FPos)^ := Byte(NewChar);
+      Inc(FPos);
+    end;
+  end;
+end;
+
+procedure TZRawSQLStringWriter.AddOrd32(Value: Cardinal; Digits: Byte;
+  Negative: Boolean; var Result: RawByteString);
+var P: PAnsiChar;
+  D2: Byte;
+begin
+  D2 := Digits+Ord(Negative);
+  if (FPos+D2 < FEnd) then begin
+    P := FPos;
+    Inc(FPos, D2);
+  end else
+    P := FlushBuff(Result, D2);
+  if Negative then begin
+    PByte(P)^ := Ord('-');
+    Inc(P);
+  end;
+  IntToRaw(Value, P, nil);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd64(const Value: UInt64; Digits: Byte;
+  Negative: Boolean; var Result: RawByteString);
+var P: PAnsiChar;
+  D2: Byte;
+begin
+  D2 := Digits+Ord(Negative);
+  if (FPos+D2 < FEnd) then begin
+    P := FPos;
+    Inc(FPos, D2);
+  end else
+    P := FlushBuff(Result, D2);
+  if Negative then begin
+    PByte(P)^ := Ord('-');
+    Inc(P);
+  end;
+  IntToRaw(Value, P, nil);
+end;
+
+procedure TZRawSQLStringWriter.AddText(const Value: RawByteString;
+  var Result: RawByteString);
+begin
+  AddText(Pointer(Value), Length(Value), Result);
+end;
+
+procedure TZRawSQLStringWriter.AddTextQuoted(const Value: RawByteString;
+  QuoteChar: AnsiChar; var Result: RawByteString);
+begin
+  AddTextQuoted(Pointer(Value), Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, QuoteChar, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddTextQuoted(Value: PAnsiChar; L: LengthInt;
+  QuoteChar: AnsiChar; var Result: RawByteString);
+var
+  P, Dest, PEnd, PFirst: PAnsiChar;
+begin
+  Dest := nil;
+  P := Value;
+  PEnd := P + L;
+  PFirst := nil;
+  while P < PEnd do begin
+    if (AnsiChar(P^)=QuoteChar) then begin
+      if Dest = nil then
+        PFirst := P;
+      Inc(Dest);
+    end;
+    Inc(P);
+  end;
+  if Dest = nil then begin //no quoteChars found?
+    if (FPos+L+2 < FEnd) then begin
+      Dest := FPos;
+      Inc(FPos, L+2);
+    end else
+      Dest := FlushBuff(Result, L+2);
+    AnsiChar(Dest^) := QuoteChar;
+    if L > 0 then begin
+      System.Move(Value^, (Dest+1)^, L);
+      Inc(Dest, L+1);
+    end else
+      Inc(Dest);
+    AnsiChar(Dest^) := QuoteChar;
+    Exit;
+  end;
+  if (FPos+L+{%H-}NativeInt(Dest) +2 < FEnd) then begin
+    Dest := FPos;
+    Inc(FPos, L+{%H-}NativeInt(Dest)+2);
+  end else
+    Dest := FlushBuff(Result, L+{%H-}NativeInt(Dest)+2);
+  AnsiChar(Dest^) := QuoteChar;
+  Inc(Dest);
+  P := PFirst;
+  repeat
+    Inc(P);
+    Move(Value^, Dest^, (P - Value));
+    Inc(Dest, P - Value);
+    AnsiChar(Dest^) := QuoteChar;
+    Inc(Dest);
+    Value := P;
+    while (P<PEnd) do if AnsiChar(P^)=QuoteChar
+      then Break
+      else Inc(P);
+  until P = PEnd;
+  Move(Value^, Dest^, (PEnd - Value));
+  Inc(Dest, PEnd - Value);
+  AnsiChar(Dest^) := QuoteChar;
+end;
+
+procedure TZRawSQLStringWriter.AddTime(const Value: TDateTime; const Format: String;
+  var Result: RawByteString);
+var H, M, S, MS: Word;
+  L: LengthInt;
+  P: PAnsiChar;
+  Buffer: Array[0..15] of AnsiChar;
+begin
+  if (FPos + 14 < FEnd) //'00:00:00.123'
+  then P := FPos
+  else P := @Buffer[0];
+  DecodeTime(Value, H, M, S, MS);
+  L := ZSysUtils.DateTimeToRawSQLTime(H, M, S, MS, P, Format, True);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(const Value: UInt64; var Result: RawByteString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd64(Value, Digits, False, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(const Value: Int64; var Result: RawByteString);
+var Digits: Byte;
+  U: UInt64;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, U, Negative);
+  AddOrd64(U, Digits, Negative, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(Value: Byte; var Result: RawByteString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd32(Value, Digits, False, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(Value: ShortInt; var Result: RawByteString);
+var B, Digits: Byte;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, B, Negative);
+  AddOrd32(B, Digits, Negative, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(Value: Word; var Result: RawByteString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd32(Value, Digits, False, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddOrd(Value: SmallInt; var Result: RawByteString);
+var Digits: Byte;
+  W: Word;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, W, Negative);
+  AddOrd32(W, Digits, Negative, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddFloat(Value: Single; var Result: RawByteString);
+var D: Double;
+begin
+  D := Value;
+  AddFloat(D, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddDate(const Value: TDateTime; const Format: String;
+  var Result: RawByteString);
+var Y, M, D: Word;
+  L: LengthInt;
+  P: PAnsiChar;
+  Buffer: Array[0..15] of AnsiChar;
+begin
+  if (FPos + 12 < FEnd) //'2019-09-11'
+  then P := FPos
+  else P := @Buffer[0];
+  DecodeDate(Value, Y, M, D);
+  L := ZSysUtils.DateTimeToRawSQLDate(Y, M, D, P, Format, True, False);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddDateTime(const Value: TDateTime;
+  const Format: String; var Result: RawByteString);
+var Y, MO, D, H, M, S, MS: Word;
+  L: LengthInt;
+  P: PAnsiChar;
+  Buffer: Array[0..27] of AnsiChar;
+begin
+  if (FPos + 25 < FEnd) //'2019-09-11 00:00:00.999'
+  then P := FPos
+  else P := @Buffer[0];
+  DecodeDate(Value, Y, MO, D);
+  DecodeTime(Value, H, M, S, MS);
+  L := ZSysUtils.DateTimeToRawSQLTimeStamp(Y, MO, D, H, M, S, MS, P, Format, True, False);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddDecimal(const Value: TBCD;
+  var Result: RawByteString);
+var L: LengthInt;
+  P: PAnsiChar;
+  Buffer: array[0..MaxFMTBcdFractionSize+2] of AnsiChar;
+begin
+  if (FPos+ MaxFMTBcdFractionSize+2 < FEnd)
+  then P := FPos
+  else P := @Buffer[0];
+  L := ZSysUtils.BcdToRaw(Value, P, '.');
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddFloat(const Value: Double; var Result: RawByteString);
+var L: LengthInt;
+  P: PAnsiChar;
+  Buffer: array[0..63] of AnsiChar;
+begin
+  if (FPos+64 < FEnd)
+  then P := FPos
+  else P := @Buffer[0];
+  L := ZSysUtils.FloatToSqlRaw(Value, P);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddGUID(const Value: TGUID;
+  Options: TGUIDConvOptions; var Result: RawByteString);
+var
+  L: LengthInt;
+  P: PAnsiChar;
+begin
+  L := 36;
+  if guidWithBrackets in Options then
+    Inc(L, 2);
+  if guidQuoted in Options then
+    Inc(L, 2);
+  if (FPos + L < FEnd) then begin
+    P := FPos;
+    Inc(FPos, L);
+  end else
+    P := FlushBuff(Result, L);
+  ZSysUtils.GUIDToBuffer(@Value.D1, P, Options);
+end;
+
+procedure TZRawSQLStringWriter.AddDecimal(const Value: Currency; var Result: RawByteString);
+var L: LengthInt;
+  P, P2: PAnsiChar;
+  Buffer: array[0..23] of AnsiChar;
+begin
+  if (FPos + 24 < FEnd)
+  then P := FPos
+  else P := @Buffer[0];
+  CurrToRaw(Value, P, @P2);
+  L := P2-P;
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+procedure TZRawSQLStringWriter.AddText(const AsciiValue: UnicodeString;
+  var Result: RawByteString);
+var PW: PWidechar;
+  PA: PAnsiChar;
+  L: LengthInt;
+begin
+  PW := Pointer(AsciiValue);
+  if PW = nil then Exit;
+  L := Length(AsciiValue);
+  if L < (FEnd-FPos) then begin
+    PA := FPos;
+    Inc(FPos, L);
+  end else
+    PA := FlushBuff(Result, L);
+  while L > 0 do begin
+    PByte(PA)^ := PWord(PW)^;
+    Inc(PA);
+    Inc(PW);
+    Dec(L);
+  end;
+end;
+{$ENDIF}
+
+procedure TZRawSQLStringWriter.AddOrd(Value: Pointer;
+  var Result: RawByteString);
+begin
+  AddOrd({$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF}(Value), Result);
+end;
+
+{ TZUnicodeSQLStringWriter }
+
+procedure TZUnicodeSQLStringWriter.AddChar(Value: WideChar;
+  var Result: UnicodeString);
+var P: PWideChar;
+begin
+  if (FPos < FEnd) then begin
+    FPos^ := Value;
+    Inc(FPos);
+  end else begin
+    P := FlushBuff(Result, 1);
+    P^ := Value;
+  end;
+end;
+
+procedure TZUnicodeSQLStringWriter.AddDate(const Value: TDateTime;
+  const Format: String; var Result: UnicodeString);
+var Y, M, D: Word;
+  L: LengthInt;
+  P: PWideChar;
+  Buffer: Array[0..15] of WideChar;
+begin
+  if (FPos+12 < FEnd) //'2019-09-11'
+  then P := FPos
+  else P := @Buffer[0];
+  DecodeDate(Value, Y, M, D);
+  L := ZSysUtils.DateTimeToUnicodeSQLDate(Y, M, D, P, Format, True, False);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddDateTime(const Value: TDateTime;
+  const Format: String; var Result: UnicodeString);
+var Y, MO, D, H, M, S, MS: Word;
+  L: LengthInt;
+  P: PWideChar;
+  Buffer: Array[0..27] of WideChar;
+begin
+  if (FPos+25 < FEnd) //'2019-09-11 00:00:00.999'
+  then P := FPos
+  else P := @Buffer[0];
+  DecodeDate(Value, Y, MO, D);
+  DecodeTime(Value, H, M, S, MS);
+  L := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Y, MO, D, H, M, S, MS, P, Format, True, False);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddDecimal(const Value: TBCD;
+  var Result: UnicodeString);
+var L: LengthInt;
+  P: PWideChar;
+  Buffer: array[0..MaxFMTBcdFractionSize+2] of WideChar;
+begin
+  if (FPos+MaxFMTBcdFractionSize+2 < FEnd)
+  then P := FPos
+  else P := @Buffer[0];
+  L := ZSysUtils.BcdToUni(Value, P, '.');
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddDecimal(const Value: Currency;
+  var Result: UnicodeString);
+var L: LengthInt;
+  P, P2: PWideChar;
+  Buffer: array[0..23] of WideChar;
+begin
+  if (FPos+24 < FEnd)
+  then P := FPos
+  else P := @Buffer[0];
+  CurrToUnicode(Value, P, @P2);
+  L := P2-P;
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddFloat(Value: Single;
+  var Result: UnicodeString);
+var D: Double;
+begin
+  D := Value;
+  AddFloat(D, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddFloat(const Value: Double;
+  var Result: UnicodeString);
+var L: LengthInt;
+  P: PWideChar;
+  Buffer: array[0..63] of WideChar;
+begin
+  if (FPos+64 < FEnd)
+  then P := FPos
+  else P := @Buffer[0];
+  L := ZSysUtils.FloatToSqlUnicode(Value, P);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddGUID(const Value: TGUID;
+  Options: TGUIDConvOptions; var Result: UnicodeString);
+var
+  L: LengthInt;
+  P: PWideChar;
+begin
+  L := 36;
+  if guidWithBrackets in Options then
+    Inc(L, 2);
+  if guidQuoted in Options then
+    Inc(L, 2);
+  if (FPos + L < FEnd) then begin
+    P := FPos;
+    Inc(FPos, L);
+  end else
+    P := FlushBuff(Result, L);
+  ZSysUtils.GUIDToBuffer(@Value.D1, P, Options);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddHexBinary(Value: PByte; L: LengthInt;
+  ODBC: Boolean; var Result: UnicodeString);
+var P: PWideChar;
+  LTotal: LengthInt;
+begin
+  LTotal := ((L+1) shl 1) + Ord(not ODBC);
+  if (FPos+LTotal < FEnd) then begin
+    P := FPos;
+    Inc(FPos, LTotal);
+  end else
+    P := FlushBuff(Result, LTotal);
+  If ODBC then begin
+    PWord(P  )^ := Ord('0');
+    PWord(P+1)^ := Ord('x');
+  end else begin
+    PWord(P  )^ := Ord('x');
+    PWord(P+1)^ := Ord(#39);
+  end;
+  if Value <> nil then
+    ZBinToHex(PAnsiChar(Value), P+2, L);
+  if not ODBC then
+    PWord(P+LTotal-1)^ := Ord(#39);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddHexBinary(const Value: TBytes;
+  ODBC: Boolean; var Result: UnicodeString);
+begin
+  AddHexBinary(Pointer(Value), Length(Value), ODBC, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddLineFeedIfNotEmpty(
+  var Result: UnicodeString);
+begin
+  if (Pointer(Result) <> nil) or (FPos > FBuf) then
+    AddText(LineEnding, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(Value: ShortInt;
+  var Result: UnicodeString);
+var B, Digits: Byte;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, B, Negative);
+  AddOrd32(B, Digits, Negative, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(Value: Byte;
+  var Result: UnicodeString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd32(Value, Digits, False, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(Value: Word;
+  var Result: UnicodeString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd32(Value, Digits, False, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(const Value: Int64;
+  var Result: UnicodeString);
+var Digits: Byte;
+  U: UInt64;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, U, Negative);
+  AddOrd64(U, Digits, Negative, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(const Value: UInt64;
+  var Result: UnicodeString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd64(Value, Digits, False, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(Value: Integer;
+  var Result: UnicodeString);
+var Digits: Byte;
+  C: Cardinal;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, C, Negative);
+  AddOrd32(C, Digits, Negative, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(Value: SmallInt;
+  var Result: UnicodeString);
+var Digits: Byte;
+  W: Word;
+  Negative: Boolean;
+begin
+  Digits := GetordinalDigits(Value, W, Negative);
+  AddOrd32(W, Digits, Negative, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd(Value: Cardinal;
+  var Result: UnicodeString);
+var Digits: Byte;
+begin
+  Digits := GetordinalDigits(Value);
+  AddOrd32(Value, Digits, False, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd32(Value: Cardinal; Digits: Byte;
+  Negative: Boolean; var Result: UnicodeString);
+var P: PWideChar;
+  D2: Byte;
+begin
+  D2 := Digits+Ord(Negative);
+  if (FPos+D2 < FEnd) then begin
+    P := FPos;
+    Inc(FPos, D2);
+  end else
+    P := FlushBuff(Result, D2);
+  if Negative then begin
+    PWord(P)^ := Ord('-');
+    Inc(P);
+  end;
+  IntToUnicode(Value, P, nil);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddOrd64(const Value: UInt64; Digits: Byte;
+  Negative: Boolean; var Result: UnicodeString);
+var P: PWideChar;
+  D2: Byte;
+begin
+  D2 := Digits+Ord(Negative);
+  if (FPos+D2 < FEnd) then begin
+    P := FPos;
+    Inc(FPos, D2);
+  end else
+    P := FlushBuff(Result, D2);
+  if Negative then begin
+    PWord(P)^ := Ord('-');
+    Inc(P);
+  end;
+  IntToUnicode(Value, P, nil);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddText(Value: PWideChar; L: LengthInt;
+  var Result: UnicodeString);
+var P: PWideChar;
+begin
+  if (Value = nil) or (L = 0) then Exit;
+  if (FPos + L < FEnd) then begin
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, FPos^, L shl 1);
+    Inc(FPos, L);
+  end else begin
+    P := FlushBuff(Result, L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, P^, L shl 1);
+  end;
+end;
+
+procedure TZUnicodeSQLStringWriter.AddText(const Value: UnicodeString;
+  var Result: UnicodeString);
+begin
+  AddText(Pointer(Value), Length(Value), Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddTime(const Value: TDateTime;
+  const Format: String; var Result: UnicodeString);
+var H, M, S, MS: Word;
+  L: LengthInt;
+  P: PWideChar;
+  Buffer: Array[0..15] of WideChar;
+begin
+  if (FPos+14 < FEnd) //'00:00:00.123'
+  then P := FPos
+  else P := @Buffer[0];
+  DecodeTime(Value, H, M, S, MS);
+  L := ZSysUtils.DateTimeToUnicodeSQLTime(H, M, S, MS, P, Format, True);
+  if P = FPos
+  then Inc(FPos, L)
+  else AddText(P, L, Result);
+end;
+
+procedure TZUnicodeSQLStringWriter.CancelLastCharIfExists(Value: WideChar;
+  var Result: UnicodeString);
+var P: PWideChar;
+  L: LengthInt;
+begin
+  if (FPos > FBuf) then begin
+    if PWord(FPos-1)^ = Word(Value) then
+      Dec(FPos);
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-1;
+    Inc(P, L);
+    if (L >= 1) and (PWord(P)^ = Word(',')) then
+      SetLength(Result, L);
+  end;
+end;
+
+procedure TZUnicodeSQLStringWriter.CancelLastComma(var Result: UnicodeString);
+var P: PWideChar;
+  L: LengthInt;
+begin
+  if (FPos > FBuf) then begin
+    if PWord(FPos-1)^ = Ord(',') then
+      Dec(FPos);
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-1;
+    Inc(P, L);
+    if (L >= 1) and (PWord(P)^ = Ord(',')) then
+      SetLength(Result, L);
+  end;
+end;
+
+constructor TZUnicodeSQLStringWriter.Create(WideCharCapacity: Integer);
+begin
+  if WideCharCapacity < High(Byte) then
+    WideCharCapacity := High(Byte);
+  GetMem(FBuf, WideCharCapacity shl 1);
+  FPos := FBuf;
+  FEnd := FBuf+WideCharCapacity;
+end;
+
+destructor TZUnicodeSQLStringWriter.Destroy;
+begin
+  FreeMem(FBuf);
+  inherited;
+end;
+
+procedure TZUnicodeSQLStringWriter.Finalize(var Result: UnicodeString);
+begin
+  if FPos > FBuf then
+    FlushBuff(Result, 0);
+end;
+
+function TZUnicodeSQLStringWriter.FlushBuff(var Dest: UnicodeString;
+  ReservedLen: LengthInt): PWideChar;
+var LRes: LengthInt;
+begin
+  LRes := Length(Dest);
+  SetLength(Dest, LRes+(FPos-FBuf)+ReservedLen);
+  Result := Pointer(Dest);
+  Inc(Result, LRes);
+  if FPos > FBuf then begin
+    LRes := (PAnsiChar(FPos)-PAnsiChar(FBuf)); //get size in bytes
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBuf^, Result^, LRes);
+    Inc(PAnsiChar(Result), LRes);
+    FPos := FBuf;
+  end;
+end;
+
+procedure TZUnicodeSQLStringWriter.IncreaseCapacityTo(WideCharCapacity: Integer;
+  var Result: UnicodeString);
+begin
+  if WideCharCapacity < FEnd-FBuf then
+    Exit;
+  if FPos > FBuf then
+    FlushBuff(Result,0);
+  FreeMem(FBuf);
+  GetMem(FBuf, WideCharCapacity shl 1);
+  FPos := FBuf;
+  FEnd := FBuf+WideCharCapacity;
+end;
+
+procedure TZUnicodeSQLStringWriter.ReplaceOrAddLastChar(OldChar,
+  NewChar: WideChar; var Result: UnicodeString);
+var P: PWidechar;
+  L: LengthInt;
+  label setp;
+begin
+  if (FPos > FBuf) then begin
+    P := FPos-1;
+    if PWord(P)^ = Ord(OldChar)
+    then PWord(P)^ := Ord(NewChar)
+    else goto setp
+  end else begin
+    P := Pointer(Result);
+    L := Length(Result)-{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}2{$ELSE}1{$ENDIF};
+    Inc(P, L);
+    if (L >= 1) and (PWord(P)^ = Ord(OldChar)) then
+      PWord(P)^ := Ord(NewChar)
+    else begin
+setp: PWord(FPos)^ := Ord(NewChar);
+      Inc(FPos);
+    end;
+  end;
+end;
+
 end.
+
 

@@ -67,7 +67,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement, ZCollections,
-  ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties;
+  ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties, ZClasses;
 
 type
   IZOleDBPreparedStatement = Interface(IZStatement)
@@ -164,7 +164,7 @@ type
     procedure RaiseUnsupportedParamType(Index: Integer; WType: Word; SQLType: TZSQLType);
     procedure RaiseExceeded(Index: Integer);
     function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
-    function GetInParamLogValue(Index: Integer): RawByteString; override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -238,7 +238,7 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, TypInfo,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} DateUtils,
   ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcOleDBMetadata,
-  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZClasses, ZDbcResultSet,
+  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZDbcResultSet,
   ZDbcCachedResultSet, ZDbcGenericResolver;
 
 { TZAbstractOleDBStatement }
@@ -1225,114 +1225,6 @@ SetUniArray:
   Arr := BindList[Index].Value;
 end;
 
-function TZOleDBPreparedStatement.GetInParamLogValue(
-  Index: Integer): RawByteString;
-var Bind: PDBBINDING;
-  Data: Pointer;
-  PEnd: PAnsichar;
-  Len: NativeUInt;
-label Set_buf_len, Set_Raw;
-begin
-  case BindList.ParamTypes[Index] of
-    pctReturn: Result := '(RETURN_VALUE)';
-    pctOut: Result := '(OUT_PARAM)';
-    else begin
-      Bind := @FDBBindingArray[Index];
-      if PDBSTATUS(NativeUInt(FDBParams.pData)+Bind.obStatus)^ = DBSTATUS_S_ISNULL then
-        Result := 'NULL'
-      else begin
-        Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
-        case Bind.wType of
-          DBTYPE_NULL:      Result := 'NULL';
-          (DBTYPE_STR or DBTYPE_BYREF): Result := '(CLOB)';
-          (DBTYPE_WSTR or DBTYPE_BYREF): Result := '(NCLOB)';
-          (DBTYPE_BYTES or DBTYPE_BYREF): Result := '(BLOB)';
-          DBTYPE_BOOL:  Result := ZVariant.BoolStrsUpRaw[PWordBool(Data)^];
-          DBTYPE_I1:  begin
-                        ZFastCode.IntToRaw(PShortInt(Data)^, @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_UI1:  begin
-                        ZFastCode.IntToRaw(Cardinal(PByte(Data)^), @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_I2:  begin
-                        ZFastCode.IntToRaw(Integer(PSmallInt(Data)^), @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_UI2:  begin
-                        ZFastCode.IntToRaw(Cardinal(PWord(Data)^), @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_I4:  begin
-                        ZFastCode.IntToRaw(PInteger(Data)^, @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_UI4:  begin
-                        ZFastCode.IntToRaw(PCardinal(Data)^, @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_I8:  begin
-                        ZFastCode.IntToRaw(PInt64(Data)^, @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_UI8: begin
-                        ZFastCode.IntToRaw(PUInt64(Data)^, @fABuffer[0], @PEnd);
-                        goto Set_buf_len;
-                      end;
-          DBTYPE_R4:  begin
-                        Len := ZSysUtils.FloatToRaw(PSingle(Data)^, @fABuffer[0]);
-                        goto Set_Raw;
-                      end;
-          DBTYPE_R8:  begin
-                        Len := ZSysUtils.FloatToRaw(PDouble(Data)^, @fABuffer[0]);
-                        goto Set_raw;
-                      end;
-          DBTYPE_CY:  begin
-                        ZFastcode.CurrToRaw(PCurrency(Data)^, @fABuffer[0], @PEnd);
-Set_buf_len:            Len := PEnd - PAnsichar(@fABuffer[0]);
-                        goto Set_Raw;
-                      end;
-          DBTYPE_NUMERIC: begin
-                        Len := 16;
-                        SQLNumeric2Raw(PDB_Numeric(Data), @fABuffer[0], Len);
-                        goto Set_raw;
-                      end;
-          DBTYPE_WSTR:  Result := PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, ConSettings.CTRL_CP);
-          DBTYPE_DBDATE:begin
-                          Len := ZSysUtils.DateTimeToRawSQLDate(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
-                            PDBDATE(Data)^.day, PAnsiChar(@fABuffer[0]), ConSettings.WriteFormatSettings.DateFormat, True, PDBDATE(Data)^.year <0);
-                          goto Set_raw;
-                        end;
-          DBTYPE_DATE:   begin
-                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @fABuffer[0], ConSettings.WriteFormatSettings, True);
-                        goto Set_raw;
-                      end;
-          DBTYPE_DBTIME: begin
-                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
-                          PDBTIME(Data)^.second, 0, @fABuffer[0],  ConSettings.WriteFormatSettings.TimeFormat, True);
-                        goto Set_raw;
-                      end;
-          DBTYPE_DBTIME2: begin
-                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
-                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction div 1000000, @fABuffer[0],
-                          ConSettings.WriteFormatSettings.DateTimeFormat, True);
-                        goto Set_raw;
-                      end;
-          DBTYPE_DBTIMESTAMP: begin
-                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(Abs(PDBTimeStamp(Data)^.year),
-                          PDBTimeStamp(Data).month, PDBTimeStamp(Data).day, PDBTimeStamp(Data).hour,
-                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,  PDBTimeStamp(Data)^.fraction div 1000000,
-                          @fABuffer[0],  ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
-Set_Raw:                ZSetString(PAnsiChar(@fABuffer[0]), Len, Result);
-                      end;
-          else Result := '(unknown)';
-        end;
-      end;
-    end;
-  end;
-end;
-
 procedure TZOleDBPreparedStatement.InitDateBind(Index: Integer;
   SQLType: TZSQLType);
 var Bind: PDBBINDING;
@@ -1669,7 +1561,7 @@ begin
       if FDBUPARAMS > 0 then begin
         OleCheck(FCommand.QueryInterface(IID_IAccessor, FParameterAccessor));
         FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
-          FParamInfoArray, fSupportsByRef);
+          FParamInfoArray);
         CalcParamSetsAndBufferSize;
         if not (FDBParams.hAccessor = 1) then
           raise EZSQLException.Create('Accessor handle should be unique!');
@@ -2265,6 +2157,78 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+procedure TZOleDBPreparedStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var Bind: PDBBINDING;
+  Data: Pointer;
+  Len: NativeUInt;
+begin
+  case BindList.ParamTypes[ParamIndex] of
+    pctReturn: SQLWriter.AddText('(RETURN_VALUE)', Result);
+    pctOut: SQLWriter.AddText('(OUT_PARAM)', Result);
+    else begin
+      Bind := @FDBBindingArray[ParamIndex];
+      if PDBSTATUS(NativeUInt(FDBParams.pData)+Bind.obStatus)^ = DBSTATUS_S_ISNULL then
+        SQLWriter.AddText('(NULL)', Result)
+      else begin
+        Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
+        case Bind.wType of
+          DBTYPE_NULL:  SQLWriter.AddText('(NULL)', Result);
+          (DBTYPE_STR   or DBTYPE_BYREF): SQLWriter.AddText('(CLOB/VARCHAR(MAX))', Result);
+          (DBTYPE_WSTR  or DBTYPE_BYREF): SQLWriter.AddText('(NCLOB/NVARCHAR(MAX))', Result);
+          (DBTYPE_BYTES or DBTYPE_BYREF): SQLWriter.AddText('(BLOB/VARBINARY(MAX))', Result);
+          DBTYPE_BOOL:  if PWordBool(Data)^
+                        then SQLWriter.AddText('(TRUE)', Result)
+                        else SQLWriter.AddText('(FALSE)', Result);
+          DBTYPE_I1:    SQLWriter.AddOrd(PShortInt(Data)^, Result);
+          DBTYPE_UI1:   SQLWriter.AddOrd(PByte(Data)^, Result);
+          DBTYPE_I2:    SQLWriter.AddOrd(PSmallInt(Data)^, Result);
+          DBTYPE_UI2:   SQLWriter.AddOrd(PWord(Data)^, Result);
+          DBTYPE_I4:    SQLWriter.AddOrd(PInteger(Data)^, Result);
+          DBTYPE_UI4:   SQLWriter.AddOrd(PCardinal(Data)^, Result);
+          DBTYPE_I8:    SQLWriter.AddOrd(PInt64(Data)^, Result);
+          DBTYPE_UI8:   SQLWriter.AddOrd(PUInt64(Data)^, Result);
+          DBTYPE_R4:    SQLWriter.AddFloat(PSingle(Data)^, Result);
+          DBTYPE_R8:    SQLWriter.AddFloat(PDouble(Data)^, Result);
+          DBTYPE_CY:    SQLWriter.AddDecimal(PCurrency(Data)^, Result);
+          DBTYPE_GUID:  SQLWriter.AddGUID(PGUID(Data)^, [guidWithBrackets, guidQuoted], Result);
+          DBTYPE_NUMERIC: begin
+                        SQLNumeric2Raw(PDB_Numeric(Data), @fABuffer[0], Len);
+                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                      end;
+          DBTYPE_BYTES: SQLWriter.AddHexBinary(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, True, Result);
+          DBTYPE_WSTR:  SQLWriter.AddText(SQLQuotedStr(PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, ConSettings.CTRL_CP),#39), Result);
+          DBTYPE_DBDATE:begin
+                        Len := ZSysUtils.DateTimeToRawSQLDate(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
+                          PDBDATE(Data)^.day, PAnsiChar(@fABuffer[0]), ConSettings.WriteFormatSettings.DateFormat, True, PDBDATE(Data)^.year <0);
+                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                      end;
+          DBTYPE_DATE:  SQLWriter.AddDate(PDateTime(Data)^, ConSettings.WriteFormatSettings.DateFormat, Result);
+          DBTYPE_DBTIME: begin
+                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
+                          PDBTIME(Data)^.second, 0, @fABuffer[0],  ConSettings.WriteFormatSettings.TimeFormat, True);
+                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                      end;
+          DBTYPE_DBTIME2: begin
+                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
+                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction div 1000000, @fABuffer[0],
+                          ConSettings.WriteFormatSettings.DateTimeFormat, True);
+                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                      end;
+          DBTYPE_DBTIMESTAMP: begin
+                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(Abs(PDBTimeStamp(Data)^.year),
+                          PDBTimeStamp(Data).month, PDBTimeStamp(Data).day, PDBTimeStamp(Data).hour,
+                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,  PDBTimeStamp(Data)^.fraction div 1000000,
+                          @fABuffer[0],  ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
+                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                      end;
+          else Result := '(unknown)';
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TZOleDBPreparedStatement.SetInt(Index, Value: Integer);
 begin
   InternalBindSInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger, Value);
@@ -2898,21 +2862,21 @@ function TZOleDBCallableStatementMSSQL.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
-  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  SQLWriter: TZSQLStringWriter;
 begin
   //https://docs.microsoft.com/en-us/sql/relational-databases/native-client-ole-db-how-to/results/execute-stored-procedure-with-rpc-and-process-output?view=sql-server-2017
-  Buf.Pos := 0;
-  SQL := '';
-  ZDbcUtils.ToBuff('{? = CALL ', Buf, SQL);
-  ZDbcUtils.ToBuff(StoredProcName, Buf, SQL);
+  SQL := '{? = CALL ';
+  SQLWriter := TZSQLStringWriter.Create(Length(StoredProcName)+BindList.Count shl 2);
+  SQLWriter.AddText(StoredProcName, SQL);
   if BindList.Count > 1 then
-  ZDbcUtils.ToBuff(Char('('), Buf, SQL);
+    SQLWriter.AddChar(Char('('), SQL);
   for i := 1 to BindList.Count-1 do
-    ZDbcUtils.ToBuff('?,', Buf, SQL);
+    SQLWriter.AddText('?,', SQL);
   if BindList.Count > 1 then
-    ReplaceOrAddLastChar(',', ')', Buf, SQL);
-  ZDbcUtils.ToBuff(Char('}'), Buf, SQL);
-  ZDbcUtils.FlushBuff(Buf, SQL);
+    SQLWriter.ReplaceOrAddLastChar(',', ')', SQL);
+  SQLWriter.AddChar('}', SQL);
+  SQLWriter.Finalize(SQL);
+  FreeAndNil(SQLWriter);
   Result := TZOleDBPreparedStatement.Create(Connection, SQL, Info);
   TZOleDBPreparedStatement(Result).Prepare;
 end;

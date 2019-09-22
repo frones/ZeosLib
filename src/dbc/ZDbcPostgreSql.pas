@@ -220,10 +220,9 @@ implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses
-  ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement,
-  ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
-  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcProperties,
-  ZDbcUtils;
+  ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement, ZClasses, ZDbcUtils,
+  ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken, ZDbcProperties,
+  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties;
 
 const
   FON = String('ON');
@@ -373,24 +372,24 @@ end;
 function TZPostgreSQLConnection.BuildConnectStr: RawByteString;
 var
   ConnectTimeout, Cnt: Integer;
-  Buf: TRawBuff;
+  SQLWriter: TZRawSQLStringWriter;
   //parameters should be separated by whitespace
   procedure AddParamToResult(const AParam: RawByteString;
     const AValue: String);
   begin
     if Cnt > 0 then
-      ToBuff(AnsiChar(' '),Buf, Result);
-    ToBuff(AParam, Buf, Result);
-    ToBuff(AnsiChar('='),Buf, Result);
+      SQLWriter.AddChar(AnsiChar(' '), Result);
+    SQLWriter.AddText(AParam, Result);
+    SQLWriter.AddChar(AnsiChar('='), Result);
     // backslashes and single quotes must be escaped with backslashes
-    ToBuff(SQLQuotedStr(EncodeCString({$IFDEF UNICODE}RawByteString{$ENDIF}(AValue)), AnsiChar(#39)),Buf, Result);
+    SQLWriter.AddTextQuoted(EncodeCString({$IFDEF UNICODE}RawByteString{$ENDIF}(AValue)), AnsiChar(#39), Result);
     Inc(Cnt);
   end;
 begin
   //Init the result to empty string.
   Result := '';
   Cnt := 0;
-  Buf.Pos := 0;
+  SQLWriter := TZRawSQLStringWriter.Create(512);
   //Entering parameters from the ZConnection
   If IsIpAddr(HostName) then
     AddParamToResult('hostaddr', HostName)
@@ -427,7 +426,8 @@ begin
   { Sets the application name }
   if Info.Values[ConnProps_ApplicationName] <> '' then
     AddParamToResult(ConnProps_ApplicationName, Info.Values[ConnProps_ApplicationName]);
-  FlushBuff(Buf, Result);
+  SQLWriter.Finalize(Result);
+  FreeAndNil(SQLWriter);
 end;
 
 {**
@@ -1315,7 +1315,7 @@ end;
 }
 function TZPostgreSQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
-  Result := ConSettings^.ConvFuncs.ZRawToUnicode(EscapeString(ConSettings.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP)), ConSettings^.ClientCodePage^.CP);
+  Result := ZRawToUnicode(EscapeString(ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP)), ConSettings^.ClientCodePage^.CP);
 end;
 
 function TZPostgreSQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;

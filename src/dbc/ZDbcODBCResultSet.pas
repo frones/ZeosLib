@@ -63,7 +63,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  ZSysUtils, ZDbcIntfs,
+  ZSysUtils, ZDbcIntfs, ZClasses,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
   ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils;
 
@@ -88,6 +88,9 @@ type
     property StrLen_or_IndArray: PSQLLENArray read fStrLen_or_IndArray write fStrLen_or_IndArray;
   end;
 
+  { Interbase Error Class}
+  EZODBCConvertError = class(EZSQLException);
+
   TAbstractODBCResultSet = Class(TZAbstractReadOnlyResultSet)
   private
     fPHSTMT: PSQLHSTMT; //direct reference the handle of the stmt/metadata
@@ -106,6 +109,7 @@ type
     FTinyBuffer: array[Byte] of Byte;
     FClientCP: Word;
     procedure LoadUnBoundColumns;
+    function CreateODBCConvertError(ColumnIndex: Integer; DataType: Word): EZODBCConvertError;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
   public
@@ -128,6 +132,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -228,7 +233,7 @@ implementation
 uses Math,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZMessages, ZEncoding, ZDbcProperties,
-  ZClasses, ZDbcUtils;
+  ZDbcUtils;
 
 { TAbstractODBCResultSet }
 
@@ -392,6 +397,14 @@ begin
   end;
 end;
 {$ENDIF USE_SYNCOMMONS}
+
+function TAbstractODBCResultSet.CreateODBCConvertError(ColumnIndex: Integer;
+  DataType: Word): EZODBCConvertError;
+begin
+  Result := EZODBCConvertError.Create(Format(SErrorConvertionField,
+        [TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnLabel,
+        IntToStr(DataType)]));
+end;
 
 {$IFNDEF NO_ANSISTRING}
 function TAbstractODBCResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
@@ -745,11 +758,45 @@ begin
     Result := 0;
 end;
 
+procedure TAbstractODBCResultSet.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+var L: LengthInt;
+label Fail;
+begin
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+    case ColumnType of
+      stGUID:     Result := PGUID(fColDataPtr)^;
+      stBytes:    if fStrLen_or_Ind = SizeOf(TGUID)
+                  then Move(fColDataPtr^, Result.D1, SizeOf(TGUID))
+                  else goto fail;
+      stString, stUnicodeString: if fIsUnicodeDriver then begin
+                  L := fStrLen_or_Ind shr 1;
+                  if FixedWidth then
+                    L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
+                  if (L = 38) or (L = 36)
+                  then ZSysUtils.ValidGUIDToBinary(PWidechar(fColDataPtr), @Result.D1)
+                  else goto fail;
+                end else begin
+                  L := fStrLen_or_Ind;
+                  if FixedWidth then
+                    L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
+                  if (L = 38) or (L = 36)
+                  then ZSysUtils.ValidGUIDToBinary(PAnsichar(fColDataPtr), @Result.D1)
+                  else goto fail;
+                end;
+      else
+fail:          raise CreateODBCConvertError(ColumnIndex, Ord(ColumnType));
+    end;
+  end else
+    FillChar(Result, SizeOf(TGUID), #0);
+end;
+
 function TAbstractODBCResultSet.GetInt(ColumnIndex: Integer): Integer;
 var L: LengthInt;
 begin
-  if not IsNull(ColumnIndex) then
-    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     case ColumnType of
       stBoolean:    Result := PByte(fColDataPtr)^;
       stByte:       Result := PByte(fColDataPtr)^;

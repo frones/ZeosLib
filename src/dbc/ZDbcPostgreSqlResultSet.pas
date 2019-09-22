@@ -60,10 +60,12 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFNDEF FPC}{$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
-  ZDbcResultSetMetadata, ZCompatibility;
+  ZDbcResultSetMetadata, ZCompatibility, ZDbcCache, ZDbcGenericResolver,
+  ZClasses;
 
 type
   TZPGColumnInfo = class(TZColumnInfo)
@@ -83,10 +85,12 @@ type
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
 
+  { Postgres Error Class}
+  EZPGConvertError = class(EZSQLException);
+
   {** Implements PostgreSQL ResultSet. }
   TZAbstractPostgreSQLStringResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
   private
-    FUUIDOIDOutBuff: TBytes; //just play with the refcounts
     FconnAddress: PPGconn;
     Fres: TPGresult;
     FresAddress: PPGresult;
@@ -100,6 +104,7 @@ type
     FBinaryValues, Finteger_datetimes, FIsOidAsBlob: Boolean;
     FDecimalSeps: array[Boolean] of Char;
     procedure ClearPGResult;
+    function CreatePGConvertError(ColumnIndex: Integer; DataType: OID): EZPGConvertError;
   protected
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType({$IFDEF AUTOREFCOUNT}var{$ENDIF}ColumnInfo: TZPGColumnInfo;
@@ -191,6 +196,18 @@ type
     constructor Create(const PlainDriver: TZPostgreSQLPlainDriver; Data: PAnsiChar);
   end;
 
+  {** Implements a specialized cached resolver for PostgreSQL. }
+  TZPostgreSQLCachedResolver = class(TZGenericCachedResolver)
+  protected
+    function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
+  end;
+
+  {** Implements a specialized cached resolver for PostgreSQL version 7.4 and up. }
+  TZPostgreSQLCachedResolverV74up = class(TZPostgreSQLCachedResolver)
+  public
+    procedure FormWhereClause(Columns: TObjectList;
+      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+  end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
@@ -199,7 +216,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
   ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
-  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZClasses, ZDbcUtils, ZDbcProperties,
+  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties,
   ZVariant;
 
 
@@ -576,6 +593,13 @@ begin
   FCachedLob := CachedLob;
   FClientCP := ConSettings.ClientCodePage.CP;
   Open;
+end;
+
+function TZAbstractPostgreSQLStringResultSet.CreatePGConvertError(
+  ColumnIndex: Integer; DataType: OID): EZPGConvertError;
+begin
+  Result := EZPGConvertError.Create(Format(SErrorConvertionField,
+        [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel, IntToStr(DataType)]));
 end;
 
 procedure TZAbstractPostgreSQLStringResultSet.ClearPGResult;
@@ -1155,7 +1179,7 @@ begin
         stString, stUnicodeString:    Result := StrToBoolEx(P, True, (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID));
         //stBytes: ;
         //stBinaryStream: ;
-        else Result := False;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else
       Result := StrToBoolEx(P, True, (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID));
@@ -1212,7 +1236,7 @@ begin
         stBinaryStream: if ColumnOID = OIDOID
                         then Result := PG2Cardinal(P)
                         else Result := 0;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else Result := RawToIntDef(P, 0);
   end;
@@ -1268,7 +1292,7 @@ begin
         stBinaryStream: if ColumnOID = OIDOID
                         then Result := PG2Cardinal(P)
                         else Result := 0;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else Result := RawToInt64Def(P, 0);
   end;
@@ -1331,7 +1355,7 @@ begin
         stBinaryStream: if ColumnOID = OIDOID
                         then Result := PG2Cardinal(P)
                         else Result := 0;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else Result := RawToUInt64Def(P, 0);
   end;
@@ -1389,7 +1413,7 @@ begin
         stBinaryStream: if ColumnOID = OIDOID
                         then Result := PG2Cardinal(P)
                         else Result := 0;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else pgSQLStrToFloatDef(P, 0, Result);
   end;
@@ -1406,40 +1430,77 @@ end;
 }
 procedure TZAbstractPostgreSQLStringResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
-var P: PAnsiChar;
-label fail;
+var
+  Buffer, pgBuff: PAnsiChar;
+  Len: cardinal;
+  SrcUUID: PGUID absolute Buffer;
+label Fail;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stDouble);
+  CheckColumnConvertion(ColumnIndex, stGUID);
 {$ENDIF}
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  if FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) = 0 then begin
-fail: LastWasNull := True;
-    FillChar(Result, SizeOf(TGUID), #0);
-  end else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
-    LastWasNull := False;
-    P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    if ColumnOID = OIDOID then
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
+  if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
+    if ColumnOID = BYTEAOID {bytea} then begin
       if FBinaryValues then begin
-                        {$IFNDEF ENDIAN_BIG}
-                        Result.D1 := PG2Cardinal(@PGUID(P).D1);
-                        Result.D2 := PG2Word(@PGUID(P).D2);
-                        Result.D3 := PG2Word(@PGUID(P).D3);
-                        PInt64(@Result.D4)^ := PInt64(@PGUID(P).D4)^;
-                        {$ELSE}
-                        Result := PGUID(P)^;
-                        {$ENDIF}
-      end else ValidGUIDToBinary(P, @Result.D1)
-    else case ColumnType of
-      stAsciiStream, stUnicodeStream,
-      stString, stUnicodeString:  if Byte(ZFastCode.StrLen(P)) in [36, 38]
-                                  then ValidGUIDToBinary(P, @Result.D1)
-                                  else goto fail;
-      else Goto Fail;
+        Len := FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex);
+        if Len = SizeOf(TGUID)
+        then Move(Buffer^, Result.D1, SizeOf(TGUID))
+        else goto Fail;
+      end else if FIs_bytea_output_hex then begin
+        {skip trailing /x}
+        Len := (ZFastCode.StrLen(Buffer)-2) shr 1;
+        if Len = SizeOf(TGUID)
+        then HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
+        else goto Fail;
+      end else if Assigned(FPlainDriver.PQUnescapeBytea) then begin
+        pgBuff := FPlainDriver.PQUnescapeBytea(Buffer, @Len);
+        if Len = SizeOf(TGUID) then begin
+          Move(pgBuff^, Result.D1, SizeOf(TGUID));
+          FPlainDriver.PQFreemem(pgBuff);
+        end else begin
+          FPlainDriver.PQFreemem(pgBuff);
+          goto Fail;
+        end;
+      end else begin
+        Len := ZFastCode.StrLen(Buffer);
+        getMem(pgBuff, Len);
+        Len := DecodeCString(Len, Buffer, pgBuff);
+        if Len = SizeOf(TGUID) then begin
+          Move(pgBuff^, Result.D1, SizeOf(TGUID));
+          FreeMem(pgBuff);
+        end else begin
+          FreeMem(pgBuff);
+          goto Fail;
+        end;
+      end;
+    end else if ColumnOID = UUIDOID { uuid } then begin
+      if FBinaryValues then begin
+        Result.D1 := PG2Cardinal(@SrcUUID.D1);
+        Result.D2 := PG2Word(@SrcUUID.D2);
+        Result.D3 := PG2Word(@SrcUUID.D3);
+        PInt64(@Result.D4)^ := PInt64(@SrcUUID.D4)^;
+      end else ValidGUIDToBinary(Buffer, @Result.D1);
+    end else case ColumnType of
+      stString,
+      stUnicodeString: if (ColumnOID = MACADDROID) or (ColumnOID = INETOID) or (ColumnOID = CIDROID) or (ColumnOID = INTERVALOID)
+                      then goto Fail
+                      else begin
+                        Len := ZFastCode.StrLen(Buffer);
+                        if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID) then
+                          Len := GetAbsorbedTrailingSpacesLen(Buffer, Len);
+                        if (Len = 36) or (Len = 38)
+                        then ValidGUIDToBinary(Buffer, @Result.D1)
+                        else goto Fail;
+                      end;
+      else
+Fail:       raise CreatePGConvertError(ColumnIndex, ColumnOID);
     end;
-  end;
+  end else FillChar(Result, SizeOf(TGUID), #0);
 end;
 
 {**
@@ -1493,7 +1554,7 @@ begin
         stBinaryStream: if ColumnOID = OIDOID
                         then Result := PG2Cardinal(P)
                         else Result := 0;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else pgSQLStrToFloatDef(P, 0, Result);
   end;
@@ -1520,7 +1581,7 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
-  then Result := NullBCD
+  then FillChar(Result, SizeOf(TBCD), #0)
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
     if FBinaryValues then
@@ -1540,7 +1601,7 @@ begin
         stBinaryStream: if ColumnOID = OIDOID
                         then ScaledOrdinal2BCD(PG2Cardinal(P), 0, Result, False)
                         else Result := NullBCD;
-        else Result := NullBCD;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
   end;
@@ -1591,8 +1652,7 @@ begin
         SetLength(Result, DecodeCString(Len, Buffer, Pointer(Result)));
       end;
     end else if ColumnOID = UUIDOID { uuid } then begin
-      SetLength(FUUIDOIDOutBuff, 16); //take care we've a unique dyn-array if so then this alloc happens once
-      Result := FUUIDOIDOutBuff;
+      SetLength(Result, SizeOf(TGUID)); //take care we've a unique dyn-array if so then this alloc happens once
       if FBinaryValues then begin
         ResUUID.D1 := PG2Cardinal(@SrcUUID.D1);
         ResUUID.D2 := PG2Word(@SrcUUID.D2);
@@ -1656,7 +1716,7 @@ begin
         stBinaryStream: if ColumnOID = OIDOID
                         then Result := PG2Cardinal(P)
                         else Result := 0;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, ColumnOID);
       end
     else SQLStrToFloatDef(P, 0, FDecimalSeps[ColumnOID = CASHOID], Result);
   end;
@@ -2284,6 +2344,45 @@ function TZServerCursorPostgreSQLStringResultSet.PGRowNo: Integer;
 begin
   Result := 0;
 end;
+
+{ TZPostgreSQLCachedResolver }
+
+{**
+  Checks is the specified column can be used in where clause.
+  @param ColumnIndex an index of the column.
+  @returns <code>true</code> if column can be included into where clause.
+}
+function TZPostgreSQLCachedResolver.CheckKeyColumn(ColumnIndex: Integer): Boolean;
+begin
+  Result := (Metadata.GetTableName(ColumnIndex) <> '')
+    and (Metadata.GetColumnName(ColumnIndex) <> '')
+    and Metadata.IsSearchable(ColumnIndex)
+    and not (Metadata.GetColumnType(ColumnIndex) in [stUnknown, stBinaryStream]);
+end;
+
+{ TZPostgreSQLCachedResolverV74up }
+
+procedure TZPostgreSQLCachedResolverV74up.FormWhereClause(Columns: TObjectList;
+  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+  var Result: SQLString);
+var
+  I: Integer;
+  Tmp: SQLString;
+begin
+  if WhereColumns.Count > 0 then
+    SQLWriter.AddText(' WHERE ', Result);
+  for I := 0 to WhereColumns.Count - 1 do
+    with TZResolverParameter(WhereColumns[I]) do begin
+      if I > 0 then
+        SQLWriter.AddText(' AND ', Result);
+      Tmp := IdentifierConvertor.Quote(ColumnName);
+      SQLWriter.AddText(Tmp, Result);
+      if (Metadata.IsNullable(ColumnIndex) = ntNullable)
+      then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
+      else SQLWriter.AddText('=?', Result);
+    end;
+end;
+
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.

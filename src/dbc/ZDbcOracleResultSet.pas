@@ -54,6 +54,7 @@ unit ZDbcOracleResultSet;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
 {$IFDEF USE_SYNCOMMONS}
@@ -62,11 +63,14 @@ uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver,
+  ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver, ZClasses,
   ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils,
   ZPlainOracleConstants, ZPlainDriver, ZDbcStatement;
 
 type
+  { Interbase Error Class}
+  EZOCIConvertError = class(EZSQLException);
+
   {** Implements Oracle ResultSet. }
   TZOracleAbstractResultSet_A = class(TZAbstractReadOnlyResultSet_A)
   private
@@ -87,6 +91,7 @@ type
     fStatus: Sword;
     FvnuInfo: TZvnuInfo;
     function GetFinalObject(Obj: POCIObject): POCIObject;
+    function CreateOCIConvertError(ColumnIndex: Integer; DataType: ub2): EZOCIConvertError;
   public
     constructor Create(
       const Statement: IZStatement; const SQL: string;
@@ -105,6 +110,7 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
@@ -203,11 +209,13 @@ type
     procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
-  ZMessages, ZEncoding, ZClasses, ZDbcUtils;
+  ZMessages, ZEncoding, ZDbcUtils;
 
 { TZOracleAbstractResultSet_A }
 
@@ -429,6 +437,14 @@ begin
   Open;
 end;
 
+function TZOracleAbstractResultSet_A.CreateOCIConvertError(ColumnIndex: Integer;
+  DataType: ub2): EZOCIConvertError;
+begin
+  Result := EZOCIConvertError.Create(Format(SErrorConvertionField,
+        [TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnLabel,
+        IntToStr(DataType)]));
+end;
+
 {**
   Indicates if the value of the designated column in the current row
   of this <code>ResultSet</code> object is Null.
@@ -602,8 +618,7 @@ set_Result:       Len := Result - @FTinyBuffer[0];
           Result    := FTempLob.GetPAnsiChar(FClientCP);
           Len       := FTempLob.Length;
         end;
-      else
-        raise Exception.Create('Unsupported OCI Type? '+ZFastCode.IntToStr(SQLVarHolder^.dty));
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -769,8 +784,7 @@ set_from_tmp:
           Result    := FTempLob.GetPWideChar;
           Len       := FTempLob.Length;
         end;
-      else
-        raise Exception.Create('Unsupported OCI Type? '+ZFastCode.IntToStr(SQLVarHolder^.dty));
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -849,8 +863,7 @@ begin
         Result := GetTimeStamp(ColumnIndex) <> 0;
       //SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
       SQLT_CLOB: Result := StrToBoolEx(GetBlob(ColumnIndex).GetPAnsiChar(FClientCP));
-      else
-        Result := False;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -955,8 +968,7 @@ begin
           FTempLob := GetBlob(ColumnIndex);
           Result := RawToInt64Def(FTempLob.GetBuffer, 0);
         end;
-    else
-      Result := 0;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -1059,8 +1071,7 @@ begin
           FTempLob := GetBlob(ColumnIndex);
           Result := RawToUInt64Def(FTempLob.GetBuffer, 0);
         end;
-    else
-      Result := 0;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -1078,6 +1089,54 @@ end;
 function TZOracleAbstractResultSet_A.GetFloat(ColumnIndex: Integer): Single;
 begin
   Result := GetDouble(ColumnIndex);
+end;
+
+procedure TZOracleAbstractResultSet_A.GetGUID(ColumnIndex: Integer;
+  var Result: TGUID);
+var SQLVarHolder: PZSQLVar;
+  Len: LengthInt;
+  P: PAnsiChar;
+label Fail;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stGUID);
+{$ENDIF}
+  {$R-}
+  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    LastWasNull := True;
+    Fillchar(Result, SizeOf(TGUID), #0);
+  end else begin
+    P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
+    LastWasNull := False;
+    case SQLVarHolder.dty of
+      { the supported character/binary types we use }
+      SQLT_AFC: begin
+                  Len := GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz);
+                  if (Len = 36) or (Len = 38)
+                  then ValidGUIDToBinary(P, @Result.D1)
+                  else goto Fail;
+                end;
+      SQLT_VBI: if POCIVary(P).Len = SizeOf(TGUID)
+                then Move(POCIVary(P).data[0], Result.D1, SizeOf(TGUID))
+                else goto Fail;
+      SQLT_LVB: if POCILong(P).Len = SizeOf(TGUID)
+                then Move(POCILong(P).data[0], Result.D1, SizeOf(TGUID))
+                else goto Fail;
+      SQLT_VST: if PPOCILong(P)^.Len = SizeOf(TGUID)
+                then Move(PPOCILong(P)^.data[0], Result.D1, SizeOf(TGUID))
+                else goto Fail;
+      SQLT_VCS: if (POCIVary(P).Len = 36) or (POCIVary(P).Len = 38)
+                then ValidGUIDToBinary(PAnsiChar(@POCIVary(P).data[0]), @Result.D1)
+                else goto Fail;
+      SQLT_LVC: if (POCILong(P).Len = 36) or (POCILong(P).Len = 38)
+                then ValidGUIDToBinary(PAnsiChar(@POCILong(P).data[0]), @Result.D1)
+                else goto Fail;
+      else
+Fail:     raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
+    end;
+  end;
 end;
 
 {**
@@ -1150,8 +1209,7 @@ begin
         Result := GetTimeStamp(ColumnIndex);
       SQLT_BLOB, SQLT_CLOB:
         SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
-      else
-        Result := 0;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -1216,8 +1274,7 @@ begin
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
         Double2BCD(GetTimeStamp(ColumnIndex), Result);
-      else
-        Result := NullBCD;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -1344,8 +1401,7 @@ begin
         Result := GetTimeStamp(ColumnIndex);
       SQLT_BLOB, SQLT_CLOB:
         SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
-    else
-      Result := 0;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -1512,8 +1568,7 @@ ConvFromString:   if (P+2)^ = ':' then //possible date if Len = 10 then
           Len := Blob.Length;
           goto ConvFromString;
         end;
-      else
-        Result := 0;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
 end;
@@ -2327,5 +2382,6 @@ begin
     {%H-}OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
       FChunkSize, Int64(Len)+1, False, FConSettings);
 end;
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.

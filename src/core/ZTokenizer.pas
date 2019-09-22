@@ -1268,6 +1268,9 @@ begin
   Result := TZTokenList.Create;
   LastTokenType := ttUnknown;
 
+  if Result.FCapacity < (EOS-Buffer) shr 5 then
+    Result.SetCapacity((EOS-Buffer) shr 5);
+
   while Buffer < EOS do begin
     State := FCharacterStates[Ord(Buffer^)];
     if State <> nil then

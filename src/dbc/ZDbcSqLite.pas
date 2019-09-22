@@ -306,7 +306,7 @@ begin
     SQL := DataBase;
     {$ELSE}
     if ZEncoding.ZDetectUTF8Encoding(Pointer(DataBase), Length(DataBase)) = etANSI
-    then SQL := ConSettings.ConvFuncs.ZStringToUTF8(DataBase, zOSCodePage)
+    then PRawToRawConvert(Pointer(DataBase), Length(DataBase), zOSCodePage, zCP_UTF8, SQL)
     else SQL := DataBase;
     {$ENDIF}
   {$ENDIF}

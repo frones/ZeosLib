@@ -1224,7 +1224,7 @@ begin
   {$ENDIF}
 {$ELSE}
 begin
-  Reverse4Bytes(Buf)
+  PCardinal(Buf)^ := Value;
 {$ENDIF}
 end;
 

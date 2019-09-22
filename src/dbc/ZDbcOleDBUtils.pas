@@ -94,8 +94,7 @@ procedure OleDBCheck(aResult: HRESULT; const SQL: String;
 function PromptDataSource(Handle: THandle; const InitialString: WideString): WideString;
 
 function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
-  var DBBindingArray: TDBBindingDynArray; ParamInfoArray: PDBParamInfoArray;
-  SupportsByRefAccessor: Boolean): DBROWOFFSET;
+  var DBBindingArray: TDBBindingDynArray; ParamInfoArray: PDBParamInfoArray): DBROWOFFSET;
 
 function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
@@ -432,8 +431,7 @@ begin
 end;
 
 function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
-  var DBBindingArray: TDBBindingDynArray; ParamInfoArray: PDBParamInfoArray;
-  SupportsByRefAccessor: Boolean): DBROWOFFSET;
+  var DBBindingArray: TDBBindingDynArray; ParamInfoArray: PDBParamInfoArray): DBROWOFFSET;
 var
   I: Integer;
   Procedure SetDBBindingProps(Index: Integer);

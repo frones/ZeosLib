@@ -54,6 +54,7 @@ unit ZDbcOracleMetadata;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
@@ -246,10 +247,12 @@ type
   public
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
-  ZFastCode, ZDbcUtils, ZSelectSchema,
+  ZFastCode, ZDbcUtils, ZSelectSchema, ZClasses,
   ZPlainOracleConstants{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF};
 
 { TZOracleDatabaseInfo }
@@ -1333,7 +1336,7 @@ var
   TempProcedureNamePattern, TmpSchemaPattern: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
   RS: IZResultSet;
   Descriptor: TZOraProcDescriptor_A;
-  Buf: {$IFDEF UNICODE}TUCS2Buff{$ELSE}TRawBuff{$ENDIF};
+  SQLWriter: TZSQLStringWriter;
   SL: TStrings;
   i: Integer;
   SQLType: TZSQLType;
@@ -1350,23 +1353,22 @@ var
   procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}
     Descriptor: TZOraProcDescriptor_A);
   var I: Integer;
-    ProcName, ParamName: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
+    ProcName, ParamName: SQLString;
     Arg: TZOraProcDescriptor_A;
   begin
-    Buf.Pos := 0;
     ProcName := '';
-    Descriptor.ConcatParentName(True, buf, ProcName, IC);
-    ZDbcUtils.ToBuff(Descriptor.AttributeName, Buf, ProcName);
-    ZDbcUtils.FlushBuff(Buf, ProcName);
+    Descriptor.ConcatParentName(True, SQLWriter, ProcName, IC);
+    SQLWriter.AddText(Descriptor.AttributeName, ProcName);
+    SQLWriter.Finalize(ProcName);
     for I := 0 to Descriptor.Args.Count-1 do begin
       Result.MoveToInsertRow;
       Result.UpdateString(SchemaNameIndex, Descriptor.SchemaName);
       Result.UpdateString(ProcColProcedureNameIndex, ProcName);
       ParamName := '';
       Arg := TZOraProcDescriptor_A(Descriptor.Args[i]);
-      Arg.ConcatParentName(False, buf, ParamName, IC);
-      ZDbcUtils.ToBuff(Arg.AttributeName, Buf, ParamName);
-      ZDbcUtils.FlushBuff(Buf, ParamName);
+      Arg.ConcatParentName(False, SQLWriter, ParamName, IC);
+      SQLWriter.AddText(Arg.AttributeName, ParamName);
+      SQLWriter.Finalize(ParamName);
       {$IFDEF UNICODE}
       Result.UpdateUnicodeString(ProcColColumnNameIndex, ParamName);
       Result.UpdateUnicodeString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
@@ -1408,8 +1410,7 @@ var
   end;
 begin
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
-
-  Buf.Pos := 0;
+  SQLWriter := TZSQLStringWriter.Create(1024);
   if Catalog = ''
   then TmpSchemaPattern := SchemaPattern
   else TmpSchemaPattern := Catalog;
@@ -1432,43 +1433,45 @@ begin
     end else
       I := 0;
     for I := I to SL.Count -1 do begin
-      ZDbcUtils.ToBuff(IC.ExtractQuote(SL[i]), Buf, TempProcedureNamePattern);
-      ZDbcUtils.ToBuff('.', Buf, TempProcedureNamePattern);
+      SQLWriter.AddText(IC.ExtractQuote(SL[i]), TempProcedureNamePattern);
+      SQLWriter.AddChar('.', TempProcedureNamePattern);
     end;
-    CancelLastChar(Buf, TempProcedureNamePattern);
-    ZDbcUtils.FlushBuff(Buf, TempProcedureNamePattern);
+    SQLWriter.CancelLastCharIfExists('.', TempProcedureNamePattern);
+    SQLWriter.Finalize(TempProcedureNamePattern);
     FreeAndNil(SL);
   end;
-
-
-  RS := GetProcedures('', TmpSchemaPattern, TempProcedureNamePattern);
-  while RS.Next do begin
-    TempProcedureNamePattern := '';
-    SL := SplitString(RS.GetString(ProcedureNameIndex), '.');
-    //SL.Insert(0, RS.GetString(SchemaNameIndex));
-    for I := 0 to SL.Count -1 do
-      if not IC.IsQuoted(SL[i]) then begin
-        ZDbcUtils.ToBuff('"', Buf, TempProcedureNamePattern);
-        ZDbcUtils.ToBuff(SL[i], Buf, TempProcedureNamePattern);
-        ZDbcUtils.ToBuff('".', Buf, TempProcedureNamePattern);
-      end else begin
-        ZDbcUtils.ToBuff(SL[i], Buf, TempProcedureNamePattern);
-        ZDbcUtils.ToBuff('.', Buf, TempProcedureNamePattern);
+  try
+    RS := GetProcedures('', TmpSchemaPattern, TempProcedureNamePattern);
+    while RS.Next do begin
+      TempProcedureNamePattern := '';
+      SL := SplitString(RS.GetString(ProcedureNameIndex), '.');
+      for I := 0 to SL.Count -1 do
+        if not IC.IsQuoted(SL[i]) then begin
+          SQLWriter.AddChar('"', TempProcedureNamePattern);
+          SQLWriter.AddText(SL[i], TempProcedureNamePattern);
+          SQLWriter.AddChar('"', TempProcedureNamePattern);
+          SQLWriter.AddChar('.', TempProcedureNamePattern);
+        end else begin
+          SQLWriter.AddText(SL[i], TempProcedureNamePattern);
+          SQLWriter.AddChar('.', TempProcedureNamePattern);
+        end;
+      SQLWriter.CancelLastCharIfExists('.', TempProcedureNamePattern);
+      SQLWriter.Finalize(TempProcedureNamePattern);
+      Descriptor := TZOraProcDescriptor_A.Create(nil);
+      try
+        Descriptor.Describe(OCI_PTYPE_UNK, GetConnection, TempProcedureNamePattern);
+        if Descriptor.ObjType = OCI_PTYPE_PKG
+        then AddPackageArgs(Descriptor)
+        else AddArgs(Descriptor);
+      finally
+        SL.Free;
+        FreeAndNil(Descriptor);
       end;
-    CancelLastChar(Buf, TempProcedureNamePattern);
-    ZDbcUtils.FlushBuff(Buf, TempProcedureNamePattern);
-    Descriptor := TZOraProcDescriptor_A.Create(nil);
-    try
-      Descriptor.Describe(OCI_PTYPE_UNK, GetConnection, TempProcedureNamePattern);
-      if Descriptor.ObjType = OCI_PTYPE_PKG
-      then AddPackageArgs(Descriptor)
-      else AddArgs(Descriptor);
-    finally
-      SL.Free;
-      FreeAndNil(Descriptor);
     end;
+    RS.Close;
+  finally
+    FreeAndNil(SQLWriter);
   end;
-  RS.Close;
 end;
 
 {**
@@ -2361,5 +2364,7 @@ begin
     Close;
   end;
 end;
+
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.

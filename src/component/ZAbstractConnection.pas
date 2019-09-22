@@ -744,9 +744,23 @@ end;
   @returns a constructed connection URL.
 }
 function TZAbstractConnection.ConstructURL(const UserName, Password: string): string;
+var AURL: TZURL;
 begin
-  Result := DriverManager.ConstructURL(FURL.Protocol, FURL.HostName, FURL.Database, UserName,
-    Password, FURL.Port, FURL.Properties, FURL.LibLocation);
+  AURL := TZURL.Create;
+  Result := '';
+  try
+    AURL.Protocol := FURL.Protocol;
+    AURL.HostName := FURL.HostName;
+    AURL.Database := FURL.Database;
+    AURL.UserName := UserName;
+    AURL.Password := Password;
+    AURL.Port := Port;
+    AURL.Properties.AddStrings(FURL.Properties);
+    AURL.LibLocation := FURL.LibLocation;
+    Result := AURL.URL;
+  finally
+    FreeAndNil(AURL);
+  end;
 end;
 
 {**

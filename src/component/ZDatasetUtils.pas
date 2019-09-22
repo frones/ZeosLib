@@ -165,7 +165,7 @@ procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
 }
 procedure PrepareValuesForComparison(const FieldRefs: TObjectDynArray;
   const DecodedKeyValues: TZVariantDynArray; const ResultSet: IZResultSet;
-  PartialKey: Boolean; CaseInsensitive: Boolean);
+  PartialKey: Boolean; CaseInsensitive: Boolean; const VariantManager: IZClientVariantManager);
 
 {**
   Compares row field values with the given ones.
@@ -189,7 +189,7 @@ function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
 }
 function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   const KeyValues: TZVariantDynArray; const ResultSet: IZResultSet; PartialKey: Boolean;
-  CaseInsensitive: Boolean): Boolean;
+  CaseInsensitive: Boolean; const VariantManager: IZClientVariantManager): Boolean;
 
 {**
   Defines a list of key field names.
@@ -301,7 +301,7 @@ var
 implementation
 
 uses
-  FmtBCD,
+  FmtBCD, Math,
   ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
   ZSysUtils, ZDbcResultSet;
 
@@ -543,6 +543,12 @@ begin
       ftExtended:
         RowAccessor.SetDouble(FieldIndex, ResultSet.GetDouble(ColumnIndex));
       {$ENDIF}
+      {$IFDEF WITH_FTGUID}
+      ftGUID: begin
+          ResultSet.GetGUID(ColumnIndex, PGUID(@RowAccessor.TinyBuffer[0])^);
+          RowAccessor.SetGUID(FieldIndex, PGUID(@RowAccessor.TinyBuffer[0])^);
+        end;
+      {$ENDIF}
       ftFmtBCD: begin
           ResultSet.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
           RowAccessor.SetBigDecimal(FieldIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
@@ -556,7 +562,7 @@ begin
           RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), Len)
         else
           RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
-      ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
+      ftBytes, ftVarBytes:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
         RowAccessor.SetDate(FieldIndex, ResultSet.GetDate(ColumnIndex));
@@ -1091,7 +1097,8 @@ end;
 }
 procedure PrepareValuesForComparison(const FieldRefs: TObjectDynArray;
   const DecodedKeyValues: TZVariantDynArray; const ResultSet: IZResultSet;
-  PartialKey: Boolean; CaseInsensitive: Boolean);
+  PartialKey: Boolean; CaseInsensitive: Boolean;
+  const VariantManager: IZClientVariantManager);
 var
   I: Integer;
   Current: TField;
@@ -1106,102 +1113,65 @@ begin
       Continue;
     CurrentType := ResultSet.GetMetadata.GetColumnType(Current.FieldNo{$IFDEF GENERIC_INDEX} -1{$ENDIF});
 
-    if PartialKey then
-    begin
-      if CurrentType = stUnicodeString then
-      begin
-        DecodedKeyValues[I] := SoftVarManager.Convert(
-          DecodedKeyValues[I], vtUnicodeString);
-        if CaseInsensitive then begin
-          if DecodedKeyValues[I].VType = vtString then begin
-            DecodedKeyValues[I].VString := Uppercase(DecodedKeyValues[I].VString);
-            DecodedKeyValues[I].VUnicodeString := DecodedKeyValues[I].VString;
-          end else begin
-            DecodedKeyValues[I].VUnicodeString :=
-              {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(DecodedKeyValues[I].VUnicodeString);
-          end;
-        end;
-      end
-      else
-      begin
-        DecodedKeyValues[I] := SoftVarManager.Convert(
-          DecodedKeyValues[I], vtString);
+    if PartialKey then begin
+      {$IFNDEF NEXTGEN}
+      if (CurrentType in [stUnicodeString, stUnicodeStream]) or
+         ((CurrentType in [stString, stAsciiStream]) and (VariantManager.UseWComparsions)) then begin
+      {$ENDIF NEXTGEN}
+        DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtUnicodeString);
         if CaseInsensitive then
-        begin
-          {$IFDEF LAZARUSUTF8HACK} // Is this correct? Assumes the Lazarus convention all strings are UTF8. But is that
-                       // true in this point, or should that be converted higher up?
-          DecodedKeyValues[I].VString :=
-            WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString));
-          {$ELSE}
-          DecodedKeyValues[I].VString :=
-            AnsiUpperCase(DecodedKeyValues[I].VString);
-          {$ENDIF}
-        end;
+          DecodedKeyValues[I].VUnicodeString :=
+              {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(DecodedKeyValues[I].VUnicodeString);
+      {$IFNDEF NEXTGEN}
+      end else begin
+        DecodedKeyValues[I] := SoftVarManager.Convert(DecodedKeyValues[I], vtAnsiString);
+        if CaseInsensitive then
+          DecodedKeyValues[I].VRawByteString := AnsiUpperCase(DecodedKeyValues[I].VRawByteString);
       end;
-    end
-    else
-    begin
+      {$ENDIF NEXTGEN}
+    end else
       case CurrentType of
         stBoolean:
-          DecodedKeyValues[I] := SoftVarManager.Convert(
-            DecodedKeyValues[I], vtBoolean);
-        stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
-          DecodedKeyValues[I] := SoftVarManager.Convert(
-            DecodedKeyValues[I], vtInteger);
-          stFloat, stDouble:
-            DecodedKeyValues[I] := SoftVarManager.Convert(
-              DecodedKeyValues[I], vtDouble);
-          stCurrency:
-            DecodedKeyValues[I] := SoftVarManager.Convert(
-              DecodedKeyValues[I], vtCurrency);
-          stBigDecimal:
-            DecodedKeyValues[I] := SoftVarManager.Convert(
-              DecodedKeyValues[I], vtBigDecimal);
-        stUnicodeString:
+          DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtBoolean);
+        stByte, stWord, stLongWord, stULong:
+          DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtUInteger);
+        stShort, stSmall, stInteger, stLong:
+          DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtInteger);
+        stFloat, stDouble:
+          DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtDouble);
+        stCurrency:
+          DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtCurrency);
+        stBigDecimal:
+          DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtBigDecimal);
+        stUnicodeString, stUnicodeStream:
           begin
+            if DecodedKeyValues[I].VType <> vtUnicodeString then
+              DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtUnicodeString);
             if CaseInsensitive then
-            begin
-              if DecodedKeyValues[I].VType = vtString then
-              begin
-                DecodedKeyValues[I].VString := Uppercase(DecodedKeyValues[I].VString);
-                DecodedKeyValues[I].VUnicodeString := DecodedKeyValues[I].VString;
-              end
-              else
-              begin
-                DecodedKeyValues[I].VUnicodeString :=
-                  {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(DecodedKeyValues[I].VUnicodeString);
-              end;
-            end
-            else
-            begin
-              DecodedKeyValues[I] := SoftVarManager.Convert(
-                DecodedKeyValues[I], vtUnicodeString);
-            end;
+              DecodedKeyValues[I].VUnicodeString :=
+                {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(DecodedKeyValues[I].VUnicodeString);
           end;
+        stGUID: DecodedKeyValues[I] := VariantManager.Convert(
+            DecodedKeyValues[I], vtGUID);
         stDate, stTime, stTimestamp:
-          DecodedKeyValues[I] := SoftVarManager.Convert(
+          DecodedKeyValues[I] := VariantManager.Convert(
             DecodedKeyValues[I], vtDateTime);
-        else
-          if CaseInsensitive then
-          begin
-            DecodedKeyValues[I] := SoftVarManager.Convert( 
-              DecodedKeyValues[I], vtString); 
-            {$IFDEF LAZARUSUTF8HACK}
-                    // Is this correct? Assumes the Lazarus convention all strings are UTF8. But is that
-                    // true in this point, or should that be converted higher up?
-            DecodedKeyValues[I].VString :=
-              WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString));
-            {$ELSE}
-            DecodedKeyValues[I].VString := 
-              AnsiUpperCase(DecodedKeyValues[I].VString); 
-            {$ENDIF} 
-          end
-          else
-          begin
-            DecodedKeyValues[I] := SoftVarManager.Convert(
-              DecodedKeyValues[I], vtString);
-          end;
-      end;
+        else {$IFNDEF NEXTGEN} if (CurrentType in [stString, stAsciiStream]) then
+          if VariantManager.UseWComparsions then {$ENDIF NEXTGEN}begin
+            DecodedKeyValues[I] := VariantManager.Convert(DecodedKeyValues[I], vtUnicodeString);
+            if CaseInsensitive then
+              DecodedKeyValues[I].VUnicodeString :=
+                {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(DecodedKeyValues[I].VUnicodeString);
+          end {$IFNDEF NEXTGEN} else begin
+            DecodedKeyValues[I] := VariantManager.Convert(
+              DecodedKeyValues[I], vtRawByteString);
+            if CaseInsensitive then
+              DecodedKeyValues[I].VRawByteString :=
+                {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(DecodedKeyValues[I].VRawByteString);
+        end else
+          DecodedKeyValues[I] := VariantManager.Convert(
+              DecodedKeyValues[I], vtRawByteString);
+        {$ENDIF NEXTGEN}
     end;
   end;
 end;
@@ -1217,7 +1187,7 @@ end;
 }
 function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   const KeyValues: TZVariantDynArray; const ResultSet: IZResultSet; PartialKey: Boolean;
-  CaseInsensitive: Boolean): Boolean;
+  CaseInsensitive: Boolean; const VariantManager: IZClientVariantManager): Boolean;
 var
   I: Integer;
   ColumnIndex: Integer;
@@ -1226,7 +1196,16 @@ var
   {$ENDIF}
   WValue1, WValue2: ZWideString;
   CurrentType : TZSQLType;
-  TinyBuffer: array[Byte] of Byte;
+  BCD: TBCD;
+  UID: TGUID absolute BCD;
+  U64: UInt64 absolute BCD;
+  I64: Int64 absolute BCD;
+  C: Currency absolute i64;
+  D: Double absolute C;
+  DT: TDateTime absolute D;
+  B: Boolean absolute C;
+  P1, P2: Pointer;
+  L1, L2: LengthInt;
 begin
   Result := True;
   for I := 0 to High(KeyValues) do
@@ -1244,81 +1223,115 @@ begin
 
     if PartialKey then begin
       {$IFNDEF NEXTGEN}
-      if CurrentType = stUnicodeString then begin
+      if (CurrentType in [stUnicodeString, stUnicodeStream]) or
+         ((CurrentType in [stString, stAsciiStream]) and (VariantManager.UseWComparsions)) then begin
       {$ENDIF}
         {$IFDEF NEXGEN}
-        WValue1 := SoftVarManager.GetAsUnicodeString(KeyValues[I]);
+        WValue1 := VariantManager.GetAsUnicodeString(KeyValues[I]);
         {$ELSE}
         WValue1 := KeyValues[I].VUnicodeString;
         {$ENDIF}
         WValue2 := ResultSet.GetUnicodeString(ColumnIndex);
-
         if CaseInsensitive then
           WValue2 := {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(WValue2);
-        {$IFDEF UNICODE}
-        Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
-        {$ELSE}
-          AValue1 := UTF8ToAnsi(UTF8Encode(WValue1));
-          AValue2 := UTF8ToAnsi(UTF8Encode(WValue2));
-          Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
-        {$ENDIF}
+
+        P1 := Pointer(WValue1);
+        if P1 = nil then begin //if partial value is '' then the avalutaion is always true
+          Result := True;
+          Exit;
+        end;
+        P2 := Pointer(WValue2);
+        L1 := Length(WValue1);
+        L2 := Length(WValue2);
+        if (P2 <> P1) and (L2 >= L1) then begin
+          if L2 < L1 then
+            Exit;
+          {$IFDEF MSWINDOWS}
+          Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
+          {$ELSE}
+            {$IFDEF UNICODE}
+            Result := SysUtils.AnsiStrLComp(P2, P1, L1) = 0;
+            {$ELSE} //EH: what are the fpc non windows wide comparision here?
+              AValue1 := AnsiString(WValue1);
+              AValue2 := AnsiString(WValue2);
+              L1 := Length(AValue1);
+              L2 := Length(AValue2);
+              if L2 < L1 then
+                Exit;
+              P1 := Pointer(AValue1);
+              P2 := Pointer(AValue1);
+              Result := AnsiStrLComp(P2, P1, L1) = 0;
+            {$ENDIF}
+          {$ENDIF}
+        end;
       {$IFNDEF NEXTGEN}
       end else begin
-        AValue1 := AnsiString(KeyValues[I].VString);
-        if (ResultSet.GetConSettings.ClientCodePage^.Encoding = ceAnsi)
-          or (ResultSet.GetConSettings.AutoEncode and ( ResultSet.GetConSettings.CTRL_CP <> 65001 )) then
-          AValue2 := AnsiString(ResultSet.GetString(ColumnIndex))
-        else
-          AValue2 := AnsiString({$IFNDEF UNICODE}UTF8ToAnsi{$ENDIF}(ResultSet.GetString(ColumnIndex)));
-
+        AValue1 := KeyValues[I].VRawByteString;
+        AValue2 := ResultSet.GetAnsiString(ColumnIndex);
         if CaseInsensitive then
           AValue2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
-        Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
+        L1 := Length(AValue1);
+        L2 := Length(AValue2);
+        if L2 < L1 then
+          Exit;
+        P1 := Pointer(AValue1);
+        P2 := Pointer(AValue1);
+        Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(P2), PAnsiChar(P1), L1) = 0;
       end;
       {$ENDIF}
     end else
       case CurrentType of
-        stBoolean: Result := KeyValues[I].VBoolean = ResultSet.GetBoolean(ColumnIndex);
-        stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong:
-          Result := KeyValues[I].VInteger = ResultSet.GetLong(ColumnIndex);
-        stFloat:
-          Result := Abs(KeyValues[I].VDouble -
-            ResultSet.GetDouble(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
-        stDouble:
-          Result := Abs(KeyValues[I].VDouble -
-            ResultSet.GetDouble(ColumnIndex)) < FLOAT_COMPARE_PRECISION;
-        stCurrency: Result := KeyValues[I].VCurrency = ResultSet.GetCurrency(ColumnIndex);
+        stBoolean: begin
+              B := ResultSet.GetBoolean(ColumnIndex);
+              Result := KeyValues[I].VBoolean = B;
+            end;
+        stByte, stWord, stLongWord, stUlong: begin
+              U64 := ResultSet.GetULong(ColumnIndex);
+              Result := KeyValues[I].VUInteger = U64;
+            end;
+        stShort, stSmall, stInteger, stLong: begin
+              I64 := ResultSet.GetLong(ColumnIndex);
+              Result := KeyValues[I].VInteger = I64;
+            end;
+        stFloat:  begin
+              D := ResultSet.GetDouble(ColumnIndex);
+              Result := Abs(KeyValues[I].VDouble - D) < FLOAT_COMPARE_PRECISION_SINGLE;
+            end;
+        stDouble: begin
+              D := ResultSet.GetDouble(ColumnIndex);
+              Result := Abs(KeyValues[I].VDouble - D) < FLOAT_COMPARE_PRECISION;
+            end;
+        stCurrency: begin
+              C := ResultSet.GetCurrency(ColumnIndex);
+              Result := KeyValues[I].VCurrency = C;
+            end;
         stBigDecimal: begin
-                        ResultSet.GetBigDecimal(ColumnIndex, PBCD(@TinyBuffer[0])^);
-                        Result := BCDCompare(KeyValues[I].VBigDecimal, PBCD(@TinyBuffer[0])^) = 0;
+                        ResultSet.GetBigDecimal(ColumnIndex, BCD);
+                        Result := BCDCompare(KeyValues[I].VBigDecimal, BCD) = 0;
                       end;
         stDate,
         stTime,
-        stTimestamp:
-          Result := KeyValues[I].VDateTime = ResultSet.GetTimestamp(ColumnIndex);
-        stUnicodeString:
-          begin
-            if CaseInsensitive
-            then Result := KeyValues[I].VUnicodeString =
-                {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(ResultSet.GetUnicodeString(ColumnIndex))
-            else Result := KeyValues[I].VUnicodeString =
-                ResultSet.GetUnicodeString(ColumnIndex);
+        stTimestamp:  begin
+            DT := ResultSet.GetTimestamp(ColumnIndex);
+            Result := KeyValues[I].VDateTime = D;
           end;
-        else
-          if CaseInsensitive then
-          begin
-            {$IFDEF LAZARUSUTF8HACK}
-            Result := KeyValues[I].VString =
-              AnsiUpperCase (Utf8ToAnsi(ResultSet.GetString(ColumnIndex)));
-            {$ELSE}
-            Result := KeyValues[I].VString =
-              AnsiUpperCase(ResultSet.GetString(ColumnIndex));
-            {$ENDIF}
-          end
-          else
-          begin
-            Result := KeyValues[I].VString =
-              ResultSet.GetString(ColumnIndex);
+        stGUID: begin
+                  ResultSet.GetGUID(ColumnIndex, UID);
+                  Result := CompareMem(@KeyValues[I].VGUID.D1, @UID.D1, SizeOf(TGUID));
+                end
+        else {$IFNDEF NEXTGEN}if (CurrentType in [stUnicodeString, stUnicodeStream]) or
+             ((CurrentType in [stString, stAsciiStream]) and (VariantManager.UseWComparsions)) then {$ENDIF NEXTGEN} begin
+            WValue2 := ResultSet.GetUnicodeString(ColumnIndex);
+            if CaseInsensitive then
+              WValue2 := {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(WValue2);
+            Result := KeyValues[I].VUnicodeString = WValue2;
+        {$IFNDEF NEXTGEN}
+          end else begin
+            AValue2 := ResultSet.GetAnsiString(ColumnIndex);
+            if CaseInsensitive then
+              AValue2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
+            Result := KeyValues[I].VRawByteString = AValue2;
+        {$ENDIF !NEXTGEN}
           end;
       end;
 
@@ -1470,7 +1483,7 @@ begin
       ftWideString:
         Result := ResultSet.GetUnicodeString(ColumnIndex) =
           Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsWideString{$ENDIF};
-      else
+      else //includes ftGUID
         Result := ResultSet.GetString(ColumnIndex) = Field2.AsString;
     end;
   end;

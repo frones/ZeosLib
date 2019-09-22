@@ -304,6 +304,7 @@ var
   lLogFile  : String;
   TDSVersion: DBINT;
   Ret: RETCODE;
+  P: PChar;
 begin
   LogMessage := 'CONNECT TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage)+'"';
   LoginRec := FPlainDriver.dbLogin;
@@ -318,19 +319,34 @@ begin
       lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
       TDSVersion := StrToIntDef(lLogFile, TDSDBVERSION_UNKNOWN);
       if TDSVersion = TDSDBVERSION_UNKNOWN then begin
-        if FplainDriver.DBLibraryVendorType = lvtMS then
-          TDSVersion := TDSDBVERSION_42
-        else begin {as long we left the protocol names this workaraound is possible}
-          lLogFile := plainDriver.GetProtocol;
-          if (ZFastCode.Pos('MsSQL 7.0', lLogFile) > 0) or (ZFastCode.Pos('MsSQL 2000', lLogFile) > 0) then
-            TDSVersion := DBVERSION_70
-          else if ZFastCode.Pos('MsSQL 2005+', lLogFile) > 0 then
-            TDSVersion := DBVERSION_72
-          else if ZFastCode.Pos('Sybase-10+', lLogFile) > 0 then
+        lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
+        if (lLogFile <> '') and (FplainDriver.DBLibraryVendorType <> lvtMS) then begin
+          P := Pointer(lLogFile);
+          if P^ = Char('5') then
             TDSVersion := TDSDBVERSION_100
-          else //old sybase and MSSQL <= 6.5
-            TDSVersion := TDSDBVERSION_42;
+          else if P^ = Char('4') then
+            TDSVersion := TDSDBVERSION_42
+          else if P^ = Char('7') then begin
+            Inc(P, 1+Ord(Length(lLogFile) = 3));
+            TDSVersion := DBVERSION_70 + (Ord(P^)-Ord('0'));
+            if (TDSVersion < TDSDBVERSION_UNKNOWN) or (TDSVersion > DBVERSION_73) then
+              TDSVersion := TDSDBVERSION_UNKNOWN;
+          end;
         end;
+        if TDSVersion = TDSDBVERSION_UNKNOWN then
+          if FplainDriver.DBLibraryVendorType = lvtMS then
+            TDSVersion := TDSDBVERSION_42
+          else begin {as long we left the protocol names this workaraound is possible}
+            lLogFile := plainDriver.GetProtocol;
+            if (ZFastCode.Pos('MsSQL 7.0', lLogFile) > 0) or (ZFastCode.Pos('MsSQL 2000', lLogFile) > 0) then
+              TDSVersion := DBVERSION_70
+            else if ZFastCode.Pos('MsSQL 2005+', lLogFile) > 0 then
+              TDSVersion := DBVERSION_72
+            else if ZFastCode.Pos('Sybase-10+', lLogFile) > 0 then
+              TDSVersion := TDSDBVERSION_100
+            else //old sybase and MSSQL <= 6.5
+              TDSVersion := TDSDBVERSION_42;
+          end;
       end;
       if TDSVersion <> TDSDBVERSION_UNKNOWN then begin
         if FPLainDriver.DBLibraryVendorType = lvtFreeTDS
@@ -437,7 +453,7 @@ var I: Integer;
   R: RawByteString;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
-  Buf: TRawBuff;
+  SQLWriter: TZRawSQLStringWriter;
   procedure IntToBuf(Value: Integer);
   var C: Cardinal;
     Digits: Byte;
@@ -446,10 +462,10 @@ var I: Integer;
   begin
     Digits := GetOrdinalDigits(Value, C, Negative);
     if Negative then
-      ToBuff('-', Buf, R);
+      SQLWriter.AddChar(AnsiChar('-'), R);
     PCardinal(@IntBuf[0])^ := Cardinal(808464432);//'0000'
     IntToRaw(C, @IntBuf[5-Digits], Digits);
-    ToBuff(PAnsiChar(@IntBuf[0]), 5, Buf, r);
+    SQLWriter.AddText(PAnsiChar(@IntBuf[0]), 5, r);
   end;
 begin
   {$IFNDEF TEST_CALLBACK}
@@ -457,26 +473,24 @@ begin
   {$ENDIF}
   if (FSQLErrors.Count = 0) and (FSQLMessages.Count = 0) then
     Exit;
-  Buf.Pos := 0;
   R := EmptyRaw;
+  SQLWriter := TZRawSQLStringWriter.Create(1024);
   for I := 0 to FSQLErrors.Count -1 do begin
     lErrorEntry := PDBLibError(FSQLErrors[I]);
     if (lErrorEntry <> nil) then begin
       if lErrorEntry^.Severity > EXINFO then begin
-        if (Buf.Pos <> 0) or (r <> EmptyRaw) then
-          ToBuff(LineEnding, Buf, R);
-        ToBuff('DBError : [', Buf, r);
+        SQLWriter.AddLineFeedIfNotEmpty(R);
+        SQLWriter.AddText('DBError : [', r);
         IntToBuf(lErrorEntry^.DbErr);
-        ToBuff('] : ', Buf, r);
-        ToBuff(lErrorEntry^.DbErrStr, Buf, r);
+        SQLWriter.AddText('] : ', r);
+        SQLWriter.AddText(lErrorEntry^.DbErrStr, r);
       end;
       if lErrorEntry^.OsErr > EXINFO then begin
-        if (Buf.Pos <> 0) or (r <> EmptyRaw) then
-          ToBuff(LineEnding, Buf, R);
-        ToBuff('OSError : [', Buf, r);
+        SQLWriter.AddLineFeedIfNotEmpty(R);
+        SQLWriter.AddText('OSError : [', r);
         IntToBuf(lErrorEntry^.OsErr);
-        ToBuff('] : ', Buf, r);
-        ToBuff(lErrorEntry^.OsErrStr, Buf, r);
+        SQLWriter.AddText('] : ', r);
+        SQLWriter.AddText(lErrorEntry^.OsErrStr, r);
       end;
       Dispose(lErrorEntry);
     end;
@@ -487,16 +501,16 @@ begin
     if (lMesageEntry <> nil) then begin
       if lMesageEntry^.Severity > EXINFO then begin
         if lMesageEntry^.MsgNo <> 5701 then begin
-          if (Buf.Pos <> 0) or (r <> EmptyRaw) then
-            ToBuff(LineEnding, Buf, R);
-          ToBuff(lMesageEntry^.MsgText, Buf, R);
+          SQLWriter.AddLineFeedIfNotEmpty(R);
+          SQLWriter.AddText(lMesageEntry^.MsgText, R);
         end;
       end;
       Dispose(lMesageEntry);
     end;
   end;
   FSQLMessages.Count := 0;
-  FlushBuff(Buf, R);
+  SQLWriter.Finalize(R);
+  FreeAndNil(SQLWriter);
   if R <> '' then begin
     DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage, 0, R);
     FPlainDriver.dbcancel(fHandle);
