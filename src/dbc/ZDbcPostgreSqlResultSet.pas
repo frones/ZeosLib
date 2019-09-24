@@ -205,8 +205,16 @@ type
   {** Implements a specialized cached resolver for PostgreSQL version 7.4 and up. }
   TZPostgreSQLCachedResolverV74up = class(TZPostgreSQLCachedResolver)
   public
-    procedure FormWhereClause(Columns: TObjectList;
-      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+  end;
+
+  {** Implements a specialized cached resolver for PostgreSQL version 8.0 and up. }
+  TZPostgreSQLCachedResolverV8up = class(TZPostgreSQLCachedResolverV74up)
+  protected
+    procedure SetResolverStatementParamters(const Statement: IZStatement;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
@@ -2362,8 +2370,10 @@ end;
 
 { TZPostgreSQLCachedResolverV74up }
 
-procedure TZPostgreSQLCachedResolverV74up.FormWhereClause(Columns: TObjectList;
-  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+procedure TZPostgreSQLCachedResolverV74up.FormWhereClause(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
   I: Integer;
@@ -2381,6 +2391,17 @@ begin
       then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
       else SQLWriter.AddText('=?', Result);
     end;
+end;
+
+{ TZPostgreSQLCachedResolverV8up }
+
+procedure TZPostgreSQLCachedResolverV8up.SetResolverStatementParamters(
+  const Statement: IZStatement;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TStrings);
+begin
+  inherited SetResolverStatementParamters(Statement, Params);
+  Params.Values[ConnProps_BindDoublesAsString] := 'false';
+  Params.Values[DSProps_EmulatePrepares] := 'false';
 end;
 
 

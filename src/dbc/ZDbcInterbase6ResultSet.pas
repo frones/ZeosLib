@@ -206,8 +206,9 @@ type
   {** Implements a specialized cached resolver for Firebird version 2.0 and up. }
   TZCachedResolverFirebird2up = class(TZInterbase6CachedResolver)
   public
-    procedure FormWhereClause(Columns: TObjectList;
-      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -2160,8 +2161,10 @@ end;
 
 { TZCachedResolverFirebird2up }
 
-procedure TZCachedResolverFirebird2up.FormWhereClause(Columns: TObjectList;
-  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+procedure TZCachedResolverFirebird2up.FormWhereClause(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
   I: Integer;

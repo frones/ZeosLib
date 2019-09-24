@@ -114,24 +114,28 @@ type
     UpdateStatement   : IZPreparedStatement;
     DeleteStatement   : IZPreparedStatement;
 
-    procedure CopyResolveParameters(FromList, ToList: TObjectList);
+    procedure CopyResolveParameters({$IFDEF AUTOREFCOUNT}const {$ENDIF}FromList, ToList: TObjectList);
     function ComposeFullTableName(const Catalog, Schema, Table: SQLString;
-      SQLWriter: TZSQLStringWriter): SQLString;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter): SQLString;
     function DefineTableName: SQLString;
 
-    function CreateResolverStatement(const SQL : String):IZPreparedStatement;
+    function CreateResolverStatement(const SQL : String): IZPreparedStatement;
+    procedure SetResolverStatementParamters(const Statement: IZStatement;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TStrings); virtual;
 
-    procedure DefineCalcColumns(Columns: TObjectList;
-      RowAccessor: TZRowAccessor);
-    procedure DefineInsertColumns(Columns: TObjectList);
-    procedure DefineUpdateColumns(Columns: TObjectList;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor);
-    procedure DefineWhereKeyColumns(Columns: TObjectList);
-    procedure DefineWhereAllColumns(Columns: TObjectList; IgnoreKeyColumn: Boolean = False);
+    procedure DefineCalcColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
+    procedure DefineInsertColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
+    procedure DefineUpdateColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
+    procedure DefineWhereKeyColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
+    procedure DefineWhereAllColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      IgnoreKeyColumn: Boolean = False);
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; virtual;
 
     procedure FillStatement(const Statement: IZPreparedStatement;
-      Params: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 
     property Connection: IZConnection read FConnection write FConnection;
     property Metadata: IZResultSetMetadata read FMetadata write FMetadata;
@@ -152,21 +156,22 @@ type
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
 
-    procedure FormWhereClause(Columns: TObjectList;
-      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); virtual;
-    function FormInsertStatement(Columns: TObjectList;
-      {%H-}NewRowAccessor: TZRowAccessor): SQLString; virtual;
-    function FormUpdateStatement(Columns: TObjectList;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString; virtual;
+    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); virtual;
+    function FormInsertStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}{%H-}NewRowAccessor: TZRowAccessor): SQLString;
+    function FormUpdateStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString; virtual;
     function FormDeleteStatement(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): SQLString;
-    function FormCalculateStatement(Columns: TObjectList): SQLString; virtual;
+    function FormCalculateStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList): SQLString; virtual;
 
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
-      RowAccessor: TZRowAccessor);
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType;
@@ -270,7 +275,7 @@ end;
   @param ToList the destination object list.
 }
 procedure TZGenericCachedResolver.CopyResolveParameters(
-  FromList: TObjectList; ToList: TObjectList);
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}FromList, ToList: TObjectList);
 var
   I: Integer;
   Current: TZResolverParameter;
@@ -292,7 +297,7 @@ end;
   @return a fully qualified table name.
 }
 function TZGenericCachedResolver.ComposeFullTableName(const Catalog, Schema,
-  Table: SQLString; SQLWriter: TZSQLStringWriter): SQLString;
+  Table: SQLString; {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter): SQLString;
 var tmp: SQLString;
 begin
   Result := '';
@@ -344,24 +349,22 @@ function TZGenericCachedResolver.CreateResolverStatement(const SQL: String): IZP
 var
   Temp : TStrings;
 begin
-  if StrToBoolEx(FStatement.GetParameters.Values[DSProps_PreferPrepared]) then begin
-    Temp := TStringList.Create;
-    Temp.Values[DSProps_PreferPrepared] := 'true';
-    if ( FStatement.GetParameters.Values[DSProps_ChunkSize] = '' ) //ordered by precedence
-    then Temp.Values[DSProps_ChunkSize] := Connection.GetParameters.Values[DSProps_ChunkSize]
-    else Temp.Values[DSProps_ChunkSize] := FStatement.GetParameters.Values[DSProps_ChunkSize];
+  Temp := TStringList.Create;
+  Result := nil;
+  try
+    SetResolverStatementParamters(FStatement, Temp);
     Result := Connection.PrepareStatementWithParams(SQL, Temp);
+  finally
     Temp.Free;
-  end else
-    Result := Connection.PrepareStatement(SQL);
-
+  end;
 end;
 
 {**
   Gets a collection of data columns for INSERT statements.
   @param Columns a collection of columns.
 }
-procedure TZGenericCachedResolver.DefineInsertColumns(Columns: TObjectList);
+procedure TZGenericCachedResolver.DefineInsertColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
 var
   I: Integer;
 begin
@@ -382,7 +385,8 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZGenericCachedResolver.DefineUpdateColumns(
-  Columns: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var I: Integer;
 begin
   { Use precached parameters. }
@@ -413,7 +417,8 @@ end;
   Gets a collection of where key columns for DELETE or UPDATE DML statements.
   @param Columns a collection of key columns.
 }
-procedure TZGenericCachedResolver.DefineWhereKeyColumns(Columns: TObjectList);
+procedure TZGenericCachedResolver.DefineWhereKeyColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
 
   function AddColumn(const Table, ColumnName: string; WhereColumns: TObjectList): Boolean;
   var
@@ -487,7 +492,8 @@ end;
   Gets a collection of where all columns for DELETE or UPDATE DML statements.
   @param Columns a collection of key columns.
 }
-procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList;
+procedure TZGenericCachedResolver.DefineWhereAllColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
   IgnoreKeyColumn: Boolean = False);
 var
   I: Integer;
@@ -530,8 +536,9 @@ end;
   @param Columns a collection of columns.
   @param RowAccessor an accessor object to column values.
 }
-procedure TZGenericCachedResolver.DefineCalcColumns(Columns: TObjectList;
-  RowAccessor: TZRowAccessor);
+procedure TZGenericCachedResolver.DefineCalcColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
 var
   I: Integer;
 begin
@@ -558,7 +565,8 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZGenericCachedResolver.FillStatement(const Statement: IZPreparedStatement;
-  Params: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   I: Integer;
   ColumnIndex: Integer;
@@ -576,9 +584,9 @@ begin
       RowAccessor := OldRowAccessor;
     ColumnIndex := Current.ColumnIndex;
 
+    if RowAccessor.IsNull(ColumnIndex) then begin
       if FCalcDefaults then
         Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
-    if RowAccessor.IsNull(ColumnIndex) then begin
       Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex));
     end else case Metadata.GetColumnType(ColumnIndex) of
       stBoolean:
@@ -644,8 +652,10 @@ end;
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
 }
-procedure TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
-  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+procedure TZGenericCachedResolver.FormWhereClause(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
   I, N: Integer;
@@ -678,7 +688,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList;
-  NewRowAccessor: TZRowAccessor): SQLString;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}NewRowAccessor: TZRowAccessor): SQLString;
 var
   I: Integer;
   Tmp: SQLString;
@@ -742,8 +752,9 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-function TZGenericCachedResolver.FormUpdateStatement(Columns: TObjectList;
-  OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
+function TZGenericCachedResolver.FormUpdateStatement(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
 var
   I: Integer;
   Current: TZResolverParameter;
@@ -809,7 +820,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
 }
 function TZGenericCachedResolver.FormCalculateStatement(
-  Columns: TObjectList): SQLString;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList): SQLString;
 var
   I: Integer;
   Current: TZResolverParameter;
@@ -841,7 +852,8 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZGenericCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement            : IZPreparedStatement;
   S                    : string;
@@ -925,13 +937,20 @@ begin
   raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
 
+procedure TZGenericCachedResolver.SetResolverStatementParamters(
+  const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
+begin
+  Params.Values[DSProps_PreferPrepared] := 'true';
+  Params.Values[DSProps_ChunkSize] := ZDbcUtils.DefineStatementParameter(Statement, DSProps_ChunkSize, '4096');
+end;
+
 {**
   Calculate default values for the fields.
   @param Sender a cached result set object.
   @param RowAccessor an accessor object to column values.
 }
 procedure TZGenericCachedResolver.CalculateDefaults(
-  const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
+  const Sender: IZCachedResultSet; {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
 var
   I: Integer;
   SQL: string;

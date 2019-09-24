@@ -576,7 +576,127 @@ function BytesToVar(const Value: RawByteString): Variant; {$IFNDEF WITH_TBYTES_A
 }
 function VarToBytes(const Value: Variant): TBytes;
 
-{**
+{** EH:
+  Converts raw SQL Date (DateFormat) to TZDate value
+  We do not check if the date is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'Y'/'y' for the year,
+    'M'/'n' for the month's,
+    'D'/'d' for the Day.
+    The year may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash
+  @param Value a pointer to the raw encoded date string.
+  @param Len the length of the buffer
+  @param format a DateFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryRawToDate(Value: PAnsiChar; Len: Cardinal;
+  const Format: String; var Date: TZDate): Boolean;
+
+{** EH:
+  Converts unicode SQL Date (DateFormat) to TZDate value
+  We do not check if the date is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'Y'/'y' for the year,
+    'M'/'n' for the month's,
+    'D'/'d' for the Day.
+    The year may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash
+  @param Value a pointer to the UTF16 encoded date string.
+  @param Len the length of the buffer
+  @param format a DateFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryUniToDate(Value: PWideChar; Len: Cardinal;
+  const Format: String; var Date: TZDate): Boolean;
+
+{** EH:
+  Converts raw SQL Time (TimeFormat) to TZTime value
+  We do not check if the time is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'H'/'h' for the year,
+    'M'/'n'/'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    The hour may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
+  @param Value a pointer to the raw encoded time string.
+  @param Len the length of the buffer
+  @param format a TimeFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryRawToTime(Value: PAnsiChar; Len: Cardinal;
+  const Format: String; var Time: TZTime): Boolean;
+
+{** EH:
+  Converts uniocde SQL Time (TimeFormat) to TZTime value
+  We do not check if the time is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'H'/'h' for the year,
+    'M'/'n'/'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    The hour may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
+  @param Value a pointer to the UTF16 encoded time string.
+  @param Len the length of the buffer
+  @param format a TimeFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryUniToTime(Value: PWideChar; Len: Cardinal;
+  const Format: String; var Time: TZTime): Boolean;
+
+{** EH:
+  Converts raw SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  We do not check if the time is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'Y'/'y' for the year,
+    'M'/'n' for the month's,
+    'D'/'d' for the Day.
+    'H'/'h' for the year,
+    'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    'P'/'p' for the UTC offset.
+    The year may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
+  @param Value a pointer to the raw encoded string.
+  @param Len the length of the buffer
+  @param format a TimeStampFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
+  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+
+{** EH:
+  Converts unicode SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  We do not check if the time is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'Y'/'y' for the year,
+    'M'/'n' for the month's,
+    'D'/'d' for the Day.
+    'H'/'h' for the year,
+    'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    'P'/'p' for the UTC offset.
+    The year may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
+  @param Value a pointer to the UTF16 encoded string.
+  @param Len the length of the buffer
+  @param format a TimeStampFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryUniToTimeStamp(Value: PWideChar; Len: Cardinal;
+  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+
+  {**
   Converts Ansi SQL Date/Time to TDateTime
   @param Value a date and time string.
   @return a decoded TDateTime value.
@@ -594,6 +714,7 @@ function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime; overload;
 }
 function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
   const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
+
 
 {**
   Converts Unicode SQL Date (DateFormat) to TDateTime
@@ -1248,6 +1369,13 @@ const
   // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
   FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: {%H-}'.' );
   MSecMulTable: array[1..3] of Word = (100,10,1);
+  NanoSecondMulTable: array[1..6] of Cardinal = (
+    100000,
+    10000,
+    1000,
+    100,
+    10,
+    1);
 
 implementation
 
@@ -2957,6 +3085,423 @@ begin
     if Failed and ( ZFormatSettings.DateFormatLen = 0 )then
       TryExtractDateFromUnknownSize;
   end;
+end;
+
+{**
+  Converts Ansi SQL Date (DateFormat) to TZDate
+  Valid year identifiers are "Y" or "y"
+  Valid month identifiers are "M" or "m"
+  Valid Day identifiers are "D" or "d"
+  Valid delimiters (if given) are " ","-","/","\"
+  We do not check if the date is valid. We just try convert the numers into the
+  result record using the format-string.
+  @param Value a pointer to the raw encoded date string.
+  @param Len the length of the buffer
+  @param Dateformat a DateFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return @return <code>True</code> if the conversion was successful.
+}
+function TryRawToDate(Value: PAnsiChar; Len: Cardinal;
+  const Format: String; var Date: TZDate): Boolean;
+var F, FEnd, P, PEnd: PAnsiChar;
+begin
+  Result := False;
+  F := Pointer(Format);
+  FillChar(Date, SizeOf(TZDate), #0);
+  if (F = nil) or (Value = nil) or (Len=0) then Exit;
+  FEnd := F+Length(Format);
+  P := Value;
+  PEnd := P + Len;
+  if PByte(P)^ in [Byte('-'), Byte('+')] then begin
+    Date.IsNeagative := PByte(P)^ = Byte('-');
+    Inc(P);
+  end else
+    Date.IsNeagative := False;
+  while (F < FEnd) and (P < PEnd) do begin
+    case PByte(F)^ or $20 of //lower()
+      Byte('y'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  Date.Year := Date.Year * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('y')) do Inc(F)
+                else Exit;
+      Byte('m'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  Date.Month := Date.Month * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('m')) do Inc(F)
+                else Exit;
+      Byte('d'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  Date.Day := Date.Day * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('d')) do Inc(F)
+                else Exit;
+      Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
+      else Exit;
+    end;
+    Inc(F);
+    Inc(P);
+  end;
+  Result := True;
+end;
+
+{** EH:
+  Converts raw SQL Date (DateFormat) to TZDate value
+  We do not check if the date is valid. We just convert the numers into the
+  Result record using the Formatstring. Valid format tokens are:
+    'Y'/'y' for the year,
+    'M'/'n' for the month's,
+    'D'/'d' for the Day.
+    The year may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash
+  @param Value a pointer to the raw encoded date string.
+  @param Len the length of the buffer
+  @param Dateformat a DateFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryUniToDate(Value: PWideChar; Len: Cardinal;
+  const Format: String; var Date: TZDate): Boolean;
+var F, FEnd, P, PEnd: PWideChar;
+begin
+  Result := False;
+  F := Pointer(Format);
+  FillChar(Date, SizeOf(TZDate), #0);
+  if (F = nil) or (Value = nil) or (Len=0) then Exit;
+  FEnd := F+Length(Format);
+  P := Value;
+  PEnd := P + Len;
+  if (PWord(P)^ < 255) and (Byte(PWord(P)^)  in [Byte('-'), Byte('+')]) then begin
+    Date.IsNeagative := PWord(P)^ = Word('-');
+    Inc(P);
+  end else
+    Date.IsNeagative := False;
+  while (F < FEnd) and (P < PEnd) do begin
+    case PWord(F)^ or $0020 of //lower()
+      Word('y'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  Date.Year := Date.Year * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('y')) do Inc(F)
+                else Exit;
+      Word('m'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  Date.Month := Date.Month * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('m')) do Inc(F)
+                else Exit;
+      Word('d'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  Date.Day := Date.Day * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('d')) do Inc(F)
+                else Exit;
+      Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
+      else Exit;
+    end;
+    Inc(F);
+    Inc(P);
+  end;
+  Result := True;
+end;
+
+{** EH:
+  Converts raw SQL Time (TimeFormat) to TZTime value
+  We do not check if the time is valid. We just convert the numers into the
+  Result record using the Formatstring. Valid format tokens are:
+    'H'/'h' for the year,
+    'M'/'n'/'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    The hour may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,doubledot
+  @param Value a pointer to the raw encoded time string.
+  @param Len the length of the buffer
+  @param timeformat a TimeFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryRawToTime(Value: PAnsiChar; Len: Cardinal;
+  const Format: String; var Time: TZTime): Boolean;
+var F, FEnd, P, PEnd: PAnsiChar;
+begin
+  Result := False;
+  F := Pointer(Format);
+  FillChar(Time, SizeOf(TZTime), #0);
+  if (F = nil) or (Value = nil) or (Len=0) then Exit;
+  FEnd := F+Length(Format);
+  P := Value;
+  PEnd := P + Len;
+  Len := 0;
+  if PByte(P)^ in [Byte('-'), Byte('+')] then begin
+    Time.IsNeagative := PByte(P)^ = Byte('-');
+    Inc(P);
+  end;
+  while (F < FEnd) and (P < PEnd) do begin
+    case PByte(F)^ or $20 of //lower()
+      Byte('h'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  Time.Hour := Time.Hour * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('h')) do Inc(F)
+                else Exit;
+      Byte('m'),
+      Byte('n'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  Time.Minute := Time.Minute * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and (Byte(PByte(F)^ or $20) in [Byte('m'), Byte('n')]) do Inc(F)
+                else Exit;
+      Byte('s'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  Time.Second := Time.Second * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('s')) do Inc(F)
+                else Exit;
+      Byte('z'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then begin
+                  Time.Fractions := Time.Fractions * 10 + Cardinal(PByte(P)^ - Byte('0'));
+                  Inc(Len);
+                end else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('z')) do Inc(F)
+                else Exit;
+      Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
+      else Exit;
+    end;
+    Inc(F);
+    Inc(P);
+  end;
+  if (Len > 0) and (Len < 6) then
+    Time.Fractions := Time.Fractions * NanoSecondMulTable[Len];
+  Result := True;
+end;
+
+{** EH:
+  Converts uniocde SQL Time (TimeFormat) to TZTime value
+  We do not check if the time is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'H'/'h' for the year,
+    'M'/'n'/'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    The hour may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,doubledot
+  @param Value a pointer to the UTF16 encoded time string.
+  @param Len the length of the buffer
+  @param timeformat a TimeFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryUniToTime(Value: PWideChar; Len: Cardinal;
+  const Format: String; var Time: TZTime): Boolean;
+var F, FEnd, P, PEnd: PWideChar;
+begin
+  Result := False;
+  F := Pointer(Format);
+  FillChar(Time, SizeOf(TZTime), #0);
+  if (F = nil) or (Value = nil) or (Len=0) then Exit;
+  FEnd := F+Length(Format);
+  P := Value;
+  PEnd := P + Len;
+  Len := 0;
+  if PWord(P)^ in [Word('-'), Word('+')] then begin
+    Time.IsNeagative := PWord(P)^ = Word('-');
+    Inc(P);
+  end;
+  while (F < FEnd) and (P < PEnd) do begin
+    case PWord(F)^ or $20 of //lower()
+      Word('h'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  Time.Hour := Time.Hour * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('h')) do Inc(F)
+                else Exit;
+      Word('m'),
+      Word('n'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  Time.Minute := Time.Minute * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and (Byte(PWord(F)^ or $0020) in [Word('m'), Word('n')]) do Inc(F)
+                else Exit;
+      Word('s'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  Time.Second := Time.Second * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('s')) do Inc(F)
+                else Exit;
+      Word('z'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then begin
+                  Time.Fractions := Time.Fractions * 10 + Cardinal(PWord(P)^ - Word('0'));
+                  Inc(Len);
+                end else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('z')) do Inc(F)
+                else Exit;
+      Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
+      else Exit;
+    end;
+    Inc(F);
+    Inc(P);
+  end;
+  if (Len > 0) and (Len < 6) then
+    Time.Fractions := Time.Fractions * NanoSecondMulTable[Len];
+  Result := True;
+end;
+
+{** EH:
+  Converts raw SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  We do not check if the time is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'Y'/'y' for the year,
+    'M'/'n' for the month's,
+    'D'/'d' for the Day.
+    'H'/'h' for the year,
+    'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    'P'/'p' for the UTC offset.
+    The year may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
+  @param Value a pointer to the raw encoded string.
+  @param Len the length of the buffer
+  @param format a TimeStampFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
+  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+var F, FEnd, P, PEnd: PAnsiChar;
+begin
+  Result := False;
+  F := Pointer(Format);
+  FillChar(TimeStmap, SizeOf(TZTimeStamp), #0);
+  if (F = nil) or (Value = nil) or (Len=0) then Exit;
+  FEnd := F+Length(Format);
+  P := Value;
+  PEnd := P + Len;
+  Len := 0;
+  if PByte(P)^ in [Byte('-'), Byte('+')] then begin
+    TimeStmap.IsNeagative := PByte(P)^ = Byte('-');
+    Inc(P);
+  end;
+  while (F < FEnd) and (P < PEnd) do begin
+    case PByte(F)^ or $20 of //lower()
+      Byte('y'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  TimeStmap.Year := TimeStmap.Year * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('y')) do Inc(F)
+                else Exit;
+      Byte('m'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  TimeStmap.Month := TimeStmap.Month * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('m')) do Inc(F)
+                else Exit;
+      Byte('d'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  TimeStmap.Day := TimeStmap.Day * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('d')) do Inc(F)
+                else Exit;
+      Byte('h'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  TimeStmap.Hour := TimeStmap.Hour * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('h')) do Inc(F)
+                else Exit;
+      Byte('n'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  TimeStmap.Minute := TimeStmap.Minute * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and (Byte(PByte(F)^ or $20) in [Byte('m'), Byte('n')]) do Inc(F)
+                else Exit;
+      Byte('s'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
+                  TimeStmap.Second := TimeStmap.Second * 10 + PByte(P)^ - Byte('0')
+                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('s')) do Inc(F)
+                else Exit;
+      Byte('z'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then begin
+                  TimeStmap.Fractions := TimeStmap.Fractions * 10 + Cardinal(PByte(P)^ - Byte('0'));
+                  Inc(Len);
+                end else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('z')) do Inc(F)
+                else Exit;
+      Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
+      else Exit;
+    end;
+    Inc(F);
+    Inc(P);
+  end;
+  if (Len > 0) and (Len < 6) then
+    TimeStmap.Fractions := TimeStmap.Fractions * NanoSecondMulTable[Len];
+  Result := True;
+end;
+
+{** EH:
+  Converts unicode SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  We do not check if the time is valid. We just convert !numers! into the
+  Result record using the Formatstring. Valid format tokens are:
+    'Y'/'y' for the year,
+    'M'/'n' for the month's,
+    'D'/'d' for the Day.
+    'H'/'h' for the year,
+    'N','n' for the minute,
+    'S'/'s' for the seconds.
+    'Z'/'z' for the Fractions.
+    'P'/'p' for the UTC offset.
+    The year may be negative using explicit '-' to sign as is.
+    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
+  @param Value a pointer to the UTF16 encoded string.
+  @param Len the length of the buffer
+  @param format a TimeStampFormat string uses for the convertion.
+  @param Result the record we write in.
+  @return true if the conversion was successful.
+}
+function TryUniToTimeStamp(Value: PWideChar; Len: Cardinal;
+  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+var F, FEnd, P, PEnd: PWideChar;
+begin
+  Result := False;
+  F := Pointer(Format);
+  FillChar(TimeStmap, SizeOf(TZTimeStamp), #0);
+  if (F = nil) or (Value = nil) or (Len=0) then Exit;
+  FEnd := F+Length(Format);
+  P := Value;
+  PEnd := P + Len;
+  if (PWord(P)^ < 255) and (Byte(PWord(P)^)  in [Byte('-'), Byte('+')]) then begin
+    TimeStmap.IsNeagative := PWord(P)^ = Word('-');
+    Inc(P);
+  end else
+    TimeStmap.IsNeagative := False;
+  while (F < FEnd) and (P < PEnd) do begin
+    case PWord(F)^ or $0020 of //lower()
+      Word('y'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  TimeStmap.Year := TimeStmap.Year * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('y')) do Inc(F)
+                else Exit;
+      Word('m'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  TimeStmap.Month := TimeStmap.Month * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('m')) do Inc(F)
+                else Exit;
+      Word('d'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  TimeStmap.Day := TimeStmap.Day * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('d')) do Inc(F)
+                else Exit;
+      Word('h'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  TimeStmap.Hour := TimeStmap.Hour * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('h')) do Inc(F)
+                else Exit;
+      Word('n'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  TimeStmap.Minute := TimeStmap.Minute * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and (Byte(PWord(F)^ or $0020) in [Word('m'), Word('n')]) do Inc(F)
+                else Exit;
+      Word('s'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
+                  TimeStmap.Second := TimeStmap.Second * 10 + PWord(P)^ - Word('0')
+                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('s')) do Inc(F)
+                else Exit;
+      Word('z'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then begin
+                  TimeStmap.Fractions := TimeStmap.Fractions * 10 + Cardinal(PWord(P)^ - Word('0'));
+                  Inc(Len);
+                end else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
+                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('z')) do Inc(F)
+                else Exit;
+      Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
+      else Exit;
+    end;
+    Inc(F);
+    Inc(P);
+  end;
+  if (Len > 0) and (Len < 6) then
+    TimeStmap.Fractions := TimeStmap.Fractions * NanoSecondMulTable[Len];
+  Result := True;
 end;
 
 {**

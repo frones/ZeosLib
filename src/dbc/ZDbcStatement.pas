@@ -70,7 +70,6 @@ type
   TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject,
     IImmediatelyReleasable)
   private
-    //fABufferIndex, fWBufferIndex: Integer;
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
     FEscapeProcessing: Boolean;
@@ -1077,6 +1076,7 @@ end;
 function TZAbstractStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 {$IFDEF UNICODE}
 begin
+  FWSQL := SQL;
   Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
 {$ELSE}
 var

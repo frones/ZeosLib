@@ -149,7 +149,8 @@ type
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
+    function GetDate(ColumnIndex: Integer): TDateTime; {$IFDEF TEST_RECORD_REFACTORING}overload;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload; {$ENDIF TEST_RECORD_REFACTORING}
     function GetTime(ColumnIndex: Integer): TDateTime;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
     function GetBlob(ColumnIndex: Integer): IZBlob;
@@ -190,10 +191,11 @@ type
       MYSQL_STMT: PPMYSQL_STMT; const Statement: IZStatement;
       const Metadata: IZResultSetMetadata);
 
-    procedure FormWhereClause(Columns: TObjectList;
-      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
@@ -1811,6 +1813,77 @@ Fail:           raise CreateMySQLConvertError(ColumnIndex{$IFNDEF GENERIC_INDEX}
   end;
 end;
 
+{$IFDEF TEST_RECORD_REFACTORING}
+procedure TZAbstractMySQLResultSet.GetDate(ColumnIndex: Integer;
+  var Result: TZDate);
+var
+  Len: NativeUInt;
+  Buffer: PAnsiChar;
+  Failed: Boolean;
+  ColBind: PMYSQL_aligned_BIND;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  CheckColumnConvertion(ColumnIndex, stDate);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  Failed := False;
+  if fBindBufferAllocated then begin
+    {$R-}
+    ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    LastWasNull := ColBind^.is_null =1;
+    if not LastWasNull then
+      //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
+      Case ColBind^.buffer_type_address^ of
+        FIELD_TYPE_LONG,
+        FIELD_TYPE_FLOAT,
+        FIELD_TYPE_DOUBLE,
+        FIELD_TYPE_LONGLONG:  DecodeDate(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result.Year, Result.Month, Result.Day);
+        FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_DATETIME,
+        FIELD_TYPE_NEWDATE: begin
+            Result.Year := PMYSQL_TIME(ColBind^.buffer)^.year;
+            Result.Month := PMYSQL_TIME(ColBind^.buffer)^.month;
+            Result.Day := PMYSQL_TIME(ColBind^.buffer)^.day;
+            Result.IsNeagative := PMYSQL_TIME(ColBind^.buffer)^.neg <> 0;
+          end;
+        FIELD_TYPE_YEAR: begin
+                          Result.Year := PWord(ColBind^.buffer)^;
+                          Result.Month := 0;
+                          Result.Day := 0;
+                        end;
+        FIELD_TYPE_STRING: begin
+            if ColBind^.Length[0]  = ConSettings^.ReadFormatSettings.DateFormatLen then
+              Result := RawSQLDateToDateTime(PAnsiChar(ColBind^.buffer),
+                ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed)
+            else
+              Result := Int(RawSQLTimeStampToDateTime(PAnsiChar(ColBind^.buffer),
+                  ColBind^.Length[0] , ConSettings^.ReadFormatSettings, Failed));
+            LastWasNull := Failed;
+          end;
+        else raise CreateMySQLConvertError(ColumnIndex: Integer, ColBind^.buffer_type_address^);
+      end
+  end else begin
+    {$R-}
+    Buffer := PMYSQL_ROW(FRowHandle)[ColumnIndex];
+    Len := FLengthArray^[ColumnIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    LastWasNull := Buffer = nil;
+    if not LastWasNull then begin
+      if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
+        Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
+      else
+        Result := Int(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
+      LastWasNull := Failed;
+      if Failed then
+        Result := InvalidDate;
+   end;
+  end;
+end;
+{$ENDIF TEST_RECORD_REFACTORING}
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -2575,8 +2648,9 @@ end;
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
 }
-procedure TZMySQLCachedResolver.FormWhereClause(Columns: TObjectList;
-  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString);
+procedure TZMySQLCachedResolver.FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString);
 var
   I: Integer;
   Current: TZResolverParameter;

@@ -99,31 +99,6 @@ type
     VIsNullArrayVariantType: TZVariantType; { better way to determine vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtUnicodeString, vtCharRec}
   end;
 
-  { TZSQLTimeStamp }
-  TZTimeStamp = record
-    Year: Word;
-    Month: Word;
-    Day: Word;
-    Hour: Word;
-    Minute: Word;
-    Second: Word;
-    Fractions: Cardinal; //NanoSeconds
-    IsNeagative: WordBool;
-    UTC_Offset_MUL100: SmallInt;
-  end;
-  TZDate = record
-    Year: Word;
-    Month: Word;
-    Day: Word;
-    IsNeagative: WordBool;
-  end;
-  TZTime = Record
-    Hour: Word;
-    Minute: Word;
-    Second: Word;
-    Fractions: Cardinal; //NanoSeconds
-    IsNeagative: WordBool; //MySQL allows negative time values
-  end;
   {** Defines a variant structure. }
   TZVariant = record
     VType: TZVariantType;

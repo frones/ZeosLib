@@ -169,6 +169,32 @@ type
     CP: Word;      //CodePage of the String
   end;
 
+  { TZSQLTimeStamp }
+  TZTimeStamp = record
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: Cardinal; //NanoSeconds
+    IsNeagative: WordBool;
+    UTC_Offset_MUL100: SmallInt;
+  end;
+  TZDate = record
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    IsNeagative: WordBool;
+  end;
+  TZTime = Record
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: Cardinal; //NanoSeconds
+    IsNeagative: WordBool; //MySQL allows negative time values
+  end;
+
   {$IF NOT DECLARED(TBytes)}
   TBytes = TByteDynArray;
   {$IFEND}

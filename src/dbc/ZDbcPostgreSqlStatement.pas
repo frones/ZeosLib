@@ -115,7 +115,7 @@ type
     procedure ReleaseConnection; override;
   protected
     procedure FlushPendingResults;
-    function CreateResultSet({%H-}ServerCursor: Boolean): IZResultSet;
+    function CreateResultSet(ServerCursor: Boolean): IZResultSet;
     function PGExecute: TPGresult; virtual;
     procedure PGExecutePrepare;
     function PGExecutePrepared: TPGresult;
@@ -801,26 +801,29 @@ function TZAbstractPostgreSQLPreparedStatementV3.CreateResultSet(
 var
   NativeResultSet: TZAbstractPostgreSQLStringResultSet;
   CachedResultSet: TZCachedResultSet;
+  Resolver: TZPostgreSQLCachedResolver;
+  Metadata: IZResultSetMetadata;
 begin
-  if fServerCursor
+  if ServerCursor
   then NativeResultSet := TZServerCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
       @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength)
   else NativeResultSet := TZClientCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
       @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
-  if (GetResultSetConcurrency = rcUpdatable) or fServerCursor then
-  begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, nil,
-      ConSettings);
-    if (GetResultSetConcurrency = rcUpdatable) then begin
+  if (GetResultSetConcurrency = rcUpdatable) or (ServerCursor and (GetResultSetType <> rtForwardOnly)) then begin
+    Metadata := NativeResultSet.GetMetaData;
+    if (FPostgreSQLConnection.GetServerMajorVersion > 7) then
+      Resolver := TZPostgreSQLCachedResolverV8up.Create(Self, Metadata)
+    else if ((FPostgreSQLConnection.GetServerMajorVersion = 7) and
+        (FPostgreSQLConnection.GetServerMinorVersion >= 4))
+    then Resolver := TZPostgreSQLCachedResolverV74up.Create(Self, Metadata)
+    else Resolver := TZPostgreSQLCachedResolver.Create(Self, Metadata);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings);
+    if (GetResultSetConcurrency = rcUpdatable) then
       CachedResultSet.SetConcurrency(rcUpdatable);
-      CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
-        Self,  NativeResultSet.GetMetadata));
-    end;
     Result := CachedResultSet;
-  end
-  else
+  end else
     Result := NativeResultSet;
   FOpenResultSet := Pointer(Result);
 end;
