@@ -170,6 +170,7 @@ type
   end;
 
   { TZSQLTimeStamp }
+  PZTimeStamp = ^TZTimeStamp;
   TZTimeStamp = record
     Year: Word;
     Month: Word;
@@ -181,12 +182,14 @@ type
     IsNeagative: WordBool;
     UTC_Offset_MUL100: SmallInt;
   end;
+  PZDate = ^TZDate;
   TZDate = record
     Year: Word;
     Month: Word;
     Day: Word;
     IsNeagative: WordBool;
   end;
+  PZTime = ^TZTime;
   TZTime = Record
     Hour: Word;
     Minute: Word;

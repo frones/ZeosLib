@@ -651,7 +651,7 @@ function TryUniToTime(Value: PWideChar; Len: Cardinal;
   const Format: String; var Time: TZTime): Boolean;
 
 {** EH:
-  Converts raw SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  Converts raw SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
   We do not check if the time is valid. We just convert !numers! into the
   Result record using the Formatstring. Valid format tokens are:
     'Y'/'y' for the year,
@@ -671,10 +671,10 @@ function TryUniToTime(Value: PWideChar; Len: Cardinal;
   @return true if the conversion was successful.
 }
 function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
-  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+  const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 
 {** EH:
-  Converts unicode SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  Converts unicode SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
   We do not check if the time is valid. We just convert !numers! into the
   Result record using the Formatstring. Valid format tokens are:
     'Y'/'y' for the year,
@@ -694,9 +694,17 @@ function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
   @return true if the conversion was successful.
 }
 function TryUniToTimeStamp(Value: PWideChar; Len: Cardinal;
-  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+  const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 
-  {**
+function TryDateToDateTime(const Value: TZDate; var DT: TDateTime): Boolean;
+function TryTimeToDateTime(const Value: TZTime; var DT: TDateTime): Boolean;
+function TryTimeStampToDateTime(const Value: TZTimeStamp; var DT: TDateTime): Boolean;
+
+procedure DecodeDateTimeToDate(const Value: TDateTime; var Date: TZDate);
+procedure DecodeDateTimeToTime(const Value: TDateTime; var Time: TZTime);
+procedure DecodeDateTimeToTimeStamp(const Value: TDateTime; var TimeStamp: TZTimeStamp);
+
+{**
   Converts Ansi SQL Date/Time to TDateTime
   @param Value a date and time string.
   @return a decoded TDateTime value.
@@ -1369,7 +1377,18 @@ const
   // Local copy of current FormatSettings with '.' as DecimalSeparator and empty other fields
   FmtSettFloatDot: TFormatSettings = ( DecimalSeparator: {%H-}'.' );
   MSecMulTable: array[1..3] of Word = (100,10,1);
-  NanoSecondMulTable: array[1..6] of Cardinal = (
+  NanoSecondMulTable: array[1..9] of Cardinal = (
+    (*1,
+    10,
+    100,
+    1000,
+    10000,
+    100000,
+    1000000,
+    10000000,*)
+    100000000,
+    10000000,
+    1000000,
     100000,
     10000,
     1000,
@@ -3104,6 +3123,8 @@ end;
 function TryRawToDate(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var Date: TZDate): Boolean;
 var F, FEnd, P, PEnd: PAnsiChar;
+  B: Byte;
+label Next;
 begin
   Result := False;
   F := Pointer(Format);
@@ -3112,33 +3133,33 @@ begin
   FEnd := F+Length(Format);
   P := Value;
   PEnd := P + Len;
-  if PByte(P)^ in [Byte('-'), Byte('+')] then begin
+  if (PByte(P)^ < 255) and (Byte(PByte(P)^)  in [Byte('-'), Byte('+')]) then begin
     Date.IsNeagative := PByte(P)^ = Byte('-');
     Inc(P);
-  end else
-    Date.IsNeagative := False;
+  end;
   while (F < FEnd) and (P < PEnd) do begin
-    case PByte(F)^ or $20 of //lower()
-      Byte('y'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  Date.Year := Date.Year * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('y')) do Inc(F)
-                else Exit;
-      Byte('m'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  Date.Month := Date.Month * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('m')) do Inc(F)
-                else Exit;
-      Byte('d'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  Date.Day := Date.Day * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('d')) do Inc(F)
-                else Exit;
-      Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
-      else Exit;
+    case PByte(P)^ of
+      Byte('0')..Byte('9'): begin
+        B := PByte(P)^ - Byte('0');
+        case PByte(F)^ or $20 of //lower() of
+          Byte('y'):  Date.Year := Date.Year * 10 + B;
+          Byte('m'):  Date.Month := Date.Month * 10 + B;
+          Byte('d'):  Date.Day := Date.Day * 10 + B;
+          else begin
+            Inc(F);
+            Continue;
+          end;
+        end;
+        goto Next;
+      end else if PByte(P)^ = PByte(F)^ then begin //delimiter?
+Next:   Inc(P); Inc(F);
+      end else if (Byte(PByte(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
+        Inc(P);
+        B := PByte(F)^;
+        while (PByte(F)^ = B) and (F < FEnd) do Inc(F);
+      end else
+        Exit;
     end;
-    Inc(F);
-    Inc(P);
   end;
   Result := True;
 end;
@@ -3161,6 +3182,8 @@ end;
 function TryUniToDate(Value: PWideChar; Len: Cardinal;
   const Format: String; var Date: TZDate): Boolean;
 var F, FEnd, P, PEnd: PWideChar;
+  W: Word;
+label Next;
 begin
   Result := False;
   F := Pointer(Format);
@@ -3172,30 +3195,30 @@ begin
   if (PWord(P)^ < 255) and (Byte(PWord(P)^)  in [Byte('-'), Byte('+')]) then begin
     Date.IsNeagative := PWord(P)^ = Word('-');
     Inc(P);
-  end else
-    Date.IsNeagative := False;
+  end;
   while (F < FEnd) and (P < PEnd) do begin
-    case PWord(F)^ or $0020 of //lower()
-      Word('y'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  Date.Year := Date.Year * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('y')) do Inc(F)
-                else Exit;
-      Word('m'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  Date.Month := Date.Month * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('m')) do Inc(F)
-                else Exit;
-      Word('d'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  Date.Day := Date.Day * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('d')) do Inc(F)
-                else Exit;
-      Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
-      else Exit;
+    case PWord(P)^ of
+      Word('0')..Word('9'): begin
+        W := PWord(P)^ - Word('0');
+        case PWord(F)^ or $0020 of //lower() of
+          Word('y'):  Date.Year := Date.Year * 10 + W;
+          Word('m'):  Date.Month := Date.Month * 10 + W;
+          Word('d'):  Date.Day := Date.Day * 10 + W;
+          else begin
+            Inc(F);
+            Continue;
+          end;
+        end;
+        Goto Next;
+      end else if PWord(P)^ = PWord(F)^ then begin //delimiter?
+Next:   Inc(P); Inc(F);
+      end else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
+        Inc(P);
+        W := PWord(F)^;
+        while (PWord(F)^ = W) and (F < FEnd) do Inc(F);
+      end else
+        Exit;
     end;
-    Inc(F);
-    Inc(P);
   end;
   Result := True;
 end;
@@ -3219,6 +3242,8 @@ end;
 function TryRawToTime(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var Time: TZTime): Boolean;
 var F, FEnd, P, PEnd: PAnsiChar;
+  B: Byte;
+label Next, zFlush;
 begin
   Result := False;
   F := Pointer(Format);
@@ -3228,41 +3253,44 @@ begin
   P := Value;
   PEnd := P + Len;
   Len := 0;
-  if PByte(P)^ in [Byte('-'), Byte('+')] then begin
+  if (PByte(P)^ < 255) and (Byte(PByte(P)^)  in [Byte('-'), Byte('+')]) then begin
     Time.IsNeagative := PByte(P)^ = Byte('-');
     Inc(P);
   end;
   while (F < FEnd) and (P < PEnd) do begin
-    case PByte(F)^ or $20 of //lower()
-      Byte('h'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  Time.Hour := Time.Hour * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('h')) do Inc(F)
-                else Exit;
-      Byte('m'),
-      Byte('n'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  Time.Minute := Time.Minute * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and (Byte(PByte(F)^ or $20) in [Byte('m'), Byte('n')]) do Inc(F)
-                else Exit;
-      Byte('s'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  Time.Second := Time.Second * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('s')) do Inc(F)
-                else Exit;
-      Byte('z'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then begin
-                  Time.Fractions := Time.Fractions * 10 + Cardinal(PByte(P)^ - Byte('0'));
-                  Inc(Len);
-                end else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('z')) do Inc(F)
-                else Exit;
-      Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
-      else Exit;
+    case PByte(P)^ of
+      Byte('0')..Byte('9'): begin
+        B := PByte(P)^ - Byte('0');
+        case PByte(F)^ or $20 of //lower() of
+          Byte('h'):  Time.Hour := Time.Hour * 10 + B;
+          Byte('m'),
+          Byte('n'):  Time.Minute := Time.Minute * 10 + B;
+          Byte('s'):  Time.Second := Time.Second * 10 + B;
+          Byte('z'):  begin
+                        Time.Fractions := Time.Fractions * 10 + B;
+                        Inc(Len);
+                        {if a server returns micro or nanoseconds and the format with the z indicators is to short ...}
+                        if ((P+1) < PEnd) and (PByte(P+1)^ in [Word('0')..Word('9')])
+                        then Dec(F)
+                        else goto zFlush;
+                      end;
+          else begin
+            Inc(F);
+            Continue;
+          end;
+        end;
+        Goto Next;
+      end else if PByte(P)^ = PByte(F)^ then begin //delimiter?
+Next:   Inc(P); Inc(F);
+      end else if (Byte(PByte(P)^) in [Ord(':'), Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
+zFlush: Inc(P);
+        B := PByte(F)^;
+        while (PByte(F)^ = B) and (F < FEnd) do Inc(F);
+      end else
+        Exit;
     end;
-    Inc(F);
-    Inc(P);
   end;
-  if (Len > 0) and (Len < 6) then
+  if (Len > 0) and (Len < 9) then
     Time.Fractions := Time.Fractions * NanoSecondMulTable[Len];
   Result := True;
 end;
@@ -3286,6 +3314,8 @@ end;
 function TryUniToTime(Value: PWideChar; Len: Cardinal;
   const Format: String; var Time: TZTime): Boolean;
 var F, FEnd, P, PEnd: PWideChar;
+  W: Word;
+label Next, zFlush;
 begin
   Result := False;
   F := Pointer(Format);
@@ -3295,47 +3325,50 @@ begin
   P := Value;
   PEnd := P + Len;
   Len := 0;
-  if PWord(P)^ in [Word('-'), Word('+')] then begin
+  if (PWord(P)^ < 255) and (Byte(PWord(P)^)  in [Byte('-'), Byte('+')]) then begin
     Time.IsNeagative := PWord(P)^ = Word('-');
     Inc(P);
   end;
   while (F < FEnd) and (P < PEnd) do begin
-    case PWord(F)^ or $20 of //lower()
-      Word('h'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  Time.Hour := Time.Hour * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('h')) do Inc(F)
-                else Exit;
-      Word('m'),
-      Word('n'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  Time.Minute := Time.Minute * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and (Byte(PWord(F)^ or $0020) in [Word('m'), Word('n')]) do Inc(F)
-                else Exit;
-      Word('s'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  Time.Second := Time.Second * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('s')) do Inc(F)
-                else Exit;
-      Word('z'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then begin
-                  Time.Fractions := Time.Fractions * 10 + Cardinal(PWord(P)^ - Word('0'));
-                  Inc(Len);
-                end else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('z')) do Inc(F)
-                else Exit;
-      Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
-      else Exit;
+    case PWord(P)^ of
+      Word('0')..Word('9'): begin
+        W := PWord(P)^ - Word('0');
+        case PWord(F)^ or $0020 of //lower() of
+          Word('h'):  Time.Hour := Time.Hour * 10 + W;
+          Word('n'):  Time.Minute := Time.Minute * 10 + W;
+          Word('s'):  Time.Second := Time.Second * 10 + W;
+            Word('z'):  begin
+                          Time.Fractions := Time.Fractions * 10 + W;
+                          Inc(Len);
+                          {if a server returns micro or nanoseconds and the format with the z indicators is to short ...}
+                          if ((P+1) < PEnd) and (PByte(P+1)^ in [Word('0')..Word('9')])
+                          then Dec(F)
+                          else goto zFlush;
+                        end;
+          Word('p'): ;
+          else begin
+            Inc(F);
+            Continue;
+          end;
+        end;
+        Goto Next;
+      end else if PWord(P)^ = PWord(F)^ then begin //delimiter?
+Next:   Inc(P); Inc(F);
+      end else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
+zFlush: Inc(P);
+        W := PWord(F)^;
+        while (PWord(F)^ = W) and (F < FEnd) do Inc(F);
+      end else
+        Exit;
     end;
-    Inc(F);
-    Inc(P);
   end;
-  if (Len > 0) and (Len < 6) then
+  if (Len > 0) and (Len < 9) then
     Time.Fractions := Time.Fractions * NanoSecondMulTable[Len];
   Result := True;
 end;
 
 {** EH:
-  Converts raw SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  Converts raw SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
   We do not check if the time is valid. We just convert !numers! into the
   Result record using the Formatstring. Valid format tokens are:
     'Y'/'y' for the year,
@@ -3355,72 +3388,66 @@ end;
   @return true if the conversion was successful.
 }
 function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
-  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+  const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 var F, FEnd, P, PEnd: PAnsiChar;
+  B: Byte;
+label Next, zFlush;
 begin
-  Result := False;
+ Result := False;
   F := Pointer(Format);
-  FillChar(TimeStmap, SizeOf(TZTimeStamp), #0);
+  FillChar(TimeStamp, SizeOf(TZTimeStamp), #0);
   if (F = nil) or (Value = nil) or (Len=0) then Exit;
   FEnd := F+Length(Format);
   P := Value;
   PEnd := P + Len;
   Len := 0;
-  if PByte(P)^ in [Byte('-'), Byte('+')] then begin
-    TimeStmap.IsNeagative := PByte(P)^ = Byte('-');
+  if (PByte(P)^ < 255) and (Byte(PByte(P)^)  in [Byte('-'), Byte('+')]) then begin
+    TimeStamp.IsNeagative := PByte(P)^ = Byte('-');
     Inc(P);
   end;
   while (F < FEnd) and (P < PEnd) do begin
-    case PByte(F)^ or $20 of //lower()
-      Byte('y'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  TimeStmap.Year := TimeStmap.Year * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('y')) do Inc(F)
-                else Exit;
-      Byte('m'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  TimeStmap.Month := TimeStmap.Month * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('m')) do Inc(F)
-                else Exit;
-      Byte('d'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  TimeStmap.Day := TimeStmap.Day * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('d')) do Inc(F)
-                else Exit;
-      Byte('h'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  TimeStmap.Hour := TimeStmap.Hour * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('h')) do Inc(F)
-                else Exit;
-      Byte('n'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  TimeStmap.Minute := TimeStmap.Minute * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and (Byte(PByte(F)^ or $20) in [Byte('m'), Byte('n')]) do Inc(F)
-                else Exit;
-      Byte('s'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then
-                  TimeStmap.Second := TimeStmap.Second * 10 + PByte(P)^ - Byte('0')
-                else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('s')) do Inc(F)
-                else Exit;
-      Byte('z'):if (PByte(P)^ >= Byte('0')) and (PByte(P)^ <= Byte('9')) then begin
-                  TimeStmap.Fractions := TimeStmap.Fractions * 10 + Cardinal(PByte(P)^ - Byte('0'));
-                  Inc(Len);
-                end else if (PByte(P)^ in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PByte(F)^ or $20) = Byte('z')) do Inc(F)
-                else Exit;
-      Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
-      else Exit;
+    case PByte(P)^ of
+      Byte('0')..Byte('9'): begin
+        B := PByte(P)^ - Byte('0');
+        case PByte(F)^ or $20 of //lower() of
+          Byte('y'):  TimeStamp.Year := TimeStamp.Year * 10 + B;
+          Byte('m'):  TimeStamp.Month := TimeStamp.Month * 10 + B;
+          Byte('d'):  TimeStamp.Day := TimeStamp.Day * 10 + B;
+          Byte('h'):  TimeStamp.Hour := TimeStamp.Hour * 10 + B;
+          Byte('n'):  TimeStamp.Minute := TimeStamp.Minute * 10 + B;
+          Byte('s'):  TimeStamp.Second := TimeStamp.Second * 10 + B;
+          Byte('z'):  begin
+                        TimeStamp.Fractions := TimeStamp.Fractions * 10 + B;
+                        Inc(Len);
+                        {if a server returns micro or nanoseconds and the format with the z indicators is to short ...}
+                        if ((P+1) < PEnd) and (PByte(P+1)^ in [Word('0')..Word('9')])
+                        then Dec(F)
+                        else goto zFlush;
+                      end;
+          Byte('p'): ;
+          else begin
+            Inc(F);
+            Continue;
+          end;
+        end;
+        goto Next;
+      end else if PByte(P)^ = PByte(F)^ then begin //delimiter?
+Next:   Inc(P); Inc(F);
+      end else if (Byte(PByte(P)^) in [Ord(':'), Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
+zFlush: Inc(P);
+        B := PByte(F)^;
+        while (PByte(F)^ = B) and (F < FEnd) do Inc(F);
+      end else
+        Exit;
     end;
-    Inc(F);
-    Inc(P);
   end;
-  if (Len > 0) and (Len < 6) then
-    TimeStmap.Fractions := TimeStmap.Fractions * NanoSecondMulTable[Len];
+  if (Len > 0) and (Len < 9) then
+    TimeStamp.Fractions := TimeStamp.Fractions * NanoSecondMulTable[Len];
   Result := True;
 end;
 
 {** EH:
-  Converts unicode SQL TimeStmap (TimeStampFormat) to TZTimeStamp value
+  Converts unicode SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
   We do not check if the time is valid. We just convert !numers! into the
   Result record using the Formatstring. Valid format tokens are:
     'Y'/'y' for the year,
@@ -3440,68 +3467,135 @@ end;
   @return true if the conversion was successful.
 }
 function TryUniToTimeStamp(Value: PWideChar; Len: Cardinal;
-  const Format: String; var TimeStmap: TZTimeStamp): Boolean;
+  const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 var F, FEnd, P, PEnd: PWideChar;
+  W{, TZLen}: Word;
+  TZ:Array[0..4] of Word;
+label Next, zFlush, TimeZ;
 begin
   Result := False;
   F := Pointer(Format);
-  FillChar(TimeStmap, SizeOf(TZTimeStamp), #0);
+  FillChar(TimeStamp, SizeOf(TZTimeStamp), #0);
   if (F = nil) or (Value = nil) or (Len=0) then Exit;
   FEnd := F+Length(Format);
   P := Value;
   PEnd := P + Len;
-  if (PWord(P)^ < 255) and (Byte(PWord(P)^)  in [Byte('-'), Byte('+')]) then begin
-    TimeStmap.IsNeagative := PWord(P)^ = Word('-');
-    Inc(P);
-  end else
-    TimeStmap.IsNeagative := False;
+  Len := 0;
+  //TZLen := 0;
   while (F < FEnd) and (P < PEnd) do begin
-    case PWord(F)^ or $0020 of //lower()
-      Word('y'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  TimeStmap.Year := TimeStmap.Year * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('y')) do Inc(F)
-                else Exit;
-      Word('m'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  TimeStmap.Month := TimeStmap.Month * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('m')) do Inc(F)
-                else Exit;
-      Word('d'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  TimeStmap.Day := TimeStmap.Day * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('d')) do Inc(F)
-                else Exit;
-      Word('h'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  TimeStmap.Hour := TimeStmap.Hour * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('h')) do Inc(F)
-                else Exit;
-      Word('n'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  TimeStmap.Minute := TimeStmap.Minute * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and (Byte(PWord(F)^ or $0020) in [Word('m'), Word('n')]) do Inc(F)
-                else Exit;
-      Word('s'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then
-                  TimeStmap.Second := TimeStmap.Second * 10 + PWord(P)^ - Word('0')
-                else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('s')) do Inc(F)
-                else Exit;
-      Word('z'):if (PWord(P)^ >= Word('0')) and (PWord(P)^ <= Word('9')) then begin
-                  TimeStmap.Fractions := TimeStmap.Fractions * 10 + Cardinal(PWord(P)^ - Word('0'));
-                  Inc(Len);
-                end else if (PWord(P)^ < 255) and (Byte(PWord(P)^) in [Ord('.'),Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then
-                  while (F < FEnd) and ((PWord(F)^ or $0020) = Word('z')) do Inc(F)
-                else Exit;
-      Ord('-'),Ord('/'),Ord('\'),Ord(' '): ;
-      else Exit;
+    case PWord(P)^ of
+      Word('0')..Word('9'): begin
+          W := PWord(P)^ - Word('0');
+          case PWord(F)^ or $0020 of //lower() of
+            Word('y'):  TimeStamp.Year := TimeStamp.Year * 10 + W;
+            Word('m'):  TimeStamp.Month := TimeStamp.Month * 10 + W;
+            Word('d'):  TimeStamp.Day := TimeStamp.Day * 10 + W;
+            Word('h'):  TimeStamp.Hour := TimeStamp.Hour * 10 + W;
+            Word('n'):  TimeStamp.Minute := TimeStamp.Minute * 10 + W;
+            Word('s'):  TimeStamp.Second := TimeStamp.Second * 10 + W;
+            Word('z'):  begin
+                          TimeStamp.Fractions := TimeStamp.Fractions * 10 + W;
+                          Inc(Len);
+                          {if a server returns micro or nanoseconds and the format with the z indicators is to short ...}
+                          if ((P+1) < PEnd) and (PWord(P+1)^ < 255) and (Byte(PWord(P+1)^) in [Word('0')..Word('9')])
+                          then Dec(F)
+                          else goto zFlush;
+                        end;
+            Word('p'):  goto TimeZ;
+            else begin
+              Inc(F);
+              Continue;
+            end;
+          end;
+          goto Next;
+        end;
+      Word('+'), Word('-'): begin
+          case PWord(F)^ or $0020 of //lower() of;
+            Word('y'): TimeStamp.IsNeagative := PWord(P)^ = Word('-');
+            Word('p'): begin
+//                        TZLen := 1;
+TimeZ:                  TZ[0] := PWord(P)^;
+                        (*while (P < PEnd) and (PWord(P)^ < 255) do
+                          if(Byte(PWord(P)^) in [Byte('0')..Byte('0')]) then begin
+                            if TZLen < 5
+                            then TZ[TZLen] := PWord(P)^
+                            else Exit;
+                          end else if True then
+
+                        Inc(P);
+                        if (P < PEnd) and (PWord(P)^ = Word('.')) then
+                          *)
+                       Exit; //incomplete by now
+                      end;
+            else if PWord(P)^ = PWord(F)^
+            then goto Next
+            else Exit;
+          end;
+          Inc(P);
+        end;
+      else if PWord(P)^ = PWord(F)^ then begin //delimiter?
+Next:   Inc(P); Inc(F);
+      end else if (PWord(P)^ <255) and (Byte(PWord(P)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
+zFlush: Inc(P);
+        W := PWord(F)^;
+        while (PWord(F)^ = W) and (F < FEnd) do Inc(F);
+      end else
+        Exit;
     end;
-    Inc(F);
-    Inc(P);
   end;
-  if (Len > 0) and (Len < 6) then
-    TimeStmap.Fractions := TimeStmap.Fractions * NanoSecondMulTable[Len];
+  if (Len > 0) and (Len < 9) then
+    TimeStamp.Fractions := TimeStamp.Fractions * NanoSecondMulTable[Len];
   Result := True;
+end;
+
+function TryDateToDateTime(const Value: TZDate; var DT: TDateTime): Boolean;
+begin
+  Result := not Value.IsNeagative and TryEncodeDate(Value.Year, Value.Month, Value.Day, DT);
+  if not Result then
+    DT := 0;
+end;
+
+function TryTimeToDateTime(const Value: TZTime; var DT: TDateTime): Boolean;
+begin
+  Result := not Value.IsNeagative and TryEncodeTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div 1000000, DT);
+  if not Result then
+    DT := 0;
+end;
+
+function TryTimeStampToDateTime(const Value: TZTimeStamp; var DT: TDateTime): Boolean;
+var d: TDatetime;
+begin
+  Result := not Value.IsNeagative and TryEncodeDate(Value.Year, Value.Month, Value.Day, d) and
+      TryEncodeTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div 1000000, DT);
+  if Result then
+    if d < 0
+    then DT := D - DT
+    else DT := D + DT
+  else
+    DT := 0;
+end;
+
+procedure DecodeDateTimeToDate(const Value: TDateTime; var Date: TZDate);
+begin
+  DecodeDate(Value, Date.Year, Date.Month, Date.Day);
+  Date.IsNeagative := False;
+end;
+
+procedure DecodeDateTimeToTime(const Value: TDateTime; var Time: TZTime);
+var MS: Word;
+begin
+  DecodeTime(Value, Time.Hour, Time.Minute, Time.Second, MS);
+  Time.Fractions := MS * 1000000;
+  Time.IsNeagative := False;
+end;
+
+procedure DecodeDateTimeToTimeStamp(const Value: TDateTime; var TimeStamp: TZTimeStamp);
+var MS: Word;
+begin
+  DecodeDate(Value, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
+  DecodeTime(Value, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, MS);
+  TimeStamp.Fractions := MS * 1000000;
+  TimeStamp.IsNeagative := False;
 end;
 
 {**
@@ -8063,7 +8157,17 @@ begin
   end;
 end;
 
+procedure X;
+var S, F: String;
+  TS: TZTimeStamp;
+begin
+  F := 'YYYY-MM-DDTHH:NN:SS.ZZZZZZZP';
+  S := '-99/99-99T00:00:00.999999+1.45';
+  Assert(TryUniToTimeStamp(Pointer(S), Length(S), F, TS));
+end;
+
 initialization;
+  X;
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
