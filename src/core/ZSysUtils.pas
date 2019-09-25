@@ -8157,17 +8157,7 @@ begin
   end;
 end;
 
-procedure X;
-var S, F: String;
-  TS: TZTimeStamp;
-begin
-  F := 'YYYY-MM-DDTHH:NN:SS.ZZZZZZZP';
-  S := '-99/99-99T00:00:00.999999+1.45';
-  Assert(TryUniToTimeStamp(Pointer(S), Length(S), F, TS));
-end;
-
 initialization;
-  X;
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
