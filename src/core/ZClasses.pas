@@ -997,7 +997,7 @@ begin
   then P := FPos
   else P := @Buffer[0];
   DecodeTime(Value, H, M, S, MS);
-  L := ZSysUtils.DateTimeToRawSQLTime(H, M, S, MS, P, Format, True);
+  L := ZSysUtils.DateTimeToRawSQLTime(H, M, S, MS, P, Format, True, False);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -1483,7 +1483,7 @@ begin
   then P := FPos
   else P := @Buffer[0];
   DecodeTime(Value, H, M, S, MS);
-  L := ZSysUtils.DateTimeToUnicodeSQLTime(H, M, S, MS, P, Format, True);
+  L := ZSysUtils.DateTimeToUnicodeSQLTime(H, M, S, MS, P, Format, True, False);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);

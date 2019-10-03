@@ -573,6 +573,11 @@ var
   Current: TZResolverParameter;
   RowAccessor: TZRowAccessor;
   WasNull: Boolean;
+  BCD: TBCD; //one val on stack 4 all
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
+  G: TGUID absolute BCD;
 begin
   WasNull := False;
   for I := 0 to Params.Count - 1 do
@@ -584,11 +589,9 @@ begin
       RowAccessor := OldRowAccessor;
     ColumnIndex := Current.ColumnIndex;
 
-    if RowAccessor.IsNull(ColumnIndex) then begin
-      if FCalcDefaults then
-        Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
-      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex));
-    end else case Metadata.GetColumnType(ColumnIndex) of
+    if RowAccessor.IsNull(ColumnIndex) then
+      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex))
+    else case Metadata.GetColumnType(ColumnIndex) of
       stBoolean:
         Statement.SetBoolean(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetBoolean(ColumnIndex, WasNull));
@@ -624,16 +627,21 @@ begin
       stBytes:
         Statement.SetBytes(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
       stGUID: begin
-                RowAccessor.GetGUID(ColumnIndex, PGUID(@RowAccessor.TinyBuffer[0])^, WasNull);
-                Statement.SetGuid(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGUID(@RowAccessor.TinyBuffer[0])^);
+                RowAccessor.GetGUID(ColumnIndex, G{%H-}, WasNull);
+                Statement.SetGuid(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, G);
               end;
-      stDate:
-        Statement.SetDate(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDate(ColumnIndex, WasNull));
-      stTime:
-        Statement.SetTime(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetTime(ColumnIndex, WasNull));
-      stTimestamp:
-        Statement.SetTimestamp(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-          RowAccessor.GetTimestamp(ColumnIndex, WasNull));
+      stDate: begin
+                RowAccessor.GetDate(ColumnIndex, WasNull, D);
+                Statement.SetDate(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, D);
+              end;
+      stTime: begin
+                RowAccessor.GetTime(ColumnIndex, WasNull, T);
+                Statement.SetTime(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+              end;
+      stTimestamp: begin
+                RowAccessor.GetTimestamp(ColumnIndex, WasNull, TS);
+                Statement.SetTimestamp(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
+              end;
       stAsciiStream:
          Statement.SetBlob(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream,
            RowAccessor.GetBlob(ColumnIndex, WasNull));
@@ -960,6 +968,19 @@ var
   Metadata: IZResultSetMetadata;
   Current: TZResolverParameter;
   Len: NativeUInt;
+  BCD: TBCD; //one val on stack 4 all
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
+  G: TGUID absolute BCD;
+  i32: Integer absolute BCD;
+  c32: Cardinal absolute BCD;
+  i64: Int64 absolute BCD;
+  U64: UInt64 absolute BCD;
+  Dbl: Double absolute BCD;
+  P: Pointer;
+  C: Currency absolute BCD;
+  S: Single absolute BCD;
 begin
   if not FCalcDefaults then
      Exit;
@@ -985,48 +1006,64 @@ begin
           Current := TZResolverParameter(SQLParams[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
           try
             case Current.ColumnType of
-              stBoolean:
-                RowAccessor.SetBoolean(Current.ColumnIndex,
-                  ResultSet.GetBoolean(I));
-              stByte:
-                RowAccessor.SetByte(Current.ColumnIndex, ResultSet.GetByte(I));
-              stShort:
-                RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetShort(I));
-              stWord:
-                RowAccessor.SetWord(Current.ColumnIndex, ResultSet.GetWord(I));
-              stSmall:
-                RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetSmall(I));
-              stInteger:
-                RowAccessor.SetInt(Current.ColumnIndex, ResultSet.GetInt(I));
-              stLongWord:
-                RowAccessor.SetUInt(Current.ColumnIndex, ResultSet.GetUInt(I));
-              stLong:
-                RowAccessor.SetLong(Current.ColumnIndex, ResultSet.GetLong(I));
-              stULong:
-                RowAccessor.SetULong(Current.ColumnIndex, ResultSet.GetULong(I));
-              stFloat:
-                RowAccessor.SetFloat(Current.ColumnIndex, ResultSet.GetFloat(I));
-              stCurrency:
-                RowAccessor.SetCurrency(Current.ColumnIndex, ResultSet.GetCurrency(I));
-              stDouble:
-                RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
-              stBigDecimal: begin
-                  ResultSet.GetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
-                  RowAccessor.SetBigDecimal(Current.ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
-                end;
+              stBoolean: RowAccessor.SetBoolean(I, ResultSet.GetBoolean(I));
+              stByte, stWord, stLongWord: begin
+                                C32 := ResultSet.GetUInt(I);
+                                RowAccessor.SetUInt(Current.ColumnIndex, C32);
+                              end;
+              stShort, stSmall, stInteger: begin
+                                I32 := ResultSet.GetInt(I);
+                                RowAccessor.SetInt(Current.ColumnIndex, i32);
+                              end;
+              stULong:        begin
+                                u64 := ResultSet.GetULong(I);
+                                RowAccessor.SetULong(Current.ColumnIndex, U64);
+                              end;
+              stLong:         begin
+                                i64 := ResultSet.GetLong(I);
+                                RowAccessor.SetLong(Current.ColumnIndex, i64);
+                              end;
+              stFloat:        begin
+                                S := ResultSet.GetFloat(I);
+                                RowAccessor.SetFloat(Current.ColumnIndex, S);
+                              end;
+              stDouble:       begin
+                                Dbl := ResultSet.GetDouble(I);
+                                RowAccessor.SetDouble(Current.ColumnIndex, Dbl);
+                              end;
+              stCurrency:     begin
+                                C := ResultSet.GetCurrency(I);
+                                RowAccessor.SetCurrency(Current.ColumnIndex, C);
+                              end;
+              stGUID:         begin
+                                ResultSet.GetGUID(I, G);
+                                RowAccessor.SetGUID(Current.ColumnIndex, G);
+                              end;
+              stBigDecimal:   begin
+                                ResultSet.GetBigDecimal(I, BCD);
+                                RowAccessor.SetBigDecimal(Current.ColumnIndex, BCD);
+                              end;
               stString, stAsciiStream, stUnicodeString, stUnicodeStream:
-                if RowAccessor.IsRaw then
-                  RowAccessor.SetPAnsiChar(Current.ColumnIndex, ResultSet.GetPAnsiChar(I, Len), Len)
-                else
-                  RowAccessor.SetPWideChar(Current.ColumnIndex, ResultSet.GetPWideChar(I, Len), Len);
-              stBytes, stGUID:
-                RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
-              stDate:
-                RowAccessor.SetDate(Current.ColumnIndex, ResultSet.GetDate(I));
-              stTime:
-                RowAccessor.SetTime(Current.ColumnIndex, ResultSet.GetTime(I));
-              stTimestamp:
-                RowAccessor.SetTimestamp(Current.ColumnIndex, ResultSet.GetTimestamp(I));
+                if RowAccessor.IsRaw then begin
+                  P := ResultSet.GetPAnsiChar(I, Len);
+                  RowAccessor.SetPAnsiChar(Current.ColumnIndex, P, Len)
+                end else begin
+                  P := ResultSet.GetPWideChar(I, Len);
+                  RowAccessor.SetPWideChar(Current.ColumnIndex, P, Len);
+                end;
+              stBytes: RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
+              stDate:         begin
+                                ResultSet.GetDate(I, D);
+                                RowAccessor.SetDate(Current.ColumnIndex, D);
+                              end;
+              stTime:         begin
+                                ResultSet.GetTime(I, T);
+                                RowAccessor.SetTime(Current.ColumnIndex, T);
+                              end;
+              stTimestamp:    begin
+                                ResultSet.GetTimestamp(I, TS);
+                                RowAccessor.SetTimestamp(Current.ColumnIndex, TS);
+                              end;
             end;
 
             if ResultSet.WasNull then

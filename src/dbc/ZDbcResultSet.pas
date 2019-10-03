@@ -148,6 +148,12 @@ type
     function GetDataSet(ColumnIndex: Integer): IZDataSet; virtual;
     function GetValue(ColumnIndex: Integer): TZVariant;
     function GetDefaultExpression(ColumnIndex: Integer): String; virtual;
+    function GetTime(ColumnIndex: Integer): TDateTime; overload;
+    procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); overload;
+    function GetDate(ColumnIndex: Integer): TDateTime; overload;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
 
     //======================================================================
     // Methods for accessing results by column name
@@ -183,9 +189,12 @@ type
     procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
     procedure GetGUIDByName(const ColumnName: string; var Result: TGUID);
     function GetBytesByName(const ColumnName: string): TBytes;
-    function GetDateByName(const ColumnName: string): TDateTime;
-    function GetTimeByName(const ColumnName: string): TDateTime;
-    function GetTimestampByName(const ColumnName: string): TDateTime;
+    function GetDateByName(const ColumnName: string): TDateTime; overload;
+    procedure GetDateByName(const ColumnName: string; var Result: TZDate); overload;
+    function GetTimeByName(const ColumnName: string): TDateTime; overload;
+    procedure GetTimeByName(const ColumnName: string; Var Result: TZTime); overload;
+    function GetTimestampByName(const ColumnName: string): TDateTime; overload;
+    procedure GetTimeStampByName(const ColumnName: string; var Result: TZTimeStamp); overload;
     function GetAsciiStreamByName(const ColumnName: string): TStream;
     function GetUnicodeStreamByName(const ColumnName: string): TStream;
     function GetBinaryStreamByName(const ColumnName: string): TStream;
@@ -248,6 +257,9 @@ type
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload;
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); overload;
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateTimeStamp(ColumnIndex: Integer; const Value: TDateTime); overload;
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
 
     //======================================================================
@@ -284,9 +296,12 @@ type
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TBytes);
-    procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime);
-    procedure UpdateTimeByName(const ColumnName: string; const Value: TDateTime);
-    procedure UpdateTimestampByName(const ColumnName: string; const Value: TDateTime);
+    procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime); overload;
+    procedure UpdateDateByName(const ColumnName: string; const Value: TZDate); overload;
+    procedure UpdateTimeByName(const ColumnName: string; const Value: TDateTime); overload;
+    procedure UpdateTimeByName(const ColumnName: string; const Value: TZTime); overload;
+    procedure UpdateTimestampByName(const ColumnName: string; const Value: TDateTime); overload;
+    procedure UpdateTimestampByName(const ColumnName: string; const Value: TZTimeStamp); overload;
     procedure UpdateAsciiStreamByName(const ColumnName: string; const Value: TStream);
     procedure UpdateUnicodeStreamByName(const ColumnName: string; const Value: TStream);
     procedure UpdateBinaryStreamByName(const ColumnName: string; const Value: TStream);
@@ -350,9 +365,9 @@ type
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
-    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
-    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
-    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
     procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
@@ -1681,6 +1696,42 @@ begin
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetBytes(GetColumnIndex(ColumnName));
 end;
 
+function TZAbstractResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+var D: TZDate;
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex, D);
+  if not LastWasNull then
+    LastWasNull := not TryDateToDateTime(D, Result);
+  if LastWasNull then
+    Result := 0;
+end;
+
+procedure TZAbstractResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
+var DT: TDateTime;
+begin
+  DT := IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex);
+  if not LastWasNull
+  then  DecodeDateTimeToDate(DT, Result)
+  else if SizeOf(TZDate) = SizeOf(Int64)
+    then PInt64(@Result.Year)^ := 0
+    else FillChar(Result, SizeOf(TZDate), #0);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Date</code> object in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+procedure TZAbstractResultSet.GetDateByName(const ColumnName: string;
+  var Result: TZDate);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).GetDate(GetColumnIndex(ColumnName), Result);
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -1704,9 +1755,96 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>,
     the value returned is <code>null</code>
 }
+function TZAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+var T: TZTime;
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex, T);
+  if not LastWasNull then
+    LastWasNull := not TryTimeToDateTime(T, Result);
+  if LastWasNull then
+    Result := 0;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Time</code> object in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>,
+    the value returned is <code>null</code>
+}
+procedure TZAbstractResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
+var T: TDateTime;
+begin
+  T := IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex);
+  if not LastWasNull
+  then DecodeDateTimeToTime(T, Result)
+  else FillChar(Result, SizeOf(TZTime), #0);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Time</code> object in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>,
+    the value returned is <code>null</code>
+}
+procedure TZAbstractResultSet.GetTimeByName(const ColumnName: string;
+  var Result: TZTime);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).GetTime(GetColumnIndex(ColumnName), Result);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Time</code> object in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>,
+    the value returned is <code>null</code>
+}
 function TZAbstractResultSet.GetTimeByName(const ColumnName: string): TDateTime;
 begin
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetTime(GetColumnIndex(ColumnName));
+end;
+
+function TZAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+var TS: TZTimeStamp;
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).GetTimeStamp(ColumnIndex, TS);
+  if not LastWasNull then
+    LastWasNull := not TryTimeStampToDateTime(TS, Result);
+  if LastWasNull then
+    Result := 0;
+end;
+
+procedure TZAbstractResultSet.GetTimestamp(ColumnIndex: Integer;
+  var Result: TZTimeStamp);
+var Dt: TDateTime;
+begin
+  DT := IZResultSet(FWeakIntfPtrOfSelf).GetTimeStamp(ColumnIndex);
+  if not LastWasNull
+  then DecodeDateTimeToTimeStamp(DT, Result)
+  else FillChar(Result, SizeOf(TZTimeStamp), #0);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Timestamp</code> object.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+procedure TZAbstractResultSet.GetTimestampByName(const ColumnName: string;
+  var Result: TZTimeStamp);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).GetTimestamp(GetColumnIndex(ColumnName), Result);
 end;
 
 {**
@@ -2838,6 +2976,30 @@ begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(GetColumnIndex(ColumnName), Value);
 end;
 
+procedure TZAbstractResultSet.UpdateDate(ColumnIndex: Integer;
+  const Value: TDateTime);
+var D: TZDate;
+begin
+  DecodeDateTimeToDate(Value, D);
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(ColumnIndex, D);
+end;
+
+{**
+  Updates the designated column with a <code>java.sql.Date</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateDateByName(const ColumnName: string;
+  const Value: TZDate);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(GetColumnIndex(ColumnName), Value);
+end;
+
 {**
   Updates the designated column with a <code>java.sql.Time</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
@@ -2854,6 +3016,38 @@ begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(GetColumnIndex(ColumnName), Value);
 end;
 
+procedure TZAbstractResultSet.UpdateTime(ColumnIndex: Integer;
+  const Value: TDateTime);
+var T: TZTime;
+begin
+  DecodeDateTimeToTime(Value, T);
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(ColumnIndex, T);
+end;
+
+{**
+  Updates the designated column with a <code>java.sql.Time</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateTimeByName(const ColumnName: string;
+  const Value: TZTime);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(GetColumnIndex(ColumnName), Value);
+end;
+
+procedure TZAbstractResultSet.UpdateTimeStamp(ColumnIndex: Integer;
+  const Value: TDateTime);
+var TS: TZTimeStamp;
+begin
+  DecodeDateTimeToTimeStamp(Value, TS);
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateTimeStamp(ColumnIndex, TS);
+end;
+
 {**
   Updates the designated column with a <code>java.sql.Timestamp</code>
   value.
@@ -2867,6 +3061,23 @@ end;
 }
 procedure TZAbstractResultSet.UpdateTimestampByName(const ColumnName: string;
   const Value: TDateTime);
+begin
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
+  Updates the designated column with a <code>java.sql.Timestamp</code>
+  value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateTimestampByName(const ColumnName: string;
+  const Value: TZTimeStamp);
 begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(GetColumnIndex(ColumnName), Value);
 end;
@@ -4505,7 +4716,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractReadOnlyResultSet.UpdateDate(ColumnIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
 begin
   RaiseReadOnlyException;
 end;
@@ -4723,7 +4934,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractReadOnlyResultSet.UpdateTime(ColumnIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
 begin
   RaiseReadOnlyException;
 end;
@@ -4740,7 +4951,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractReadOnlyResultSet.UpdateTimestamp(ColumnIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
 begin
   RaiseReadOnlyException;
 end;

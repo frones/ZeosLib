@@ -604,10 +604,6 @@ function EncodeInterface(const Value: IZInterface): TZVariant; {$IFDEF WITH_INLI
 }
 function EncodeArray(const Value: TZArray): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function ZCompareDate(const Value1, Value2: TZDate): Integer;
-//function ZAddDate(const Value1, Value2: TZDate; Var Result: TZDate): Integer;
-function ZCompareTime(const Value1, Value2: TZTime): Integer;
-function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
 var
   {** Declares a variant manager with soft convertion rules. }
   SoftVarManager: IZVariantManager;
@@ -2013,14 +2009,14 @@ begin
     vtDate:     begin
                   P := @Buff[0];
                   L := ZSysUtils.DateTimeToRawSQLDate(Value.VDate.Year,
-                    Value.VDate.Month, Value.VDate.Day, P, FFormatSettings, False, Value.VDate.IsNeagative);
+                    Value.VDate.Month, Value.VDate.Day, P, FFormatSettings, False, Value.VDate.IsNegative);
                 end;
     vtTimeStamp:begin
                   P := @Buff[0];
                   L := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VTimeStamp.Year,
                     Value.VTimeStamp.Month, Value.VTimeStamp.Day,
                     Value.VTimeStamp.Hour, Value.VTimeStamp.Minute, Value.VTimeStamp.Second,
-                    Value.VTimeStamp.Fractions div 1000000, P, FFormatSettings, False, Value.VTimeStamp.IsNeagative);
+                    Value.VTimeStamp.Fractions div 1000000, P, FFormatSettings, False, Value.VTimeStamp.IsNegative);
                 end;
     {$ELSE}
     vtDateTime: begin
@@ -2090,14 +2086,14 @@ begin
     vtDate:     begin
                   P := @Buff[0];
                   L := ZSysUtils.DateTimeToUnicodeSQLDate(Value.VDate.Year,
-                    Value.VDate.Month, Value.VDate.Day, P, FFormatSettings, False, Value.VDate.IsNeagative);
+                    Value.VDate.Month, Value.VDate.Day, P, FFormatSettings, False, Value.VDate.IsNegative);
                 end;
     vtTimeStamp:begin
                   P := @Buff[0];
                   L := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.VTimeStamp.Year,
                     Value.VTimeStamp.Month, Value.VTimeStamp.Day,
                     Value.VTimeStamp.Hour, Value.VTimeStamp.Minute, Value.VTimeStamp.Second,
-                    Value.VTimeStamp.Fractions div 1000000, P, FFormatSettings, False, Value.VTimeStamp.IsNeagative);
+                    Value.VTimeStamp.Fractions div 1000000, P, FFormatSettings, False, Value.VTimeStamp.IsNegative);
                 end;
     {$ELSE}
     vtDateTime: begin
@@ -3241,60 +3237,6 @@ begin
   Result.VArray := Value;
 end;
 
-function ZCompareDate(const Value1, Value2: TZDate): Integer;
-begin
-  Result := Ord(Value1.IsNeagative)-Ord(Value2.IsNeagative);
-  if Result = 0 then begin
-    Result := Value1.Year-Value2.Year;
-    if Result = 0 then begin
-      Result := Value1.Month - Value2.Month;
-      if Result = 0 then
-        Result := Value1.Day - Value2.Day;
-    end;
-  end;
-end;
-
-function ZCompareTime(const Value1, Value2: TZTime): Integer;
-begin
-  Result := Ord(Value1.IsNeagative)-Ord(Value2.IsNeagative);
-  if Result = 0 then begin
-    Result := Value1.Hour - Value2.Hour;
-    if Result = 0 then begin
-      Result := Value1.Minute - Value2.Minute;
-      if Result = 0 then begin
-        Result := Value1.Second - Value2.Second;
-        if Result = 0 then
-          Result := Ord(Value1.Fractions > Value2.Fractions)-Ord(Value1.Fractions < Value2.Fractions);
-      end;
-    end;
-  end;
-end;
-
-function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
-begin
-  Result := Ord(Value1.IsNeagative)-Ord(Value2.IsNeagative);
-  if Result = 0 then begin
-    Result := Value1.Year-Value2.Year;
-    if Result = 0 then begin
-      Result := Value1.Month - Value2.Month;
-      if Result = 0 then begin
-        Result := Value1.Day - Value2.Day;
-        if Result = 0 then begin
-          Result := (Value1.Hour + Value1.UTC_Offset_MUL100) - (Value2.Hour + Value2.UTC_Offset_MUL100);
-          if Result = 0 then begin
-            Result := Value1.Minute - Value2.Minute;
-            if Result = 0 then begin
-              Result := Value1.Second - Value2.Second;
-              if Result = 0 then
-                Result := Ord(Value1.Fractions > Value2.Fractions)-Ord(Value1.Fractions < Value2.Fractions);
-            end;
-          end;
-        end;
-      end;
-    end;
-  end;
-end;
-
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
 procedure RawFiller;
 var B: Boolean;
@@ -3308,15 +3250,9 @@ initialization
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   RawFiller;
 {$ENDIF}
-  {$IFDEF ZEOS_TEST_ONLY}
-  DefVarManager  := TZDefaultVariantManager.Create;
-  {$ENDIF ZEOS_TEST_ONLY}
   SoftVarManager := TZSoftVariantManager.Create;
   NullVariant    := EncodeNull;
 
 finalization
-  {$IFDEF ZEOS_TEST_ONLY}
-  DefVarManager  := nil;
-  {$ENDIF ZEOS_TEST_ONLY}
   SoftVarManager := nil;
 end.

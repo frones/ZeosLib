@@ -135,9 +135,9 @@ type
     procedure SetRawByteString(Index: Integer; const AValue: RawByteString); reintroduce;
     procedure SetUnicodeString(Index: Integer; const AValue: ZWideString); reintroduce;
 
-    procedure SetDate(Index: Integer; const AValue: TDateTime); reintroduce;
-    procedure SetTime(Index: Integer; const AValue: TDateTime); reintroduce;
-    procedure SetTimestamp(Index: Integer; const AValue: TDateTime); reintroduce;
+    procedure SetDate(Index: Integer; const AValue: TDateTime); reintroduce; overload;
+    procedure SetTime(Index: Integer; const AValue: TDateTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const AValue: TDateTime); reintroduce; overload;
 
     procedure SetBytes(Index: Integer; const AValue: TBytes); reintroduce;
     procedure SetGUID(Index: Integer; const AValue: TGUID); reintroduce;
@@ -511,7 +511,6 @@ begin
     if BindList.Count <> FAdoCommand.Parameters.Count then //this could cause an AV
       BindList.Count := FAdoCommand.Parameters.Count;
     FRefreshParamsFailed := False;
-    SetLength(FInParamDefaultValues, BindList.Count);
     for I := 0 to BindList.Count -1 do
       with FAdoCommand.Parameters[i] do
         BindList.SetParamTypes(I, ConvertAdoToSqlType(Get_Type_, Get_Precision,

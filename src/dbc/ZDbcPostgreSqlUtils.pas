@@ -139,27 +139,40 @@ function GetMinorVersion(const Value: string): Word;
 //macros from datetime.c
 function date2j(y, m, d: Integer): Integer;
 procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
-procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: Cardinal); overload;
-procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: Cardinal); overload;
+
+procedure time2t(Hour, Min, Sec: Word; fsec: Cardinal; out MicroSeconds: Int64); overload;
+procedure time2t(Hour, Min, Sec: Word; fsec: Cardinal; out MicroSeconds: Double); overload;
+
+
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out MicroFractions: Cardinal); overload;
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out MicroFractions: Cardinal); overload;
 
 procedure DateTime2PG(const Value: TDateTime; out Result: Int64); overload;
 procedure DateTime2PG(const Value: TDateTime; out Result: Double); overload;
 
-procedure Date2PG(const Value: TDateTime; out Result: Integer);
+procedure TimeStamp2PG(const Value: TZTimeStamp; out MicroSeconds: Double); overload;
+procedure TimeStamp2PG(const Value: TZTimeStamp; out MicroSeconds: Int64); overload;
+
+procedure Date2PG(const Value: TDateTime; out Result: Integer); overload;
+procedure Date2PG(Year, Month, Day: Word; out Result: Integer); overload;
 
 procedure Time2PG(const Value: TDateTime; out Result: Int64); overload;
+procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result: Int64); overload;
 procedure Time2PG(const Value: TDateTime; out Result: Double); overload;
+procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result: Double); overload;
 
 function PG2DateTime(Value: Double): TDateTime; overload;
 procedure PG2DateTime(Value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: Cardinal); overload;
+  out NanoFractions: Cardinal); overload;
 
 function PG2DateTime(Value: Int64): TDateTime; overload;
 procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: Cardinal); overload;
+  out NanoFractions: Cardinal); overload;
 
 function PG2Time(Value: Double): TDateTime; overload;
+procedure PG2Time(Value: Double; Out Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 function PG2Time(Value: Int64): TDateTime; overload;
+procedure PG2Time(Value: Int64; Out Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 
 function PG2Date(Value: Integer): TDateTime; overload;
 procedure PG2Date(Value: Integer; out Year, Month, Day: Word); overload;
@@ -872,6 +885,16 @@ begin
   AMonth := (quad + 10) mod 12{MONTHS_PER_YEAR} + 1;
 end;
 
+procedure time2t(Hour, Min, Sec: Word; fsec: Cardinal; out MicroSeconds: Int64);
+begin
+  MicroSeconds := (((((Hour * MINS_PER_HOUR) + Min) * SECS_PER_MINUTE) + Sec) * USECS_PER_SEC) + fsec;
+end;
+
+procedure time2t(Hour, Min, Sec: Word; fsec: Cardinal; out MicroSeconds: Double);
+begin
+  MicroSeconds := (((((Hour * MINS_PER_HOUR) + Min) * SECS_PER_MINUTE) + Sec) * USECS_PER_SEC) + fsec;
+end;
+
 {$IFNDEF ENDIAN_BIG}
 procedure Reverse2Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 var W: Byte;
@@ -948,11 +971,36 @@ begin
   TryEncodeDate(Year, Month, Day, date);
   dt2time(Value, Hour, Min, Sec, fsec);
   TryEncodeTime(Hour, Min, Sec, fsec, Result);
-  Result := date + Result;
+  if date < 0 then
+  else Result := date + Result;
+end;
+
+procedure TimeStamp2PG(const Value: TZTimeStamp; out MicroSeconds: Double);
+var Date: Double; //overflow save multiply
+begin
+  Date := date2j(Value.Year, Value.Month, Value.Day) - POSTGRES_EPOCH_JDATE;
+  time2t(Value.Hour, Value.Minute, Value.Second, Value.Fractions div 1000, MicroSeconds);
+  MicroSeconds := Date * SECS_PER_DAY + MicroSeconds;
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@MicroSeconds);
+  {$ENDIF}
+end;
+
+procedure TimeStamp2PG(const Value: TZTimeStamp; out MicroSeconds: Int64);
+var Date: Int64; //overflow save multiply
+begin
+  Date := date2j(Value.Year, Value.Month, Value.Day) - POSTGRES_EPOCH_JDATE;
+  time2t(Value.Hour, Value.Minute, Value.Second, Value.Fractions div 1000, MicroSeconds);
+  Date := (Date * MSecsPerDay);//allign to millisecond resolution
+  Date := Date*MicroSecsOfMilliSecond; //align to microseconds
+  MicroSeconds := Date + MicroSeconds;
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@MicroSeconds);
+  {$ENDIF}
 end;
 
 procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: Cardinal);
+  out NanoFractions: Cardinal);
 var
   date: Double;
   time: Double;
@@ -972,24 +1020,39 @@ begin
   end;
   date := date + POSTGRES_EPOCH_JDATE;
   j2date(Integer(Trunc(date)), Year, Month, Day);
-  dt2time(Time, Hour, Min, Sec, fsec);
+  dt2time(Time, Hour, Min, Sec, NanoFractions);
+  NanoFractions := NanoFractions * 1000;
 end;
 
 function PG2DateTime(Value: Int64): TDateTime;
-var date: TDateTime;
+var d: TDateTime;
+  date: Int64;
   Year, Month, Day, Hour, Min, Sec: Word;
-  fsec: Cardinal;
+  MicroF: Cardinal;
 begin
-  PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
-  if not TryEncodeDate(Year, Month, Day, date) then
-    Date := 0;
-  if not TryEncodeTime(Hour, Min, Sec, fsec div MSecsPerSec, Result) then
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Value);
+  {$ENDIF}
+  date := Value div USECS_PER_DAY;
+  Value := Value mod USECS_PER_DAY;
+  if Value < 0 then begin
+    Value := Value + USECS_PER_DAY;
+    date := date - 1;
+  end;
+  date := date + POSTGRES_EPOCH_JDATE;
+  j2date(date, Year, Month, Day);
+  if not TryEncodeDate(Year, Month, Day, d) then
+    D := 0;
+  dt2time(Value, Hour, Min, Sec, MicroF);
+  if not TryEncodeTime(Hour, Min, Sec, MicroF div 1000, Result) then
     Result := 0;
-  Result := date + Result;
+  if d < 0
+  then Result := d - Result
+  else Result := d + Result;
 end;
 
 procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out fsec: Cardinal);
+  out NanoFractions: Cardinal);
 var date: Int64;
 begin
   {$IFNDEF ENDIAN_BIG}
@@ -1003,34 +1066,43 @@ begin
   end;
   date := date + POSTGRES_EPOCH_JDATE;
   j2date(date, Year, Month, Day);
-  dt2time(Value, Hour, Min, Sec, fsec);
+  dt2time(Value, Hour, Min, Sec, NanoFractions);
+  NanoFractions := NanoFractions * 1000;
 end;
 
-procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out fsec: Cardinal);
+procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out MicroFractions: Cardinal);
 begin
   Hour := jd div USECS_PER_HOUR;
   jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
   Min := jd div USECS_PER_MINUTE;
   jd := jd - Int64(Min) * Int64(USECS_PER_MINUTE);
   Sec := jd div USECS_PER_SEC;
-  Fsec := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
+  MicroFractions := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
 end;
 
-procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out fsec: Cardinal);
+procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out MicroFractions: Cardinal);
 begin
   Hour := Trunc(jd / SECS_PER_HOUR);
   jd := jd - Hour * SECS_PER_HOUR;
   Min := Trunc(jd / SECS_PER_MINUTE);
   jd := jd - Min * SECS_PER_MINUTE;
   Sec := Trunc(jd);
-  Fsec := Trunc(jd - Sec);
+  MicroFractions := Trunc((jd - Sec)) * Int64(USECS_PER_SEC);
 end;
 
 procedure Time2PG(const Value: TDateTime; out Result: Int64);
 var Hour, Min, Sec, MSec: Word;
 begin
   DecodeTime(Value, Hour, Min, Sec, MSec);
-  Result := (((((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + Msec;
+  time2t(Hour, Min, Sec, MSec * 1000, Result);
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Result);
+  {$ENDIF}
+end;
+
+procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result: Int64);
+begin
+  time2t(Hour, Min, Sec, NanoFraction div 1000, Result);
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Result);
   {$ENDIF}
@@ -1041,31 +1113,60 @@ var Hour, Min, Sec, MSec: Word;
 begin
   DecodeTime(Value, Hour, Min, Sec, MSec);
   //macro of datetime.c
-  Result := (((hour * MINS_PER_HOUR) + min) * SECS_PER_MINUTE) + sec + Msec;
+  time2t(Hour, Min, Sec, MSec*1000, Result);
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Result);
   {$ENDIF}
 end;
 
-function PG2Time(Value: Double): TDateTime;
-var Hour, Min, Sec: Word; fsec: Cardinal;
+procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result: Double); overload;
+begin
+  //macro of datetime.c
+  time2t(Hour, Min, Sec, NanoFraction div 1000, Result);
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Result);
+  {$ENDIF}
+end;
+
+procedure PG2Time(Value: Double; Out Hour, Min, Sec: Word;
+  out NanoFractions: Cardinal); overload;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
-  dt2Time(Value, Hour, Min, Sec, fsec);
-  if not TryEncodeTime(Hour, Min, Sec, Fsec, Result) then
+  dt2Time(Value, Hour, Min, Sec, NanoFractions);
+  NanoFractions := NanoFractions * 1000;
+end;
+
+function PG2Time(Value: Double): TDateTime;
+var Hour, Min, Sec: Word; fMicro: Cardinal;
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Value);
+  {$ENDIF}
+  dt2Time(Value, Hour, Min, Sec, fMicro);
+  if not TryEncodeTime(Hour, Min, Sec, fMicro div 1000, Result) then
     Result := 0;
 end;
 
-function PG2Time(Value: Int64): TDateTime;
-var Hour, Min, Sec: Word; fsec: Cardinal;
+procedure PG2Time(Value: Int64; Out Hour, Min, Sec: Word;
+  out NanoFractions: Cardinal);
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
-  dt2Time(Value, Hour, Min, Sec, fsec);
-  if not TryEncodeTime(Hour, Min, Sec, Fsec div MSecsPerSec, Result) then
+  dt2Time(Value, Hour, Min, Sec, NanoFractions);
+  NanoFractions := NanoFractions * 1000;
+end;
+
+function PG2Time(Value: Int64): TDateTime;
+var Hour, Min, Sec: Word; fMicro: Cardinal;
+begin
+  {$IFNDEF ENDIAN_BIG}
+  Reverse8Bytes(@Value);
+  {$ENDIF}
+  dt2Time(Value, Hour, Min, Sec, fMicro);
+  if not TryEncodeTime(Hour, Min, Sec, fMicro div 1000, Result) then
     Result := 0;
 end;
 
@@ -1073,7 +1174,12 @@ procedure Date2PG(const Value: TDateTime; out Result: Integer);
 var y,m,d: Word;
 begin
   DecodeDate(Value, y,m,d);
-  Result := date2j(y,m,d) - POSTGRES_EPOCH_JDATE;
+  Date2PG(y,m,d, Result);
+end;
+
+procedure Date2PG(Year, Month, Day: Word; out Result: Integer);
+begin
+  Result := date2j(Year,Month,Day) - POSTGRES_EPOCH_JDATE;
   {$IFNDEF ENDIAN_BIG}
   Reverse4Bytes(@Result);
   {$ENDIF}

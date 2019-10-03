@@ -414,7 +414,7 @@ TMYSQL_CLIENT_OPTIONS =
     hour:                UInt;
     minute:              UInt;
     second:              UInt;
-    second_part:         ULong;
+    second_part:         ULong; {max microseconds}
     neg:                 my_bool;
     time_type:           mysql_timestamp_type;
   end;

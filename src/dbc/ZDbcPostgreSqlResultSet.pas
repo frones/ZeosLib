@@ -129,9 +129,9 @@ type
     function GetDouble(ColumnIndex: Integer): Double;
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
+    procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); reintroduce; overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetBlob(ColumnIndex: Integer): IZBlob;
@@ -883,7 +883,7 @@ jmpDate:              Result := @fTinyBuffer[0];
                       else dt2time(PG2Double(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := @fTinyBuffer[0];
                       Len := ZSysUtils.DateTimeToRawSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
-                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False);
+                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False, False);
                     end;
         stTimestamp:begin
                       if Finteger_datetimes
@@ -1059,7 +1059,7 @@ jmpDate:              Result := @fTinyBuffer[0];
                       else dt2time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := @fTinyBuffer[0];
                       Len := ZSysUtils.DateTimeToUnicodeSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
-                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False);
+                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False, tS.IsNegative);
                     end;
         stTimestamp:begin
                       if Finteger_datetimes
@@ -1739,12 +1739,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+procedure TZAbstractPostgreSQLStringResultSet.GetDate(ColumnIndex: Integer;
+  var Result: TZDate);
 var
   Len: NativeUInt;
   P: PAnsiChar;
-  Failed: Boolean;
-label from_str;
+label from_str, Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -1754,37 +1754,42 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
-  then Result := 0
+  then goto fill
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
     if FBinaryValues then
       case ColumnType of
+        stDate:       begin
+                        PG2Date(Pinteger(P)^, Result.Year, Result.Month, Result.Day);
+                        Result.IsNegative := False;
+                      end;
+        stTime:       goto Fill;
+        stTimestamp:  begin
+                        Result.IsNegative := False;
+                        if Finteger_datetimes
+                        then PG2DateTime(PInt64(P)^, Result.Year, Result.Month, Result.Day,
+                          PZTime(@FTinyBuffer[0])^.Hour, PZTime(@FTinyBuffer[0])^.Minute,
+                          PZTime(@FTinyBuffer[0])^.Second, PZTime(@FTinyBuffer[0])^.Fractions)
+                        else PG2DateTime(PDouble(P)^, Result.Year, Result.Month, Result.Day,
+                          PZTime(@FTinyBuffer[0])^.Hour, PZTime(@FTinyBuffer[0])^.Minute,
+                          PZTime(@FTinyBuffer[0])^.Second, PZTime(@FTinyBuffer[0])^.Fractions);
+                  end;
         stBoolean, stSmall,
-        stInteger, stLong, stLongWord:Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        stDate:                       Result := PG2Date(Pinteger(P)^);
-        //stTime:                       Result := 0;
-        stTimestamp:                  if Finteger_datetimes
-                                      then Result := Int(PG2DateTime(PInt64(P)^))
-                                      else Result := Int(PG2DateTime(PDouble(P)^));
+        stInteger, stLong, stLongWord,
         stFloat, stDouble,
-        stCurrency, stBigDecimal:     Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        //stGUID: ;
+        stCurrency, stBigDecimal:     DecodeDateTimeToDate(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
         stAsciiStream, stUnicodeStream,
         stString, stUnicodeString:    goto from_str;
-        //stBytes: ;
-        //stBinaryStream: ;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, FColOID);
       end
     else begin
 from_str:
       Len := ZFastCode.StrLen(P);
-      if Len = ConSettings^.ReadFormatSettings.DateFormatLen
-      then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-      else Result := Int(RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
-      LastWasNull := Failed;
+      LastWasNull := not TryPCharToDate(P, Len, ConSettings^.ReadFormatSettings, Result);
+      if LastWasNull then
+Fill:   PInt64(@Result.Year)^ := 0;
     end;
   end;
-
 end;
 
 {**
@@ -1796,12 +1801,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+procedure TZAbstractPostgreSQLStringResultSet.GetTime(ColumnIndex: Integer;
+  var Result: TZTime);
 var
   Len: NativeUInt;
   P: PAnsiChar;
-  Failed: Boolean;
-label from_str;
+label from_str, fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1811,36 +1816,44 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
-  then Result := 0
+  then goto Fill
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
     if FBinaryValues then
       case ColumnType of
+        stDate:     goto Fill;
+        stTime:     begin
+                      Result.IsNegative := False;
+                      if Finteger_datetimes
+                      then PG2Time(PInt64(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                      else PG2Time(PDouble(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+                    end;
+        stTimestamp:begin
+                      Result.IsNegative := False;
+                      if Finteger_datetimes
+                      then PG2DateTime(PInt64(P)^, PZDate(@fTinyBuffer[0])^.Year,
+                        PZDate(@fTinyBuffer[0])^.Month, PZDate(@fTinyBuffer[0])^.Day,
+                        Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                      else PG2DateTime(PDouble(P)^, PZDate(@fTinyBuffer[0])^.Year,
+                        PZDate(@fTinyBuffer[0])^.Month, PZDate(@fTinyBuffer[0])^.Day,
+                        Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+                    end;
         stBoolean, stSmall,
-        stInteger, stLong, stLongWord:Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        //stDate:                       Result := 0;
-        stTime:                       if Finteger_datetimes
-                                      then Result := PG2Time(PInt64(P)^)
-                                      else Result := PG2Time(PDouble(P)^);
-        stTimestamp:                  if Finteger_datetimes
-                                      then Result := Frac(PG2DateTime(PInt64(P)^))
-                                      else Result := Frac(PG2DateTime(PDouble(P)^));
+        stInteger, stLong, stLongWord,
         stFloat, stDouble,
-        stCurrency, stBigDecimal:     Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        //stGUID: ;
+        stCurrency, stBigDecimal: DecodeDateTimeToTime(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
         stAsciiStream, stUnicodeStream,
         stString, stUnicodeString:    goto from_str;
-        //stBytes: ;
-        //stBinaryStream: ;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, FColOID);
       end
     else begin
 from_str:
       Len := ZFastCode.StrLen(P);
-      if not (Len > ConSettings^.ReadFormatSettings.TimeFormatLen) and ( ( ConSettings^.ReadFormatSettings.TimeFormatLen - Len) <= 4 )
-      then Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-      else Result := Frac(RawSQLTimeStampToDateTime(P,  Len, ConSettings^.ReadFormatSettings, Failed));
-      LastWasNull := Failed;
+      LastWasNull := not TryPCharToTime(P, Len, ConSettings^.ReadFormatSettings, Result);
+      if LastWasNull then begin
+Fill:   PCardinal(@Result.Hour)^ := 0;
+        PInt64(@Result.Second)^ := 0;
+      end;
     end;
   end;
 end;
@@ -1855,11 +1868,12 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZAbstractPostgreSQLStringResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+procedure TZAbstractPostgreSQLStringResultSet.GetTimestamp(ColumnIndex: Integer;
+  var Result: TZTimeStamp);
 var
+  Len: NativeUInt;
   P: PAnsiChar;
-  Failed: Boolean;
-label from_str;
+label from_str, fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimeStamp);
@@ -1869,32 +1883,53 @@ begin
   {$ENDIF}
   LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
   if LastWasNull
-  then Result := 0
+  then goto Fill
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
     if FBinaryValues then
       case ColumnType of
+        stDate:     begin
+                      PG2Date(Pinteger(P)^, Result.Year, Result.Month, Result.Day);
+                      Result.IsNegative := False;
+                      PInt64(@Result.Hour)^ := 0;
+                      PInt64(@Result.Fractions)^ := 0;
+                      goto Fill;
+                    end;
+        stTime:     begin
+                      Result.IsNegative := False;
+                      PInt64(@Result.Year)^ := 0;
+                      PInt64(PAnsiChar(@Result.TimeZoneHour)-2)^ := 0;
+                      if Finteger_datetimes
+                      then PG2Time(PInt64(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                      else PG2Time(PDouble(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+                    end;
+        stTimestamp:begin
+                      Result.IsNegative := False;
+                      PCardinal(@Result.TimeZoneHour)^ := 0;
+                      if Finteger_datetimes
+                      then PG2DateTime(PInt64(P)^, Result.Year,
+                        Result.Month, Result.Day, Result.Hour, Result.Minute,
+                        Result.Second, Result.Fractions)
+                      else PG2DateTime(PDouble(P)^, Result.Year,
+                        Result.Month, Result.Day, Result.Hour, Result.Minute,
+                        Result.Second, Result.Fractions);
+                    end;
         stBoolean, stSmall,
-        stInteger, stLongWord, stLong:Result := GetLong(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        stDate:                       Result := PG2Date(Pinteger(P)^);
-        stTime:                       if Finteger_datetimes
-                                      then Result := PG2Time(PInt64(P)^)
-                                      else Result := PG2Time(PDouble(P)^);
-        stTimestamp:                  if Finteger_datetimes
-                                      then Result := PG2DateTime(PInt64(P)^)
-                                      else Result := PG2DateTime(PDouble(P)^);
+        stInteger, stLong, stLongWord,
         stFloat, stDouble,
-        stCurrency, stBigDecimal:     Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        //stGUID: ;
+        stCurrency, stBigDecimal: DecodeDateTimeToTimeStamp(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
         stAsciiStream, stUnicodeStream,
         stString, stUnicodeString:    goto from_str;
-        //stBytes: ;
-        //stBinaryStream: ;
-        else Result := 0;
+        else raise CreatePGConvertError(ColumnIndex, FColOID);
       end
-    else
+    else begin
 from_str:
-      Result := RawSQLTimeStampToDateTime(P, ZFastCode.StrLen(P), ConSettings^.ReadFormatSettings, Failed);
+      Len := ZFastCode.StrLen(P);
+      LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
+      if LastWasNull then begin
+Fill:   Fillchar(Result, SizeOF(TZTimeStamp), #0);
+      end;
+    end;
   end;
 end;
 

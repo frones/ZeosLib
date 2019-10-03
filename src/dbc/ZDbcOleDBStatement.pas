@@ -127,6 +127,8 @@ type
     function GetNewRowSet(var RowSet: IRowSet): Boolean;
   end;
 
+  EZOleDBConvertError = class(EZSQLException);
+
   TZOleDBPreparedStatement = class(TZAbstractOleDBStatement, IZPreparedStatement)
   private
     FDBBindingArray: TDBBindingDynArray;
@@ -161,7 +163,7 @@ type
     procedure CheckParameterIndex(var Value: Integer); override;
     procedure SetParamCount(NewParamCount: Integer); override;
     procedure SetBindCapacity(Capacity: Integer); override;
-    procedure RaiseUnsupportedParamType(Index: Integer; WType: Word; SQLType: TZSQLType);
+    function CreateOleDBConvertErrror(Index: Integer; WType: Word; SQLType: TZSQLType): EZOleDBConvertError;
     procedure RaiseExceeded(Index: Integer);
     function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
@@ -202,9 +204,9 @@ type
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
     procedure SetUnicodeString(Index: Integer; const Value: ZWideString); reintroduce;
 
-    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
 
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce;
     procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
@@ -1072,7 +1074,7 @@ W_Len:                if PLen^ > MaxL then
                 raise Exception.Create('Unsupported AnsiString-Array Variant');
             end;
           end;
-        else RaiseUnsupportedParamType(I, WType, SQLType);
+        else raise CreateOleDBConvertErrror(I, WType, SQLType);
         //DBTYPE_UDT: ;
         //DBTYPE_HCHAPTER:;
         //DBTYPE_PROPVARIANT:;
@@ -1164,6 +1166,14 @@ constructor TZOleDBPreparedStatement.Create(const Connection: IZConnection;
 begin
   inherited Create(Connection, SQL, Info);
   FClientCP := ConSettings^.ClientCodePage.CP;
+end;
+
+function TZOleDBPreparedStatement.CreateOleDBConvertErrror(Index: Integer;
+  WType: Word; SQLType: TZSQLType): EZOleDBConvertError;
+begin
+  Result := EZOleDBConvertError.Create('Index: '+ZFastCode.IntToStr(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF})+
+    ', OleType: '+ZFastCode.IntToStr(wType)+', SQLType: '+GetEnumName(TypeInfo(TZSQLType), Ord(SQLType))+
+    LineEnding+SUnsupportedParameterType+LineEnding+ 'Stmt: '+GetSQL);
 end;
 
 function TZOleDBPreparedStatement.CreateResultSet(
@@ -1343,7 +1353,7 @@ TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
 TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                         DateTimeToUnicodeSQLTime(Value, PWideChar(Data), ConSettings.WriteFormatSettings, False) shl 1
                     else RaiseExceeded(Index);
-            else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
+            else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
           end;
       (DBTYPE_WSTR or DBTYPE_BYREF): case SQLType of
             stFloat, stDouble: begin
@@ -1365,14 +1375,14 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                       Data := PPointer(Data)^;
                       goto TSWConv;
                     end;
-            else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
+            else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
         end;
       DBTYPE_NUMERIC: begin
                         Double2BCD(Value, PBCD(@fWBuffer[0])^);
                         BCD2SQLNumeric(PBCD(@fWBuffer[0])^, PDB_NUMERIC(Data));
                       end;
       //DBTYPE_VARNUMERIC:;
-      else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
     end;
   end else begin//Late binding
     if SQLtype in [stDate, stTime, stTimeStamp]
@@ -1431,7 +1441,7 @@ begin
                         FillChar(PDB_NUMERIC(Data)^.val[SizeOf(NativeUInt)], SQL_MAX_NUMERIC_LEN-SizeOf(NativeUInt), #0);
                       end;
       //DBTYPE_VARNUMERIC:;
-      else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
     end;
   end else begin//Late binding
     InitFixedBind(Index, ZSQLTypeToBuffSize[SQLType], SQLType2OleDBTypeEnum[SQLType]);
@@ -1486,7 +1496,7 @@ begin
                         PNativeUInt(@PDB_NUMERIC(Data)^.val[0])^ := Value;
                       end;
       //DBTYPE_VARNUMERIC:;
-      else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
     end;
   end else begin//Late binding
     InitFixedBind(Index, ZSQLTypeToBuffSize[SQLType], SQLType2OleDBTypeEnum[SQLType]);
@@ -1590,14 +1600,6 @@ procedure TZOleDBPreparedStatement.RaiseExceeded(Index: Integer);
 begin
   raise EZSQLException.Create(Format(cSParamValueExceeded, [Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}])+LineEnding+
     'Stmt: '+GetSQL);
-end;
-
-procedure TZOleDBPreparedStatement.RaiseUnsupportedParamType(Index: Integer;
-  WType: Word; SQLType: TZSQLType);
-begin
-  raise EZSQLException.Create('Index: '+ZFastCode.IntToStr(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF})+
-    ', OleType: '+ZFastCode.IntToStr(wType)+', SQLType: '+GetEnumName(TypeInfo(TZSQLType), Ord(SQLType))+
-    LineEnding+SUnsupportedParameterType+LineEnding+ 'Stmt: '+GetSQL);
 end;
 
 procedure TZOleDBPreparedStatement.RegisterParameter(Index: Integer;
@@ -1718,7 +1720,7 @@ begin
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, ZPPWideChar(Data)^, '.') shl 1;;
                  end;
       //DBTYPE_VARNUMERIC:;
-     else RaiseUnsupportedParamType(Index, Bind.wType, stBigDecimal);
+     else raise CreateOleDBConvertErrror(Index, Bind.wType, stBigDecimal);
     end;
   end else begin//Late binding
     InitFixedBind(Index, SizeOf(TDB_NUMERIC), DBTYPE_NUMERIC);
@@ -1837,7 +1839,7 @@ Fix_CLob: FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Le
               then Move(Value.GetBuffer^, Data^, DBLENGTH^)
               else RaiseExceeded(Index);
             end;
-      else RaiseUnsupportedParamType(Index, Bind.wType, SQLType);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
     end;
   end else
     InitLongBind(Index, SQLType2OleDBTypeEnum[SQLType]);
@@ -1985,7 +1987,7 @@ begin
                         FillChar(PDB_NUMERIC(Data)^.val[SizeOf(Currency)], SQL_MAX_NUMERIC_LEN-SizeOf(Currency), #0);
                       end;
       //DBTYPE_VARNUMERIC:;
-     else RaiseUnsupportedParamType(Index, Bind.wType, stCurrency);
+     else raise CreateOleDBConvertErrror(Index, Bind.wType, stCurrency);
     end;
   end else begin//Late binding
     InitFixedBind(Index, SizeOf(Currency), DBTYPE_CY);
@@ -2042,7 +2044,7 @@ begin
       stAsciiStream,
       stUnicodeStream,
       stBinaryStream: InitLongBind(ParameterIndex, SQLType2OleDBTypeEnum[SQLType]);
-      stUnknown, stArray, stDataSet: Self.RaiseUnsupportedParamType(ParameterIndex, DBTYPE_WSTR, SQLType);
+      stUnknown, stArray, stDataSet: raise CreateOleDBConvertErrror(ParameterIndex, DBTYPE_WSTR, SQLType);
       else InitFixedBind(ParameterIndex, ZSQLTypeToBuffSize[SQLType], SQLType2OleDBTypeEnum[SQLType]);
     end;
   end;
@@ -2057,9 +2059,68 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetDate(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var Bind: PDBBINDING;
+  Data: PAnsichar;
+  DT: TDateTime;
+label DWConv;
 begin
-  InternalBindDbl(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    Bind := @FDBBindingArray[Index];
+    PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
+    Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
+    case Bind.wType of
+      DBTYPE_NULL:        PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
+      DBTYPE_DATE:        if not TryDateToDateTime(Value, PDateTime(Data)^) then
+                            raise CreateOleDBConvertErrror(Index, Bind.wType, stDate);
+      DBTYPE_DBDATE:      begin
+                            PDBDate(Data).year := Value.Year;
+                            if Value.IsNegative then
+                              PDBDate(Data).year := -PDBDate(Data).year;
+                            PDBDate(Data).month := Value.Month;
+                            PDBDate(Data).day := Value.Day;
+                          end;
+      DBTYPE_DBTIME:      FillChar(Data^, SizeOf(TDBTIME), #0);
+      DBTYPE_DBTIME2:     FillChar(Data^, SizeOf(TDBTIME2), #0);
+      DBTYPE_DBTIMESTAMP: begin
+                            Fillchar(Data^, SizeOf(TDBTimeStamp), #0);
+                            PDBTimeStamp(Data)^.year := Value.Year;
+                            if Value.IsNegative then
+                              PDBTimeStamp(Data)^.year := -PDBTimeStamp(Data)^.year;
+                            PDBTimeStamp(Data)^.month := Value.Month;
+                            PDBTimeStamp(Data)^.day := Value.Day;
+                          end;
+      DBTYPE_DBTIMESTAMPOFFSET: begin
+                            Fillchar(Data^, SizeOf(TDBTIMESTAMPOFFSET), #0);
+                            PDBTIMESTAMPOFFSET(Data)^.year := Value.Year;
+                            if Value.IsNegative then
+                              PDBTIMESTAMPOFFSET(Data)^.year := -PDBTimeStamp(Data)^.year;
+                            PDBTIMESTAMPOFFSET(Data)^.month := Value.Month;
+                            PDBTIMESTAMPOFFSET(Data)^.day := Value.Day;
+                          end;
+      DBTYPE_WSTR:  if Bind.cbMaxLen >= 22 then
+DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
+                        DateTimeToUnicodeSQLDate(Value.Year, Value.Month, Value.Day,
+                          PWideChar(Data), ConSettings.WriteFormatSettings.DateFormat,
+                          False, Value.IsNegative) shl 1
+                    else RaiseExceeded(Index);
+      (DBTYPE_WSTR or DBTYPE_BYREF): begin
+                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      Data := PPointer(Data)^;
+                      goto DWConv;
+                    end;
+      else          if TryDateToDateTime(Value, DT)
+                    then InternalBindDbl(Index, stDate, DT)
+                    else InternalBindSInt(Index, stDate, 1);
+    end;
+  end else begin//Late binding
+    InitDateBind(Index, stDate);
+    BindList.Put(Index, Value);
+  end;
 end;
 
 {**
@@ -2141,7 +2202,7 @@ set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
                     GUIDToBuffer(@Value.D1, ZPPWideChar(Data)^, [guidSet0Term]);
 set_uni_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 72;
                   end;
-      else RaiseUnsupportedParamType(Index, Bind.wType, stGUID);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, stGUID);
     end;
   end else begin
     InitFixedBind(Index, SizeOf(TGUID), DBTYPE_GUID);
@@ -2206,13 +2267,13 @@ begin
           DBTYPE_DATE:  SQLWriter.AddDate(PDateTime(Data)^, ConSettings.WriteFormatSettings.DateFormat, Result);
           DBTYPE_DBTIME: begin
                         Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
-                          PDBTIME(Data)^.second, 0, @fABuffer[0],  ConSettings.WriteFormatSettings.TimeFormat, True);
+                          PDBTIME(Data)^.second, 0, @fABuffer[0],  ConSettings.WriteFormatSettings.TimeFormat, True, False);
                         SQLWriter.AddText(@fABuffer[0], Len, Result);
                       end;
           DBTYPE_DBTIME2: begin
                         Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
                           PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction div 1000000, @fABuffer[0],
-                          ConSettings.WriteFormatSettings.DateTimeFormat, True);
+                          ConSettings.WriteFormatSettings.DateTimeFormat, True, False);
                         SQLWriter.AddText(@fABuffer[0], Len, Result);
                       end;
           DBTYPE_DBTIMESTAMP: begin
@@ -2297,7 +2358,7 @@ begin
                       end;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       //DBTYPE_VARNUMERIC:;
-      else RaiseUnsupportedParamType(Index, Bind.wType, stLong);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, stLong);
     end;
   end else begin//Late binding
     InitFixedBind(Index, SizeOf(Int64), DBTYPE_I8);
@@ -2480,7 +2541,7 @@ begin
           PDBTimeStamp(Data)^.year := W1;
           PDBTimeStamp(Data)^.fraction := W2*1000000
         end;
-     else RaiseUnsupportedParamType(Index, Bind.wType, stString);
+     else raise CreateOleDBConvertErrror(Index, Bind.wType, stString);
       //DBTYPE_UDT: ;
       //DBTYPE_HCHAPTER:;
       //DBTYPE_PROPVARIANT:;
@@ -2587,7 +2648,7 @@ set_Raw:    if Bind.wType and DBTYPE_BYREF <> 0 then begin
           PDBTimeStamp(Data)^.year := W1;
           PDBTimeStamp(Data)^.fraction := W2*1000000
         end;
-      else RaiseUnsupportedParamType(Index, Bind.wType, stUnicodeString);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, stUnicodeString);
       //DBTYPE_UDT: ;
       //DBTYPE_HCHAPTER:;
       //DBTYPE_PROPVARIANT:;
@@ -2671,9 +2732,70 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetTime(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var Bind: PDBBINDING;
+  Data: PAnsichar;
+  DT: TDateTime;
+label TWConv, RConv;
 begin
-  InternalBindDbl(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    Bind := @FDBBindingArray[Index];
+    PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
+    Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
+    case Bind.wType of
+      DBTYPE_NULL:        PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
+      DBTYPE_DATE:        if not TryTimeToDateTime(Value, PDateTime(Data)^) then
+                            raise CreateOleDBConvertErrror(Index, Bind.wType, stTime);
+      DBTYPE_DBDATE:      FillChar(Data^, SizeOf(TDBDate), #0);
+      DBTYPE_DBTIME:      begin
+                            PDBTIME(Data)^.hour := Value.Hour;
+                            PDBTIME(Data)^.minute := Value.Minute;
+                            PDBTIME(Data)^.second := Value.Second;
+                          end;
+      DBTYPE_DBTIME2:     begin
+                            PDBTIME2(Data)^.hour := Value.Hour;
+                            PDBTIME2(Data)^.minute := Value.Minute;
+                            PDBTIME2(Data)^.second := Value.Second;
+                            PDBTIME2(Data)^.fraction := Value.Fractions;
+                          end;
+      DBTYPE_DBTIMESTAMP: begin
+                            PInt64(Data)^ := cPascalDate;
+                            PDBTimeStamp(Data)^.hour := Value.Hour;
+                            PDBTimeStamp(Data)^.minute := Value.Minute;
+                            PDBTimeStamp(Data)^.second := Value.Second;
+                            PDBTimeStamp(Data)^.fraction := Value.Fractions;
+                          end;
+      DBTYPE_DBTIMESTAMPOFFSET: begin
+                            PInt64(Data)^ := cPascalDate;
+                            PDBTIMESTAMPOFFSET(Data)^.hour := Value.Hour;
+                            PDBTIMESTAMPOFFSET(Data)^.minute := Value.Minute;
+                            PDBTIMESTAMPOFFSET(Data)^.second := Value.Second;
+                            PDBTIMESTAMPOFFSET(Data)^.fraction := Value.Fractions;
+                            PDBTIMESTAMPOFFSET(Data)^.timezone_hour := 0;
+                            PDBTIMESTAMPOFFSET(Data)^.timezone_minute := 0;
+                          end;
+      DBTYPE_WSTR:  if (Bind.cbMaxLen >= 26 ){00.00.00.000#0} or ((Bind.cbMaxLen-2) shr 1 = DBLENGTH(ConSettings.WriteFormatSettings.TimeFormatLen)) then
+TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
+                        DateTimeToUnicodeSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                        PWideChar(Data), ConSettings.WriteFormatSettings.TimeFormat, False, Value.IsNegative) shl 1
+                      else RaiseExceeded(Index);
+      (DBTYPE_WSTR or DBTYPE_BYREF): begin
+                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      Data := PPointer(Data)^;
+                      goto TWConv;
+                    end;
+      else          if TryTimeToDateTime(Value, DT)
+                    then InternalBindDbl(Index, stTime, DT)
+                    else InternalBindSint(Index, stTime, 1);
+    end;
+  end else begin//Late binding
+    InitDateBind(Index, stTime);
+    BindList.Put(Index, Value);
+  end;
 end;
 
 {**
@@ -2685,9 +2807,85 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var Bind: PDBBINDING;
+  Data: PAnsichar;
+  DT: TDateTime;
+label TSWConv, RConv;
 begin
-  InternalBindDbl(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    Bind := @FDBBindingArray[Index];
+    PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_OK;
+    Data := PAnsiChar(fDBParams.pData)+Bind.obValue;
+    case Bind.wType of
+      DBTYPE_NULL:        PDBSTATUS(PAnsiChar(FDBParams.pData)+Bind.obStatus)^ := DBSTATUS_S_ISNULL; //Shouldn't happen
+      DBTYPE_DATE:        if not TryTimeStampToDateTime(Value, PDateTime(Data)^) then
+                            raise CreateOleDBConvertErrror(Index, Bind.wType, stTimeStamp);
+      DBTYPE_DBDATE:      begin
+                            PDBDate(Data).year := Value.Year;
+                            if Value.IsNegative then
+                              PDBDate(Data).year := -PDBDate(Data).year;
+                            PDBDate(Data).month := Value.Month;
+                            PDBDate(Data).day := Value.Day;
+                          end;
+      DBTYPE_DBTIME:      begin
+                            PDBTIME(Data)^.hour := Value.Hour;
+                            PDBTIME(Data)^.minute := Value.Minute;
+                            PDBTIME(Data)^.second := Value.Second;
+                          end;
+      DBTYPE_DBTIME2:     begin
+                            PDBTIME2(Data)^.hour := Value.Hour;
+                            PDBTIME2(Data)^.minute := Value.Minute;
+                            PDBTIME2(Data)^.second := Value.Second;
+                            PDBTIME2(Data)^.fraction := Value.Fractions;
+                          end;
+      DBTYPE_DBTIMESTAMP: begin
+                            PDBTimeStamp(Data)^.year := Value.Year;
+                            if Value.IsNegative then
+                              PDBTimeStamp(Data)^.year := -PDBTimeStamp(Data)^.year;
+                            PDBTimeStamp(Data)^.month := Value.Month;
+                            PDBTimeStamp(Data)^.day := Value.Day;
+                            PDBTimeStamp(Data)^.hour := Value.Hour;
+                            PDBTimeStamp(Data)^.minute := Value.Minute;
+                            PDBTimeStamp(Data)^.second := Value.Second;
+                            PDBTimeStamp(Data)^.fraction := Value.Fractions;
+                          end;
+      DBTYPE_DBTIMESTAMPOFFSET: begin
+                            PDBTIMESTAMPOFFSET(Data)^.year := Value.Year;
+                            if Value.IsNegative then
+                              PDBTIMESTAMPOFFSET(Data)^.year := -PDBTIMESTAMPOFFSET(Data)^.year;
+                            PDBTIMESTAMPOFFSET(Data).month := Value.Month;
+                            PDBTIMESTAMPOFFSET(Data).day := Value.Day;
+                            PDBTIMESTAMPOFFSET(Data)^.hour := Value.Hour;
+                            PDBTIMESTAMPOFFSET(Data)^.minute := Value.Minute;
+                            PDBTIMESTAMPOFFSET(Data)^.second := Value.Second;
+                            PDBTIMESTAMPOFFSET(Data)^.fraction := Value.Fractions;
+                            PDBTIMESTAMPOFFSET(Data)^.timezone_hour := Value.TimeZoneHour;
+                            PDBTIMESTAMPOFFSET(Data)^.timezone_minute := Value.TimeZoneMinute;
+                          end;
+      DBTYPE_WSTR:  if (Bind.cbMaxLen >= 48){0000-00-00T00.00.00.000#0}  or ((Bind.cbMaxLen-2) shr 1 = DBLENGTH(ConSettings.WriteFormatSettings.DateTimeFormatLen)) then
+TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
+                        DateTimeToUnicodeSQLTimeStamp(Value.Year, Value.Month, Value.Day,
+                          Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                        PWideChar(Data), ConSettings.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative) shl 1
+                    else RaiseExceeded(Index);
+      (DBTYPE_WSTR or DBTYPE_BYREF): begin
+                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      Data := PPointer(Data)^;
+                      goto TSWConv;
+                    end;
+      else          if ZSysUtils.TryTimeStampToDateTime(Value, DT)
+                    then InternalBindDbl(Index, stTimeStamp, DT)
+                    else InternalBindSInt(Index, stTimeStamp, 1);
+    end;
+  end else begin//Late binding
+    InitDateBind(Index, stTime);
+    BindList.Put(Index, Value);
+  end;
 end;
 
 {**
@@ -2763,7 +2961,7 @@ begin
                         FillChar(PDB_NUMERIC(Data)^.val[SizeOf(UInt64)], SQL_MAX_NUMERIC_LEN-SizeOf(UInt64), #0);
                       end;
       //DBTYPE_VARNUMERIC:;
-      else RaiseUnsupportedParamType(Index, Bind.wType, stULong);
+      else raise CreateOleDBConvertErrror(Index, Bind.wType, stULong);
     end;
   end else begin//Late binding
     InitFixedBind(Index, SizeOf(UInt64), DBTYPE_UI8);

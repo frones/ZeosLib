@@ -144,8 +144,6 @@ type
     constructor Create(const Connection: IZODBCConnection;
       var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
   public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
-
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
@@ -160,9 +158,9 @@ type
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
     procedure SetBigDecimal(Index: Integer; const Value: TBCD);
-    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce;
     procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
 
@@ -1912,25 +1910,74 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetDate(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var Bind: PZODBCParamBind;
+  DT: TDateTime;
+  Len: LengthInt;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.SQLType <> stDate)) then
+      InitBind(Index, 1, stDate);
+    case Bind.ValueType of
+      SQL_C_TYPE_DATE, SQL_C_DATE:
+        with PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^ do begin
+          Year := Value.Year;
+          if Value.IsNegative then
+            Year := -Year;
+          Month := Value.Month;
+          Day := Value.Day;
+        end;
+      SQL_C_TYPE_TIME,
+      SQL_C_TIME:     FillChar(Bind.ParameterValuePtr^, SizeOf(TSQL_TIME_STRUCT), #0);
+      SQL_C_SS_TIME2: FillChar(Bind.ParameterValuePtr^, SizeOf(TSQL_SS_TIME2_STRUCT), #0);
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP: begin
+          FillChar(Bind.ParameterValuePtr^, SizeOf(TSQL_TIMESTAMP_STRUCT), #0);
+          With PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^ do begin
+            Year := Value.Year;
+            if Value.IsNegative then
+              Year := -Year;
+            Month := Value.Month;
+            Day := Value.Day;
+          end;
+        end;
+      SQL_C_SS_TIMESTAMPOFFSET: begin
+          FillChar(Bind.ParameterValuePtr^, SizeOf(TSQL_SS_TIMESTAMPOFFSET_STRUCT), #0);
+          With PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^ do begin
+            Year := Value.Year;
+            if Value.IsNegative then
+              Year := -Year;
+            Month := Value.Month;
+            Day := Value.Day;
+          end;
+        end;
+      SQL_C_WCHAR:  begin
+              Len := ZSysUtils.DateTimeToUnicodeSQLDate(Value.Year, Value.Month, Value.Day,
+                @fWBuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+              SetPWideChar(Index, @fWBuffer[0], Len);
+              Exit;
+            end;
+      SQL_C_CHAR:  begin
+              Len := ZSysUtils.DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
+                @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+              SetPAnsiChar(Index, @fABuffer[0], Len);
+              Exit;
+            end;
+      else  begin
+              if TryDateToDateTime(Value, DT)
+              then InternalBindDouble(Index, stDate, DT)
+              else BindSInteger(Index, stDate, 1);
+              Exit;
+            end;
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else
+    BindList.Put(Index, Value);
 end;
-
-{**
-  Sets the designated parameter the default SQL value.
-  <P><B>Note:</B> You must specify the default value.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param Value the default value normally defined in the field's DML SQL statement
-}
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
-procedure TZAbstractODBCPreparedStatement.SetDefaultValue(
-  ParameterIndex: Integer; const Value: string);
-begin
-  //its' a nop
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>double</code> value.
@@ -2312,9 +2359,86 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetTime(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var Bind: PZODBCParamBind;
+  DT: TDateTime;
+  Len: LengthInt;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.SQLType <> stTime)) then
+      InitBind(Index, 1, stTime);
+    case Bind.ValueType of
+      SQL_C_TYPE_DATE, SQL_C_DATE: FillChar(Bind.ParameterValuePtr^, SizeOf(TSQL_DATE_STRUCT), #0);
+      SQL_C_TYPE_TIME,
+      SQL_C_TIME:     with PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^ do begin
+                        if SizeOf(TSQL_TIME_STRUCT) = SizeOf(TZTime)-6 then
+                          PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^ := PSQL_TIME_STRUCT(@Value.Hour)^
+                        else begin
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                        end;
+                      end;
+      SQL_C_SS_TIME2: with PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^ do begin
+                        if SizeOf(TSQL_SS_TIME2_STRUCT) = SizeOf(TZTime)-2 then
+                          PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^ := PSQL_SS_TIME2_STRUCT(@Value.Hour)^
+                        else begin
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                          Fraction := Value.Fractions
+                        end;
+                      end;
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP: begin
+                        With PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^ do begin
+                          Year := 1899;
+                          Month := 12;
+                          Day := 31;
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                          fraction := Value.Fractions;
+                        end;
+                      end;
+      SQL_C_SS_TIMESTAMPOFFSET:
+                        With PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^ do begin
+                          Year := 1899;
+                          Month := 12;
+                          Day := 31;
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                          Fraction := Value.Fractions;
+                          timezone_hour := 0;
+                          timezone_minute := 0;
+                        end;
+      SQL_C_WCHAR:  begin
+              Len := ZSysUtils.DateTimeToUnicodeSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                @fWBuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+              SetPWideChar(Index, @fWBuffer[0], Len);
+              Exit;
+            end;
+      SQL_C_CHAR:  begin
+              Len := ZSysUtils.DateTimeToUnicodeSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+              SetPAnsiChar(Index, @fABuffer[0], Len);
+              Exit;
+            end;
+      else  begin
+              if TryTimeToDateTime(Value, DT)
+              then InternalBindDouble(Index, stTime, DT)
+              else BindSInteger(Index, stTime, 1);
+              Exit;
+            end;
+      end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else
+    BindList.Put(Index, Value);
 end;
 
 {**
@@ -2326,9 +2450,90 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var Bind: PZODBCParamBind;
+  DT: TDateTime;
+  Len: LengthInt;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if fBindImmediat then begin
+    {$R-}
+    Bind := @fParamBindings[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.SQLType <> stTimeStamp)) then
+      InitBind(Index, 1, stTimeStamp);
+    case Bind.ValueType of
+      SQL_C_TYPE_DATE,
+      SQL_C_DATE:       with PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^ do begin
+                          Year := Value.Year;
+                          if Value.IsNegative then
+                            Year := -Year;
+                          Month := Value.Month;
+                          Day := Value.Day;
+                        end;
+      SQL_C_TYPE_TIME,
+      SQL_C_TIME:       with PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^ do begin
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                        end;
+      SQL_C_SS_TIME2:   with PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^ do begin
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                          Fraction := Value.Fractions
+                        end;
+      SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP:
+                        With PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^ do begin
+                          Year := Value.Year;
+                          Month := Value.Month;
+                          Day := Value.Day;
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                          fraction := Value.Fractions;
+                          if Value.IsNegative then
+                            Year := -Year;
+                        end;
+      SQL_C_SS_TIMESTAMPOFFSET:
+                        With PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^ do begin
+                          Year := Value.Year;
+                          Month := Value.Month;
+                          Day := Value.Day;
+                          Hour := Value.Hour;
+                          Minute := Value.Minute;
+                          Second := Value.Second;
+                          Fraction := Value.Fractions;
+                          timezone_hour := Value.TimeZoneHour;
+                          timezone_minute := Value.TimeZoneMinute;
+                          if Value.IsNegative then
+                            Year := -Year;
+                        end;
+      SQL_C_WCHAR:  begin
+              Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.Year, Value.Month, Value.Day,
+                Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                @fWBuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+              SetPWideChar(Index, @fWBuffer[0], Len);
+              Exit;
+            end;
+      SQL_C_CHAR:  begin
+              Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.Year, Value.Month, Value.Day,
+                Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+              SetPAnsiChar(Index, @fABuffer[0], Len);
+              Exit;
+            end;
+      else  begin
+              if TryTimeStampToDateTime(Value, DT)
+              then InternalBindDouble(Index, stTimeStamp, DT)
+              else BindSInteger(Index, stTimeStamp, 1);
+              Exit;
+            end;
+    end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+  end else
+    BindList.Put(Index, Value);
 end;
 
 {**

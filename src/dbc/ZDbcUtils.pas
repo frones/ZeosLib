@@ -296,7 +296,11 @@ const
     SizeOf(WordBool),
     SizeOf(Byte), SizeOf(ShortInt), SizeOf(Word), SizeOf(SmallInt), SizeOf(Cardinal), SizeOf(Integer), SizeOf(UInt64), SizeOf(Int64),  //ordinals
     SizeOf(Single), SizeOf(Double), SizeOf(Currency), SizeOf(TBcd),
+    {$IFDEF TEST_RECORD_REFACTORING}
+    SizeOf(TZDate), SizeOf(TZTime), SizeOf(TZTimeStamp),
+    {$ELSE}
     SizeOf(TDateTime), SizeOf(TDateTime), SizeOf(TDateTime),
+    {$ENDIF}
     SizeOf(TGUID),
     //now varying size types in equal order
     0,0,0,//stString, stUnicodeString, stBytes,

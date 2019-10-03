@@ -169,9 +169,9 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);// override;
     procedure GetGUID(ColumnIndex: Integer; Var Result: TGUID); //override;
     function GetBytes(ColumnIndex: Integer): TBytes; //override;
-    function GetDate(ColumnIndex: Integer): TDateTime; //override;
-    function GetTime(ColumnIndex: Integer): TDateTime; //override;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime; //override;
+    function GetDate(ColumnIndex: Integer): TDateTime; overload;
+    function GetTime(ColumnIndex: Integer): TDateTime; overload;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
     function GetBlob(ColumnIndex: Integer): IZBlob; //override;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;

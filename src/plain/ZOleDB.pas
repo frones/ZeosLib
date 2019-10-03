@@ -1783,7 +1783,8 @@ type
     fraction: ULONG;
   end;
 
-  DBTIMESTAMPOFFSET = record
+  PDBTIMESTAMPOFFSET = ^TDBTIMESTAMPOFFSET;
+  TDBTIMESTAMPOFFSET = record
     year:           SHORT;
     month:          USHORT;
     day:            USHORT;

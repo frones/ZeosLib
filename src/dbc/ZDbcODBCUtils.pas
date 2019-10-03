@@ -385,10 +385,13 @@ Dbl:                    Result := stDouble;
                         else Result := stAsciiStream;
                         ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
                       end;
+    SQL_SS_TIMESTAMPOFFSET: begin
+                        Result := stTimeStamp;
+                        ODBCCType := SQL_C_SS_TIMESTAMPOFFSET;
+                      end;
     SQL_DATETIME,
     SQL_INTERVAL,
     SQL_TYPE_TIMESTAMP,
-    SQL_SS_TIMESTAMPOFFSET,
     SQL_TIMESTAMP:    begin
                         Result := stTimeStamp;
                         ODBCCType := SQL_C_TYPE_TIMESTAMP;
