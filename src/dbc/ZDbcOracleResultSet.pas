@@ -1996,6 +1996,14 @@ begin
     if (ColumnInfo.ColumnType in [stString, stUnicodeString]) then begin
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+      {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
+        and is different to the native db charset
+        so we'll increase the buffers to avoid truncation errors
+        and we use 8 byte aligned buffers. Here we go:}
+      if Consettings.ClientCodePage.Encoding <> ceUTF16
+      then CurrentVar^.value_sz := ColumnInfo.Precision * ConSettings.ClientCodePage.CharWidth + 1
+      else CurrentVar^.value_sz := ColumnInfo.Precision shl 1 + SizeOf(WideChar);
+      CurrentVar^.value_sz := ((CurrentVar^.value_sz shr 3)+1) shl 3;
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
       if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
