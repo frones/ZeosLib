@@ -1922,6 +1922,7 @@ begin
     SQLT_DAT:   begin
                   POraDate(Bind^.valuep).Cent := Value.Year div 100 +100;
                   POraDate(Bind^.valuep).Year := Value.Year mod 100 +100;
+                  POraDate(Bind^.valuep).Day  := Value.Day;
                   POraDate(Bind^.valuep).Month:= Value.Month;
                   POraDate(Bind^.valuep).Hour := Value.Hour +1;
                   POraDate(Bind^.valuep).Min  := Value.Minute +1;
