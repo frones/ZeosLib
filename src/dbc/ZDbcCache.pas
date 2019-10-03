@@ -3421,11 +3421,11 @@ begin
       stBoolean:    Result := EncodeBoolean(PWordBool(ValuePtr)^);
       stDate:       begin
                       InitializeVariant(Result, vtDateTime);
-                      {$IFDEF BCC32_vtDateTime_ERROR}TDateTime
+                      {$IFDEF BCC32_vtDateTime_ERROR}
                       IsNull := TryDateToDateTime(PZDate(ValuePtr)^, PDateTime(@Result.VDateTime)^);
                       {$ELSE}
-                      {$ENDIF}
                       IsNull := TryDateToDateTime(PZDate(ValuePtr)^, Result.VDateTime);
+                      {$ENDIF}
                     end;
       stTime:       begin
                       InitializeVariant(Result, vtDateTime);
