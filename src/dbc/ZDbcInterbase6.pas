@@ -512,10 +512,13 @@ end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
 var
-  AC,RO: Boolean;
+  AC,RO, HC: Boolean;
   TIL: TZTransactIsolationLevel;
 begin
-  FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
+  HC := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
+  if (HC <> FHardCommit) and Assigned(FTransactionManager) then //*** ADDED THIS CHECK by EMartin ***
+    FTransactionManager.GetActiveTransaction.CloseTransaction;
+  FHardCommit := HC;
   FGUIDProps.InitFromProps(Info);
   for AC := false to true do
     for RO := false to true do
