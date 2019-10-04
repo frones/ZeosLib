@@ -572,7 +572,7 @@ function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
+    Result := ZSysUtils.ZCompareDateTime(PDateTime(V1)^, PDateTime(V2)^)
 end;
 
 function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -584,7 +584,79 @@ function CompareDateTime_Equals(const Null1, Null2: Boolean; const V1, V2): Inte
 begin
   Result := NullsEqualMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PDateTime(V1)^ <> PDateTime(V2)^);
+    Result := ZSysUtils.ZCompareDateTime(PDateTime(V1)^, PDateTime(V2)^)
+end;
+
+function CompareZDate_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PInt64(V1)^ <> PInt64(V2)^)
+end;
+
+function CompareZDate_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZCompareDate(PZDate(V1)^, PZDate(V2)^)
+end;
+
+function CompareZDate_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := -ZCompareDate(PZDate(V1)^, PZDate(V2)^)
+end;
+
+function CompareZTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then begin
+    Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
+    if Result = 0 then
+        Result := Ord(PInt64(PAnsiChar(V1)+2)^ <> PInt64(PAnsiChar(V2)+2)^);
+  end;
+end;
+
+function CompareZTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := -ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTimeStamp_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then begin
+    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+    if Result = 0 then begin
+      Result := Ord(PInt64(PAnsiChar(V1)+8)^ <> PInt64(PAnsiChar(V2)+8)^);
+      if Result = 0 then
+        Result := Ord(PInt64(PAnsiChar(V1)+14)^ <> PInt64(PAnsiChar(V2)+14)^);
+    end;
+  end;
+end;
+
+function CompareZTimeStamp_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
+end;
+
+function CompareZTimeStamp_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := -ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
 end;
 
 function CompareGUID_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -1048,7 +1120,7 @@ begin
       stLong: Result := Integer(PInt64(Data)^);
       stFloat: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^));
       stDouble: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^));
-      stCurrency: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^));
+      stCurrency: Result := Integer(PInt64(Data)^ div 10000);
       stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
@@ -1094,7 +1166,7 @@ begin
       stLong: Result := PInt64(Data)^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stCurrency: Result := (PInt64(Data)^ div 10000);
       stBigDecimal: Result := BCD2UInt64(PBCD(Data)^);
       stString, stUnicodeString: if Data^ <> nil then
           if fRaw
@@ -1587,12 +1659,21 @@ begin
         ckDescending: Result := CompareBigDecimal_Desc;
         ckEquals:     Result := CompareBigDecimal_Equals;
       end;
-    stDate, stTime, stTimestamp:
-      case CompareKind of
-        ckAscending:  Result := CompareDateTime_Asc;
-        ckDescending: Result := CompareDateTime_Desc;
-        ckEquals:     Result := CompareDateTime_Equals;
-      end;
+    stDate: case CompareKind of
+              ckAscending:  Result := CompareZDate_Asc;
+              ckDescending: Result := CompareZDate_Desc;
+              ckEquals:     Result := CompareZDate_Equals;
+            end;
+    stTime: case CompareKind of
+              ckAscending:  Result := CompareZTime_Asc;
+              ckDescending: Result := CompareZTime_Desc;
+              ckEquals:     Result := CompareZTime_Equals;
+            end;
+    stTimestamp: case CompareKind of
+              ckAscending:  Result := CompareZTimeStamp_Asc;
+              ckDescending: Result := CompareZTimeStamp_Desc;
+              ckEquals:     Result := CompareZTimeStamp_Equals;
+            end;
     stGUID:
       case CompareKind of
         ckAscending:  Result := CompareGUID_Asc;
@@ -2667,7 +2748,7 @@ begin
       stLong: Result := PInt64(Data)^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stCurrency: Result := PInt64(Data)^ div 10000;
       stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw

@@ -709,6 +709,7 @@ procedure TimeStampFromDate(const Date: TZDate; var TS: TZTimeStamp);
 procedure TimeFromTimeStamp(const TS: TZTimeStamp; var Time: TZTime);
 procedure DateFromTimeStamp(const TS: TZTimeStamp; var Date: TZDate);
 
+function ZCompareDateTime(const Value1, Value2: TDateTime): Integer;
 function ZCompareDate(const Value1, Value2: TZDate): Integer;
 function ZCompareTime(const Value1, Value2: TZTime): Integer;
 function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
@@ -2857,9 +2858,7 @@ label Next, Fmt;
 begin
   Result := False;
   PF := Pointer(Format);
-  if SizeOf(TZDate) = SizeOf(Int64)
-  then PInt64(@Date.Year)^ := 0
-  else FillChar(Date, SizeOf(TZDate), #0);
+  PInt64(@Date.Year)^ := 0;
   if (PF = nil) or (Value = nil) or (Len=0) then Exit;
   FEnd := PF+Length(Format);
   VEnd := Value + Len;
@@ -2936,9 +2935,7 @@ label Next, IncF, Fmt;
 begin
   Result := False;
   PF := Pointer(Format);
-  if SizeOf(TZDate) = SizeOf(Int64)
-  then PInt64(@Date.Year)^ := 0
-  else FillChar(Date, SizeOf(TZDate), #0);
+  PInt64(@Date.Year)^ := 0;
   if (PF = nil) or (Value = nil) or (Len=0) then Exit;
   FEnd := PF+Length(Format);
   VEnd := Value + Len;
@@ -3015,11 +3012,8 @@ label Next, zFlush, jmpFrac;
 begin
   Result := False;
   PF := Pointer(Format);
-  if SizeOf(TZTime) = 12 then begin
-    PCardinal(@Time.Hour)^ := 0;
-    PInt64(@Time.Second)^ := 0;
-  end else
-    FillChar(Time, SizeOf(TZTime), #0);
+  PCardinal(@Time.Hour)^ := 0;
+  PInt64(@Time.Second)^ := 0;
   if (PF = nil) or (Value = nil) or (Len=0) then Exit;
   FEnd := PF+Length(Format);
   VEnd := Value + Len;
@@ -3125,11 +3119,8 @@ label Next, zFlush, jmpFrac;
 begin
   Result := False;
   PF := Pointer(Format);
-  if SizeOf(TZTime) = 12 then begin
-    PCardinal(@Time.Hour)^ := 0;
-    PInt64(@Time.Second)^ := 0;
-  end else
-    FillChar(Time, SizeOf(TZTime), #0);
+  PCardinal(@Time.Hour)^ := 0;
+  PInt64(@Time.Second)^ := 0;
   if (PF = nil) or (Value = nil) or (Len=0) then Exit;
   FEnd := PF+Length(Format);
   VEnd := Value + Len;
@@ -3596,6 +3587,18 @@ procedure DateFromTimeStamp(const TS: TZTimeStamp; var Date: TZDate);
 begin
   PZDate(@Date.Year)^ := PZDate(@TS.Year)^;
   Date.IsNegative := TS.IsNegative;
+end;
+
+{** EH: overflow safe and exact comparision of pascal datetime values }
+function ZCompareDateTime(const Value1, Value2: TDateTime): Integer;
+var
+  TS1, TS2: TTimeStamp;
+begin
+  TS1 := DateTimeToTimeStamp(Value1);
+  TS2 := DateTimeToTimeStamp(Value2);
+  Result := Ord(TS1.Date > TS2.Date)-Ord(TS1.Date < TS2.Date);
+  if Result = 0 then
+    Result := Ord(TS1.Time > TS2.Time)-Ord(TS1.Time < TS2.Time);
 end;
 
 function ZCompareDate(const Value1, Value2: TZDate): Integer;

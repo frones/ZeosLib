@@ -799,12 +799,7 @@ DoWideCompare:
     vtDateTime:
       begin
         TempDateTime := GetAsDateTime(Value2);
-        if Value1.VDateTime < TempDateTime then
-          Result := -1
-        else if Value1.VDateTime > TempDateTime then
-          Result := 1
-        else
-          Result := 0;
+        Result := ZCompareDateTime(Value1.VDateTime, TempDateTime);
       end;
     {$ENDIF}
     vtPointer:
