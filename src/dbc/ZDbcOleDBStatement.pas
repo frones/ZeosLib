@@ -2763,14 +2763,14 @@ begin
                             PDBTIME2(Data)^.fraction := Value.Fractions;
                           end;
       DBTYPE_DBTIMESTAMP: begin
-                            PInt64(Data)^ := cPascalDate;
+                            PInt64(Data)^ := cPascalIntegralDatePart;
                             PDBTimeStamp(Data)^.hour := Value.Hour;
                             PDBTimeStamp(Data)^.minute := Value.Minute;
                             PDBTimeStamp(Data)^.second := Value.Second;
                             PDBTimeStamp(Data)^.fraction := Value.Fractions;
                           end;
       DBTYPE_DBTIMESTAMPOFFSET: begin
-                            PInt64(Data)^ := cPascalDate;
+                            PInt64(Data)^ := cPascalIntegralDatePart;
                             PDBTIMESTAMPOFFSET(Data)^.hour := Value.Hour;
                             PDBTIMESTAMPOFFSET(Data)^.minute := Value.Minute;
                             PDBTIMESTAMPOFFSET(Data)^.second := Value.Second;

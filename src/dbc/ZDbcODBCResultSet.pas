@@ -1346,7 +1346,7 @@ begin
                       Result.IsNegative := PSQL_DATE_STRUCT(fColDataPtr)^.year < 0;
                     end;
       stTime:     begin
-                    PInt64(@Result.Year)^ := cPascalDate;
+                    PInt64(@Result.Year)^ := cPascalIntegralDatePart;
                     if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then begin
                       PInt64(@Result.Year)^ := 0;
                       Result.Hour := PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour;

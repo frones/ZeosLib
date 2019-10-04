@@ -2398,7 +2398,7 @@ begin
                         With PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^ do begin
                           Year := 1899;
                           Month := 12;
-                          Day := 31;
+                          Day := 30;
                           Hour := Value.Hour;
                           Minute := Value.Minute;
                           Second := Value.Second;
@@ -2409,7 +2409,7 @@ begin
                         With PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^ do begin
                           Year := 1899;
                           Month := 12;
-                          Day := 31;
+                          Day := 30;
                           Hour := Value.Hour;
                           Minute := Value.Minute;
                           Second := Value.Second;

@@ -1414,8 +1414,7 @@ const
   MSecsOfHour = 60 * MSecsOfMinute;
   MSecsOfDay = MSecsOfHour * 24;
 
-  cPascalDate: Int64 = 133144774507; //1899.12.31 00;
-
+  cPascalIntegralDatePart: Int64 = 128849807211; //1899.12.30 00;
 implementation
 
 uses DateUtils, Math,
@@ -3562,7 +3561,7 @@ end;
 
 procedure TimeStampFromTime(const Time: TZTime; var TS: TZTimeStamp);
 begin
-  PInt64(@TS.Year)^ := cPascalDate;
+  PInt64(@TS.Year)^ := cPascalIntegralDatePart;
   PInt64(@TS.Hour)^ := PInt64(@Time.Hour)^;
   PInt64(@TS.Fractions)^ := 0;
   TS.Fractions := Time.Fractions;
@@ -3786,7 +3785,7 @@ function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal;
 begin
   if (Len > 2) and (P <> nil) then
     if PByte(P+2)^ = Ord(':') then begin
-      PInt64(@TimeStamp.Year)^ := cPascalDate;
+      PInt64(@TimeStamp.Year)^ := cPascalIntegralDatePart;
       PCardinal(@TimeStamp.TimeZoneHour)^ := 0;
       Result := TryRawToTime(P, Len,
         FormatSettings.TimeFormat, PZTime(@TimeStamp.Hour)^)
@@ -3814,7 +3813,7 @@ function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal;
 begin
   if (Len > 2) and (P <> nil) then
     if PByte(P+2)^ = Ord(':') then begin
-      PInt64(@TimeStamp.Year)^ := cPascalDate;
+      PInt64(@TimeStamp.Year)^ := cPascalIntegralDatePart;
       PCardinal(@TimeStamp.TimeZoneHour)^ := 0;
       Result := TryUniToTime(P, Len,
         FormatSettings.TimeFormat, PZTime(@TimeStamp.Hour)^)

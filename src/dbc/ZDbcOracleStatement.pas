@@ -1861,14 +1861,14 @@ begin
                   POraDate(Bind^.valuep).Cent   := 1899 div 100 +100;
                   POraDate(Bind^.valuep).Year   := 1899 mod 100 +100;
                   POraDate(Bind^.valuep).Month  := 12;
-                  POraDate(Bind^.valuep).Day    := 31;
+                  POraDate(Bind^.valuep).Day    := 30;
                   POraDate(Bind^.valuep).Hour := Value.Hour +1;
                   POraDate(Bind^.valuep).Min := Value.Minute +1;
                   POraDate(Bind^.valuep).Sec := Value.Second +1;
                 end;
     SQLT_TIMESTAMP: begin
                   Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
-                    FOCIError, PPOCIDescriptor(Bind.valuep)^, 1899, 12, 31,
+                    FOCIError, PPOCIDescriptor(Bind.valuep)^, 1899, 12, 30,
                       Value.Hour, Value.Minute, Value.Second, Value.Fractions, nil, 0);
                   if Status <> OCI_SUCCESS then
                     CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
