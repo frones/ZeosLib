@@ -67,7 +67,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement, ZCollections,
-  ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties, ZClasses;
+  ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties, ZDbcUtils, ZClasses;
 
 type
   IZOleDBPreparedStatement = Interface(IZStatement)
@@ -167,6 +167,7 @@ type
     procedure RaiseExceeded(Index: Integer);
     function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -240,9 +241,10 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, TypInfo,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} DateUtils,
   ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcOleDBMetadata,
-  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages, ZDbcResultSet,
+  ZFastCode, ZDbcMetadata, ZMessages, ZDbcResultSet,
   ZDbcCachedResultSet, ZDbcGenericResolver;
 
+var DefaultPreparableTokens: TPreparablePrefixTokens;
 { TZAbstractOleDBStatement }
 
 {**
@@ -1235,6 +1237,11 @@ SetUniArray:
   Arr := BindList[Index].Value;
 end;
 
+function TZOleDBPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
+begin
+  Result := @DefaultPreparableTokens;
+end;
+
 procedure TZOleDBPreparedStatement.InitDateBind(Index: Integer;
   SQLType: TZSQLType);
 var Bind: PDBBINDING;
@@ -1510,8 +1517,8 @@ var
   DBInfo: IZDataBaseInfo;
 begin
   if Not Prepared then begin//prevent PrepareInParameters
-    fDEFERPREPARE := {False;//}StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True'));
-    fBindImmediat := {False;//}fDEFERPREPARE;
+    fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
+    fBindImmediat := fDEFERPREPARE;
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
       SetOleCommandProperties;
@@ -3078,6 +3085,14 @@ begin
   Result := TZOleDBPreparedStatement.Create(Connection, SQL, Info);
   TZOleDBPreparedStatement(Result).Prepare;
 end;
+
+initialization
+SetLength(DefaultPreparableTokens, 5);
+DefaultPreparableTokens[0].MatchingGroup := 'DELETE';
+DefaultPreparableTokens[1].MatchingGroup := 'INSERT';
+DefaultPreparableTokens[2].MatchingGroup := 'UPDATE';
+DefaultPreparableTokens[3].MatchingGroup := 'SELECT';
+DefaultPreparableTokens[4].MatchingGroup := 'CALL';
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 end.

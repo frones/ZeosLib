@@ -1240,7 +1240,7 @@ var
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then
+  if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode{$ENDIF} or Assigned(ComparePrefixTokens) then
   begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     try
