@@ -1518,7 +1518,6 @@ var
 begin
   if Not Prepared then begin//prevent PrepareInParameters
     fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
-    fBindImmediat := fDEFERPREPARE;
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
       SetOleCommandProperties;
@@ -3087,12 +3086,14 @@ begin
 end;
 
 initialization
-SetLength(DefaultPreparableTokens, 5);
+
+SetLength(DefaultPreparableTokens, 6);
 DefaultPreparableTokens[0].MatchingGroup := 'DELETE';
 DefaultPreparableTokens[1].MatchingGroup := 'INSERT';
 DefaultPreparableTokens[2].MatchingGroup := 'UPDATE';
 DefaultPreparableTokens[3].MatchingGroup := 'SELECT';
 DefaultPreparableTokens[4].MatchingGroup := 'CALL';
+DefaultPreparableTokens[5].MatchingGroup := 'SET';
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 end.
