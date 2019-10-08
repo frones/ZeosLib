@@ -2380,7 +2380,7 @@ begin
         B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
 Str_Conv:
         if B
-        then B := TryPCharToDateTime(PWideChar(P), L, formatSettings, Result)
+        then B := TryPCharToDateTime(PWideChar(P), L, formatSettings, Result{%H-})
         else B := TryPCharToDateTime(PAnsiChar(P), L, formatSettings, Result);
         if B then goto Fail;
       end;
@@ -2427,7 +2427,7 @@ begin
         B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
 Str_Conv:
         if B
-        then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result)
+        then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result{%H-})
         else B := TryPCharToDateTime(PAnsiChar(P), L, FormatSettings, Result);
         if not B then goto Fail;
       end;
@@ -2474,7 +2474,7 @@ begin
         B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
 Str_Conv:
         if B
-        then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result)
+        then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result{%H-})
         else B := TryPCharToDateTime(PAnsiChar(P), L, FormatSettings, Result);
         if not B then goto Fail;
       end;

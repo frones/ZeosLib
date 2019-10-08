@@ -3852,7 +3852,7 @@ end;
 function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
 var TS: TZTimeStamp;
 begin
-  if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
+  if TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-}) then
     Result := TryTimeStampToDateTime(TS, DateTime)
   else begin
     Result := False;
@@ -3863,7 +3863,7 @@ end;
 function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
 var TS: TZTimeStamp;
 begin
-  if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
+  if TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-}) then
     Result := TryTimeStampToDateTime(TS, DateTime)
   else begin
     Result := False;
@@ -4874,7 +4874,7 @@ end;
   @return the length in code-points of written value.
 }
 function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
-  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+  const Format: String; Quoted, Negative: Boolean): Byte;
 var PStart: PWideChar;
   PFormat, PEnd: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
