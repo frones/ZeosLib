@@ -141,7 +141,6 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     procedure SetBindCapacity(Capacity: Integer); override;
-    function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
   public
     constructor Create(const Connection: IZODBCConnection;
       var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
@@ -187,8 +186,14 @@ type
 
   TZODBCPreparedStatementW = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
   protected
+    FCachedQueryUni: TUnicodeStringDynArray;
+    FIsParamIndex: TBooleanDynArray;
+  protected
     function ExecutDirect: RETCODE; override;
     procedure InternalPrepare; override;
+  public
+    procedure Unprepare; override;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
   end;
 
   TZODBCStatementW = class(TZAbstractODBCStatement)
@@ -212,8 +217,14 @@ type
 
   TZODBCPreparedStatementA = class(TZAbstractODBCPreparedStatement, IZPreparedStatement)
   protected
+    FCachedQueryRaw: TRawByteStringDynArray;
+    FIsParamIndex: TBooleanDynArray;
+  protected
     function ExecutDirect: RETCODE; override;
     procedure InternalPrepare; override;
+  public
+    procedure Unprepare; override;
+    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
   end;
 
   TZODBCStatementA = class(TZAbstractODBCStatement)
@@ -675,6 +686,33 @@ begin
   Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL))
 end;
 
+function TZODBCPreparedStatementW.GetUnicodeEncodedSQL(
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+var I: Integer;
+  {$IFNDEF UNICODE}SQLWriter: TZUnicodeSQLStringWriter;{$ENDIF}
+begin
+  if Length(FCachedQueryUni) = 0 then begin
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(SQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, nil,
+      @DefaultPreparableTokens, FTokenMatchIndex);
+    FCountOfQueryParams := 0;
+    Result := ''; //init Result
+    {$IFNDEF UNICODE}SQLWriter := TZUnicodeSQLStringWriter.Create(Length(SQL));{$ENDIF}
+    for I := 0 to High(FCachedQueryUni) do begin
+      {$IFNDEF UNICODE}SQLWriter.AddText(FCachedQueryUni[i], Result);{$ENDIF}
+      Inc(FCountOfQueryParams, Ord(FIsParamIndex[i]));
+    end;
+    {$IFNDEF UNICODE}
+    SQLWriter.Finalize(Result);
+    FreeAndNil(SQLWriter);
+    {$ELSE}
+    Result := SQL;
+    {$ENDIF}
+    SetBindCapacity(FCountOfQueryParams);
+  end else
+    Result := inherited GetUnicodeEncodedSQL(SQL);
+end;
+
 procedure TZODBCPreparedStatementW.InternalPrepare;
 begin
   fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
@@ -686,6 +724,12 @@ begin
     fBindImmediat := False;
 end;
 
+procedure TZODBCPreparedStatementW.Unprepare;
+begin
+  inherited;
+  SetLength(FCachedQueryUni, 0);
+end;
+
 { TZODBCPreparedStatementA }
 
 function TZODBCPreparedStatementA.ExecutDirect: RETCODE;
@@ -693,10 +737,44 @@ begin
   Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(ASQL), Length(ASQL));
 end;
 
+function TZODBCPreparedStatementA.GetRawEncodedSQL(
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+var I: Integer;
+  SQLWriter: TZRawSQLStringWriter;
+begin
+  if FCachedQueryRaw = nil then begin
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, nil,
+      @DefaultPreparableTokens, FTokenMatchIndex);
+    FCountOfQueryParams := 0;
+    Result := EmptyRaw; //init Result
+    SQLWriter := TZRawSQLStringWriter.Create(Length(SQL));
+    for I := 0 to High(FCachedQueryRaw) do begin
+      SQLWriter.AddText(FCachedQueryRaw[i], Result);
+      Inc(FCountOfQueryParams, Ord(FIsParamIndex[i]));
+    end;
+    SQLWriter.Finalize(Result);
+    FreeAndNil(SQLWriter);
+    SetBindCapacity(FCountOfQueryParams);
+  end else
+    Result := Inherited GetRawEncodedSQL(SQL);
+end;
+
 procedure TZODBCPreparedStatementA.InternalPrepare;
 begin
-  CheckStmtError(TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL)));
-  FHandleState := hsPrepared;
+  fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
+  if fDEFERPREPARE then begin
+    CheckStmtError(TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL)));
+    FHandleState := hsPrepared;
+    fBindImmediat := True;
+  end else
+    fBindImmediat := False;
+end;
+
+procedure TZODBCPreparedStatementA.Unprepare;
+begin
+  inherited;
+  SetLength(FCachedQueryRaw, 0);
 end;
 
 { TZAbstractODBCPreparedStatement }
@@ -1426,11 +1504,6 @@ begin
   end;
 end;
 
-function TZAbstractODBCPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
-begin
-  Result := @DefaultPreparableTokens;
-end;
-
 procedure TZAbstractODBCPreparedStatement.InternalBindDouble(Index: Integer;
   SQLType: TZSQLType; const Value: Double);
 var Bind: PZODBCParamBind;
@@ -1673,6 +1746,7 @@ begin
   Bind.InputOutputType := ODBCInputOutputType[SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]][ParamType] ;
   if not Bind.Described then begin
     Bind.Described := True;
+    Bind.SQLType := SQLType;
     if (SQLtype in [stAsciiStream, stUnicodeStream, stBinaryStream])
     then Bind.BufferLength := SizeOf(Pointer) //range check issue on CalcBufSize
     else if (SQLtype in [stString, stUnicodeString, stBytes]) then begin
@@ -2722,7 +2796,7 @@ end;
 function TZODBCCallableStatementW.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var  I: Integer;
-  SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
+  SQL: SQLString;
   SQLWriter: TZSQLStringWriter;
 begin
   //https://docs.microsoft.com/en-us/sql/relational-databases/native-client-ole-db-how-to/results/execute-stored-procedure-with-rpc-and-process-output?view=sql-server-2017
@@ -2759,26 +2833,27 @@ end;
 
 function TZODBCCallableStatementA.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
-var I: Integer;
+var  I: Integer;
   SQL: SQLString;
   SQLWriter: TZSQLStringWriter;
 begin
-  I := Length(StoredProcName);
-  I := I + 12 + BindList.Count shl 1;
-  SQLWriter := TZSQLStringWriter.Create(I);
   //https://docs.microsoft.com/en-us/sql/relational-databases/native-client-ole-db-how-to/results/execute-stored-procedure-with-rpc-and-process-output?view=sql-server-2017
-  SQL := '';
-  SQLWriter.AddText('{? = CALL ', SQL);
+  SQL := '{? = CALL ';
+  I := Length(StoredProcName);
+  i := I + 20+BindList.Count shl 1;
+  SQLWriter := TZSQLStringWriter.Create(I);
   SQLWriter.AddText(StoredProcName, SQL);
-  SQLWriter.AddChar('(', SQL);
-  for i := 1 to BindList.Count-1 do begin
-    SQLWriter.AddChar('?', SQL);
-    SQLWriter.AddChar(',', SQL);
+  if BindList.Count > 1 then
+    SQLWriter.AddChar('(', SQL);
+  for i := 1 to BindList.Count-1 do
+    SQLWriter.AddText('?,', SQL);
+  if BindList.Count > 1 then begin
+    SQLWriter.CancelLastComma(SQL);
+    SQLWriter.AddChar(')', SQL);
   end;
-  SQLWriter.ReplaceOrAddLastChar(',', ')', SQL);
   SQLWriter.AddChar('}', SQL);
   SQLWriter.Finalize(SQL);
-  SQLWriter.Free;
+  FreeAndNil(SQLWriter);
   Result := TZODBCPreparedStatementA.Create(Connection as IZODBCConnection, fPHDBC^, SQL, Info);
   TZODBCPreparedStatementA(Result).Prepare;
 end;
