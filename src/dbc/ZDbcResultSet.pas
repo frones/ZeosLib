@@ -149,11 +149,8 @@ type
     function GetValue(ColumnIndex: Integer): TZVariant;
     function GetDefaultExpression(ColumnIndex: Integer): String; virtual;
     function GetTime(ColumnIndex: Integer): TDateTime; overload;
-    procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); overload;
     function GetDate(ColumnIndex: Integer): TDateTime; overload;
-    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
-    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
 
     //======================================================================
     // Methods for accessing results by column name
@@ -1706,17 +1703,6 @@ begin
     Result := 0;
 end;
 
-procedure TZAbstractResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
-var DT: TDateTime;
-begin
-  DT := IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex);
-  if not LastWasNull
-  then  DecodeDateTimeToDate(DT, Result)
-  else if SizeOf(TZDate) = SizeOf(Int64)
-    then PInt64(@Result.Year)^ := 0
-    else FillChar(Result, SizeOf(TZDate), #0);
-end;
-
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -1774,24 +1760,6 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>,
     the value returned is <code>null</code>
 }
-procedure TZAbstractResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
-var T: TDateTime;
-begin
-  T := IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex);
-  if not LastWasNull
-  then DecodeDateTimeToTime(T, Result)
-  else FillChar(Result, SizeOf(TZTime), #0);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Time</code> object in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>,
-    the value returned is <code>null</code>
-}
 procedure TZAbstractResultSet.GetTimeByName(const ColumnName: string;
   var Result: TZTime);
 begin
@@ -1820,16 +1788,6 @@ begin
     LastWasNull := not TryTimeStampToDateTime(TS, Result);
   if LastWasNull then
     Result := 0;
-end;
-
-procedure TZAbstractResultSet.GetTimestamp(ColumnIndex: Integer;
-  var Result: TZTimeStamp);
-var Dt: TDateTime;
-begin
-  DT := IZResultSet(FWeakIntfPtrOfSelf).GetTimeStamp(ColumnIndex);
-  if not LastWasNull
-  then DecodeDateTimeToTimeStamp(DT, Result)
-  else FillChar(Result, SizeOf(TZTimeStamp), #0);
 end;
 
 {**

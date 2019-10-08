@@ -2187,7 +2187,7 @@ Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
                   end;
       stDate:     begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToRawSQLDate(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
+                    Len := DateToRaw(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
                       Result, ConSettings^.DisplayFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
                   end;
       stTime:     begin
@@ -2480,7 +2480,7 @@ Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
                   end;
       stDate:     begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToUnicodeSQLDate(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
+                    Len := DateToUni(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
                       Result, ConSettings^.DisplayFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
                   end;
       stTime:     begin
@@ -4391,11 +4391,11 @@ begin
     stDate: PZDate(Data)^ := Value;
     stTimestamp: TimeStampFromDate(Value, PZTimeStamp(Data)^);
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin
-        Len := DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day, @TinyBuffer[0],
+        Len := DateToRaw(Value.Year, Value.Month, Value.Day, @TinyBuffer[0],
           ConSettings^.ReadFormatSettings.DateFormat, False, Value.IsNegative);
         SetPAnsiChar(ColumnIndex, @TinyBuffer[0], Len);
       end else begin
-        Len := DateTimeToUnicodeSQLDate(Value.Year, Value.Month, Value.Day, @TinyBuffer[0],
+        Len := DateToUni(Value.Year, Value.Month, Value.Day, @TinyBuffer[0],
           ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], Len);
       end;

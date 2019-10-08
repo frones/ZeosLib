@@ -1192,8 +1192,8 @@ begin
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
     SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer,
-                      DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
-                        @fABuffer, ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative));
+                      DateToRaw(Value.Year, Value.Month, Value.Day, @fABuffer,
+                        ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative));
     SQL_TYPE_DATE : isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, Value.Year, Value.Month, Value.Day);
     else begin
       ZSysUtils.TryDateToDateTime(Value, DT);
@@ -1509,10 +1509,11 @@ end;
 procedure TZInterbase6PreparedStatement.SetPAnsiChar(Index: Word;
   Value: PAnsiChar; Len: LengthInt);
 var
-  TempTimeStamp: TDateTime;
-  TimeStamp: TZTimeStamp;
-  Failed: Boolean;
+  TS: TZTimeStamp;
+  D: TZDate absolute TS;
+  T: TZTime absolute TS;
   XSQLVAR: PXSQLVAR;
+Label Fail;
 begin
   {$R-}
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
@@ -1529,48 +1530,18 @@ begin
     SQL_FLOAT     : SQLStrToFloatDef(Value, 0, PSingle (XSQLVAR.sqldata)^, Len);
     SQL_INT64     : PISC_INT64(XSQLVAR.sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(SQLStrToFloatDef(Value, 0, Len) * IBScaleDivisor[XSQLVAR.sqlscale], 0)); //AVZ - INT64 value was not recognized
     SQL_BLOB, SQL_QUAD: WriteLobBuffer(XSQLVAR, Value, Len);
-    SQL_TYPE_DATE :
-      begin
-        if (Len = 0) or (PByte(Value+2)^ = Ord(':')) then
-          TempTimeStamp := 0
-        else if Len = ConSettings^.WriteFormatSettings.DateFormatLen then
-          TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
-        else
-          TempTimeStamp := Int(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
-        DecodeDate(TempTimeStamp, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-        isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-      end;
-    SQL_TYPE_TIME:
-      begin
-        if Len = 0 then
-          TempTimeStamp := 0
-        else if PByte(Value+2)^ = Ord(':') then //possible date if Len = 10 then
-          TempTimeStamp := RawSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed)
-        else
-          TempTimeStamp := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
-        DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-        isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-      end;
-    SQL_TIMESTAMP:
-      begin
-        if Len = 0 then
-          TempTimeStamp := 0
-        else if PByte(Value+2)^ = Ord(':') then
-          TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
-        else if (ConSettings^.WriteFormatSettings.DateTimeFormatLen - Len) <= 4 then
-          TempTimeStamp := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
-        else if PByte(Value+4)^ = Ord('-') then
-          TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
-        else
-          TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed);
-        DecodeDate(TempTimeStamp, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-        isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-        DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-        isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-      end;
-    else raise EZIBConvertError.Create(SErrorConvertion);
+    SQL_TYPE_DATE : if TryPCharToDate(Value, Len, ConSettings^.WriteFormatSettings, D)
+                    then isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, D.Year, D.Month, D.Day)
+                    else goto Fail;
+    SQL_TYPE_TIME:  if TryPCharToTime(Value, Len, ConSettings^.WriteFormatSettings, T)
+                    then isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, T.Hour, T.Minute, T.Second, T.Fractions div 100000)
+                    else goto Fail;
+    SQL_TIMESTAMP:  if TryPCharToTimeStamp(Value, Len, ConSettings^.WriteFormatSettings, TS) then begin
+                      isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TS.Year, TS.Month, TS.Day);
+                      isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TS.Hour, TS.Minute, TS.Second, TS.Fractions div 100000);
+                    end else goto Fail;
+    else
+Fail: raise EZIBConvertError.Create(SErrorConvertion);
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if (XSQLVAR.sqlind <> nil) then
@@ -1580,10 +1551,11 @@ end;
 procedure TZInterbase6PreparedStatement.SetPWideChar(Index: Word;
   Value: PWideChar; Len: LengthInt);
 var
-  TempTimeStamp: TDateTime;
-  TimeStamp: TZTimeStamp;
-  Failed: Boolean;
+  TS: TZTimeStamp;
+  D: TZDate absolute TS;
+  T: TZTime absolute TS;
   XSQLVAR: PXSQLVAR;
+Label Fail;
 begin
   {$R-}
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
@@ -1617,48 +1589,18 @@ begin
                       then WriteLobBuffer(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
                       else WriteLobBuffer(XSQLVAR, PEmptyAnsiString, 0)
                     end;
-    SQL_TYPE_DATE :
-      begin
-        if (Len = 0) or (PByte(Value+2)^ = Ord(':')) then
-          TempTimeStamp := 0
-        else if Len = ConSettings^.WriteFormatSettings.DateFormatLen then
-          TempTimeStamp := UnicodeSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
-        else
-          TempTimeStamp := Int(UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
-        DecodeDate(TempTimeStamp, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-        isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-      end;
-    SQL_TYPE_TIME:
-      begin
-        if Len = 0 then
-          TempTimeStamp := 0
-        else if PByte(Value+2)^ = Ord(':') then //possible date if Len = 10 then
-          TempTimeStamp := UnicodeSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed)
-        else
-          TempTimeStamp := Frac(UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
-        DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-        isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-      end;
-    SQL_TIMESTAMP:
-      begin
-        if Len = 0 then
-          TempTimeStamp := 0
-        else if PByte(Value+2)^ = Ord(':') then
-          TempTimeStamp := UnicodeSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
-        else if (ConSettings^.WriteFormatSettings.DateTimeFormatLen - Len) <= 4 then
-          TempTimeStamp := UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
-        else if PByte(Value+4)^ = Ord('-') then
-          TempTimeStamp := UnicodeSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed)
-        else
-          TempTimeStamp := UnicodeSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed);
-        DecodeDate(TempTimeStamp, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-        isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TimeStamp.Year, TimeStamp.Month, TimeStamp.Day);
-        DecodeTime(TempTimeStamp, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, PWord(@TimeStamp.Fractions)^);
-        TimeStamp.Fractions := PWord(@TimeStamp.Fractions)^*10;
-        isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TimeStamp.Hour, TimeStamp.Minute, TimeStamp.Second, TimeStamp.Fractions);
-      end;
-    else raise EZIBConvertError.Create(SErrorConvertion);
+    SQL_TYPE_DATE : if TryPCharToDate(Value, Len, ConSettings^.WriteFormatSettings, D)
+                    then isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, D.Year, D.Month, D.Day)
+                    else goto Fail;
+    SQL_TYPE_TIME:  if TryPCharToTime(Value, Len, ConSettings^.WriteFormatSettings, T)
+                    then isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, T.Hour, T.Minute, T.Second, T.Fractions div 100000)
+                    else goto Fail;
+    SQL_TIMESTAMP:  if TryPCharToTimeStamp(Value, Len, ConSettings^.WriteFormatSettings, TS) then begin
+                      isc_encode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date, TS.Year, TS.Month, TS.Day);
+                      isc_encode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time, TS.Hour, TS.Minute, TS.Second, TS.Fractions div 100000);
+                    end else goto Fail;
+    else
+Fail:   raise EZIBConvertError.Create(SErrorConvertion);
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if (XSQLVAR.sqlind <> nil) then

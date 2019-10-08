@@ -2110,7 +2110,7 @@ begin
                           end;
       DBTYPE_WSTR:  if Bind.cbMaxLen >= 22 then
 DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
-                        DateTimeToUnicodeSQLDate(Value.Year, Value.Month, Value.Day,
+                        DateToUni(Value.Year, Value.Month, Value.Day,
                           PWideChar(Data), ConSettings.WriteFormatSettings.DateFormat,
                           False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
@@ -2266,7 +2266,7 @@ begin
           DBTYPE_BYTES: SQLWriter.AddHexBinary(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, True, Result);
           DBTYPE_WSTR:  SQLWriter.AddText(SQLQuotedStr(PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, ConSettings.CTRL_CP),#39), Result);
           DBTYPE_DBDATE:begin
-                        Len := ZSysUtils.DateTimeToRawSQLDate(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
+                        Len := DateToRaw(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
                           PDBDATE(Data)^.day, PAnsiChar(@fABuffer[0]), ConSettings.WriteFormatSettings.DateFormat, True, PDBDATE(Data)^.year <0);
                         SQLWriter.AddText(@fABuffer[0], Len, Result);
                       end;
@@ -2478,8 +2478,10 @@ procedure TZOleDBPreparedStatement.SetPAnsiChar(Index: Word; Value: PAnsiChar;
   Len: Cardinal);
 var Bind: PDBBINDING;
   Data: PAnsichar;
-  W1, W2: Word;
-  Failed: Boolean;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
+label Fail;
 begin
   if fBindImmediat then begin
     Bind := @FDBBindingArray[Index];
@@ -2492,7 +2494,8 @@ begin
       DBTYPE_R4:        SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len);
       DBTYPE_R8:        SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len);
       DBTYPE_CY:        SQLStrToFloatDef(Value, 0, PCurrency(Data)^, Len);
-      DBTYPE_DATE:      PDateTime(Data)^ := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed);
+      DBTYPE_DATE:      if not TryPCharToDateTime(Value, Len, ConSettings^.WriteFormatSettings, PDateTime(Data)^) then
+                          goto Fail;
       //DBTYPE_IDISPATCH	= 9;
       //DBTYPE_ERROR	= 10;
       DBTYPE_BOOL:      PWordBool(Data)^ := StrToBoolEx(Value, Value+Len, True, False);
@@ -2527,27 +2530,50 @@ begin
               PPointer(Data)^ := Value;
               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := Len;
             end;
-      DBTYPE_DBDATE: begin
-          DecodeDate(RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed), W1,
-            PDBDate(Data)^.month, PDBDate(Data)^.day);
-          PDBDate(Data)^.year := W1;
-        end;
-      DBTYPE_DBTIME:
-        DecodeTime(RawSQLTimeToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed),
-          PDBTime(Data)^.hour, PDBTime(Data)^.minute, PDBTime(Data)^.second, W1);
-      DBTYPE_DBTIME2: begin
-          DecodeTime(RawSQLTimeToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed),
-            PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute, PDBTIME2(Data)^.second, W1);
-            PDBTIME2(Data)^.fraction := W1 * 1000000;
-        end;
-      DBTYPE_DBTIMESTAMP:  begin
-          DecodeDateTime(RawSQLTimeStampToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed), W2,
-            PDBTimeStamp(Data)^.month, PDBTimeStamp(Data)^.day, PDBTimeStamp(Data)^.hour, PDBTimeStamp(Data)^.minute,
-            PDBTimeStamp(Data)^.second, W2);
-          PDBTimeStamp(Data)^.year := W1;
-          PDBTimeStamp(Data)^.fraction := W2*1000000
-        end;
-     else raise CreateOleDBConvertErrror(Index, Bind.wType, stString);
+      DBTYPE_DBDATE:  if TryPCharToDate(Value, Len, ConSettings^.WriteFormatSettings, D) then begin
+                        PDBDate(Data)^.year := D.Year;
+                        if D.IsNegative then
+                          PDBDate(Data)^.year := -PDBDate(Data)^.year;
+                        PDBDate(Data)^.month := D.Month;
+                        PDBDate(Data)^.day := D.Day;
+                      end else goto Fail;
+      DBTYPE_DBTIME:  if TryPCharToTime(Value, Len, ConSettings^.WriteFormatSettings, T) then begin
+                        PDBTime(Data)^.hour := T.Hour;
+                        PDBTime(Data)^.minute := T.Minute;
+                        PDBTime(Data)^.second := t.Second;
+                      end else goto Fail;
+      DBTYPE_DBTIME2: if TryPCharToTime(Value, Len, ConSettings^.WriteFormatSettings, T) then begin
+                        PDBTIME2(Data)^.hour := T.Hour;
+                        PDBTIME2(Data)^.minute := T.Minute;
+                        PDBTIME2(Data)^.second := T.Second;
+                        PDBTIME2(Data)^.fraction := T.Fractions;
+                      end else goto Fail;
+      DBTYPE_DBTIMESTAMP:if TryPCharToTimeStamp(Value, Len, ConSettings^.WriteFormatSettings, TS) then begin
+                        PDBTimeStamp(Data)^.year := TS.Year;
+                        if Ts.IsNegative then
+                          PDBTimeStamp(Data)^.year := -PDBTimeStamp(Data)^.year;
+                        PDBTimeStamp(Data)^.month := TS.Month;
+                        PDBTimeStamp(Data)^.day := TS.Day;
+                        PDBTimeStamp(Data)^.hour := TS.Hour;
+                        PDBTimeStamp(Data)^.minute := TS.Minute;
+                        PDBTimeStamp(Data)^.second := TS.Second;
+                        PDBTimeStamp(Data)^.fraction := TS.Fractions;
+                      end else goto Fail;
+      DBTYPE_DBTIMESTAMPOFFSET:if TryPCharToTimeStamp(Value, Len, ConSettings^.WriteFormatSettings, TS) then begin
+                        PDBTimeStamp(Data)^.year := TS.Year;
+                        if Ts.IsNegative then
+                          PDBTIMESTAMPOFFSET(Data)^.year := -PDBTIMESTAMPOFFSET(Data)^.year;
+                        PDBTIMESTAMPOFFSET(Data)^.month := TS.Month;
+                        PDBTIMESTAMPOFFSET(Data)^.day := TS.Day;
+                        PDBTIMESTAMPOFFSET(Data)^.hour := TS.Hour;
+                        PDBTIMESTAMPOFFSET(Data)^.minute := TS.Minute;
+                        PDBTIMESTAMPOFFSET(Data)^.second := TS.Second;
+                        PDBTIMESTAMPOFFSET(Data)^.fraction := TS.Fractions;
+                        PDBTIMESTAMPOFFSET(Data)^.timezone_hour := TS.TimeZoneHour;
+                        PDBTIMESTAMPOFFSET(Data)^.timezone_minute := TS.TimeZoneMinute;
+                      end else goto Fail;
+     else
+Fail:    raise CreateOleDBConvertErrror(Index, Bind.wType, stString);
       //DBTYPE_UDT: ;
       //DBTYPE_HCHAPTER:;
       //DBTYPE_PROPVARIANT:;
@@ -2571,9 +2597,10 @@ procedure TZOleDBPreparedStatement.SetPWideChar(Index: Word; Value: PWideChar;
   Len: Cardinal);
 var Bind: PDBBINDING;
   Data: PAnsichar;
-  W1, W2: Word;
-  Failed: Boolean;
-label set_Raw;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
+label Fail, set_Raw;
 begin
   if fBindImmediat then begin
     Bind := @FDBBindingArray[Index];
@@ -2586,7 +2613,8 @@ begin
       DBTYPE_R4:        SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len);
       DBTYPE_R8:        SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len);
       DBTYPE_CY:        SQLStrToFloatDef(Value, 0, PCurrency(Data)^, Len);
-      DBTYPE_DATE:      PDateTime(Data)^ := UnicodeSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed);
+      DBTYPE_DATE:      if not TryPCharToDateTime(Value, Len, ConSettings^.WriteFormatSettings, PDateTime(Data)^) then
+                          goto Fail;
       //DBTYPE_IDISPATCH	= 9;
       //DBTYPE_ERROR	= 10;
       DBTYPE_BOOL:      PWordBool(Data)^ := StrToBoolEx(Value, Value+Len, True, False);
@@ -2634,27 +2662,50 @@ set_Raw:    if Bind.wType and DBTYPE_BYREF <> 0 then begin
                   PPointer(Data)^ := Value;
                   PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := Len shl 1;
                 end;
-      DBTYPE_DBDATE: begin
-          DecodeDate(UnicodeSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed), W1,
-            PDBDate(Data)^.month, PDBDate(Data)^.day);
-          PDBDate(Data)^.year := W1;
-        end;
-      DBTYPE_DBTIME:
-        DecodeTime(UnicodeSQLTimeToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed),
-          PDBTime(Data)^.hour, PDBTime(Data)^.minute, PDBTime(Data)^.second, W1);
-      DBTYPE_DBTIME2: begin
-          DecodeTime(UnicodeSQLTimeToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed),
-            PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute, PDBTIME2(Data)^.second, W1);
-            PDBTIME2(Data)^.fraction := W1 * 1000000;
-        end;
-      DBTYPE_DBTIMESTAMP:  begin
-          DecodeDateTime(UnicodeSQLTimeStampToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed), W2,
-            PDBTimeStamp(Data)^.month, PDBTimeStamp(Data)^.day, PDBTimeStamp(Data)^.hour, PDBTimeStamp(Data)^.minute,
-            PDBTimeStamp(Data)^.second, W2);
-          PDBTimeStamp(Data)^.year := W1;
-          PDBTimeStamp(Data)^.fraction := W2*1000000
-        end;
-      else raise CreateOleDBConvertErrror(Index, Bind.wType, stUnicodeString);
+      DBTYPE_DBDATE:  if TryPCharToDate(Value, Len, ConSettings^.WriteFormatSettings, D) then begin
+                        PDBDate(Data)^.year := D.Year;
+                        if D.IsNegative then
+                          PDBDate(Data)^.year := -PDBDate(Data)^.year;
+                        PDBDate(Data)^.month := D.Month;
+                        PDBDate(Data)^.day := D.Day;
+                      end else goto Fail;
+      DBTYPE_DBTIME:  if TryPCharToTime(Value, Len, ConSettings^.WriteFormatSettings, T) then begin
+                        PDBTime(Data)^.hour := T.Hour;
+                        PDBTime(Data)^.minute := T.Minute;
+                        PDBTime(Data)^.second := t.Second;
+                      end else goto Fail;
+      DBTYPE_DBTIME2: if TryPCharToTime(Value, Len, ConSettings^.WriteFormatSettings, T) then begin
+                        PDBTIME2(Data)^.hour := T.Hour;
+                        PDBTIME2(Data)^.minute := T.Minute;
+                        PDBTIME2(Data)^.second := T.Second;
+                        PDBTIME2(Data)^.fraction := T.Fractions;
+                      end else goto Fail;
+      DBTYPE_DBTIMESTAMP:if TryPCharToTimeStamp(Value, Len, ConSettings^.WriteFormatSettings, TS) then begin
+                        PDBTimeStamp(Data)^.year := TS.Year;
+                        if Ts.IsNegative then
+                          PDBTimeStamp(Data)^.year := -PDBTimeStamp(Data)^.year;
+                        PDBTimeStamp(Data)^.month := TS.Month;
+                        PDBTimeStamp(Data)^.day := TS.Day;
+                        PDBTimeStamp(Data)^.hour := TS.Hour;
+                        PDBTimeStamp(Data)^.minute := TS.Minute;
+                        PDBTimeStamp(Data)^.second := TS.Second;
+                        PDBTimeStamp(Data)^.fraction := TS.Fractions;
+                      end else goto Fail;
+      DBTYPE_DBTIMESTAMPOFFSET:if TryPCharToTimeStamp(Value, Len, ConSettings^.WriteFormatSettings, TS) then begin
+                        PDBTimeStamp(Data)^.year := TS.Year;
+                        if Ts.IsNegative then
+                          PDBTIMESTAMPOFFSET(Data)^.year := -PDBTIMESTAMPOFFSET(Data)^.year;
+                        PDBTIMESTAMPOFFSET(Data)^.month := TS.Month;
+                        PDBTIMESTAMPOFFSET(Data)^.day := TS.Day;
+                        PDBTIMESTAMPOFFSET(Data)^.hour := TS.Hour;
+                        PDBTIMESTAMPOFFSET(Data)^.minute := TS.Minute;
+                        PDBTIMESTAMPOFFSET(Data)^.second := TS.Second;
+                        PDBTIMESTAMPOFFSET(Data)^.fraction := TS.Fractions;
+                        PDBTIMESTAMPOFFSET(Data)^.timezone_hour := TS.TimeZoneHour;
+                        PDBTIMESTAMPOFFSET(Data)^.timezone_minute := TS.TimeZoneMinute;
+                      end else goto Fail;
+      else
+Fail:     raise CreateOleDBConvertErrror(Index, Bind.wType, stUnicodeString);
       //DBTYPE_UDT: ;
       //DBTYPE_HCHAPTER:;
       //DBTYPE_PROPVARIANT:;

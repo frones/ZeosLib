@@ -594,7 +594,7 @@ var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  Len := DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
+  Len := DateToRaw(Value.Year, Value.Month, Value.Day,
     @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
   ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
   BindList.Put(ParameterIndex, stDate, fRawTemp, FClientCP);
@@ -1226,7 +1226,7 @@ var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  Len := DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
+  Len := DateToRaw(Value.Year, Value.Month, Value.Day,
     @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
   ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
   BindList.Put(ParameterIndex, stDate, fRawTemp, FClientCP);

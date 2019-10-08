@@ -95,7 +95,6 @@ type
   TZAdoPreparedStatement = class(TZAbstractAdoStatement, IZPreparedStatement)
   private
     FRefreshParamsFailed, FEmulatedParams: Boolean;
-    //FBatchStmt: TZOleDBPreparedStatement;
   protected
     function CheckParameterIndex(Index, ASize: Integer; SQLType: TZSQLType): DataTypeEnum; reintroduce;
     procedure PrepareInParameters; override;
@@ -136,9 +135,9 @@ type
     procedure SetRawByteString(Index: Integer; const AValue: RawByteString); reintroduce;
     procedure SetUnicodeString(Index: Integer; const AValue: ZWideString); reintroduce;
 
-    procedure SetDate(Index: Integer; const AValue: TDateTime); reintroduce; overload;
-    procedure SetTime(Index: Integer; const AValue: TDateTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const AValue: TDateTime); reintroduce; overload;
+    procedure SetDate(Index: Integer; const AValue: TZDate); overload;
+    procedure SetTime(Index: Integer; const AValue: TZTime); overload;
+    procedure SetTimestamp(Index: Integer; const AValue: TZTimeStamp); overload;
 
     procedure SetBytes(Index: Integer; const AValue: TBytes); reintroduce;
     procedure SetGUID(Index: Integer; const AValue: TGUID); reintroduce;
@@ -722,7 +721,7 @@ set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]
 end;
 
 procedure TZAdoPreparedStatement.SetDate(Index: Integer;
-  const AValue: TDateTime);
+  const AValue: TZDate);
 var V: OleVariant;
 label jmp_assign;
 begin
@@ -736,13 +735,17 @@ begin
     adDate:     begin
 jmp_Assign:       V := null;
                   tagVariant(V).vt := VT_DATE;
-                  tagVariant(V).date := AValue;
+                  TryDateToDateTime(AValue, PDateTime(@tagVariant(V).date)^);
                   FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
-    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUnicodeSQLDate(AValue, @fWBuffer[0], ConSettings.WriteFormatSettings, False));
-    else            SetDouble(Index, AValue);
+    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateToUni(AValue.Year, AValue.Month,
+      AValue.Day, @fWBuffer[0], ConSettings.WriteFormatSettings.DateFormat, False, AValue.IsNegative));
+    else           begin
+                      TryDateToDateTime(AValue, PDateTime(@fWBuffer[0])^);
+                      SetDouble(Index, PDouble(@fWBuffer[0])^);
                     end;
+  end;
 end;
 
 procedure TZAdoPreparedStatement.SetDouble(Index: Integer;
@@ -1003,8 +1006,8 @@ procedure TZAdoPreparedStatement.SetPWideChar(Index: Word;
 var V: OleVariant;
   BCD: TBCD;
   D: Double absolute BCD;
+  DT: TDatetime absolute BCD;
   C: Currency absolute BCD;
-  Failed: Boolean;
   procedure SetEmulatedValue;
   begin
     {$IFNDEF GENERIC_INDEX}
@@ -1045,17 +1048,10 @@ begin
                         end;
     adBoolean:          SetBoolean(Index, StrToBoolEx(Value, Value+Len, True, False));
     adDBTimeStamp,
-    adDate:             begin
-                          D := UnicodeSQLTimeStampToDateTime(Value, Len, Consettings.WriteFormatSettings, Failed);
-                          goto set_dbl;
-                        end;
-    adDBDate:           begin
-                          D := UnicodeSQLDateToDateTime(Value, Len, Consettings.WriteFormatSettings, Failed);
-                          goto set_dbl;
-                        end;
+    adDate,
+    adDBDate,
     adDBTime:           begin
-                          D := UnicodeSQLTimeToDateTime(Value, Len, Consettings.WriteFormatSettings, Failed);
-set_dbl:                  if Failed then D := 0;
+                          TryPCharToDateTime(Value, Len, Consettings.WriteFormatSettings, DT);
                           SetDouble(Index, D);
                         end;
     adGUID,
@@ -1128,7 +1124,7 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.SetTime(Index: Integer;
-  const AValue: TDateTime);
+  const AValue: TZTime);
 var V: OleVariant;
 label jmp_assign;
 begin
@@ -1142,17 +1138,22 @@ begin
     adDate:     begin
 jmp_assign:       V := null;
                   tagVariant(V).vt := VT_DATE;
-                  tagVariant(V).date := AValue;
+                  TryTimeToDateTime(AValue, PDateTime(@tagVariant(V).date)^);
                   FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
-    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUnicodeSQLTime(AValue, @fWBuffer[0], ConSettings.WriteFormatSettings, False));
-    else            SetDouble(Index, AValue);
+    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], TimeToUni(AValue.Hour,
+        AValue.Minute, AValue.Second, AValue.Fractions, @fWBuffer[0],
+        ConSettings.WriteFormatSettings.TimeFormat, False, AValue.IsNegative));
+    else           begin
+                      TryTimeToDateTime(AValue, PDateTime(@fWBuffer[0])^);
+                      SetDouble(Index, PDouble(@fWBuffer[0])^);
                     end;
+  end;
 end;
 
 procedure TZAdoPreparedStatement.SetTimestamp(Index: Integer;
-  const AValue: TDateTime);
+  const AValue: TZTimeStamp);
 var V: OleVariant;
 label jmp_Assign;
 begin
@@ -1166,13 +1167,19 @@ begin
     adDate: begin
 jmp_Assign:   V := null;
               tagVariant(V).vt := VT_DATE;
-              tagVariant(V).date := AValue;
+              TryTimeStampToDateTime(AValue, PDateTime(@tagVariant(V).date)^);
               FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
             end;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
-    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUnicodeSQLTimeStamp(AValue, @fWBuffer[0], ConSettings.WriteFormatSettings, False));
-    else            SetDouble(Index, AValue);
+    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUni(AValue.Hour,
+        AValue.Minute, AValue.Second, AValue.Fractions, AValue.Hour, AValue.Minute,
+        AValue.Fractions, @fWBuffer[0],
+        ConSettings.WriteFormatSettings.TimeFormat, False, AValue.IsNegative));
+    else           begin
+                      TryTimeStampToDateTime(AValue, PDateTime(@fWBuffer[0])^);
+                      SetDouble(Index, PDouble(@fWBuffer[0])^);
                     end;
+  end;
 end;
 
 procedure TZAdoPreparedStatement.SetUInt(Index: Integer;

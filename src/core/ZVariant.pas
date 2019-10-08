@@ -1997,21 +1997,21 @@ begin
     {$IFDEF TEST_RECORD_REFACTORING}
     vtTime:     begin
                   P := @Buff[0];
-                  L := ZSysUtils.DateTimeToRawSQLTime(Value.VTime.Hour,
+                  L := TimeToRaw(Value.VTime.Hour,
                     Value.VTime.Minute, Value.VTime.Second,
-                    Value.VTime.Fractions div 1000000, P, FFormatSettings, False)
+                    Value.VTime.Fractions, P, FFormatSettings, False, Value.VDate.IsNegativ)
                 end;
     vtDate:     begin
                   P := @Buff[0];
-                  L := ZSysUtils.DateTimeToRawSQLDate(Value.VDate.Year,
+                  L := DateToRaw(Value.VDate.Year,
                     Value.VDate.Month, Value.VDate.Day, P, FFormatSettings, False, Value.VDate.IsNegative);
                 end;
     vtTimeStamp:begin
                   P := @Buff[0];
-                  L := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VTimeStamp.Year,
+                  L := DateTimeToRaw(Value.VTimeStamp.Year,
                     Value.VTimeStamp.Month, Value.VTimeStamp.Day,
                     Value.VTimeStamp.Hour, Value.VTimeStamp.Minute, Value.VTimeStamp.Second,
-                    Value.VTimeStamp.Fractions div 1000000, P, FFormatSettings, False, Value.VTimeStamp.IsNegative);
+                    Value.VTimeStamp.Fractions, P, FFormatSettings, False, Value.VTimeStamp.IsNegative);
                 end;
     {$ELSE}
     vtDateTime: begin
@@ -2442,7 +2442,6 @@ procedure TZClientVariantManager.ProcessDateTime(const Value: TZVariant;
   out Result: TZVariant);
 var P: Pointer;
   L: LengthInt;
-  Failed: Boolean;
 label DateTimeFromRaw, DateTimeFromUnicode;
 begin
   Result.VType := vtDateTime;
@@ -2454,11 +2453,8 @@ begin
         P := Pointer(Value.VRawByteString);
         L := Length(Value.VRawByteString);
 DateTimeFromRaw:
-        if Ord((PAnsiChar(P)+2)^) = Ord(':') then
-          Result.VDateTime := RawSQLTimeToDateTime(P, L, FConSettings^.ReadFormatSettings, Failed)
-        else if (FConSettings^.ReadFormatSettings.DateTimeFormatLen - L) <= 4 then
-          Result.VDateTime := RawSQLTimeStampToDateTime(P, L, FConSettings^.ReadFormatSettings, Failed)
-        else Result.VDateTime := RawSQLTimeToDateTime(P, L, FConSettings^.ReadFormatSettings, Failed);
+        if not ZSysUtils.TryPCharToDateTime(PAnsiChar(P), L, FConSettings^.ReadFormatSettings, Result.VDateTime) then
+          RaiseTypeMismatchError;
       end;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString:
@@ -2466,11 +2462,8 @@ DateTimeFromRaw:
         P := Pointer(Value.VUnicodeString);
         L := Length(Value.VUnicodeString);
 DateTimeFromUnicode:
-        if (PWideChar(P)+2)^ = ':' then
-          Result.VDateTime := UnicodeSQLTimeToDateTime(P, L, FConSettings^.ReadFormatSettings, Failed)
-        else if (FConSettings^.ReadFormatSettings.DateTimeFormatLen - L) <= 4 then
-          Result.VDateTime := UnicodeSQLTimeStampToDateTime(P, L, FConSettings^.ReadFormatSettings, Failed)
-        else Result.VDateTime := UnicodeSQLTimeToDateTime(P, L,FConSettings^.ReadFormatSettings, Failed);
+        if not ZSysUtils.TryPCharToDateTime(PWideChar(P), L, FConSettings^.ReadFormatSettings, Result.VDateTime) then
+          RaiseTypeMismatchError;
       end;
     vtCharRec: begin
         P := Value.VCharRec.P;

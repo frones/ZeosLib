@@ -607,8 +607,8 @@ begin
         CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
     end;
   end else begin
-    Len := DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
-      @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+    Len := DateToRaw(Value.Year, Value.Month, Value.Day, @FABuffer[0],
+      ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
     ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
     Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
     if not FBindLater then begin

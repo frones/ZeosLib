@@ -2094,8 +2094,8 @@ begin
                     end;
       end;
   end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
-    Len := DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
-      @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+    Len := DateToRaw(Value.Year, Value.Month, Value.Day,@FABuffer[0],
+      ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
     ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
     BindRawStr(InParamIdx, fRawTemp)
   end else if TryDateToDateTime(Value, DT)

@@ -1396,7 +1396,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        Len := ZSysUtils.DateTimeToRawSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                        Len := DateToRaw(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
@@ -1527,7 +1527,7 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        Len := ZSysUtils.DateTimeToUnicodeSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                        Len := DateToUni(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin

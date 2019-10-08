@@ -2354,105 +2354,7 @@ function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings:
 var P: Pointer;
   L: LengthInt;
   B: Boolean;
-label Str_Conv;
-begin
-  {$R-}
-  case ZArray.VArrayVariantType of
-    {$IFNDEF UNICODE}vtString,{$ENDIF}
-    {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-    {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-    vtRawByteString: begin
-        B := False;
-        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
-        L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
-        goto Str_Conv;
-      end;
-    {$IFDEF UNICODE}vtString,{$ENDIF}
-    vtUnicodeString: begin
-        B := True;
-        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
-        L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
-        goto Str_Conv;
-      end;
-    vtCharRec: begin
-        P := TZCharRecDynArray(ZArray.VArray)[Index].P;
-        L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
-        B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
-Str_Conv:
-        if B then begin
-          Result := ZSysUtils.UnicodeSQLDateToDateTime(P, L, FormatSettings, B);
-          if B then Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(P, L, FormatSettings, B);
-        end else begin
-          Result := ZSysUtils.RawSQLDateToDateTime(P, L, FormatSettings, B);
-          if B then Result := ZSysUtils.RawSQLTimeStampToDateTime(P, L, FormatSettings, B);
-        end;
-      end;
-    vtNull, vtDateTime:  case TZSQLType(ZArray.VArrayType) of
-        stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
-        stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
-        stBigDecimal: Result := TExtendedDynArray(ZArray.VArray)[Index];
-        stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
-        else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
-      end;
-    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
-  end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-end;
-
-function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
-var P: Pointer;
-  L: LengthInt;
-  B: Boolean;
-label Str_Conv;
-begin
-  {$R-}
-  case ZArray.VArrayVariantType of
-    {$IFNDEF UNICODE}vtString,{$ENDIF}
-    {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
-    {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
-    vtRawByteString: begin
-        B := False;
-        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
-        L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
-        goto Str_Conv;
-      end;
-    {$IFDEF UNICODE}vtString,{$ENDIF}
-    vtUnicodeString: begin
-        B := True;
-        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
-        L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
-        goto Str_Conv;
-      end;
-    vtCharRec: begin
-        P := TZCharRecDynArray(ZArray.VArray)[Index].P;
-        L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
-        B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
-Str_Conv:
-        if B then begin
-          Result := ZSysUtils.UnicodeSQLTimeToDateTime(P, L, FormatSettings, B);
-          if B then Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(P, L, FormatSettings, B);
-        end else begin
-          Result := ZSysUtils.RawSQLTimeToDateTime(P, L, FormatSettings, B);
-          if B then Result := ZSysUtils.RawSQLTimeStampToDateTime(P, L, FormatSettings, B);
-        end;
-      end;
-    vtNull:  case TZSQLType(ZArray.VArrayType) of
-        stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
-        stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
-        stBigDecimal: Result := TExtendedDynArray(ZArray.VArray)[Index];
-        stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
-        else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
-      end;
-    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
-  end;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-end;
-
-function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
-var P: Pointer;
-  L: LengthInt;
-  B: Boolean;
-label Str_Conv;
+label Str_Conv, Fail;
 begin
   {$R-}
   case ZArray.VArrayVariantType of
@@ -2478,8 +2380,56 @@ begin
         B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
 Str_Conv:
         if B
-        then Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(P, L, FormatSettings, B)
-        else Result := ZSysUtils.RawSQLTimeStampToDateTime(P, L, FormatSettings, B);
+        then B := TryPCharToDateTime(PWideChar(P), L, formatSettings, Result)
+        else B := TryPCharToDateTime(PAnsiChar(P), L, formatSettings, Result);
+        if B then goto Fail;
+      end;
+    vtNull, vtDateTime:  case TZSQLType(ZArray.VArrayType) of
+        stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
+        stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
+        stBigDecimal: Result := TExtendedDynArray(ZArray.VArray)[Index];
+        stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
+        else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
+      end;
+    else
+Fail: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+  end;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+end;
+
+function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+var P: Pointer;
+  L: LengthInt;
+  B: Boolean;
+label Str_Conv, Fail;
+begin
+  {$R-}
+  case ZArray.VArrayVariantType of
+    {$IFNDEF UNICODE}vtString,{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+    {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    vtRawByteString: begin
+        B := False;
+        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        goto Str_Conv;
+      end;
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString: begin
+        B := True;
+        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+        goto Str_Conv;
+      end;
+    vtCharRec: begin
+        P := TZCharRecDynArray(ZArray.VArray)[Index].P;
+        L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
+        B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
+Str_Conv:
+        if B
+        then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result)
+        else B := TryPCharToDateTime(PAnsiChar(P), L, FormatSettings, Result);
+        if not B then goto Fail;
       end;
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
@@ -2488,7 +2438,55 @@ Str_Conv:
         stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
-    else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+    else
+Fail:  raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
+  end;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+end;
+
+function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+var P: Pointer;
+  L: LengthInt;
+  B: Boolean;
+label Str_Conv, Fail;
+begin
+  {$R-}
+  case ZArray.VArrayVariantType of
+    {$IFNDEF UNICODE}vtString,{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+    {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    vtRawByteString: begin
+        B := False;
+        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        goto Str_Conv;
+      end;
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString: begin
+        B := True;
+        P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
+        goto Str_Conv;
+      end;
+    vtCharRec: begin
+        P := TZCharRecDynArray(ZArray.VArray)[Index].P;
+        L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
+        B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
+Str_Conv:
+        if B
+        then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result)
+        else B := TryPCharToDateTime(PAnsiChar(P), L, FormatSettings, Result);
+        if not B then goto Fail;
+      end;
+    vtNull:  case TZSQLType(ZArray.VArrayType) of
+        stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
+        stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
+        stBigDecimal: Result := TExtendedDynArray(ZArray.VArray)[Index];
+        stTime, stDate, stTimeStamp: Result := Int(TDateTimeDynArray(ZArray.VArray)[Index]);
+        else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
+      end;
+    else
+Fail:  raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;

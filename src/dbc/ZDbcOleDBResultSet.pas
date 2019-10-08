@@ -592,7 +592,7 @@ set_from_buf:           Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       end;
     DBTYPE_DBDATE:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToRawSQLDate(Abs(PDBDate(FData)^.year),
+                        Len := DateToRaw(Abs(PDBDate(FData)^.year),
                           PDBDate(FData)^.month, PDBDate(FData)^.day,
                           Result, ConSettings.ReadFormatSettings.DateFormat,
                           False, PDBDate(FData)^.year < 0);
@@ -741,7 +741,7 @@ set_from_buf:           Len := Result - PWideChar(@FTinyBuffer[0]);
                       end;
     DBTYPE_DBDATE:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToUnicodeSQLDate(Abs(PDBDate(FData)^.year),
+                        Len := DateToUni(Abs(PDBDate(FData)^.year),
                           PDBDate(FData)^.month, PDBDate(FData)^.day,
                           Result, ConSettings.ReadFormatSettings.DateFormat,
                           False, PDBDate(FData)^.year < 0);

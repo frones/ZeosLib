@@ -1453,19 +1453,15 @@ var
   P: PMYSQL_TIME;
   { move the string conversions into a own proc -> no (U/L)StrClear}
   procedure BindEmulated;
+  var Len: LengthInt;
   begin
     case SQLType of
-      stDate: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLDate(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      stTime: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.TimeFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLTime(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      stTimestamp: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateTimeFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLTimeStamp(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      else FEmulatedValues[Index] := FloatToSQLRaw(Value);
+      stDate: Len := DateTimeToRawSQLDate(Value, @fABuffer, ConSettings^.WriteFormatSettings, True);
+      stTime: Len := DateTimeToRawSQLTime(Value, @fABuffer, ConSettings^.WriteFormatSettings, True);
+      stTimestamp: Len := DateTimeToRawSQLTimeStamp(Value, @fABuffer, ConSettings^.WriteFormatSettings, True)
+      else Len := FloatToSQLRaw(Value, @fABuffer);
     end;
+    ZSetString(PAnsiChar(@fABuffer), Len, FEmulatedValues[Index]);
   end;
 begin
   CheckParameterIndex(Index);
@@ -1504,7 +1500,9 @@ var
   Bind: PMYSQL_aligned_BIND;
   BindValue: PZBindValue;
   SQLType: TZSQLType;
-  Failed: Boolean;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
   procedure BindAsLob;
   var Lob: IZBlob;
     P: PAnsiChar;
@@ -1562,10 +1560,14 @@ begin
           else RawToFloat(Buf, AnsiChar('.'), PSingle(bind^.buffer)^);
           Bind^.is_null_address^ := 0;
         end;
-      stTime: InternalBindDouble(Index, stTime, ZSysUtils.RawSQLTimeToDateTime(Buf, Len, ConSettings.WriteFormatSettings, Failed));
-      stDate: InternalBindDouble(Index, stDate, ZSysUtils.RawSQLDateToDateTime(Buf, Len, ConSettings.WriteFormatSettings, Failed));
-      stTimeStamp: InternalBindDouble(Index, stTimeStamp, ZSysUtils.RawSQLTimeStampToDateTime(Buf, Len, ConSettings.WriteFormatSettings, Failed));
+      stTime:     if TryPCharToTime(Buf, Len, ConSettings.WriteFormatSettings, T)
+                  then SetTime(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+      stDate:     if TryPCharToDate(Buf, Len, ConSettings.WriteFormatSettings, D)
+                  then SetDate(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, D);
+      stTimeStamp: if TryPCharToTimeStamp(Buf, Len, ConSettings.WriteFormatSettings, TS)
+                  then SetTimeStamp(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
       stAsciiStream..stBinaryStream: BindAsLob;
+
     end;
   end;
 end;
@@ -2070,7 +2072,7 @@ var
   procedure BindEmulated;
   var L: LengthInt;
   begin
-    L := DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
+    L := DateToRaw(Value.Year, Value.Month, Value.Day,
       @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
     ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
   end;

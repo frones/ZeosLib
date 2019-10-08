@@ -987,11 +987,10 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
                     end;
       stDate:       begin
-                      DateTimeToRawSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day), @FTinyBuffer[0],
-                          ConSettings^.DisplayFormatSettings, False);
+                      Len := DateToRaw(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day, @FTinyBuffer[0],
+                          ConSettings^.DisplayFormatSettings.DateFormat, False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
                       Result := @FTinyBuffer[0];
-                      Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
                     end;
       stTimeStamp:  begin
                       Result := @FTinyBuffer[0];

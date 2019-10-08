@@ -299,7 +299,7 @@ type
     procedure AddOrd64(const Value: UInt64; Digits: Byte; Negative: Boolean; var Result: RawByteString);
   protected
     FBuf, //the buffer we use as temporary storage
-    FPos, //the current position of the buffer. Points always to the next writable char
+    FPos, //the current position of the buffer. Points always to the first writeable char
     FEnd: PAnsiChar; //the end of the buffer
   public
     constructor Create(AnsiCharCapacity: Integer);
@@ -351,7 +351,7 @@ type
     procedure AddOrd64(const Value: UInt64; Digits: Byte; Negative: Boolean; var Result: UnicodeString);
   protected
     FBuf, //the buffer we use as temporary storage
-    FPos, //the current position of the buffer. Points always to the next writable char
+    FPos, //the current position of the buffer. Points always to the first writeable char
     FEnd: PWideChar; //the end of the buffer
   public
     constructor Create(WideCharCapacity: Integer);
@@ -946,7 +946,7 @@ begin
   then P := FPos
   else P := @Buffer[0];
   L := TimeToRaw(Value.Hour, Value.Minute, Value.Second,
-    Value.Fractions, P, Format, True, False);
+    Value.Fractions, P, Format, True, Value.IsNegative);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -962,7 +962,7 @@ begin
   then P := FPos
   else P := @Buffer[0];
   L := ZSysUtils.DateTimeToRaw(Value.Year, Value.Month, Value.Day,
-    Value.Hour, Value.Minute, Value.Second, Value.Fractions, P, Format, True, False);
+    Value.Hour, Value.Minute, Value.Second, Value.Fractions, P, Format, True, Value.IsNegative);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -1106,7 +1106,7 @@ begin
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, M, D);
-  L := ZSysUtils.DateTimeToRawSQLDate(Y, M, D, P, Format, True, False);
+  L := DateToRaw(Y, M, D, P, Format, True, False);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -1122,7 +1122,8 @@ begin
   if (FPos + cMaxDateLen < FEnd)
   then P := FPos
   else P := @Buffer[0];
-  L := ZSysUtils.DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day, P, Format, True, False);
+  L := DateToRaw(Value.Year, Value.Month, Value.Day, P,
+    Format, True, Value.IsNegative);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -1265,7 +1266,7 @@ begin
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, M, D);
-  L := ZSysUtils.DateTimeToUnicodeSQLDate(Y, M, D, P, Format, True, False);
+  L := DateToUni(Y, M, D, P, Format, True, False);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -1281,7 +1282,7 @@ begin
   if (FPos + cMaxDateLen < FEnd)
   then P := FPos
   else P := @Buffer[0];
-  L := ZSysUtils.DateTimeToUnicodeSQLDate(Value.Year, Value.Month, Value.Day, P, Format, True, Value.IsNegative);
+  L := DateToUni(Value.Year, Value.Month, Value.Day, P, Format, True, Value.IsNegative);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -1552,7 +1553,7 @@ begin
   then P := FPos
   else P := @Buffer[0];
   L := TimeToUni(Value.Hour, Value.Minute, Value.Second, Value.Fractions, P,
-    Format, True, False);
+    Format, True, Value.IsNegative);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);
@@ -1567,8 +1568,8 @@ begin
   if (FPos + cMaxTimeStampLen < FEnd)
   then P := FPos
   else P := @Buffer[0];
-  L := ZSysUtils.DateTimeToUni(Value.Year, Value.Month, Value.Day, Value.Hour,
-    Value.Minute, Value.Second, Value.Fractions, P, Format, True, False);
+  L := DateTimeToUni(Value.Year, Value.Month, Value.Day, Value.Hour,
+    Value.Minute, Value.Second, Value.Fractions, P, Format, True, Value.IsNegative);
   if P = FPos
   then Inc(FPos, L)
   else AddText(P, L, Result);

@@ -720,6 +720,8 @@ function TryPCharToTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFor
 function TryPCharToTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean; overload;
 function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
 function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
+function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean; overload;
+function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean; overload;
 
 {**
   Converts Ansi SQL Date/Time to TDateTime
@@ -828,8 +830,8 @@ function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
   @param Negative if the date is negative (i.e. bc).
   @return the length in bytes of written value.
 }
-function DateTimeToRawSQLDate(Year, Month, Day: Word; Buf: PAnsichar;
-  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
+  const Format: String; Quoted, Negative: Boolean): Byte;
 
 {** EH:
   Converts date value into a WideString/UnicodeString with format pattern
@@ -871,8 +873,8 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
   @param Negative if the date is negative (i.e. bc).
   @return the length in code-points of written value.
 }
-function DateTimeToUnicodeSQLDate(Year, Month, Day: Word; Buf: PWideChar;
-  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
+  const Format: String; Quoted, Negative: Boolean): Byte;
 
 {**
   Converts DateTime value to native string
@@ -3847,6 +3849,28 @@ begin
   else Result := False;
 end;
 
+function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
+var TS: TZTimeStamp;
+begin
+  if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
+    Result := TryTimeStampToDateTime(TS, DateTime)
+  else begin
+    Result := False;
+    Datetime := 0;
+  end;
+end;
+
+function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
+var TS: TZTimeStamp;
+begin
+  if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
+    Result := TryTimeStampToDateTime(TS, DateTime)
+  else begin
+    Result := False;
+    Datetime := 0;
+  end;
+end;
+
 {**
   Converts Ansi SQL Date/Time (yyyy-mm-dd hh:nn:ss or yyyy-mm-dd hh:nn:ss.zzz)
   to TDateTime
@@ -4676,7 +4700,7 @@ var L, L2, Year, Month, Day: Word;
   P: PAnsiChar;
 begin
   DecodeDate(Value, Year, Month, Day);
-  L := DateTimeToRawSQLDate(Year, Month, Day, @Buffer[0],
+  L := DateToRaw(Year, Month, Day, @Buffer[0],
     ConFormatSettings.DateFormat, Quoted, False);
   l2 := Length(Suffix);
   {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
@@ -4706,7 +4730,7 @@ function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
 var L, Year, Month, Day: Word;
 begin
   DecodeDate(Value, Year, Month, Day);
-  Result := DateTimeToRawSQLDate(Year, Month, Day, Buf,
+  Result := DateToRaw(Year, Month, Day, Buf,
     ConFormatSettings.DateFormat, Quoted, False);
   L := Length(Suffix);
   if L > 0 then begin
@@ -4728,8 +4752,8 @@ end;
   @param Negative if the date is negative (i.e. bc).
   @return the length in bytes of written value.
 }
-function DateTimeToRawSQLDate(Year, Month, Day: Word; Buf: PAnsichar;
-  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
+  const Format: String; Quoted, Negative: Boolean): Byte;
 var PStart: PAnsiChar;
   PFormat, PEnd: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
@@ -4827,7 +4851,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
 var L, Year, Month, Day: Word;
 begin
   DecodeDate(Value, Year, Month, Day);
-  Result := DateTimeToUnicodeSQLDate(Year, Month, Day, Buf,
+  Result := DateToUni(Year, Month, Day, Buf,
     ConFormatSettings.DateFormat, Quoted, False);
   L := Length(Suffix);
   if L > 0 then begin
@@ -4849,7 +4873,7 @@ end;
   @param Negative if the date is negative (i.e. bc).
   @return the length in code-points of written value.
 }
-function DateTimeToUnicodeSQLDate(Year, Month, Day: Word; Buf: PWideChar;
+function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
   const Format: String; Quoted, Negative: Boolean): Byte; overload;
 var PStart: PWideChar;
   PFormat, PEnd: PChar;
@@ -4947,7 +4971,7 @@ var L, L2, Year, Month, Day: Word;
   P: PWideChar;
 begin
   DecodeDate(Value, Year, Month, Day);
-  L := DateTimeToUnicodeSQLDate(Year, Month, Day, @Buffer[0],
+  L := DateToUni(Year, Month, Day, @Buffer[0],
     ConFormatSettings.DateFormat, Quoted, False);
   l2 := Length(Suffix);
   System.SetString(Result, nil , L+L2);

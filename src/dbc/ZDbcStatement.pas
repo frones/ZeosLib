@@ -435,9 +435,7 @@ type
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload; virtual;
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload; virtual;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload;
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
@@ -3215,15 +3213,6 @@ begin
     raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
-procedure TZAbstractPreparedStatement.SetDate(ParameterIndex: Integer;
-  const Value: TZDate);
-var DT: TDateTime;
-begin
-  if TryDateToDateTime(Value, DT)
-  then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDate(ParameterIndex, DT)
-  else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(ParameterIndex, stDate)
-end;
-
 {**
   Sets the designated parameter to a <code<java.sql.Date</code> value.
   The driver converts this to an SQL <code>DATE</code>
@@ -3434,15 +3423,6 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZAbstractPreparedStatement.SetTime(ParameterIndex: Integer;
-  const Value: TZTime);
-var DT: TDateTime;
-begin
-  if TryTimeToDateTime(Value, DT)
-  then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTime(ParameterIndex, DT)
-  else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(ParameterIndex, stTime);
-end;
-
 procedure TZAbstractPreparedStatement.SetTimestamp(ParameterIndex: Integer;
   const Value: TZTimeStamp);
 var DT: TDateTime;

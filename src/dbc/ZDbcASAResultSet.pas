@@ -1059,7 +1059,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
       DT_TIMESTAMP_STRUCT : begin
                       Result := @FTinyBuffer[0];
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
-                        stDate: Len := ZSysUtils.DateTimeToRawSQLDate(PZASASQLDateTime(SQLData).Year,
+                        stDate: Len := DateToRaw(PZASASQLDateTime(SQLData).Year,
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                         stTime: Len := TimeToRaw(PZASASQLDateTime(SQLData).Hour,
@@ -1162,7 +1162,7 @@ set_from_uni:           Len := Length(FUniTemp);
       DT_TIMESTAMP_STRUCT : begin
                       Result := @FTinyBuffer[0];
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
-                        stDate: Len := ZSysUtils.DateTimeToUnicodeSQLDate(Abs(PZASASQLDateTime(SQLData).Year),
+                        stDate: Len := DateToUni(Abs(PZASASQLDateTime(SQLData).Year),
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, PZASASQLDateTime(SQLData).Year < 0);
                         stTime: Len := TimeToUni(PZASASQLDateTime(SQLData).Hour,

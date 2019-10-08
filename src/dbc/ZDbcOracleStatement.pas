@@ -1585,8 +1585,8 @@ begin
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
-                Len := DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
-                  @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                Len := DateToRaw(Value.Year, Value.Month, Value.Day, @fABuffer[0],
+                  ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
                 BindRawStr(Index, @fABuffer[0], Len);
                 Exit;
               end;

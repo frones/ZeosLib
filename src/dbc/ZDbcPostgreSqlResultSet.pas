@@ -874,8 +874,8 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
         stDate:     begin
                       PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
 jmpDate:              Result := @fTinyBuffer[0];
-                      Len := ZSysUtils.DateTimeToRawSQLDate(TS.Year, TS.Month, TS.Day,
-                        Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
+                      Len := DateToRaw(TS.Year, TS.Month, TS.Day, Result,
+                        ConSettings.DisplayFormatSettings.DateFormat, False, False);
                     end;
         stTime:     begin
                       if Finteger_datetimes
@@ -1050,7 +1050,7 @@ JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
         stDate:     begin
                       PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
 jmpDate:              Result := @fTinyBuffer[0];
-                      Len := ZSysUtils.DateTimeToUnicodeSQLDate(TS.Year, TS.Month, TS.Day,
+                      Len := DateToUni(TS.Year, TS.Month, TS.Day,
                         Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
                     end;
         stTime:     begin

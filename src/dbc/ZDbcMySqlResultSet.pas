@@ -959,7 +959,7 @@ begin
           end;
         FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE: begin
             Result := @FTinyBuffer;
-            Len := DateTimeToRawSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
+            Len := DateToRaw(PMYSQL_TIME(ColBind^.buffer)^.Year,
               PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
               Result, ConSettings^.ReadFormatSettings.DateFormat, False, PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);
           end;
@@ -1100,7 +1100,7 @@ begin
           end;
         FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE: begin
             Result := @FTinyBuffer;
-            Len := DateTimeToUnicodeSQLDate(PMYSQL_TIME(ColBind^.buffer)^.Year,
+            Len := DateToUni(PMYSQL_TIME(ColBind^.buffer)^.Year,
               PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
               Result, ConSettings^.ReadFormatSettings.DateFormat, False,
               PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);

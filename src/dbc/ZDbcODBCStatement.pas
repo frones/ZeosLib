@@ -404,7 +404,7 @@ begin
     FLastResultSet := InternalCreateResultSet;
     CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
     (*EH: There is a problem i could not handle:
-      if a {? = CALL() } af a SP using SQLExecute which returns !no! result shows this behavior:
+      if a {? = CALL() } of a SP using SQLExecute which returns !no! result shows this behavior:
       SQLNumResultCols returns a valid count
       but the columninfos are from sp_describe_undeclared_parameters ...
       -> the first fetch leads to an invalid cursor handle
@@ -2060,13 +2060,13 @@ begin
           end;
         end;
       SQL_C_WCHAR:  begin
-              Len := ZSysUtils.DateTimeToUnicodeSQLDate(Value.Year, Value.Month, Value.Day,
+              Len := DateToUni(Value.Year, Value.Month, Value.Day,
                 @fWBuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
               SetPWideChar(Index, @fWBuffer[0], Len);
               Exit;
             end;
       SQL_C_CHAR:  begin
-              Len := ZSysUtils.DateTimeToRawSQLDate(Value.Year, Value.Month, Value.Day,
+              Len := DateToRaw(Value.Year, Value.Month, Value.Day,
                 @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
               SetPAnsiChar(Index, @fABuffer[0], Len);
               Exit;
