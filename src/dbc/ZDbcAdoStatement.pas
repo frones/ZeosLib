@@ -63,11 +63,11 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZCompatibility, ZSysUtils, ZOleDB, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
-  ZDbcOleDBUtils, ZDbcOleDBStatement;
+  ZDbcOleDBUtils, ZDbcOleDBStatement, ZDbcUtils;
 
 type
   {** Implements Prepared ADO Statement. }
-  TZAbstractAdoStatement = Class(TZUTF16PreparedStatement)
+  TZAbstractAdoStatement = Class(TZUTF16ParamDetectPreparedStatement)
   private
     FAdoRecordSet: ZPlainAdo.RecordSet;
     FAdoCommand: ZPlainAdo.Command;
@@ -100,6 +100,7 @@ type
     function CheckParameterIndex(Index, ASize: Integer; SQLType: TZSQLType): DataTypeEnum; reintroduce;
     procedure PrepareInParameters; override;
     function CreateResultSet: IZResultSet; override;
+    function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -163,8 +164,10 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZDbcAdoResultSet,
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcAdoResultSet,
   ZMessages, ZDbcProperties;
+
+var DefaultPreparableTokens: TPreparablePrefixTokens;
 
 { TZAbstractAdoStatement }
 
@@ -328,7 +331,8 @@ begin
     FAdoCommand.CommandType := FCommandType;
    // FAdoCommand.Properties['Defer Prepare'].Value := False;
     inherited Prepare;
-    FAdoCommand.Prepared := True;
+    if FTokenMatchIndex > -1 then
+      FAdoCommand.Prepared := True;
   end;
 end;
 
@@ -501,6 +505,11 @@ begin
   Result := inherited CreateResultSet;
   if Result = nil then
     Result := fOutParamResultSet;
+end;
+
+function TZAdoPreparedStatement.GetCompareFirstKeywordStrings: PPreparablePrefixTokens;
+begin
+  Result := @DefaultPreparableTokens;
 end;
 
 procedure TZAdoPreparedStatement.PrepareInParameters;
@@ -733,7 +742,7 @@ jmp_Assign:       V := null;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
     adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUnicodeSQLDate(AValue, @fWBuffer[0], ConSettings.WriteFormatSettings, False));
     else            SetDouble(Index, AValue);
-  end;
+                    end;
 end;
 
 procedure TZAdoPreparedStatement.SetDouble(Index: Integer;
@@ -1139,7 +1148,7 @@ jmp_assign:       V := null;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
     adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUnicodeSQLTime(AValue, @fWBuffer[0], ConSettings.WriteFormatSettings, False));
     else            SetDouble(Index, AValue);
-  end;
+                    end;
 end;
 
 procedure TZAdoPreparedStatement.SetTimestamp(Index: Integer;
@@ -1163,7 +1172,7 @@ jmp_Assign:   V := null;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
     adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUnicodeSQLTimeStamp(AValue, @fWBuffer[0], ConSettings.WriteFormatSettings, False));
     else            SetDouble(Index, AValue);
-  end;
+                    end;
 end;
 
 procedure TZAdoPreparedStatement.SetUInt(Index: Integer;
@@ -1329,5 +1338,14 @@ begin
   TZAdoPreparedStatement(Result).Prepare;
 end;
 
+initialization
+
+SetLength(DefaultPreparableTokens, 6);
+DefaultPreparableTokens[0].MatchingGroup := 'DELETE';
+DefaultPreparableTokens[1].MatchingGroup := 'INSERT';
+DefaultPreparableTokens[2].MatchingGroup := 'UPDATE';
+DefaultPreparableTokens[3].MatchingGroup := 'SELECT';
+DefaultPreparableTokens[4].MatchingGroup := 'CALL';
+DefaultPreparableTokens[5].MatchingGroup := 'SET';
 {$ENDIF ZEOS_DISABLE_ADO}
 end.
