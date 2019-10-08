@@ -2337,7 +2337,7 @@ begin
                     end;
       end;
   end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
-    Len := DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+    Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
       @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, False);
     ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
     BindRawStr(InParamIdx, fRawTemp);
@@ -2382,8 +2382,8 @@ begin
                     else TimeStamp2PG(Value, PDouble(FPQparamValues[InParamIdx])^);
       end;
   end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
-    Len := DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-      Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+    Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+      Value.Hour, Value.Minute, Value.Second, Value.Fractions,
       @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
     ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
     BindRawStr(InParamIdx, fRawTemp)

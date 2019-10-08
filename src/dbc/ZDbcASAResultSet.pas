@@ -1062,14 +1062,14 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         stDate: Len := ZSysUtils.DateTimeToRawSQLDate(PZASASQLDateTime(SQLData).Year,
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
-                        stTime: Len := ZSysUtils.DateTimeToRawSQLTime(PZASASQLDateTime(SQLData).Hour,
+                        stTime: Len := TimeToRaw(PZASASQLDateTime(SQLData).Hour,
                                   PZASASQLDateTime(SQLData).Minute, PZASASQLDateTime(SQLData).Second,
-                                  PZASASQLDateTime(SQLData).MicroSecond div 1000,
+                                  PZASASQLDateTime(SQLData).MicroSecond * 1000,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
-                        else    Len := ZSysUtils.DateTimeToRawSQLTimeStamp(PZASASQLDateTime(SQLData).Year,
+                        else    Len := DateTimeToRaw(PZASASQLDateTime(SQLData).Year,
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   PZASASQLDateTime(SQLData).Hour, PZASASQLDateTime(SQLData).Minute,
-                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond div 1000,
+                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond * 1000,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                         end;
                       end;
@@ -1165,14 +1165,14 @@ set_from_uni:           Len := Length(FUniTemp);
                         stDate: Len := ZSysUtils.DateTimeToUnicodeSQLDate(Abs(PZASASQLDateTime(SQLData).Year),
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, PZASASQLDateTime(SQLData).Year < 0);
-                        stTime: Len := ZSysUtils.DateTimeToUnicodeSQLTime(PZASASQLDateTime(SQLData).Hour,
+                        stTime: Len := TimeToUni(PZASASQLDateTime(SQLData).Hour,
                                   PZASASQLDateTime(SQLData).Minute, PZASASQLDateTime(SQLData).Second,
-                                  PZASASQLDateTime(SQLData).MicroSecond div 1000,
+                                  PZASASQLDateTime(SQLData).MicroSecond * 1000,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
-                        else    Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Abs(PZASASQLDateTime(SQLData).Year),
+                        else    Len := DateTimeToUni(Abs(PZASASQLDateTime(SQLData).Year),
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   PZASASQLDateTime(SQLData).Hour, PZASASQLDateTime(SQLData).Minute,
-                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond div 1000,
+                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond * 1000,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, PZASASQLDateTime(SQLData).Year < 0);
                         end;
                       end;

@@ -944,7 +944,7 @@ begin
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME:
           begin
             Result := @FTinyBuffer[0];
-            Len := DateTimeToRawSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
+            Len := DateTimeToRaw(PMYSQL_TIME(ColBind^.buffer)^.Year,
               PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
               PMYSQL_TIME(ColBind^.buffer)^.Hour, PMYSQL_TIME(ColBind^.buffer)^.Minute,
               PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
@@ -965,7 +965,7 @@ begin
           end;
         FIELD_TYPE_TIME: begin
             Result := @FTinyBuffer;
-            Len := DateTimeToRawSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
+            Len := TimeToRaw(PMYSQL_TIME(ColBind^.buffer)^.Hour,
               PMYSQL_TIME(ColBind^.buffer)^.Minute,
               PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
               @FTinyBuffer, ConSettings^.ReadFormatSettings.TimeFormat, False, PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);
@@ -1085,7 +1085,7 @@ begin
           end;
         FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME: begin
             Result := @FTinyBuffer[0];
-            Len := DateTimeToUnicodeSQLTimeStamp(PMYSQL_TIME(ColBind^.buffer)^.Year,
+            Len := DateTimeToUni(PMYSQL_TIME(ColBind^.buffer)^.Year,
               PMYSQL_TIME(ColBind^.buffer)^.Month, PMYSQL_TIME(ColBind^.buffer)^.Day,
               PMYSQL_TIME(ColBind^.buffer)^.Hour, PMYSQL_TIME(ColBind^.buffer)^.Minute,
               PMYSQL_TIME(ColBind^.buffer)^.Second, 0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
@@ -1106,7 +1106,7 @@ begin
               PMYSQL_TIME(ColBind^.buffer)^.neg <> 0);
           end;
         FIELD_TYPE_TIME: begin
-            Len := DateTimeToUnicodeSQLTime(PMYSQL_TIME(ColBind^.buffer)^.Hour,
+            Len := TimeToUni(PMYSQL_TIME(ColBind^.buffer)^.Hour,
               PMYSQL_TIME(ColBind^.buffer)^.Minute, PMYSQL_TIME(ColBind^.buffer)^.Second,
               0{PMYSQL_TIME(ColBind^.buffer)^.second_part},
               @FTinyBuffer, ConSettings^.ReadFormatSettings.TimeFormat, False,

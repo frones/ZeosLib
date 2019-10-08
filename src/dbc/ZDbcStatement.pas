@@ -2390,6 +2390,7 @@ begin
   end;
   FBindList := TZBindList.Create(ConSettings);
   FClientCP := ConSettings.ClientCodePage.CP;
+  FTokenMatchIndex := -1;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
 
@@ -3305,6 +3306,9 @@ begin
                   else SQLWriter.AddText('(CLOB)', Result);
     zbtPointer:   SQLWriter.AddText('(POINTER)', Result);
     zbtNull:      SQLWriter.AddText('(NULL)', Result);
+    zbtDate:      SQLWriter.AddDate(PZDate(BindValue.Value)^, ConSettings.WriteFormatSettings.DateFormat, Result);
+    zbtTime:      SQLWriter.AddTime(PZTime(BindValue.Value)^, ConSettings.WriteFormatSettings.TimeFormat, Result);
+    zbtTimeStamp: SQLWriter.AddTimeStamp(PZTimeStamp(BindValue.Value)^, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
     else          SQLWriter.AddText('(CUSTOM)', Result);
   end;
 end;

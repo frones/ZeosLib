@@ -882,7 +882,7 @@ jmpDate:              Result := @fTinyBuffer[0];
                       then dt2time(PG2Int64(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else dt2time(PG2Double(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := @fTinyBuffer[0];
-                      Len := ZSysUtils.DateTimeToRawSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                      Len := TimeToRaw(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                         Result, ConSettings.DisplayFormatSettings.TimeFormat, False, False);
                     end;
         stTimestamp:begin
@@ -890,7 +890,7 @@ jmpTime:              Result := @fTinyBuffer[0];
                       then PG2DateTime(PInt64(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := @fTinyBuffer[0];
-                      Len := ZSysUtils.DateTimeToRawSQLTimeStamp(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+                      Len := ZSysUtils.DateTimeToRaw(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
                     end;
         stGUID:     begin
@@ -1058,7 +1058,7 @@ jmpDate:              Result := @fTinyBuffer[0];
                       then dt2time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else dt2time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := @fTinyBuffer[0];
-                      Len := ZSysUtils.DateTimeToUnicodeSQLTime(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                      Len := TimeToUni(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                         Result, ConSettings.DisplayFormatSettings.TimeFormat, False, tS.IsNegative);
                     end;
         stTimestamp:begin
@@ -1066,7 +1066,7 @@ jmpTime:              Result := @fTinyBuffer[0];
                       then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := @fTinyBuffer[0];
-                      Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+                      Len := ZSysUtils.DateTimeToUni(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
                     end;
         stGUID:     begin

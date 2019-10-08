@@ -2272,20 +2272,20 @@ begin
                       end;
           DBTYPE_DATE:  SQLWriter.AddDate(PDateTime(Data)^, ConSettings.WriteFormatSettings.DateFormat, Result);
           DBTYPE_DBTIME: begin
-                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
+                        Len := TimeToRaw(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
                           PDBTIME(Data)^.second, 0, @fABuffer[0],  ConSettings.WriteFormatSettings.TimeFormat, True, False);
                         SQLWriter.AddText(@fABuffer[0], Len, Result);
                       end;
           DBTYPE_DBTIME2: begin
-                        Len := ZSysUtils.DateTimeToRawSQLTime(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
-                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction div 1000000, @fABuffer[0],
+                        Len := TimeToRaw(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
+                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction, @fABuffer[0],
                           ConSettings.WriteFormatSettings.DateTimeFormat, True, False);
                         SQLWriter.AddText(@fABuffer[0], Len, Result);
                       end;
           DBTYPE_DBTIMESTAMP: begin
-                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(Abs(PDBTimeStamp(Data)^.year),
+                        Len := DateTimeToRaw(Abs(PDBTimeStamp(Data)^.year),
                           PDBTimeStamp(Data).month, PDBTimeStamp(Data).day, PDBTimeStamp(Data).hour,
-                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,  PDBTimeStamp(Data)^.fraction div 1000000,
+                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,  PDBTimeStamp(Data)^.fraction,
                           @fABuffer[0],  ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
                         SQLWriter.AddText(@fABuffer[0], Len, Result);
                       end;
@@ -2769,14 +2769,18 @@ begin
                             PDBTIME2(Data)^.fraction := Value.Fractions;
                           end;
       DBTYPE_DBTIMESTAMP: begin
-                            PInt64(Data)^ := cPascalIntegralDatePart;
+                            PDBTimeStamp(Data)^.year := cPascalIntegralDatePart.Year;
+                            PDBTimeStamp(Data)^.month := cPascalIntegralDatePart.Month;
+                            PDBTimeStamp(Data)^.day := cPascalIntegralDatePart.Day;
                             PDBTimeStamp(Data)^.hour := Value.Hour;
                             PDBTimeStamp(Data)^.minute := Value.Minute;
                             PDBTimeStamp(Data)^.second := Value.Second;
                             PDBTimeStamp(Data)^.fraction := Value.Fractions;
                           end;
       DBTYPE_DBTIMESTAMPOFFSET: begin
-                            PInt64(Data)^ := cPascalIntegralDatePart;
+                            PDBTIMESTAMPOFFSET(Data)^.year := cPascalIntegralDatePart.Year;
+                            PDBTIMESTAMPOFFSET(Data)^.month := cPascalIntegralDatePart.Month;
+                            PDBTIMESTAMPOFFSET(Data)^.day := cPascalIntegralDatePart.Day;
                             PDBTIMESTAMPOFFSET(Data)^.hour := Value.Hour;
                             PDBTIMESTAMPOFFSET(Data)^.minute := Value.Minute;
                             PDBTIMESTAMPOFFSET(Data)^.second := Value.Second;
@@ -2786,7 +2790,7 @@ begin
                           end;
       DBTYPE_WSTR:  if (Bind.cbMaxLen >= 26 ){00.00.00.000#0} or ((Bind.cbMaxLen-2) shr 1 = DBLENGTH(ConSettings.WriteFormatSettings.TimeFormatLen)) then
 TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
-                        DateTimeToUnicodeSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                        TimeToUni(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                         PWideChar(Data), ConSettings.WriteFormatSettings.TimeFormat, False, Value.IsNegative) shl 1
                       else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
@@ -2875,9 +2879,9 @@ begin
                           end;
       DBTYPE_WSTR:  if (Bind.cbMaxLen >= 48){0000-00-00T00.00.00.000#0}  or ((Bind.cbMaxLen-2) shr 1 = DBLENGTH(ConSettings.WriteFormatSettings.DateTimeFormatLen)) then
 TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
-                        DateTimeToUnicodeSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-                          Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
-                        PWideChar(Data), ConSettings.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative) shl 1
+                        DateTimeToUni(Value.Year, Value.Month, Value.Day,
+                          Value.Hour, Value.Minute, Value.Second, Value.Fractions, PWideChar(Data),
+                          ConSettings.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
                       PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);

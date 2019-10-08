@@ -1858,24 +1858,25 @@ begin
     InitBuffer(OraType, Bind, Index, 1);
   case Bind.dty of
     SQLT_DAT:   begin
-                  POraDate(Bind^.valuep).Cent   := 1899 div 100 +100;
-                  POraDate(Bind^.valuep).Year   := 1899 mod 100 +100;
-                  POraDate(Bind^.valuep).Month  := 12;
-                  POraDate(Bind^.valuep).Day    := 30;
+                  POraDate(Bind^.valuep).Cent   := cPascalIntegralDatePart.Year div 100 +100;
+                  POraDate(Bind^.valuep).Year   := cPascalIntegralDatePart.Year mod 100 +100;
+                  POraDate(Bind^.valuep).Month  := cPascalIntegralDatePart.Month;
+                  POraDate(Bind^.valuep).Day    := cPascalIntegralDatePart.Day;
                   POraDate(Bind^.valuep).Hour := Value.Hour +1;
                   POraDate(Bind^.valuep).Min := Value.Minute +1;
                   POraDate(Bind^.valuep).Sec := Value.Second +1;
                 end;
     SQLT_TIMESTAMP: begin
                   Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
-                    FOCIError, PPOCIDescriptor(Bind.valuep)^, 1899, 12, 30,
+                    FOCIError, PPOCIDescriptor(Bind.valuep)^, cPascalIntegralDatePart.Year,
+                      cPascalIntegralDatePart.Month, cPascalIntegralDatePart.Day,
                       Value.Hour, Value.Minute, Value.Second, Value.Fractions, nil, 0);
                   if Status <> OCI_SUCCESS then
                     CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
-                Len := DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                   @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
                 BindRawStr(Index, @fABuffer[0], Len);
                 Exit;
@@ -1937,8 +1938,8 @@ begin
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
-                Len := DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-                  Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+                  Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                   @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
                 BindRawStr(Index, @fABuffer[0], Len);
                 Exit;

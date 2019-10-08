@@ -2392,7 +2392,7 @@ begin
   CheckParameterIndex(Index);
   if FEmulatedParams then begin
     BindList.Put(Index, Value);
-    L := DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+    L := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
       @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
     ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
   end else begin
@@ -2430,8 +2430,8 @@ begin
   CheckParameterIndex(Index);
   if FEmulatedParams then begin
     BindList.Put(Index, Value);
-    L := DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-      Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+    L := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+      Value.Hour, Value.Minute, Value.Second, Value.Fractions,
       @fABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
     ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
   end else begin

@@ -587,7 +587,7 @@ function VarToBytes(const Value: Variant): TBytes;
     Valid delimiters (if given) are space,minus,slash,backslash
   @param Value a pointer to the raw encoded date string.
   @param Len the length of the buffer
-  @param format a DateFormat string uses for the convertion.
+  @param format a DateFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -605,7 +605,7 @@ function TryRawToDate(Value: PAnsiChar; Len: Cardinal;
     Valid delimiters (if given) are space,minus,slash,backslash
   @param Value a pointer to the UTF16 encoded date string.
   @param Len the length of the buffer
-  @param format a DateFormat string uses for the convertion.
+  @param format a DateFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -624,7 +624,7 @@ function TryUniToDate(Value: PWideChar; Len: Cardinal;
     Valid delimiters (if given) are space,minus,slash,backslash,doubledot
   @param Value a pointer to the raw encoded time string.
   @param Len the length of the buffer
-  @param format a TimeFormat string uses for the convertion.
+  @param format a TimeFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -643,7 +643,7 @@ function TryRawToTime(Value: PAnsiChar; Len: Cardinal;
     Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
   @param Value a pointer to the UTF16 encoded time string.
   @param Len the length of the buffer
-  @param format a TimeFormat string uses for the convertion.
+  @param format a TimeFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -665,7 +665,7 @@ function TryUniToTime(Value: PWideChar; Len: Cardinal;
     Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
   @param Value a pointer to the raw encoded string.
   @param Len the length of the buffer
-  @param format a TimeStampFormat string uses for the convertion.
+  @param format a TimeStampFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -688,7 +688,7 @@ function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
     Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
   @param Value a pointer to the UTF16 encoded string.
   @param Len the length of the buffer
-  @param format a TimeStampFormat string uses for the convertion.
+  @param format a TimeStampFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -914,13 +914,13 @@ function DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
   @param Hour a hour value with range of 0..23.
   @param Minute a minute value with range of 0..59.
   @param Second a second value with range of 0..59.
-  @param MSec a millisecond value with range of 0..999.
+  @param Fractions the nano fractions of the .
   @param Buf the raw buffer we write in.
   @param Format the !valid! result format.
   @param Quoted if the result should be quoted.
   @return the length in bytes of written value.
 }
-function DateTimeToRawSQLTime(Hour, Minute, Second, MSec: Word;
+function TimeToRaw(Hour, Minute, Second: Word; Fractions: Cardinal;
   Buf: PAnsichar; const Format: String; Quoted: Boolean; IsNegative: Boolean): Byte; overload;
 
 {** EH:
@@ -962,7 +962,7 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
   @param Quoted if the result should be quoted.
   @return the length in codepoints of written value.
 }
-function DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec: Word;
+function TimeToUni(Hour, Minute, Second: Word; Fractions: Cardinal;
   Buf: PWideChar; const Format: String; Quoted, IsNegative: Boolean): Byte; overload;
 
 {**
@@ -1016,8 +1016,8 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
   @param Negative if the date is negative (i.e. bc).
   @return the length in bytes of written value.
 }
-function DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buf: PAnsiChar; const Format: String; Quoted, Negative: Boolean): Byte; overload;
+function DateTimeToRaw(Year, Month, Day, Hour, Minute, Second: Word;
+  Fractions: Cardinal; Buf: PAnsiChar; const Format: String; Quoted, Negative: Boolean): Byte;
 
 {** EH:
   Converts datetime value into a Unicode/Widestring with format pattern
@@ -1063,8 +1063,9 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
   @param Negative if the date is negative (i.e. bc).
   @return the length in bytes of written value.
 }
-function DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buf: PWideChar; const Format: String; Quoted, Negative: Boolean): Byte; overload;
+function DateTimeToUni(Year, Month, Day, Hour, Minute, Second: Word;
+  Fractions: Cardinal; Buf: PWideChar; const Format: String;
+  Quoted, Negative: Boolean): Byte;
 
 {**
   Converts DateTime value to native string
@@ -1414,7 +1415,11 @@ const
   MSecsOfHour = 60 * MSecsOfMinute;
   MSecsOfDay = MSecsOfHour * 24;
 
-  cPascalIntegralDatePart: Int64 = 128849807211; //1899.12.30 00;
+  cPascalIntegralDatePart: TZDate = (Year: 1899; Month: 12; Day: 30);
+
+  cMaxDateLen = 1{neg sign}+5{high word}+1{delim}+2{month}+1{delim}+2{day}+1{T};
+  cMaxTimeLen = 1{T}+1{neg sign}+2{hour}+1{delim}+2{minute}+1{delim}+2{second}+1{dot}+9{nano fractions};
+  cMaxTimeStampLen = cMaxDateLen+cMaxTimeLen{Z is replace by dbl T delim }+6{-/+)14:45};
 implementation
 
 uses DateUtils, Math,
@@ -1423,10 +1428,17 @@ uses DateUtils, Math,
   {$IFDEF WITH_DBCONSTS}DBConsts,{$ENDIF}
   ZFastCode;
 
+const
+  u4Zeros: UnicodeString = '0000';
+{$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  r8Zeros: RawByteString = '00000000';
+{$ENDIF}
 var
   ZBcdNibble2DwoDigitLookupW:   array[0..153] of Word;
   ZBcdNibble2DwoDigitLookupLW:  array[0..153] of Cardinal;
-
+{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  r8Zeros: RawByteString;
+{$ENDIF}
 
 {**
   Determines a position of a first delimiter.
@@ -2844,7 +2856,7 @@ end;
   result record using the format-string.
   @param Value a pointer to the raw encoded date string.
   @param Len the length of the buffer
-  @param Dateformat a DateFormat string uses for the convertion.
+  @param Dateformat a DateFormat string used for the convertion.
   @param Result the record we write in.
   @return @return <code>True</code> if the conversion was successful.
 }
@@ -2921,7 +2933,7 @@ end;
     Valid delimiters (if given) are space,minus,slash,backslash
   @param Value a pointer to the raw encoded date string.
   @param Len the length of the buffer
-  @param Dateformat a DateFormat string uses for the convertion.
+  @param Dateformat a DateFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -2998,7 +3010,7 @@ end;
     Valid delimiters (if given) are space,minus,slash,backslash,doubledot
   @param Value a pointer to the raw encoded time string.
   @param Len the length of the buffer
-  @param timeformat a TimeFormat string uses for the convertion.
+  @param timeformat a TimeFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -3105,7 +3117,7 @@ end;
     Valid delimiters (if given) are space,minus,slash,backslash,doubledot
   @param Value a pointer to the UTF16 encoded time string.
   @param Len the length of the buffer
-  @param timeformat a TimeFormat string uses for the convertion.
+  @param timeformat a TimeFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -3217,7 +3229,7 @@ end;
     Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
   @param Value a pointer to the raw encoded string.
   @param Len the length of the buffer
-  @param format a TimeStampFormat string uses for the convertion.
+  @param format a TimeStampFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -3365,7 +3377,7 @@ end;
     Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
   @param Value a pointer to the UTF16 encoded string.
   @param Len the length of the buffer
-  @param format a TimeStampFormat string uses for the convertion.
+  @param format a TimeStampFormat string used for the convertion.
   @param Result the record we write in.
   @return true if the conversion was successful.
 }
@@ -3561,7 +3573,7 @@ end;
 
 procedure TimeStampFromTime(const Time: TZTime; var TS: TZTimeStamp);
 begin
-  PInt64(@TS.Year)^ := cPascalIntegralDatePart;
+  PInt64(@TS.Year)^ := PInt64(@cPascalIntegralDatePart.Year)^;
   PInt64(@TS.Hour)^ := PInt64(@Time.Hour)^;
   PInt64(@TS.Fractions)^ := 0;
   TS.Fractions := Time.Fractions;
@@ -3785,7 +3797,7 @@ function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal;
 begin
   if (Len > 2) and (P <> nil) then
     if PByte(P+2)^ = Ord(':') then begin
-      PInt64(@TimeStamp.Year)^ := cPascalIntegralDatePart;
+      PInt64(@TimeStamp.Year)^ := PInt64(@cPascalIntegralDatePart.Year)^;
       PCardinal(@TimeStamp.TimeZoneHour)^ := 0;
       Result := TryRawToTime(P, Len,
         FormatSettings.TimeFormat, PZTime(@TimeStamp.Hour)^)
@@ -3813,7 +3825,7 @@ function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal;
 begin
   if (Len > 2) and (P <> nil) then
     if PByte(P+2)^ = Ord(':') then begin
-      PInt64(@TimeStamp.Year)^ := cPascalIntegralDatePart;
+      PInt64(@TimeStamp.Year)^ := PInt64(@cPascalIntegralDatePart.Year)^;
       PCardinal(@TimeStamp.TimeZoneHour)^ := 0;
       Result := TryUniToTime(P, Len,
         FormatSettings.TimeFormat, PZTime(@TimeStamp.Hour)^)
@@ -4660,7 +4672,7 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var L, L2, Year, Month, Day: Word;
-  Buffer: array[0..11] of AnsiChar;
+  Buffer: array[0..cMaxDateLen] of AnsiChar;
   P: PAnsiChar;
 begin
   DecodeDate(Value, Year, Month, Day);
@@ -4931,7 +4943,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
 var L, L2, Year, Month, Day: Word;
-  Buffer: array[0..11] of WideChar;
+  Buffer: array[0..cMaxDateLen] of WideChar;
   P: PWideChar;
 begin
   DecodeDate(Value, Year, Month, Day);
@@ -4968,11 +4980,11 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var l, l2, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..15] of AnsiChar;
+  Buffer: array[0..cMaxTimeLen] of AnsiChar;
   P: PAnsiChar;
 begin
   DecodeTime(Value, Hour, Minute, Second, MSec);
-  L := DateTimeToRawSQLTime(Hour, Minute, Second, MSec, @Buffer[0],
+  L := TimeToRaw(Hour, Minute, Second, MSec * NanoSecsPerMSec, @Buffer[0],
     ConFormatSettings.TimeFormat, Quoted, False);
   l2 := Length(Suffix);
   {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
@@ -5002,7 +5014,7 @@ function DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
 var l, Hour, Minute, Second, MSec: Word;
 begin
   DecodeTime(Value, Hour, Minute, Second, MSec);
-  Result := DateTimeToRawSQLTime(Hour, Minute, Second, MSec, Buffer,
+  Result := TimeToRaw(Hour, Minute, Second, MSec * NanoSecsPerMSec, Buffer,
     ConFormatSettings.TimeFormat, Quoted, False);
   L := Length(Suffix);
   if L > 0 then begin
@@ -5017,18 +5029,19 @@ end;
   @param Hour a hour value with range of 0..23.
   @param Minute a minute value with range of 0..59.
   @param Second a second value with range of 0..59.
-  @param MSec a millisecond value with range of 0..999.
+  @param Fractions a millisecond fraction value with range of 0..999.999.999
   @param Buf the raw buffer we write in.
   @param Format the !valid! result format.
   @param Quoted if the result should be quoted.
   @return the length in bytes of written value.
 }
-function DateTimeToRawSQLTime(Hour, Minute, Second, MSec: Word;
+function TimeToRaw(Hour, Minute, Second: Word; Fractions: Cardinal;
   Buf: PAnsichar; const Format: String; Quoted, IsNegative: Boolean): Byte;
-var PStart: PAnsiChar;
+var PStart, ZStart: PAnsiChar;
   PFormat, PEnd: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
-  EQ2, EQ3: Boolean;
+  EQ2: Boolean;
+  B: Byte absolute EQ2;
 label inc_dbl; //keep code tiny
 begin
   PStart := Buf;
@@ -5059,25 +5072,30 @@ Inc_dbl:          Inc(Buf, 2);
                   goto Inc_dbl;
                 end else
                   PByte(Buf)^ := Ord('0') + Second;
+      Ord('f'),
       Ord('z'): begin
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  if EQ3 or (MSec >= 100) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
-                    Result := MSec div 100;
-                    PByte(Buf)^   := Ord('0')+Result;
-                    PWord(Buf+1)^ := TwoDigitLookupW[MSec-(Result*100)];
-                    {$ELSE}
-                    PByte(Buf)^   := Ord('0')+MSec div 100;
-                    PWord(Buf+1)^ := TwoDigitLookupW[MSec mod 100];
-                    {$ENDIF}
-                    Inc(Buf, 3); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
-                    continue;
-                  end else if EQ2 or (MSec > 9) then begin
-                    PWord(Buf)^ := TwoDigitLookupW[MSec];
-                    goto Inc_dbl;
-                  end else
-                    PByte(Buf)^ := Ord('0') + MSec;
+                  ZStart := Buf;
+                  PInt64(Buf)^ := PInt64(r8Zeros)^;
+                  if Fractions = 0 then begin
+                    Inc(Buf, 8);
+                    PByte(Buf)^ := Byte('0');
+                  end else begin
+                    B := GetOrdinalDigits(Fractions);
+                    Inc(Buf, 9-B);
+                    IntToRaw(Fractions, Buf, B);
+                    Inc(Buf, B-1);
+                  end;
+                  {$IFDEF UNICODE}
+                  while PWord(PFormat+1)^ or $0020 = C1 do begin
+                  {$ELSE}
+                  while PByte(PFormat+1)^ or $20 = C1 do begin
+                  {$ENDIF}
+                    Inc(PFormat);
+                    if (ZStart<Buf) then
+                      Inc(ZStart);
+                  end;
+                  while (PByte(Buf)^ = Byte('0')) and (Buf>ZStart) do
+                    Dec(Buf);
                 end;
       else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
@@ -5105,11 +5123,11 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
 var l, l2, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..15] of WideChar;
+  Buffer: array[0..cMaxTimeLen] of WideChar;
   P: PWideChar;
 begin
   DecodeTime(Value, Hour, Minute, Second, MSec);
-  L := DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec, @Buffer[0],
+  L := TimeToUni(Hour, Minute, Second, MSec * NanoSecsPerMSec, @Buffer[0],
     ConFormatSettings.TimeFormat, Quoted, False);
   l2 := Length(Suffix);
   System.SetString(Result, nil , L+L2);
@@ -5135,7 +5153,7 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
 var l, Hour, Minute, Second, MSec: Word;
 begin
   DecodeTime(Value, Hour, Minute, Second, MSec);
-  Result := DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec, Buf,
+  Result := TimeToUni(Hour, Minute, Second, MSec * NanoSecsPerMSec, Buf,
     ConFormatSettings.TimeFormat, Quoted, False);
   L := Length(Suffix);
   if L > 0 then begin
@@ -5150,18 +5168,19 @@ end;
   @param Hour a hour value with range of 0..23.
   @param Minute a minute value with range of 0..59.
   @param Second a second value with range of 0..59.
-  @param MSec a millisecond value with range of 0..999.
+  @param Fractions a nanosecond fraction value with range of 0..999.999.999.
   @param Buf the unicode buffer we write in.
   @param Format the !valid! result format.
   @param Quoted if the result should be quoted.
   @return the length in codepoints of written value.
 }
-function DateTimeToUnicodeSQLTime(Hour, Minute, Second, MSec: Word;
+function TimeToUni(Hour, Minute, Second: Word; Fractions: Cardinal;
   Buf: PWideChar; const Format: String; Quoted, IsNegative: Boolean): Byte;
-var PStart: PWideChar;
+var PStart, ZStart: PWideChar;
   PFormat, PEnd: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
-  EQ2, EQ3: Boolean;
+  EQ2: Boolean;
+  B: Byte absolute EQ2;
 label inc_dbl; //keep code tiny
 begin
   PStart := Buf;
@@ -5192,26 +5211,32 @@ Inc_dbl:          Inc(Buf, 2);
                   goto Inc_dbl;
                 end else
                   PWord(Buf)^ := Ord('0') + Second;
+      Ord('f'),
       Ord('z'): begin
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  if EQ3 or (MSec >= 100) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
-                    Result := MSec div 100;
-                    PWord(Buf)^       := Ord('0')+Result;
-                    PCardinal(Buf+1)^ := TwoDigitLookupLW[MSec-(Result*100)];
-                    {$ELSE}
-                    PWord(Buf)^       := Ord('0')+MSec div 100;
-                    PCardinal(Buf+1)^ := TwoDigitLookupLW[MSec mod 100];
-                    {$ENDIF}
-                    Inc(Buf, 3); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
-                    continue;
-                  end else if EQ2 or (MSec > 9) then begin
-                    PCardinal(Buf)^ := TwoDigitLookupLW[MSec];
-                    goto Inc_dbl
-                  end else
-                    PWord(Buf)^ := Ord('0') + MSec;
-                end
+                  ZStart := Buf;
+                  PInt64(Buf)^ := PInt64(u4Zeros)^;
+                  PInt64(Buf+4)^ := PInt64(u4Zeros)^;
+                  if Fractions = 0 then begin
+                    Inc(Buf, 8);
+                    PWord(Buf)^ := Byte('0');
+                  end else begin
+                    B := GetOrdinalDigits(Fractions);
+                    Inc(Buf, 9-B);
+                    IntToUnicode(Fractions, Buf, B);
+                    Inc(Buf, B-1);
+                  end;
+                  {$IFDEF UNICODE}
+                  while PWord(PFormat+1)^ or $0020 = C1 do begin
+                  {$ELSE}
+                  while PByte(PFormat+1)^ or $20 = C1 do begin
+                  {$ENDIF}
+                    Inc(PFormat);
+                    if (ZStart<Buf) then
+                      Inc(ZStart);
+                  end;
+                  while (PWord(Buf)^ = Word('0')) and (Buf>ZStart) do
+                    Dec(Buf);
+                end;
       else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
     Inc(Buf);
@@ -5248,11 +5273,11 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..31] of AnsiChar;
+  Buffer: array[0..cMaxTimeStampLen] of AnsiChar;
   P: PAnsiChar;
 begin
   DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
-  L := DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec,
+  L := DateTimeToRaw(Year, Month, Day, Hour, Minute, Second, MSec*NanoSecsPerMSec,
     @Buffer[0], ConFormatSettings.DateTimeFormat, Quoted, False);
   l2 := Length(Suffix);
   {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
@@ -5282,8 +5307,8 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
 var l, Year, Month, Day, Hour, Minute, Second, MSec: Word;
 begin
   DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
-  Result := DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second,
-    MSec, Buf, ConFormatSettings.DateTimeFormat, Quoted, False);
+  Result := DateTimeToRaw(Year, Month, Day, Hour, Minute, Second,
+    MSec*NanoSecsPerMSec, Buf, ConFormatSettings.DateTimeFormat, Quoted, False);
   L := Length(Suffix);
   if L > 0 then begin
     Move(Pointer(Suffix)^, (Buf+Result)^, L);
@@ -5308,12 +5333,14 @@ end;
   @param Negative if the date is negative (i.e. bc).
   @return the length in bytes of written value.
 }
-function DateTimeToRawSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buf: PAnsiChar; const Format: String; Quoted, Negative: Boolean): Byte; overload;
-var PStart: PAnsiChar;
+function DateTimeToRaw(Year, Month, Day, Hour, Minute, Second: Word;
+  Fractions: Cardinal; Buf: PAnsiChar; const Format: String;
+  Quoted, Negative: Boolean): Byte;
+var PStart, ZStart: PAnsiChar;
   PFormat, PEnd: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
   EQ2, EQ3, EQ4: Boolean; //equals to C1?
+  B: Byte absolute EQ2;
 label inc_dbl, inc_trpl; //keep code tiny
 begin
   PFormat := Pointer(Format);
@@ -5393,24 +5420,30 @@ Inc_dbl:            Inc(Buf, 2);
                   goto Inc_dbl;
                 end else
                   PByte(Buf)^ := Ord('0') + Second;
+      Ord('f'),
       Ord('z'): begin
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  if EQ3 or (MSec >= 100) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
-                    Result := MSec div 100;
-                    PByte(Buf)^   := Ord('0')+Result;
-                    PWord(Buf+1)^ := TwoDigitLookupW[MSec-(Result*100)];
-                    {$ELSE}
-                    PByte(Buf)^   := Ord('0')+MSec div 100;
-                    PWord(Buf+1)^ := TwoDigitLookupW[MSec mod 100];
-                    {$ENDIF}
-                    goto inc_trpl;
-                  end else if EQ2 or (MSec > 9) then begin
-                    PWord(Buf)^ := TwoDigitLookupW[MSec];
-                    goto Inc_dbl;
-                  end else
-                    PByte(Buf)^ := Ord('0') + MSec;
+                  ZStart := Buf;
+                  PInt64(Buf)^ := PInt64(r8Zeros)^;
+                  if Fractions = 0 then begin
+                    Inc(Buf, 8);
+                    PByte(Buf)^ := Byte('0');
+                  end else begin
+                    B := GetOrdinalDigits(Fractions);
+                    Inc(Buf, 9-B);
+                    IntToRaw(Fractions, Buf, B);
+                    Inc(Buf, B-1);
+                  end;
+                  {$IFDEF UNICODE}
+                  while PWord(PFormat+1)^ or $0020 = C1 do begin
+                  {$ELSE}
+                  while PByte(PFormat+1)^ or $20 = C1 do begin
+                  {$ENDIF}
+                    Inc(PFormat);
+                    if (ZStart<Buf) then
+                      Inc(ZStart);
+                  end;
+                  while (PByte(Buf)^ = Byte('0')) and (Buf>ZStart) do
+                    Dec(Buf);
                 end;
       else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
@@ -5441,8 +5474,8 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
 var l, Year, Month, Day, Hour, Minute, Second, MSec: Word;
 begin
   DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
-  Result := DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute, Second,
-    MSec, Buf, ConFormatSettings.DateTimeFormat, Quoted, False);
+  Result := DateTimeToUni(Year, Month, Day, Hour, Minute, Second,
+    MSec*NanoSecsPerMSec, Buf, ConFormatSettings.DateTimeFormat, Quoted, False);
   L := Length(Suffix);
   if L > 0 then begin
     Move(Pointer(Suffix)^, (Buf+Result)^, L shl 1);
@@ -5467,12 +5500,14 @@ end;
   @param Negative if the date is negative (i.e. bc).
   @return the length in bytes of written value.
 }
-function DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buf: PWideChar; const Format: String; Quoted, Negative: Boolean): Byte;
-var PStart: PWideChar;
+function DateTimeToUni(Year, Month, Day, Hour, Minute, Second: Word;
+  Fractions: Cardinal; Buf: PWideChar; const Format: String;
+  Quoted, Negative: Boolean): Byte;
+var PStart, ZStart: PWideChar;
   PFormat, PEnd: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
   EQ2, EQ3, EQ4: Boolean; //equals to C1?
+  B: Byte absolute EQ2;
 label inc_dbl, inc_trpl; //keep code tiny
 begin
   PFormat := Pointer(Format);
@@ -5552,24 +5587,31 @@ Inc_dbl:            Inc(Buf, 2);
                   goto Inc_dbl;
                 end else
                   PWord(Buf)^ := Ord('0') + Second;
+      Ord('f'),
       Ord('z'): begin
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  if EQ3 or (MSec >= 100) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
-                    Result := MSec div 100;
-                    PWord(Buf)^   := Ord('0')+Result;
-                    PCardinal(Buf+1)^ := TwoDigitLookupLW[MSec-(Result*100)];
-                    {$ELSE}
-                    PWord(Buf)^   := Ord('0')+MSec div 100;
-                    PCardinal(Buf+1)^ := TwoDigitLookupLW[MSec mod 100];
-                    {$ENDIF}
-                    goto inc_trpl;
-                  end else if EQ2 or (MSec > 9) then begin
-                    PCardinal(Buf)^ := TwoDigitLookupLW[MSec];
-                    goto Inc_dbl;
-                  end else
-                    PWord(Buf)^ := Ord('0') + MSec;
+                  ZStart := Buf;
+                  PInt64(Buf)^ := PInt64(u4Zeros)^;
+                  PInt64(Buf+4)^ := PInt64(u4Zeros)^;
+                  if Fractions = 0 then begin
+                    Inc(Buf, 8);
+                    PWord(Buf)^ := Byte('0');
+                  end else begin
+                    B := GetOrdinalDigits(Fractions);
+                    Inc(Buf, 9-B);
+                    IntToUnicode(Fractions, Buf, B);
+                    Inc(Buf, B-1);
+                  end;
+                  {$IFDEF UNICODE}
+                  while PWord(PFormat+1)^ or $0020 = C1 do begin
+                  {$ELSE}
+                  while PByte(PFormat+1)^ or $20 = C1 do begin
+                  {$ENDIF}
+                    Inc(PFormat);
+                    if (ZStart<Buf) then
+                      Inc(ZStart);
+                  end;
+                  while (PWord(Buf)^ = Word('0')) and (Buf>ZStart) do
+                    Dec(Buf);
                 end;
       else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
     end;
@@ -5597,12 +5639,12 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..31] of WideChar;
+  Buffer: array[0..cMaxTimeStampLen] of WideChar;
   P: PWideChar;
 begin
   DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
-  L := DateTimeToUnicodeSQLTimeStamp(Year, Month, Day, Hour, Minute,
-    Second, MSec, @Buffer[0], ConFormatSettings.DateTimeFormat, Quoted, False);
+  L := DateTimeToUni(Year, Month, Day, Hour, Minute,
+    Second, MSec*NanoSecsPerMSec, @Buffer[0], ConFormatSettings.DateTimeFormat, Quoted, False);
   l2 := Length(Suffix);
   System.SetString(Result, nil, L+L2);
   P := Pointer(Result);
@@ -8645,6 +8687,17 @@ begin
     BoolStrsRaw[B] := UnicodeStringToASCII7(BoolStrsW[B]);
     YesNoStrsRaw[B] := UnicodeStringToASCII7(YesNoStrs[b]);
   end;
+  SetLength(r8Zeros, 8);
+  r8Zeros[0] := Ord('0');
+  r8Zeros[1] := Ord('0');
+  r8Zeros[2] := Ord('0');
+  r8Zeros[3] := Ord('0');
+  r8Zeros[4] := Ord('0');
+  r8Zeros[5] := Ord('0');
+  r8Zeros[6] := Ord('0');
+  r8Zeros[7] := Ord('0');
+  r8Zeros[8] := Ord('0');
+  r8Zeros[9] := Ord('0');
 end;
 {$ENDIF}
 

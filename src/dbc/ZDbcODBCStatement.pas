@@ -2500,9 +2500,9 @@ begin
                       end;
       SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP: begin
                         With PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^ do begin
-                          Year := 1899;
-                          Month := 12;
-                          Day := 30;
+                          Year := cPascalIntegralDatePart.Year;
+                          Month := cPascalIntegralDatePart.Month;
+                          Day := cPascalIntegralDatePart.Day;
                           Hour := Value.Hour;
                           Minute := Value.Minute;
                           Second := Value.Second;
@@ -2511,9 +2511,9 @@ begin
                       end;
       SQL_C_SS_TIMESTAMPOFFSET:
                         With PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^ do begin
-                          Year := 1899;
-                          Month := 12;
-                          Day := 30;
+                          Year := cPascalIntegralDatePart.Year;
+                          Month := cPascalIntegralDatePart.Month;
+                          Day := cPascalIntegralDatePart.Day;
                           Hour := Value.Hour;
                           Minute := Value.Minute;
                           Second := Value.Second;
@@ -2522,13 +2522,13 @@ begin
                           timezone_minute := 0;
                         end;
       SQL_C_WCHAR:  begin
-              Len := ZSysUtils.DateTimeToUnicodeSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+              Len := TimeToUni(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                 @fWBuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
               SetPWideChar(Index, @fWBuffer[0], Len);
               Exit;
             end;
       SQL_C_CHAR:  begin
-              Len := ZSysUtils.DateTimeToUnicodeSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+              Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                 @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
               SetPAnsiChar(Index, @fABuffer[0], Len);
               Exit;
@@ -2615,15 +2615,15 @@ begin
                             Year := -Year;
                         end;
       SQL_C_WCHAR:  begin
-              Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-                Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+              Len := ZSysUtils.DateTimeToUni(Value.Year, Value.Month, Value.Day,
+                Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                 @fWBuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
               SetPWideChar(Index, @fWBuffer[0], Len);
               Exit;
             end;
       SQL_C_CHAR:  begin
-              Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-                Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+              Len := ZSysUtils.DateTimeToUni(Value.Year, Value.Month, Value.Day,
+                Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                 @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
               SetPAnsiChar(Index, @fABuffer[0], Len);
               Exit;

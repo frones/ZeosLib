@@ -2192,14 +2192,14 @@ Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
                   end;
       stTime:     begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToRawSQLTime(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
-                      PZTime(Data)^.Fractions div NanoSecsPerMSec, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
+                    Len := TimeToRaw(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
+                      PZTime(Data)^.Fractions, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
                   end;
       stTimestamp:begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToRawSQLTimeStamp(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
+                    Len := DateTimeToRaw(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
                       PZTimeStamp(Data)^.Day, PZTimeStamp(Data)^.Hour, PZTimeStamp(Data)^.Minute,
-                      PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions div NanoSecsPerMSec, Result,
+                      PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions, Result,
                       ConSettings^.DisplayFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
                   end;
       stAsciiStream, stUnicodeStream:
@@ -2485,14 +2485,14 @@ Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
                   end;
       stTime:     begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToUnicodeSQLTime(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
-                      PZTime(Data)^.Fractions div NanoSecsPerMSec, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
+                    Len := TimeToUni(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
+                      PZTime(Data)^.Fractions, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
                   end;
       stTimestamp:begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToUnicodeSQLTimeStamp(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
+                    Len := DateTimeToUni(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
                       PZTimeStamp(Data)^.Day, PZTimeStamp(Data)^.Hour, PZTimeStamp(Data)^.Minute,
-                      PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions div NanoSecsPerMSec, Result,
+                      PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions, Result,
                       ConSettings^.DisplayFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
                   end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4433,11 +4433,11 @@ begin
     stTime: PZTime(Data)^ := Value;
     stTimestamp: TimeStampFromTime(Value, PZTimeStamp(Data)^);
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin
-        Len := DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+        Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
           @TinyBuffer[0], ConSettings^.ReadFormatSettings.TimeFormat, False, Value.IsNegative);
         SetPAnsiChar(ColumnIndex, @TinyBuffer[0], Len);
       end else begin
-        Len := DateTimeToUnicodeSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+        Len := TimeToUni(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
           @TinyBuffer[0], ConSettings^.ReadFormatSettings.TimeFormat, False, Value.IsNegative);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], Len);
       end;
@@ -4475,13 +4475,13 @@ begin
     stTime: TimeFromTimeStamp(Value, PZTime(Data)^);
     stTimestamp: PZTimeStamp(Data)^ := Value;
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin
-        Len := DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-          Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+        Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+          Value.Hour, Value.Minute, Value.Second, Value.Fractions,
           @TinyBuffer[0], ConSettings^.ReadFormatSettings.DateTimeFormat, False, Value.IsNegative);
         SetPAnsiChar(ColumnIndex, @TinyBuffer[0], Len);
       end else begin
-        Len := DateTimeToUnicodeSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-          Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+        Len := DateTimeToUni(Value.Year, Value.Month, Value.Day,
+          Value.Hour, Value.Minute, Value.Second, Value.Fractions,
           @TinyBuffer[0], ConSettings^.ReadFormatSettings.DateTimeFormat, False, Value.IsNegative);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], Len);
       end;

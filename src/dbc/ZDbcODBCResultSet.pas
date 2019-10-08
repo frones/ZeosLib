@@ -978,11 +978,11 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
       stTime:       begin
                       Result := @FTinyBuffer[0];
                       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
-                      then Len := DateTimeToRawSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                      then Len := TimeToRaw(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
-                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
+                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction, Result,
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False)
-                      else Len := DateTimeToRawSQLTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                      else Len := TimeToRaw(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
                     end;
@@ -995,7 +995,7 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     end;
       stTimeStamp:  begin
                       Result := @FTinyBuffer[0];
-                      Len := DateTimeToRawSQLTimeStamp(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                      Len := DateTimeToRaw(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
@@ -1118,11 +1118,11 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
       stTime:       begin
                       Result := @FTinyBuffer[0];
                       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
-                      then Len := DateTimeToUnicodeSQLTime(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                      then Len := TimeToUni(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
-                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, Result,
+                          PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction, Result,
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False)
-                      else Len := DateTimeToUnicodeSQLTime(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                      else Len := TimeToUni(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
                     end;
@@ -1135,7 +1135,7 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                     end;
       stTimeStamp:  begin
                       Result := @FTinyBuffer[0];
-                      Len := DateTimeToUnicodeSQLTimeStamp(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                      Len := DateTimeToUni(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
@@ -1346,21 +1346,20 @@ begin
                       Result.IsNegative := PSQL_DATE_STRUCT(fColDataPtr)^.year < 0;
                     end;
       stTime:     begin
-                    PInt64(@Result.Year)^ := cPascalIntegralDatePart;
+                    PInt64(@Result.Year)^ := PInt64(@cPascalIntegralDatePart.Year)^;
                     if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then begin
                       PInt64(@Result.Year)^ := 0;
                       Result.Hour := PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour;
                       Result.Minute := PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute;
                       Result.Second := PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second;
                       Result.Fractions := PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction;
-                      Result.IsNegative := False;
                     end else begin
                       Result.Hour := PSQL_TIME_STRUCT(fColDataPtr)^.hour;
                       Result.Minute := PSQL_TIME_STRUCT(fColDataPtr)^.minute;
                       Result.Second := PSQL_TIME_STRUCT(fColDataPtr)^.second;
                       Result.Fractions := 0;
-                      Result.IsNegative := False;
                     end;
+                    Result.IsNegative := False;
                   end;
       stTimeStamp:  if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIMESTAMPOFFSET) then begin
                       if SizeOf(TSQL_SS_TIMESTAMPOFFSET_STRUCT) = SizeOf(TZTimeStamp)-2 then

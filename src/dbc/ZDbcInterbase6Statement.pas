@@ -1820,7 +1820,7 @@ begin
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
     SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer,
-                      DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div 100000,
+                      TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                         @fABuffer, ConSettings^.WriteFormatSettings.TimeFormat, False, False));
     SQL_TYPE_TIME : isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, Value.Hour, Value.Minute, Value.Second, Value.Fractions div 100000);
     else            begin
@@ -1855,8 +1855,8 @@ begin
   case (XSQLVAR.sqltype and not(1)) of
     SQL_TEXT,
     SQL_VARYING   : EncodePData(XSQLVAR, @fABuffer,
-                      DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-                        Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+                      DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+                        Value.Hour, Value.Minute, Value.Second, Value.Fractions,
                         @fABuffer, ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative));
     SQL_TYPE_DATE : isc_encode_date(PISC_DATE(XSQLVAR.sqldata)^, Value.Year, Value.Month, Value.Day);
     SQL_TYPE_TIME : isc_encode_time(PISC_TIME(XSQLVAR.sqldata)^, Value.Hour, Value.Minute, Value.Second, Value.Fractions div 100000);

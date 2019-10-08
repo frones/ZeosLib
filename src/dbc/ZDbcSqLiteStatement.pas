@@ -770,7 +770,7 @@ begin
         CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
     end;
   end else begin
-    Len := DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+    Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
       @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
     ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
     Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
@@ -801,8 +801,8 @@ begin
         CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
     end;
   end else begin
-    Len := DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-      Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+    Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+      Value.Hour, Value.Minute, Value.Second, Value.Fractions,
         @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
     ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
     Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);

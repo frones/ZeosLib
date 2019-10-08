@@ -599,16 +599,16 @@ set_from_buf:           Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       end;
     DBTYPE_DBTIME:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToRawSQLTime(PDBTime(FData)^.hour,
+                        Len := TimeToRaw(PDBTime(FData)^.hour,
                           PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToRawSQLTimeStamp(Word(Abs(PDBTimeStamp(FData)^.year)),
+                        Len := DateTimeToRaw(Word(Abs(PDBTimeStamp(FData)^.year)),
                           PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
                           PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
-                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction div 1000000,
+                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction,
                           Result, ConSettings.ReadFormatSettings.DateTimeFormat,
                           False, PDBTimeStamp(FData)^.year < 0);
                       end;
@@ -748,16 +748,16 @@ set_from_buf:           Len := Result - PWideChar(@FTinyBuffer[0]);
                       end;
     DBTYPE_DBTIME:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToUnicodeSQLTime(PDBTime(FData)^.hour,
+                        Len := TimeToUni(PDBTime(FData)^.hour,
                           PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToUnicodeSQLTimeStamp(Abs(PDBTimeStamp(FData)^.year),
+                        Len := DateTimeToUni(Abs(PDBTimeStamp(FData)^.year),
                           PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
                           PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
-                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction div 1000000,
+                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction,
                           Result, ConSettings.ReadFormatSettings.DateTimeFormat,
                           False, PDBTimeStamp(FData)^.year < 0);
                       end;

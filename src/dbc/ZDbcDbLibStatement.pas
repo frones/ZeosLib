@@ -743,7 +743,7 @@ var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  Len := DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+  Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
     @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
   ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
   BindList.Put(ParameterIndex, stTime, fRawTemp, FClientCP);
@@ -754,8 +754,8 @@ procedure TZDBLibPreparedStatementEmulated.SetTimestamp(ParameterIndex: Integer;
 var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  Len := DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-    Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+  Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+    Value.Hour, Value.Minute, Value.Second, Value.Fractions,
     @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
   ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
   BindList.Put(ParameterIndex, stTimeStamp, fRawTemp, FClientCP);
@@ -1323,7 +1323,7 @@ var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  Len := DateTimeToRawSQLTime(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+  Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
     @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
   ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
   BindList.Put(ParameterIndex, stString, fRawTemp, FClientCP);
@@ -1334,8 +1334,8 @@ procedure TZDBLIBPreparedRPCStatement.SetTimestamp(ParameterIndex: Integer;
 var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  Len := DateTimeToRawSQLTimeStamp(Value.Year, Value.Month, Value.Day,
-    Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+  Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+    Value.Hour, Value.Minute, Value.Second, Value.Fractions,
     @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
   ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
   BindList.Put(ParameterIndex, stTimeStamp, fRawTemp, FClientCP);

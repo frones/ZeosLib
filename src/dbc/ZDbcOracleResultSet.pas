@@ -605,8 +605,8 @@ set_Result:       Len := Result - @FTinyBuffer[0];
       SQLT_TIMESTAMP: begin
                   GetTimeStamp(ColumnIndex, TS);
                   Result := @fTinyBuffer[0];
-                  Len := DateTimeToRawSQLTimeStamp(TS.Year, TS.Month, TS.Day,
-                    TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec,
+                  Len := DateTimeToRaw(TS.Year, TS.Month, TS.Day,
+                    TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                     Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
                     False, TS.IsNegative);
                 end;
@@ -770,8 +770,8 @@ set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
       SQLT_TIMESTAMP: begin
                   GetTimeStamp(ColumnIndex, TS);
                   Result := @fTinyBuffer[0];
-                  Len := DateTimeToUnicodeSQLTimeStamp(TS.Year, TS.Month, TS.Day,
-                    TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec,
+                  Len := DateTimeToUni(TS.Year, TS.Month, TS.Day,
+                    TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                     Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
                     False, TS.IsNegative);
                 end;
