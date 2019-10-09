@@ -821,6 +821,12 @@ begin
           ResultValues[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
         ftBytes, ftVarBytes, ftBlob, ftGraphic:
           ResultValues[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
+        {$IFDEF WITH_FTGUID}
+        ftGUID: begin
+                  InitializeVariant(ResultValues[I], vtGUID);
+                  ResultSet.GetGUID(ColumnIndex, ResultValues[I].VGUID);
+                end;
+        {$ENDIF}
         else
           ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
       end;
