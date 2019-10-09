@@ -94,6 +94,7 @@ type
     FParams: TStringList;
     FMultiStatements: Boolean;
     FParamChar: Char;
+    FTempText: String; //keep the Text alive while processing the Tokens -> FPC
 
     function GetParamCount: Integer;
     function GetParamName(Index: Integer): string;
@@ -353,7 +354,7 @@ var
   ParamIndex: Integer;
   ParamIndices: TIntegerDynArray;
   ParamIndexCount: Integer;
-  ParamName, SQL, S: string;
+  ParamName, SQL: string;
   Tokenizer: IZTokenizer;
 
   procedure NextToken;
@@ -374,17 +375,17 @@ begin
   { Optimization for empty query. }
   If Length(Trim(Text)) = 0 then
     Exit;
-  S := Text;
+  FTempText := Text;
   { Optimization for single query without parameters. }
-  if (not FParamCheck or (Pos(FParamChar, S) = 0))
-    and (not FMultiStatements or (Pos(';', S) = 0)) then
+  if (not FParamCheck or (Pos(FParamChar, FTempText) = 0))
+    and (not FMultiStatements or (Pos(';', FTempText) = 0)) then
   begin
-    FStatements.Add(TZSQLStatement.Create(S, ParamIndices, FParams));
+    FStatements.Add(TZSQLStatement.Create(FTempText, ParamIndices, FParams));
     Exit;
   end;
 
   Tokenizer := GetTokenizer;
-  Tokens := Tokenizer.TokenizeBufferToList(S, [toSkipComments, toUnifyWhitespaces]);
+  Tokens := Tokenizer.TokenizeBufferToList(FTempText, [toSkipComments, toUnifyWhitespaces]);
   try
     TokenIndex := 0;
     StartTokenIndex := 0;
@@ -435,7 +436,7 @@ begin
       end;
     until Token.TokenType = ttEOF;
   finally
-    S := ''; //hooking compiler optimisation
+    FTempText := ''; //hooking compiler optimisation
     Tokens.Free;
   end;
 end;
