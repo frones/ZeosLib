@@ -1417,11 +1417,14 @@ const
   MSecsOfHour = 60 * MSecsOfMinute;
   MSecsOfDay = MSecsOfHour * 24;
 
-  cPascalIntegralDatePart: TZDate = (Year: 1899; Month: 12; Day: 30);
+  cPascalIntegralDatePart: TZDate = (Year: 1899; Month: 12; Day: 30; IsNegative: False);
 
   cMaxDateLen = 1{neg sign}+5{high word}+1{delim}+2{month}+1{delim}+2{day}+1{T};
+  cMaxDateLenQuoted = cMaxDateLen+2;
   cMaxTimeLen = 1{T}+1{neg sign}+2{hour}+1{delim}+2{minute}+1{delim}+2{second}+1{dot}+9{nano fractions};
+  cMaxTimeLenQuoted = cMaxTimeLen +2;
   cMaxTimeStampLen = cMaxDateLen+cMaxTimeLen{Z is replace by dbl T delim }+6{-/+)14:45};
+  cMaxTimeStampLenQuoted = cMaxTimeStampLen+2;
 implementation
 
 uses DateUtils, Math,
@@ -4696,7 +4699,7 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var L, L2, Year, Month, Day: Word;
-  Buffer: array[0..cMaxDateLen] of AnsiChar;
+  Buffer: array[0..cMaxDateLenQuoted] of AnsiChar;
   P: PAnsiChar;
 begin
   DecodeDate(Value, Year, Month, Day);
@@ -4755,10 +4758,11 @@ end;
 function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
   const Format: String; Quoted, Negative: Boolean): Byte;
 var PStart: PAnsiChar;
-  PFormat, PEnd: PChar;
+  PFormat, PEnd, FStart: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
-  EQ2, EQ3, EQ4: Boolean; //equals to C1?
-label inc_dbl; //keep code tiny
+  EQ2: Boolean; //equals to C1?
+  B: Byte absolute EQ2;
+label inc_dbl, next4; //keep code tiny
 begin
   PFormat := Pointer(Format);
   if PFormat = nil then begin
@@ -4776,12 +4780,26 @@ begin
     case C1 of
       Ord('y'): begin
                   { don't read over buffer }
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
-                  if EQ4 or (Year >= 1000) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                  FStart := PFormat+1+Ord(EQ2);
+                  if EQ2 then
+                    while (FStart < PEnd) and
+                      {$IFDEF UNICODE}
+                      (PWord(FStart)^ or $0020 = C1) do Inc(FStart);
+                      {$ELSE}
+                      (PByte(FStart)^ or $20 = C1) do Inc(FStart);
+                      {$ENDIF}
+                  b := (FStart - PFormat);
+                  if (B = 5) or (Year >= 10000) then begin
+                    if (Year >= 10000) then begin
+                      Result := Year div 10000;
+                      PByte(Buf)^ := Ord('0')+Result;
+                      Year := Year-(Result*10000);
+                    end else
+                      PByte(Buf)^ := Ord('0');
+                    Inc(Buf);
+                    goto next4;
+                  end else if (B = 4) or (Year >= 1000) then begin
+next4:              {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PWord(Buf)^   := TwoDigitLookupW[Result];
                     PWord(Buf+2)^ := TwoDigitLookupW[Year-(Result*100)];
@@ -4790,9 +4808,7 @@ begin
                     PWord(Buf+2)^ := TwoDigitLookupW[Year mod 100];
                     {$ENDIF}
                     Inc(Buf, 4);
-                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
-                    Continue;
-                  end else if EQ3 or (Year >= 100) then begin
+                  end else if (B=3) or (Year >= 100) then begin
                     {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PByte(Buf)^   := Ord('0')+Result;
@@ -4802,15 +4818,15 @@ begin
                     PWord(Buf+1)^ := TwoDigitLookupW[Year mod 100];
                     {$ENDIF}
                     Inc(Buf, 3);
-                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
-                    Continue;
                   end else if EQ2 or (Year >= 10) then begin
                     PWord(Buf)^ := TwoDigitLookupW[Year];
-Inc_dbl:            Inc(Buf, 2);
-                    Inc(PFormat, 1+Ord(EQ2));
-                    Continue;
-                  end else
+                    Inc(Buf, 2);
+                  end else begin
                     PByte(Buf)^ := Ord('0') + Year;
+                    Inc(Buf);
+                  end;
+                  PFormat := FStart;
+                  Continue;
                 end;
       Ord('m'): if EQ2 or (Month >= 10) then begin
                   PWord(Buf)^ := TwoDigitLookupW[Month];
@@ -4819,7 +4835,9 @@ Inc_dbl:            Inc(Buf, 2);
                   PByte(Buf)^ := Ord('0') + Month;
       Ord('d'): if EQ2 or (Day >= 10) then begin
                   PWord(Buf)^ := TwoDigitLookupW[Day];
-                  goto inc_dbl;
+Inc_dbl:          Inc(Buf, 2);
+                  Inc(PFormat, 1+Ord(EQ2));
+                  continue;
                 end else
                   PByte(Buf)^ := Ord('0') + Day;
       else      PByte(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
@@ -4876,10 +4894,11 @@ end;
 function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
   const Format: String; Quoted, Negative: Boolean): Byte;
 var PStart: PWideChar;
-  PFormat, PEnd: PChar;
+  PFormat, PEnd, FStart: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
-  EQ2, EQ3, EQ4: Boolean; //equals to C1?
-label inc_dbl; //keep code tiny
+  EQ2: Boolean; //equals to C1?
+  B: Byte absolute EQ2;
+label inc_dbl, next4; //keep code tiny
 begin
   PFormat := Pointer(Format);
   if PFormat = nil then begin
@@ -4897,12 +4916,26 @@ begin
     case C1 of
       Ord('y'): begin
                   { don't read over buffer }
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
-                  if EQ4 or (Year >= 1000) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                  FStart := PFormat+1+Ord(EQ2);
+                  if EQ2 then
+                    while (FStart < PEnd) and
+                      {$IFDEF UNICODE}
+                      (PWord(FStart)^ or $0020 = C1) do Inc(FStart);
+                      {$ELSE}
+                      (PByte(FStart)^ or $20 = C1) do Inc(FStart);
+                      {$ENDIF}
+                  b := (FStart - PFormat);
+                  if (B = 5) or (Year >= 10000) then begin
+                    if (Year >= 10000) then begin
+                      Result := Year div 10000;
+                      PWord(Buf)^ := Ord('0')+Result;
+                      Year := Year-(Result*10000);
+                    end else
+                      PWord(Buf)^ := Ord('0');
+                    Inc(Buf);
+                    goto next4;
+                  end else if (B = 4) or (Year >= 1000) then begin
+next4:              {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PCardinal(Buf)^   := TwoDigitLookupLW[Result];
                     PCardinal(Buf+2)^ := TwoDigitLookupLW[Year-(Result*100)];
@@ -4910,9 +4943,8 @@ begin
                     PCardinal(Buf)^   := TwoDigitLookupLW[Year div 100];
                     PCardinal(Buf+2)^ := TwoDigitLookupLW[Year mod 100];
                     {$ENDIF}
-                    Inc(Buf, 4); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
-                    continue;
-                  end else if EQ3 or (Year >= 100) then begin
+                    Inc(Buf, 4);
+                  end else if (B = 3) or (Year >= 100) then begin
                     {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PWord(Buf)^   := Ord('0')+Result;
@@ -4921,15 +4953,16 @@ begin
                     PWord(Buf)^   := Ord('0')+Year div 100;
                     PCardinal(Buf+1)^ := TwoDigitLookupLW[Year mod 100];
                     {$ENDIF}
-                    Inc(Buf, 3); Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
-                    continue;
-                  end else if (Year >= 10) or EQ2 then begin
+                    Inc(Buf, 3);
+                  end else if (B = 2) or (Year >= 10) then begin
                     PCardinal(Buf)^ := TwoDigitLookupLW[Year];
-Inc_dbl:            Inc(Buf, 2);
-                    Inc(PFormat, 1+Ord(EQ2));
-                    continue;
-                  end else
+                    Inc(Buf, 2);
+                  end else begin
                     PWord(Buf)^ := Ord('0') + Year;
+                    Inc(Buf);
+                  end;
+                  PFormat := FStart;
+                  Continue;
                 end;
       Ord('m'): if EQ2 or (Month >= 10) then begin
                   PCardinal(Buf)^ := TwoDigitLookupLW[Month];
@@ -4938,7 +4971,9 @@ Inc_dbl:            Inc(Buf, 2);
                   PWord(Buf)^ := Ord('0') + Month;
       Ord('d'): if EQ2 or (Day >= 10) then begin
                   PCardinal(Buf)^ := TwoDigitLookupLW[Day];
-                  goto Inc_Dbl;
+Inc_dbl:          Inc(Buf, 2);
+                  Inc(PFormat, 1+Ord(EQ2));
+                  continue;
                 end else
                   PWord(Buf)^ := Ord('0') + Day;
       else      PWord(Buf)^ := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^;
@@ -4967,7 +5002,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
 var L, L2, Year, Month, Day: Word;
-  Buffer: array[0..cMaxDateLen] of WideChar;
+  Buffer: array[0..cMaxDateLenQuoted] of WideChar;
   P: PWideChar;
 begin
   DecodeDate(Value, Year, Month, Day);
@@ -5004,7 +5039,7 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var l, l2, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..cMaxTimeLen] of AnsiChar;
+  Buffer: array[0..cMaxTimeLenQuoted] of AnsiChar;
   P: PAnsiChar;
 begin
   DecodeTime(Value, Hour, Minute, Second, MSec);
@@ -5147,7 +5182,7 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
 var l, l2, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..cMaxTimeLen] of WideChar;
+  Buffer: array[0..cMaxTimeLenQuoted] of WideChar;
   P: PWideChar;
 begin
   DecodeTime(Value, Hour, Minute, Second, MSec);
@@ -5297,7 +5332,7 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..cMaxTimeStampLen] of AnsiChar;
+  Buffer: array[0..cMaxTimeStampLenQuoted] of AnsiChar;
   P: PAnsiChar;
 begin
   DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
@@ -5361,11 +5396,11 @@ function DateTimeToRaw(Year, Month, Day, Hour, Minute, Second: Word;
   Fractions: Cardinal; Buf: PAnsiChar; const Format: String;
   Quoted, Negative: Boolean): Byte;
 var PStart, ZStart: PAnsiChar;
-  PFormat, PEnd: PChar;
+  PFormat, PEnd{$IFDEF UNICODE}, FStart{$ENDIF}: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
-  EQ2, EQ3, EQ4: Boolean; //equals to C1?
+  EQ2: Boolean; //equals to C1?
   B: Byte absolute EQ2;
-label inc_dbl, inc_trpl; //keep code tiny
+label inc_dbl, next4; //keep code tiny
 begin
   PFormat := Pointer(Format);
   if PFormat = nil then begin
@@ -5383,12 +5418,26 @@ begin
     case C1 of
       Ord('y'): begin
                   { don't read over buffer }
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
-                  if EQ4 or (Year >= 1000) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                  {$IFDEF UNICODE}FStart{$ELSE}ZStart{$ENDIF} := PFormat+1+Ord(EQ2);
+                  if EQ2 then
+                    while ({$IFDEF UNICODE}FStart{$ELSE}ZStart{$ENDIF} < PEnd) and
+                      {$IFDEF UNICODE}
+                      (PWord(FStart)^ or $0020 = C1) do Inc(FStart);
+                      {$ELSE}
+                      (PByte(ZStart)^ or $20 = C1) do Inc(ZStart);
+                      {$ENDIF}
+                  b := ({$IFDEF UNICODE}FStart{$ELSE}ZStart{$ENDIF} - PFormat);
+                  if (B = 5) or (Year >= 10000) then begin
+                    if (Year >= 10000) then begin
+                      Result := Year div 10000;
+                      PByte(Buf)^ := Ord('0')+Result;
+                      Year := Year-(Result*10000);
+                    end else
+                      PByte(Buf)^ := Ord('0');
+                    Inc(Buf);
+                    goto next4;
+                  end else if (B = 4) or (Year >= 1000) then begin
+next4:              {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PWord(Buf)^   := TwoDigitLookupW[Result];
                     PWord(Buf+2)^ := TwoDigitLookupW[Year-(Result*100)];
@@ -5397,9 +5446,7 @@ begin
                     PWord(Buf+2)^ := TwoDigitLookupW[Year mod 100];
                     {$ENDIF}
                     Inc(Buf, 4);
-                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
-                    Continue;
-                  end else if EQ3 or (Year >= 100) then begin
+                  end else if (B=3) or (Year >= 100) then begin
                     {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PByte(Buf)^   := Ord('0')+Result;
@@ -5408,20 +5455,22 @@ begin
                     PByte(Buf)^   := Ord('0')+Year div 100;
                     PWord(Buf+1)^ := TwoDigitLookupW[Year mod 100];
                     {$ENDIF}
-inc_trpl:           Inc(Buf, 3);
-                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
-                    Continue;
+                    Inc(Buf, 3);
                   end else if EQ2 or (Year >= 10) then begin
                     PWord(Buf)^ := TwoDigitLookupW[Year];
-Inc_dbl:            Inc(Buf, 2);
-                    Inc(PFormat, 1+Ord(EQ2));
-                    Continue;
-                  end else
+                    Inc(Buf, 2);
+                  end else begin
                     PByte(Buf)^ := Ord('0') + Year;
+                    Inc(Buf);
+                  end;
+                  PFormat := {$IFDEF UNICODE}FStart{$ELSE}ZStart{$ENDIF};
+                  Continue;
                 end;
       Ord('m'): if EQ2 or (Month >= 10) then begin
                   PWord(Buf)^ := TwoDigitLookupW[Month];
-                  goto Inc_dbl;
+Inc_dbl:          Inc(Buf, 2);
+                  Inc(PFormat, 1+Ord(EQ2));
+                  Continue;
                 end else
                   PByte(Buf)^ := Ord('0') + Month;
       Ord('d'): if EQ2 or (Day >= 10) then begin
@@ -5528,11 +5577,11 @@ function DateTimeToUni(Year, Month, Day, Hour, Minute, Second: Word;
   Fractions: Cardinal; Buf: PWideChar; const Format: String;
   Quoted, Negative: Boolean): Byte;
 var PStart, ZStart: PWideChar;
-  PFormat, PEnd: PChar;
+  PFormat, PEnd{$IFNDEF UNICODE}, FStart{$ENDIF}: PChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
-  EQ2, EQ3, EQ4: Boolean; //equals to C1?
+  EQ2: Boolean; //equals to C1?
   B: Byte absolute EQ2;
-label inc_dbl, inc_trpl; //keep code tiny
+label inc_dbl, next4; //keep code tiny
 begin
   PFormat := Pointer(Format);
   if PFormat = nil then begin
@@ -5550,12 +5599,26 @@ begin
     case C1 of
       Ord('y'): begin
                   { don't read over buffer }
-                  EQ3 := EQ2 and (PFormat+2 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+2)^ or $20 = C1);
-                  EQ4 := EQ3 and (PFormat+3 < PEnd) and
-                    ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+3)^ or $20 = C1);
-                  if EQ4 or (Year >= 1000) then begin
-                    {$IFNDEF HAVE_REZIPROKE_MOD100}
+                  {$IFDEF UNICODE}ZStart{$ELSE}FStart{$ENDIF} := PFormat+1+Ord(EQ2);
+                  if EQ2 then
+                    while ({$IFDEF UNICODE}ZStart{$ELSE}FStart{$ENDIF} < PEnd) and
+                      {$IFDEF UNICODE}
+                      (PWord(ZStart)^ or $0020 = C1) do Inc(ZStart);
+                      {$ELSE}
+                      (PByte(FStart)^ or $20 = C1) do Inc(FStart);
+                      {$ENDIF}
+                  b := ({$IFDEF UNICODE}ZStart{$ELSE}FStart{$ENDIF} - PFormat);
+                  if (B = 5) or (Year >= 10000) then begin
+                    if (Year >= 10000) then begin
+                      Result := Year div 10000;
+                      PWord(Buf)^ := Ord('0')+Result;
+                      Year := Year-(Result*10000);
+                    end else
+                      PWord(Buf)^ := Ord('0');
+                    Inc(Buf);
+                    goto next4;
+                  end else if (B = 4) or (Year >= 1000) then begin
+next4:              {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PCardinal(Buf)^   := TwoDigitLookupLW[Result];
                     PCardinal(Buf+2)^ := TwoDigitLookupLW[Year-(Result*100)];
@@ -5564,9 +5627,7 @@ begin
                     PCardinal(Buf+2)^ := TwoDigitLookupLW[Year mod 100];
                     {$ENDIF}
                     Inc(Buf, 4);
-                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3)+Ord(EQ4));
-                    Continue;
-                  end else if EQ3 or (Year >= 100) then begin
+                  end else if (B = 3) or (Year >= 100) then begin
                     {$IFNDEF HAVE_REZIPROKE_MOD100}
                     Result := Year div 100;
                     PWord(Buf)^   := Ord('0')+Result;
@@ -5575,20 +5636,22 @@ begin
                     PWord(Buf)^   := Ord('0')+Year div 100;
                     PCardinal(Buf+1)^ := TwoDigitLookupLW[Year mod 100];
                     {$ENDIF}
-inc_trpl:           Inc(Buf, 3);
-                    Inc(PFormat, 1+Ord(EQ2)+Ord(EQ3));
-                    Continue;
-                  end else if EQ2 or (Year >= 10) then begin
+                    Inc(Buf, 3);
+                  end else if (B = 2) or (Year >= 10) then begin
                     PCardinal(Buf)^ := TwoDigitLookupLW[Year];
-Inc_dbl:            Inc(Buf, 2);
-                    Inc(PFormat, 1+Ord(EQ2));
-                    Continue;
-                  end else
+                    Inc(Buf, 2);
+                  end else begin
                     PWord(Buf)^ := Ord('0') + Year;
+                    Inc(Buf);
+                  end;
+                  PFormat := {$IFDEF UNICODE}ZStart{$ELSE}FStart{$ENDIF};
+                  Continue;
                 end;
       Ord('m'): if EQ2 or (Month >= 10) then begin
                   PCardinal(Buf)^ := TwoDigitLookupLW[Month];
-                  goto Inc_dbl;
+Inc_dbl:          Inc(Buf, 2);
+                  Inc(PFormat, 1+Ord(EQ2));
+                  Continue;
                 end else
                   PWord(Buf)^ := Ord('0') + Month;
       Ord('d'): if EQ2 or (Day >= 10) then begin
@@ -5663,7 +5726,7 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
 var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
-  Buffer: array[0..cMaxTimeStampLen] of WideChar;
+  Buffer: array[0..cMaxTimeStampLenQuoted] of WideChar;
   P: PWideChar;
 begin
   DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);

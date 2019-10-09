@@ -940,9 +940,9 @@ procedure TZRawSQLStringWriter.AddTime(const Value: TZTime;
   const Format: String; var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
-  Buffer: Array[0..cMaxTimeLen] of AnsiChar;
+  Buffer: Array[0..cMaxTimeLenQuoted] of AnsiChar;
 begin
-  if (FPos + cMaxTimeLen < FEnd)
+  if (FPos + cMaxTimeLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := TimeToRaw(Value.Hour, Value.Minute, Value.Second,
@@ -956,9 +956,9 @@ procedure TZRawSQLStringWriter.AddTimeStamp(const Value: TZTimeStamp;
   const Format: String; var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
-  Buffer: Array[0..cMaxTimeStampLen] of AnsiChar;
+  Buffer: Array[0..cMaxTimeStampLenQuoted] of AnsiChar;
 begin
-  if (FPos + cMaxTimeStampLen < FEnd)
+  if (FPos + cMaxTimeStampLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := ZSysUtils.DateTimeToRaw(Value.Year, Value.Month, Value.Day,
@@ -1029,9 +1029,9 @@ procedure TZRawSQLStringWriter.AddTime(const Value: TDateTime; const Format: Str
 var H, M, S, MS: Word;
   L: LengthInt;
   P: PAnsiChar;
-  Buffer: Array[0..cMaxTimeLen] of AnsiChar;
+  Buffer: Array[0..cMaxTimeLenQuoted] of AnsiChar;
 begin
-  if (FPos + cMaxTimeLen < FEnd)
+  if (FPos + cMaxTimeLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   DecodeTime(Value, H, M, S, MS);
@@ -1100,9 +1100,9 @@ procedure TZRawSQLStringWriter.AddDate(const Value: TDateTime; const Format: Str
 var Y, M, D: Word;
   L: LengthInt;
   P: PAnsiChar;
-  Buffer: Array[0..cMaxDateLen] of AnsiChar;
+  Buffer: Array[0..cMaxDateLenQuoted] of AnsiChar;
 begin
-  if (FPos + cMaxDateLen < FEnd) //'-20199-09-11'
+  if (FPos + cMaxDateLenQuoted < FEnd) //'-20199-09-11'
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, M, D);
@@ -1117,9 +1117,9 @@ procedure TZRawSQLStringWriter.AddDate(const Value: TZDate; const Format: String
 var
   L: LengthInt;
   P: PAnsiChar;
-  Buffer: Array[0..cMaxDateLen] of AnsiChar;
+  Buffer: Array[0..cMaxDateLenQuoted] of AnsiChar;
 begin
-  if (FPos + cMaxDateLen < FEnd)
+  if (FPos + cMaxDateLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := DateToRaw(Value.Year, Value.Month, Value.Day, P,
@@ -1134,9 +1134,9 @@ procedure TZRawSQLStringWriter.AddDateTime(const Value: TDateTime;
 var Y, MO, D, H, M, S, MS: Word;
   L: LengthInt;
   P: PAnsiChar;
-  Buffer: Array[0..cMaxTimeStampLen] of AnsiChar;
+  Buffer: Array[0..cMaxTimeStampLenQuoted] of AnsiChar;
 begin
-  if (FPos + cMaxTimeStampLen < FEnd)
+  if (FPos + cMaxTimeStampLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, MO, D);
@@ -1260,9 +1260,9 @@ procedure TZUnicodeSQLStringWriter.AddDate(const Value: TDateTime;
 var Y, M, D: Word;
   L: LengthInt;
   P: PWideChar;
-  Buffer: Array[0..cMaxDateLen] of WideChar;
+  Buffer: Array[0..cMaxDateLenQuoted] of WideChar;
 begin
-  if (FPos+cMaxDateLen < FEnd)
+  if (FPos+cMaxDateLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, M, D);
@@ -1277,9 +1277,9 @@ procedure TZUnicodeSQLStringWriter.AddDate(const Value: TZDate;
 var
   L: LengthInt;
   P: PWideChar;
-  Buffer: Array[0..cMaxDateLen] of WideChar;
+  Buffer: Array[0..cMaxDateLenQuoted] of WideChar;
 begin
-  if (FPos + cMaxDateLen < FEnd)
+  if (FPos + cMaxDateLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := DateToUni(Value.Year, Value.Month, Value.Day, P, Format, True, Value.IsNegative);
@@ -1293,9 +1293,9 @@ procedure TZUnicodeSQLStringWriter.AddDateTime(const Value: TDateTime;
 var Y, MO, D, H, M, S, MS: Word;
   L: LengthInt;
   P: PWideChar;
-  Buffer: Array[0..cMaxTimeStampLen] of WideChar;
+  Buffer: Array[0..cMaxTimeStampLenQuoted] of WideChar;
 begin
-  if (FPos+cMaxTimeStampLen < FEnd) //'2019-09-11 00:00:00.999'
+  if (FPos+cMaxTimeStampLenQuoted < FEnd) //'2019-09-11 00:00:00.999'
   then P := FPos
   else P := @Buffer[0];
   DecodeDate(Value, Y, MO, D);
@@ -1547,9 +1547,9 @@ procedure TZUnicodeSQLStringWriter.AddTime(const Value: TZTime;
   const Format: String; var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;
-  Buffer: Array[0..cMaxTimeLen] of WideChar;
+  Buffer: Array[0..cMaxTimeLenQuoted] of WideChar;
 begin
-  if (FPos + cMaxTimeLen < FEnd)
+  if (FPos + cMaxTimeLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := TimeToUni(Value.Hour, Value.Minute, Value.Second, Value.Fractions, P,
@@ -1563,9 +1563,9 @@ procedure TZUnicodeSQLStringWriter.AddTimeStamp(const Value: TZTimeStamp;
   const Format: String; var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;
-  Buffer: Array[0..cMaxTimeStampLen] of WideChar;
+  Buffer: Array[0..cMaxTimeStampLenQuoted] of WideChar;
 begin
-  if (FPos + cMaxTimeStampLen < FEnd)
+  if (FPos + cMaxTimeStampLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   L := DateTimeToUni(Value.Year, Value.Month, Value.Day, Value.Hour,
@@ -1580,9 +1580,9 @@ procedure TZUnicodeSQLStringWriter.AddTime(const Value: TDateTime;
 var H, M, S, MS: Word;
   L: LengthInt;
   P: PWideChar;
-  Buffer: Array[0..cMaxTimeLen] of WideChar;
+  Buffer: Array[0..cMaxTimeLenQuoted] of WideChar;
 begin
-  if (FPos+cMaxTimeLen < FEnd)
+  if (FPos+cMaxTimeLenQuoted < FEnd)
   then P := FPos
   else P := @Buffer[0];
   DecodeTime(Value, H, M, S, MS);
