@@ -368,12 +368,25 @@ end;
 }
 function TZSubStrFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
+var
+  Value1, Value2, Value3: TZVariant;
 begin
   CheckParamsCount(Stack, 3);
-  VariantManager.SetAsString(Result, Copy(
-    VariantManager.GetAsString(Stack.GetParameter(3)),
-    VariantManager.GetAsInteger(Stack.GetParameter(2)),
-    VariantManager.GetAsInteger(Stack.GetParameter(1))));
+  Value1 := Stack.GetParameter(1);
+  Value2 := Stack.GetParameter(2);
+  Value3 := Stack.GetParameter(3);
+
+  VariantManager.Assign(Value3, Result);
+  if Value3.VType in [{$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString]
+  then Result.VUnicodeString := Copy(Result.VUnicodeString, VariantManager.GetAsInteger(Value2), VariantManager.GetAsInteger(Value1))
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  else begin
+    Result.VRawByteString := Copy(Result.VRawByteString, VariantManager.GetAsInteger(Value2)-1, VariantManager.GetAsInteger(Value1)+1);
+    Result.VRawByteString[High(Result.VRawByteString]] := 0;
+  end;
+  {$ELSE}
+  else Result.VRawByteString := Copy(Result.VRawByteString, VariantManager.GetAsInteger(Value2), VariantManager.GetAsInteger(Value1));
+  {$ENDIF}
 end;
 
 { TZLeftFunction }
@@ -385,7 +398,17 @@ begin
   CheckParamsCount(Stack, 2);
   Value1 := Stack.GetParameter(2);
   Value2 := Stack.GetParameter(1);
-  VariantManager.SetAsString(Result, LeftStr(Value1.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, Value2.VInteger));
+  VariantManager.Assign(Value1, Result);
+  if Value1.VType in [{$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString]
+  then Result.VUnicodeString := Copy(Result.VUnicodeString, 1, Value2.VInteger)
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  else begin
+    Result.VRawByteString := Copy(Result.VRawByteString, 0, Value2.VInteger +1);
+    Result.VRawByteString[Value2.VInteger] := 0;
+  end;
+  {$ELSE}
+  else Result.VRawByteString := Copy(Result.VRawByteString, 1, Value2.VInteger);
+  {$ENDIF}
 end;
 
 { TZRightFunction }
@@ -397,7 +420,17 @@ begin
   CheckParamsCount(Stack, 2);
   Value1 := Stack.GetParameter(2);
   Value2 := Stack.GetParameter(1);
-  VariantManager.SetAsString(Result, RightStr(Value1.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, Value2.VInteger));
+  VariantManager.Assign(Value1, Result);
+  if Value1.VType in [{$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString]
+  then Result.VUnicodeString := Copy(Value1.VUnicodeString, Length(Value1.VUnicodeString) + 1 - Value2.VInteger, Value2.VInteger)
+  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+  else begin
+    Result.VRawByteString := Copy(Value1.VRawByteString, Length(Value1.VRawByteString) - Value2.VInteger, Value2.VInteger+1);
+    Result.VRawByteString[High(Result.VRawByteString]] := 0;
+  end;
+  {$ELSE}
+  else Result.VRawByteString := Copy(Value1.VRawByteString, Length(Value1.VRawByteString) + 1 - Value2.VInteger, Value2.VInteger);
+  {$ENDIF}
 end;
 
 { TZStrPosFunction }
