@@ -618,8 +618,8 @@ begin
       stDouble:
         Statement.SetDouble(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDouble(ColumnIndex, WasNull));
       stBigDecimal: begin
-                      RowAccessor.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^, WasNull);
-                      Statement.SetBigDecimal(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@RowAccessor.TinyBuffer[0])^);
+                      RowAccessor.GetBigDecimal(ColumnIndex, BCD, WasNull);
+                      Statement.SetBigDecimal(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD);
                     end;
       stString, stUnicodeString:
         Statement.SetCharRec(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
