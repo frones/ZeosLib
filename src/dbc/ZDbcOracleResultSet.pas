@@ -1682,10 +1682,13 @@ Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
                   end;
                   Result.Month := Ptr^.Month;
                   Result.Day := Ptr^.Day;
-                  Result.Hour := Ptr^.Hour-1;
-                  Result.Minute := Ptr^.Min-1;
-                  PInt64(@Result.Second)^ := 0;
-                  Result.Second := Ptr^.Sec-1;
+                  PInt64(@Result.Minute)^ := 0;
+                  if (Ptr^.Hour <> 0) and (Ptr^.Min <> 0) and (Ptr^.Sec <> 0) then begin
+                    Result.Hour := Ptr^.Hour-1;
+                    Result.Minute := Ptr^.Min-1;
+                    Result.Second := Ptr^.Sec-1;
+                  end else
+                    Result.Hour := 0;
                   PCardinal(@Result.TimeZoneHour)^ := 0;
                 end;
       SQLT_INTERVAL_DS:
