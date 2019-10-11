@@ -748,12 +748,12 @@ begin
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
+    LastWasNull := True;
     PInt64(@Result.Year)^ := 0
-  else
-    {$R-}
-    with FXSQLDA.sqlvar[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
+  end else begin
+    LastWasNull := False;
+    with XSQLVAR^ do begin
       SQLCode := (sqltype and not(1));
       case SQLCode of
         SQL_TIMESTAMP : begin
@@ -774,7 +774,7 @@ begin
         else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype)
       end;
     end;
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  end;
 end;
 
 {**

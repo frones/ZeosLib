@@ -1696,9 +1696,9 @@ end;
 function TZAbstractResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var D: TZDate;
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex, D);
+  IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex, D{%H-});
   if not LastWasNull then
-    LastWasNull := not TryDateToDateTime(D, Result);
+    LastWasNull := not TryDateToDateTime(D, Result{%H-});
   if LastWasNull then
     Result := 0;
 end;
@@ -1744,7 +1744,7 @@ end;
 function TZAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var T: TZTime;
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex, T);
+  IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex, T{%H-});
   if not LastWasNull then
     LastWasNull := not TryTimeToDateTime(T, Result);
   if LastWasNull then
