@@ -2447,7 +2447,6 @@ begin
     (Consettings.ClientCodePage.Encoding = ceUTF16);
 end;
 
-{$IFNDEF NO_ANSISTRING}
 function TZClientVariantManager.GetAsDateTime(
   const Value: TZVariant): TDateTime;
 var P: Pointer;
@@ -2486,6 +2485,7 @@ Fail: Result := inherited GetAsDateTime(Value);
   end;
 end;
 
+{$IFNDEF NO_ANSISTRING}
 procedure TZClientVariantManager.ProcessAnsiString(const Value: TZVariant;
   out Result: TZVariant);
 var ResTmp: RawByteString;

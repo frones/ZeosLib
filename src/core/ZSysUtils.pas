@@ -1247,8 +1247,12 @@ function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean; overload;
 function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean; overload;
 
 function Trim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
+function LTrim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
+function RTrim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
 function Trim(P: PAnsiChar): RawByteString; overload;
 function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
+function LTrim(P: PWideChar; L: LengthInt): UnicodeString; overload;
+function RTrim(P: PWideChar; L: LengthInt): UnicodeString; overload;
 {$IF defined(UNICODE) and not defined(WITH_UNITANSISTRINGS)}
 function Trim(const Value: RawByteString): RawByteString; overload;
 function LowerCase(const Value: RawByteString): RawByteString; overload;
@@ -7598,12 +7602,32 @@ begin
   ZSetString(P, PEnd-P+1, Result);
 end;
 
+function LTrim(P: PAnsiChar; L: LengthInt): RawByteString;
+var PEnd: PAnsiChar;
+begin
+  PEnd := P + L -1;
+  while (P <= PEnd) and (PByte(P)^ <= Byte(' ')) do
+    Inc(P);
+  {$IFDEF FPC}Result := '';{$ENDIF}
+  ZSetString(P, PEnd-P+1, Result);
+end;
+
+function RTrim(P: PAnsiChar; L: LengthInt): RawByteString;
+var PEnd: PAnsiChar;
+begin
+  PEnd := P + L -1;
+  while (PEnd >= P) and (PByte(PEnd)^ <= Byte(' ')) do
+    Dec(PEnd);
+  {$IFDEF FPC}Result := '';{$ENDIF}
+  ZSetString(P, PEnd-P+1, Result);
+end;
+
 function Trim(P: PAnsiChar): RawByteString;
 begin
   Result := Trim(P, StrLen(P));
 end;
 
-function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
+function Trim(P: PWideChar; L: LengthInt): ZWideString;
 var PEnd: PWideChar;
 begin
   PEnd := P + L -1;
@@ -7611,6 +7635,27 @@ begin
     Inc(P);
   while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
     Dec(PEnd);
+  {$IFDEF FPC}Result := '';{$ENDIF}
+  System.SetString(Result, P, PEnd-P+1);
+end;
+
+function LTrim(P: PWideChar; L: LengthInt): UnicodeString;
+var PEnd: PWideChar;
+begin
+  PEnd := P + L -1;
+  while (P <= PEnd) and (PWord(P)^ <= Word(' ')) do
+    Inc(P);
+  {$IFDEF FPC}Result := '';{$ENDIF}
+  System.SetString(Result, P, PEnd-P+1);
+end;
+
+function RTrim(P: PWideChar; L: LengthInt): UnicodeString;
+var PEnd: PWideChar;
+begin
+  PEnd := P + L -1;
+  while (PEnd >= P) and (PWord(PEnd)^ <= Word(' ')) do
+    Dec(PEnd);
+  {$IFDEF FPC}Result := '';{$ENDIF}
   System.SetString(Result, P, PEnd-P+1);
 end;
 
@@ -7702,7 +7747,6 @@ begin
     System.SetString(Result, P, PEnd-P+1);
   end;
 end;
-
 {$ENDIF}
 
 {**
