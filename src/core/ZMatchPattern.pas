@@ -1,4 +1,4 @@
-﻿{*********************************************************}
+{*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
 {                  Regular Expressions                    }
@@ -276,22 +276,6 @@ begin
   if (p > plen) and (t > tlen) then
     Result := MATCH_VALID;
 end;
-
-procedure X;
-var S: String;
-begin
-  S := 'abbc';
-  Assert(IsMatch('*c*', S));
-  Assert(IsMatch('*b*', S));
-  Assert(IsMatch('*a*', S));
-  Assert(not IsMatch('*xx*', S));
-  S := 'A';
-  Assert(not IsMatch('*ring*', S));
-
-end;
-
-initialization
- X;
 
 end.
 
