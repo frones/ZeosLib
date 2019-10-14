@@ -235,27 +235,25 @@ begin
   T := 1;
   PLen := Length(Pattern);
   TLen := Length(Text);
-  if (PLen = 0) or (TLen = 0) then
-  begin
+  if (plen > 0) then
+    While (( t <= tlen ) and (p <= plen)) and
+       (pattern[p] in [MATCH_CHAR_SINGLE, MATCH_CHAR_KLEENE_CLOSURE]) do begin
+      if Pattern[P] = MATCH_CHAR_SINGLE then
+        Inc(T);
+      Inc(P);
+    end;
+  If (T > Tlen) then begin
     Result := MATCH_ABORT;
     Exit;
   end;
-  while ((T <= TLen) and (P < PLen)) and
-      ((Pattern[P] = MATCH_CHAR_SINGLE) or (Pattern[P] = MATCH_CHAR_KLEENE_CLOSURE)) do begin
-    if Pattern[P] = MATCH_CHAR_SINGLE then
-      Inc(T);
-    Inc(P);
-  end;
-  if T >= TLen then begin
-    Result := MATCH_ABORT;
-    Exit;
-  end;
-  if P >= PLen then begin
+
+  If (plen > 0) and (p > plen) then begin
     Result := MATCH_VALID;
     Exit;
   end;
   repeat
-    if (Pattern[P] = Text[T]) or (Pattern[P] = MATCH_CHAR_RANGE_OPEN) then begin
+    If (plen > 0) and ((pattern[p] = text[t]) or (pattern[p] = MATCH_CHAR_RANGE_OPEN)) then
+    begin
       aPattern := Copy(Pattern, P, PLen);
       aText    := Copy(Text, T, TLen);
       PLen    := Length(Pattern);
