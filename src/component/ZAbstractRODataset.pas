@@ -4577,8 +4577,9 @@ begin
     raise EZDatabaseError.Create(SIncorrectSearchFieldsNumber);
   SetLength(RowValues, Length(DecodedKeyValues));
 
-  if not OnlyDataFields then
-  begin
+  VariantManager := Connection.DbcConnection.GetClientVariantManager;
+
+  if not OnlyDataFields then begin
     { Processes fields if come calculated or lookup fields are involved. }
     {$IFDEF WITH_AllocRecBuf_TRecBuf}
     SearchRowBuffer := PZRowBuffer(AllocRecBuf);
@@ -4605,7 +4606,7 @@ begin
         RetrieveDataFieldsFromRowAccessor(
           FieldRefs, FieldIndices, RowAccessor, RowValues);
 
-        if CompareDataFields(DecodedKeyValues, RowValues,
+        if CompareDataFields(DecodedKeyValues, RowValues, VariantManager,
           PartialKey, CaseInsensitive) then begin
           Result := I + 1;
           Break;
@@ -4622,7 +4623,6 @@ begin
         {$ENDIF}
     end;
   end else begin
-    VariantManager := Connection.DbcConnection.GetClientVariantManager;
     PrepareValuesForComparison(FieldRefs, DecodedKeyValues,
       ResultSet, PartialKey, CaseInsensitive, VariantManager);
 

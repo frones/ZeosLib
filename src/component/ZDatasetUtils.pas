@@ -176,7 +176,7 @@ procedure PrepareValuesForComparison(const FieldRefs: TObjectDynArray;
   @return <code> if values are equal.
 }
 function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
-  PartialKey: Boolean; CaseInsensitive: Boolean): Boolean;
+  Const VariantManager: IZVariantManager; PartialKey, CaseInsensitive: Boolean): Boolean;
 
 {**
   Compares row field values with the given ones.
@@ -1011,7 +1011,7 @@ end;
   @return <code> if values are equal.
 }
 function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
-  PartialKey: Boolean; CaseInsensitive: Boolean): Boolean;
+  Const VariantManager: IZVariantManager; PartialKey, CaseInsensitive: Boolean): Boolean;
 var
   I: Integer;
   {$IFNDEF NEXTGEN}
@@ -1026,8 +1026,8 @@ begin
       vtUnicodeString{$IFDEF UNICODE}, vtString{$ENDIF}:
         begin
     {$ENDIF}
-          WValue1 := SoftVarManager.GetAsUnicodeString(KeyValues[I]);
-          WValue2 := SoftVarManager.GetAsUnicodeString(RowValues[I]);
+          WValue1 := VariantManager.GetAsUnicodeString(KeyValues[I]);
+          WValue2 := VariantManager.GetAsUnicodeString(RowValues[I]);
           if CaseInsensitive then begin
             if PartialKey then begin
               {$IFDEF MSWINDOWS}
@@ -1058,17 +1058,17 @@ begin
               {$ENDIF}
             {$ENDIF}
           end else
-            Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+            Result := VariantManager.Compare(KeyValues[I], RowValues[I]) = 0;
     {$IFNDEF NEXTGEN}
         end;
       else
       begin
         {$IFDEF NO_ANSISTRING}
-        Value1 := SoftVarManager.GetAsRawByteString(KeyValues[I]);
-        Value2 := SoftVarManager.GetAsRawByteString(RowValues[I]);
+        Value1 := VariantManager.GetAsRawByteString(KeyValues[I]);
+        Value2 := VariantManager.GetAsRawByteString(RowValues[I]);
         {$ELSE}
-        Value1 := SoftVarManager.GetAsAnsiString(KeyValues[I]);
-        Value2 := SoftVarManager.GetAsAnsiString(RowValues[I]);
+        Value1 := VariantManager.GetAsAnsiString(KeyValues[I]);
+        Value2 := VariantManager.GetAsAnsiString(RowValues[I]);
         {$ENDIF}
         if CaseInsensitive then begin
           Value1 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(Value1);
@@ -1079,7 +1079,7 @@ begin
         end else begin
           if PartialKey
           then Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
-          else Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+          else Result := VariantManager.Compare(KeyValues[I], RowValues[I]) = 0;
         end;
       end;
     end;
@@ -1238,34 +1238,28 @@ begin
           WValue2 := {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(WValue2);
 
         P1 := Pointer(WValue1);
-        if P1 = nil then begin //if partial value is '' then the avalutaion is always true
-          Result := True;
+        if P1 = nil then //if partial value is '' then the evaluatin is always true
           Exit;
-        end;
+        {$IF not (defined(FPC) and not defined(MSWINDOWS))}
         P2 := Pointer(WValue2);
+        {$IFEND}
         L1 := Length(WValue1);
         L2 := Length(WValue2);
-        if (P2 <> P1) and (L2 >= L1) then begin
-          if L2 < L1 then
-            Exit;
-          {$IFDEF MSWINDOWS}
-          Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
-          {$ELSE}
-            {$IFDEF UNICODE}
-            Result := SysUtils.AnsiStrLComp(P2, P1, L1) = 0;
-            {$ELSE} //EH: what are the fpc non windows wide comparision here?
-              AValue1 := AnsiString(WValue1);
-              AValue2 := AnsiString(WValue2);
-              L1 := Length(AValue1);
-              L2 := Length(AValue2);
-              if L2 < L1 then
-                Exit;
-              P1 := Pointer(AValue1);
-              P2 := Pointer(AValue1);
-              Result := AnsiStrLComp(P2, P1, L1) = 0;
-            {$ENDIF}
-          {$ENDIF}
+        if L2 < L1 then begin //if resultset value is shorter than keyvalue the evaluatin is always false
+          Result := False;
+          Exit;
         end;
+        {$IFDEF MSWINDOWS}
+        Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
+        {$ELSE}
+          {$IFDEF UNICODE}
+          Result := SysUtils.AnsiStrLComp(P2, P1, L1) = 0;
+          {$ELSE} //https://www.freepascal.org/docs-html/rtl/sysutils/widecomparestr.html
+            if L2 > L1 then
+              WValue2 := Copy(WValue2, 1, L2);
+            Result := WideCompareStr(WValue1, WValue2) = 0;
+          {$ENDIF}
+        {$ENDIF}
       {$IFNDEF NEXTGEN}
       end else begin
         AValue1 := KeyValues[I].VRawByteString;
@@ -1315,7 +1309,7 @@ begin
         stTime,
         stTimestamp:  begin
             DT := ResultSet.GetTimestamp(ColumnIndex);
-            Result := KeyValues[I].VDateTime = D;
+            Result := ZCompareDateTime(KeyValues[I].VDateTime, DT) = 0;;
           end;
         stGUID: begin
                   ResultSet.GetGUID(ColumnIndex, UID);
