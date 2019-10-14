@@ -237,7 +237,7 @@ begin
   TLen := Length(Text);
   if (plen > 0) then
     While (( t <= tlen ) and (p <= plen)) and
-       (pattern[p] in [MATCH_CHAR_SINGLE, MATCH_CHAR_KLEENE_CLOSURE]) do begin
+       (Ord(pattern[p]) in [Ord(MATCH_CHAR_SINGLE), Ord(MATCH_CHAR_KLEENE_CLOSURE)]) do begin
       if Pattern[P] = MATCH_CHAR_SINGLE then
         Inc(T);
       Inc(P);
