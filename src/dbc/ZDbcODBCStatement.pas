@@ -812,7 +812,7 @@ begin
                     end;
       SQL_C_CHAR:   begin
                       IntToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
-                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
+                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fABuffer[SizeOf(Pointer)]));
                       Exit;
                     end;
       else RaiseUnsupportedParamType(Index, Bind.ValueType, SQLType);
@@ -1308,7 +1308,7 @@ begin
                     end;
       SQL_C_CHAR:   begin
                       IntToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
-                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
+                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fABuffer[SizeOf(Pointer)]));
                       Exit;
                     end;
       else RaiseUnsupportedParamType(Index, Bind.ValueType, SQLType);
@@ -2213,7 +2213,7 @@ begin
                     end;
       SQL_C_CHAR:   begin
                       IntToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
-                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
+                      SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fABuffer[SizeOf(Pointer)]));
                       Exit;
                     end;
       else RaiseUnsupportedParamType(Index, Bind.ValueType, stULong);
