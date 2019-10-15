@@ -406,7 +406,7 @@ function CompareLongWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PLongWord(V1)^ > PLongWord(V2)^)-Ord(PLongWord(V1)^ < PLongWord(V2)^);
+    Result := Ord(PCardinal(V1)^ > PCardinal(V2)^)-Ord(PCardinal(V1)^ < PCardinal(V2)^);
 end;
 
 function CompareLongWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -418,7 +418,7 @@ function CompareLongWord_Equals(const Null1, Null2: Boolean; const V1, V2): Inte
 begin
   Result := NullsEqualMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PLongWord(V1)^ <> PLongWord(V2)^);
+    Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
 end;
 
 function CompareInteger_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -618,10 +618,10 @@ begin
   begin
     Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
     if Result <> BothNotNull then Exit;
-    if PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^ then Result := 1//length different?
+    if PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^ then Result := 1//length different?
     else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
                          PAnsiChar(Pointer(V2)^)+PAnsiInc,
-                         PLongWord(Pointer(V1)^)^);
+                         PCardinal(Pointer(V1)^)^);
   end;
 end;
 
@@ -635,8 +635,8 @@ begin
     if Result <> BothNotNull then Exit;
     {$IFDEF MSWINDOWS}
     Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
-      PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
-      PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
+      PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^,
+      PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
     {$ELSE}
     Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
       AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
@@ -659,8 +659,8 @@ begin
   begin
     Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
     if Result <> BothNotNull then Exit;
-    S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^, zCP_UTF8);
-    S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^, zCP_UTF8);
+    S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^, zCP_UTF8);
+    S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^, zCP_UTF8);
     {$IFDEF UNICODE}
     Result := AnsiCompareStr(S1, S2);
     {$ELSE}
@@ -716,11 +716,11 @@ begin
     // Both values not null
     Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
     if Result <> BothNotNull then Exit;
-    Result := Ord(PLongWord(Pointer(V1)^)^ <> PLongWord(Pointer(V2)^)^);
+    Result := Ord(PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^);
     if Result = 0 then
        Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
                            Pointer(PWideChar(Pointer(V2)^)+PWideInc),
-                           PLongWord(Pointer(V1)^)^ shl 1);
+                           PCardinal(Pointer(V1)^)^ shl 1);
   end;
 end;
 
@@ -1003,7 +1003,7 @@ begin
     stSmall:
       Result := SizeOf(SmallInt);
     stLongWord:
-      Result := SizeOf(LongWord);
+      Result := SizeOf(Cardinal);
     stInteger:
       Result := SizeOf(Integer);
     stULong:
@@ -1212,14 +1212,14 @@ procedure TZRowAccessor.InternalSetPWideChar(BuffAddr: PPointer;
 var
   LMem: Cardinal;
 begin
-  if (BuffAddr^ <> nil) and (Len <> PLongWord(BuffAddr^)^) then begin
+  if (BuffAddr^ <> nil) and (Len <> PCardinal(BuffAddr^)^) then begin
     FreeMem(BuffAddr^);
     BuffAddr^ := nil;
   end;
   if (Len > 0) and (Value <> nil) then begin
       LMem := Len*SizeOf(WideChar);
     if BuffAddr^ = nil then
-      GetMem(BuffAddr^, LMem+SizeOf(LongWord)+SizeOf(WideChar)); //including #0#0 terminator
+      GetMem(BuffAddr^, LMem+SizeOf(Cardinal)+SizeOf(WideChar)); //including #0#0 terminator
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (PWideChar(BuffAddr^)+PWideInc)^, LMem);
     PLongWord(BuffAddr^)^ := Len;
     (PWideChar(BuffAddr^)+PWideInc+Len)^ := WideChar(#0);
@@ -1230,15 +1230,15 @@ end;
 procedure TZRowAccessor.InternalSetPAnsiChar(BuffAddr: PPointer;
   Value: PAnsiChar; Len: Cardinal);
 begin
-  if (BuffAddr^ <> nil) and (Len <> PLongWord(BuffAddr^)^) then begin
+  if (BuffAddr^ <> nil) and (Len <> PCardinal(BuffAddr^)^) then begin
     System.FreeMem(BuffAddr^);
     BuffAddr^ := nil;
     end;
   if (Len > 0) and (Value <> nil) then begin
     if BuffAddr^ = nil then
-      GetMem(BuffAddr^, Len+SizeOf(LongWord)+SizeOf(AnsiChar)); //including #0 terminator
+      GetMem(BuffAddr^, Len+SizeOf(Cardinal)+SizeOf(AnsiChar)); //including #0 terminator
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (PPAnsiChar(BuffAddr)^+PAnsiInc)^, Len);
-    PLongWord(BuffAddr^)^ := Len;
+    PCardinal(BuffAddr^)^ := Len;
     AnsiChar((PPAnsiChar(BuffAddr)^+PAnsiInc+Len)^) := AnsiChar(#0); //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
@@ -1600,7 +1600,7 @@ begin
         DestAddress^ := nil;
         InternalSetPAnsiChar(DestAddress,
           PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PAnsiInc,
-          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^);
+          PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^)^);
       end;
   end else begin
     for i := 0 to FHighStringCols do
@@ -1610,7 +1610,7 @@ begin
         DestAddress^ := nil;
         InternalSetPWideChar(DestAddress,
           ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PWideInc,
-          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^);
+          PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^)^);
   end;
   end;
   for i := 0 to FHighLobCols do
@@ -1922,10 +1922,10 @@ Set_Results:        Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     goto SetEmpty
                   else if fRaw then begin
             Result := PPAnsiChar(Data)^+PAnsiInc;
-            Len := PPLongWord(Data)^^;
+                    Len := PCardinal(PPointer(Data)^)^;
                   end else begin
                     FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
-                      PPLongWord(Data)^^, FClientCP);
+                      PCardinal(PPointer(Data)^)^, FClientCP);
                     Len := Length(FRawTemp);
                     if Len > 0
                     then Result := Pointer(FRawTemp)
@@ -2219,11 +2219,11 @@ Set_Results:        Len := Result - PWideChar(@FTinyBuffer[0]);
       stUnicodeString: if (Data^ = nil) then
                     goto SetEmpty
                   else if fRaw then begin
-                    FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^, FClientCP);
+                    FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PCardinal(PPointer(Data)^)^, FClientCP);
                     goto Set_From_Temp;
                   end else begin
           Result := ZPPWideChar(Data)^+PWideInc;
-                    Len := PLongWord(Data^)^;
+                    Len := PCardinal(Data^)^;
         end;
       stBytes:    if Data^ <> nil then begin
                     fUniTemp := Ascii7ToUnicodeString(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
@@ -2561,8 +2561,8 @@ begin
       stBigDecimal: Result := PExtended(Data)^;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
-        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
-        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
@@ -2616,8 +2616,8 @@ begin
       stTime, stDate, stTimeStamp: Result := PDateTime(Data)^;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
-        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
-        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
@@ -2670,8 +2670,8 @@ begin
       stBigDecimal: Result := PExtended(Data)^;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
-        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
-        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
@@ -2725,8 +2725,8 @@ begin
       stBigDecimal: Result := PExtended(Data)^;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
-        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
-        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
@@ -2772,9 +2772,9 @@ begin
       stString, stUnicodeString:
         if Data^ <> nil then
           if fRaw then begin
-            Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PPLongWord(Data)^^ )
+            Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PCardinal(PPointer(Data)^)^ )
           end else begin
-            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^);
+            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^);
             Result := BufferToBytes( Pointer(FRawTemp), Length(FRawTemp) );
           end
         else
@@ -2823,10 +2823,10 @@ begin
         end;
       stString, stUnicodeString: if (PPointer(Result)^ <> nil) then
           if fRaw then begin
-            Len := PPLongWord(Result)^^;
+            Len := PCardinal(PPointer(Result)^)^;
             Result := PPAnsiChar(Result)^+PAnsiInc;
           end else begin
-            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Result)^+PWideInc, PPLongWord(Result)^^);
+            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Result)^+PWideInc, PCardinal(PPointer(Result)^)^);
             Len := Length(FRawTemp);
             Result := Pointer(FRawTemp);
           end;
@@ -2867,16 +2867,16 @@ begin
       stString, stUnicodeString: if (PPointer(Data)^ <> nil) then
         if fRaw then begin
           Result := ZSysUtils.RawSQLDateToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
+            PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
+              PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed));
         end else begin
           Result := ZSysUtils.UnicodeSQLDateToDateTime(ZPPWideChar(Data)^+PWideInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
+            PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ZSysUtils.UnicodeSQLTimeStampToDateTime(
-              ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
+              ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed));
         end;
       stAsciiStream, stUnicodeStream: if (PPointer(Data)^ <> nil ) then begin
           TempBlob := PPointer(Data)^; //from address to obj-pointer
@@ -2924,17 +2924,17 @@ begin
       stTimestamp: Result := Frac(PDateTime(Data)^);
       stString, stUnicodeString:
         if fRaw then begin
-          Result := ZSysUtils.RawSQLTimeToDateTime(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
+          Result := ZSysUtils.RawSQLTimeToDateTime(PPAnsiChar(Data)^+PAnsiInc, PCardinal(PPointer(Data)^)^,
             ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
+              PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed));
         end else begin
-          Result := ZSysUtils.UnicodeSQLTimeToDateTime(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^,
+          Result := ZSysUtils.UnicodeSQLTimeToDateTime(ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^,
             ConSettings^.ReadFormatSettings, Failed);
           if Failed then
             Result := Frac(ZSysUtils.UnicodeSQLTimeStampToDateTime(ZPPWideChar(Data)^+PWideInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
+              PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed));
         end;
       stAsciiStream, stUnicodeStream:
         if (PPointer(Data)^ <> nil) then begin
@@ -2983,10 +2983,10 @@ begin
       stString, stUnicodeString:
         if fRaw then
           Result := ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed)
+            PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed)
         else
-          Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(PPWideChar(Data)^+PWideInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
+          Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(ZPPWideChar(Data)^+PWideInc,
+            PCardinal(PPointer(Data)^)^, ConSettings^.ReadFormatSettings, Failed);
       stAsciiStream, stUnicodeStream:
         if (PPointer(Data)^ <> nil) then begin
           TempBlob := PPointer(Data)^; //from address to obj-pointer

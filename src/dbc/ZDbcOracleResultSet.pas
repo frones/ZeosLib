@@ -1343,9 +1343,7 @@ begin
     CurrentVar^.Precision := 0;
 
     case CurrentVar^.oDataType of
-      SQLT_AFC:
-        CurrentVar^.ColType := stString;
-      SQLT_CHR, SQLT_VCS, SQLT_AVC, SQLT_STR, SQLT_VST:
+      SQLT_AFC, SQLT_CHR, SQLT_VCS, SQLT_AVC, SQLT_STR, SQLT_VST:
         CurrentVar^.ColType := stString;
       SQLT_NUM: //unsigned char[21](binary) see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
         begin {11g returns Precision = 38 in all cases}
@@ -1424,20 +1422,29 @@ begin
             CurrentVar^.ColType := stBinaryStream;
         end;
       else
-          CurrentVar^.ColType := stUnknown;
+        CurrentVar^.ColType := stUnknown;
     end;
-
-    if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-    begin
-      CurrentVar^.CodePage := ConSettings^.ClientCodePage^.CP;
-      if (ConSettings.CPType = cCP_UTF16) then
-        case CurrentVar^.ColType of
-          stString: CurrentVar^.ColType := stUnicodeString;
-          stAsciiStream: if not ( CurrentVar^.oDataType in [SQLT_LNG]) then
-            CurrentVar^.ColType := stUnicodeStream;
-        end;
-    end
-    else
+    if (CurrentVar^.ColType = stString) then begin
+      FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
+        @CurrentVar^.Precision, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+      FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
+        @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
+      if CSForm = SQLCS_NCHAR then
+        CurrentVar^.Precision := CurrentVar^.Precision shr 1;
+      {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
+        and is different to the native db charset
+        so we'll increase the buffers to avoid truncation errors. Here we go:}
+      if Consettings.ClientCodePage.Encoding <> ceUTF16
+      then CurrentVar^.oDataSize := CurrentVar^.Precision * ConSettings.ClientCodePage.CharWidth
+      else CurrentVar^.oDataSize := CurrentVar^.Precision shl 1;
+      if Consettings.CPType =cCP_UTF16 then
+        CurrentVar^.ColType := stUnicodeString;
+      CurrentVar^.CodePage := ConSettings.ClientCodePage.CP;
+    end else if (CurrentVar^.ColType = stAsciiStream) then begin
+      if (CurrentVar^.oDataType <> SQLT_LNG) and (ConSettings.CPType = cCP_UTF16) then
+        CurrentVar^.ColType := stUnicodeStream;
+      CurrentVar^.CodePage := ConSettings.ClientCodePage.CP;
+    end else
       CurrentVar^.CodePage := High(Word);
     {set new datatypes if required}
     DefineOracleVarTypes(CurrentVar, CurrentVar^.ColType, CurrentVar^.oDataSize, CurrentVar^.oDataType, FConnection.GetClientVersion >= 11002000);
@@ -1445,10 +1452,9 @@ begin
     Inc(RowSize, CalcBufferSizeOfSQLVar(CurrentVar));
   end;
   { now let's calc the iters we can use }
-  if RowSize > FZBufferSize then
-    FIteration := 1
-  else
-    FIteration := FZBufferSize div RowSize;
+  if RowSize > FZBufferSize
+  then FIteration := 1
+  else FIteration := FZBufferSize div RowSize;
   if ( DescriptorColumnCount > 0 ) and (DescriptorColumnCount * FIteration > 1000) then //take care we do not create too much descriptors
     FIteration := 1000 div DescriptorColumnCount;
   if (SubObjectColumnCount > 0) then
@@ -1460,25 +1466,19 @@ begin
 
   { Bind handle and Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 1 to FColumns.AllocNum do
-  begin
+  for I := 1 to FColumns.AllocNum do begin
     {$R-}
     CurrentVar := @FColumns.Variables[I-1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     SetVariableDataEntrys(BufferPos, CurrentVar, FIteration);
-    if CurrentVar^.ColType <> stUnknown then //do not BIND unknown types
-    begin
+    if CurrentVar^.ColType <> stUnknown then begin//do not BIND unknown types
       AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration, False); //alloc Desciptors if required
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.DefineByPos(FStmtHandle, CurrentVar^.Define,
           FErrorHandle, I, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
           CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, OCI_DEFAULT),
         lcExecute, 'OCIDefineByPos', ConSettings);
-    end
-    else
-      {$R-}
-      CurrentVar := @FColumns.Variables[I-1];
-      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    end;
     if CurrentVar^.oDataType=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
@@ -1487,9 +1487,7 @@ begin
         lcExecute, 'OCIDefineObject', ConSettings);
 
     ColumnInfo := TZColumnInfo.Create;
-    with ColumnInfo do
-    begin
-      //ColumnName := ''; TableName := ''; ColumnDisplaySize := 0; AutoIncrement := False;
+    with ColumnInfo do begin
       ColumnCodePage := CurrentVar^.CodePage;
       P := nil; //init
       CheckOracleError(FPlainDriver, FErrorHandle,
@@ -1506,24 +1504,14 @@ begin
 
       Signed := True;
       Nullable := ntNullable;
+      CharOctedLength := CurrentVar^.oDataSize;
 
       ColumnType := CurrentVar^.ColType;
       Scale := CurrentVar^.Scale;
-      if (ColumnType in [stString, stUnicodeString]) then begin
-        FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
-          @ColumnDisplaySize, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
-        FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
-          @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
-        if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
-          ColumnDisplaySize := ColumnDisplaySize shr 1; //shr 1 = div 2 but faster
-        Precision := ColumnDisplaySize;
-        CharOctedLength := CurrentVar^.oDataSize;
-        if ColumnType = stString then begin
-          CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
-        end else begin
-          CharOctedLength := Precision shl 1;
-        end;
-      end else if (ColumnType = stBytes ) then
+      Precision := CurrentVar^.Precision;
+      if (ColumnType in [stString, stUnicodeString]) then
+        ColumnDisplaySize := CurrentVar^.Precision
+      else if (ColumnType = stBytes ) then
         Precision := CurrentVar^.oDataSize
       else
         Precision := CurrentVar^.Precision;
