@@ -106,9 +106,9 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); reintroduce; overload;
+    procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); reintroduce; overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
     function GetBlob(ColumnIndex: Integer): IZBlob;
@@ -204,7 +204,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
- Math, ZFastCode, ZDbcLogging, ZEncoding, ZClasses;
+ Math, ZFastCode, ZDbcLogging, ZEncoding, ZClasses, ZDbcUtils;
 
 { TZASAResultSet }
 
@@ -308,7 +308,7 @@ begin
           DT_BIGINT           : JSONWriter.Add(PInt64(sqldata)^);
           DT_UNSINT           : JSONWriter.AddU(PCardinal(sqldata)^);
           DT_UNSSMALLINT      : JSONWriter.AddU(PWord(sqldata)^);
-          DT_UNSBIGINT        : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(sqldata)^));
+          DT_UNSBIGINT        : JSONWriter.AddQ(PUInt64(sqldata)^);
           DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(sqldata)^ <> 0]);
           DT_NSTRING,
           DT_NFIXCHAR,
@@ -477,8 +477,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PCardinal(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -522,8 +522,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PCardinal(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -568,8 +568,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PCardinal(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -614,8 +614,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PCardinal(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -838,8 +838,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PCardinal(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := PSingle(sqldata)^;
         DT_DOUBLE      : Result := PDouble(sqldata)^;
         DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING(sqlData).length);
@@ -862,9 +862,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAAbstractResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+procedure TZASAAbstractResultSet.GetDate(ColumnIndex: Integer; Var Result: TZDate);
 var
-  Failed: Boolean;
   P: PAnsiChar;
   Len: NativeUInt;
 begin
@@ -872,7 +871,6 @@ begin
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  Result := 0;
   if not LastWasNull then
     with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
       case sqlType and $FFFE of
@@ -880,20 +878,18 @@ begin
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
             Len := PZASASQLSTRING(sqlData).length;
-            if Len >= 10 then
-              if Len = ConSettings^.ReadFormatSettings.DateFormatLen
-              then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-              else Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                    RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
+            LastWasNull := not TryPCharToDate(P, Len, ConSettings^.ReadFormatSettings, Result);
           end;
-           DT_TIMESTAMP_STRUCT:
-                Result := EncodeDate(PZASASQLDateTime(sqlData).Year,
-                                      PZASASQLDateTime(sqlData).Month + 1,
-                                      PZASASQLDateTime(sqlData).Day);
-        else
-          FSqlData.CreateException(Format(SErrorConvertionField,
-            [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
-      end;
+       DT_TIMESTAMP_STRUCT: begin
+            Result.Year := Abs(PZASASQLDateTime(sqlData).Year);
+            Result.Month := PZASASQLDateTime(sqlData).Month+1;
+            Result.Day := PZASASQLDateTime(sqlData).Day;
+            Result.IsNegative := PZASASQLDateTime(sqlData).Year < 0;
+          end;
+    else
+      FSqlData.CreateException(Format(SErrorConvertionField,
+        [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+  end;
 end;
 
 {**
@@ -905,9 +901,8 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+procedure TZASAAbstractResultSet.GetTime(ColumnIndex: Integer; Var Result: TZTime);
 var
-  Failed: Boolean;
   P: PAnsiChar;
   Len: NativeUInt;
 begin
@@ -915,7 +910,6 @@ begin
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  Result := 0;
   if not LastWasNull then
     with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
       case sqlType and $FFFE of
@@ -923,17 +917,14 @@ begin
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
             Len := PZASASQLSTRING(sqlData).length;
-            if Len >= 8 then
-              if AnsiChar((P+2)^) = AnsiChar(':') //possible date if Len = 10 then
-              then Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed)
-              else Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
+            LastWasNull := not TryPCharToTime(P, Len, ConSettings^.ReadFormatSettings, Result);
           end;
         DT_TIMESTAMP_STRUCT:
           begin
-            Result :=  EncodeTime(PZASASQLDateTime(sqlData).Hour,
-                                  PZASASQLDateTime(sqlData).Minute,
-                                  PZASASQLDateTime(sqlData).Second,
-                                  PZASASQLDateTime(sqlData).MicroSecond div 1000);
+            Result.Hour := PZASASQLDateTime(sqlData)^.Hour;
+            Result.Minute := PZASASQLDateTime(sqlData)^.Minute;
+            Result.Second := PZASASQLDateTime(sqlData)^.Second;
+            Result.Fractions := PZASASQLDateTime(sqlData).MicroSecond * 1000;
           end;
         else
           FSqlData.CreateException(Format(SErrorConvertionField,
@@ -951,9 +942,8 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZASAAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+procedure TZASAAbstractResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 var
-  Failed: Boolean;
   P: PAnsiChar;
   Len: NativeUInt;
 begin
@@ -961,7 +951,6 @@ begin
   CheckColumnConvertion(ColumnIndex, stTimeStamp);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  Result := 0;
   if not LastWasNull then
     with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
       case sqlType and $FFFE of
@@ -969,21 +958,19 @@ begin
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
             Len := PZASASQLSTRING(sqlData).length;
-            if Len >= 8 then
-            if AnsiChar((P+2)^) = AnsiChar(':')
-            then Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-            else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4
-              then Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-              else Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
+            LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
           end;
-        DT_TIMESTAMP_STRUCT:
-              Result := EncodeDate(PZASASQLDateTime(sqlData).Year,
-                                    PZASASQLDateTime(sqlData).Month + 1,
-                                    PZASASQLDateTime(sqlData).Day) +
-                                    EncodeTime(PZASASQLDateTime(sqlData).Hour,
-                                    PZASASQLDateTime(sqlData).Minute,
-                                    PZASASQLDateTime(sqlData).Second,
-                                    PZASASQLDateTime(sqlData).MicroSecond div 1000);
+        DT_TIMESTAMP_STRUCT: begin
+            Result.Year := Abs(PZASASQLDateTime(sqlData).Year);
+            Result.Month := PZASASQLDateTime(sqlData).Month+1;
+            Result.Day := PZASASQLDateTime(sqlData).Day;
+            Result.Hour := PZASASQLDateTime(sqlData)^.Hour;
+            Result.Minute := PZASASQLDateTime(sqlData)^.Minute;
+            Result.Second := PZASASQLDateTime(sqlData)^.Second;
+            PInt64(PAnsiChar(@Result.TimeZoneHour)-2)^ := 0;
+            Result.Fractions := PZASASQLDateTime(sqlData).MicroSecond * 1000;
+            Result.IsNegative := PZASASQLDateTime(sqlData).Year < 0;
+          end;
         else
           FSqlData.CreateException(Format(SErrorConvertionField,
             [FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
@@ -1072,17 +1059,17 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
       DT_TIMESTAMP_STRUCT : begin
                       Result := @FTinyBuffer[0];
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
-                        stDate: Len := ZSysUtils.DateTimeToRawSQLDate(PZASASQLDateTime(SQLData).Year,
+                        stDate: Len := DateToRaw(PZASASQLDateTime(SQLData).Year,
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
-                        stTime: Len := ZSysUtils.DateTimeToRawSQLTime(PZASASQLDateTime(SQLData).Hour,
+                        stTime: Len := TimeToRaw(PZASASQLDateTime(SQLData).Hour,
                                   PZASASQLDateTime(SQLData).Minute, PZASASQLDateTime(SQLData).Second,
-                                  PZASASQLDateTime(SQLData).MicroSecond div 1000,
-                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False);
-                        else    Len := ZSysUtils.DateTimeToRawSQLTimeStamp(PZASASQLDateTime(SQLData).Year,
+                                  PZASASQLDateTime(SQLData).MicroSecond * 1000,
+                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
+                        else    Len := DateTimeToRaw(PZASASQLDateTime(SQLData).Year,
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   PZASASQLDateTime(SQLData).Hour, PZASASQLDateTime(SQLData).Minute,
-                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond div 1000,
+                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond * 1000,
                                   Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                         end;
                       end;
@@ -1175,18 +1162,18 @@ set_from_uni:           Len := Length(FUniTemp);
       DT_TIMESTAMP_STRUCT : begin
                       Result := @FTinyBuffer[0];
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
-                        stDate: Len := ZSysUtils.DateTimeToUnicodeSQLDate(PZASASQLDateTime(SQLData).Year,
+                        stDate: Len := DateToUni(Abs(PZASASQLDateTime(SQLData).Year),
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
-                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
-                        stTime: Len := ZSysUtils.DateTimeToUnicodeSQLTime(PZASASQLDateTime(SQLData).Hour,
+                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, PZASASQLDateTime(SQLData).Year < 0);
+                        stTime: Len := TimeToUni(PZASASQLDateTime(SQLData).Hour,
                                   PZASASQLDateTime(SQLData).Minute, PZASASQLDateTime(SQLData).Second,
-                                  PZASASQLDateTime(SQLData).MicroSecond div 1000,
-                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False);
-                        else    Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(PZASASQLDateTime(SQLData).Year,
+                                  PZASASQLDateTime(SQLData).MicroSecond * 1000,
+                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
+                        else    Len := DateTimeToUni(Abs(PZASASQLDateTime(SQLData).Year),
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
                                   PZASASQLDateTime(SQLData).Hour, PZASASQLDateTime(SQLData).Minute,
-                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond div 1000,
-                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
+                                  PZASASQLDateTime(SQLData).Second, PZASASQLDateTime(SQLData).MicroSecond * 1000,
+                                  Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, PZASASQLDateTime(SQLData).Year < 0);
                         end;
                       end;
 

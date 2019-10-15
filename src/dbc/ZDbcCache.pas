@@ -64,8 +64,8 @@ uses
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBcd,
-  {$IF defined(OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND} ZDbcIntfs, ZDbcResultSet,
-  ZDbcResultSetMetadata, ZVariant, ZCompatibility;
+  {$IF defined(OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND} ZDbcIntfs,
+  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant, ZCompatibility;
 
 type
 
@@ -211,9 +211,9 @@ type
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID; out IsNull: Boolean);
     function GetBytes(ColumnIndex: Integer; out IsNull: Boolean): TBytes; overload;
     function GetBytes(ColumnIndex: Integer; out IsNull: Boolean; out Len: Word): Pointer; overload;
-    function GetDate(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
-    function GetTime(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; out IsNull: Boolean; Var Result: TZDate);
+    procedure GetTime(ColumnIndex: Integer; out IsNull: Boolean; Var Result: TZTime);
+    procedure GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean; var Result: TZTimeStamp);
     function GetAsciiStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
     function GetUnicodeStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
     function GetBinaryStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
@@ -254,9 +254,9 @@ type
     procedure SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString); virtual;
     procedure SetBytes(ColumnIndex: Integer; const Value: TBytes); overload; virtual;
     procedure SetBytes(ColumnIndex: Integer; Buf: Pointer; Len: Word); overload; virtual;
-    procedure SetDate(ColumnIndex: Integer; const Value: TDateTime); virtual;
-    procedure SetTime(ColumnIndex: Integer; const Value: TDateTime); virtual;
-    procedure SetTimestamp(ColumnIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetDate(ColumnIndex: Integer; const Value: TZDate); virtual;
+    procedure SetTime(ColumnIndex: Integer; const Value: TZTime); virtual;
+    procedure SetTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); virtual;
     procedure SetAsciiStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetUnicodeStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ColumnIndex: Integer; const Value: TStream);
@@ -572,7 +572,7 @@ function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PDateTime(V1)^ > PDateTime(V2)^)-Ord(PDateTime(V1)^ < PDateTime(V2)^);
+    Result := ZSysUtils.ZCompareDateTime(PDateTime(V1)^, PDateTime(V2)^)
 end;
 
 function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -584,7 +584,79 @@ function CompareDateTime_Equals(const Null1, Null2: Boolean; const V1, V2): Inte
 begin
   Result := NullsEqualMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PDateTime(V1)^ <> PDateTime(V2)^);
+    Result := ZSysUtils.ZCompareDateTime(PDateTime(V1)^, PDateTime(V2)^)
+end;
+
+function CompareZDate_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := Ord(PInt64(V1)^ <> PInt64(V2)^)
+end;
+
+function CompareZDate_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZCompareDate(PZDate(V1)^, PZDate(V2)^)
+end;
+
+function CompareZDate_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := -ZCompareDate(PZDate(V1)^, PZDate(V2)^)
+end;
+
+function CompareZTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then begin
+    Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
+    if Result = 0 then
+        Result := Ord(PInt64(PAnsiChar(V1)+2)^ <> PInt64(PAnsiChar(V2)+2)^);
+  end;
+end;
+
+function CompareZTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := -ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTimeStamp_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then begin
+    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+    if Result = 0 then begin
+      Result := Ord(PInt64(PAnsiChar(V1)+8)^ <> PInt64(PAnsiChar(V2)+8)^);
+      if Result = 0 then
+        Result := Ord(PInt64(PAnsiChar(V1)+14)^ <> PInt64(PAnsiChar(V2)+14)^);
+    end;
+  end;
+end;
+
+function CompareZTimeStamp_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
+end;
+
+function CompareZTimeStamp_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := NullsCompareMatrix[Null1, Null2];
+  if Result = BothNotNull then
+    Result := -ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
 end;
 
 function CompareGUID_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -999,41 +1071,28 @@ end;
 function TZRowAccessor.GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
 begin
   case ColumnInfo.ColumnType of
-    stBoolean:
-      Result := SizeOf(WordBool);
-    stByte:
-      Result := SizeOf(Byte);
-    stShort:
-      Result := SizeOf(ShortInt);
-    stWord:
-      Result := SizeOf(Word);
-    stSmall:
-      Result := SizeOf(SmallInt);
-    stLongWord:
-      Result := SizeOf(LongWord);
-    stInteger:
-      Result := SizeOf(Integer);
-    stULong:
-      Result := SizeOf(UInt64);
-    stLong:
-      Result := SizeOf(Int64);
-    stFloat:
-      Result := SizeOf(Single);
-    stDouble:
-      Result := SizeOf(Double);
-    stCurrency:
-      Result := SizeOf(Currency);
-    stBigDecimal:
-      Result := SizeOf(TBCD);
+    stBoolean:    Result := SizeOf(WordBool);
+    stByte:       Result := SizeOf(Byte);
+    stShort:      Result := SizeOf(ShortInt);
+    stWord:       Result := SizeOf(Word);
+    stSmall:      Result := SizeOf(SmallInt);
+    stLongWord:   Result := SizeOf(Cardinal);
+    stInteger:    Result := SizeOf(Integer);
+    stULong:      Result := SizeOf(UInt64);
+    stLong:       Result := SizeOf(Int64);
+    stFloat:      Result := SizeOf(Single);
+    stDouble:     Result := SizeOf(Double);
+    stCurrency:   Result := SizeOf(Currency);
+    stBigDecimal: Result := SizeOf(TBCD);
     stString, stUnicodeString,
     stAsciiStream, stUnicodeStream, stBinaryStream,
     stDataSet, stArray:
       Result := SizeOf(Pointer);
     stGUID: Result := SizeOf(TGUID);
-    stBytes:
-      Result := SizeOf(Pointer) + SizeOf(Word);
-    stDate, stTime, stTimestamp:
-      Result := SizeOf(TDateTime);
+    stBytes:      Result := SizeOf(Pointer) + SizeOf(Word);
+    stDate:       Result := SizeOf(TZDate);
+    stTime:       Result := SizeOf(TZTime);
+    stTimeStamp:  Result := SizeOf(TZTimeStamp);
     else
       Result := 0;
   end;
@@ -1061,7 +1120,7 @@ begin
       stLong: Result := Integer(PInt64(Data)^);
       stFloat: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^));
       stDouble: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^));
-      stCurrency: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^));
+      stCurrency: Result := Integer(PInt64(Data)^ div 10000);
       stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
@@ -1107,7 +1166,7 @@ begin
       stLong: Result := PInt64(Data)^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stCurrency: Result := (PInt64(Data)^ div 10000);
       stBigDecimal: Result := BCD2UInt64(PBCD(Data)^);
       stString, stUnicodeString: if Data^ <> nil then
           if fRaw
@@ -1373,13 +1432,13 @@ begin
                               if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
                                  (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then
                                 JSONWriter.AddJSONEscapeW(Pointer(ZPPWideChar(Data)^+PWideInc),
-                                  PPLongWord(Data)^^)
+                                  PCardinal(PPointer(Data)^)^)
                               else if FClientCP = zCP_UTF8 then
                                 JSONWriter.AddJSONEscape(PPAnsiChar(Data)^+PAnsiInc,
-                                  PPLongWord(Data)^^)
+                                  PCardinal(PPointer(Data)^)^)
                               else begin
                                 FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-                                  PPLongWord(Data)^^, FClientCP);
+                                  PCardinal(PPointer(Data)^)^, FClientCP);
                                 JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
                               end;
                             end;
@@ -1391,50 +1450,55 @@ begin
                             JSONWriter.Add(PGUID(Data)^);
                             JSONWriter.Add('"');
                           end;
-        stTime          : if (jcoMongoISODate in JSONComposeOptions) then begin
-                            JSONWriter.AddShort('ISODate("0000-00-00');
-                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddShort('Z")')
-                          end else begin
-                            if jcoDATETIME_MAGIC in JSONComposeOptions
-                            then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+        stTime          : begin
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("0000-00-00')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            end else
+                              JSONWriter.Add('"');
+                            TimeToIso8601PChar(@TinyBuffer[0], True, PZTime(Data)^.hour,
+                              PZTime(Data)^.Minute, PZTime(Data)^.second, PZTime(Data)^.Fractions div NanoSecsPerMSec,
+                                'T', jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.Add('"');
                           end;
-        stDate          : if (jcoMongoISODate in JSONComposeOptions) then begin
-                            if Trunc(PDateTime(Data)^)=0 then
-                              JSONWriter.AddShort('ISODate("1899-12-30T00:00:00Z')
-                            else begin
-                              JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddDateTime(Int(PDateTime(Data)^), jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddShort('T00:00:00Z")')
-                            end;
-                          end else begin
-                            if jcoDATETIME_MAGIC in JSONComposeOptions
-                            then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+        stDate          : begin
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else
+                              JSONWriter.Add('"');
+                            if PZDate(Data)^.IsNegative then
+                              JSONWriter.Add('-');
+                            DateToIso8601PChar(@TinyBuffer[0], True, PZDate(Data)^.Year,
+                              PZDate(Data)^.Month, PZDate(Data)^.Day);
+                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],10);
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('T00:00:00Z")')
                             else JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.Add('"');
                           end;
-        stTimestamp     : if (jcoMongoISODate in JSONComposeOptions) then begin
-                            if PDateTime(Data)^ = 0 then
-                              JSONWriter.AddShort('ISODate("1899-12-30T00:00:00')
-                            else begin
-                              JSONWriter.AddShort('ISODate("');
-                              if Trunc(PDateTime(Data)^)=0
-                              then JSONWriter.AddShort('1899-12-30')
-                              else JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
-                              if Frac(PDateTime(Data)^) = 0 then
-                              JSONWriter.AddShort('T00:00:00')
-                            end;
-                            JSONWriter.AddShort('Z")')
-                          end else begin
-                            if jcoDATETIME_MAGIC in JSONComposeOptions
-                            then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+        stTimestamp     : begin
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else
+                              JSONWriter.Add('"');
+                            if PZTimeStamp(Data)^.IsNegative then
+                              JSONWriter.Add('-');
+                            DateToIso8601PChar(@TinyBuffer[0], True, PZTimeStamp(Data)^.Year,
+                               PZTimeStamp(Data)^.Month, PZTimeStamp(Data)^.Day);
+                            TimeToIso8601PChar(@TinyBuffer[10], True, PZTimeStamp(Data)^.Hour,
+                              PZTimeStamp(Data)^.Minute, PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions div NanoSecsPerMSec,
+                                'T', jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(PDateTime(Data)^, jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.Add('"');
                           end;
         stAsciiStream, stUnicodeStream:
           begin
@@ -1595,12 +1659,21 @@ begin
         ckDescending: Result := CompareBigDecimal_Desc;
         ckEquals:     Result := CompareBigDecimal_Equals;
       end;
-    stDate, stTime, stTimestamp:
-      case CompareKind of
-        ckAscending:  Result := CompareDateTime_Asc;
-        ckDescending: Result := CompareDateTime_Desc;
-        ckEquals:     Result := CompareDateTime_Equals;
-      end;
+    stDate: case CompareKind of
+              ckAscending:  Result := CompareZDate_Asc;
+              ckDescending: Result := CompareZDate_Desc;
+              ckEquals:     Result := CompareZDate_Equals;
+            end;
+    stTime: case CompareKind of
+              ckAscending:  Result := CompareZTime_Asc;
+              ckDescending: Result := CompareZTime_Desc;
+              ckEquals:     Result := CompareZTime_Equals;
+            end;
+    stTimestamp: case CompareKind of
+              ckAscending:  Result := CompareZTimeStamp_Asc;
+              ckDescending: Result := CompareZTimeStamp_Desc;
+              ckEquals:     Result := CompareZTimeStamp_Equals;
+            end;
     stGUID:
       case CompareKind of
         ckAscending:  Result := CompareGUID_Asc;
@@ -1766,7 +1839,7 @@ begin
         DestAddress^ := nil;
         InternalSetPAnsiChar(DestAddress,
           PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PAnsiInc,
-          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^);
+          PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^)^);
       end;
   end else begin
     for i := 0 to FHighStringCols do
@@ -1776,7 +1849,7 @@ begin
         DestAddress^ := nil;
         InternalSetPWideChar(DestAddress,
           ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^+PWideInc,
-          PPLongWord(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^^);
+          PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[FStringCols[i]]+1])^)^);
       end;
   end;
   for i := 0 to FHighLobCols do
@@ -2093,10 +2166,10 @@ Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
                     goto SetEmpty
                   else if fRaw then begin
                     Result := PPAnsiChar(Data)^+PAnsiInc;
-                    Len := PPLongWord(Data)^^;
+                    Len := PCardinal(PPointer(Data)^)^;
                   end else begin
                     FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
-                      PPLongWord(Data)^^, FClientCP);
+                      PCardinal(PPointer(Data)^)^, FClientCP);
                     Len := Length(FRawTemp);
                     if Len > 0
                     then Result := Pointer(FRawTemp)
@@ -2114,18 +2187,20 @@ Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
                   end;
       stDate:     begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToRawSQLDate(PDateTime(Data)^, @TinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
+                    Len := DateToRaw(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
+                      Result, ConSettings^.DisplayFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
                   end;
       stTime:     begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToRawSQLTime(PDateTime(Data)^, @TinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
+                    Len := TimeToRaw(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
+                      PZTime(Data)^.Fractions, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
                   end;
       stTimestamp:begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToRawSQLTimeStamp(PDateTime(Data)^, @TinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
+                    Len := DateTimeToRaw(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
+                      PZTimeStamp(Data)^.Day, PZTimeStamp(Data)^.Hour, PZTimeStamp(Data)^.Minute,
+                      PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions, Result,
+                      ConSettings^.DisplayFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
                   end;
       stAsciiStream, stUnicodeStream:
                   if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
@@ -2387,7 +2462,7 @@ Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
       stUnicodeString: if (Data^ = nil) then
                     goto SetEmpty
                   else if fRaw then begin
-                    FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^, FClientCP);
+                    FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc, PCardinal(PPointer(Data)^)^, FClientCP);
                     goto Set_From_Temp;
                   end else begin
                     Result := ZPPWideChar(Data)^+PWideInc;
@@ -2405,19 +2480,20 @@ Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
                   end;
       stDate:     begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToUnicodeSQLDate(PDateTime(Data)^, @TinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
+                    Len := DateToUni(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
+                      Result, ConSettings^.DisplayFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
                   end;
       stTime:     begin
-                    DateTimeToUnicodeSQLTime(PDateTime(Data)^, @TinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
                     Result := @TinyBuffer[0];
-                    Len := ConSettings^.DisplayFormatSettings.TimeFormatLen;
+                    Len := TimeToUni(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
+                      PZTime(Data)^.Fractions, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
                   end;
       stTimestamp:begin
                     Result := @TinyBuffer[0];
-                    Len := DateTimeToUnicodeSQLTimeStamp(PDateTime(Data)^, @TinyBuffer[0],
-                      ConSettings^.DisplayFormatSettings, False);
+                    Len := DateTimeToUni(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
+                      PZTimeStamp(Data)^.Day, PZTimeStamp(Data)^.Hour, PZTimeStamp(Data)^.Minute,
+                      PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions, Result,
+                      ConSettings^.DisplayFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
                   end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
                   if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then begin
@@ -2499,7 +2575,10 @@ begin
       stDouble: Result := PDouble(Data)^ <> 0;
       stCurrency: Result := PCurrency(Data)^ <> 0;
       stBigDecimal: Result := BCDCompare(NullBCD, PBCD(Data)^) <> 0;
-      stDate, stTime, stTimeStamp: Result := PDateTime(Data)^ <> 0;
+      stDate: Result := (PZDate(Data)^.Year or PZDate(Data)^.Month or PZDate(Data)^.Day) <> 0;
+      stTime: Result := (PZTime(Data)^.Hour or PZTime(Data)^.Minute or PZTime(Data)^.Second or PZTime(Data)^.Fractions) <> 0;
+      stTimeStamp: Result := (PZTimeStamp(Data)^.Year or PZTimeStamp(Data)^.Month or PZTimeStamp(Data)^.Day or
+        PZTimeStamp(Data)^.Hour or PZTimeStamp(Data)^.Minute or PZTimeStamp(Data)^.Second or PZTimeStamp(Data)^.Fractions) <> 0;
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
         then Result := StrToBoolEx(PPAnsiChar(Data)^+PAnsiInc, False)
@@ -2669,7 +2748,7 @@ begin
       stLong: Result := PInt64(Data)^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
-      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(Data)^);
+      stCurrency: Result := PInt64(Data)^ div 10000;
       stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
@@ -2727,8 +2806,8 @@ begin
       stBigDecimal: Result := BCDToDouble(PBCD(Data)^);
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
-        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
-        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
@@ -2821,11 +2900,13 @@ begin
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
       stBigDecimal: Result := BCDToDouble(PBCD(Data)^);
-      stTime, stDate, stTimeStamp: Result := PDateTime(Data)^;
+      stTime: IsNull := not TryTimeToDateTime(PZTime(Data)^, TDateTime(Result));
+      stDate: IsNull := not TryDateToDateTime(PZDate(Data)^, TDateTime(Result));
+      stTimeStamp: IsNull := not TryTimeStampToDateTime(PZTimeStamp(Data)^, TDateTime(Result));
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
-        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
-        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
@@ -2878,8 +2959,8 @@ begin
       stBigDecimal: BCDToCurr(PBCD(Data)^, Result);
       stString, stUnicodeString: if Data^ <> nil then
         if fRaw
-        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PPLongWord(Data)^^)
-        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PPLongWord(Data)^^);
+        then SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^)
+        else SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^);
       stAsciiStream, stBinaryStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then
           if PIZlob(Data)^.IsClob
           then SQLStrToFloatDef(PIZlob(Data)^.GetPAnsiChar(FClientCP), 0, Result)
@@ -2981,9 +3062,9 @@ begin
       stString, stUnicodeString:
         if Data^ <> nil then
           if fRaw then begin
-            Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PPLongWord(Data)^^ )
+            Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PCardinal(PPointer(Data)^)^ )
           end else begin
-            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^);
+            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^);
             Result := BufferToBytes( Pointer(FRawTemp), Length(FRawTemp) );
           end
         else
@@ -3032,72 +3113,15 @@ begin
         end;
       stString, stUnicodeString: if (PPointer(Result)^ <> nil) then
           if fRaw then begin
-            Len := PPLongWord(Result)^^;
+            Len := PCardinal(PPointer(Result)^)^;
             Result := PPAnsiChar(Result)^+PAnsiInc;
           end else begin
-            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Result)^+PWideInc, PPLongWord(Result)^^);
+            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Result)^+PWideInc, PCardinal(PPointer(Result)^)^);
             Len := Length(FRawTemp);
             Result := Pointer(FRawTemp);
           end;
       else //all other types have fixed length and points to data in buffer
         Len := FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
-    end;
-    IsNull := False;
-  end else
-    IsNull := True;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Date</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZRowAccessor.GetDate(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
-var
-  Failed: Boolean;
-  Data: Pointer;
-  TempBlob: PIZLob;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stDate);
-{$ENDIF}
-  Result := 0;
-  {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stDate: Result := PDateTime(Data)^;
-      stTimestamp: Result := Int(PDateTime(Data)^);
-      stString, stUnicodeString: if (PPointer(Data)^ <> nil) then
-        if fRaw then begin
-          Result := ZSysUtils.RawSQLDateToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
-          if Failed then
-            Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
-        end else begin
-          Result := ZSysUtils.UnicodeSQLDateToDateTime(ZPPWideChar(Data)^+PWideInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
-          if Failed then
-            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ZSysUtils.UnicodeSQLTimeStampToDateTime(
-              ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
-        end;
-      stAsciiStream, stUnicodeStream: if (PPointer(Data)^ <> nil ) then begin
-          TempBlob := PPointer(Data)^; //from address to obj-pointer
-          if not TempBlob^.IsEmpty and TempBlob^.IsClob then begin
-            Data := TempBlob^.GetPAnsiChar(FClientCP);
-            Result := ZSysUtils.RawSQLDateToDateTime(Data, TempBlob^.Length,
-              ConSettings^.ReadFormatSettings, Failed);
-            if Failed then
-              Result := Int(ZSysUtils.RawSQLTimeStampToDateTime(Data, TempBlob^.Length,
-                ConSettings^.ReadFormatSettings, Failed));
-          end;
-        end;
     end;
     IsNull := False;
   end else
@@ -3113,54 +3137,48 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetTime(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+procedure TZRowAccessor.GetTime(ColumnIndex: Integer; out IsNull: Boolean; var Result: TZTime);
 var
-  Failed: Boolean;
   Data: Pointer;
-  TempBlob: PIZLob;
+  Len: NativeUint;
+label Fill, Dbl;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then
   begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stTime: Result := PDateTime(Data)^;
-      stTimestamp: Result := Frac(PDateTime(Data)^);
-      stString, stUnicodeString:
-        if fRaw then begin
-          Result := ZSysUtils.RawSQLTimeToDateTime(PPAnsiChar(Data)^+PAnsiInc, PPLongWord(Data)^^,
-            ConSettings^.ReadFormatSettings, Failed);
-          if Failed then
-            Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
-        end else begin
-          Result := ZSysUtils.UnicodeSQLTimeToDateTime(ZPPWideChar(Data)^+PWideInc, PPLongWord(Data)^^,
-            ConSettings^.ReadFormatSettings, Failed);
-          if Failed then
-            Result := Frac(ZSysUtils.UnicodeSQLTimeStampToDateTime(ZPPWideChar(Data)^+PWideInc,
-              PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed));
-        end;
-      stAsciiStream, stUnicodeStream:
-        if (PPointer(Data)^ <> nil) then begin
-          TempBlob := PPointer(Data)^; //from address to obj-pointer
-          if TempBlob^.IsEmpty and TempBlob^.IsClob then begin
-            Data := TempBlob^.GetPAnsiChar(FClientCP); //make a conversion
-            Result := ZSysUtils.RawSQLTimeToDateTime(Data, TempBlob^.Length,
-              ConSettings^.ReadFormatSettings, Failed);
-            if Failed then
-              Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(Data,
-                TempBlob^.Length, ConSettings^.ReadFormatSettings, Failed));
-          end;
-        end;
-    end;
     IsNull := False;
-  end else
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stTime: Result := PZTime(Data)^;
+      stDate: goto Fill;
+      stTimestamp:  begin
+                      Result.Hour := PZTimeStamp(Data)^.Hour;
+                      Result.Minute := PZTimeStamp(Data)^.Minute;
+                      Result.Second := PZTimeStamp(Data)^.Second;
+                      Result.Fractions := PZTimeStamp(Data)^.Fractions;
+                      Result.IsNegative := False;
+                    end;
+      stString, stUnicodeString, stAsciiStream, stUnicodeStream: begin
+          if fRaw then begin
+            Data := GetPAnsiChar(ColumnIndex, IsNull, Len);
+            IsNull := not TryPCharToTime(PAnsiChar(Data), Len, ConSettings^.ReadFormatSettings, Result);
+          end else begin
+            Data := GetPWideChar(ColumnIndex, IsNull, Len);
+            IsNull := not TryPCharToTime(PWideChar(Data), Len, ConSettings^.ReadFormatSettings, Result);
+          end;
+          if IsNull then goto Dbl;
+        end;
+      else
+Dbl:    DecodeDateTimeToTime(GetDouble(ColumnIndex, IsNull), Result);
+    end;
+  end else begin
     IsNull := True;
+Fill: FillChar(Result, SizeOf(TZTime), #0);
+  end;
 end;
 
 {**
@@ -3173,42 +3191,57 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean): TDateTime;
+procedure TZRowAccessor.GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean; var Result: TZTimeStamp);
 var
-  Failed: Boolean;
   Data: Pointer;
-  TempBlob: PIZLob;
+  Len: NativeUInt;
+label Dbl;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Result := 0;
   {$R-}
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stDate, stTime, stTimestamp: Result := PDateTime(Data)^;
-      stString, stUnicodeString:
-        if fRaw then
-          Result := ZSysUtils.RawSQLTimeStampToDateTime(PPAnsiChar(Data)^+PAnsiInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed)
-        else
-          Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(PPWideChar(Data)^+PWideInc,
-            PPLongWord(Data)^^, ConSettings^.ReadFormatSettings, Failed);
-      stAsciiStream, stUnicodeStream:
-        if (PPointer(Data)^ <> nil) then begin
-          TempBlob := PPointer(Data)^; //from address to obj-pointer
-          if TempBlob^.IsEmpty and TempBlob^.IsClob then begin
-            Data := TempBlob^.GetPAnsiChar(FClientCP);
-            Result := ZSysUtils.RawSQLTimeStampToDateTime(Data,
-              TempBlob^.Length, ConSettings^.ReadFormatSettings, Failed);
-        end;
-      end;
-    end;
     IsNull := False;
-  end else
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stDate: begin
+           PInt64(@Result.Hour)^ := 0;
+           PInt64(@Result.Fractions)^ := 0;
+           Result.Year := PZDate(Data)^.Year;
+           Result.Month := PZDate(Data)^.Month;
+           Result.Day := PZDate(Data)^.Day;
+           PCardinal(@Result.TimeZoneHour)^ := 0;
+           Result.IsNegative := PZDate(Data)^.IsNegative;
+        end;
+      stTime: begin
+           PInt64(@Result.Year)^ := 0;
+           Result.Hour := PZTime(Data)^.Hour;
+           Result.Minute := PZTime(Data)^.Minute;
+           Result.Second := PZTime(Data)^.Second;
+           Result.Fractions := PZTime(Data)^.Fractions;
+           PCardinal(@Result.TimeZoneHour)^ := 0;
+           Result.IsNegative := PZTime(Data)^.IsNegative;
+        end;
+      stTimestamp: Result := PZTimeStamp(Data)^;
+      stString, stUnicodeString, stAsciiStream, stUnicodeStream: begin
+          if fRaw then begin
+            Data := GetPAnsiChar(ColumnIndex, IsNull, Len);
+            IsNull := not TryPCharToTimeStamp(PAnsiChar(Data), Len, ConSettings^.ReadFormatSettings, Result);
+          end else begin
+            Data := GetPWideChar(ColumnIndex, IsNull, Len);
+            IsNull := not TryPCharToTimeStamp(PWideChar(Data), Len, ConSettings^.ReadFormatSettings, Result);
+          end;
+          if IsNull then goto Dbl;
+        end;
+      else
+Dbl:    DecodeDateTimeToTimeStamp(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, IsNull), Result);
+    end;
+  end else begin
     IsNull := True;
+    FillChar(Result, SizeOf(TZTimeStamp), #0);
+  end;
 end;
 
 {**
@@ -3382,6 +3415,60 @@ end;
 
 {**
   Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>java.sql.Date</code> object in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+procedure TZRowAccessor.GetDate(ColumnIndex: Integer; out IsNull: Boolean;
+  var Result: TZDate);
+var
+  Data: Pointer;
+  Len: NativeUInt;
+label Fill, Dbl;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDate);
+{$ENDIF}
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    IsNull := False;
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stTime: goto Fill;
+      stDate: Result := PZDate(Data)^;
+      stTimestamp: begin
+          Result.Year := PZTimeStamp(Data).Year;
+          Result.Month := PZTimeStamp(Data).Month;
+          Result.Day := PZTimeStamp(Data).Day;
+          Result.IsNegative := PZTimeStamp(Data).IsNegative;
+        end;
+      stString, stUnicodeString, stAsciiStream, stUnicodeStream: begin
+          if fRaw then begin
+            Data := GetPAnsiChar(ColumnIndex, IsNull, Len);
+            IsNull := not TryPCharToDate(PAnsiChar(Data), Len, ConSettings^.ReadFormatSettings, Result);
+          end else begin
+            Data := GetPWideChar(ColumnIndex, IsNull, Len);
+            IsNull := not TryPCharToDate(PWideChar(Data), Len, ConSettings^.ReadFormatSettings, Result);
+          end;
+          if IsNull then goto Dbl;
+        end;
+      else
+Dbl:    DecodeDateTimeToDate(GetDouble(ColumnIndex, IsNull), Result);
+    end;
+  end else begin
+    IsNull := True;
+Fill: if SizeOf(TZDate) = SizeOf(Int64)
+    then PInt64(@Result.Year)^ := 0
+    else FillChar(Result, SizeOf(TZDate), #0);
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Variant</code> value.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -3413,14 +3500,39 @@ begin
       stCurrency:   Result := EncodeCurrency(PCurrency(ValuePtr)^);
       stBigDecimal: Result := EncodeBigDecimal(PBCD(ValuePtr)^);
       stBoolean:    Result := EncodeBoolean(PWordBool(ValuePtr)^);
-      stDate,
-      stTime,
-      stTimestamp:  Result := EncodeDateTime(PDateTime(ValuePtr)^);
+      stDate:       begin
+                      InitializeVariant(Result, vtDateTime);
+                      {$IFDEF BCC32_vtDateTime_ERROR}
+                      IsNull := TryDateToDateTime(PZDate(ValuePtr)^, PDateTime(@Result.VDateTime)^);
+                      {$ELSE}
+                      IsNull := TryDateToDateTime(PZDate(ValuePtr)^, Result.VDateTime);
+                      {$ENDIF}
+                    end;
+      stTime:       begin
+                      InitializeVariant(Result, vtDateTime);
+                      {$IFDEF BCC32_vtDateTime_ERROR}
+                      IsNull := TryTimeToDateTime(PZTime(ValuePtr)^, PDateTime(@Result.VDateTime)^);
+                      {$ELSE}
+                      IsNull := TryTimeToDateTime(PZTime(ValuePtr)^, Result.VDateTime);
+                      {$ENDIF}
+                    end;
+      stTimestamp:  begin
+                      InitializeVariant(Result, vtDateTime);
+                      {$IFDEF BCC32_vtDateTime_ERROR}
+                      IsNull := TryTimeStampToDateTime(PZTimeStamp(ValuePtr)^, PDateTime(@Result.VDateTime)^);
+                      {$ELSE}
+                      IsNull := TryTimeStampToDateTime(PZTimeStamp(ValuePtr)^, Result.VDateTime);
+                      {$ENDIF}
+                    end;
       stString,
       stAsciiStream:Result := EncodeString(GetString(ColumnIndex, IsNull));
       stUnicodeString,
       stUnicodeStream: Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex, IsNull));
-      stBytes, stGUID, stBinaryStream: Result := EncodeBytes(GetBytes(ColumnIndex, IsNull));
+      stBytes, stBinaryStream: Result := EncodeBytes(GetBytes(ColumnIndex, IsNull));
+      stGUID: begin
+                      InitializeVariant(Result, vtGUID);
+                      Result.VGUID := PGUID(ValuePtr)^;
+                    end;
       else
         Result.VType := vtNull;
     end;
@@ -3973,7 +4085,7 @@ procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsichar;
   var Len: NativeUInt);
 var
   Data: PPointer;
-  Failed: Boolean;
+  TS: TZTimeStamp;
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
@@ -4003,20 +4115,20 @@ begin
       if (Value <> nil) and ((Len = 36) or (Len = 38))
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
-    stDate:
-      begin
-        PDateTime(Data)^ := RawSQLDateToDateTime (Value, Len, ConSettings^.DisplayFormatSettings, Failed);
-        if Failed then
-          PDateTime(Data)^ := Int(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed));
-      end;
-    stTime:
-      begin
-        PDateTime(Data)^ := RawSQLTimeToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
-        if Failed then
-          PDateTime(Data)^ := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed));
-      end;
-    stTimestamp:
-      PDateTime(Data)^ := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
+    stDate: if not ZSysUtils.TryRawToDate(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZDate(Data)^) then
+              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS{%H-}) then begin
+                PZDate(Data)^.Year := TS.Year;
+                PZDate(Data)^.Month := TS.Month;
+                PZDate(Data)^.Day := TS.Day;
+                PZDate(Data)^.IsNegative := TS.IsNegative;
+              end else
+                PInt64(Data)^ := 0;
+    stTime: if not ZSysUtils.TryRawToTime(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTime(Data)^) then
+              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS) then begin
+                PZTime(Data)^ := PZTime(@TS.Hour)^;
+                PZTime(Data)^.IsNegative := False;
+              end;
+    stTimestamp: ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTimeStamp(Data)^);
     stUnicodeStream, stAsciiStream:
       if (Data^ = nil) or not PIZLob(Data^)^.IsClob
       then PIZLob(Data)^ := TZAbstractCLob.CreateWithData(Value, Len, FClientCP, ConSettings)
@@ -4043,7 +4155,7 @@ procedure TZRowAccessor.SetPWideChar(ColumnIndex: Integer;
   Value: PWideChar; var Len: NativeUInt);
 var
   Data: PPointer;
-  Failed: Boolean;
+  TS: TZTimeStamp;
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
@@ -4077,21 +4189,19 @@ begin
       if (Value <> nil) and ((Len = 36) or (Len = 38))
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
-    stDate:
-      begin
-        PDateTime(Data)^ :=
-          UnicodeSQLDateToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
-        if Failed then PDateTime(Data)^ := Int(UnicodeSQLTimeStampToDateTime(Value, Len,
-              ConSettings^.DisplayFormatSettings, Failed));
-      end;
-    stTime:
-      begin
-        PDateTime(Data)^ := UnicodeSQLTimeToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
-        if Failed then
-          PDateTime(Data)^ := Frac(UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed));
-      end;
-    stTimestamp:
-      PDateTime(Data)^ := UnicodeSQLTimeStampToDateTime(Value, Len, ConSettings^.DisplayFormatSettings, Failed);
+    stDate: if not ZSysUtils.TryUniToDate(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZDate(Data)^) then
+              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS{%H-}) then begin
+                PZDate(Data)^.Year := TS.Year;
+                PZDate(Data)^.Month := TS.Month;
+                PZDate(Data)^.Day := TS.Day;
+                PZDate(Data)^.IsNegative := TS.IsNegative;
+              end;
+    stTime: if not ZSysUtils.TryUniToTime(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTime(Data)^) then
+              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS) then begin
+                PZTime(Data)^ := PZTime(@TS.Hour)^;
+                PZTime(Data)^.IsNegative := False;
+              end;
+    stTimestamp: ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTimeStamp(Data)^);
     else
       raise EZSQLException.Create(SConvertionIsNotPossible);
   end;
@@ -4261,9 +4371,10 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetDate(ColumnIndex: Integer; const Value: TDateTime);
+procedure TZRowAccessor.SetDate(ColumnIndex: Integer; const Value: TZDate);
 var Data: PPointer;
   Len: NativeUInt;
+  DT: TDateTime;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -4273,18 +4384,26 @@ begin
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stTime, stDate, stTimestamp: PDateTime(Data)^ := Int(Value);
+    stTime: if SizeOf(TZTime) = 12 then begin
+              PCardinal(Data)^ := 0;
+              PInt64(@PZTime(Data).Second)^ := 0;
+            end else FillChar(Data^, SizeOf(TZTime), #0);
+    stDate: PZDate(Data)^ := Value;
+    stTimestamp: TimeStampFromDate(Value, PZTimeStamp(Data)^);
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin
-        Len := DateTimeToRawSQLDate(Value, @TinyBuffer[0], ConSettings^.WriteFormatSettings, False);
+        Len := DateToRaw(Value.Year, Value.Month, Value.Day, @TinyBuffer[0],
+          ConSettings^.ReadFormatSettings.DateFormat, False, Value.IsNegative);
         SetPAnsiChar(ColumnIndex, @TinyBuffer[0], Len);
       end else begin
-        Len := DateTimeToUnicodeSQLDate(Value, @TinyBuffer[0], ConSettings^.WriteFormatSettings, False);
+        Len := DateToUni(Value.Year, Value.Month, Value.Day, @TinyBuffer[0],
+          ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], Len);
       end;
-    else SetDouble(ColumnIndex, Value);
+    else if TryDateToDateTime(Value, DT{%H-})
+      then SetDouble(ColumnIndex, DT)
+      else SetNull(ColumnIndex);
   end;
 end;
-
 {**
   Sets the designated column with a <code>java.sql.Time</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
@@ -4295,9 +4414,10 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTime(ColumnIndex: Integer; const Value: TDateTime);
+procedure TZRowAccessor.SetTime(ColumnIndex: Integer; const Value: TZTime);
 var Data: PPointer;
   Len: NativeUInt;
+  DT: TDateTime;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -4307,15 +4427,23 @@ begin
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stTime, stTimestamp: PDateTime(Data)^ := Frac(Value);
+    stDate: if SizeOf(TZDate) = SizeOf(Int64)
+            then PInt64(Data)^ := 0
+            else FillChar(Data^, SizeOf(TZDate), #0);
+    stTime: PZTime(Data)^ := Value;
+    stTimestamp: TimeStampFromTime(Value, PZTimeStamp(Data)^);
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin
-        Len := DateTimeToRawSQLTime(Value, @TinyBuffer[0], ConSettings^.WriteFormatSettings, False);
+        Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+          @TinyBuffer[0], ConSettings^.ReadFormatSettings.TimeFormat, False, Value.IsNegative);
         SetPAnsiChar(ColumnIndex, @TinyBuffer[0], Len);
       end else begin
-        Len := DateTimeToUnicodeSQLTime(Value, @TinyBuffer[0], ConSettings^.WriteFormatSettings, False);
+        Len := TimeToUni(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+          @TinyBuffer[0], ConSettings^.ReadFormatSettings.TimeFormat, False, Value.IsNegative);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], Len);
       end;
-    else SetDouble(ColumnIndex, Value);
+    else if TryTimeToDateTime(Value, DT{%H-})
+      then SetDouble(ColumnIndex, DT)
+      else SetNull(ColumnIndex);
   end;
 end;
 
@@ -4330,9 +4458,10 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; const Value: TDateTime);
+procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp);
 var Data: PPointer;
   Len: NativeUInt;
+  DT: TDateTime;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -4342,17 +4471,23 @@ begin
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stDate: PDateTime(Data)^ := Int(Value);
-    stTime: PDateTime(Data)^ := Frac(Value);
-    stTimestamp: PDateTime(Data)^ := Value;
+    stDate: DateFromTimeStamp(Value, PZDate(Data)^);
+    stTime: TimeFromTimeStamp(Value, PZTime(Data)^);
+    stTimestamp: PZTimeStamp(Data)^ := Value;
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin
-        Len := DateTimeToRawSQLTimeStamp(Value, @TinyBuffer[0], ConSettings^.WriteFormatSettings, False);
+        Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+          Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+          @TinyBuffer[0], ConSettings^.ReadFormatSettings.DateTimeFormat, False, Value.IsNegative);
         SetPAnsiChar(ColumnIndex, @TinyBuffer[0], Len);
       end else begin
-        Len := DateTimeToUnicodeSQLTimeStamp(Value, @TinyBuffer[0], ConSettings^.WriteFormatSettings, False);
+        Len := DateTimeToUni(Value.Year, Value.Month, Value.Day,
+          Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+          @TinyBuffer[0], ConSettings^.ReadFormatSettings.DateTimeFormat, False, Value.IsNegative);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], Len);
       end;
-    else SetDouble(ColumnIndex, Value);
+    else if TryTimeStampToDateTime(Value, DT{%H-})
+      then SetDouble(ColumnIndex, DT)
+      else SetNull(ColumnIndex);
   end;
 end;
 
@@ -4549,6 +4684,7 @@ procedure TZRowAccessor.SetValue(ColumnIndex: Integer; const Value: TZVariant);
 var
   Len: NativeUInt;
   Lob: IZBLob;
+  TS: TZTimeStamp;
 begin
   case Value.VType of
     vtNull: SetNull(ColumnIndex);
@@ -4556,7 +4692,7 @@ begin
     vtInteger: SetLong(ColumnIndex, Value.VInteger);
     vtUInteger: SetULong(ColumnIndex, Value.VUInteger);
     vtBigDecimal: SetBigDecimal(ColumnIndex, Value.VBigDecimal);
-    //vtGUID:  Self.SetBytes(ColumnIndex, Value.VGUID);
+    vtGUID:  SetGUID(ColumnIndex, Value.VGUID);
     vtBytes: begin
               Len := Length(Value.VRawByteString);
               SetPAnsichar(ColumnIndex, Pointer(Value.VRawByteString), Len);
@@ -4570,7 +4706,10 @@ begin
     {$ENDIF}
     vtRawByteString: SetRawByteString(ColumnIndex, Value.VRawByteString);
     vtUnicodeString: SetUnicodeString(ColumnIndex, Value.VUnicodeString);
-    vtDateTime: SetTimestamp(ColumnIndex, Value.VDateTime);
+    vtDateTime: begin
+        DecodeDateTimeToTimeStamp(Value.VDateTime, TS{%H-});
+        SetTimestamp(ColumnIndex, TS);
+      end;
     vtInterface: if Value.VInterface.QueryInterface(IZBLob, Lob) = S_OK then
                   SetBlob(ColumnIndex, Lob);
     vtCharRec:

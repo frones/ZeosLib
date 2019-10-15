@@ -169,6 +169,41 @@ type
     CP: Word;      //CodePage of the String
   end;
 
+  { TZSQLTimeStamp }
+  PZTimeStamp = ^TZTimeStamp;
+  TZTimeStamp = packed record //keep it packet !!
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: Cardinal; //NanoSeconds
+    TimeZoneHour: SmallInt;
+    TimeZoneMinute:Word;
+    IsNegative: WordBool; //MySQL allows negative timestamp values
+  end;
+  TZTimeStampDynArray = array of TZTimeStamp;
+
+  PZDate = ^TZDate;
+  TZDate = packed record //keep it packet !!
+    Year: Word;
+    Month: Word;
+    Day: Word;
+    IsNegative: WordBool; //MySQL allows negative date values
+  end;
+  TZDateDynArray = array of TZDate;
+
+  PZTime = ^TZTime;
+  TZTime = packed Record //keep it packet !!
+    Hour: Word;
+    Minute: Word;
+    Second: Word;
+    Fractions: Cardinal; //NanoSeconds
+    IsNegative: WordBool; //MySQL allows negative time values
+  end;
+  TZTimeDynArray = array of TZTime;
+
   {$IF NOT DECLARED(TBytes)}
   TBytes = TByteDynArray;
   {$IFEND}
@@ -198,8 +233,10 @@ const
   DefDateFormatYMD = 'YYYY-MM-DD';
   DefTimeFormat = 'HH:NN:SS';
   DefTimeFormatMsecs = 'HH:NN:SS.ZZZ';
-  DefDateTimeFormat = DefDateFormatDMY + ' ' + DefTimeFormat;
-  DefDateTimeFormatMsecs = DefDateFormatDMY + ' ' + DefTimeFormatMsecs;
+  DefDateTimeFormatDMY = DefDateFormatDMY + ' ' + DefTimeFormat;
+  DefDateTimeFormatYMD = DefDateFormatYMD + ' ' + DefTimeFormat;
+  DefDateTimeFormatMsecsDMY = DefDateFormatDMY + ' ' + DefTimeFormatMsecs;
+  DefDateTimeFormatMsecsYMD = DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
 
 {$IF NOT DECLARED(LineEnding)} // FPC-style constant, declare for Delphi
 const
@@ -467,26 +504,26 @@ var
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
       ClientCodePage: @ClientCodePageDummy;
       DisplayFormatSettings:
-          (DateFormat: DefDateFormatDMY;
-          DateFormatLen: Length(DefDateFormatDMY);
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
           TimeFormat: DefTimeFormatMsecs;
           TimeFormatLen: Length(DefTimeFormatMsecs);
-          DateTimeFormat: DefDateTimeFormat;
-          DateTimeFormatLen: Length(DefDateTimeFormat));
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
       ReadFormatSettings:
-          (DateFormat: DefDateFormatDMY;
-          DateFormatLen: Length(DefDateFormatDMY);
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
           TimeFormat: DefTimeFormatMsecs;
           TimeFormatLen: Length(DefTimeFormatMsecs);
-          DateTimeFormat: DefDateTimeFormatMsecs;
-          DateTimeFormatLen: Length(DefDateTimeFormatMsecs));
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
       WriteFormatSettings:
-          (DateFormat: DefDateFormatDMY;
-          DateFormatLen: Length(DefDateFormatDMY);
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
           TimeFormat: DefTimeFormatMsecs;
           TimeFormatLen: Length(DefTimeFormatMsecs);
-          DateTimeFormat: DefDateTimeFormatMsecs;
-          DateTimeFormatLen: Length(DefDateTimeFormatMsecs));
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
     );
   {$IFDEF FPC} {$POP} {$ENDIF}
 

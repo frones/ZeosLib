@@ -31,6 +31,9 @@ uses
 {$IFDEF ENABLE_SQLITE}
   ZTestBugCompSQLite,
 {$ENDIF}
+{$IF defined(ENABLE_DBLIB) or defined(ENABLE_ADO) or defined(ENABLE_OLEDB) or defined(ENABLE_ODBC)}
+  ZTestBugDbcMSSQL,
+{$IFEND}
   ZTestBugDbcCore,
   ZTestBugCompCore;
 

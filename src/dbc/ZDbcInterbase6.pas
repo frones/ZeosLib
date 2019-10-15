@@ -512,10 +512,13 @@ end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
 var
-  AC,RO: Boolean;
+  AC,RO, HC: Boolean;
   TIL: TZTransactIsolationLevel;
 begin
-  FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
+  HC := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
+  if (HC <> FHardCommit) and Assigned(FTransactionManager) then //*** ADDED THIS CHECK by EMartin ***
+    FTransactionManager.GetActiveTransaction.CloseTransaction;
+  FHardCommit := HC;
   FGUIDProps.InitFromProps(Info);
   for AC := false to true do
     for RO := false to true do
@@ -772,14 +775,17 @@ var
     R: RawByteString;
     P: PAnsiChar;
     L: LengthInt;
+    CP: Word;
   begin
-    if (Info.IndexOf('isc_dpb_utf8_filename') = -1) then begin
-      R := ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, ZOSCodePage);
-      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, ZOSCodePage);
-    end else begin
-      R := ConSettings^.ConvFuncs.ZStringToRaw(ConnectionString, ConSettings^.CTRL_CP, zCP_UTF8);
-      DPB := GenerateDPB(FPlainDriver, Info, ConSettings, zCP_UTF8);
-    end;
+    if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
+    then CP := zOSCodePage
+    else CP := zCP_UTF8;
+    {$IFDEF UNICODE}
+    R := ZUnicodeToRaw(ConnectionString, CP);
+    {$ELSE}
+    R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
+    {$ENDIF}
+    DPB := GenerateDPB(FPlainDriver, Info, ConSettings, CP);
     P := Pointer(R);
     L := Min(SizeOf(DBName)-1, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
     if P <> nil then

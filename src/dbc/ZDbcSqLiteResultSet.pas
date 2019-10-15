@@ -136,9 +136,9 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); reintroduce; overload;
+    procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
     function GetBlob(ColumnIndex: Integer): IZBlob;
 
     function Next: Boolean; reintroduce;
@@ -172,7 +172,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
-  ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
+  ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode, ZDbcUtils,
   ZVariant, ZDbcMetadata {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -1127,12 +1127,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+procedure TZSQLiteResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
 var
   ColType: Integer;
   Buffer: PAnsiChar;
   Len: Cardinal;
-  Failed: Boolean;
+Label Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -1144,21 +1144,17 @@ begin
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
-    Result := 0
+    goto Fill
   else case ColType of
     SQLITE_INTEGER, SQLITE_FLOAT:
-      Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
+      DecodeDateTimeToDate(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch, Result);
     else begin
       Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
       Len := ZFastCode.StrLen(Buffer);
-
-      if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
-        Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
-      else
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-          RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
+      LastWasNull := not TryPCharToDate(Buffer, Len, ConSettings^.ReadFormatSettings, Result);
+      if LastWasNull then
+Fill:   PInt64(@Result.Year)^ := 0;
     end;
-    LastWasNull := Result = 0;
   end;
 end;
 
@@ -1171,12 +1167,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+procedure TZSQLiteResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
 var
   ColType: Integer;
   Buffer: PAnsiChar;
   Len: Cardinal;
-  Failed: Boolean;
+Label Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1188,24 +1184,20 @@ begin
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
-    Result := 0
-  else
-    case ColType of
-      SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
-      else
-      begin
-        Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
-        Len := ZFastCode.StrLen(Buffer);
-
-        if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
-          Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
-        else
-          Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len,
-            ConSettings^.ReadFormatSettings, Failed));
+    goto Fill
+  else case ColType of
+    SQLITE_INTEGER, SQLITE_FLOAT:
+      DecodeDateTimeToTime(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch, Result);
+    else begin
+      Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
+      Len := ZFastCode.StrLen(Buffer);
+      LastWasNull := not TryPCharToTime(Buffer, Len, ConSettings^.ReadFormatSettings, Result);
+      if LastWasNull then begin
+Fill:   PCardinal(@Result.Hour)^ := 0;
+        PInt64(@Result.Second)^ := 0;
       end;
-      LastWasNull := Result = 0;
     end;
+  end;
 end;
 
 {**
@@ -1218,11 +1210,13 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZSQLiteResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+procedure TZSQLiteResultSet.GetTimestamp(ColumnIndex: Integer;
+  var Result: TZTimeStamp);
 var
   ColType: Integer;
   Buffer: PAnsiChar;
-  Failed: Boolean;
+  Len: LengthInt;
+label Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1233,15 +1227,18 @@ begin
   ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
-    Result := 0
+    goto Fill
   else case ColType of
     SQLITE_INTEGER,
     SQLITE_FLOAT:
-      Result := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch;
+      DecodeDateTimeToTimeStamp(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex)+JulianEpoch, Result);
     else begin
-        Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
-        Result := RawSQLTimeStampToDateTime(Buffer, ZFastCode.StrLen(Buffer), ConSettings^.ReadFormatSettings, Failed);
-      end;
+      Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
+      Len := StrLen(Buffer);
+      LastWasNull := not TryPCharToTimeStamp(Buffer, Len, ConSettings^.ReadFormatSettings, Result);
+      if LastWasNull then
+Fill:  FillChar(Result, SizeOf(TZTimeStamp), #0);
+    end;
   end;
 end;
 

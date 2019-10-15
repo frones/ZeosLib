@@ -115,7 +115,7 @@ type
     procedure ReleaseConnection; override;
   protected
     procedure FlushPendingResults;
-    function CreateResultSet({%H-}ServerCursor: Boolean): IZResultSet;
+    function CreateResultSet(ServerCursor: Boolean): IZResultSet;
     function PGExecute: TPGresult; virtual;
     procedure PGExecutePrepare;
     function PGExecutePrepared: TPGresult;
@@ -170,9 +170,9 @@ type
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
     procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
-    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
 
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = '';
@@ -801,26 +801,29 @@ function TZAbstractPostgreSQLPreparedStatementV3.CreateResultSet(
 var
   NativeResultSet: TZAbstractPostgreSQLStringResultSet;
   CachedResultSet: TZCachedResultSet;
+  Resolver: TZPostgreSQLCachedResolver;
+  Metadata: IZResultSetMetadata;
 begin
-  if fServerCursor
+  if ServerCursor
   then NativeResultSet := TZServerCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
       @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength)
   else NativeResultSet := TZClientCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
       @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
-  if (GetResultSetConcurrency = rcUpdatable) or fServerCursor then
-  begin
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, nil,
-      ConSettings);
-    if (GetResultSetConcurrency = rcUpdatable) then begin
+  if (GetResultSetConcurrency = rcUpdatable) or (ServerCursor and (GetResultSetType <> rtForwardOnly)) then begin
+    Metadata := NativeResultSet.GetMetaData;
+    if (FPostgreSQLConnection.GetServerMajorVersion > 7) then
+      Resolver := TZPostgreSQLCachedResolverV8up.Create(Self, Metadata)
+    else if ((FPostgreSQLConnection.GetServerMajorVersion = 7) and
+        (FPostgreSQLConnection.GetServerMinorVersion >= 4))
+    then Resolver := TZPostgreSQLCachedResolverV74up.Create(Self, Metadata)
+    else Resolver := TZPostgreSQLCachedResolver.Create(Self, Metadata);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings);
+    if (GetResultSetConcurrency = rcUpdatable) then
       CachedResultSet.SetConcurrency(rcUpdatable);
-      CachedResultSet.SetResolver(TZPostgreSQLCachedResolver.Create(
-        Self,  NativeResultSet.GetMetadata));
-    end;
     Result := CachedResultSet;
-  end
-  else
+  end else
     Result := NativeResultSet;
   FOpenResultSet := Pointer(Result);
 end;
@@ -1375,7 +1378,6 @@ begin
     SetLength(FPQparamLengths, BindList.Capacity);
     SetLength(FPQparamFormats, BindList.Capacity);
     SetLength(FPQParamOIDs, BindList.Capacity);
-    SetLength(FInParamDefaultValues, BindList.Capacity);
     SetLength(FParamNames, BindList.Capacity);
     { rebind since the realloc did change the addresses of the hooked values}
     for i := 0 to Capacity -1 do
@@ -1853,6 +1855,9 @@ var
   I: Integer;
   pgOID, zOID: OID;
   NewSQLType: TZSQLType;
+  TS: TZTimeStamp;
+  D: TZDate absolute TS;
+  T: TZTime absolute TS;
 begin
   if (fRawPlanName <> '') and not (Findeterminate_datatype) and (BindList.Capacity > 0) then begin
     if Assigned(FPlainDriver.PQdescribePrepared) then begin
@@ -1888,13 +1893,26 @@ begin
                               PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
                               SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
                             end;
-                stTime:     if Finteger_datetimes
-                            then SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Time(PInt64(FPQparamValues[i])^))
-                            else SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Time(PDouble(FPQparamValues[i])^));
-                stDate:     SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},PG2Date(PInteger(FPQparamValues[i])^));
-                stTimeStamp:if Finteger_datetimes
-                            then SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},PG2DateTime(PInt64(FPQparamValues[i])^))
-                            else SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},PG2DateTime(PDouble(FPQparamValues[i])^));
+                stTime:     begin
+                              if Finteger_datetimes
+                              then PG2Time(PInt64(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions)
+                              else PG2Time(PDouble(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions);
+                              T.IsNegative := False;
+                              SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+                            end;
+                stDate:     begin
+                              PG2Date(PInteger(FPQparamValues[i])^, D.Year, D.Month, D.Day);
+                              D.IsNegative := False;
+                              SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},D);
+                            end;
+                stTimeStamp:begin
+                              if Finteger_datetimes
+                              then PG2DateTime(PInt64(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                                  TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions)
+                              else PG2DateTime(PDouble(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                                TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions);
+                              SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},TS);
+                            end;
               end;
           //end;
         end;
@@ -2047,9 +2065,42 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetDate(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var PGSQLType: TZSQLType;
+  InParamIdx: Integer;
+  TS: TZTimeStamp;
+  DT: TDateTime absolute TS;
+  Len: LengthInt absolute TS;
 begin
-  InternalBindDouble(Index, stDate, Value);
+  InParamIdx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  PGSQLType := OIDToSQLType(InParamIdx, stDate);
+  if (Ord(PGSQLType) >= Ord(stDate)) and (Ord(PGSQLType) <= Ord(stTimestamp)) then begin
+    {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
+    if PGSQLType = stDate then begin
+      BindList.Put(Index, PGSQLType, P4Bytes(@Value));
+      LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], 4);
+    end else begin
+      BindList.Put(Index, PGSQLType, P8Bytes(@Value));
+      LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
+    end;
+    case PGSQLType of
+      stDate:       Date2PG(Value.Year, Value.Month, Value.Day, PInteger(FPQparamValues[InParamIdx])^);
+      stTime:       PInt64(FPQparamValues[InParamIdx])^ := 0;
+      else          begin
+                      ZSysUtils.TimeStampFromDate(Value, TS);
+                      if Finteger_datetimes
+                      then TimeStamp2PG(TS, PInt64(FPQparamValues[InParamIdx])^)
+                      else TimeStamp2PG(TS, PDouble(FPQparamValues[InParamIdx])^);
+                    end;
+      end;
+  end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
+    Len := DateToRaw(Value.Year, Value.Month, Value.Day,@FABuffer[0],
+      ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    BindRawStr(InParamIdx, fRawTemp)
+  end else if TryDateToDateTime(Value, DT)
+    then InternalBindDouble(Index, stDate, DT)
+    else InternalBindInt(Index, stDate, 1);
 end;
 
 {**
@@ -2255,9 +2306,44 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetTime(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var PGSQLType: TZSQLType;
+  InParamIdx: Integer;
+  TS: TZTimeStamp;
+  DT: TDateTime absolute TS;
+  Len: LengthInt absolute TS;
 begin
-  InternalBindDouble(Index, stTime, Value);
+  InParamIdx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  PGSQLType := OIDToSQLType(InParamIdx, stTime);
+  if (Ord(PGSQLType) >= Ord(stDate)) and (Ord(PGSQLType) <= Ord(stTimestamp)) then begin
+    {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
+    if PGSQLType = stDate then begin
+      BindList.Put(Index, PGSQLType, P4Bytes(@Value));
+      LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], 4);
+    end else begin
+      BindList.Put(Index, PGSQLType, P8Bytes(@Value));
+      LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
+    end;
+    case PGSQLType of
+      stDate:       PInteger(FPQparamValues[InParamIdx])^ := 0;
+      stTime:       if Finteger_datetimes
+                    then Time2PG(Value.Hour, Value.Minute, Value.Second, Value.Fractions, PInt64(FPQparamValues[InParamIdx])^)
+                    else Time2PG(Value.Hour, Value.Minute, Value.Second, Value.Fractions, PDouble(FPQparamValues[InParamIdx])^);
+      else          begin
+                      TimeStampFromTime(Value, TS);
+                      if Finteger_datetimes
+                      then TimeStamp2PG(TS, PInt64(FPQparamValues[InParamIdx])^)
+                      else TimeStamp2PG(TS, PDouble(FPQparamValues[InParamIdx])^);
+                    end;
+      end;
+  end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
+    Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+      @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, False);
+    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    BindRawStr(InParamIdx, fRawTemp);
+  end else if TryTimeToDateTime(Value, DT)
+    then InternalBindDouble(Index, stTime, DT)
+    else InternalBindInt(Index, stTime, 1);
 end;
 
 {**
@@ -2269,9 +2355,41 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetTimestamp(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var PGSQLType: TZSQLType;
+  InParamIdx: Integer;
+  DT: TDateTime;
+  Len: LengthInt absolute DT;
 begin
-  InternalBindDouble(Index, stTimeStamp, Value);
+  InParamIdx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  PGSQLType := OIDToSQLType(InParamIdx, stTimeStamp);
+  if (Ord(PGSQLType) >= Ord(stDate)) and (Ord(PGSQLType) <= Ord(stTimestamp)) then begin
+    {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
+    if PGSQLType = stDate then begin
+      BindList.Put(Index, PGSQLType, P4Bytes(@Value));
+      LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], 4);
+    end else begin
+      BindList.Put(Index, PGSQLType, P8Bytes(@Value));
+      LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
+    end;
+    case PGSQLType of
+      stDate:       Date2PG(Value.Year, Value.Month, Value.Day, PInteger(FPQparamValues[InParamIdx])^);
+      stTime:       if Finteger_datetimes
+                    then Time2PG(Value.Hour, Value.Minute, Value.Second, Value.Fractions, PInt64(FPQparamValues[InParamIdx])^)
+                    else Time2PG(Value.Hour, Value.Minute, Value.Second, Value.Fractions, PDouble(FPQparamValues[InParamIdx])^);
+      else          if Finteger_datetimes
+                    then TimeStamp2PG(Value, PInt64(FPQparamValues[InParamIdx])^)
+                    else TimeStamp2PG(Value, PDouble(FPQparamValues[InParamIdx])^);
+      end;
+  end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
+    Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+      Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+      @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    BindRawStr(InParamIdx, fRawTemp)
+  end else if TryTimeStampToDateTime(Value, DT)
+    then InternalBindDouble(Index, stTimeStamp, DT)
+    else InternalBindInt(Index, stTimeStamp, 1);
 end;
 
 {**

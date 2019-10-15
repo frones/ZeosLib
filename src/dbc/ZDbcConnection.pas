@@ -383,6 +383,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
+{$WARN SYMBOL_DEPRECATED OFF}
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempURL:  TZURL;
@@ -394,6 +395,7 @@ begin
     TempUrl.Free;
   end;
 end;
+{$WARN SYMBOL_DEPRECATED ON}
 
 {**
   Attempts to make a database connection to the given URL.
@@ -877,6 +879,7 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
+{$WARN SYMBOL_DEPRECATED OFF}
 constructor TZAbstractDbcConnection.Create(const Driver: IZDriver; const Url: string;
   const PlainDriver: IZPlainDriver;
   const HostName: string; Port: Integer; const Database: string;
@@ -888,6 +891,7 @@ begin
   Create(TempURL);
   TempURL.Free;
 end;
+{$WARN SYMBOL_DEPRECATED ON}
 
 {**
   Constructs this object and assignes the main properties.

@@ -66,9 +66,9 @@ uses
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
-  ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages, ZPlainDriver,
-  ZDbcInterbase6Utils, ZSelectSchema, ZDbcUtils, ZClasses, ZDbcCache,
-  ZDbcGenericResolver, ZDbcCachedResultSet;
+  ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
+  ZPlainDriver, ZDbcInterbase6Utils, ZSelectSchema, ZDbcUtils, ZClasses,
+  ZDbcCache, ZDbcGenericResolver, ZDbcCachedResultSet;
 
 type
   {** Implements Interbase ResultSet. }
@@ -125,9 +125,9 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
+    procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
+    procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     {$ENDIF}
@@ -206,8 +206,9 @@ type
   {** Implements a specialized cached resolver for Firebird version 2.0 and up. }
   TZCachedResolverFirebird2up = class(TZInterbase6CachedResolver)
   public
-    procedure FormWhereClause(Columns: TObjectList;
-      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -734,12 +735,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6XSQLDAResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+procedure TZInterbase6XSQLDAResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
 var
-  TempDate: TZTimeStamp;//TCTimeStructure;
   Len: NativeUInt;
   P: PAnsiChar;
-  Failed: Boolean;
   SQLCode: SmallInt;
   XSQLVAR: PXSQLVAR;
 begin
@@ -749,40 +748,33 @@ begin
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := 0
-  else
-    {$R-}
-    with FXSQLDA.sqlvar[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
+    LastWasNull := True;
+    PInt64(@Result.Year)^ := 0
+  end else begin
+    LastWasNull := False;
+    with XSQLVAR^ do begin
       SQLCode := (sqltype and not(1));
       case SQLCode of
-        SQL_TIMESTAMP :
-          begin
-            isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
-              TempDate.Year, TempDate.Month, Tempdate.Day);
-            Result := SysUtils.EncodeDate(TempDate.Year, TempDate.Month, TempDate.Day);
-          end;
-        SQL_TYPE_DATE :
-          begin
-            isc_decode_date(PISC_DATE(sqldata)^, TempDate.Year, TempDate.Month, Tempdate.Day);
-            Result := SysUtils.EncodeDate(TempDate.Year, TempDate.Month, TempDate.Day);
-          end;
-        SQL_TYPE_TIME : Result := 0;
+        SQL_TIMESTAMP : begin
+                          isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
+                            Result.Year, Result.Month, Result.Day);
+                          Result.IsNegative := False;
+                        end;
+        SQL_TYPE_DATE : begin
+                          isc_decode_date(PISC_DATE(sqldata)^, Result.Year, Result.Month, Result.Day);
+                          Result.IsNegative := False;
+                        end;
+        SQL_TYPE_TIME : PInt64(@Result.Year)^ := 0;
         SQL_TEXT,
-        SQL_VARYING:
-          begin
+        SQL_VARYING: begin
             GetPCharFromTextVar(XSQLVAR, P, Len);
-            if Len = ConSettings^.ReadFormatSettings.DateFormatLen
-            then Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-            else Result := Int(RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
-            LastWasNull := Result = 0;
+            LastWasNull := not TryPCharToDate(P, Len, ConSettings^.ReadFormatSettings, Result)
           end;
-        else
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}));
+        else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype)
       end;
     end;
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  end;
 end;
 
 {**
@@ -1180,13 +1172,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6XSQLDAResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+procedure TZInterbase6XSQLDAResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
 var
   P: PAnsiChar;
   Len: NativeUInt;
   XSQLVAR: PXSQLVAR;
-  TempDate: TZTimeStamp; //TCTimeStructure;
-  Failed: Boolean;
+label Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1196,35 +1187,29 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
-    Result := 0;
+Fill: PCardinal(@Result.Hour)^ := 0;
+    PInt64(@Result.Second)^ := 0;
   end else begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
-      SQL_TIMESTAMP :
-        begin
-          isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
-            TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-          Result := EncodeTime(TempDate.Hour, TempDate.Minute,
-            TempDate.Second, TempDate.Fractions div 10);
-        end;
-      SQL_TYPE_DATE : Result := 0;
-      SQL_TYPE_TIME :
-        begin
-          isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
-            TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-          Result := EncodeTime(TempDate.Hour, TempDate.Minute,
-            TempDate.Second, TempDate.Fractions div 10);
-        end;
-      SQL_TEXT, SQL_VARYING:
-        begin
+      SQL_TIMESTAMP : begin
+            isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
+              Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+            Result.Fractions := Result.Fractions * 100000;
+            Result.IsNegative := False;
+          end;
+      SQL_TYPE_DATE : goto Fill;
+      SQL_TYPE_TIME : begin
+            isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
+              Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+            Result.Fractions := Result.Fractions * 100000;
+            Result.IsNegative := False;
+          end;
+      SQL_TEXT, SQL_VARYING: begin
           GetPCharFromTextVar(XSQLVAR, P, Len);
-          if AnsiChar((P+2)^) = AnsiChar(':') then //possible date if Len = 10 then
-            Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed)
-          else
-            Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
+          LastWasNull := not TryPCharToTime(P, Len, ConSettings^.ReadFormatSettings, Result);
         end;
-      else
-        Result := Frac(GetDouble(ColumnIndex));
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype)
     end;
   end;
 end;
@@ -1239,14 +1224,11 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZInterbase6XSQLDAResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+procedure TZInterbase6XSQLDAResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 var
   P: PAnsiChar;
   Len: NativeUInt;
   XSQLVAR: PXSQLVAR;
-  TempDate: TZTimeStamp; //TCTimeStructure;
-  Failed: Boolean;
-  DT: TDateTime;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimeStamp);
@@ -1256,50 +1238,43 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
-    Result := 0;
+    FillChar(Result, SizeOf(TZTimeStamp), #0);
   end else begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TIMESTAMP :
         begin
           isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
-            TempDate.Year, TempDate.Month, Tempdate.Day);
+            Result.Year, Result.Month, Result.Day);
+          PInt64(PAnsiChar(@Result.TimeZoneHour)-2)^ := 0;
           isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
-            TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-          if not SysUtils.TryEncodeDate(TempDate.Year, TempDate.Month, Tempdate.Day, Result) then
-            Result := 0;
-          if not SysUtils.TryEncodeTime(TempDate.Hour, TempDate.Minute,
-              TempDate.Second, TempDate.Fractions div 10, DT) then
-            DT := 0;
-          if Result < 0
-          then Result := Result - DT
-          else Result := Result + DT;
+            Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+          Result.Fractions := Result.Fractions * 100000;
+          Result.IsNegative := False;
         end;
       SQL_TYPE_DATE :
         begin
+          PInt64(@Result.Hour)^ := 0;
+          PInt64(PAnsiChar(@Result.TimeZoneHour)-2)^ := 0;
           isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
-            TempDate.Year, TempDate.Month, Tempdate.Day);
-          if not SysUtils.TryEncodeDate(TempDate.Year,TempDate.Month, TempDate.Day, Result) then
-            Result := 0;
+            Result.Year, Result.Month, Result.Day);
+          Result.IsNegative := False;
         end;
       SQL_TYPE_TIME :
         begin
+          PInt64(@Result.Year)^ := 0;
+          PInt64(PAnsiChar(@Result.TimeZoneHour)-2)^ := 0;
           isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^,
-            TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-          if not SysUtils.TryEncodeTime(TempDate.Hour, TempDate.Minute,
-            TempDate.Second, TempDate.Fractions div 10, Result) then
-            Result := 0;
+            Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+          Result.Fractions := Result.Fractions * 100000;
+          Result.IsNegative := False;
         end;
       SQL_TEXT, SQL_VARYING:
         begin
           GetPCharFromTextVar(XSQLVAR, P, Len);
-          if AnsiChar((P+2)^) = AnsiChar(':') then
-            Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-          else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4
-            then Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-            else Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
+          LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
         end;
-      else Result := GetDouble(ColumnIndex);
+      else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype)
     end;
   end;
 end;
@@ -1412,25 +1387,25 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        Len := ZSysUtils.DateTimeToRawSQLTimeStamp(TempDate.Year,
-                          TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10,
+                        Len := DateTimeToRaw(TempDate.Year, TempDate.Month,
+                          TempDate.Day, TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions * 10000,
                           Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                       end;
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        Len := ZSysUtils.DateTimeToRawSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                        Len := DateToRaw(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToRawSQLTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10,
-                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
+                        Len := TimeToRaw(TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions * 10000,
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
       else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
@@ -1543,25 +1518,25 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         isc_decode_time(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        Len := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(TempDate.Year,
+                        Len := DateTimeToUni(TempDate.Year,
                           TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10,
+                          TempDate.Second, TempDate.Fractions * 10000,
                           Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
                       end;
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(XSQLVAR.sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         Result := @FTinyBuffer[0];
-                        Len := ZSysUtils.DateTimeToUnicodeSQLDate(TempDate.Year, TempDate.Month, Tempdate.Day,
+                        Len := DateToUni(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(XSQLVAR.sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                         Result := @FTinyBuffer[0];
-                        Len := ZSysUtils.DateTimeToUnicodeSQLTime(TempDate.Hour, TempDate.Minute,
-                          TempDate.Second, TempDate.Fractions div 10,
-                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
+                        Len := TimeToUni(TempDate.Hour, TempDate.Minute,
+                          TempDate.Second, TempDate.Fractions * 100000,
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
       else raise CreateIBConvertError(ColumnIndex, XSQLVAR.sqltype);
     end;
@@ -2160,8 +2135,10 @@ end;
 
 { TZCachedResolverFirebird2up }
 
-procedure TZCachedResolverFirebird2up.FormWhereClause(Columns: TObjectList;
-  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+procedure TZCachedResolverFirebird2up.FormWhereClause(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
   I: Integer;

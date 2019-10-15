@@ -581,7 +581,11 @@ begin
         end;
       pvtString:
         begin
-          tmp := ConSettings.ConvFuncs.ZStringToRaw(ParamValue, ConSettings^.CTRL_CP, CP);
+          {$IFDEF UNICODE}
+          tmp := ZUnicodeToRaw(ParamValue, CP);
+          {$ELSE}
+          tmp := ZConvertStringToRawWithAutoEncode(ParamValue, ConSettings^.CTRL_CP, CP);
+          {$ENDIF}
           ToBuff(AnsiChar(PParam.Number), Buf, Result);
           ToBuff(AnsiChar(Length(tmp)), Buf, Result);
           ToBuff(tmp, Buf, Result);

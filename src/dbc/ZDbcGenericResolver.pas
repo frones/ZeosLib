@@ -114,24 +114,28 @@ type
     UpdateStatement   : IZPreparedStatement;
     DeleteStatement   : IZPreparedStatement;
 
-    procedure CopyResolveParameters(FromList, ToList: TObjectList);
+    procedure CopyResolveParameters({$IFDEF AUTOREFCOUNT}const {$ENDIF}FromList, ToList: TObjectList);
     function ComposeFullTableName(const Catalog, Schema, Table: SQLString;
-      SQLWriter: TZSQLStringWriter): SQLString;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter): SQLString;
     function DefineTableName: SQLString;
 
-    function CreateResolverStatement(const SQL : String):IZPreparedStatement;
+    function CreateResolverStatement(const SQL : String): IZPreparedStatement;
+    procedure SetResolverStatementParamters(const Statement: IZStatement;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TStrings); virtual;
 
-    procedure DefineCalcColumns(Columns: TObjectList;
-      RowAccessor: TZRowAccessor);
-    procedure DefineInsertColumns(Columns: TObjectList);
-    procedure DefineUpdateColumns(Columns: TObjectList;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor);
-    procedure DefineWhereKeyColumns(Columns: TObjectList);
-    procedure DefineWhereAllColumns(Columns: TObjectList; IgnoreKeyColumn: Boolean = False);
+    procedure DefineCalcColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
+    procedure DefineInsertColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
+    procedure DefineUpdateColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
+    procedure DefineWhereKeyColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
+    procedure DefineWhereAllColumns({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      IgnoreKeyColumn: Boolean = False);
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; virtual;
 
     procedure FillStatement(const Statement: IZPreparedStatement;
-      Params: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 
     property Connection: IZConnection read FConnection write FConnection;
     property Metadata: IZResultSetMetadata read FMetadata write FMetadata;
@@ -152,21 +156,22 @@ type
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
 
-    procedure FormWhereClause(Columns: TObjectList;
-      SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor; var Result: SQLString); virtual;
-    function FormInsertStatement(Columns: TObjectList;
-      {%H-}NewRowAccessor: TZRowAccessor): SQLString; virtual;
-    function FormUpdateStatement(Columns: TObjectList;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString; virtual;
+    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); virtual;
+    function FormInsertStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}{%H-}NewRowAccessor: TZRowAccessor): SQLString;
+    function FormUpdateStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString; virtual;
     function FormDeleteStatement(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): SQLString;
-    function FormCalculateStatement(Columns: TObjectList): SQLString; virtual;
+    function FormCalculateStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList): SQLString; virtual;
 
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
-      RowAccessor: TZRowAccessor);
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
+      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType;
@@ -270,7 +275,7 @@ end;
   @param ToList the destination object list.
 }
 procedure TZGenericCachedResolver.CopyResolveParameters(
-  FromList: TObjectList; ToList: TObjectList);
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}FromList, ToList: TObjectList);
 var
   I: Integer;
   Current: TZResolverParameter;
@@ -292,7 +297,7 @@ end;
   @return a fully qualified table name.
 }
 function TZGenericCachedResolver.ComposeFullTableName(const Catalog, Schema,
-  Table: SQLString; SQLWriter: TZSQLStringWriter): SQLString;
+  Table: SQLString; {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter): SQLString;
 var tmp: SQLString;
 begin
   Result := '';
@@ -344,24 +349,22 @@ function TZGenericCachedResolver.CreateResolverStatement(const SQL: String): IZP
 var
   Temp : TStrings;
 begin
-  if StrToBoolEx(FStatement.GetParameters.Values[DSProps_PreferPrepared]) then begin
-    Temp := TStringList.Create;
-    Temp.Values[DSProps_PreferPrepared] := 'true';
-    if ( FStatement.GetParameters.Values[DSProps_ChunkSize] = '' ) //ordered by precedence
-    then Temp.Values[DSProps_ChunkSize] := Connection.GetParameters.Values[DSProps_ChunkSize]
-    else Temp.Values[DSProps_ChunkSize] := FStatement.GetParameters.Values[DSProps_ChunkSize];
+  Temp := TStringList.Create;
+  Result := nil;
+  try
+    SetResolverStatementParamters(FStatement, Temp);
     Result := Connection.PrepareStatementWithParams(SQL, Temp);
+  finally
     Temp.Free;
-  end else
-    Result := Connection.PrepareStatement(SQL);
-
+  end;
 end;
 
 {**
   Gets a collection of data columns for INSERT statements.
   @param Columns a collection of columns.
 }
-procedure TZGenericCachedResolver.DefineInsertColumns(Columns: TObjectList);
+procedure TZGenericCachedResolver.DefineInsertColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
 var
   I: Integer;
 begin
@@ -382,7 +385,8 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZGenericCachedResolver.DefineUpdateColumns(
-  Columns: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var I: Integer;
 begin
   { Use precached parameters. }
@@ -413,7 +417,8 @@ end;
   Gets a collection of where key columns for DELETE or UPDATE DML statements.
   @param Columns a collection of key columns.
 }
-procedure TZGenericCachedResolver.DefineWhereKeyColumns(Columns: TObjectList);
+procedure TZGenericCachedResolver.DefineWhereKeyColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList);
 
   function AddColumn(const Table, ColumnName: string; WhereColumns: TObjectList): Boolean;
   var
@@ -487,7 +492,8 @@ end;
   Gets a collection of where all columns for DELETE or UPDATE DML statements.
   @param Columns a collection of key columns.
 }
-procedure TZGenericCachedResolver.DefineWhereAllColumns(Columns: TObjectList;
+procedure TZGenericCachedResolver.DefineWhereAllColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
   IgnoreKeyColumn: Boolean = False);
 var
   I: Integer;
@@ -530,8 +536,9 @@ end;
   @param Columns a collection of columns.
   @param RowAccessor an accessor object to column values.
 }
-procedure TZGenericCachedResolver.DefineCalcColumns(Columns: TObjectList;
-  RowAccessor: TZRowAccessor);
+procedure TZGenericCachedResolver.DefineCalcColumns(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
 var
   I: Integer;
 begin
@@ -558,13 +565,19 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZGenericCachedResolver.FillStatement(const Statement: IZPreparedStatement;
-  Params: TObjectList; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   I: Integer;
   ColumnIndex: Integer;
   Current: TZResolverParameter;
   RowAccessor: TZRowAccessor;
   WasNull: Boolean;
+  BCD: TBCD; //one val on stack 4 all
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
+  G: TGUID absolute BCD;
 begin
   WasNull := False;
   for I := 0 to Params.Count - 1 do
@@ -576,11 +589,9 @@ begin
       RowAccessor := OldRowAccessor;
     ColumnIndex := Current.ColumnIndex;
 
-      if FCalcDefaults then
-        Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
-    if RowAccessor.IsNull(ColumnIndex) then begin
-      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex));
-    end else case Metadata.GetColumnType(ColumnIndex) of
+    if RowAccessor.IsNull(ColumnIndex) then
+      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex))
+    else case Metadata.GetColumnType(ColumnIndex) of
       stBoolean:
         Statement.SetBoolean(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetBoolean(ColumnIndex, WasNull));
@@ -607,8 +618,8 @@ begin
       stDouble:
         Statement.SetDouble(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDouble(ColumnIndex, WasNull));
       stBigDecimal: begin
-                      RowAccessor.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^, WasNull);
-                      Statement.SetBigDecimal(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@RowAccessor.TinyBuffer[0])^);
+                      RowAccessor.GetBigDecimal(ColumnIndex, BCD{%H-}, WasNull);
+                      Statement.SetBigDecimal(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD);
                     end;
       stString, stUnicodeString:
         Statement.SetCharRec(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
@@ -616,16 +627,21 @@ begin
       stBytes:
         Statement.SetBytes(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
       stGUID: begin
-                RowAccessor.GetGUID(ColumnIndex, PGUID(@RowAccessor.TinyBuffer[0])^, WasNull);
-                Statement.SetGuid(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGUID(@RowAccessor.TinyBuffer[0])^);
+                RowAccessor.GetGUID(ColumnIndex, G{%H-}, WasNull);
+                Statement.SetGuid(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, G);
               end;
-      stDate:
-        Statement.SetDate(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDate(ColumnIndex, WasNull));
-      stTime:
-        Statement.SetTime(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetTime(ColumnIndex, WasNull));
-      stTimestamp:
-        Statement.SetTimestamp(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-          RowAccessor.GetTimestamp(ColumnIndex, WasNull));
+      stDate: begin
+                RowAccessor.GetDate(ColumnIndex, WasNull, D);
+                Statement.SetDate(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, D);
+              end;
+      stTime: begin
+                RowAccessor.GetTime(ColumnIndex, WasNull, T);
+                Statement.SetTime(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+              end;
+      stTimestamp: begin
+                RowAccessor.GetTimestamp(ColumnIndex, WasNull, TS);
+                Statement.SetTimestamp(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
+              end;
       stAsciiStream:
          Statement.SetBlob(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream,
            RowAccessor.GetBlob(ColumnIndex, WasNull));
@@ -644,8 +660,10 @@ end;
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
 }
-procedure TZGenericCachedResolver.FormWhereClause(Columns: TObjectList;
-  SQLWriter: TZSQLStringWriter; OldRowAccessor: TZRowAccessor;
+procedure TZGenericCachedResolver.FormWhereClause(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
   I, N: Integer;
@@ -678,7 +696,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList;
-  NewRowAccessor: TZRowAccessor): SQLString;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}NewRowAccessor: TZRowAccessor): SQLString;
 var
   I: Integer;
   Tmp: SQLString;
@@ -742,8 +760,9 @@ end;
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
 }
-function TZGenericCachedResolver.FormUpdateStatement(Columns: TObjectList;
-  OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
+function TZGenericCachedResolver.FormUpdateStatement(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
 var
   I: Integer;
   Current: TZResolverParameter;
@@ -809,7 +828,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
 }
 function TZGenericCachedResolver.FormCalculateStatement(
-  Columns: TObjectList): SQLString;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList): SQLString;
 var
   I: Integer;
   Current: TZResolverParameter;
@@ -841,7 +860,8 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZGenericCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement            : IZPreparedStatement;
   S                    : string;
@@ -925,13 +945,20 @@ begin
   raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
 end;
 
+procedure TZGenericCachedResolver.SetResolverStatementParamters(
+  const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
+begin
+  Params.Values[DSProps_PreferPrepared] := 'true';
+  Params.Values[DSProps_ChunkSize] := ZDbcUtils.DefineStatementParameter(Statement, DSProps_ChunkSize, '4096');
+end;
+
 {**
   Calculate default values for the fields.
   @param Sender a cached result set object.
   @param RowAccessor an accessor object to column values.
 }
 procedure TZGenericCachedResolver.CalculateDefaults(
-  const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
+  const Sender: IZCachedResultSet; {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
 var
   I: Integer;
   SQL: string;
@@ -941,6 +968,19 @@ var
   Metadata: IZResultSetMetadata;
   Current: TZResolverParameter;
   Len: NativeUInt;
+  BCD: TBCD; //one val on stack 4 all
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
+  G: TGUID absolute BCD;
+  i32: Integer absolute BCD;
+  c32: Cardinal absolute BCD;
+  i64: Int64 absolute BCD;
+  U64: UInt64 absolute BCD;
+  Dbl: Double absolute BCD;
+  P: Pointer;
+  C: Currency absolute BCD;
+  S: Single absolute BCD;
 begin
   if not FCalcDefaults then
      Exit;
@@ -966,48 +1006,64 @@ begin
           Current := TZResolverParameter(SQLParams[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
           try
             case Current.ColumnType of
-              stBoolean:
-                RowAccessor.SetBoolean(Current.ColumnIndex,
-                  ResultSet.GetBoolean(I));
-              stByte:
-                RowAccessor.SetByte(Current.ColumnIndex, ResultSet.GetByte(I));
-              stShort:
-                RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetShort(I));
-              stWord:
-                RowAccessor.SetWord(Current.ColumnIndex, ResultSet.GetWord(I));
-              stSmall:
-                RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetSmall(I));
-              stInteger:
-                RowAccessor.SetInt(Current.ColumnIndex, ResultSet.GetInt(I));
-              stLongWord:
-                RowAccessor.SetUInt(Current.ColumnIndex, ResultSet.GetUInt(I));
-              stLong:
-                RowAccessor.SetLong(Current.ColumnIndex, ResultSet.GetLong(I));
-              stULong:
-                RowAccessor.SetULong(Current.ColumnIndex, ResultSet.GetULong(I));
-              stFloat:
-                RowAccessor.SetFloat(Current.ColumnIndex, ResultSet.GetFloat(I));
-              stCurrency:
-                RowAccessor.SetCurrency(Current.ColumnIndex, ResultSet.GetCurrency(I));
-              stDouble:
-                RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
-              stBigDecimal: begin
-                  ResultSet.GetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
-                  RowAccessor.SetBigDecimal(Current.ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
-                end;
+              stBoolean: RowAccessor.SetBoolean(I, ResultSet.GetBoolean(I));
+              stByte, stWord, stLongWord: begin
+                                C32 := ResultSet.GetUInt(I);
+                                RowAccessor.SetUInt(Current.ColumnIndex, C32);
+                              end;
+              stShort, stSmall, stInteger: begin
+                                I32 := ResultSet.GetInt(I);
+                                RowAccessor.SetInt(Current.ColumnIndex, i32);
+                              end;
+              stULong:        begin
+                                u64 := ResultSet.GetULong(I);
+                                RowAccessor.SetULong(Current.ColumnIndex, U64);
+                              end;
+              stLong:         begin
+                                i64 := ResultSet.GetLong(I);
+                                RowAccessor.SetLong(Current.ColumnIndex, i64);
+                              end;
+              stFloat:        begin
+                                S := ResultSet.GetFloat(I);
+                                RowAccessor.SetFloat(Current.ColumnIndex, S);
+                              end;
+              stDouble:       begin
+                                Dbl := ResultSet.GetDouble(I);
+                                RowAccessor.SetDouble(Current.ColumnIndex, Dbl);
+                              end;
+              stCurrency:     begin
+                                C := ResultSet.GetCurrency(I);
+                                RowAccessor.SetCurrency(Current.ColumnIndex, C);
+                              end;
+              stGUID:         begin
+                                ResultSet.GetGUID(I, G);
+                                RowAccessor.SetGUID(Current.ColumnIndex, G);
+                              end;
+              stBigDecimal:   begin
+                                ResultSet.GetBigDecimal(I, BCD);
+                                RowAccessor.SetBigDecimal(Current.ColumnIndex, BCD);
+                              end;
               stString, stAsciiStream, stUnicodeString, stUnicodeStream:
-                if RowAccessor.IsRaw then
-                  RowAccessor.SetPAnsiChar(Current.ColumnIndex, ResultSet.GetPAnsiChar(I, Len), Len)
-                else
-                  RowAccessor.SetPWideChar(Current.ColumnIndex, ResultSet.GetPWideChar(I, Len), Len);
-              stBytes, stGUID:
-                RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
-              stDate:
-                RowAccessor.SetDate(Current.ColumnIndex, ResultSet.GetDate(I));
-              stTime:
-                RowAccessor.SetTime(Current.ColumnIndex, ResultSet.GetTime(I));
-              stTimestamp:
-                RowAccessor.SetTimestamp(Current.ColumnIndex, ResultSet.GetTimestamp(I));
+                if RowAccessor.IsRaw then begin
+                  P := ResultSet.GetPAnsiChar(I, Len);
+                  RowAccessor.SetPAnsiChar(Current.ColumnIndex, P, Len)
+                end else begin
+                  P := ResultSet.GetPWideChar(I, Len);
+                  RowAccessor.SetPWideChar(Current.ColumnIndex, P, Len);
+                end;
+              stBytes: RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
+              stDate:         begin
+                                ResultSet.GetDate(I, D);
+                                RowAccessor.SetDate(Current.ColumnIndex, D);
+                              end;
+              stTime:         begin
+                                ResultSet.GetTime(I, T);
+                                RowAccessor.SetTime(Current.ColumnIndex, T);
+                              end;
+              stTimestamp:    begin
+                                ResultSet.GetTimestamp(I, TS);
+                                RowAccessor.SetTimestamp(Current.ColumnIndex, TS);
+                              end;
             end;
 
             if ResultSet.WasNull then

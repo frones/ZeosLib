@@ -57,10 +57,10 @@ interface
 {$Z-}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
-  ZDbcUtils, FmtBCD;
+  ZDbcUtils;
 
 type
   {** Implements Abstract Generic SQL Statement. }
@@ -70,7 +70,6 @@ type
   TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject,
     IImmediatelyReleasable)
   private
-    //fABufferIndex, fWBufferIndex: Integer;
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
     FEscapeProcessing: Boolean;
@@ -204,7 +203,8 @@ type
   TZBindType = (zbtNull, zbt8Byte, zbt4Byte,
     zbtRawString, zbtUTF8String, {$IFNDEF NEXTGEN}zbtAnsiString,{$ENDIF}
     zbtUniString, zbtCharByRef, zbtBinByRef, zbtGUID, zbtBytes,
-    zbtArray, zbtRefArray, zbtLob, zbtPointer, zbtBCD, zbtTimeStamp, zbtCustom);
+    zbtArray, zbtRefArray, zbtLob, zbtPointer, zbtBCD,
+    zbtDate, zbtTime, zbtTimeStamp, zbtCustom);
 
   PZBindValue = ^TZBindValue;
   TZBindValue = record
@@ -228,7 +228,8 @@ const
   TZBindTypeSize: array[TZBindType] of Integer = (0,{$IFNDEF CPU64}8{$ELSE}0{$ENDIF}, 0,
     0, 0, {$IFNDEF NEXTGEN}0,{$ENDIF}
     0, SizeOf(TZCharRec), SizeOf(TZBufRec), SizeOf(TGUID), 0,
-    SizeOf(TZArray), SizeOf(TZArray), 0, 0, SizeOf(TBCD), SizeOf(TZTimeStamp), 0);
+    SizeOf(TZArray), SizeOf(TZArray), 0, 0, SizeOf(TBCD),
+    SizeOf(TZDate), SizeOf(TZTime), SizeOf(TZTimeStamp), 0);
 type
   P8Bytes = PInt64;
   P4Bytes = PCardinal;
@@ -273,6 +274,8 @@ type
     procedure Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; _4Byte: P4Bytes); overload;
     procedure Put(Index: Integer; const Value: TBCD); overload;
+    procedure Put(Index: Integer; const Value: TZTime); overload;
+    procedure Put(Index: Integer; const Value: TZDate); overload;
     procedure Put(Index: Integer; const Value: TZTimeStamp); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: TBytes); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); overload;
@@ -381,10 +384,12 @@ type
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
     procedure GetGUID(ParameterIndex: Integer; var Result: TGUID);
     function GetBytes(ParameterIndex: Integer): TBytes; overload;
-    function GetDate(ParameterIndex: Integer): TDateTime;
-    function GetTime(ParameterIndex: Integer): TDateTime;
+    function GetDate(ParameterIndex: Integer): TDateTime; overload;
+    procedure GetDate(ParameterIndex: Integer; var Result: TZDate); overload;
+    function GetTime(ParameterIndex: Integer): TDateTime; overload;
+    procedure GetTime(ParameterIndex: Integer; var Result: TZTime); overload;
     function GetTimestamp(ParameterIndex: Integer): TDateTime; overload;
-    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload; virtual;
+    procedure GetTimeStamp(ParameterIndex: Integer; var Result: TZTimeStamp); overload; virtual;
     function GetString(ParameterIndex: Integer): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ParameterIndex: Integer): AnsiString;
@@ -429,9 +434,10 @@ type
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
-    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); virtual;
-    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); virtual;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
+    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload;
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
@@ -454,14 +460,10 @@ type
 
   TZRawPreparedStatement = class(TZAbstractPreparedStatement)
   protected
-    FInParamDefaultValues: TRawByteStringDynArray;
     procedure BindRawStr(Index: Integer; const Value: RawByteString); overload; virtual;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); overload; virtual;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure SetBindCapacity(Capacity: Integer); override;
-    property InParamDefaultValues: TRawByteStringDynArray read FInParamDefaultValues;
   public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -487,13 +489,9 @@ type
 
   TZUTF16PreparedStatement = class(TZAbstractPreparedStatement)
   protected
-    FInParamDefaultValues: TUnicodeStringDynArray;
     procedure BindUniStr(Index: Integer; const Value: ZWideString); overload; virtual;
     procedure BindUniStr(Index: Integer; Buf: PWideChar; CodePoints: LengthInt); overload; virtual;
-    property InParamDefaultValues: TUnicodeStringDynArray read FInParamDefaultValues;
-    procedure SetBindCapacity(Capacity: Integer); override;
   public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -553,10 +551,9 @@ type
     function GetCurrency(ParameterIndex: Integer): Currency; reintroduce;
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD); reintroduce;
     function GetBytes(ParameterIndex: Integer): TBytes; reintroduce;
-    function GetDate(ParameterIndex: Integer): TDateTime; reintroduce;
-    function GetTime(ParameterIndex: Integer): TDateTime; reintroduce;
-    function GetTimestamp(ParameterIndex: Integer): TDateTime; reintroduce; overload;
-    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); override;
+    procedure GetDate(ParameterIndex: Integer; var Result: TZDate); reintroduce; overload;
+    procedure GetTime(ParameterIndex: Integer; var Result: TZTime); reintroduce; overload;
+    procedure GetTimeStamp(ParameterIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
 
     function GetValue(ParameterIndex: Integer): TZVariant;
   public //value setter methods
@@ -574,12 +571,13 @@ type
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
+    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); reintroduce; overload;
   public
     function GetResultSet: IZResultSet; override;
     function GetUpdateCount: Integer; override;
     function GetMoreResults: Boolean; override;
-  public
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: String);
   public //additional IZCallableStatement api
     function GetFirstResultSet: IZResultSet; virtual;
     function GetPreviousResultSet: IZResultSet; virtual;
@@ -1077,6 +1075,7 @@ end;
 function TZAbstractStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 {$IFDEF UNICODE}
 begin
+  FWSQL := SQL;
   Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
 {$ELSE}
 var
@@ -1684,7 +1683,9 @@ begin
         zbtLob:       IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetBlob(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType, IZBlob(BindValue.Value));
         zbtPointer:   IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.Value <> nil);
         zbtBCD:       IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(BindValue.Value)^);
-        //, zbtTimeStamp:;
+        zbtDate:      IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZDate(BindValue.Value)^);
+        zbtTime:      IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZTime(BindValue.Value)^);
+        zbtTimeStamp: IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZTimeStamp(BindValue.Value)^);
       end;
     end;
   end;
@@ -2031,7 +2032,7 @@ end;
 procedure TZBindList.Put(Index: Integer; const Value: TZTimeStamp);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, stTimeStamp, zbtBCD);
+  BindValue := AquireBuffer(Index, stTimeStamp, zbtTimeStamp);
   if BindValue.Value = nil then
     GetMem(BindValue.Value, SizeOf(TZTimeStamp));
   PZTimeStamp(BindValue.Value)^ := Value;
@@ -2387,6 +2388,7 @@ begin
   end;
   FBindList := TZBindList.Create(ConSettings);
   FClientCP := ConSettings.ClientCodePage.CP;
+  FTokenMatchIndex := -1;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
 
@@ -2656,9 +2658,17 @@ end;
 
 function TZAbstractPreparedStatement.GetDate(
   ParameterIndex: Integer): TDateTime;
+var D: TZDate;
+begin
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).GetDate(ParameterIndex, D);
+  TryDateToDateTime(D, Result);
+end;
+
+procedure TZAbstractPreparedStatement.GetDate(ParameterIndex: Integer;
+  var Result: TZDate);
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-  Result := fOutParamResultSet.GetDate(ParamterIndex2ResultSetIndex(ParameterIndex));
+  fOutParamResultSet.GetDate(ParamterIndex2ResultSetIndex(ParameterIndex), Result);
   if (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDate(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
@@ -2837,11 +2847,10 @@ end;
 
 function TZAbstractPreparedStatement.GetTime(
   ParameterIndex: Integer): TDateTime;
+var T: TZTime;
 begin
-  {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-  Result := fOutParamResultSet.GetTime(ParamterIndex2ResultSetIndex(ParameterIndex));
-  if (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
-    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTime(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).GetTime(ParameterIndex, T);
+  TryTimeToDateTime(T, Result);
 end;
 
 function TZAbstractPreparedStatement.GetUInt(ParameterIndex: Integer): Cardinal;
@@ -2934,20 +2943,30 @@ begin
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
-function TZAbstractPreparedStatement.GetTimeStamp(
-  ParameterIndex: Integer): TDateTime;
+procedure TZAbstractPreparedStatement.GetTime(ParameterIndex: Integer;
+  var Result: TZTime);
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-  Result := fOutParamResultSet.GetTimestamp(ParamterIndex2ResultSetIndex(ParameterIndex));
+  fOutParamResultSet.GetTime(ParamterIndex2ResultSetIndex(ParameterIndex), Result);
   if (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
-    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimestamp(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
+    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTime(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
-procedure TZAbstractPreparedStatement.GetTimeStamp(Index: Integer;
+function TZAbstractPreparedStatement.GetTimeStamp(
+  ParameterIndex: Integer): TDateTime;
+var TS: TZTimeStamp;
+begin
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).GetTimeStamp(ParameterIndex, TS);
+  TryTimeStampToDateTime(TS, Result);
+end;
+
+procedure TZAbstractPreparedStatement.GetTimeStamp(ParameterIndex: Integer;
   var Result: TZTimeStamp);
 begin
-  ParamterIndex2ResultSetIndex(Index);
-  RaiseUnsupportedException
+  {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
+  fOutParamResultSet.GetTimestamp(ParamterIndex2ResultSetIndex(ParameterIndex), Result);
+  if (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
+    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimestamp(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -3204,8 +3223,10 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetDate(ParameterIndex: Integer;
   const Value: TDateTime);
+var D: TZDate;
 begin
-  BindDateTime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
+  ZSysUtils.DecodeDateTimeToDate(Value, D);
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDate(ParameterIndex, D);
 end;
 
 {**
@@ -3274,6 +3295,9 @@ begin
                   else SQLWriter.AddText('(CLOB)', Result);
     zbtPointer:   SQLWriter.AddText('(POINTER)', Result);
     zbtNull:      SQLWriter.AddText('(NULL)', Result);
+    zbtDate:      SQLWriter.AddDate(PZDate(BindValue.Value)^, ConSettings.WriteFormatSettings.DateFormat, Result);
+    zbtTime:      SQLWriter.AddTime(PZTime(BindValue.Value)^, ConSettings.WriteFormatSettings.TimeFormat, Result);
+    zbtTimeStamp: SQLWriter.AddTimeStamp(PZTimeStamp(BindValue.Value)^, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
     else          SQLWriter.AddText('(CUSTOM)', Result);
   end;
 end;
@@ -3385,8 +3409,10 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetTime(ParameterIndex: Integer;
   const Value: TDateTime);
+var T: TZTime;
 begin
-  BindDateTime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+  ZSysUtils.DecodeDateTimeToTime(Value, T);
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTime(ParameterIndex, T)
 end;
 
 {**
@@ -3398,9 +3424,20 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetTimestamp(ParameterIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var DT: TDateTime;
 begin
-  BindDateTime(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+  if TryTimeStampToDateTime(Value, DT)
+  then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimeStamp(ParameterIndex, DT)
+  else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(ParameterIndex, stTimeStamp);
+end;
+
+procedure TZAbstractPreparedStatement.SetTimestamp(ParameterIndex: Integer;
+  const Value: TDateTime);
+var TS: TZTimeStamp;
+begin
+  ZSysUtils.DecodeDateTimeToTimeStamp(Value, TS);
+  IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimeStamp(ParameterIndex, TS)
 end;
 
 {**
@@ -3548,6 +3585,24 @@ begin
   PGUID(BindValue.Value)^ := Value;
 end;
 
+procedure TZBindList.Put(Index: Integer; const Value: TZDate);
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, stDate, zbtDate);
+  if BindValue.Value = nil then
+    GetMem(BindValue.Value, SizeOf(TZDate));
+  PZDate(BindValue.Value)^ := Value;
+end;
+
+procedure TZBindList.Put(Index: Integer; const Value: TZTime);
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, stTime, zbtTime);
+  if BindValue.Value = nil then
+    GetMem(BindValue.Value, SizeOf(TZTime));
+  PZTime(BindValue.Value)^ := Value;
+end;
+
 { TZRawPreparedStatement }
 
 procedure TZRawPreparedStatement.BindRawStr(Index: Integer;
@@ -3580,17 +3635,6 @@ begin
   if Buf <> nil
   then FBindList.Put(Index, stString, Buf, Len, FClientCP)
   else FBindList.Put(Index, stString, PEmptyAnsiString, 0, FClientCP)
-end;
-
-{**
-  Sets a new parameter capacity and initializes the buffers.
-  @param NewParamCount a new parameters count.
-}
-procedure TZRawPreparedStatement.SetBindCapacity(Capacity: Integer);
-begin
-  inherited SetBindCapacity(Capacity);
-  if Length(FInParamDefaultValues) <> BindList.Capacity then
-    SetLength(FInParamDefaultValues, BindList.Capacity);
 end;
 
 {**
@@ -3642,24 +3686,6 @@ begin
     BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
       ZUnicodeToRaw(UniTemp, FClientCP))
   end;
-end;
-
-{**
-  Sets the designated parameter the default SQL value.
-  <P><B>Note:</B> You must specify the default value.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param Value the default value normally defined in the field's DML SQL statement
-}
-procedure TZRawPreparedStatement.SetDefaultValue(ParameterIndex: Integer;
-  const Value: string);
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex -1;
-  {$ENDIF}
-  CheckParameterIndex(ParameterIndex);
-  FInParamDefaultValues[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(
-    Value, ConSettings^.CTRL_CP, FClientCP);
 end;
 
 {**
@@ -3780,14 +3806,6 @@ begin
 end;
 {$ENDIF NO_ANSISTRING}
 
-procedure TZUTF16PreparedStatement.SetBindCapacity(Capacity: Integer);
-begin
-  inherited SetBindCapacity(Capacity);
-  if Length(FInParamDefaultValues) <> BindList.Capacity then
-    SetLength(FInParamDefaultValues, BindList.Capacity);
-end;
-
-
 {**
   Sets the designated parameter to a Java <code>TZCharRec</code> value.
   The driver converts this
@@ -3806,28 +3824,6 @@ begin
     BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
   else
     BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, PRawToUnicode(Value.P, Value.Len, Value.CP))
-end;
-
-{**
-  Sets the designated parameter the default SQL value.
-  <P><B>Note:</B> You must specify the default value.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param Value the default value normally defined in the field's DML SQL statement
-}
-procedure TZUTF16PreparedStatement.SetDefaultValue(ParameterIndex: Integer;
-  const Value: string);
-begin
-  {$IFNDEF GENERIC_INDEX}
-  ParameterIndex := ParameterIndex -1;
-  {$ENDIF}
-  CheckParameterIndex(ParameterIndex);
-  {$IFDEF UNICODE}
-  FInParamDefaultValues[ParameterIndex] := Value;
-  {$ELSE}
-  FInParamDefaultValues[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToUnicode(
-    Value, ConSettings^.CTRL_CP);
-  {$ENDIF}
 end;
 
 {**
@@ -4277,16 +4273,15 @@ begin
   end;
 end;
 
-function TZAbstractCallableStatement.GetDate(
-  ParameterIndex: Integer): TDateTime;
+procedure TZAbstractCallableStatement.GetDate(
+  ParameterIndex: Integer; var Result: TZDate);
 begin
   if FExecStatement <> nil then begin
-    Result := FExecStatement.GetDate(ParameterIndex);
-    {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-      BindDouble(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
+    FExecStatement.GetDate(ParameterIndex, Result);
+    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+      SetDate(ParameterIndex, Result);
   end else begin
-    {$IFDEF FPC}Result := 0;{$ENDIF}; //satisfy compiler
+    {$IFDEF FPC} FillChar(Result, SizeOf(TZDate), #0);{$ENDIF} //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
 end;
@@ -4530,36 +4525,28 @@ end;
   @return the parameter value.  If the value is SQL <code>NULL</code>, the result
   is <code>null</code>.
 }
-function TZAbstractCallableStatement.GetTime(
-  ParameterIndex: Integer): TDateTime;
+procedure TZAbstractCallableStatement.GetTime(
+  ParameterIndex: Integer; Var Result: TZTime);
 begin
   if FExecStatement <> nil then begin
-    Result := FExecStatement.GetTime(ParameterIndex);
-    {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-      BindDouble(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
+    FExecStatement.GetTime(ParameterIndex, Result);
+    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+      SetTime(ParameterIndex, Result);
   end else begin
-    {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
+    {$IFDEF FPC} FillChar(Result, SizeOf(TZTime), #0);{$ENDIF} //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
 end;
 
-procedure TZAbstractCallableStatement.GetTimeStamp(Index: Integer;
+procedure TZAbstractCallableStatement.GetTimeStamp(ParameterIndex: Integer;
   var Result: TZTimeStamp);
 begin
-  RaiseUnsupportedException
-end;
-
-function TZAbstractCallableStatement.GetTimestamp(
-  ParameterIndex: Integer): TDateTime;
-begin
   if FExecStatement <> nil then begin
-    Result := FExecStatement.GetTimestamp(ParameterIndex);
-    {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
-      BindDouble(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
+    FExecStatement.GetTimeStamp(ParameterIndex, Result);
+    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+      SetTimeStamp(ParameterIndex, Result);
   end else begin
-    {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
+    {$IFDEF FPC} FillChar(Result, SizeOf(TZTimeStamp), #0);{$ENDIF} //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
 end;
@@ -4828,18 +4815,12 @@ begin
   end else FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));;
 end;
 
-{**
-  Sets the designated parameter the default SQL value.
-  <P><B>Note:</B> You must specify the default value.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param Value the default value normally defined in the field's DML SQL statement
-}
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
-procedure TZAbstractCallableStatement.SetDefaultValue(ParameterIndex: Integer;
-  const Value: String);
+procedure TZAbstractCallableStatement.SetDate(ParameterIndex: Integer;
+  const Value: TZDate);
 begin
-  //it's a nop
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  FBindList.Put(ParameterIndex, Value);
 end;
 
 procedure TZAbstractCallableStatement.SetDouble(ParameterIndex: Integer;
@@ -4861,8 +4842,6 @@ procedure TZAbstractCallableStatement.SetFloat(ParameterIndex: Integer;
 begin
   BindDouble({$IFNDEF GENERIC_INDEX}ParameterIndex-1{$ENDIF}, stFloat, Value);
 end;
-
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>int</code> value.
@@ -4968,6 +4947,22 @@ procedure TZAbstractCallableStatement.SetSmall(ParameterIndex: Integer;
   Value: SmallInt);
 begin
   BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
+end;
+
+procedure TZAbstractCallableStatement.SetTime(ParameterIndex: Integer;
+  const Value: TZTime);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  FBindList.Put(ParameterIndex, Value);
+end;
+
+procedure TZAbstractCallableStatement.SetTimestamp(ParameterIndex: Integer;
+  const Value: TZTimeStamp);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  FBindList.Put(ParameterIndex, Value);
 end;
 
 {**

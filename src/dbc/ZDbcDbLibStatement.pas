@@ -134,9 +134,9 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); reintroduce;
-    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); reintroduce; overload;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
 
@@ -178,9 +178,9 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); reintroduce;
-    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); reintroduce; overload;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   public
     function ExecuteQuery(const {%H-}SQL: ZWideString): IZResultSet; override;
@@ -462,9 +462,7 @@ begin
     if IsParamIndex[i] then begin
       Bind := BindList[ParamIndex];
       if Bind.BindType = zbtNull
-      then if FInParamDefaultValues[ParamIndex] <> '' then
-        SQLWriter.AddText(FInParamDefaultValues[ParamIndex], Result)
-        else SQLWriter.AddText('null', Result)
+      then SQLWriter.AddText('null', Result)
       else begin
         if (Bind.SQLType in [stString, stAsciiStream]) and (Bind.BindType = zbtUTF8String) and not FIsNCharIndex[ParamIndex] then
           SQLWriter.AddChar(AnsiChar('N'), Result);
@@ -578,7 +576,7 @@ begin
       fRawTemp := ZUnicodeToRaw(fUniTemp, CP)
     end;
     FRawTemp := SQLQuotedStr(fRawTemp, AnsiChar(#39));
-    BindList.Put(ParameterIndex, stString, FRawTemp, Value.CP);
+    BindList.Put(ParameterIndex, stString, FRawTemp, CP);
   end;
 end;
 
@@ -591,11 +589,15 @@ begin
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetDate(ParameterIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stDate, ZSysUtils.DateTimeToRawSQLDate(Value, ConSettings.WriteFormatSettings, True), FClientCP);
+  Len := DateToRaw(Value.Year, Value.Month, Value.Day,
+    @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+  BindList.Put(ParameterIndex, stDate, fRawTemp, FClientCP);
 end;
 
 {**
@@ -736,19 +738,27 @@ begin
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetTime(ParameterIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stTime, ZSysUtils.DateTimeToRawSQLTime(Value, ConSettings.WriteFormatSettings, True), FClientCP);
+  Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+    @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
+  ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+  BindList.Put(ParameterIndex, stTime, fRawTemp, FClientCP);
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetTimestamp(ParameterIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stTimeStamp, ZSysUtils.DateTimeToRawSQLTimeStamp(Value, ConSettings.WriteFormatSettings, True), FClientCP);
+  Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+    Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+    @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
+  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+  BindList.Put(ParameterIndex, stTimeStamp, fRawTemp, FClientCP);
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetUInt(ParameterIndex: Integer;
@@ -1211,11 +1221,15 @@ begin
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetDate(ParameterIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stString, DateTimeToRawSQLDate(Value, ConSettings.WriteFormatSettings, False), FClientCP);
+  Len := DateToRaw(Value.Year, Value.Month, Value.Day,
+    @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+  BindList.Put(ParameterIndex, stDate, fRawTemp, FClientCP);
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetDouble(ParameterIndex: Integer;
@@ -1304,19 +1318,27 @@ begin
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetTime(ParameterIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stString, DateTimeToRawSQLTime(Value, ConSettings.WriteFormatSettings, False), FClientCP);
+  Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
+    @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+  ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+  BindList.Put(ParameterIndex, stString, fRawTemp, FClientCP);
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetTimestamp(ParameterIndex: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stString, DateTimeToRawSQLTimeStamp(Value, ConSettings.WriteFormatSettings, False), FClientCP);
+  Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+    Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+    @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
+  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+  BindList.Put(ParameterIndex, stTimeStamp, fRawTemp, FClientCP);
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetUInt(ParameterIndex: Integer;

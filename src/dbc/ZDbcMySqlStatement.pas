@@ -80,7 +80,6 @@ type
     FInitial_emulate_prepare, //the user given mode
     FBindAgain, //if types or pointer locations do change(realloc f.e.) we need to bind again -> this is dead slow with mysql
     FChunkedData, //just skip the binding loop for sending long data
-    FHasDefaultValues, //are default values given?
     FStmtHandleIsExecuted: Boolean; //identify state of stmt handle for flushing pending results?
     FPreparablePrefixTokens: TPreparablePrefixTokens;
     FBindOffset: PMYSQL_BINDOFFSETS;
@@ -171,11 +170,10 @@ type
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
     procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
-    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
 
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
   end;
@@ -316,9 +314,7 @@ begin
     for I := 0 to High(FCachedQueryRaw) do
       if IsParamIndex[i] then begin
         if BindList[ParamIndex].BindType = zbtNull
-        then if FInParamDefaultValues[ParamIndex] <> ''
-          then SQLWriter.AddText(FInParamDefaultValues[ParamIndex], Result)
-          else SQLWriter.AddText('null', Result)
+        then SQLWriter.AddText('null', Result)
         else SQLWriter.AddText(FEmulatedValues[ParamIndex], Result);
         Inc(ParamIndex);
       end else
@@ -1088,9 +1084,6 @@ begin
 end;
 
 procedure TZAbstractMySQLPreparedStatement.InternalRealPrepare;
-var
-  I: Integer;
-  P: PansiChar;
 begin
   if (FMYSQL_STMT = nil) then
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
@@ -1116,12 +1109,6 @@ begin
     then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows)
     else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_PREFETCH_ROWS, @FPrefetchRows);
   FEmulatedParams := False;
-  if FHasDefaultValues then
-    for I := 0 to High(FInParamDefaultValues) do begin
-      P := Pointer(FInParamDefaultValues[i]);
-      if (P<>nil) and (PByte(P)^ = Ord(#39)) and (PByte(P+Length(FInParamDefaultValues[i])-1)^=Ord(#39))
-      then FInParamDefaultValues[i] := Copy(FInParamDefaultValues[i], 2, Length(FInParamDefaultValues[i])-2)
-    end;
   SetLength(FEmulatedValues, 0);
   if (BindList.Capacity > 0) and (FMYSQL_BINDs = nil) then
     InternalSetInParamCount(BindList.Capacity);
@@ -1466,19 +1453,15 @@ var
   P: PMYSQL_TIME;
   { move the string conversions into a own proc -> no (U/L)StrClear}
   procedure BindEmulated;
+  var Len: LengthInt;
   begin
     case SQLType of
-      stDate: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLDate(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      stTime: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.TimeFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLTime(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      stTimestamp: if Length(FEmulatedValues[Index])-2 < ConSettings^.WriteFormatSettings.DateTimeFormatLen
-              then FEmulatedValues[Index] := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, True)
-              else DateTimeToRawSQLTimeStamp(Value, Pointer(FEmulatedValues[Index]), ConSettings^.WriteFormatSettings, True);
-      else FEmulatedValues[Index] := FloatToSQLRaw(Value);
+      stDate: Len := DateTimeToRawSQLDate(Value, @fABuffer, ConSettings^.WriteFormatSettings, True);
+      stTime: Len := DateTimeToRawSQLTime(Value, @fABuffer, ConSettings^.WriteFormatSettings, True);
+      stTimestamp: Len := DateTimeToRawSQLTimeStamp(Value, @fABuffer, ConSettings^.WriteFormatSettings, True)
+      else Len := FloatToSQLRaw(Value, @fABuffer);
     end;
+    ZSetString(PAnsiChar(@fABuffer), Len, FEmulatedValues[Index]);
   end;
 begin
   CheckParameterIndex(Index);
@@ -1517,7 +1500,9 @@ var
   Bind: PMYSQL_aligned_BIND;
   BindValue: PZBindValue;
   SQLType: TZSQLType;
-  Failed: Boolean;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
   procedure BindAsLob;
   var Lob: IZBlob;
     P: PAnsiChar;
@@ -1575,10 +1560,14 @@ begin
           else RawToFloat(Buf, AnsiChar('.'), PSingle(bind^.buffer)^);
           Bind^.is_null_address^ := 0;
         end;
-      stTime: InternalBindDouble(Index, stTime, ZSysUtils.RawSQLTimeToDateTime(Buf, Len, ConSettings.WriteFormatSettings, Failed));
-      stDate: InternalBindDouble(Index, stDate, ZSysUtils.RawSQLDateToDateTime(Buf, Len, ConSettings.WriteFormatSettings, Failed));
-      stTimeStamp: InternalBindDouble(Index, stTimeStamp, ZSysUtils.RawSQLTimeStampToDateTime(Buf, Len, ConSettings.WriteFormatSettings, Failed));
+      stTime:     if TryPCharToTime(Buf, Len, ConSettings.WriteFormatSettings, T)
+                  then SetTime(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+      stDate:     if TryPCharToDate(Buf, Len, ConSettings.WriteFormatSettings, D)
+                  then SetDate(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, D);
+      stTimeStamp: if TryPCharToTimeStamp(Buf, Len, ConSettings.WriteFormatSettings, TS)
+                  then SetTimeStamp(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
       stAsciiStream..stBinaryStream: BindAsLob;
+
     end;
   end;
 end;
@@ -1955,12 +1944,26 @@ begin
         FillChar(P^, BatchDMLArrayCount*SizeOf(TMYSQL_TIME), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
         if SQLType = stDate then begin
           Bind^.buffer_type_address^ := FIELD_TYPE_DATE;
-          for i := 0 to BatchDMLArrayCount -1 do begin
-            MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
-            DecodeDate(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.year)^, PWord(@MySQLTime^.month)^, PWord(@MySQLTime^.day)^);
-            PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
-            //MySQLTime.time_type := MYSQL_TIMESTAMP_DATE; //done by fillchar
-          end
+          if VariantType in [vtNull, vtDateTime] then begin
+            for i := 0 to BatchDMLArrayCount -1 do begin
+              MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
+              DecodeDate(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.year)^, PWord(@MySQLTime^.month)^, PWord(@MySQLTime^.day)^);
+              PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
+              //MySQLTime.time_type := MYSQL_TIMESTAMP_DATE; //done by fillchar
+            end
+          end else begin
+            for i := 0 to BatchDMLArrayCount -1 do begin
+              with TZDateDynArray(Value)[i] do begin
+                MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
+                MySQLTime^.year := Year;
+                MySQLTime^.month := Month;
+                MySQLTime^.day := Day;
+                MySQLTime^.neg := Ord(IsNegative);
+              end;
+              PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
+              //MySQLTime.time_type := MYSQL_TIMESTAMP_DATE; //done by fillchar
+            end
+          end;
         end else if SQLType = stTime then begin
           Bind^.buffer_type_address^ := FIELD_TYPE_TIME;
           for i := 0 to BatchDMLArrayCount -1 do begin
@@ -2061,26 +2064,37 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetDate(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var
+  Bind: PMYSQL_aligned_BIND;
+  P: PMYSQL_TIME;
+  { move the string conversions into a own proc -> no (U/L)StrClear}
+  procedure BindEmulated;
+  var L: LengthInt;
+  begin
+    L := DateToRaw(Value.Year, Value.Month, Value.Day,
+      @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+    ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
+  end;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
-end;
-
-{**
-  Sets the designated parameter the default SQL value.
-  <P><B>Note:</B> You must specify the default value.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param Value the default value normally defined in the field's DML SQL statement
-}
-procedure TZMySQLPreparedStatement.SetDefaultValue(ParameterIndex: Integer;
-  const Value: string);
-var P: PChar;
-begin
-  P := Pointer(Value);
-  if (P = nil) or FEmulatedParams or not ((P^ = #39) and ((P+Length(Value)-1)^ = #39))
-  then inherited SetDefaultValue(ParameterIndex, Value)
-  else inherited SetDefaultValue(ParameterIndex, Copy(Value, 2, Length(Value)-2));
+  {$IFNDEF GENERIC_INDEX}Index := Index -1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if FEmulatedParams then begin
+    BindList.Put(Index, Value);
+    BindEmulated;
+  end else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> stDate) or (Bind^.buffer = nil)  then
+      InitBuffer(stDate, Index, Bind);
+    P := Pointer(bind^.buffer);
+    P^.neg := Ord(Value.IsNegative);
+    P^.year := Value.Year;
+    P^.month := Value.Month;
+    P^.day := Value.Day;
+    Bind^.is_null_address^ := 0;
+  end;
 end;
 
 {**
@@ -2287,20 +2301,16 @@ begin
     if FTokenMatchIndex <> -1
     then BindList.SetNull(ParameterIndex, SQLType);
     //we always need a new copy of the defult values else we'll write into the metadata default values for the non unicode compilers
-    if FUseDefaults and (FInParamDefaultValues[ParameterIndex] <> '')
-    then FEmulatedValues[ParameterIndex] := Copy(FInParamDefaultValues[ParameterIndex], 1, Length(FInParamDefaultValues[ParameterIndex]))
-    else FEmulatedValues[ParameterIndex] := 'null'
+    FEmulatedValues[ParameterIndex] := 'null'
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[ParameterIndex];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if FUseDefaults and (FInParamDefaultValues[ParameterIndex] <> '') then
-      BindRawStr(ParameterIndex, Pointer(FInParamDefaultValues[ParameterIndex]), Length(FInParamDefaultValues[ParameterIndex]))
-    else begin
-      if (BindList.SQLTypes[ParameterIndex] <> SQLType) then
-        InitBuffer(SQLType, ParameterIndex, Bind, 0);
-      Bind^.is_null_address^ := 1;
-    end;
+    if (BindList.SQLTypes[ParameterIndex] <> SQLType) then
+      InitBuffer(SQLType, ParameterIndex, Bind, 0);
+    if FUseDefaults
+    then Bind^.is_null_address^ := STMT_INDICATOR_DEFAULT
+    else Bind^.is_null_address^ := STMT_INDICATOR_NULL;
   end;
 end;
 
@@ -2374,9 +2384,33 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetTime(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var
+  Bind: PMYSQL_aligned_BIND;
+  P: PMYSQL_TIME;
+  L: LengthInt;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index -1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if FEmulatedParams then begin
+    BindList.Put(Index, Value);
+    L := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+      @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
+    ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
+  end else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> stTime) or (Bind^.buffer = nil) then
+      InitBuffer(stTime, Index, Bind);
+    P := Pointer(bind^.buffer);
+    P^.neg := Ord(Value.IsNegative);
+    P^.hour := Value.Hour;
+    P^.minute := Value.Minute;
+    P^.second := Value.Second;
+    P^.second_part := Value.Fractions div 1000;
+    Bind^.is_null_address^ := 0;
+  end;
 end;
 
 {**
@@ -2388,9 +2422,37 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var
+  Bind: PMYSQL_aligned_BIND;
+  P: PMYSQL_TIME;
+  L: LengthInt;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index -1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if FEmulatedParams then begin
+    BindList.Put(Index, Value);
+    L := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+      Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+      @fABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
+    ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
+  end else begin
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> stTimeStamp) or (Bind^.buffer = nil)  then
+      InitBuffer(stTimeStamp, Index, Bind);
+    P := Pointer(bind^.buffer);
+    P^.neg := Ord(Value.IsNegative);
+    P^.year := Value.Year;
+    P^.month := Value.Month;
+    P^.day := Value.Day;
+    P^.hour := Value.Hour;
+    P^.minute := Value.Minute;
+    P^.second := Value.Second;
+    P^.second_part := Value.Fractions div 1000;
+    Bind^.is_null_address^ := 0;
+  end;
 end;
 
 {**

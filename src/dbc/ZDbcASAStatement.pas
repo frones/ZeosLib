@@ -106,7 +106,7 @@ type
     procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
-    procedure BindTimeStampStruct(Index: Integer; ASAType: SmallInt; const Value: TDateTime);
+    procedure BindTimeStampStruct(Index: Integer; ASAType: SmallInt; const Value: TZASASQLDateTime);
   protected
     procedure UnPrepareInParameters; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
@@ -127,9 +127,9 @@ type
     procedure SetBigDecimal(Index: Integer; const Value: TBCD);
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce;
     procedure SetGuid(Index: Integer; const Value: TGUID); reintroduce;
-    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
   end;
 
   TZASACallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
@@ -473,27 +473,15 @@ begin
 end;
 
 procedure TZASAPreparedStatement.BindTimeStampStruct(Index: Integer;
-  ASAType: SmallInt; const Value: TDateTime);
+  ASAType: SmallInt; const Value: TZASASQLDateTime);
 var SQLVAR: PZASASQLVAR;
-  y, m, d: word;
-  hr, min, sec, msec: word;
 begin
   CheckParameterIndex(Index);
   SQLVAR := @FInParamSQLDA.sqlvar[Index];
   if (SQLVAR.sqlData = nil) or (SQLVAR.sqlType <> DT_TIMESTAMP_STRUCT or 1) then
     InitBind(SQLVAR, DT_TIMESTAMP_STRUCT or 1, SizeOf(TZASASQLDateTime));
   SQLVAR.sqlind^ := 0; //not NULL
-  DecodeDate( Value, y, m, d);
-  DecodeTime( Value, hr, min, sec, msec);
-  PZASASQLDateTime(SQLVAR.sqlData).Year := y;
-  PZASASQLDateTime(SQLVAR.sqlData).Month := m - 1;
-  PZASASQLDateTime(SQLVAR.sqlData).Day := d;
-  PZASASQLDateTime(SQLVAR.sqlData).Hour := hr;
-  PZASASQLDateTime(SQLVAR.sqlData).Minute := min;
-  PZASASQLDateTime(SQLVAR.sqlData).Second := sec;
-  PZASASQLDateTime(SQLVAR.sqlData).MicroSecond := msec * 1000;
-  PZASASQLDateTime(SQLVAR.sqlData).Day_of_Week := 0;
-  PZASASQLDateTime(SQLVAR.sqlData).Day_of_Year := 0;
+  PZASASQLDateTime(SQLVAR.sqlData)^ := Value;
   PSmallInt(PAnsiChar(SQLVAR.sqlData)+SizeOf(TZASASQLDateTime))^ := ASAType; //save declared type for the logs
 end;
 
@@ -596,9 +584,16 @@ begin
 end;
 
 procedure TZASAPreparedStatement.SetDate(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var TS: TZASASQLDateTime;
 begin
-  BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_DATE, Value);
+  FillChar(TS, SizeOf(TZASASQLDateTime), #0);
+  TS.Year := Value.Year;
+  Ts.Month := Value.Month -1;
+  TS.Day := Value.Day;
+  if Value.IsNegative then
+    TS.Year := -TS.Year;
+  BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_DATE, TS);
 end;
 
 procedure TZASAPreparedStatement.SetDouble(Index: Integer;
@@ -766,15 +761,32 @@ begin
 end;
 
 procedure TZASAPreparedStatement.SetTime(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var TS: TZASASQLDateTime;
 begin
-  BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_TIME, Value);
+  FillChar(TS, SizeOf(TZASASQLDateTime), #0);
+  TS.Hour := Value.Hour;
+  Ts.Minute := Value.Minute;
+  TS.Second := Value.Second;
+  TS.MicroSecond := Value.Fractions div 1000;
+  BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_TIME, TS);
 end;
 
 procedure TZASAPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var TS: TZASASQLDateTime;
 begin
-  BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_TIMESTAMP, Value);
+  FillChar(TS, SizeOf(TZASASQLDateTime), #0);
+  TS.Year := Value.Year;
+  Ts.Month := Value.Month -1;
+  TS.Day := Value.Day;
+  if Value.IsNegative then
+    TS.Year := -TS.Year;
+  TS.Hour := Value.Hour;
+  Ts.Minute := Value.Minute;
+  TS.Second := Value.Second;
+  TS.MicroSecond := Value.Fractions div 1000;
+  BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_TIME, TS);
 end;
 
 procedure TZASAPreparedStatement.SetUInt(Index: Integer;

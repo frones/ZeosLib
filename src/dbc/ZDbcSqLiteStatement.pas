@@ -85,7 +85,6 @@ type
     procedure BindInParameters; override;
   protected
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
-    procedure BindDateTime(Index: Integer; SQLType: TZSQLType; const Value: TDateTime); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
@@ -123,6 +122,9 @@ type
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); reintroduce;
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
   end;
 
   TZSQLiteStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZStatement)
@@ -225,45 +227,6 @@ begin
       CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
   end else
     FLateBound := True;
-end;
-
-procedure TZAbstractSQLiteCAPIPreparedStatement.BindDateTime(Index: Integer;
-  SQLType: TZSQLType; const Value: TDateTime);
-var
-  BindVal: PZBindValue;
-  ErrorCode: Integer;
-begin
-  CheckParameterIndex(Index);
-  if FBindDoubleDateTimeValues then begin
-    if FBindLater or FHasLoggingListener
-      then BindList.Put(Index, SQLType, P8Bytes(@Value));
-    if not FBindLater then begin
-      ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, Value-JulianEpoch);
-      if ErrorCode <> SQLITE_OK then
-        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
-    end;
-  end else begin
-    CheckParameterIndex(Index);
-    BindVal := BindList[Index];
-    if SQLType = stDate then
-      if (BindVal.BindType <> zbtRawString) or (Length(RawByteString(BindVal.Value)) <> ConSettings^.WriteFormatSettings.DateFormatLen)
-      then Bindlist.Put(Index, stString, DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8)
-      else DateTimeToRawSQLDate(Value, BindVal.Value, ConSettings^.WriteFormatSettings, False)
-    else if SQLType = stTime then
-      if (BindVal.BindType <> zbtRawString) or (Length(RawByteString(BindVal.Value)) <> ConSettings^.WriteFormatSettings.TimeFormatLen)
-      then Bindlist.Put(Index, stString, DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8)
-      else DateTimeToRawSQLTime(Value, BindVal.Value, ConSettings^.WriteFormatSettings, False)
-    else
-      if (BindVal.BindType <> zbtRawString) or (Length(RawByteString(BindVal.Value)) <> ConSettings^.WriteFormatSettings.DateTimeFormatLen)
-      then Bindlist.Put(Index, stString, DateTimeToRawSQLTimestamp(Value, ConSettings^.WriteFormatSettings, False), zCP_UTF8)
-      else DateTimeToRawSQLTimestamp(Value, BindVal.Value, ConSettings^.WriteFormatSettings, False);
-    if not FBindLater then begin
-      ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, BindVal.Value,
-        Length(RawByteString(BindVal.Value)), nil);
-      if ErrorCode <> SQLITE_OK then
-        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
-    end;
-  end;
 end;
 
 {**
@@ -625,6 +588,37 @@ begin
     FLateBound := True;
 end;
 
+procedure TZSQLiteCAPIPreparedStatement.SetDate(Index: Integer;
+  const Value: TZDate);
+var
+  ErrorCode: Integer;
+  DT: TDateTime;
+  Len: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if FBindDoubleDateTimeValues then begin
+    ZSysUtils.TryDateToDateTime(Value, DT);
+    if FBindLater or FHasLoggingListener
+      then BindList.Put(Index, Value);
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, DT-JulianEpoch);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end else begin
+    Len := DateToRaw(Value.Year, Value.Month, Value.Day, @FABuffer[0],
+      ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end;
+end;
+
 {**
   Sets the designated parameter to a Java <code>double</code> value.
   The driver converts this
@@ -755,6 +749,69 @@ procedure TZSQLiteCAPIPreparedStatement.SetSmall(ParameterIndex: Integer;
   Value: SmallInt);
 begin
   SetInt(ParameterIndex, Value);
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.SetTime(Index: Integer;
+  const Value: TZTime);
+var
+  ErrorCode: Integer;
+  DT: TDateTime;
+  Len: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if FBindDoubleDateTimeValues then begin
+    ZSysUtils.TryTimeToDateTime(Value, DT);
+    if FBindLater or FHasLoggingListener
+      then BindList.Put(Index, Value);
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, DT-JulianEpoch);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end else begin
+    Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+      @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+    Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.SetTimestamp(Index: Integer;
+  const Value: TZTimeStamp);
+var
+  ErrorCode: Integer;
+  DT: TDateTime;
+  Len: LengthInt;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if FBindDoubleDateTimeValues then begin
+    ZSysUtils.TryTimeStampToDateTime(Value, DT);
+    if FBindLater or FHasLoggingListener
+      then BindList.Put(Index, Value);
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, DT-JulianEpoch);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end else begin
+    Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+      Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+        @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+    Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
+    if not FBindLater then begin
+      ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
+      if ErrorCode <> SQLITE_OK then
+        CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+    end;
+  end;
 end;
 
 {**

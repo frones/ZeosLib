@@ -176,7 +176,7 @@ procedure PrepareValuesForComparison(const FieldRefs: TObjectDynArray;
   @return <code> if values are equal.
 }
 function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
-  PartialKey: Boolean; CaseInsensitive: Boolean): Boolean;
+  Const VariantManager: IZVariantManager; PartialKey, CaseInsensitive: Boolean): Boolean;
 
 {**
   Compares row field values with the given ones.
@@ -198,22 +198,6 @@ function CompareFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   @return a list of key field names.
 }
 function DefineKeyFields(Fields: TFields; const IdConverter: IZIdentifierConvertor): string;
-
-{**
-  Converts datetime value into TDataset internal presentation.
-  @param DataType a type of date-time field.
-  @param Data a data which contains a value.
-  @param Buffer a field buffer pointer
-}
-procedure DateTimeToNative(DataType: TFieldType; Data: TDateTime; Buffer: Pointer);
-
-{**
-  Converts date times from TDataset internal presentation into datetime value.
-  @param DataType a type of date-time field.
-  @param Buffer a field buffer pointer
-  @return a data which contains a value.
-}
-function NativeToDateTime(DataType: TFieldType; Buffer: Pointer): TDateTime;
 
 {**
   Compare values from two key fields.
@@ -497,6 +481,11 @@ var
   Current: TField;
   ColumnIndex, ColumnCount: Integer;
   Len: NativeUInt;
+  BCD: TBCD; //one val on stack 4 all
+  G: TGUID absolute BCD;
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
 begin
   RowAccessor.RowBuffer.Index := ResultSet.GetRow;
   ColumnCount := ResultSet.GetMetadata.GetColumnCount;
@@ -515,23 +504,9 @@ begin
     case Current.DataType of
       ftBoolean:
         RowAccessor.SetBoolean(FieldIndex, ResultSet.GetBoolean(ColumnIndex));
-      {$IFDEF WITH_FTBYTE}
-      ftByte:
-        RowAccessor.SetByte(FieldIndex, ResultSet.GetByte(ColumnIndex));
-      {$ENDIF}
-      {$IFDEF WITH_FTSHORTINT}
-      ftShortInt:
-        RowAccessor.SetShort(FieldIndex, ResultSet.GetShort(ColumnIndex));
-      {$ENDIF}
-      ftWord:
-        RowAccessor.SetWord(FieldIndex, ResultSet.GetWord(ColumnIndex));
-      ftSmallInt:
-        RowAccessor.SetSmall(FieldIndex, ResultSet.GetSmall(ColumnIndex));
-      {$IFDEF WITH_FTLONGWORD}
-      ftLongWord:
+      {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}ftWord{$IFDEF WITH_FTLONGWORD},ftLongWord{$ENDIF}:
         RowAccessor.SetUInt(FieldIndex, ResultSet.GetUInt(ColumnIndex));
-      {$ENDIF}
-      ftInteger, ftAutoInc:
+      {$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}ftSmallInt,ftInteger, ftAutoInc:
         RowAccessor.SetInt(FieldIndex, ResultSet.GetInt(ColumnIndex));
       {$IFDEF WITH_FTSINGLE}
       ftSingle:
@@ -545,13 +520,13 @@ begin
       {$ENDIF}
       {$IFDEF WITH_FTGUID}
       ftGUID: begin
-          ResultSet.GetGUID(ColumnIndex, PGUID(@RowAccessor.TinyBuffer[0])^);
-          RowAccessor.SetGUID(FieldIndex, PGUID(@RowAccessor.TinyBuffer[0])^);
+          ResultSet.GetGUID(ColumnIndex, G);
+          RowAccessor.SetGUID(FieldIndex, G);
         end;
       {$ENDIF}
       ftFmtBCD: begin
-          ResultSet.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
-          RowAccessor.SetBigDecimal(FieldIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
+          ResultSet.GetBigDecimal(ColumnIndex, BCD);
+          RowAccessor.SetBigDecimal(FieldIndex, BCD);
         end;
       ftLargeInt:
         RowAccessor.SetLong(FieldIndex, ResultSet.GetLong(ColumnIndex));
@@ -564,12 +539,18 @@ begin
           RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
       ftBytes, ftVarBytes:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
-      ftDate:
-        RowAccessor.SetDate(FieldIndex, ResultSet.GetDate(ColumnIndex));
-      ftTime:
-        RowAccessor.SetTime(FieldIndex, ResultSet.GetTime(ColumnIndex));
-      ftDateTime:
-        RowAccessor.SetTimestamp(FieldIndex, ResultSet.GetTimestamp(ColumnIndex));
+      ftDate: begin
+          ResultSet.GetDate(ColumnIndex, D);
+          RowAccessor.SetDate(FieldIndex, D);
+        end;
+      ftTime: begin
+          ResultSet.GetTime(ColumnIndex, T);
+          RowAccessor.SetTime(FieldIndex, T);
+        end;
+      ftDateTime: begin
+          ResultSet.GetTimestamp(ColumnIndex, TS);
+          RowAccessor.SetTimestamp(FieldIndex, TS);
+        end;
       ftMemo, ftBlob, ftGraphic {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
         RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
       {$IFDEF WITH_FTDATASETSUPPORT}
@@ -600,6 +581,11 @@ var
   ColumnIndex, ColumnCount: Integer;
   Blob: IZBlob;
   Len: NativeUInt;
+  BCD: TBCD; //one val on stack 4 all
+  G: TGUID absolute BCD;
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
 begin
   WasNull := False;
   RowAccessor.RowBuffer.Index := ResultSet.GetRow;
@@ -665,15 +651,25 @@ begin
         else
           ResultSet.UpdatePWideChar(ColumnIndex,
             RowAccessor.GetPWideChar(FieldIndex, WasNull, Len), Len);
-      ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
+      {$IFDEF WITH_FTGUID}ftGuid: begin
+          RowAccessor.GetGUID(FieldIndex, G, WasNull);
+          ResultSet.UpdateGUID(ColumnIndex, G);
+        end;
+      {$ENDIF}
+      ftBytes, ftVarBytes:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
-      ftDate:
-        ResultSet.UpdateDate(ColumnIndex, RowAccessor.GetDate(FieldIndex, WasNull));
-      ftTime:
-        ResultSet.UpdateTime(ColumnIndex, RowAccessor.GetTime(FieldIndex, WasNull));
-      ftDateTime:
-        ResultSet.UpdateTimestamp(ColumnIndex,
-          RowAccessor.GetTimestamp(FieldIndex, WasNull));
+      ftDate: begin
+          RowAccessor.GetDate(FieldIndex, WasNull, D);
+          ResultSet.UpdateDate(ColumnIndex, D);
+        end;
+      ftTime: begin
+          RowAccessor.GetTime(FieldIndex, WasNull, T);
+          ResultSet.UpdateTime(ColumnIndex, T);
+        end;
+      ftDateTime: begin
+          RowAccessor.GetTimestamp(FieldIndex, WasNull, TS);
+          ResultSet.UpdateTimestamp(ColumnIndex, TS);
+        end;
       {$IFDEF WITH_WIDEMEMO}
       ftWideMemo,
       {$ENDIF}
@@ -825,6 +821,12 @@ begin
           ResultValues[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
         ftBytes, ftVarBytes, ftBlob, ftGraphic:
           ResultValues[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
+        {$IFDEF WITH_FTGUID}
+        ftGUID: begin
+                  InitializeVariant(ResultValues[I], vtGUID);
+                  ResultSet.GetGUID(ColumnIndex, ResultValues[I].VGUID);
+                end;
+        {$ENDIF}
         else
           ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
       end;
@@ -875,7 +877,7 @@ begin
       {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
         ResultValues[I] := EncodeInteger(RowAccessor.GetLong(ColumnIndex, WasNull));
       ftDate, ftTime, ftDateTime:
-        ResultValues[I] := EncodeDateTime(RowAccessor.GetTimestamp(ColumnIndex, WasNull));
+        ResultValues[I] := EncodeDateTime(RowAccessor.GetDouble(ColumnIndex, WasNull));
       ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
         ResultValues[I] := EncodeUnicodeString(RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
       ftBytes, ftVarBytes:
@@ -1009,7 +1011,7 @@ end;
   @return <code> if values are equal.
 }
 function CompareDataFields(const KeyValues, RowValues: TZVariantDynArray;
-  PartialKey: Boolean; CaseInsensitive: Boolean): Boolean;
+  Const VariantManager: IZVariantManager; PartialKey, CaseInsensitive: Boolean): Boolean;
 var
   I: Integer;
   {$IFNDEF NEXTGEN}
@@ -1024,8 +1026,8 @@ begin
       vtUnicodeString{$IFDEF UNICODE}, vtString{$ENDIF}:
         begin
     {$ENDIF}
-          WValue1 := SoftVarManager.GetAsUnicodeString(KeyValues[I]);
-          WValue2 := SoftVarManager.GetAsUnicodeString(RowValues[I]);
+          WValue1 := VariantManager.GetAsUnicodeString(KeyValues[I]);
+          WValue2 := VariantManager.GetAsUnicodeString(RowValues[I]);
           if CaseInsensitive then begin
             if PartialKey then begin
               {$IFDEF MSWINDOWS}
@@ -1056,17 +1058,17 @@ begin
               {$ENDIF}
             {$ENDIF}
           end else
-            Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+            Result := VariantManager.Compare(KeyValues[I], RowValues[I]) = 0;
     {$IFNDEF NEXTGEN}
         end;
       else
       begin
         {$IFDEF NO_ANSISTRING}
-        Value1 := SoftVarManager.GetAsRawByteString(KeyValues[I]);
-        Value2 := SoftVarManager.GetAsRawByteString(RowValues[I]);
+        Value1 := VariantManager.GetAsRawByteString(KeyValues[I]);
+        Value2 := VariantManager.GetAsRawByteString(RowValues[I]);
         {$ELSE}
-        Value1 := SoftVarManager.GetAsAnsiString(KeyValues[I]);
-        Value2 := SoftVarManager.GetAsAnsiString(RowValues[I]);
+        Value1 := VariantManager.GetAsAnsiString(KeyValues[I]);
+        Value2 := VariantManager.GetAsAnsiString(RowValues[I]);
         {$ENDIF}
         if CaseInsensitive then begin
           Value1 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(Value1);
@@ -1077,7 +1079,7 @@ begin
         end else begin
           if PartialKey
           then Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
-          else Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
+          else Result := VariantManager.Compare(KeyValues[I], RowValues[I]) = 0;
         end;
       end;
     end;
@@ -1236,34 +1238,28 @@ begin
           WValue2 := {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(WValue2);
 
         P1 := Pointer(WValue1);
-        if P1 = nil then begin //if partial value is '' then the avalutaion is always true
-          Result := True;
+        if P1 = nil then //if partial value is '' then the evaluatin is always true
           Exit;
-        end;
+        {$IF not (defined(FPC) and not defined(MSWINDOWS))}
         P2 := Pointer(WValue2);
+        {$IFEND}
         L1 := Length(WValue1);
         L2 := Length(WValue2);
-        if (P2 <> P1) and (L2 >= L1) then begin
-          if L2 < L1 then
-            Exit;
-          {$IFDEF MSWINDOWS}
-          Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
-          {$ELSE}
-            {$IFDEF UNICODE}
-            Result := SysUtils.AnsiStrLComp(P2, P1, L1) = 0;
-            {$ELSE} //EH: what are the fpc non windows wide comparision here?
-              AValue1 := AnsiString(WValue1);
-              AValue2 := AnsiString(WValue2);
-              L1 := Length(AValue1);
-              L2 := Length(AValue2);
-              if L2 < L1 then
-                Exit;
-              P1 := Pointer(AValue1);
-              P2 := Pointer(AValue1);
-              Result := AnsiStrLComp(P2, P1, L1) = 0;
-            {$ENDIF}
-          {$ENDIF}
+        if L2 < L1 then begin //if resultset value is shorter than keyvalue the evaluatin is always false
+          Result := False;
+          Exit;
         end;
+        {$IFDEF MSWINDOWS}
+        Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
+        {$ELSE}
+          {$IFDEF UNICODE}
+          Result := SysUtils.AnsiStrLComp(P2, P1, L1) = 0;
+          {$ELSE} //https://www.freepascal.org/docs-html/rtl/sysutils/widecomparestr.html
+            if L2 > L1 then
+              WValue2 := Copy(WValue2, 1, L2);
+            Result := WideCompareStr(WValue1, WValue2) = 0;
+          {$ENDIF}
+        {$ENDIF}
       {$IFNDEF NEXTGEN}
       end else begin
         AValue1 := KeyValues[I].VRawByteString;
@@ -1313,7 +1309,7 @@ begin
         stTime,
         stTimestamp:  begin
             DT := ResultSet.GetTimestamp(ColumnIndex);
-            Result := KeyValues[I].VDateTime = D;
+            Result := ZCompareDateTime(KeyValues[I].VDateTime, DT) = 0;;
           end;
         stGUID: begin
                   ResultSet.GetGUID(ColumnIndex, UID);
@@ -1357,71 +1353,6 @@ begin
       and not (Fields[I].DataType in [ftBlob, ftGraphic, ftMemo, ftBytes, ftVarBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
       AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName), ',');
   end;
-end;
-
-{**
-  Converts datetime value into TDataset internal presentation.
-  @param DataType a type of date-time field.
-  @param Data a data which contains a value.
-  @param Buffer a field buffer pointer
-}
-procedure DateTimeToNative(DataType: TFieldType; Data: TDateTime;
-  Buffer: Pointer);
-var
-  TimeStamp: TTimeStamp;
-begin
-  TimeStamp := DateTimeToTimeStamp(Data);
-  case DataType of
-    ftDate: Integer(Buffer^) := TimeStamp.Date;
-    ftTime: Integer(Buffer^) := TimeStamp.Time;
-  else
-    TDateTime(Buffer^) := TimeStampToMSecs(TimeStamp);
-  end;
-end;
-
-{**
-  Converts date times from TDataset internal presentation into datetime value.
-  @param DataType a type of date-time field.
-  @param Buffer a field buffer pointer
-  @return a data which contains a value.
-}
-function NativeToDateTime(DataType: TFieldType; Buffer: Pointer): TDateTime;
-{$IFNDEF OLDFPC}
-var
-  TimeStamp: TTimeStamp;
-begin
-  case DataType of
-    ftDate:
-      begin
-        TimeStamp.Time := 0;
-        TimeStamp.Date := Integer(Buffer^);
-      end;
-    ftTime:
-      begin
-        {$IFDEF WITH_FPC_FTTIME_BUG}
-        TimeStamp := DateTimeToTimeStamp(TDateTime(Buffer^));
-        {$ELSE}
-        TimeStamp.Time := Integer(Buffer^);
-        TimeStamp.Date := DateDelta;
-        {$ENDIF}
-      end;
-  else
-    try
-      {$IF not defined(cpui386) and defined(FPC)}
-      TimeStamp := MSecsToTimeStamp(System.Trunc(Int(TDateTime(Buffer^))));
-      {$ELSE}
-        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
-      {$IFEND}
-    except
-      TimeStamp.Time := 0;
-      TimeStamp.Date := 0;
-    end;
-  end;
-  Result := TimeStampToDateTime(TimeStamp);
-{$ELSE}
-begin
-  Result := TDateTime(Buffer^);
-{$ENDIF}
 end;
 
 {**

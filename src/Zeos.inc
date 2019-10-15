@@ -124,6 +124,7 @@
   {$DEFINE WITH_TFIELD_FREEBUFFERS}       //TField has virtual FreeBuffers procedure
   {$DEFINE WITH_FIELD_VALIDATELOOKUPINFO} //TField has private ValidateLookupInfo() procedure
   {$DEFINE WITH_FUNIDIRECTIONAL}          //TDataSet have SetUniDirectional and GetUnidirectional
+  {$DEFINE WITH_FTTIMESTAMP}              //TSQLTimeStamp record and field exists
 
   //now compiler related (un)defines do follow up here
   {$IF CompilerVersion < 15}
@@ -207,7 +208,7 @@
                 {$DEFINE WITH_FTSINGLE}               // ftSingle is supported
                 {$DEFINE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
                 {$DEFINE DELPHI14_UP}                 // used in ZTestStoredProcedure.pas only
-
+                {$DEFINE WITH_FTTIMESTAMP_OFFSET}     // TSQLTimeStampOffset record and field exists
                 {$IF CompilerVersion >= 22} //Delphi XE+
                   {$DEFINE WITH_tagVARIANT_UINT64}          // ActivX.tagVariant supports UInt64 Values
                   {$DEFINE WITH_FORMATSETTINGS}

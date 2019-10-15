@@ -2082,7 +2082,7 @@ begin
   inherited;
   { add FreeTDS supported charactersets }
   AddCodePage('UTF-8', 1, ceUTF8, zCP_UTF8,  '', 4, True);
-  AddCodePage('ISO-8859-1', 2, ceAnsi, zCP_L1_ISO_8859_1, '', 1, False);
+  AddCodePage('ISO-8859-1', 2, ceAnsi, zCP_L1_ISO_8859_1, '', 1, True);
   AddCodePage('ASCII', 3, ceAnsi, zCP_us_ascii, '', 1, False);
 end;
 

@@ -122,9 +122,9 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
+    procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
+    procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
     function GetBlob(ColumnIndex: Integer): IZBlob;
 
     {$IFDEF USE_SYNCOMMONS}
@@ -329,7 +329,7 @@ begin
                               PDBDate(FData)^.month, PDBDate(FData)^.day);
                             JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('")')
+                            then JSONWriter.AddShort('T00:00:00Z")')
                             else JSONWriter.Add('"');
                           end;
         DBTYPE_DBTIME:    begin
@@ -340,31 +340,31 @@ begin
                             end else
                               JSONWriter.Add('"');
                             TimeToIso8601PChar(@FTinyBuffer[0], True, PDBTime(FData)^.hour,
-                              PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', False);
+                              PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
                           end;
         DBTYPE_DBTIMESTAMP: begin
-                              if jcoMongoISODate in JSONComposeOptions then
-                                JSONWriter.AddShort('ISODate("')
-                              else if jcoDATETIME_MAGIC in JSONComposeOptions then
-                                JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else
-                                JSONWriter.Add('"');
-                              if PDBTimeStamp(FData)^.year < 0 then
-                                JSONWriter.Add('-');
-                              DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PDBTimeStamp(FData)^.Year),
-                                 PDBTimeStamp(FData)^.Month, PDBTimeStamp(FData)^.Day);
-                              MS := (PDBTimeStamp(FData)^.fraction * Byte(ord(jcoMilliseconds in JSONComposeOptions))) div 1000000;
-                              TimeToIso8601PChar(@FTinyBuffer[10], True, PDBTimeStamp(FData)^.Hour,
-                                PDBTimeStamp(FData)^.Minute, PDBTimeStamp(FData)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
-                              if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('Z")')
-                              else JSONWriter.Add('"');
-                            end;
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else
+                              JSONWriter.Add('"');
+                            if PDBTimeStamp(FData)^.year < 0 then
+                              JSONWriter.Add('-');
+                            DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PDBTimeStamp(FData)^.Year),
+                               PDBTimeStamp(FData)^.Month, PDBTimeStamp(FData)^.Day);
+                            MS := (PDBTimeStamp(FData)^.fraction * Byte(ord(jcoMilliseconds in JSONComposeOptions))) div 1000000;
+                            TimeToIso8601PChar(@FTinyBuffer[10], True, PDBTimeStamp(FData)^.Hour,
+                              PDBTimeStamp(FData)^.Minute, PDBTimeStamp(FData)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z")')
+                            else JSONWriter.Add('"');
+                          end;
         DBTYPE_HCHAPTER:  JSONWriter.{$IFDEF CPU64}AddQ{$ELSE}AddU{$ENDIF}(PCHAPTER(FData)^);
         //DBTYPE_FILETIME = 64;
         //DBTYPE_PROPVARIANT = 138;
@@ -592,23 +592,23 @@ set_from_buf:           Len := Result - PAnsiChar(@FTinyBuffer[0]);
                       end;
     DBTYPE_DBDATE:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToRawSQLDate(Abs(PDBDate(FData)^.year),
+                        Len := DateToRaw(Abs(PDBDate(FData)^.year),
                           PDBDate(FData)^.month, PDBDate(FData)^.day,
                           Result, ConSettings.ReadFormatSettings.DateFormat,
                           False, PDBDate(FData)^.year < 0);
                       end;
     DBTYPE_DBTIME:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToRawSQLTime(PDBTime(FData)^.hour,
+                        Len := TimeToRaw(PDBTime(FData)^.hour,
                           PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
-                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToRawSQLTimeStamp(Word(Abs(PDBTimeStamp(FData)^.year)),
+                        Len := DateTimeToRaw(Word(Abs(PDBTimeStamp(FData)^.year)),
                           PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
                           PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
-                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction div 1000000,
+                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction,
                           Result, ConSettings.ReadFormatSettings.DateTimeFormat,
                           False, PDBTimeStamp(FData)^.year < 0);
                       end;
@@ -741,23 +741,23 @@ set_from_buf:           Len := Result - PWideChar(@FTinyBuffer[0]);
                       end;
     DBTYPE_DBDATE:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToUnicodeSQLDate(Abs(PDBDate(FData)^.year),
+                        Len := DateToUni(Abs(PDBDate(FData)^.year),
                           PDBDate(FData)^.month, PDBDate(FData)^.day,
                           Result, ConSettings.ReadFormatSettings.DateFormat,
                           False, PDBDate(FData)^.year < 0);
                       end;
     DBTYPE_DBTIME:    begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToUnicodeSQLTime(PDBTime(FData)^.hour,
+                        Len := TimeToUni(PDBTime(FData)^.hour,
                           PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
-                          Result, ConSettings.ReadFormatSettings.TimeFormat, False);
+                          Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
                         Result := @FTinyBuffer[0];
-                        Len := DateTimeToUnicodeSQLTimeStamp(Abs(PDBTimeStamp(FData)^.year),
+                        Len := DateTimeToUni(Abs(PDBTimeStamp(FData)^.year),
                           PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
                           PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
-                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction div 1000000,
+                          PDBTimeStamp(FData)^.second, PDBTimeStamp(FData)^.fraction,
                           Result, ConSettings.ReadFormatSettings.DateTimeFormat,
                           False, PDBTimeStamp(FData)^.year < 0);
                       end;
@@ -1152,6 +1152,52 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>java.sql.Date</code> object in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+procedure TZAbstractOleDBResultSet.GetDate(ColumnIndex: Integer;
+  var Result: TZDate);
+label Fill;
+begin
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FwType of
+      DBTYPE_DATE: DecodeDateTimeToDate(PDateTime(FData)^, Result);
+      DBTYPE_WSTR: LastWasNull := not TryPCharToDate(PWideChar(FData), FLength shr 1,
+        ConSettings.ReadFormatSettings, Result);
+      DBTYPE_DBDATE: begin
+              Result.Year := Abs(PDBDate(FData)^.year);
+              Result.Month := PDBDate(FData)^.month;
+              Result.Day := PDBDate(FData)^.day;
+              Result.IsNegative := PDBDate(FData)^.year < 0;
+            end;
+      DBTYPE_DBTIME: goto Fill;
+      DBTYPE_DBTIMESTAMP: begin
+              Result.Year := Abs(PDBTimeStamp(FData)^.year);
+              Result.Month := PDBTimeStamp(FData)^.month;
+              Result.Day := PDBTimeStamp(FData)^.day;
+              Result.IsNegative := PDBTimeStamp(FData)^.year < 0;
+            end;
+      DBTYPE_DBTIMESTAMPOFFSET: begin
+              Result.Year := Abs(PDBTIMESTAMPOFFSET(FData)^.year);
+              Result.Month := PDBTIMESTAMPOFFSET(FData)^.month;
+              Result.Day := PDBTIMESTAMPOFFSET(FData)^.day;
+              Result.IsNegative := PDBTIMESTAMPOFFSET(FData)^.year < 0;
+            end;
+      else DecodeDateTimeToDate(GetDouble(ColumnIndex), Result);
+    end
+  else
+
+Fill: if SizeOf(TZDate) = SizeOf(Int64)
+    then PInt64(@Result.Year)^ := 0
+    else FillChar(Result, Sizeof(TZDate), #0);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>double</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1330,74 +1376,47 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>java.sql.Date</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractOleDBResultSet.GetDate(ColumnIndex: Integer): TDateTime;
-var Failed: Boolean;
-begin
-  Result := 0;
-  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
-    case FwType of
-      DBTYPE_DATE: Result := Trunc(PDateTime(FData)^);
-(*
-      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
-      DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(FData),
-          FLength);*)
-      DBTYPE_WSTR:
-        Result := UnicodeSQLDateToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
-      DBTYPE_DBDATE:
-        Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
-          PDBDate(FData)^.day);
-      DBTYPE_DBTIME: Result := 0;
-      DBTYPE_DBTIMESTAMP:
-        Result := EncodeDate(Abs(PDBTimeStamp(FData)^.year),
-          PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day);
-      else LastWasNull := True;
-    end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>java.sql.Time</code> object in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractOleDBResultSet.GetTime(ColumnIndex: Integer): TDateTime;
-var Failed: Boolean;
+procedure TZAbstractOleDBResultSet.GetTime(ColumnIndex: Integer;
+  var Result: TZTime);
+label Fill;
 begin
-  Result := 0;
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FwType of
-      DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := PDateTime(FData)^;
-          stDate: Result := 0;
-          else
-            Result := Frac(PDateTime(FData)^);
-        end;
-      DBTYPE_WSTR:
-        Result := UnicodeSQLTimeToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
-      DBTYPE_DBDATE: Result := 0;
-      DBTYPE_DBTIME:
-        Result := EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
-            PDBTime(FData)^.second,0);
-      DBTYPE_DBTIME2:
-        Result := EncodeTime(PDBTime2(FData)^.hour, PDBTime2(FData)^.minute,
-            PDBTime2(FData)^.second,PDBTime2(FData)^.fraction div 1000000);
-      DBTYPE_DBTIMESTAMP:
-        Result := EncodeTime(PDBTimeStamp(FData)^.hour,
-                    PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
-                    PDBTimeStamp(FData)^.fraction div 1000000);
-      else LastWasNull := True;
-    end;
+      DBTYPE_DATE:    DecodeDateTimeToTime(PDateTime(FData)^, Result);
+      DBTYPE_WSTR:    LastWasNull := not TryPCharToTime(PWideChar(FData), FLength shr 1,
+                        ConSettings^.ReadFormatSettings, Result);
+      DBTYPE_DBDATE:  goto fill;
+      DBTYPE_DBTIME: begin
+                      Result.Hour := PDBTime(FData)^.hour;
+                      Result.Minute := PDBTime(FData)^.minute;
+                      Result.Second := PDBTime(FData)^.second;
+                      Result.Fractions := 0;
+                      Result.IsNegative := False;
+                    end;
+      DBTYPE_DBTIME2: begin
+                      Result.Hour := PDBTime2(FData)^.hour;
+                      Result.Minute := PDBTime2(FData)^.minute;
+                      Result.Second := PDBTime2(FData)^.second;
+                      Result.Fractions := PDBTime2(FData)^.fraction;
+                      Result.IsNegative := False;
+                    end;
+      DBTYPE_DBTIMESTAMP: begin
+                      Result.Hour := PDBTimeStamp(FData)^.hour;
+                      Result.Minute := PDBTimeStamp(FData)^.minute;
+                      Result.Second := PDBTimeStamp(FData)^.second;
+                      Result.Fractions := PDBTimeStamp(FData)^.fraction;
+                      Result.IsNegative := False;
+                    end;
+      else DecodeDateTimeToTime(GetDouble(ColumnIndex), Result);
+    end
+  else
+Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
 end;
 
 {**
@@ -1410,41 +1429,79 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZAbstractOleDBResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
-var Failed: Boolean;
-  DT: TDateTime;
+procedure TZAbstractOleDBResultSet.GetTimestamp(ColumnIndex: Integer;
+  var Result: TZTimeStamp);
+label Fill;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FwType of
       DBTYPE_DBTIMESTAMP: begin
-              DT := EncodeDate(Abs(PDBTimeStamp(FData)^.year),
-                    PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day);
-              Result := EncodeTime(PDBTimeStamp(FData)^.hour,
-                    PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
-                    PDBTimeStamp(FData)^.fraction div 1000000);
-              if DT < 0
-              then Result := DT-Result
-              else Result := DT+Result;
+            if SizeOf(TDBTimeStamp) = SizeOf(TZTimeStamp)-6 then
+              PDBTimeStamp(@Result.Year)^ := PDBTimeStamp(FData)^
+            else begin
+              Result.Month := PDBTimeStamp(FData)^.month;
+              Result.Day := PDBTimeStamp(FData)^.day;
+              Result.Hour := PDBTimeStamp(FData)^.hour;
+              Result.Minute := PDBTimeStamp(FData)^.minute;
+              Result.Second := PDBTimeStamp(FData)^.second;
+              Result.Fractions := PDBTimeStamp(FData)^.fraction;
             end;
-      DBTYPE_DBDATE:
-        Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
-          PDBDate(FData)^.day);
-      DBTYPE_DBTIME:
-        Result := EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
-            PDBTime(FData)^.second,0);
-      DBTYPE_DBTIME2:
-        Result := EncodeTime(PDBTime2(FData)^.hour, PDBTime2(FData)^.minute,
-            PDBTime2(FData)^.second,PDBTime2(FData)^.fraction div 1000000);
-      DBTYPE_DATE:
-        Result := PDateTime(FData)^;
-      DBTYPE_WSTR:
-        Result := UnicodeSQLTimeStampToDateTime(PWideChar(FData), FLength shr 1, ConSettings^.ReadFormatSettings, Failed);
-      else begin
-        LastWasNull := True;
-        Result := 0;
-      end;
+            Result.Year := Abs(PDBTimeStamp(FData)^.year);
+            PCardinal(@Result.TimeZoneHour)^ := 0;
+            Result.IsNegative := PDBTimeStamp(FData)^.year < 0;
+          end;
+      DBTYPE_DBTIMESTAMPOFFSET: begin
+            if SizeOf(TDBTIMESTAMPOFFSET) = SizeOf(TZTimeStamp)-2 then
+              PDBTIMESTAMPOFFSET(@Result.Year)^ := PDBTIMESTAMPOFFSET(FData)^
+            else begin
+              Result.Month := PDBTIMESTAMPOFFSET(FData)^.month;
+              Result.Day := PDBTIMESTAMPOFFSET(FData)^.day;
+              Result.Hour := PDBTIMESTAMPOFFSET(FData)^.hour;
+              Result.Minute := PDBTIMESTAMPOFFSET(FData)^.minute;
+              Result.Second := PDBTIMESTAMPOFFSET(FData)^.second;
+              Result.Fractions := PDBTIMESTAMPOFFSET(FData)^.fraction;
+              Result.TimeZoneHour := PDBTIMESTAMPOFFSET(FData)^.timezone_hour;
+              Result.TimeZoneMinute := PDBTIMESTAMPOFFSET(FData)^.timezone_minute;
+            end;
+            Result.Year := Abs(PDBTIMESTAMPOFFSET(FData)^.year);
+            Result.IsNegative := PDBTIMESTAMPOFFSET(FData)^.year < 0;
+          end;
+      DBTYPE_DBDATE: begin
+              Result.Year := Abs(PDBDate(FData)^.year);
+              Result.Month := PDBDate(FData)^.month;
+              Result.Day := PDBDate(FData)^.day;
+              PInt64(@Result.Hour)^ := 0;
+              PInt64(@Result.Fractions)^ := 0;
+              Result.IsNegative := PDBDate(FData)^.year < 0;
+            end;
+      DBTYPE_DBTIME: begin
+              PInt64(@Result.Year)^ := 0;
+              Result.Hour := PDBTime(FData)^.hour;
+              Result.Minute := PDBTime(FData)^.minute;
+              Result.Second := PDBTime(FData)^.second;
+              PInt64(@Result.Fractions)^ := 0;
+              Result.IsNegative := False;
+            end;
+      DBTYPE_DBTIME2: begin
+              PInt64(@Result.Year)^ := 0;
+              Result.Hour := PDBTime2(FData)^.hour;
+              Result.Minute := PDBTime2(FData)^.minute;
+              Result.Second := PDBTime2(FData)^.second;
+              Result.Fractions := PDBTime2(FData)^.fraction;
+              PCardinal(@Result.TimeZoneHour)^ := 0;
+              Result.IsNegative := False;
+            end;
+      DBTYPE_DATE: DecodeDateTimeToTimeStamp(PDateTime(FData)^,Result);
+      DBTYPE_WSTR: begin
+          LastWasNull := not TryPCharToTimeStamp(PWideChar(FData), FLength shr 1,
+                ConSettings^.ReadFormatSettings, Result);
+          if LastWasNull then
+            goto Fill;
+        end;
+      else DecodeDateTimeToTimeStamp(GetDouble(ColumnIndex),Result);
     end
-  else Result := 0;
+  else
+Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
 end;
 
 {**
@@ -1618,6 +1675,10 @@ var
   FData: PPointer;
   FLength: PDBLENGTH;
   Len: NativeUInt;
+  BCD: TBCD; //one val on stack 4 all
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
 begin
   if Assigned(FResultSet)
   then Result := FResultSet.Next
@@ -1647,7 +1708,10 @@ begin
           DBTYPE_R4	                  : RowAccessor.SetFloat(I, PSingle(FData^)^);
           DBTYPE_R8                   : RowAccessor.SetDouble(I, PDouble(FData^)^);
           DBTYPE_CY                   : RowAccessor.SetCurrency(I, PCurrency(FData^)^);
-          DBTYPE_DATE                 : RowAccessor.SetTimeStamp(I, PDateTime(FData^)^);
+          DBTYPE_DATE                 : begin
+                                          DecodeDateTimeToTimeStamp(PDateTime(FData^)^, TS);
+                                          RowAccessor.SetTimeStamp(I, TS);
+                                        end;
           DBTYPE_WSTR                 : if DBBINDING.cbMaxLen = 0 then
                                           RowAccessor.SetBlob(I, TZOleDBCLOB.Create(FResultSet.FRowSet,
                                             FResultSet.FLobAccessors[DBBINDING.obLength],
@@ -1715,10 +1779,34 @@ begin
                                           RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
                                         end;
           //DBTYPE_UDT = 132;
-          DBTYPE_DBDATE               : RowAccessor.SetDate(I, EncodeDate(Abs(PDBDate(FData^)^.year), PDBDate(FData^)^.month, PDBDate(FData^)^.day));
-          DBTYPE_DBTIME               : RowAccessor.SetTime(I, EncodeTime(PDBTime(FData^)^.hour, PDBTime(FData^)^.minute, PDBTime(FData^)^.second, 0));
-          DBTYPE_DBTIMESTAMP          : RowAccessor.SetTimestamp(I, EncodeDate(Abs(PDBTimeStamp(FData^)^.year), PDBTimeStamp(FData^)^.month, PDBTimeStamp(FData^)^.day)
-                                                                   +EncodeTime(PDBTimeStamp(FData^)^.hour, PDBTimeStamp(FData^)^.minute, PDBTimeStamp(FData^)^.second, PDBTimeStamp(FData^)^.fraction div 1000000));
+          DBTYPE_DBDATE               : begin
+                                          D.Year := Abs(PDBDate(FData^)^.year);
+                                          D.Month := PDBDate(FData^)^.month;
+                                          D.Day := PDBDate(FData^)^.day;
+                                          D.IsNegative := PDBDate(FData^)^.year < 0;
+                                          RowAccessor.SetDate(I, D);
+                                        end;
+          DBTYPE_DBTIME               : begin
+                                          T.Hour := PDBTime(FData^)^.hour;
+                                          T.Minute := PDBTime(FData^)^.minute;
+                                          T.Second := PDBTime(FData^)^.second;
+                                          T.Fractions := 0;
+                                          T.IsNegative := False;
+                                          RowAccessor.SetTime(I, T);
+                                        end;
+          DBTYPE_DBTIMESTAMP          : begin
+                                          TS.Year := Abs(PDBTimeStamp(FData^)^.year);
+                                          Ts.Month := PDBTimeStamp(FData^)^.month;
+                                          TS.Day := PDBTimeStamp(FData^)^.day;
+                                          TS.Hour := PDBTimeStamp(FData^)^.hour;
+                                          TS.Minute := PDBTimeStamp(FData^)^.minute;
+                                          TS.Second := PDBTimeStamp(FData^)^.second;
+                                          TS.Fractions := PDBTimeStamp(FData^)^.fraction;
+                                          Ts.TimeZoneHour := 0;
+                                          TS.TimeZoneMinute := 0;
+                                          TS.IsNegative := PDBTimeStamp(FData^)^.year < 0;
+                                          RowAccessor.SetTimestamp(I, TS);
+                                        end;
           {SQL Server types only }
           DBTYPE_XML                  : RowAccessor.SetBlob(I, TZOleDBCLOB.Create(FResultSet.FRowSet,
                                             FResultSet.FLobAccessors[DBBINDING.obLength],
@@ -1726,7 +1814,14 @@ begin
                                             FResultSet.FChunkSize, ConSettings));
 
           //DBTYPE_TABLE = 143; // introduced in SQL 2008
-          DBTYPE_DBTIME2              : RowAccessor.SetTime(I, EncodeTime(PDBTime2(FData^)^.hour, PDBTime2(FData^)^.minute, PDBTime2(FData^)^.second, PDBTime2(FData^)^.fraction div 1000000));
+          DBTYPE_DBTIME2              : begin
+                                          T.Hour := PDBTime2(FData^)^.hour;
+                                          T.Minute := PDBTime2(FData^)^.minute;
+                                          T.Second := PDBTime2(FData^)^.second;
+                                          T.Fractions := PDBTime2(FData^)^.fraction;
+                                          T.IsNegative := False;
+                                          RowAccessor.SetTime(I, T);
+                                        end;
           //DBTYPE_DBTIMESTAMPOFFSET = 146; // introduced in SQL 2008
           //DBTYPE_FILETIME = 64;
           //DBTYPE_PROPVARIANT = 138;

@@ -158,21 +158,21 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
-    function GetBoolean(ColumnIndex: Integer): Boolean; //override;
-    function GetInt(ColumnIndex: Integer): Integer; //override;
-    function GetUInt(ColumnIndex: Integer): Cardinal; //override;
-    function GetLong(ColumnIndex: Integer): Int64; //override;
-    function GetULong(ColumnIndex: Integer): UInt64; //override;
-    function GetFloat(ColumnIndex: Integer): Single; //override;
-    function GetDouble(ColumnIndex: Integer): Double; //override;
-    function GetCurrency(ColumnIndex: Integer): Currency; //override;
-    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);// override;
-    procedure GetGUID(ColumnIndex: Integer; Var Result: TGUID); //override;
-    function GetBytes(ColumnIndex: Integer): TBytes; //override;
-    function GetDate(ColumnIndex: Integer): TDateTime; //override;
-    function GetTime(ColumnIndex: Integer): TDateTime; //override;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime; //override;
-    function GetBlob(ColumnIndex: Integer): IZBlob; //override;
+    function GetBoolean(ColumnIndex: Integer): Boolean;
+    function GetInt(ColumnIndex: Integer): Integer;
+    function GetUInt(ColumnIndex: Integer): Cardinal;
+    function GetLong(ColumnIndex: Integer): Int64;
+    function GetULong(ColumnIndex: Integer): UInt64;
+    function GetFloat(ColumnIndex: Integer): Single;
+    function GetDouble(ColumnIndex: Integer): Double;
+    function GetCurrency(ColumnIndex: Integer): Currency;
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    procedure GetGUID(ColumnIndex: Integer; Var Result: TGUID);
+    function GetBytes(ColumnIndex: Integer): TBytes;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
+    procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
+    function GetBlob(ColumnIndex: Integer): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;
     {$ENDIF}
@@ -927,9 +927,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+procedure TZDBLibResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
+var TS: TZTimeStamp;
 begin
-  Result := System.Int(GetTimestamp(ColumnIndex));
+  GetTimestamp(ColumnIndex, TS);
+  ZSysUtils.DateFromTimeStamp(TS, Result);
 end;
 
 {**
@@ -941,9 +943,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+procedure TZDBLibResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
+var TS: TZTimeStamp;
 begin
-  Result := Frac(GetTimestamp(ColumnIndex));
+  GetTimestamp(ColumnIndex, TS);
+  ZSysUtils.TimeFromTimeStamp(TS, Result);
 end;
 
 {**
@@ -956,42 +960,40 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZDBLibResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+procedure TZDBLibResultSet.GetTimestamp(ColumnIndex: Integer;
+  Var Result: TZTimeStamp);
 var
   DL: Integer;
   Data: Pointer;
-  TempDate: TDBDATETIME;
   tdsTempDate: TTDSDBDATETIME;
-  Failed: Boolean;
+  DT: TDateTime;
+label Fill, Enc;
 begin
   with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     //DBLib -----> Col/Param starts whith index 1
     FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL); //hint DBLib isn't #0 terminated @all
     LastWasNull := Data = nil;
-    Result := 0;
-    if Data <> nil then begin
+    if LastWasNull then
+Fill: Fillchar(Result, SizeOf(TZTimeStamp), #0)
+    else begin
       //Perfect conversion no need to crack and reencode the date.
-      if TDSType = tdsDateTime then
-        if FDBLibConnection.FreeTDS //type diff
-        then Result := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
-        else Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
-      else if (TDSType in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then
-        if PByte(PAnsiChar(Data)+2)^ = Ord(':') then
-          Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
-        else if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Word(DL)) <= 4
-          then Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
-          else Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
-      else begin
-        if FDBLibConnection.FreeTDS then begin//type diff
-          FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsDateTime),
-            @tdsTempDate, SizeOf(tdsTempDate));
-          Result := tdsTempDate.dtdays + 2 + (tdsTempDate.dttime / 25920000);
-        end else begin
-          FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsDateTime),
-            @TempDate, SizeOf(TempDate));
-          Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);
-        end;
+      if TDSType = tdsDateTime then begin
+Enc:    if FDBLibConnection.FreeTDS //type diff
+        then DT := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
+        else DT := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000);
+        DecodeDateTimeToTimeStamp(DT, Result);
+      end else if (TDSType in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then begin
+        if (TDSType in [tdsNText, tdsChar]) then
+          DL := ZDbcUtils.GetAbsorbedTrailingSpacesLen(PAnsichar(Data), DL);
+        LastWasNull := not ZSysUtils.TryPCharToTimeStamp(PAnsichar(Data), DL, ConSettings^.ReadFormatSettings, Result);
+        if LastWasNull then
+          goto Fill;
+      end else begin
+        FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsDateTime),
+          @tdsTempDate, SizeOf(tdsTempDate));
         FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP');
+        Data :=  @tdsTempDate.dtdays;
+        goto Enc;
       end;
     end;
   end;

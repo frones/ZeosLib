@@ -1828,8 +1828,9 @@ var
 
 implementation
 
-uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
-  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding, ZDbcProperties
+uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob,
+  ZSelectSchema, ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding,
+  ZDbcProperties
   {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
@@ -2959,6 +2960,7 @@ begin
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
 
+var D1M1Y1: TDateTime;
 {**
   Retrieves the column value and stores it into the field buffer.
   @param Field an field object to be retrieved.
@@ -2970,6 +2972,11 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
     {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
   ColumnIndex: Integer;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
+  S: TTimeStamp absolute TS;
+  DT: TDateTime;
   bLen: Word;
   P: Pointer;
   RowBuffer: PZRowBuffer;
@@ -2984,10 +2991,54 @@ begin
     if Buffer <> nil then begin
       case Field.DataType of
         { Processes DateTime fields. }
-        ftTime: DateTimeToNative(Field.DataType,
-              RowAccessor.GetTime(ColumnIndex, Result), Buffer);
-        ftDate, ftDateTime: DateTimeToNative(Field.DataType,
-              RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer);
+        ftTime: begin
+                 RowAccessor.GetTime(ColumnIndex, Result, T{%H-});
+                 Result := not TryEncodeTime(T.Hour, T.Minute, T.Second, T.Fractions div NanoSecsPerMSec, DT);
+                 {$IFNDEF OLDFPC}
+                 if Result
+                 then PInteger(Buffer)^ := 0
+                 else begin
+                    PInteger(Buffer)^ := Trunc(DT * MSecsOfDay + 0.1);
+                    if T.IsNegative then
+                      PInteger(Buffer)^ := -PInteger(Buffer)^;
+                 end;
+                 {$ELSE}
+                 PDateTime(Buffer)^ := DT;
+                 {$ENDIF}
+                end;
+        ftDate: begin
+                 RowAccessor.GetDate(ColumnIndex, Result, D);
+                 Result := not TryEncodeDate(D.Year, D.Month, D.Day, DT);
+                 {$IFNDEF OLDFPC}
+                 if Result
+                 then PInteger(Buffer)^ := 0
+                 else begin
+                    PInteger(Buffer)^ := Trunc(DT - D1M1Y1 + 1);
+                    if D.IsNegative then
+                      PInteger(Buffer)^ := -PInteger(Buffer)^;
+                 end;
+                 {$ELSE}
+                 PDateTime(Buffer)^ := DT;
+                 {$ENDIF}
+               end;
+        ftDateTime: begin
+                    RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
+                    Result := not TryTimeStampToDateTime(TS, DT);
+                    S := DateTimeToTimeStamp(DT);
+                    PDateTime(Buffer)^ := TimeStampToMSecs(S);
+                  end;
+        {$IFDEF WITH_FTTIMESTAMP}
+        ftTimeStamp: begin
+                      RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
+                      PSQLTimeStamp(Buffer)^ := PSQLTimeStamp(@TS.Year)^
+                    end;
+        {$ENDIF !WITH_FTTIMESTAMP}
+        {$IFDEF WITH_FTTIMESTAMP_OFFSET}
+        ftTimeStampOffset: begin
+                      RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
+                      PSQLTimeStampOffSet(Buffer)^ := PSQLTimeStampOffSet(@TS.Year)^;
+                    end;
+        {$ENDIF !WITH_FTTIMESTAMP_OFFSET}
         { Processes binary fields. }
         ftVarBytes: begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, PWord(Buffer)^);
@@ -3079,7 +3130,12 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
-  {$IFNDEF CPU64}pi64: PInt64Rec absolute Buffer;{$ENDIF}
+  DT: TDateTime;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
+  UID: TGUID absolute TS;
+  S: TTimeStamp absolute TS;
 begin
   WasNull := False;
   if not Active then
@@ -3108,10 +3164,38 @@ begin
     if Assigned(Buffer) then
     begin
       case Field.DataType of
-        ftDate, ftDateTime: { Processes Date/DateTime fields. }
-          RowAccessor.SetTimestamp(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
-        ftTime: { Processes Time fields. }
-          RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
+        ftDate: begin
+           DT := PInteger(Buffer)^ - 1 + D1M1Y1;
+           DecodeDateTimeToDate(DT, D{%H-});
+           RowAccessor.SetDate(ColumnIndex, D);
+          end;
+        ftTime: begin
+            DT := PInteger(Buffer)^ / MSecsOfDay;
+            DecodeDateTimeToTime(DT, T);
+            RowAccessor.SetTime(ColumnIndex, T);
+          end;
+        ftDateTime: begin
+            {$IFDEF FPC}
+            S := MSecsToTimeStamp(System.Trunc(PDouble(Buffer)^));
+            {$ELSE}
+            S := MSecsToTimeStamp(PDateTime(Buffer)^);
+            {$ENDIF}
+            DT := TimeStampToDateTime(S);
+            DecodeDateTimeToTimeStamp(DT, TS);
+            RowAccessor.SetTimestamp(ColumnIndex, TS);
+          end;
+        {$IFDEF WITH_FTTIMESTAMP}
+        ftTimeStamp: begin
+            PInt64(PAnsiChar(@TS.Year)+SizeOf(TZTimeStamp)-SizeOf(Int64))^ := 0;
+            PSQLTimeStamp(@TS.Year)^ := PSQLTimeStamp(Buffer)^;
+          end;
+        {$ENDIF WITH_FTTIMESTAMP}
+        {$IFDEF WITH_FTTIMESTAMP_OFFSET}
+        ftTimeStampOffset: begin
+            TS.IsNegative := False; //not supported here
+            PSQLTimeStampOffSet(@TS.Year)^ := PSQLTimeStampOffSet(Buffer)^;
+          end;
+        {$ENDIF}
         ftVarBytes: { Processes varbinary fields. }
           RowAccessor.SetBytes(ColumnIndex, PAnsiChar(Buffer)+SizeOf(Word), PWord(Buffer)^);
         ftBytes: { Processes binary array fields. }
@@ -3126,10 +3210,9 @@ begin
         ftString: { Processes string fields. }
           FStringFieldSetter(ColumnIndex, PAnsichar(Buffer));
         {$IFDEF WITH_FTGUID}
-        ftGUID:
-          begin
-            ValidGUIDToBinary(PAnsiChar(Buffer), RowAccessor.GetColumnData(ColumnIndex, WasNull));
-            RowAccessor.SetNotNull(ColumnIndex);
+        ftGUID: begin
+            ValidGUIDToBinary(PAnsiChar(Buffer), @UID.D1);
+            RowAccessor.SetGUID(ColumnIndex, UID);
           end;
         {$ENDIF}
         ftCurrency:
@@ -4494,8 +4577,9 @@ begin
     raise EZDatabaseError.Create(SIncorrectSearchFieldsNumber);
   SetLength(RowValues, Length(DecodedKeyValues));
 
-  if not OnlyDataFields then
-  begin
+  VariantManager := Connection.DbcConnection.GetClientVariantManager;
+
+  if not OnlyDataFields then begin
     { Processes fields if come calculated or lookup fields are involved. }
     {$IFDEF WITH_AllocRecBuf_TRecBuf}
     SearchRowBuffer := PZRowBuffer(AllocRecBuf);
@@ -4522,7 +4606,7 @@ begin
         RetrieveDataFieldsFromRowAccessor(
           FieldRefs, FieldIndices, RowAccessor, RowValues);
 
-        if CompareDataFields(DecodedKeyValues, RowValues,
+        if CompareDataFields(DecodedKeyValues, RowValues, VariantManager,
           PartialKey, CaseInsensitive) then begin
           Result := I + 1;
           Break;
@@ -4539,7 +4623,6 @@ begin
         {$ENDIF}
     end;
   end else begin
-    VariantManager := Connection.DbcConnection.GetClientVariantManager;
     PrepareValuesForComparison(FieldRefs, DecodedKeyValues,
       ResultSet, PartialKey, CaseInsensitive, VariantManager);
 
@@ -5556,20 +5639,20 @@ begin
 end;
 
 function TZField.GetAsDateTime: TDateTime;
-var IsNull: Boolean;
+//var IsNull: Boolean;
 begin
-  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+  {if GetActiveRowBuffer then //need this call to get active RowBuffer.
     Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull)
-  else
+  else}
     Result := 0;
 end;
 
 function TZField.GetAsDate: TDateTime;
-var IsNull: Boolean;
+//var IsNull: Boolean;
 begin
-  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+  {if GetActiveRowBuffer then //need this call to get active RowBuffer.
     Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull)
-  else
+  else}
     Result := 0;
 end;
 
@@ -5577,7 +5660,7 @@ function TZField.GetAsTime: TDateTime;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull)
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetDouble(FFieldIndex, IsNull)
   else
     Result := 0;
 end;
@@ -5595,7 +5678,7 @@ function TZField.GetAsBCD: TBcd;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})
+    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}{%H-}, FmtSettFloatDot{$ENDIF})
   else
     Result := NullBcd;
 end;
@@ -5758,7 +5841,7 @@ function TZField.GetAsGuid: TGUID;
 var IsNull: Boolean;
   Bytes: TBytes;
 begin
-  FillChar(Result, SizeOf(Result), #0);
+  FillChar(Result{%H-}, SizeOf(Result), #0);
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
   begin
     Bytes := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull);
@@ -5889,7 +5972,7 @@ procedure TZField.SetAsDateTime(Value: TDateTime);
 begin
   if IsFieldEditable then
   begin
-    (DataSet as TZAbstractRODataset).FRowAccessor.SetTimestamp(FFieldIndex, Value);
+    //(DataSet as TZAbstractRODataset).FRowAccessor.SetTimestamp(FFieldIndex, Value);
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
@@ -6082,7 +6165,7 @@ begin
       varSingle:    (DataSet as TZAbstractRODataset).FRowAccessor.SetFloat(FFieldIndex, Value);
       varDouble:    (DataSet as TZAbstractRODataset).FRowAccessor.SetDouble(FFieldIndex, Value);
       varCurrency:  (DataSet as TZAbstractRODataset).FRowAccessor.SetCurrency(FFieldIndex, Value);
-      varDate:      (DataSet as TZAbstractRODataset).FRowAccessor.SetTimestamp(FFieldIndex, Value);
+      //varDate:      (DataSet as TZAbstractRODataset).FRowAccessor.SetTimestamp(FFieldIndex, Value);
       varOleStr:    (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Value);
       //varDispatch:
       //varError:
@@ -7500,4 +7583,6 @@ begin
 end;
 {$ENDIF !WITH_TDATASETFIELD}
 
+initialization
+  D1M1Y1 := EncodeDate(1,1,1);
 end.

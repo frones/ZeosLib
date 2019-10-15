@@ -112,9 +112,9 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
+    procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
+    procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
     function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
     function GetBlob(ColumnIndex: Integer): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
@@ -482,7 +482,8 @@ end;
 const rInfinity: RawbyteString = 'Infinity';
 const rNegInfinity: RawbyteString = '-Infinity';
 function TZOracleAbstractResultSet_A.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
-var SQLVarHolder: PZSQLVar;
+var TS: TZTimeStamp;
+  SQLVarHolder: PZSQLVar absolute TS;
 label dbl, sin, set_Result;
   procedure RawFromNVU;
   begin
@@ -602,9 +603,12 @@ set_Result:       Len := Result - @FTinyBuffer[0];
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
-                  ZSysUtils.DateTimeToRawSQLTimeStamp(GetTimeStamp(ColumnIndex),
-                    @FTinyBuffer[0], ConSettings^.ReadFormatSettings, False);
-                  Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
+                  GetTimeStamp(ColumnIndex, TS);
+                  Result := @fTinyBuffer[0];
+                  Len := DateTimeToRaw(TS.Year, TS.Month, TS.Day,
+                    TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                    Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
+                    False, TS.IsNegative);
                 end;
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
@@ -639,7 +643,8 @@ const
 
 function TZOracleAbstractResultSet_A.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
-var SQLVarHolder: PZSQLVar;
+var TS: TZTimeStamp;
+  SQLVarHolder: PZSQLVar absolute TS;
   P: PAnsiChar;
 label dbl, sin, set_from_tmp, set_Result;
   procedure UniFromNVU;
@@ -763,10 +768,12 @@ set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
-                  ZSysUtils.DateTimeToUnicodeSQLTimeStamp(GetTimeStamp(ColumnIndex),
-                    @FTinyBuffer, ConSettings^.ReadFormatSettings, False);
-                  Result := @FTinyBuffer;
-                  Len := ConSettings^.ReadFormatSettings.DateTimeFormatLen;
+                  GetTimeStamp(ColumnIndex, TS);
+                  Result := @fTinyBuffer[0];
+                  Len := DateTimeToUni(TS.Year, TS.Month, TS.Day,
+                    TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                    Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
+                    False, TS.IsNegative);
                 end;
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
@@ -1415,9 +1422,96 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet_A.GetDate(ColumnIndex: Integer): TDateTime;
+procedure TZOracleAbstractResultSet_A.GetDate(ColumnIndex: Integer;
+  var Result: TZDate);
+var
+  SQLVarHolder: PZSQLVar;
+  DT: TDateTime;
+  P: PAnsiChar absolute DT;
+  Len: NativeUInt;
+  Status: sword absolute Len;
+  yr, mnth, dy, hr, mm, ss, fsec: sb4;
+  Year: SmallInt absolute yr;
+  Month: Byte absolute mnth;
+  Day: Byte absolute dy;
+  Hour: Byte absolute hr;
+  Minute: Byte absolute mm;
+  Second: Byte absolute ss;
+  Millis: ub4 absolute fsec;
+  Ptr: POraDate absolute P;
+label Fill;
 begin
-  Result := Int(GetTimeStamp(ColumnIndex));
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDate);
+{$ENDIF}
+  PInt64(@Result.Year)^ := 0;
+  {$R-}
+  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    LastWasNull := True
+  else begin
+    P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
+    LastWasNull := False;
+    case SQLVarHolder.dty of
+      { the supported String types we use }
+      SQLT_AFC,
+      SQLT_VST,
+      SQLT_VCS,
+      SQLT_LVC,
+      SQLT_CLOB: begin
+                  P := GetPAnsiChar(ColumnIndex, Len);
+                  LastWasNull := not TryPCharToDate(P, Len, ConSettings^.ReadFormatSettings, Result);
+                end;
+      SQLT_INT,
+      SQLT_UIN,
+      SQLT_FLT,
+      SQLT_BFLOAT,
+      SQLT_BDOUBLE,
+      SQLT_VNU: begin
+                  DT := GetDouble(ColumnIndex);
+                  DecodeDateTimeToDate(DT, Result);
+                end;
+      SQLT_DAT: begin
+                  if Ptr^.Cent <= 100 then begin
+                    Result.IsNegative := True;
+                    Result.Year := Ptr^.Cent*100+Ptr^.Year-100;
+                  end else begin
+                    Result.IsNegative := False;
+                    Result.Year := (Ptr^.Cent-100)*100+Ptr^.Year-100;
+                  end;
+                  Result.Month := Ptr^.Month;
+                  Result.Day := Ptr^.Day;
+                end;
+      SQLT_INTERVAL_DS:
+        begin
+          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle,
+            @dy, @hr, @mm, @ss, @fsec, PPOCIDescriptor(P)^);
+          if (Status = OCI_SUCCESS) then
+            Result.Day := dy;
+        end;
+      SQLT_INTERVAL_YM: begin
+          Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FErrorHandle, @yr, @mnth, PPOCIDescriptor(P)^);
+          if (Status = OCI_SUCCESS) then begin
+            Result.Year := yr;
+            Result.Month := mnth;
+          end;
+        end;
+      SQLT_TIMESTAMP_TZ,
+      SQLT_TIMESTAMP_LTZ,
+      SQLT_TIMESTAMP: begin
+          Status := FPlainDriver.OCIDateTimeGetDate(FConnectionHandle, FErrorHandle,
+            PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-});
+          if (Status = OCI_SUCCESS) then begin
+            Result.Year :=  Abs(Year);
+            Result.Month := Month;
+            Result.Day := Day;
+            Result.IsNegative := Year < 0;
+          end;
+        end;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
+    end;
+  end
 end;
 
 {**
@@ -1429,9 +1523,93 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet_A.GetTime(ColumnIndex: Integer): TDateTime;
+procedure TZOracleAbstractResultSet_A.GetTime(ColumnIndex: Integer; Var Result: TZTime);
+var
+  SQLVarHolder: PZSQLVar;
+  DT: TDateTime;
+  P: PAnsiChar absolute DT;
+  Len: NativeUInt;
+  Status: sword absolute Len;
+  yr, mnth, dy, hr, mm, ss, fsec: sb4;
+  Year: SmallInt absolute yr;
+  Month: Byte absolute mnth;
+  Day: Byte absolute dy;
+  Hour: Byte absolute hr;
+  Minute: Byte absolute mm;
+  Second: Byte absolute ss;
+  Millis: ub4 absolute fsec;
+  Ptr: POraDate absolute P;
+label Fill;
 begin
-  Result := Frac(GetTimeStamp(ColumnIndex));
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stTime);
+{$ENDIF}
+  {$R-}
+  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    LastWasNull := True;
+Fill: PCardinal(@Result.Hour)^ := 0;
+    PInt64(@Result.Second)^ := 0;
+  end else begin
+    P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
+    LastWasNull := False;
+    case SQLVarHolder.dty of
+      { the supported String types we use }
+      SQLT_AFC,
+      SQLT_VST,
+      SQLT_VCS,
+      SQLT_LVC,
+      SQLT_CLOB: begin
+                  P := GetPAnsiChar(ColumnIndex, Len);
+                  LastWasNull := not TryPCharToTime(P, Len, ConSettings^.ReadFormatSettings, Result);
+                end;
+      SQLT_INT,
+      SQLT_UIN,
+      SQLT_FLT,
+      SQLT_BFLOAT,
+      SQLT_BDOUBLE,
+      SQLT_VNU: begin
+                  DT := GetDouble(ColumnIndex);
+                  DecodeDateTimeToTime(DT, Result);
+                end;
+      SQLT_DAT: begin
+              Result.Hour := Ptr^.Hour-1;
+              Result.Minute := Ptr^.Min-1;
+              PInt64(@Result.Second)^ := 0;
+              Result.Second := Ptr^.Sec-1;
+              Result.IsNegative := False;
+          end;
+      SQLT_INTERVAL_DS:
+        begin
+          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle,
+            @dy, @hr, @mm, @ss, @fsec, PPOCIDescriptor(P)^);
+          if (Status = OCI_SUCCESS) then begin
+            Result.Hour := hr;
+            Result.Minute := mm;
+            Result.Second := ss;
+            Result.Fractions := fsec*10;
+            Result.IsNegative := False;
+          end else goto Fill;
+        end;
+      SQLT_INTERVAL_YM: goto Fill;
+      SQLT_TIMESTAMP_TZ,
+      SQLT_TIMESTAMP_LTZ,
+      SQLT_TIMESTAMP: begin
+          Status := FPlainDriver.OCIDateTimeGetTime(FConnectionHandle, FErrorHandle,
+            PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
+          if Status = OCI_SUCCESS then begin
+            Result.Hour := Hour;
+            Result.Minute := Minute;
+            Result.Second := Second;
+            Result.Fractions := Millis;
+            Result.IsNegative := False;
+          end else
+            goto Fill;
+        end;
+      else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
+    end;
+  end
 end;
 
 {**
@@ -1444,21 +1622,24 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZOracleAbstractResultSet_A.GetTimestamp(ColumnIndex: Integer): TDateTime;
+procedure TZOracleAbstractResultSet_A.GetTimestamp(ColumnIndex: Integer;
+  var Result: TZTimeStamp);
 var
-  Failed: Boolean;
   SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
+  DT: TDateTime;
+  P: PAnsiChar absolute DT;
   Len: NativeUInt;
-  Blob: IZBlob;
-  Status: sword;
-  Year: SmallInt;
+  Status: sword absolute Len;
   yr, mnth, dy, hr, mm, ss, fsec: sb4;
-  Month, Day: Byte;
-  Hour, Minute, Second: Byte;
-  Millis: ub4;
+  Year: SmallInt absolute yr;
+  Month: Byte absolute mnth;
+  Day: Byte absolute dy;
+  Hour: Byte absolute hr;
+  Minute: Byte absolute mm;
+  Second: Byte absolute ss;
+  Millis: ub4 absolute fsec;
   Ptr: POraDate absolute P;
-label ConvFromString;
+label Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimeStamp);
@@ -1468,106 +1649,90 @@ begin
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
-    Result := 0
+Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
   end else begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: begin { fixed char right ' ' padded }
-                  Len := GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz);
-                  goto ConvFromString;
+      SQLT_AFC,
+      SQLT_VST,
+      SQLT_VCS,
+      SQLT_LVC,
+      SQLT_CLOB: begin
+                  P := GetPAnsiChar(ColumnIndex, Len);
+                  LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
                 end;
-      SQLT_VST: begin
-                  Len := PPOCILong(P)^.Len;
-                  P := @PPOCILong(P)^.data[0];
-                  goto ConvFromString;
+      SQLT_INT,
+      SQLT_UIN,
+      SQLT_FLT,
+      SQLT_BFLOAT,
+      SQLT_BDOUBLE,
+      SQLT_VNU: begin
+                  DT := GetDouble(ColumnIndex);
+                  DecodeDateTimeToTimeStamp(DT, Result);
                 end;
-      SQLT_VCS: begin
-                  Len := POCIVary(P).Len;
-                  P := PAnsiChar(@POCIVary(P).data[0]);
-                  goto ConvFromString;
-                end;
-      SQLT_LVC: begin
-                  Len := POCILong(P).Len;
-                  P := PAnsiChar(@POCILong(P).data[0]);
-ConvFromString:   if (P+2)^ = ':' then //possible date if Len = 10 then
-                    Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-                  else if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-                    Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
-                  else
-                    Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
-                  LastWasNull := (Result = 0) or Failed;
-                end;
-      { the ordinals we yet do support }
-      SQLT_INT:
-        case SQLVarHolder.value_sz of
-          SizeOf(Int64):    Result := PInt64(P)^;
-          SizeOf(Integer):  Result := PInteger(P)^;
-          SizeOf(SmallInt): Result := PSmallInt(P)^;
-          else              Result := PShortInt(P)^;
-        end;
-      SQLT_UIN:
-          case SQLVarHolder.value_sz of
-            SizeOf(UInt64):   Result := Int64(PUInt64(P)^);
-            SizeOf(Cardinal): Result := PCardinal(P)^;
-            SizeOf(Word):     Result := PSmallInt(P)^;
-            else              Result := PByte(P)^;
-          end;
-      { the FPU floats we do support }
-      SQLT_FLT:     if SQLVarHolder.value_sz = SizeOf(Double)
-                    then Result := PDouble(P)^
-                    else Result := PSingle(P)^;
-      SQLT_BFLOAT:  Result := PSingle(P)^;
-      SQLT_BDOUBLE: Result := PDouble(P)^;
-      { the binary raw we support }
-      //SQLT_VBI, SQLT_LVB: Result := 0;
-      { the date/time types we support }
       SQLT_DAT: begin
-            if Ptr^.Cent <= 100  // avoid TDateTime values < 0 (generates wrong DecodeTime) //thanks to ab of synopse
-            then result := 0
-            else result := EncodeDate((Ptr^.Cent-100)*100+Ptr^.Year-100,Ptr^.Month,Ptr^.Day);
-            if (Ptr^.Hour<>0) or (Ptr^.Min<>0) or (Ptr^.Sec<>0) then
-              result := result + EncodeTime(Ptr^.Hour-1,Ptr^.Min-1,Ptr^.Sec-1,0);
-          end;
+                  if Ptr^.Cent <= 100 then begin
+                    Result.IsNegative := True;
+                    Result.Year := Ptr^.Cent*100+Ptr^.Year-100;
+                  end else begin
+                    Result.IsNegative := False;
+                    Result.Year := (Ptr^.Cent-100)*100+Ptr^.Year-100;
+                  end;
+                  Result.Month := Ptr^.Month;
+                  Result.Day := Ptr^.Day;
+                  PInt64(@Result.Minute)^ := 0;
+                  if (Ptr^.Hour <> 0) and (Ptr^.Min <> 0) and (Ptr^.Sec <> 0) then begin
+                    Result.Hour := Ptr^.Hour-1;
+                    Result.Minute := Ptr^.Min-1;
+                    Result.Second := Ptr^.Sec-1;
+                  end else
+                    Result.Hour := 0;
+                  PCardinal(@Result.TimeZoneHour)^ := 0;
+                end;
       SQLT_INTERVAL_DS:
         begin
           Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle,
             @dy, @hr, @mm, @ss, @fsec, PPOCIDescriptor(P)^);
-          if (Status = OCI_SUCCESS)
-          then Result := EncodeTime(hr, mm, ss, fsec div 100000)
-          else Result := 0;
+          if (Status = OCI_SUCCESS) then begin
+            PCardinal(@Result.Year)^ := 0;
+            PCardinal(@Result.TimeZoneHour)^ := 0;
+            Result.IsNegative := dy < 0;
+            Result.Day := Abs(dy);
+            Result.Hour := hr;
+            Result.Minute := mm;
+            Result.Second := ss;
+            Result.Fractions := fSec * 10;
+          end else goto Fill;
         end;
       SQLT_INTERVAL_YM:
         begin
           Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FErrorHandle, @yr, @mnth, PPOCIDescriptor(P)^);
-          if (Status = OCI_SUCCESS) and (not (yr and mnth = 1))
-          then Result := EncodeDate(yr, mnth, 1)
-          else Result := 0;
+          if (Status = OCI_SUCCESS) then begin
+            PInt64(@Result.Hour)^ := 0;
+            PInt64(@Result.Second)^ := 0;
+            Result.Year := Abs(yr);
+            Result.IsNegative := yr < 0;
+            Result.Month := mnth;
+          end else goto Fill;
         end;
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
-      SQLT_TIMESTAMP: begin
-          Status := FPlainDriver.OCIDateTimeGetDate(FConnectionHandle, FErrorHandle,
-            PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-});
-        // attention : this code handles all timestamps on 01/01/0001 as a pure time value
-        // reason : oracle doesn't have a pure time datatype so all time comparisons compare
-        //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-          if (Status = OCI_SUCCESS) and (not ((Year=1) and (Month=1) and (Day=1)))
-          then Result := EncodeDate(Year, Month, Day)
-          else Result := 0;
-          Status := FPlainDriver.OCIDateTimeGetTime(FConnectionHandle, FErrorHandle,
-            PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
-          if Status = OCI_SUCCESS then
-            Result := Result + EncodeTime(Hour, Minute, Second, Millis div 1000000);
-        end;
-      SQLT_BLOB,
-      SQLT_CLOB: begin
-          Blob := Getblob(ColumnIndex);
-          P := Blob.GetBuffer;
-          Len := Blob.Length;
-          goto ConvFromString;
-        end;
+      SQLT_TIMESTAMP: if (FPlainDriver.OCIDateTimeGetDate(FConnectionHandle, FErrorHandle,
+              PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-}) = OCI_SUCCESS) and
+              (FPlainDriver.OCIDateTimeGetTime(FConnectionHandle, FErrorHandle,
+               PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
+            Result.Year :=  Abs(Year);
+            Result.Month := Month;
+            Result.Day := Day;
+            Result.IsNegative := Year < 0;
+            Result.Hour := Hour;
+            Result.Minute := Minute;
+            Result.Second := Second;
+            Result.Fractions := Millis;
+          end else
+            goto Fill;
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
@@ -1834,6 +1999,14 @@ begin
     if (ColumnInfo.ColumnType in [stString, stUnicodeString]) then begin
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+      {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
+        and is different to the native db charset
+        so we'll increase the buffers to avoid truncation errors
+        and we use 8 byte aligned buffers. Here we go:}
+      if Consettings.ClientCodePage.Encoding <> ceUTF16
+      then CurrentVar^.value_sz := ColumnInfo.Precision * ConSettings.ClientCodePage.CharWidth + 1
+      else CurrentVar^.value_sz := ColumnInfo.Precision shl 1 + SizeOf(WideChar);
+      CurrentVar^.value_sz := ((CurrentVar^.value_sz shr 3)+1) shl 3;
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
       if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect

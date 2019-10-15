@@ -89,7 +89,8 @@ type
 
 implementation
 
-uses SysUtils, ZTestConsts, ZTestCase, ZVariant, ZMessages, ZDbcInterbase6Metadata;
+uses SysUtils, ZTestConsts, ZTestCase, ZVariant, ZMessages,
+  ZDbcInterbase6Metadata;
 
 { TZTestDbcInterbaseCase }
 
@@ -674,11 +675,11 @@ end;
 
 procedure TZTestDbcInterbaseCase.TestMsec;
 const
-  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  D_DATE = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  D_TIME = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  D_DATETIME = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  D_TIMESTAMP = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  D_ID = FirstDbcIndex;
+  D_DATE = FirstDbcIndex+1;
+  D_TIME = FirstDbcIndex+2;
+  D_DATETIME = FirstDbcIndex+3;
+  D_TIMESTAMP = FirstDbcIndex+4;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -711,7 +712,7 @@ begin
   ResultSet.InsertRow;
   ResultSet.Last;
   Check(ResultSet.GetInt(D_ID) <> 0);
-  CheckEquals(Trunc(ThisTime), ResultSet.GetDate(D_DATE),'Failure field 2');
+  CheckEquals(Int(ThisTime), ResultSet.GetDate(D_DATE),'Failure field 2');
   ToTS(Frac(ThisTime), TS1);
   ToTS(ResultSet.GetTime(D_TIME), Ts2);
   CheckEquals(EncodeTime(ts1.Hour, ts1.Minute, ts1.Second, 0), EncodeTime(ts2.Hour, ts2.Minute, ts2.Second, 0), 'time without fractions');

@@ -549,6 +549,11 @@ var
   WasNull: Boolean;
   RowAccessor: TZRowAccessor;
   TempBlob: IZBlob;
+  BCD: TBCD; //one val on stack 4 all
+  UID: TGUID absolute BCD;
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
 begin
   WasNull := False;
   for I := 0 to Config.ParamCount - 1 do
@@ -572,12 +577,15 @@ begin
       else
         RowAccessor := NewRowAccessor;
 
-      if StrToBoolEx(DefineStatementParameter(
+      (*if StrToBoolEx(DefineStatementParameter(
         ResultSet.GetStatement, DSProps_Defaults, 'true')) then
         Statement.SetDefaultValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-          ResultSet.GetMetadata.GetDefaultValue(ColumnIndex));
+          ResultSet.GetMetadata.GetDefaultValue(ColumnIndex));*)
 
-      case ResultSet.GetMetadata.GetColumnType(ColumnIndex) of
+      if RowAccessor.IsNull(ColumnIndex) then
+        Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+          ResultSet.GetMetadata.GetColumnType(ColumnIndex))
+      else case ResultSet.GetMetadata.GetColumnType(ColumnIndex) of
         stBoolean:
           Statement.SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
             RowAccessor.GetBoolean(ColumnIndex, WasNull));
@@ -605,20 +613,29 @@ begin
           Statement.SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCurrency(ColumnIndex, WasNull));
         stBigDecimal:
           begin
-            RowAccessor.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^, WasNull);
-            Statement.SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@RowAccessor.TinyBuffer[0])^);
+            RowAccessor.GetBigDecimal(ColumnIndex, BCD{%H-}, WasNull);
+            Statement.SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD);
+          end;
+        stGUID: begin
+            RowAccessor.GetGUID(ColumnIndex, UID, WasNull);
+            Statement.SetGUID(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, UID);
           end;
         stString, stUnicodeString:
           Statement.SetCharRec(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCharRec(ColumnIndex, WasNull));
         stBytes:
           Statement.SetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
-        stDate:
-          Statement.SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDate(ColumnIndex, WasNull));
-        stTime:
-          Statement.SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetTime(ColumnIndex, WasNull));
-        stTimestamp:
-          Statement.SetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-            RowAccessor.GetTimestamp(ColumnIndex, WasNull));
+        stDate: begin
+            RowAccessor.GetDate(ColumnIndex, WasNull, D);
+            Statement.SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, D);
+          end;
+        stTime: begin
+            RowAccessor.GetTime(ColumnIndex, WasNull, T);
+            Statement.SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+          end;
+        stTimestamp: begin
+            RowAccessor.GetTimestamp(ColumnIndex, WasNull, TS);
+            Statement.SetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
+          end;
         stAsciiStream:
           begin
             TempBlob := RowAccessor.GetBlob(ColumnIndex, WasNull);
@@ -669,7 +686,11 @@ var
   RefreshColumnName: String;
   RefreshColumnType: TZSQLType;
   Len: NativeUInt;
-  BCD: TBCD;
+  BCD: TBCD; //one val on stack 4 all
+  UID: TGUID absolute BCD;
+  TS: TZTimeStamp absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
 Label CheckColumnType;
 begin
   if Assigned(RefreshResultSet) then begin
@@ -705,17 +726,30 @@ CheckColumnType:
           stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
           stCurrency: RefreshRowAccessor.SetCurrency(RefreshColumnIndex, RefreshResultSet.GetCurrency(I));
           stBigDecimal: begin
-                          RefreshResultSet.GetBigDecimal(I, BCD);
+                          RefreshResultSet.GetBigDecimal(I, BCD{%H-});
                           RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, BCD);
                         end;
+          stGUID: begin
+              RefreshResultSet.GetGUID(I, UID);
+              RefreshRowAccessor.SetGUID(RefreshColumnIndex, UID);
+            end;
           stString, stUnicodeString:
             if RefreshRowAccessor.IsRaw
             then RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), Len)
             else RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), Len);
           stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
-          stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
-          stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));
-          stTimestamp: RefreshRowAccessor.SetTimestamp(RefreshColumnIndex, RefreshResultSet.GetTimestamp(I));
+          stDate: begin
+              RefreshResultSet.GetDate(I, D);
+              RefreshRowAccessor.SetDate(RefreshColumnIndex, D);
+            end;
+          stTime: begin
+              RefreshResultSet.GetTime(I, T);
+              RefreshRowAccessor.SetTime(RefreshColumnIndex, T);
+            end;
+          stTimestamp: begin
+              RefreshResultSet.GetTimestamp(I, TS);
+              RefreshRowAccessor.SetTimestamp(RefreshColumnIndex, TS);
+            end;
           stAsciiStream, stUnicodeStream, stBinaryStream:
             {handle possible different column_type using a native RS
              e.g. SQLite with joins we get stream types for string/bytes etc. coulmns

@@ -707,7 +707,7 @@ var
 begin
   if Parts = [] then
     Parts := [dpYear..dpMSec];
-  s := NotEqualsErrorMessage(FormatDateTime(DefDateTimeFormatMsecs, Expected), FormatDateTime(DefDateTimeFormatMsecs, Actual), Msg);
+  s := NotEqualsErrorMessage(FormatDateTime(DefDateTimeFormatMsecsYMD, Expected), FormatDateTime(DefDateTimeFormatMsecsYMD, Actual), Msg);
   DecodeDate(Expected, EYear, EMonth, EDay);
   DecodeTime(Expected, EHour, EMin, ESec, EMSec);
   DecodeDate(Actual, AYear, AMonth, ADay);

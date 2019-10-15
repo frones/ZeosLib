@@ -121,9 +121,9 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
+    procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
     function GetBlob(ColumnIndex: Integer): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
@@ -1289,23 +1289,23 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+procedure TZAdoResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
 var P: PWideChar;
   Len: NativeUint;
-  Failed: Boolean;
+label Fill;
 begin
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := 0
-  else case FValueType of
-    VT_DATE: Result := Int(PDouble(FValueAddr)^);
+  if LastWasNull then begin
+Fill: PInt64(@Result.Year)^ := 0;
+  end else case FValueType of
+    VT_DATE: DecodeDateTimeToDate(PDateTime(FValueAddr)^, Result);
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
-                  Result := UnicodeSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
-                  if Failed then
-                    Result := Int(UnicodeSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
+                  LastWasNull := not TryPCharToDate(P, Len, ConSettings^.ReadFormatSettings, Result);
+                  if LastWasNull then
+                    goto fill;
                 end;
-    else     Result := Int(GetDouble(ColumnIndex));
+    else DecodeDateTimeToDate(GetDouble(ColumnIndex), Result);
   end;
 end;
 
@@ -1318,23 +1318,24 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+procedure TZAdoResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
 var P: PWideChar;
   Len: NativeUint;
-  Failed: Boolean;
+Label Fill;
 begin
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := 0
-  else case FValueType of
-    VT_DATE: Result := Frac(PDouble(FValueAddr)^);
+  if LastWasNull then begin
+Fill: PCardinal(@Result.Hour)^ := 0;
+    PInt64(@Result.Second)^ := 0;
+  end else case FValueType of
+    VT_DATE:  DecodeDateTimeToTime(PDateTime(FValueAddr)^, Result);
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
-                  Result := UnicodeSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
-                  if Failed then
-                    Result := Frac(UnicodeSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
+                  LastWasNull := not TryPCharToTime(P, Len, ConSettings^.ReadFormatSettings, Result);
+                  if LastWasNull then
+                    goto fill;
                 end;
-    else     Result := Frac(GetDouble(ColumnIndex));
+    else     DecodeDateTimeToTime(GetDouble(ColumnIndex), Result);
   end;
 end;
 
@@ -1348,21 +1349,23 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZAdoResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+procedure TZAdoResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 var P: PWideChar;
   Len: NativeUint;
-  Failed: Boolean;
+Label Fill;
 begin
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := 0
-  else case FValueType of
-    VT_DATE: Result := PDouble(FValueAddr)^;
+  if LastWasNull then begin
+Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
+  end else case FValueType of
+    VT_DATE:    DecodeDateTimeToTimeStamp(PDateTime(FValueAddr)^, Result);
     VT_BSTR:    begin
                   P := GetPWidechar(ColumnIndex, Len);
-                  Result := UnicodeSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
+                  LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
+                  if LastWasNull then
+                    goto fill;
                 end;
-    else     Result := GetDouble(ColumnIndex);
+    else     DecodeDateTimeToTimeStamp(GetDouble(ColumnIndex), Result);
   end;
 end;
 

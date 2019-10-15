@@ -131,9 +131,9 @@ type
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
     procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
 
-    procedure SetDate(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTime(Index: Integer; const Value: TDateTime); reintroduce;
-    procedure SetTimestamp(Index: Integer; const Value: TDateTime); reintroduce;
+    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
 
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); reintroduce;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); reintroduce;
@@ -1549,9 +1549,55 @@ bind_direct:
 end;
 
 procedure TZOraclePreparedStatement_A.SetDate(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZDate);
+var
+  Bind: PZOCIParamBind;
+  DT: TDateTime;
+  Status: sword absolute DT;
+  OraType: TZSQLType absolute DT;
+  Len: LengthInt absolute DT;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (OraType <> BindList[Index].SQLType)
+  then OraType := BindList[Index].SQLType
+  else OraType := stDate;
+  if (BindList[Index].SQLType <> OraType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(OraType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_DAT:   begin
+                  POraDate(Bind^.valuep).Cent   := Value.Year div 100 +100;
+                  POraDate(Bind^.valuep).Year   := Value.Year mod 100 +100;
+                  POraDate(Bind^.valuep).Month  := Value.Month;
+                  PInteger(@POraDate(Bind^.valuep).Day)^ := 0; //init all remaining fields to 0 with one 4Byte value
+                  POraDate(Bind^.valuep).Day    := Value.Day;
+                end;
+    SQLT_TIMESTAMP: begin
+                  Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
+                    FOCIError, PPOCIDescriptor(Bind.valuep)^, Value.Year, Value.Month, Value.Day,
+                      0, 0, 0, 0, nil, 0);
+                  if Status <> OCI_SUCCESS then
+                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                end;
+    SQLT_CLOB,
+    SQLT_LVC: begin
+                Len := DateToRaw(Value.Year, Value.Month, Value.Day, @fABuffer[0],
+                  ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                BindRawStr(Index, @fABuffer[0], Len);
+                Exit;
+              end;
+    else      begin
+                if TryDateToDateTime(Value, DT)
+                then InternalBindDouble(Index, stDate, DT)
+                else BindSInteger(Index, stDate, 1);
+                Exit;
+              end;
+  end;
+  Bind.indp[0] := 0;
 end;
 
 {**
@@ -1791,9 +1837,58 @@ end;
   @param x the parameter value
 }
 procedure TZOraclePreparedStatement_A.SetTime(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTime);
+var
+  Bind: PZOCIParamBind;
+  DT: TDateTime;
+  Status: sword absolute DT;
+  OraType: TZSQLType absolute DT;
+  Len: LengthInt absolute DT;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (OraType <> BindList[Index].SQLType)
+  then OraType := BindList[Index].SQLType
+  else OraType := stTime;
+  if (BindList[Index].SQLType <> OraType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(OraType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_DAT:   begin
+                  POraDate(Bind^.valuep).Cent   := cPascalIntegralDatePart.Year div 100 +100;
+                  POraDate(Bind^.valuep).Year   := cPascalIntegralDatePart.Year mod 100 +100;
+                  POraDate(Bind^.valuep).Month  := cPascalIntegralDatePart.Month;
+                  POraDate(Bind^.valuep).Day    := cPascalIntegralDatePart.Day;
+                  POraDate(Bind^.valuep).Hour := Value.Hour +1;
+                  POraDate(Bind^.valuep).Min := Value.Minute +1;
+                  POraDate(Bind^.valuep).Sec := Value.Second +1;
+                end;
+    SQLT_TIMESTAMP: begin
+                  Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
+                    FOCIError, PPOCIDescriptor(Bind.valuep)^, cPascalIntegralDatePart.Year,
+                      cPascalIntegralDatePart.Month, cPascalIntegralDatePart.Day,
+                      Value.Hour, Value.Minute, Value.Second, Value.Fractions, nil, 0);
+                  if Status <> OCI_SUCCESS then
+                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                end;
+    SQLT_CLOB,
+    SQLT_LVC: begin
+                Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+                  @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                BindRawStr(Index, @fABuffer[0], Len);
+                Exit;
+              end;
+    else      begin
+                if TryTimeToDateTime(Value, DT)
+                then InternalBindDouble(Index, stDate, DT)
+                else BindSInteger(Index, stDate, 1);
+                Exit;
+              end;
+  end;
+  Bind.indp[0] := 0;
 end;
 
 {**
@@ -1805,9 +1900,58 @@ end;
   @param x the parameter value
 }
 procedure TZOraclePreparedStatement_A.SetTimestamp(Index: Integer;
-  const Value: TDateTime);
+  const Value: TZTimeStamp);
+var
+  Bind: PZOCIParamBind;
+  DT: TDateTime;
+  Status: sword absolute DT;
+  OraType: TZSQLType absolute DT;
+  Len: LengthInt absolute DT;
 begin
-  InternalBindDouble(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp, Value);
+  {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
+     (OraType <> BindList[Index].SQLType)
+  then OraType := BindList[Index].SQLType
+  else OraType := stDate;
+  if (BindList[Index].SQLType <> OraType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
+    InitBuffer(OraType, Bind, Index, 1);
+  case Bind.dty of
+    SQLT_DAT:   begin
+                  POraDate(Bind^.valuep).Cent := Value.Year div 100 +100;
+                  POraDate(Bind^.valuep).Year := Value.Year mod 100 +100;
+                  POraDate(Bind^.valuep).Day  := Value.Day;
+                  POraDate(Bind^.valuep).Month:= Value.Month;
+                  POraDate(Bind^.valuep).Hour := Value.Hour +1;
+                  POraDate(Bind^.valuep).Min  := Value.Minute +1;
+                  POraDate(Bind^.valuep).Sec  := Value.Second +1;
+                end;
+    SQLT_TIMESTAMP: begin
+                  Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
+                    FOCIError, PPOCIDescriptor(Bind.valuep)^, Value.Year, Value.Month, Value.Day,
+                      Value.Hour, Value.Minute, Value.Second, Value.Fractions, nil, 0);
+                  if Status <> OCI_SUCCESS then
+                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                end;
+    SQLT_CLOB,
+    SQLT_LVC: begin
+                Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+                  Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+                  @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                BindRawStr(Index, @fABuffer[0], Len);
+                Exit;
+              end;
+    else      begin
+                if TryTimeStampToDateTime(Value, DT)
+                then InternalBindDouble(Index, stDate, DT)
+                else BindSInteger(Index, stDate, 1);
+                Exit;
+              end;
+  end;
+  Bind.indp[0] := 0;
 end;
 
 {**

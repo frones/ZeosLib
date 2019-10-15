@@ -1162,8 +1162,6 @@ type
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
 
-    procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
-
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
@@ -1178,7 +1176,6 @@ type
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
-    //procedure SetPChar(ParameterIndex: Integer; Value: PChar);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
@@ -1191,9 +1188,12 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
-    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime);
-    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime);
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime);
+    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload;
+    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload;
+    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload;
+    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload;
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
@@ -1225,10 +1225,12 @@ type
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
     procedure GetGUID(Index: Integer; var Result: TGUID);
     function GetBytes(ParameterIndex: Integer): TBytes; overload;
-    function GetDate(ParameterIndex: Integer): TDateTime;
-    function GetTime(ParameterIndex: Integer): TDateTime;
+    function GetDate(ParameterIndex: Integer): TDateTime; overload;
+    procedure GetDate(ParameterIndex: Integer; Var Result: TZDate); overload;
+    function GetTime(ParameterIndex: Integer): TDateTime; overload;
+    procedure GetTime(ParameterIndex: Integer; Var Result: TZTime); overload;
     function GetTimestamp(ParameterIndex: Integer): TDateTime; overload;
-    //procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
+    procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
     function GetValue(ParameterIndex: Integer): TZVariant;
 
     function GetString(ParameterIndex: Integer): String;
@@ -1330,9 +1332,12 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
     function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetDate(ColumnIndex: Integer): TDateTime;
-    function GetTime(ColumnIndex: Integer): TDateTime;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime;
+    function GetDate(ColumnIndex: Integer): TDateTime; overload;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
+    function GetTime(ColumnIndex: Integer): TDateTime; overload;
+    procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); overload;
+    function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
     function GetAsciiStream(ColumnIndex: Integer): TStream;
     function GetUnicodeStream(ColumnIndex: Integer): TStream;
     function GetBinaryStream(ColumnIndex: Integer): TStream;
@@ -1375,9 +1380,12 @@ type
     procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
     procedure GetGUIDByName(const ColumnName: string; var Result: TGUID);
     function GetBytesByName(const ColumnName: string): TBytes;
-    function GetDateByName(const ColumnName: string): TDateTime;
-    function GetTimeByName(const ColumnName: string): TDateTime;
-    function GetTimestampByName(const ColumnName: string): TDateTime;
+    function GetDateByName(const ColumnName: string): TDateTime; overload;
+    procedure GetDateByName(const ColumnName: string; var Result: TZDate); overload;
+    function GetTimeByName(const ColumnName: string): TDateTime; overload;
+    procedure GetTimeByName(const ColumnName: string; Var Result: TZTime); overload;
+    function GetTimestampByName(const ColumnName: string): TDateTime; overload;
+    procedure GetTimeStampByName(const ColumnName: string; var Result: TZTimeStamp); overload;
     function GetAsciiStreamByName(const ColumnName: string): TStream;
     function GetUnicodeStreamByName(const ColumnName: string): TStream;
     function GetBinaryStreamByName(const ColumnName: string): TStream;
@@ -1467,9 +1475,12 @@ type
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
-    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
-    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
-    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
     procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
@@ -1511,9 +1522,12 @@ type
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TBytes);
-    procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime);
-    procedure UpdateTimeByName(const ColumnName: string; const Value: TDateTime);
-    procedure UpdateTimestampByName(const ColumnName: string; const Value: TDateTime);
+    procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime); overload;
+    procedure UpdateDateByName(const ColumnName: string; const Value: TZDate); overload;
+    procedure UpdateTimeByName(const ColumnName: string; const Value: TDateTime); overload;
+    procedure UpdateTimeByName(const ColumnName: string; const Value: TZTime); overload;
+    procedure UpdateTimestampByName(const ColumnName: string; const Value: TDateTime); overload;
+    procedure UpdateTimestampByName(const ColumnName: string; const Value: TZTimeStamp); overload;
     procedure UpdateAsciiStreamByName(const ColumnName: string; const Value: TStream);
     procedure UpdateUnicodeStreamByName(const ColumnName: string; const Value: TStream);
     procedure UpdateBinaryStreamByName(const ColumnName: string; const Value: TStream);

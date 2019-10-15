@@ -80,9 +80,9 @@ type
     FDouble: Double;
     FBigDecimal: TBCD;
     FString: string;
-    FDate: TDateTime;
-    FTime: TDateTime;
-    FTimeStamp: TDateTime;
+    FDate: TZDate;
+    FTime: TZTime;
+    FTimeStamp: TZTimeStamp;
     FAsciiStream: TStream;
     FUnicodeStream: TStream;
     FBinaryStream: TStream;
@@ -90,6 +90,7 @@ type
     FAsciiStreamData: Ansistring;
     FUnicodeStreamData: WideString;
     FBinaryStreamData: Pointer;
+    FConSettings: TZConSettings;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -244,7 +245,7 @@ var
 begin
   ColumnsInfo := GetColumnsInfoCollection;
   try
-    Result := TZRowAccessor.Create(ColumnsInfo, @ConSettingsDummy);  //dummy cp: Stringfield cp is inconsistent
+    Result := TZRowAccessor.Create(ColumnsInfo, @FConSettings);  //dummy cp: Stringfield cp is inconsistent
     Result.Alloc;
   finally
     ColumnsInfo.Free;
@@ -256,9 +257,9 @@ end;
 }
 procedure TZTestRowAccessorCase.SetUp;
 begin
-  FDate := SysUtils.Date;
-  FTime := SysUtils.Time;
-  FTimeStamp := SysUtils.Now;
+  DecodeDateTimeToDate(SysUtils.Date, FDate);
+  DecodeDateTimeToTime(SysUtils.Time, FTime);
+  DecodeDateTimeToTimeStamp(SysUtils.Now, FTimeStamp);
 
   FAsciiStreamData := 'Test Ascii Stream Data';
   FAsciiStream := StreamFromData(FAsciiStreamData);
@@ -287,6 +288,15 @@ begin
   FByteArray[2] := 2;
   FByteArray[3] := 3;
   FByteArray[4] := 4;
+
+  FConSettings := ConSettingsDummy;
+  FConSettings.DisplayFormatSettings.DateFormat := DefDateFormatYMD;
+  FConSettings.ReadFormatSettings.DateFormat := DefDateFormatYMD;
+  FConSettings.WriteFormatSettings.DateFormat := DefDateFormatYMD;
+
+  FConSettings.DisplayFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
+  FConSettings.ReadFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
+  FConSettings.WriteFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
 
   RowAccessor := GetRowAccessor;
   FillRowAccessor(RowAccessor);
@@ -612,13 +622,20 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorDate;
 var
   WasNull: Boolean;
+  DT: TDateTime;
+  TS: TZTimeStamp;
+  D: TZDate;
 begin
   with RowAccessor do
   begin
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateFormat, FDate),
+    TryDateToDateTime(FDate, DT);
+    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateFormat, DT),
       GetString(stDateIndex, WasNull), 'GetString');
-    CheckEqualsDate(FDate, GetDate(stDateIndex, WasNull), [], 'GetDate');
-    CheckEqualsDate(FDate, GetTimestamp(stDateIndex, WasNull), [], 'GetTimestamp');
+    GetDate(stDateIndex, WasNull, D);
+    Check(ZCompareDate(FDate, D)= 0, 'GetDate');
+    GetTimestamp(stDateIndex, WasNull, TS);
+    DateFromTimeStamp(Ts, D);
+    Check(ZCompareDate(FDate, D)= 0, 'GetTimestamp');
   end;
 end;
 
@@ -806,6 +823,10 @@ procedure TZTestRowAccessorCase.TestRowAccessorString;
 var
   WasNull: Boolean;
   BCD: TBCD;
+  TS: TZTimeStamp;
+  T: TZTime absolute BCD;
+  D: TZDate absolute BCD;
+  DT: TDateTime;
 begin
   with RowAccessor do
   begin
@@ -824,10 +845,15 @@ begin
 
     {test time convertion}
     SetString(stStringIndex, '1999-01-02 12:01:02');
-    CheckEquals(EncodeDate(1999, 01, 02), GetDate(stStringIndex, WasNull), 0, 'GetDate');
-    CheckEquals(EncodeTime(12, 01, 02, 0), GetTime(stStringIndex, WasNull), stShortIndex, 'GetTime');
-    CheckEquals(EncodeDate(1999, 01, 02)+EncodeTime(12,01,02, 0),
-      GetTimestamp(stStringIndex, WasNull), stShortIndex, 'GetTimestamp');
+    GetDate(stStringIndex, WasNull, D);
+    Check(TryDateToDateTime(D, DT), 'DateConvert');
+    CheckEquals(EncodeDate(1999, 01, 02), DT, 0, 'GetDate');
+    GetTime(stStringIndex, WasNull, T);
+    Check(TryTimeToDateTime(T, DT), 'TimeConvert');
+    CheckEquals(EncodeTime(12, 01, 02, 0), DT, stShortIndex, 'GetTime');
+    GetTimestamp(stStringIndex, WasNull, TS);
+    Check(TryTimeStampToDateTime(TS, DT), 'TimeStampConvert');
+    CheckEquals(EncodeDate(1999, 01, 02)+EncodeTime(12,01,02, 0), DT, stShortIndex, 'GetTimestamp');
     SetString(stStringIndex, '');
     CheckEquals('', GetString(stStringIndex, WasNull));
     SetString(stStringIndex, FString);
@@ -840,13 +866,22 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorTime;
 var
   WasNull: Boolean;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
+  DT, DT2: TDateTime;
 begin
   with RowAccessor do
   begin
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.TimeFormat, FTime),
+    Check(TryTimeToDateTime(FTime, DT), 'TimeConvert');
+    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.TimeFormat, DT),
       GetString(stTimeIndex, WasNull), 'GetString');
-    CheckEqualsDate(FTime, GetTime(stTimeIndex, WasNull), [], 'GetTime');
-    CheckEqualsDate(FTime, GetTimestamp(stTimeIndex, WasNull), [], 'GetTimestamp');
+    GetTime(stTimeIndex, WasNull, T);
+    Check(TryTimeToDateTime(T, DT2), 'TimeConvert');
+    CheckEqualsDate(DT, DT2, [], 'GetTime');
+    GetTimestamp(stTimeIndex, WasNull, TS);
+    Check(TryTimeStampToDateTime(TS, DT2), 'TimeStampConvert');
+    CheckEqualsDate(DT, DT2, [], 'GetTimestamp');
   end;
 end;
 
@@ -856,14 +891,25 @@ end;
 procedure TZTestRowAccessorCase.TestRowAccessorTimestamp;
 var
   WasNull: Boolean;
+  TS: TZTimeStamp;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
+  DT, DT2: TDateTime;
 begin
   with RowAccessor do
   begin
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateTimeFormat, FTimeStamp),
+    Check(TryTimeStampToDateTime(FTimeStamp, DT), 'TimeStampConvert');
+    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateTimeFormat, DT),
       GetString(stTimestampIndex, WasNull), 'GetString');
-    CheckEqualsDate(FTimeStamp, GetDate(stTimestampIndex, WasNull), [dpYear..dpDay], 'GetDate');
-    CheckEqualsDate(FTimeStamp, GetTime(stTimestampIndex, WasNull), [dpHour..dpMSec], 'GetTime');
-    CheckEqualsDate(FTimeStamp, GetTimestamp(stTimestampIndex, WasNull), [], 'GetTimestamp');
+    GetDate(stTimestampIndex, WasNull, D);
+    Check(TryDateToDateTime(FDate, DT2), 'DateConvert');
+    CheckEqualsDate(DT, DT2, [dpYear..dpDay], 'GetDate');
+    GetTime(stTimestampIndex, WasNull, T);
+    Check(TryTimeToDateTime(T, DT2), 'TimeConvert');
+    CheckEqualsDate(DT, DT2, [dpHour..dpMSec], 'GetTime');
+    GetTimestamp(stTimestampIndex, WasNull, TS);
+    Check(TryTimeStampToDateTime(TS, DT2), 'TimeStampConvert');
+    CheckEqualsDate(DT, DT2, [], 'GetTimestamp');
   end;
 end;
 
