@@ -85,7 +85,6 @@ type
   private
     FParams: TParams;
     FScript: TZSQLStrings;
-    FScriptText: String;
 
     FScriptParser: TZSQLScriptParser;
     FConnection: TZAbstractConnection;
@@ -305,7 +304,6 @@ procedure TZSQLProcessor.Clear;
 begin
   FScript.Clear;
   FScriptParser.ClearUncompleted;
-  FScriptText := '';
 end;
 
 {**
@@ -439,8 +437,7 @@ begin
 // mdaems 20060429 : Clear would reset the delimiter of the scriptparser
 //  FScriptParser.Clear;
   FScriptParser.ClearUncompleted;
-  FScriptText := FScript.Text;
-  FScriptParser.ParseText(FScriptText);
+  FScriptParser.ParseText(FScript.Text);
 end;
 
 {**
