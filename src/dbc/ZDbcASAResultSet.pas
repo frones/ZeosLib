@@ -399,8 +399,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -454,8 +454,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -509,8 +509,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -564,8 +564,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -619,8 +619,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -674,8 +674,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -730,8 +730,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
@@ -786,8 +786,8 @@ begin
         DT_UNSSMALLINT : Result := PWord(sqldata)^;
         DT_INT         : Result := PInteger(sqldata)^;
         DT_UNSINT      : Result := PLongWord(sqldata)^;
-        DT_BIGINT      : Result := PUInt64(sqldata)^;
-        DT_UNSBIGINT   : Result := PInt64(sqldata)^;
+        DT_BIGINT      : Result := PInt64(sqldata)^;
+        DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         DT_VARCHAR:
