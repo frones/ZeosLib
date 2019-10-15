@@ -54,6 +54,7 @@ unit ZDbcOracleResultSet;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
@@ -198,7 +199,9 @@ type
     procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
@@ -2026,5 +2029,6 @@ begin
     OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
       FChunkSize, Int64(Len)+1, False, FConSettings);
 end;
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.

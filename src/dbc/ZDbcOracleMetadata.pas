@@ -54,6 +54,7 @@ unit ZDbcOracleMetadata;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
@@ -246,7 +247,9 @@ type
   public
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   ZFastCode, ZDbcUtils, ZSelectSchema;
@@ -2367,5 +2370,7 @@ begin
     Close;
   end;
 end;
+
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.

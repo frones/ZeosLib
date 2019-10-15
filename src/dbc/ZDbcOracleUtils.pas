@@ -54,6 +54,7 @@ unit ZDbcOracleUtils;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -290,7 +291,9 @@ procedure OraWriteLob(const PlainDriver: IZOraclePlainDriver; const BlobData: Po
   const LobLocator: POCILobLocator; const ChunkSize: Integer;
   BlobSize: Int64; Const BinaryLob: Boolean; const ConSettings: PZConSettings);
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
   ZDbcUtils, ZEncoding, ZFastCode, ZClasses
@@ -1597,6 +1600,7 @@ begin
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Close Large Object', ConSettings);
 end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 
 end.
 

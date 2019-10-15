@@ -54,6 +54,7 @@ unit ZDbcOracleStatement;
 interface
 
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
@@ -146,7 +147,9 @@ type
     procedure ClearParameters; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
@@ -910,4 +913,5 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.
