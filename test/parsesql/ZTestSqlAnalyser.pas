@@ -434,6 +434,34 @@ begin
     'FR:LENGTH,FR:REPLACEMENT_COST,FR:RATING,FR:SPECIAL_FEATURES,'+
     'FR:LAST_UPDATE][TR:FILM]',
     SchemaToString(SelectSchema));
+
+  {Ticket 46 - with table ref }
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT FIRST 10 SKIP 0 T2.ID, T1.VALUE FROM T1 JOIN T2 ON T2.REF=T1.LINK');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:T2.ID,FR:T1.VALUE][TR:T1,TR:T2]',
+    SchemaToString(SelectSchema));
+
+  {Ticket 46 - with alias }
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT FIRST 10 SKIP 0 ID KEY, VALUE FROM T');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:ID/KEY,FR:VALUE][TR:T]',
+    SchemaToString(SelectSchema));
+
+  {Ticket 46 - with table ref and alias }
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT FIRST 10 SKIP 0 T2.ID KEY, T1.VALUE FROM T1 JOIN T2 ON T2.REF=T1.LINK');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:T2.ID/KEY,FR:T1.VALUE][TR:T1,TR:T2]',
+    SchemaToString(SelectSchema));
+
+  { Expression with alias }
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT FIRST 10 SKIP 0 ID+1 KEY, VALUE FROM T');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:/KEY,FR:VALUE][TR:T]',
+    SchemaToString(SelectSchema));
 end;
 
 { TZTestGenericStatementAnalyser }

@@ -481,7 +481,7 @@ var
   CurrentUpper: string;
   ReadField: Boolean;
   HadWhitespace : Boolean;
-  LastWasBracketSection: Boolean;
+  LastWasBracketSection, LastWasSymbol: Boolean;
   CurrentUpperIs_AS: Boolean; //place holder to avoid compare the token twice
 
   procedure ClearElements;
@@ -493,6 +493,7 @@ var
     Alias := '';
     ReadField := True;
     LastWasBracketSection := False;
+    LastWasSymbol:= False;
   end;
 
   { improve fail of fieldname detection if whitespaces and non ttWord or ttQuotedIdentifier previously detected
@@ -502,23 +503,33 @@ var
     CurrentValue: string;
     CurrentType: TZTokenType;
     I: Integer;
+    LAllowWord, LHadWhiteSpace: Boolean;
   begin
     Result := False;
     I := 1;
     //Check to right side to avoid wrong alias detection
-    while SelectTokens.Count > TokenIndex +i do
-    begin
+    LAllowWord:= False;
+    LHadWhiteSpace:= False;
+    while SelectTokens.Count > TokenIndex +i do begin
       CurrentValue := SelectTokens[TokenIndex+i];
       CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
         SelectTokens.Objects[TokenIndex+i]{$IFDEF FPC}){$ENDIF});
-      if CurrentType in [ttWhiteSpace, ttSymbol] then
-      begin
-        if (CurrentValue = ',') then
-        begin
+      if CurrentType in [ttWhiteSpace, ttSymbol] then begin
+        if (CurrentValue = ',') then begin
           Result := True;
           Break;
+        end
+        else if (CurrentValue = '.') and not LHadWhiteSpace then
+          LAllowWord:= True // field
+        else if CurrentType = ttWhitespace then begin
+          if not LHadWhiteSpace then
+            LAllowWord:= True; // alias
+          LHadWhiteSpace:= True;
         end;
       end
+      else
+      if LAllowWord and (CurrentType in [ttWord, ttQuotedIdentifier]) then
+        LAllowWord:= False
       else
         break;
       Inc(i);
@@ -596,13 +607,16 @@ begin
           CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
             SelectTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
           if HadWhitespace and (CurrentType in [ttWord, ttQuotedIdentifier]) then
-            if not LastWasBracketSection and CheckNextTokenForCommaAndWhiteSpaces then
+            if not LastWasBracketSection and not LastWasSymbol and CheckNextTokenForCommaAndWhiteSpaces then
               Break
             else
               Alias := CurrentValue
           else if not (CurrentType in [ttWhitespace, ttComment])
-            and (CurrentValue <> ',') then
-              Alias := ''
+            and (CurrentValue <> ',') then begin
+              Alias := '';
+              if CurrentType = ttSymbol then
+                LastWasSymbol:= True;
+            end
           else if CurrentType = ttWhitespace then
               HadWhitespace := true;
           Inc(TokenIndex);
