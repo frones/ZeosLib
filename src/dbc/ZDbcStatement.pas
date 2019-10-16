@@ -2664,10 +2664,10 @@ begin
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetCurrency(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
-{$IFDEF FPC} // parameters not used intentionally
+{$IFDEF FPC}
   {$PUSH}
   {$WARN 5033 off : Function result does not seem to be set}
-  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
 {$ENDIF}
 function TZAbstractPreparedStatement.GetDate(
   ParameterIndex: Integer): TDateTime;

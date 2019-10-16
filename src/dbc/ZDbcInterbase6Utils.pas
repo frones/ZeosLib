@@ -59,7 +59,7 @@ uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZPlainFirebirdDriver, ZCompatibility,
-  ZPlainFirebirdInterbaseConstants, ZDbcCachedResultSet, ZDbcLogging, ZMessages,
+  ZPlainFirebirdInterbaseConstants, ZDbcLogging, ZMessages,
   ZVariant, ZClasses, FmtBCD;
 
 type
