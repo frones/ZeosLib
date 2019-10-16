@@ -459,13 +459,13 @@ end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
 var
-  AC,RO: Boolean;
+  AC,RO, HC: Boolean;
   TIL: TZTransactIsolationLevel;
 begin
-  if StrToBoolEx(Info.Values['hard_commit']) <> FHardCommit then begin
+  HC := StrToBoolEx(Info.Values['hard_commit']);
+  if (HC <> FHardCommit) and Assigned(FTransactionManager) then //*** ADDED THIS CHECK by EMartin ***
     FTransactionManager.GetActiveTransaction.CloseTransaction;
-    FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
-  end;
+  FHardCommit := HC;
   for AC := false to true do
     for RO := false to true do
     for til := low(TZTransactIsolationLevel) to high(TZTransactIsolationLevel) do begin

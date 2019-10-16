@@ -372,6 +372,7 @@ end;
   @return a <code>Connection</code> object that represents a
     connection to the URL
 }
+{$WARN SYMBOL_DEPRECATED OFF}
 function TZAbstractDriver.Connect(const Url: string; Info: TStrings): IZConnection;
 var
   TempURL:  TZURL;
@@ -383,7 +384,28 @@ begin
     TempUrl.Free;
   end;
 end;
+{$WARN SYMBOL_DEPRECATED ON}
 
+{**
+  Attempts to make a database connection to the given URL.
+  The driver should return "null" if it realizes it is the wrong kind
+  of driver to connect to the given URL.  This will be common, as when
+  the JDBC driver manager is asked to connect to a given URL it passes
+  the URL to each loaded driver in turn.
+
+  <P>The driver should raise a SQLException if it is the right
+  driver to connect to the given URL, but has trouble connecting to
+  the database.
+
+  <P>The java.util.Properties argument can be used to passed arbitrary
+  string tag/value pairs as connection arguments.
+  Normally at least "user" and "password" properties should be
+  included in the Properties.
+
+  @param url the TZURL of the database to which to connect
+  @return a <code>Connection</code> object that represents a
+    connection to the URL
+}
 function TZAbstractDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := nil;
@@ -778,6 +800,7 @@ end;
   @param Password a user password.
   @param Info a string list with extra connection parameters.
 }
+{$WARN SYMBOL_DEPRECATED OFF}
 constructor TZAbstractConnection.Create(const Driver: IZDriver; const Url: string;
   const PlainDriver: IZPlainDriver;
   const HostName: string; Port: Integer; const Database: string;
@@ -789,6 +812,7 @@ begin
   Create(TempURL);
   TempURL.Free;
 end;
+{$WARN SYMBOL_DEPRECATED ON}
 
 {**
   Constructs this object and assignes the main properties.
