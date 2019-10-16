@@ -1702,6 +1702,12 @@ var
   ClientCP: Word;
   MySQLTime: PMYSQL_TIME;
   P, PEnd: PAnsiChar;
+  PD: PZDate absolute PEnd;
+  PT: PZTime absolute PEnd;
+  PTS: PZTimeStamp absolute PEnd;
+  TS: TZtimeStamp;
+  D: TZDate absolute TS;
+  T: TZTime absolute TS;
   procedure BindLobs;
   var Lob: IZBLob;
     RawTemp: RawByteString;
@@ -1937,48 +1943,65 @@ begin
             Inc(P, Bind^.length[i]+1);
           end;
       end;
-    stDate, stTime, stTimeStamp: begin
+     stDate, stTime, stTimeStamp: begin
         ReAllocMem(Bind^.buffer, (SizeOf(TMYSQL_TIME)+SizeOf(Pointer))*BatchDMLArrayCount);
         Bind^.buffer_address^ := Pointer(Bind^.buffer);
         P := PAnsiChar(Bind^.buffer)+(BatchDMLArrayCount*SizeOf(Pointer));
         FillChar(P^, BatchDMLArrayCount*SizeOf(TMYSQL_TIME), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
         if SQLType = stDate then begin
           Bind^.buffer_type_address^ := FIELD_TYPE_DATE;
-          if VariantType in [vtNull, vtDateTime] then begin
-            for i := 0 to BatchDMLArrayCount -1 do begin
-              MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
-              DecodeDate(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.year)^, PWord(@MySQLTime^.month)^, PWord(@MySQLTime^.day)^);
-              PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
-              //MySQLTime.time_type := MYSQL_TIMESTAMP_DATE; //done by fillchar
-            end
-          end else begin
-            for i := 0 to BatchDMLArrayCount -1 do begin
-              with TZDateDynArray(Value)[i] do begin
-                MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
-                MySQLTime^.year := Year;
-                MySQLTime^.month := Month;
-                MySQLTime^.day := Day;
-                MySQLTime^.neg := Ord(IsNegative);
-              end;
-              PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
-              //MySQLTime.time_type := MYSQL_TIMESTAMP_DATE; //done by fillchar
-            end
+          for i := 0 to BatchDMLArrayCount -1 do begin
+            MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
+            if VariantType in [vtNull, vtDateTime] then begin
+              DecodeDateTimeToDate(TDateTimeDynArray(Value)[i], D);
+              PD :=  @D;
+            end else if VariantType = vtDate
+              then PD :=  @TZDateDynArray(Value)[i]
+              else PTS := nil; //raise TypeMismatch
+            MySQLTime^.year := PD^.Year;
+            MySQLTime^.month := PD^.Month;
+            MySQLTime^.day := PD^.Day;
+            MySQLTime^.neg := Byte(Ord(PD^.IsNegative));
+            PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
+            //MySQLTime.time_type := MYSQL_TIMESTAMP_DATE; //done by fillchar
           end;
         end else if SQLType = stTime then begin
           Bind^.buffer_type_address^ := FIELD_TYPE_TIME;
           for i := 0 to BatchDMLArrayCount -1 do begin
             MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
-            DecodeTime(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.hour)^, PWord(@MySQLTime^.minute)^, PWord(@MySQLTime^.second)^, PWord(@MySQLTime^.second_part)^);
-            MySQLTime.time_type := MYSQL_TIMESTAMP_TIME;
+            if VariantType in [vtNull, vtDateTime] then begin
+              ZSysUtils.DecodeDateTimeToTime(TDateTimeDynArray(Value)[i], T);
+              PT :=  @T;
+            end else if VariantType = vtTime
+              then PT :=  @TZTimeDynArray(Value)[i]
+              else PT := nil; //raise TypeMismatch
+            MySQLTime^.hour := PT.Hour;
+            MySQLTime^.minute := PT.Minute;
+            MySQLTime^.second := PT.Second;
+            MySQLTime^.second_part := PT.Fractions div 1000;
+            MySQLTime^.neg := Byte(Ord(PT^.IsNegative));
+            MySQLTime^.time_type := MYSQL_TIMESTAMP_TIME;
             PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
           end
         end else begin
           Bind^.buffer_type_address^ := FIELD_TYPE_DATETIME;
           for i := 0 to BatchDMLArrayCount -1 do begin
             MySQLTime := PMYSQL_TIME(P+(I*SizeOf(TMYSQL_TIME)));
-            DecodeDateTime(TDateTimeDynArray(Value)[i], PWord(@MySQLTime^.year)^, PWord(@MySQLTime^.month)^, PWord(@MySQLTime^.day)^,
-              PWord(@MySQLTime^.hour)^, PWord(@MySQLTime^.minute)^, PWord(@MySQLTime^.second)^, PWord(@MySQLTime^.second_part)^);
-            MySQLTime.time_type := MYSQL_TIMESTAMP_DATETIME;
+            if VariantType in [vtNull, vtDateTime] then begin
+              ZSysUtils.DecodeDateTimeToTimeStamp(TDateTimeDynArray(Value)[i], TS);
+              PTS :=  @TS;
+            end else if VariantType = vtTime
+              then PTS :=  @TZTimeStampDynArray(Value)[i]
+              else PTS := nil; //raise TypeMismatch
+            MySQLTime^.year := PTS^.Year;
+            MySQLTime^.month := PTS^.Month;
+            MySQLTime^.day := PTS^.Day;
+            MySQLTime^.hour := PTS^.Hour;
+            MySQLTime^.minute := PTS^.Minute;
+            MySQLTime^.second := PTS^.Second;
+            MySQLTime^.second_part := PTS^.Fractions div 1000;
+            MySQLTime^.neg := Ord(PTS^.IsNegative);
+            MySQLTime^.time_type := MYSQL_TIMESTAMP_DATETIME;
             PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := MySQLTime; //write address
           end;
         end;
