@@ -1463,7 +1463,7 @@ begin
         {skip trailing /x}
         Len := (ZFastCode.StrLen(Buffer)-2) shr 1;
         if Len = SizeOf(TGUID)
-        then HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
+        then {$IFDEF USE_SYNCOMMONS}SynCommons.{$ENDIF}HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
         else goto Fail;
       end else if Assigned(FPlainDriver.PQUnescapeBytea) then begin
         pgBuff := FPlainDriver.PQUnescapeBytea(Buffer, @Len);
