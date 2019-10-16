@@ -2793,7 +2793,7 @@ procedure TZOleDBPreparedStatement.SetTime(Index: Integer;
 var Bind: PDBBINDING;
   Data: PAnsichar;
   DT: TDateTime;
-label TWConv, RConv;
+label TWConv;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -2872,7 +2872,7 @@ procedure TZOleDBPreparedStatement.SetTimestamp(Index: Integer;
 var Bind: PDBBINDING;
   Data: PAnsichar;
   DT: TDateTime;
-label TSWConv, RConv;
+label TSWConv;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;

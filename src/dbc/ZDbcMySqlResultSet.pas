@@ -1869,7 +1869,7 @@ begin
     if not LastWasNull then begin
 From_Str: LastWasNull := not TryPCharToDate(Buffer, Len, ConSettings^.ReadFormatSettings, Result);
       if LastWasNull then
-Fill:  FillChar(Result, SizeOf(TZDate), #0);
+Fill:   Pint64(@Result.Year)^ := 0;
     end;
   end;
 end;
@@ -2326,8 +2326,10 @@ begin
     if not LastWasNull then begin
 From_Str:
       LastWasNull := not TryPCharToTime(Buffer, Len, ConSettings^.ReadFormatSettings, Result);
-      if LastWasNull then
-Fill:   FillChar(Result, SizeOf(TZTime), #0);
+      if LastWasNull then begin
+Fill:   PCardinal(@Result.Hour)^ := 0;
+        PInt64(@Result.Second)^ := 0;
+      end;
     end;
   end;
 end;

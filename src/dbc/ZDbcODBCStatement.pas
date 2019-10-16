@@ -2072,7 +2072,7 @@ begin
               Exit;
             end;
       else  begin
-              if TryDateToDateTime(Value, DT)
+              if TryDateToDateTime(Value, DT{%H-})
               then InternalBindDouble(Index, stDate, DT)
               else BindSInteger(Index, stDate, 1);
               Exit;
@@ -2534,7 +2534,7 @@ begin
               Exit;
             end;
       else  begin
-              if TryTimeToDateTime(Value, DT)
+              if TryTimeToDateTime(Value, DT{%H-})
               then InternalBindDouble(Index, stTime, DT)
               else BindSInteger(Index, stTime, 1);
               Exit;
@@ -2629,7 +2629,7 @@ begin
               Exit;
             end;
       else  begin
-              if TryTimeStampToDateTime(Value, DT)
+              if TryTimeStampToDateTime(Value, DT{%H-})
               then InternalBindDouble(Index, stTimeStamp, DT)
               else BindSInteger(Index, stTimeStamp, 1);
               Exit;

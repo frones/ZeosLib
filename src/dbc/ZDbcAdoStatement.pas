@@ -1023,7 +1023,7 @@ var V: OleVariant;
       end;
     end;
   end;
-label set_dbl, set_BSTR;
+label set_BSTR;
 begin
   if FEmulatedParams then
     SetEmulatedValue

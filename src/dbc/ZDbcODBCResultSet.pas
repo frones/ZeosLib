@@ -656,9 +656,7 @@ begin
       else DecodeDateTimeToDate(GetDouble(ColumnIndex), Result);
     end;
   end else
-Fill: if SizeOf(TZDate) = SizeOf(Int64)
-    then PInt64(@Result.Year)^ := 0
-    else FillChar(Result, SizeOf(TZDate), #0);
+Fill: PInt64(@Result.Year)^ := 0;
 end;
 
 function TAbstractODBCResultSet.GetDouble(ColumnIndex: Integer): Double;
