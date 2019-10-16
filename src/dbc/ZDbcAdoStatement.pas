@@ -329,9 +329,10 @@ begin
     FAdoCommand.CommandText := WSQL;
     FAdoCommand.CommandType := FCommandType;
    // FAdoCommand.Properties['Defer Prepare'].Value := False;
-    inherited Prepare;
-    if FTokenMatchIndex > -1 then
+    if (FWeakIntfPtrOfIPrepStmt <> nil) and (FTokenMatchIndex > -1) and
+       StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) then
       FAdoCommand.Prepared := True;
+    inherited Prepare;
   end;
 end;
 
