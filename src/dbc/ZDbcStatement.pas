@@ -2225,9 +2225,17 @@ var BindValue: PZBindValue;
             Dest := VariantManager.Convert(Src, vtBigDecimal);
             Put(Index, Dest.VBigDecimal);
           end;
-        stDate, stTime, stTimeStamp: begin
-            Dest := VariantManager.Convert(Src, vtDateTime);
-            Put(Index, NewSQLType, P8Bytes(@Dest.VDateTime));
+        stDate: begin
+            Dest := VariantManager.Convert(Src, vtDate);
+            Put(Index, Dest.VDate);
+          end;
+        stTime: begin
+            Dest := VariantManager.Convert(Src, vtTime);
+            Put(Index, Dest.VTime);
+          end;
+        stTimeStamp: begin
+            Dest := VariantManager.Convert(Src, vtTimeStamp);
+            Put(Index, NewSQLType, P8Bytes(@Dest.VTimeStamp));
           end;
         stGUID: begin
             Dest := VariantManager.Convert(Src, vtGUID);
@@ -2656,6 +2664,11 @@ begin
     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetCurrency(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result);
 end;
 
+{$IFDEF FPC} // parameters not used intentionally
+  {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "$1" not used}
+{$ENDIF}
 function TZAbstractPreparedStatement.GetDate(
   ParameterIndex: Integer): TDateTime;
 var D: TZDate;
@@ -2663,6 +2676,7 @@ begin
   IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).GetDate(ParameterIndex, D);
   TryDateToDateTime(D, Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZAbstractPreparedStatement.GetDate(ParameterIndex: Integer;
   var Result: TZDate);
@@ -3488,7 +3502,10 @@ begin
     vtUTF8String:    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetUTF8String(ParameterIndex, Value.VRawByteString);
     {$ENDIF}
     vtCharRec:       IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetCharRec(ParameterIndex, Value.VCharRec);
+    vtDate:          IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDate(ParameterIndex, Value.VDate);
     vtDateTime:      IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimestamp(ParameterIndex, Value.VDateTime);
+    vtTime:          IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTime(ParameterIndex, Value.VTime);
+    vtTimeStamp:     IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetTimeStamp(ParameterIndex, Value.VTimeStamp);
     vtBytes:         IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBytes(ParameterIndex, {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}StrToBytes{$ENDIF}(Value.VRawByteString));
     vtArray:  begin
                 IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetDataArray(ParameterIndex, Value.VArray.VArray, TZSQLType(Value.VArray.VArrayType), Value.VArray.VArrayVariantType);

@@ -1277,8 +1277,18 @@ begin
                     InitializeVariant(Result, vtBigDecimal);
                     IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(ColumnIndex, Result.VBigDecimal);
                   end;
-    stDate, stTime, stTimestamp:
-      Result := EncodeDateTime(IZResultSet(FWeakIntfPtrOfSelf).GetTimestamp(ColumnIndex));
+    stDate:   begin
+                InitializeVariant(Result, vtDate);
+                IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex, Result.VDate);
+              end;
+    stTime:   begin
+                InitializeVariant(Result, vtTime);
+                IZResultSet(FWeakIntfPtrOfSelf).GetTime(ColumnIndex, Result.VTime);
+              end;
+    stTimestamp:begin
+                InitializeVariant(Result, vtTimeStamp);
+                IZResultSet(FWeakIntfPtrOfSelf).GetTimeStamp(ColumnIndex, Result.VTimeStamp);
+              end;
     stGUID: begin
               InitializeVariant(Result, vtGUID);
               IZResultSet(FWeakIntfPtrOfSelf).GetGUID(ColumnIndex, Result.VGUID);
@@ -1741,15 +1751,21 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>,
     the value returned is <code>null</code>
 }
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 function TZAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var T: TZTime;
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex, T{%H-});
+  IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex, T);
   if not LastWasNull then
     LastWasNull := not TryTimeToDateTime(T, Result);
   if LastWasNull then
     Result := 0;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -1780,6 +1796,11 @@ begin
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetTime(GetColumnIndex(ColumnName));
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 function TZAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var TS: TZTimeStamp;
 begin
@@ -1789,6 +1810,7 @@ begin
   if LastWasNull then
     Result := 0;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -2485,6 +2507,9 @@ begin
               IZResultSet(FWeakIntfPtrOfSelf).UpdatePAnsiChar(ColumnIndex, Pointer(Value.VRawByteString), Len);
             end;
     vtDateTime: IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(ColumnIndex, Value.VDateTime);
+    vtDate: IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(ColumnIndex, Value.VDate);
+    vtTime: IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(ColumnIndex, Value.VTime);
+    vtTimeStamp: IZResultSet(FWeakIntfPtrOfSelf).UpdateTimeStamp(ColumnIndex, Value.VTimeStamp);
     vtUnicodeString: IZResultSet(FWeakIntfPtrOfSelf).UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
     vtInterface: begin
       if (Value.vInterface <> nil) and Supports(Value.vInterface, IZBLob, Lob)
@@ -2934,6 +2959,10 @@ begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(GetColumnIndex(ColumnName), Value);
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+{$ENDIF}
 procedure TZAbstractResultSet.UpdateDate(ColumnIndex: Integer;
   const Value: TDateTime);
 var D: TZDate;
@@ -2941,6 +2970,7 @@ begin
   DecodeDateTimeToDate(Value, D);
   IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(ColumnIndex, D);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Updates the designated column with a <code>java.sql.Date</code> value.
@@ -2974,6 +3004,11 @@ begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(GetColumnIndex(ColumnName), Value);
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 procedure TZAbstractResultSet.UpdateTime(ColumnIndex: Integer;
   const Value: TDateTime);
 var T: TZTime;
@@ -2981,6 +3016,7 @@ begin
   DecodeDateTimeToTime(Value, T);
   IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(ColumnIndex, T);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Updates the designated column with a <code>java.sql.Time</code> value.
@@ -2998,6 +3034,11 @@ begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(GetColumnIndex(ColumnName), Value);
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 procedure TZAbstractResultSet.UpdateTimeStamp(ColumnIndex: Integer;
   const Value: TDateTime);
 var TS: TZTimeStamp;
@@ -3005,6 +3046,7 @@ begin
   DecodeDateTimeToTimeStamp(Value, TS);
   IZResultSet(FWeakIntfPtrOfSelf).UpdateTimeStamp(ColumnIndex, TS);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Updates the designated column with a <code>java.sql.Timestamp</code>
