@@ -594,8 +594,7 @@ begin
       if Result then begin
         if Assigned(FRowSet)
         then LastResultSet := CreateResultSet(FRowSet)
-        else LastResultSet := nil;
-        LastUpdateCount := FRowsAffected;
+        else LastUpdateCount := FRowsAffected;
       end {else if Status <> DB_S_NORESULT then
         CheckError(Status, lcOther)};
     end;

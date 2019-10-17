@@ -628,6 +628,8 @@ type
     {$ENDIF}
   public
     function NextResultSet: Boolean; virtual;
+    function NextRecordSet: Boolean;
+    function NextRowsAffected: Boolean;
   end;
 
   {$IFNDEF WITH_TFIELD_PARENTFIELD}
@@ -4500,13 +4502,27 @@ begin
   Result := (not FilterEnabled);
 end;
 
+function TZAbstractRODataset.NextRecordSet: Boolean;
+begin
+  Result := NextResultSet;
+end;
+
 function TZAbstractRODataset.NextResultSet: Boolean;
 begin
-  Result := False;
   if Assigned(Statement) and Statement.GetMoreResults then begin
     Result := True;
     SetAnotherResultset(Statement.GetResultSet);
-  end;
+  end else
+    Result := False;
+end;
+
+function TZAbstractRODataset.NextRowsAffected: Boolean;
+begin
+  if Assigned(Statement) and Statement.GetMoreResults then begin
+    Result := True;
+    FRowsAffected := Statement.GetUpdateCount;
+  end else
+    Result := False;
 end;
 
 {**
