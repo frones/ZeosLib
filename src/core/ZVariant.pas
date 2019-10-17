@@ -1166,6 +1166,11 @@ begin
   Result := Convert(Value, vtString).{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF};
 end;
 
+{**
+  Gets a variant to time value.
+  @param Value a variant to be converted.
+  @param a result value.
+}
 procedure TZSoftVariantManager.GetAsTime(const Value: TZVariant;
   var Result: TZTime);
 var P: Pointer;
@@ -3072,6 +3077,10 @@ end;
   Gets a stored value converted to time.
   @return a stored value converted to time.
 }
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 function TZAnyValue.GetTime: TZTime;
 begin
   SoftVarManager.GetAsTime(FValue, Result);
@@ -3085,6 +3094,7 @@ function TZAnyValue.GetTimeStamp: TZTimeStamp;
 begin
   SoftVarManager.GetAsTimeStamp(FValue, Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a stored value converted to AnsiString.
@@ -3139,10 +3149,15 @@ end;
   Gets a stored value converted to date.
   @return a stored value converted to date.
 }
+{$IFDEF FPC} // parameters not used intentionally
+  {$PUSH}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 function TZAnyValue.GetDate: TZDate;
 begin
   SoftVarManager.GetAsDate(FValue, Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a stored value converted to datetime.
