@@ -59,7 +59,6 @@ uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcProperties;
 
-{$IFNDEF FPC}
 type
 
   {** Implements a bug report test case for DbLib components. }
@@ -67,10 +66,11 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
+    {$IFNDEF FPC}
     procedure Test_NChar_Values;
+    {$ENDIF}    
     procedure TestSF380;
   end;
-  {$ENDIF}
 
 implementation
 
@@ -78,12 +78,12 @@ implementation
 
 uses ZAbstractRODataset, SysUtils;
 
-{$IFNDEF FPC}
 function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
 begin
   Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
 end;
 
+{$IFNDEF FPC}
 procedure ZTestCompDbLibBugReport.Test_NChar_Values;
 var
   Query: TZQuery;
@@ -202,6 +202,7 @@ begin
     Query.Free;
   end;
 end;
+{$ENDIF}
 
 procedure ZTestCompDbLibBugReport.TestSF380;
 var
@@ -242,10 +243,6 @@ begin
   end;
 end;
 
-{$ENDIF}
-
 initialization
-{$IFNDEF FPC}
   RegisterTest('bugreport',ZTestCompDbLibBugReport.Suite);
-{$ENDIF}
 end.
