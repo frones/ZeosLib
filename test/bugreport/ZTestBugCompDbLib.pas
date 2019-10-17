@@ -68,12 +68,15 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure Test_NChar_Values;
+    procedure TestSF380;
   end;
   {$ENDIF}
 
 implementation
 
 { ZTestCompDbLibBugReport }
+
+uses ZAbstractRODataset, SysUtils;
 
 {$IFNDEF FPC}
 function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
@@ -199,6 +202,46 @@ begin
     Query.Free;
   end;
 end;
+
+procedure ZTestCompDbLibBugReport.TestSF380;
+var
+  Query: TZQuery;
+  Table: TZTable;
+begin
+  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
+
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults];
+    Query.Sql.Add('create table #t (i int)');
+    Query.Sql.Add('insert into #t values (0)');
+    Query.ExecSQL;
+  finally
+    FreeAndNil(Query);
+  end;
+
+  Table := TZTable.Create(nil);
+  try
+    Table.Connection := Connection;
+    Table.Options := [doCalcDefaults];
+    Table.TableName := '#t';
+    Table.Open;
+    Table.Edit;
+    Table.Fields[0].AsInteger := 3;
+    Table.Post;
+    Table.Close;
+    Table.Open;
+    try
+      CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+    finally
+    Table.Close;
+    end;
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
 {$ENDIF}
 
 initialization
