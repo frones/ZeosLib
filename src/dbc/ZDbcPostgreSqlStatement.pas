@@ -177,8 +177,6 @@ type
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = '';
       {%H-}PrecisionOrSize: LengthInt = 0; {%H-}Scale: LengthInt = 0); override;
-    (*procedure SetNullArray(Index: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
-    procedure SetDataArray(Index: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);*)
   end;
 
   {** implements a emulated prepared statement for PostgresSQL protocol V2 }
@@ -257,13 +255,20 @@ var
   end;
 var
   OffSet, J: Cardinal;
-  D: Pointer;
+  Dyn: Pointer;
   P: PAnsiChar;
   A: PArrayType;
   CP: word;
   X, N, DynArrayLen: Integer;
   Arr: PZArray;
   Native: Boolean;
+  DT: TDateTime;
+  TS: TZTimeStamp;
+  D: TZDate absolute TS;
+  T: TZTime absolute TS;
+  PTS: PZTimeStamp;
+  PD: PZDate absolute PTS;
+  PT: PZTime absolute PTS;
 
   procedure BindLobs;
   var J: Cardinal;
@@ -274,40 +279,40 @@ var
     CP := ConSettings^.ClientCodePage.CP;
     N := 0;
     for J := 0 to DynArrayLen -1 do
-      if (TInterfaceDynArray(D)[j] <> nil) and Supports(TInterfaceDynArray(D)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty then
+      if (TInterfaceDynArray(Dyn)[j] <> nil) and Supports(TInterfaceDynArray(Dyn)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty then
         if BindList.SQLTypes[Index] in [stUnicodeStream, stAsciiStream] then begin
           if TempBlob.IsClob then
             TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP)
           else begin
             fRawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
             TempBlob := TZAbstractClob.CreateWithData(Pointer(fRawTemp), Length(fRawTemp), Cp, ConSettings);
-            TInterfaceDynArray(D)[j] := TempBlob;
+            TInterfaceDynArray(Dyn)[j] := TempBlob;
           end;
           Inc(N,TempBlob.Length);
         end else if FOidAsBlob then begin
           WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
             FconnAddress^, 0, ChunkSize);
           WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
-          TInterfaceDynArray(D)[j] := WriteTempBlob;
+          TInterfaceDynArray(Dyn)[j] := WriteTempBlob;
           Inc(N, SizeOf(OID));
         end else
           Inc(N, TempBlob.Length);
     AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
     if (BindList.SQLtypes[Index] = stBinaryStream) and FOidAsBlob then begin
       for j := 0 to DynArrayLen -1 do
-        if TInterfaceDynArray(D)[j] = nil then begin
+        if TInterfaceDynArray(Dyn)[j] = nil then begin
           Integer2PG(-1, P);
           Inc(P,SizeOf(int32));
         end else begin
           Integer2PG(SizeOf(OID), P);
-          WriteTempBlob := TInterfaceDynArray(D)[j] as IZPostgreSQLOidBlob;
+          WriteTempBlob := TInterfaceDynArray(Dyn)[j] as IZPostgreSQLOidBlob;
           Cardinal2PG(WriteTempBlob.GetBlobOid,P+SizeOf(int32));
           Inc(P,SizeOf(int32)+SizeOf(OID));
         end;
     end else begin
       AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
       for J := 0 to DynArrayLen -1 do
-        if not ((TInterfaceDynArray(D)[j] <> nil) and Supports(TInterfaceDynArray(D)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty) then begin
+        if not ((TInterfaceDynArray(Dyn)[j] <> nil) and Supports(TInterfaceDynArray(Dyn)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty) then begin
           Integer2PG(-1, P);
           Inc(P,SizeOf(int32));
         end else begin
@@ -325,16 +330,16 @@ var
     N := 0;
     for j := 0 to DynArrayLen -1 do
       if not IsNullFromArray(Arr, j) then
-        Inc(N, Length(TRawByteStringDynArray(D)[j]));
+        Inc(N, Length(TRawByteStringDynArray(Dyn)[j]));
     AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
     for j := 0 to DynArrayLen -1 do
       if IsNullFromArray(Arr, j) then begin
         Integer2PG(-1, P);
         Inc(P,SizeOf(int32));
       end else begin
-        N := Length(TRawByteStringDynArray(D)[j]);
+        N := Length(TRawByteStringDynArray(Dyn)[j]);
         Integer2PG(N, P);
-        Move(Pointer(TRawByteStringDynArray(D)[j])^, (P+SizeOf(int32))^, N);
+        Move(Pointer(TRawByteStringDynArray(Dyn)[j])^, (P+SizeOf(int32))^, N);
         Inc(P,SizeOf(int32)+N);
       end;
   end;
@@ -346,16 +351,16 @@ var
     charWidth := ConSettings^.ClientCodePage.CharWidth;
     for j := 0 to DynArrayLen -1 do
       if not IsNullFromArray(Arr, j) then
-        Inc(N, Length(TUnicodeStringDynArray(D)[j]));
+        Inc(N, Length(TUnicodeStringDynArray(Dyn)[j]));
     AllocArray(Index, (N*CharWidth)+(DynArrayLen*SizeOf(int32)), A, P);
     for j := 0 to DynArrayLen -1 do
       if IsNullFromArray(Arr, j) then begin
         Integer2PG(-1, P);
         Inc(P,SizeOf(int32));
       end else begin
-        N := Length(TUnicodeStringDynArray(D)[j]);
+        N := Length(TUnicodeStringDynArray(Dyn)[j]);
         MaxBytes := N*CharWidth;
-        RawLen := ZEncoding.PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(D)[j]), (P+SizeOf(int32)), N, MaxBytes, CP);
+        RawLen := ZEncoding.PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(Dyn)[j]), (P+SizeOf(int32)), N, MaxBytes, CP);
         Integer2PG(RawLen, P);
         Inc(P,SizeOf(int32)+RawLen);
         Dec(Stmt.FPQparamLengths[Index], (MaxBytes-RawLen));
@@ -369,17 +374,17 @@ var
     case Arr.VArrayVariantType of
       {$IFNDEF UNICODE}
       vtString:   for J := 0 to DynArrayLen -1 do
-                    FTempRaws[j] := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(D)[j], ConSettings.CTRL_CP, CP);
+                    FTempRaws[j] := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(Dyn)[j], ConSettings.CTRL_CP, CP);
       {$ENDIF}
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString: for J := 0 to DynArrayLen -1 do begin
-                      FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(D)[j]), Length(TRawByteStringDynArray(D)[j]), zOSCodePage);
+                      FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(Dyn)[j]), Length(TRawByteStringDynArray(Dyn)[j]), zOSCodePage);
                       FTempRaws[j] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUnitemp), CP);
                     end;
       {$ENDIF}
       {$IFNDEF NO_UTF8STRING}
       vtUTF8String: for J := 0 to DynArrayLen -1 do begin
-                      FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(D)[j]), Length(TRawByteStringDynArray(D)[j]), zCP_UTF8);
+                      FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(Dyn)[j]), Length(TRawByteStringDynArray(Dyn)[j]), zCP_UTF8);
                       FTempRaws[j] := PUnicodeToRaw(Pointer(FUniTemp), Length(FUnitemp), CP);
                     end;
       {$ENDIF}
@@ -387,27 +392,27 @@ var
       vtString,
       {$ENDIF}
       vtUnicodeString: for J := 0 to DynArrayLen -1 do
-                          FTempRaws[j] := ZUnicodeToRaw(TUnicodeStringDynArray(D)[j], CP);
+                          FTempRaws[j] := ZUnicodeToRaw(TUnicodeStringDynArray(Dyn)[j], CP);
       vtCharRec:  for J := 0 to DynArrayLen -1 do
-                    if ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) or (TZCharRecDynArray(D)[j].Len = 0) then
-                      ZSetString(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, FTempRaws[j])
-                    else if ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, zCP_UTF16) then
-                      FTempRaws[j] := PUnicodeToRaw(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, CP)
+                    if ZCompatibleCodePages(TZCharRecDynArray(Dyn)[j].CP, cp) or (TZCharRecDynArray(Dyn)[j].Len = 0) then
+                      ZSetString(TZCharRecDynArray(Dyn)[j].P, TZCharRecDynArray(Dyn)[j].Len, FTempRaws[j])
+                    else if ZCompatibleCodePages(TZCharRecDynArray(Dyn)[j].CP, zCP_UTF16) then
+                      FTempRaws[j] := PUnicodeToRaw(TZCharRecDynArray(Dyn)[j].P, TZCharRecDynArray(Dyn)[j].Len, CP)
                     else begin
-                      fUniTemp := PRawToUnicode(TZCharRecDynArray(D)[j].P, TZCharRecDynArray(D)[j].Len, TZCharRecDynArray(D)[j].CP);
+                      fUniTemp := PRawToUnicode(TZCharRecDynArray(Dyn)[j].P, TZCharRecDynArray(Dyn)[j].Len, TZCharRecDynArray(Dyn)[j].CP);
                       FTempRaws[j] := ZUnicodeToRaw(fUniTemp, CP)
                     end;
     end;
-    D := FTempRaws;
+    Dyn := FTempRaws;
     BindRawStrings;
   end;
 begin
   Arr := BindList[Index].Value; //localize -> next steps will free the memory
   SQLType := TZSQLType(Arr.VArrayType);
-  D := Arr.VArray;
+  Dyn := Arr.VArray;
   P := nil;
   Native := Arr.VArrayVariantType in NativeArrayValueTypes[SQLType];
-  DynArrayLen := Length(TByteDynArray(D));
+  DynArrayLen := Length(TByteDynArray(Dyn));
   case SQLType of
     stBoolean:    begin
                     AllocArray(Index, SizeOf(Byte)*DynArrayLen+SizeOf(Int32)*DynArrayLen, A, P);
@@ -419,7 +424,7 @@ begin
                       end else begin
                         Integer2PG(SizeOf(Byte), P);
                         if Native
-                        then PByte(P+SizeOf(int32))^ := Ord(TBooleanDynArray(D)[j])
+                        then PByte(P+SizeOf(int32))^ := Ord(TBooleanDynArray(Dyn)[j])
                         else PByte(P+SizeOf(int32))^ := Ord(ArrayValueToBoolean(Arr, J));
                         Inc(P,SizeOf(int32)+SizeOf(Byte));
                       end;
@@ -433,7 +438,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(SmallInt));
                       end else begin
                         Integer2PG(SizeOf(SmallInt), P);
-                        SmallInt2PG(TByteDynArray(D)[j],P+SizeOf(int32));
+                        SmallInt2PG(TByteDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(SmallInt));
                       end;
                   end;
@@ -446,7 +451,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(SmallInt));
                       end else begin
                         Integer2PG(SizeOf(SmallInt), P);
-                        SmallInt2PG(TShortIntDynArray(D)[j],P+SizeOf(int32));
+                        SmallInt2PG(TShortIntDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(SmallInt));
                       end;
                   end;
@@ -459,7 +464,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Integer));
                       end else begin
                         Integer2PG(SizeOf(Integer), P);
-                        SmallInt2PG(TWordDynArray(D)[j],P+SizeOf(int32));
+                        SmallInt2PG(TWordDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(Integer));
                       end;
                   end;
@@ -472,7 +477,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(SmallInt));
                       end else begin
                         Integer2PG(SizeOf(SmallInt), P);
-                        SmallInt2PG(TSmallIntDynArray(D)[j],P+SizeOf(int32));
+                        SmallInt2PG(TSmallIntDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(SmallInt));
                       end;
                   end;
@@ -485,7 +490,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Integer));
                       end else begin
                         Integer2PG(SizeOf(Integer), P);
-                        Integer2PG(TIntegerDynArray(D)[j],P+SizeOf(int32));
+                        Integer2PG(TIntegerDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(Integer));
                       end;
                   end;
@@ -498,7 +503,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(OID));
                       end else begin
                         Integer2PG(SizeOf(OID), P);
-                        Cardinal2PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
+                        Cardinal2PG(TLongWordDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(OID));
                       end;
                   end else begin
@@ -510,7 +515,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
                       end else begin
                         Integer2PG(SizeOf(LongWord), P);
-                        Int642PG(TLongWordDynArray(D)[j],P+SizeOf(int32));
+                        Int642PG(TLongWordDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(Int64));
                       end;
                   end;
@@ -523,7 +528,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
                       end else begin
                         Integer2PG(SizeOf(Int64), P);
-                        Int642PG(TInt64DynArray(D)[j],P+SizeOf(int32));
+                        Int642PG(TInt64DynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(Int64));
                       end;
                   end;
@@ -536,7 +541,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
                       end else begin
                         Integer2PG(SizeOf(Int64), P);
-                        Int642PG(Int64(TUInt64DynArray(D)[j]),P+SizeOf(int32));
+                        Int642PG(Int64(TUInt64DynArray(Dyn)[j]),P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(UInt64));
                       end;
                   end;
@@ -549,7 +554,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Single));
                       end else begin
                         Integer2PG(SizeOf(Single), P);
-                        Single2PG(TSingleDynArray(D)[j],P+SizeOf(int32));
+                        Single2PG(TSingleDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(Single));
                       end;
                   end;
@@ -562,7 +567,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
                       end else begin
                         Integer2PG(SizeOf(Double), P);
-                        Double2PG(TDoubleDynArray(D)[j],P+SizeOf(int32));
+                        Double2PG(TDoubleDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+SizeOf(Double));
                       end;
                   end;
@@ -575,7 +580,7 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], 8);
                       end else begin
                         Integer2PG(8, P);
-                        Currency2PGCash(TCurrencyDynArray(D)[j],P+SizeOf(int32));
+                        Currency2PGCash(TCurrencyDynArray(Dyn)[j],P+SizeOf(int32));
                         Inc(P,SizeOf(int32)+8);
                       end;
                   end else begin
@@ -587,7 +592,7 @@ begin
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], MaxCurr2NumSize);
                       end else begin
-                        Currency2PGNumeric(TCurrencyDynArray(D)[j], P+SizeOf(int32), x);
+                        Currency2PGNumeric(TCurrencyDynArray(Dyn)[j], P+SizeOf(int32), x);
                         Integer2PG(X, P);
                         Inc(P,SizeOf(int32)+X);
                         Dec(Stmt.FPQparamLengths[Index], MaxCurr2NumSize-X);
@@ -601,7 +606,7 @@ begin
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], MaxBCD2NumSize);
                       end else begin
-                        BCD2PGNumeric(TBCDDynArray(D)[j], P+SizeOf(int32), x);
+                        BCD2PGNumeric(TBCDDynArray(Dyn)[j], P+SizeOf(int32), x);
                         Integer2PG(X, P);
                         Inc(P,SizeOf(int32)+X);
                         Dec(Stmt.FPQparamLengths[Index], MaxBCD2NumSize-X);
@@ -615,8 +620,20 @@ begin
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Integer));
                       end else begin
+                        if Arr.VArrayVariantType = vtDate then
+                          PD := @TZDateDynArray(Dyn)[j]
+                        else begin
+                          PD := @D;
+                          if (Arr.VArrayVariantType in [vtNull, vtDateTime])
+                          then  DecodeDateTimeToDate(TDateTimeDynArray(Dyn)[j], D)
+                          else begin
+                            DT := ArrayValueToDate(Arr, J, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToDate(DT, D);
+                          end;
+                        end;
+                        Date2PG(PD^.Year, PD^.Month, PD^.Day, PInteger(NativeUInt(P)+SizeOf(int32))^);
                         Integer2PG(SizeOf(Integer), P);
-                        Date2PG(TDateTimeDynArray(D)[j], PInteger(NativeUInt(P)+SizeOf(int32))^);
+                        Date2PG(TDateTimeDynArray(Dyn)[j], PInteger(NativeUInt(P)+SizeOf(int32))^);
                         Inc(P,SizeOf(int32)+SizeOf(Integer));
                       end;
                   end;
@@ -628,10 +645,21 @@ begin
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], 8);
                       end else begin
+                        if Arr.VArrayVariantType = vtTime then
+                          PT := @TZTimeDynArray(Dyn)[J]
+                        else begin
+                          PT := @T;
+                          if (Arr.VArrayVariantType in [vtNull, vtDateTime])
+                          then DecodeDateTimeToTime(TDateTimeDynArray(Dyn)[J], T)
+                          else begin
+                            DT := ArrayValueToTime(Arr, J, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToTime(DT, T);
+                          end;
+                        end;
                         Integer2PG(8, P);
                         if Finteger_datetimes
-                        then Time2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
-                        else Time2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
+                        then Time2PG(PT^.Hour, PT^.Minute, PT^.Second, PT^.Fractions, PInt64(NativeUInt(P)+SizeOf(int32))^)
+                        else Time2PG(PT^.Hour, PT^.Minute, PT^.Second, PT^.Fractions, PDouble(NativeUInt(P)+SizeOf(int32))^);
                         Inc(P,SizeOf(int32)+8);
                       end
                   end;
@@ -643,10 +671,21 @@ begin
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], 8);
                       end else begin
+                        if Arr.VArrayVariantType = vtTimeStamp then
+                          PTS := @TZTimeStampDynArray(Dyn)[J]
+                        else begin
+                          PTS := @TS;
+                          if (Arr.VArrayVariantType in [vtNull, vtDateTime])
+                          then DecodeDateTimeToTimeStamp(TDateTimeDynArray(Dyn)[J], TS)
+                          else begin
+                            DT := ArrayValueToDatetime(Arr, J, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToTimeStamp(DT, TS);
+                          end;
+                        end;
                         Integer2PG(8, P);
                         if Finteger_datetimes
-                        then DateTime2PG(TDateTimeDynArray(D)[j], PInt64(NativeUInt(P)+SizeOf(int32))^)
-                        else DateTime2PG(TDateTimeDynArray(D)[j], PDouble(NativeUInt(P)+SizeOf(int32))^);
+                        then TimeStamp2PG(PTS^, PInt64(NativeUInt(P)+SizeOf(int32))^)
+                        else TimeStamp2PG(PTS^, PDouble(NativeUInt(P)+SizeOf(int32))^);
                         Inc(P,SizeOf(int32)+8);
                       end
                   end;
@@ -660,25 +699,25 @@ begin
                       end else begin
                         Integer2PG(SizeOf(TGUID), P);
                         //eh: Network byteOrder?
-                        PGUID(NativeUInt(P)+SizeOf(int32))^ := TGUIDDynArray(D)[j];
+                        PGUID(NativeUInt(P)+SizeOf(int32))^ := TGUIDDynArray(Dyn)[j];
                         Inc(P,SizeOf(int32)+SizeOf(TGUID));
                       end
                   end;
     stBytes:      begin
                     N := 0;
                     for J := 0 to DynArrayLen -1 do
-                      if not (IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil)) then
-                        Inc(N, Length(TBytesDynArray(D)[j]));
+                      if not (IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(Dyn)[j]) = nil)) then
+                        Inc(N, Length(TBytesDynArray(Dyn)[j]));
                     AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
-                      if IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(D)[j]) = nil) then begin
+                      if IsNullFromArray(Arr, j) or (Pointer(TBytesDynArray(Dyn)[j]) = nil) then begin
                         Integer2PG(-1, P);
                         Inc(P,SizeOf(int32));
                       end else begin
-                        N := Length(TBytesDynArray(D)[j]);
+                        N := Length(TBytesDynArray(Dyn)[j]);
                         Integer2PG(N, P);
                         //eh: Network byteOrder?
-                        Move(Pointer(TBytesDynArray(D)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
+                        Move(Pointer(TBytesDynArray(Dyn)[j])^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
                         Inc(P,SizeOf(int32)+N);
                       end
                   end;
@@ -709,8 +748,8 @@ begin
                         N := 0;
                         OffSet := DynArrayLen;
                         for J := 0 to DynArrayLen -1 do begin
-                          Dec(OffSet, Ord(not ((ZCompatibleCodePages(TZCharRecDynArray(D)[j].CP, cp) and (TZCharRecDynArray(D)[j].Len > 0) and not IsNullFromArray(Arr, j)))));
-                          Inc(N, Integer(TZCharRecDynArray(D)[j].Len)*Ord(not IsNullFromArray(Arr, j)));
+                          Dec(OffSet, Ord(not ((ZCompatibleCodePages(TZCharRecDynArray(Dyn)[j].CP, cp) and (TZCharRecDynArray(Dyn)[j].Len > 0) and not IsNullFromArray(Arr, j)))));
+                          Inc(N, Integer(TZCharRecDynArray(Dyn)[j].Len)*Ord(not IsNullFromArray(Arr, j)));
                         end;
                         if OffSet <> Cardinal(DynArrayLen) then
                           BindConvertedStrings
@@ -721,9 +760,9 @@ begin
                               Integer2PG(-1, P);
                               Inc(P,SizeOf(int32));
                             end else begin
-                              N := TZCharRecDynArray(D)[j].Len;
+                              N := TZCharRecDynArray(Dyn)[j].Len;
                               Integer2PG(N, P);
-                              Move(TZCharRecDynArray(D)[j].P^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
+                              Move(TZCharRecDynArray(Dyn)[j].P^, Pointer(NativeUInt(P)+SizeOf(int32))^, N);
                               Inc(P,SizeOf(int32)+N);
                             end;
                         end;

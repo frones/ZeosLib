@@ -1244,7 +1244,11 @@ var
   ArrayLen: Cardinal;
   ClientCP: Word;
   P: PAnsiChar;
+  DT: TDateTime;
   TS: TZTimeStamp;
+  D: TZDate absolute TS;
+  PTS: PZTimeStamp;
+  PD: PZDate absolute PTS;
   Status: sword;
   OraDate: POraDate;
 label bind_direct;
@@ -1474,24 +1478,43 @@ bind_direct:
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(TOraDate));
         FillChar(Bind^.valuep^, ArrayLen*SizeOf(TOraDate), #0);
         for i := 0 to ArrayLen -1 do begin
-          DecodeDate(TDateTimeDynArray(Value)[i], TS.Year, TS.Month, TS.Day);
+          if (VariantType in [vtNull, vtDateTime]) then begin
+            DecodeDateTimeToDate(TDateTimeDynArray(Value)[I], D);
+            PD := @D;
+          end else if VariantType = vtDate then
+            PD := @TZDateDynArray(Value)[I]
+          else begin
+            DT := ArrayValueToDate(BindList[ParameterIndex].Value, I, ConSettings^.WriteFormatSettings);
+            DecodeDateTimeToDate(DT, D);
+            PD := @D;
+          end;
           OraDate := POraDate(Bind^.valuep+I*SizeOf(TOraDate));
-          OraDate.Cent  := Ts.Year div 100 + 100;
-          OraDate.Year  := Ts.Year mod 100 + 100;
-          OraDate.Month := TS.Month;
-          OraDate.Day   := TS.Day;
+          OraDate.Cent  := PD^.Year div 100 + 100;
+          OraDate.Year  := PD^.Year mod 100 + 100;
+          OraDate.Month := PD^.Month;
+          OraDate.Day   := PD^.Day;
         end;
       end;
     stTime, stTimeStamp: begin //msec precision -> need a descriptor
         if (Bind.dty <> SQLT_TIMESTAMP) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(SizeOf(POCIDescriptor)));
         for i := 0 to ArrayLen -1 do begin
-          DecodeDate(TDateTimeDynArray(Value)[i], TS.Year, TS.Month, TS.Day); //oracle doesn't accept 0 dates
-          DecodeTime(TDateTimeDynArray(Value)[i], TS.Hour, TS.Minute, TS.Second, PWord(@TS.Fractions)^);
-          TS.Fractions := PWord(@TS.Fractions)^ * 1000000;
+          if VariantType = vtTimeStamp then
+            PTS := @TZTimeStampDynArray(Value)[i]
+          else begin
+            PTS := @TS;
+            if (VariantType in [vtNull, vtDateTime]) then
+              DecodeDateTimeToTimeStamp(TDateTimeDynArray(Value)[i], TS)
+            else if VariantType = vtTime then
+              ZSysUtils.TimeStampFromTime(TZTimeDynArray(Value)[i], TS)
+            else begin
+              DT := ArrayValueToDatetime(BindList[ParameterIndex].Value, I, ConSettings^.WriteFormatSettings);
+              DecodeDateTimeToTimeStamp(DT, TS);
+            end;
+          end;
           Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
               FOCIError, PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, //direct addressing descriptor to array. So we don't need to free the mem again
-              TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions, nil, 0);
+              PTS^.Year, PTS^.Month, PTS^.Day, PTS^.Hour, PTS^.Minute, PTS^.Second, PTS^.Fractions, nil, 0);
           if Status <> OCI_SUCCESS then
             CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDateTimeConstruct', ConSettings);
         end;
