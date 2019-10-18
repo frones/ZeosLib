@@ -2270,7 +2270,7 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetBindCapacity(Capacity: Integer);
 begin
-  if (Capacity = 0) or (FBindList.Capacity < Capacity) then
+  if (FBindList <> nil) and ((Capacity = 0) or (FBindList.Capacity < Capacity)) then
     FBindList.Capacity := Capacity;
 end;
 
