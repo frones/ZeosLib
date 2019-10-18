@@ -156,6 +156,7 @@ begin
   SetCharacterState(#39, #39, QuoteState);
 
   SetCharacterState('/', '/', CommentState);
+  SetCharacterState('-', '-', CommentState);
 end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE}
