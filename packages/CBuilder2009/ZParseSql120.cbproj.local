@@ -1,7 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject>
-	<Transactions>
-    <Transaction>2015/01/25 10:10:51.535.cbproj,C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZParseSql.cbproj=C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZParseSql100.cbproj</Transaction>
-    <Transaction>2015/01/25 10:15:31.416.cbproj,C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZParseSql100.cbproj=C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZParseSql120.cbproj</Transaction>
-  </Transactions>
-</BorlandProject>

@@ -27,10 +27,10 @@ package ZDbc;
 {$IMPLICITBUILD OFF}
 
 requires
-  ZParseSql,
-  ZPlain,
   rtl,
-  dbrtl;
+  dbrtl,
+  ZParseSql,
+  ZPlain;
 
 contains
   ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
@@ -43,11 +43,6 @@ contains
   ZDbcInterbase6ResultSet in '..\..\src\dbc\ZDbcInterbase6ResultSet.pas',
   ZDbcInterbase6Statement in '..\..\src\dbc\ZDbcInterbase6Statement.pas',
   ZDbcInterbase6Utils in '..\..\src\dbc\ZDbcInterbase6Utils.pas',
-  {ZDbcMySql in '..\..\src\dbc\ZDbcMySql.pas',
-  ZDbcMySqlMetadata in '..\..\src\dbc\ZDbcMySqlMetadata.pas',
-  ZDbcMySqlResultSet in '..\..\src\dbc\ZDbcMySqlResultSet.pas',
-  ZDbcMySqlStatement in '..\..\src\dbc\ZDbcMySqlStatement.pas',
-  ZDbcMySqlUtils in '..\..\src\dbc\ZDbcMySqlUtils.pas',}
   ZDbcPostgreSql in '..\..\src\dbc\ZDbcPostgreSql.pas',
   ZDbcPostgreSqlMetadata in '..\..\src\dbc\ZDbcPostgreSqlMetadata.pas',
   ZDbcPostgreSqlResultSet in '..\..\src\dbc\ZDbcPostgreSqlResultSet.pas',
