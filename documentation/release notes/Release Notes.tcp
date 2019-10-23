@@ -6,7 +6,7 @@ Version=4
 MainFile=Release Notes.tex
 UseBibTeX=0
 UseMakeIndex=0
-ActiveProfile=XeLaTeX ⇨ PDF
+ActiveProfile=LaTeX ⇨ PDF
 ProjectLanguage=en
 ProjectDialect=US
 
