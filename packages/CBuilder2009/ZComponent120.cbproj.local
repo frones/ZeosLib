@@ -1,7 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject>
-	<Transactions>
-    <Transaction>2015/01/25 10:11:10.476.cbproj,C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZComponent.cbproj=C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZComponent100.cbproj</Transaction>
-    <Transaction>2015/01/25 10:15:51.995.cbproj,C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZComponent100.cbproj=C:\Program Files (x86)\BCBCompNew\ZeosLib\packages\CBuilder2009\ZComponent120.cbproj</Transaction>
-  </Transactions>
-</BorlandProject>

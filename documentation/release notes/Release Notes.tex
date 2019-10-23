@@ -52,6 +52,13 @@ If you have any problems with Zeos 7.2, please get in contact with us on the for
 \section{General}
 \label{sec:Rev6_General}
 
+\subsection{New C++ Builder Packages}
+\label{sec:Rev6_General_CppBuilderPackages}
+This release of Zeos has new packages for C++ Builder versions 2006, 2009, XE2 and XE 10.2.
+Each package subdirectory conatins a Manual-ZeosDbo-*.txt file that has detailed installation instructions.
+For C++ Builder 2006 the necessary files are generated using the Delphi 2006 package files.
+See Manual-ZeosDbo-2006.txt for more information.
+
 \subsection{Fixed Bugs}
 \label{sec:Rev6_General_FixedBugs}
 
@@ -61,6 +68,12 @@ If you have any problems with Zeos 7.2, please get in contact with us on the for
 \item 	
   A bug about metadata caching was fixed that could lead to the TZSQLMetadata not giving correct results if meta data for the same object was queried a second time.
 	See \url{http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=73973} for more information.
+\item
+  369:
+	A bug has been fixed, where a filter didn't work correctly on the last letter of a character column.
+\item
+  356:
+	When a select contains multiple tables and fields were selected using the table alias name and when the "first M skip N" option is present, the first field may be missing in the result set. 
 \end{itemize}
 
 \subsection{Changes}
@@ -76,9 +89,9 @@ Background:
 Zeos tries to preserve your data.
 The database systems usually are better at character set conversions than we are.
 So we decided to fully rely on them.
-On Firebird and Interbase these are the character sets "`none"' and "`octetts"'.
+On Firebird and Interbase these are the character sets "none" and "octetts".
 On PostgreSQL this is the character set SQL\_ASCII.
-On MySQL and MariaDB this is the character set "`BINARY"'.
+On MySQL and MariaDB this is the character set "BINARY".
 
 \subsubsection{Limited support for TGraphicField}
 \label{sec:Rev6_General_Changes_TGrapgicField}
@@ -91,7 +104,7 @@ Zeos now supports the use of persistent TGraphicField components with drivers th
 \subsubsection{Filtering on computed columns or lookup columns does not work}
 \label{sec:Rev6_General_KnownProblems_FilteringComputeColumnsLookupColumns}
 
-Filtering on computed columns or lookup columns will generate an exception: "`Column with index -1 is not accessible"'.
+Filtering on computed columns or lookup columns will generate an exception: "Column with index -1 is not accessible".
 This will not be fixed in Zeos 7.2 because it requires a major rewrite of the filtering mechanism.
 
 \subsubsection{No support for BCD type columns}
@@ -148,7 +161,7 @@ This bug has been fixed but can lead to problems because now on persistent field
 \subsubsection{new connection parameter fb\_protocol}
 \label{sec:Rev6_FirebirdInterbase_Changes_FBProtocol}
 
-The new parameter "`fb\_protocol"' was introduced as a connection parameter.
+The new parameter "fb\_protocol" was introduced as a connection parameter.
 With Firebird 3 this paramater switches Zeos to use url style connection strings.
 This enables you to force the library to use xnet for connecting to the server, bypassing a local engine12.
 This parameter also allows you to use the wnet (Named Pipes) protocol on older versions of Firebird and on Interbase.
@@ -187,10 +200,22 @@ On Firebird 4.0 Zeos uses the new read committed default mode "READ COMMITTED RE
 \subsubsection{no support for identity columns}
 \label{sec:Rev6_FirebirdInterbase_KnownProblems_IdentityColumns}
 
-Firebird 3.0 introduced a new feature called "`IDENTITY columns"'.
+Firebird 3.0 introduced a new feature called "IDENTITY columns".
 These columns can use an internal generator to automatically create their values.
 Zeos currently does not support using these columns.
 It cannot read back values that were assigned to these columns automatically.
+
+\subsubsection{The tokenizer does not understand single line comments}
+\label{sec:Rev6_FirebirdInterbase_KnownProblems_TokenizerSingleLineComments}
+
+The Zeos tokenizer for Firebird and Interbase does not understand single line comments.
+As a workaround we suggest you use multi line comments, as shown in the following listing:
+
+\begin{lstlisting}
+-- this single line comment is not suported
+
+/* use this multi line comment instead */
+\end{lstlisting}
 
 \section{SQLite}
 \label{sec:Rev6_SQLite}
@@ -254,7 +279,7 @@ A working example how to use it can be found on \url{http://zeoslib.sourceforge.
 \label{sec:Rev6_MysqlMariadb_BreakingChanges_StoredProcMetadata}
 
 Until Zeos 7.2.4 when querying for procedure columns (parameters) the database name was returned in the PROCEDURE\_CAT column.
-PROCEDURE\_CAT now always returns "`def"' while the database is returned in the PROCEDURE\_SCHEM column.
+PROCEDURE\_CAT now always returns "def" while the database is returned in the PROCEDURE\_SCHEM column.
 This is more in line with other MySQL metadata queries and also with MySQL / MariaDb themselves.
 Also the scale for NUMERIC and DECIMAL now is returned in the SCALE column and not in the LENGTH column anymore.
 If you relied on this behavior your code might break!
@@ -269,7 +294,7 @@ The TZUpdateSQL component will raise an error if a record is posted to the conne
 This is because MySQL / MariaDB returns the number of changed records by default.
 If a record didn't change, 0 is returned instead.
 See \url{https://dev.mysql.com/doc/refman/8.0/en/mysql-affected-rows.html} for more information.
-This can be mitigated by adding "`CLIENT\_FOUND\_ROWS=1"' to the TZConnection.Properties property.
+This can be mitigated by adding "CLIENT\_FOUND\_ROWS=1" to the TZConnection.Properties property.
 
 \section{SAP / Sybase ASE}
 \label{sec:Rev6_sybase}

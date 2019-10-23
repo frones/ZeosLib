@@ -83,43 +83,53 @@
 
   </target>
 
-  <target name="main" depends="prepare, prepare_doc">
+  <!--<target name="main" depends="prepare, prepare_doc">-->
+  <target name="main" depends="prepare">
 
     <copy todir="${temp.dir}/examples">
       <fileset dir="${examples.dir}">
         <exclude name="**/CVS/**" />
-        <exclude name="**/dummy.txt" />
-	     <exclude name="**/*.dcu" />
-	     <exclude name="**/*.rsm" />
-	     <exclude name="**/*.obj" />
-	     <exclude name="**/*.exe" />
-	     <exclude name="**/*.dll" />
-	     <exclude name="**/*.~*" />
+        <exclude name="**/dummy.txt"/>
+		<exclude name="**/__history/**"/>
+	    <exclude name="**/*.dcu" />
+	    <exclude name="**/*.rsm" />
+	    <exclude name="**/*.obj" />
+	    <exclude name="**/*.exe" />
+	    <exclude name="**/*.dll" />
+	    <exclude name="**/*.~*" />
+		<!-- For Lazarus: -->
+		<exclude name="*.o" />
+		<exclude name="*.ppu" />		
       </fileset>
     </copy>
 
-    <copy todir="${temp.dir}/lib">
+    <!--
+	<copy todir="${temp.dir}/lib">
       <fileset dir="${lib.dir}">
         <exclude name="**/CVS/**" />
         <exclude name="**/dummy.txt" />
       </fileset>
     </copy>
-
+	-->
     <copy todir="${temp.dir}/packages">
       <fileset dir="${packages.dir}">
         <exclude name="**/CVS/**" />
         <exclude name="**/ZeosDboDevel.*" />
         <exclude name="**/ZTestFramework.*" />
-	     <exclude name="**/*.dcu" />
-	     <exclude name="**/*.rsm" />
-	     <exclude name="**/*.dcp" />
-	     <exclude name="**/*.bpl" />
-	     <exclude name="**/*.obj" />
-	     <exclude name="**/*.exe" />
-	     <exclude name="**/*.dll" />
-	     <exclude name="**/*.~*" />
+	    <exclude name="**/*.dcu" />
+	    <exclude name="**/*.rsm" />
+	    <exclude name="**/*.dcp" />
+	    <exclude name="**/*.bpl" />
+	    <exclude name="**/*.obj" />
+	    <exclude name="**/*.exe" />
+	    <exclude name="**/*.dll" />
+	    <exclude name="**/*.~*" />
         <exclude name="**/ZTest*.*" />
-	     <exclude name="**/ZExecuteSql.*" />
+	    <exclude name="**/ZExecuteSql.*" />
+		<!-- For Lazarus: -->
+		<exclude name="**/x86_64-win64/**" />
+		<exclude name="*.o" />
+		<exclude name="*.ppu" />
       </fileset>
     </copy>
 
@@ -127,14 +137,14 @@
       <fileset dir="${src.dir}">
         <exclude name="**/CVS/**" />
         <exclude name="**/dummy.txt" />
-	     <exclude name="**/*.dcu" />
-	     <exclude name="**/*.rsm" />
-	     <exclude name="**/*.dcp" />
-	     <exclude name="**/*.bpl" />
-	     <exclude name="**/*.obj" />
-	     <exclude name="**/*.exe" />
-	     <exclude name="**/*.dll" />
-	     <exclude name="**/*.~*" />
+	    <exclude name="**/*.dcu" />
+	    <exclude name="**/*.rsm" />
+	    <exclude name="**/*.dcp" />
+	    <exclude name="**/*.bpl" />
+	    <exclude name="**/*.obj" />
+	    <exclude name="**/*.exe" />
+	    <exclude name="**/*.dll" />
+	    <exclude name="**/*.~*" />
       </fileset>
     </copy>
 
