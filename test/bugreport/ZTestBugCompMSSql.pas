@@ -78,12 +78,14 @@ type
     procedure Mantis54;
     procedure Mantis164;
     procedure Test_SelectInformation_Schema;
+    procedure TestSF378;
     procedure TestSF380;
   end;
 
 implementation
 
-uses SysUtils, Types, ZStoredProcedure, ZTestCase, ZAbstractRODataset;
+uses SysUtils, Types, FmtBCD,
+  ZSysUtils, ZStoredProcedure, ZAbstractRODataset, ZTestCase;
 
 { TZTestCompMSSqlBugReport }
 
@@ -207,6 +209,77 @@ begin
   finally
     StoredProc.Free;
     Query.Free;
+  end;
+end;
+(**
+  User:
+    Is this the expected behaviour for summing numeric types using
+      odbc or oledb protocol in mssql server?
+*)
+procedure TZTestCompMSSqlBugReport.TestSF378;
+var
+  Query: TZQuery;
+  eBCD, aBCD: TBCD;
+begin
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults]; //turn of doPreferPrepared
+    Query.Sql.Text := 'create table #t (n numeric(16,2))';
+    Query.ExecSQL;
+    try
+      Query.Sql.Text := 'select * from  #t';
+      Query.Open;
+      CheckEquals(Ord(ftBCD), Ord(Query.FieldDefs[0].DataType), 'The returned type for numeric-field of the tmp-table');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (1)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      CheckEquals('1', Query.Fields[0].AsString, 'The value of the Sum() of the tmp-table');
+      CheckEquals(Ord(ftFmtBCD), Ord(Query.FieldDefs[0].DataType), 'The returned type for the Sum() of the tmp-table numeric type');
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('1'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 1');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (20)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      CheckEquals(Ord(ftFmtBCD), Ord(Query.FieldDefs[0].DataType), 'The returned type for the Sum() of the tmp-table numeric type');
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('21'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 21');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (300)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('321'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (0.1)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('321.1'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321.1');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (0.02)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('321.12'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321.12');
+    finally
+      Query.Sql.Text := 'drop table #t';
+      Query.ExecSQL;
+    end;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
