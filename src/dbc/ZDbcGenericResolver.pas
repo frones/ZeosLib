@@ -948,8 +948,7 @@ end;
 procedure TZGenericCachedResolver.SetResolverStatementParamters(
   const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
 begin
-  Params.Values[DSProps_PreferPrepared] := 'true';
-  Params.Values[DSProps_ChunkSize] := ZDbcUtils.DefineStatementParameter(Statement, DSProps_ChunkSize, '4096');
+  Params.Assign(Statement.GetParameters);
 end;
 
 {**
