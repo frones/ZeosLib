@@ -453,7 +453,7 @@ begin
   end;
   case Result.P^ of
     '"', '[': Result.TokenType := ttWord  //?? shouldn't the '[' be ttQuoted or ttQuotedIdentifier too?
-    else      Result.TokenType := ttQuoted;
+    else          Result.TokenType := ttQuoted;
   end;
    Result.L := SPos-Result.P+1;
 end;
@@ -469,7 +469,7 @@ function TZGenericSQLBracketQuoteState.DecodeToken(const Value: TZToken;
 begin
   if Value.L >= 2 then
     case QuoteChar of
-      #39, '"':
+      #39, '"', '`':
         if (Value.P^ = QuoteChar) and ((Value.P+Value.L-1)^ = QuoteChar) then
           if Value.L > 2
           then Result := SQLDequotedStr(Value.P, Value.L, QuoteChar)
@@ -497,7 +497,7 @@ function TZGenericSQLBracketQuoteState.EncodeString(const Value: string; QuoteCh
 begin
   case QuoteChar of
     '[':      Result := '[' + Value + ']';
-    #39, '"': Result := QuoteChar + Value + QuoteChar;
+    #39, '"', '`': Result := QuoteChar + Value + QuoteChar;
     else      Result := Value;
   end;
 end;
