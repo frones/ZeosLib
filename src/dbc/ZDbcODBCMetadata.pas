@@ -3622,7 +3622,7 @@ begin
    fProcedureColumnsColMap.ColIndices[ProcColRadixIndex] := RS.FindColumn('NUM_PREC_RADIX');
    fProcedureColumnsColMap.ColIndices[ProcColNullableIndex] := RS.FindColumn('NULLABLE');
    fProcedureColumnsColMap.ColIndices[ProcColRemarksIndex] := RS.FindColumn('REMARKS');
-   fTableColColumnMap.Initilized := True;
+   fProcedureColumnsColMap.Initilized := True;
  end;
 end;
 
