@@ -1664,6 +1664,9 @@ begin
   FResultSet := ResultSet;
 end;
 
+{$IFDEF FPC}
+  {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+{$ENDIF}
 function TZOleDBCachedResultSet.Fetch: Boolean;
 var
   I: Integer;
@@ -1772,8 +1775,8 @@ begin
                                           RowAccessor.SetPWideChar(I, Pointer(FUniTemp), Len);
                                         end;
           DBTYPE_NUMERIC              : begin
-                                          SQLNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, SQL_MAX_NUMERIC_LEN);
-                                          RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
+                                          SQLNumeric2BCD(PDB_NUMERIC(FData^), BCD, SQL_MAX_NUMERIC_LEN);
+                                          RowAccessor.SetBigDecimal(I, BCD);
                                         end;
           //DBTYPE_UDT = 132;
           DBTYPE_DBDATE               : begin
@@ -1823,8 +1826,8 @@ begin
           //DBTYPE_FILETIME = 64;
           //DBTYPE_PROPVARIANT = 138;
           DBTYPE_VARNUMERIC           : begin
-                                          SQLNumeric2BCD(PDB_NUMERIC(FData^), PBCD(@RowAccessor.TinyBuffer[0])^, FLength^);
-                                          RowAccessor.SetBigDecimal(I, PBCD(@RowAccessor.TinyBuffer[0])^);
+                                          SQLNumeric2BCD(PDB_NUMERIC(FData^), BCD, FLength^);
+                                          RowAccessor.SetBigDecimal(I, BCD);
                                         end;
         end;
       end;
@@ -1834,6 +1837,7 @@ begin
       RowAccessor.RowBuffer := TempRow;
     end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZOleDBMSSQLResultSetMetadata }
 

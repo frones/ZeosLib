@@ -445,6 +445,7 @@ begin
           if (LastResultSet <> nil) then begin
             Result := LastResultSet;
             FLastResultSet := nil;
+            Break;
           end;
     end;
   finally
@@ -470,7 +471,14 @@ begin
   FRowsAffected := DB_COUNTUNAVAILABLE; //init
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil), lcExecute, FDBBINDSTATUSArray);
+  if FSupportsMultipleResultSets then begin
+    CheckError(FCommand.Execute(nil, IID_IMultipleResults, FDBParams,@FRowsAffected,@FMultipleResults),
+      lcExecute, fDBBINDSTATUSArray);
+    if Assigned(FMultipleResults) then
+      CheckError(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+        DB_NULLGUID, @FRowsAffected, nil), lcExecute);
+  end else
+    CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil), lcExecute, FDBBINDSTATUSArray);
   if BindList.HasOutOrInOutOrResultParam then
     FOutParamResultSet := CreateResultSet(nil);
   LastUpdateCount := FRowsAffected;
