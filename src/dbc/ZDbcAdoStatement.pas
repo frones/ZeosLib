@@ -434,9 +434,9 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
         RS.MoveToInsertRow;
         J := 0;
         for i := 0 to FAdoCommand.Parameters.Count -1 do begin
-          with FAdoCommand.Parameters.Item[i],
-               TZColumnInfo(ColumnsInfo[J]) do begin
-            if Direction in [adParamOutput, adParamInputOutput, adParamReturnValue] then begin
+          with FAdoCommand.Parameters.Item[i] do begin
+            if Direction in [adParamOutput, adParamInputOutput, adParamReturnValue] then
+            with TZColumnInfo(ColumnsInfo[J]) do begin
               Temp := Value;
               case tagVariant(Temp).vt of
                 VT_NULL, VT_EMPTY: ;
