@@ -393,32 +393,38 @@ begin
       { Processes parameters. }
       if ParamCheck and (Token.P^ = FParamChar) and (Token.L = 1) then begin
         NextToken;
-        if (Token.TokenType <> ttEOF) and not ((Token.P^ = FParamChar) and (Token.L = 1)) then begin
-          { Check for correct parameter type. }
-          if not (Token.TokenType in [ttWord, ttQuoted, ttQuotedIdentifier, ttKeyWord]) then
-            raise EZDatabaseError.Create(SIncorrectToken)
-          else begin
-            Dec(TokenIndex);
+        if (Token.TokenType <> ttEOF) then begin
+          if not ((Token.P^ = FParamChar) and (Token.L = 1)) then begin
+            { Check for correct parameter type. }
+            if not (Token.TokenType in [ttWord, ttQuoted, ttQuotedIdentifier, ttKeyWord]) then
+              raise EZDatabaseError.Create(SIncorrectToken)
+            else begin
+              Dec(TokenIndex);
+              Tokens.Delete(TokenIndex-1);
+              Token := Tokens[TokenIndex-1];
+            end;
+  
+            if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
+            then ParamName := Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^)
+            else ParamName := TokenAsString(Token^);
+  
+            Token.P := pQuestionMark;
+            Token.L := 1;
+  
+            ParamIndex := FindParam(ParamName);
+            if ParamIndex < 0 then
+              ParamIndex := FParams.Add(ParamName);
+  
+            Inc(ParamIndexCount);
+            SetLength(ParamIndices, ParamIndexCount);
+            ParamIndices[ParamIndexCount - 1] := ParamIndex;
+  
+            Continue;
+          end
+          else begin // unescape FParamChar
             Tokens.Delete(TokenIndex-1);
             Token := Tokens[TokenIndex-1];
           end;
-
-          if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
-          then ParamName := Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^)
-          else ParamName := TokenAsString(Token^);
-
-          Token.P := pQuestionMark;
-          Token.L := 1;
-
-          ParamIndex := FindParam(ParamName);
-          if ParamIndex < 0 then
-            ParamIndex := FParams.Add(ParamName);
-
-          Inc(ParamIndexCount);
-          SetLength(ParamIndices, ParamIndexCount);
-          ParamIndices[ParamIndexCount - 1] := ParamIndex;
-
-          Continue;
         end;
       end;
 
