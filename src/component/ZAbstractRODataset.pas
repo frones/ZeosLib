@@ -2994,23 +2994,23 @@ begin
       case Field.DataType of
         { Processes DateTime fields. }
         ftTime: begin
-                 RowAccessor.GetTime(ColumnIndex, Result, T{%H-});
-                 Result := not TryEncodeTime(T.Hour, T.Minute, T.Second, T.Fractions div NanoSecsPerMSec, DT);
-                 {$IFNDEF OLDFPC}
-                 if Result
-                 then PInteger(Buffer)^ := 0
-                 else begin
+                  RowAccessor.GetTime(ColumnIndex, Result, T{%H-});
+                  Result := Result or not TryEncodeTime(T.Hour, T.Minute, T.Second, T.Fractions div NanoSecsPerMSec, DT);
+                  {$IFNDEF OLDFPC}
+                  if Result
+                  then PInteger(Buffer)^ := 0
+                  else begin
                     PInteger(Buffer)^ := Trunc(DT * MSecsOfDay + 0.1);
                     if T.IsNegative then
                       PInteger(Buffer)^ := -PInteger(Buffer)^;
-                 end;
-                 {$ELSE}
-                 PDateTime(Buffer)^ := DT;
-                 {$ENDIF}
+                  end;
+                  {$ELSE}
+                  PDateTime(Buffer)^ := DT;
+                  {$ENDIF}
                 end;
         ftDate: begin
                  RowAccessor.GetDate(ColumnIndex, Result, D);
-                 Result := not TryEncodeDate(D.Year, D.Month, D.Day, DT);
+                 Result := Result or not TryEncodeDate(D.Year, D.Month, D.Day, DT);
                  {$IFNDEF OLDFPC}
                  if Result
                  then PInteger(Buffer)^ := 0
@@ -3025,9 +3025,13 @@ begin
                end;
         ftDateTime: begin
                     RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
-                    Result := not TryTimeStampToDateTime(TS, DT);
-                    S := DateTimeToTimeStamp(DT);
-                    PDateTime(Buffer)^ := TimeStampToMSecs(S);
+                    Result := Result or not TryTimeStampToDateTime(TS, DT);
+                    if Result then
+                      PDateTime(Buffer)^ := 0
+                    else begin
+                      S := DateTimeToTimeStamp(DT);
+                      PDateTime(Buffer)^ := TimeStampToMSecs(S);
+                    end;
                   end;
         {$IFDEF WITH_FTTIMESTAMP}
         ftTimeStamp: begin
