@@ -3177,7 +3177,8 @@ Dbl:    DecodeDateTimeToTime(GetDouble(ColumnIndex, IsNull), Result);
     end;
   end else begin
     IsNull := True;
-Fill: FillChar(Result, SizeOf(TZTime), #0);
+Fill: PCardinal(@Result.Hour)^ := 0;
+    PInt64(@Result.Second)^ := 0;
   end;
 end;
 
@@ -3461,9 +3462,7 @@ Dbl:    DecodeDateTimeToDate(GetDouble(ColumnIndex, IsNull), Result);
     end;
   end else begin
     IsNull := True;
-Fill: if SizeOf(TZDate) = SizeOf(Int64)
-    then PInt64(@Result.Year)^ := 0
-    else FillChar(Result, SizeOf(TZDate), #0);
+Fill: PInt64(@Result.Year)^ := 0
   end;
 end;
 
