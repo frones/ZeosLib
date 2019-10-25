@@ -25,7 +25,7 @@ create table date_values
    d_date                         date,
    d_time                         time,
    d_datetime                     datetime,
-   d_timestamp                    timestamp,
+   d_timestamp                    timestamp NULL DEFAULT NULL, /*skip the mysql automation of CURRENT_TIMESTAMP*/
    primary key (d_id)
 );
 
