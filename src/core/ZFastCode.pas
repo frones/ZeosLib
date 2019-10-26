@@ -3245,6 +3245,10 @@ begin
   else PByte(Buf)^ := Ord(#0);
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 function CurrToRaw(const Value: Currency): RawByteString;
 var buf: array[0..31] of AnsiChar;
   P: PAnsiChar;
@@ -3252,6 +3256,7 @@ begin
   CurrToRaw(Value, @buf[0], @P);
   ZSetString(PAnsiChar(@Buf[0]), P-PAnsiChar(@Buf[0]), Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil);
 var

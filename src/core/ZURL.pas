@@ -302,6 +302,10 @@ begin
     Result := Result + '?' + Params;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+{$ENDIF}
 procedure TZURL.SetURL(const Value: string);
 var
   APrefix: string;
@@ -364,6 +368,7 @@ begin
   FPassword := '';
   FProperties.URLText := AProperties; // will launch DoOnPropertiesChange
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZURL.DoOnPropertiesChange(Sender: TObject);
 

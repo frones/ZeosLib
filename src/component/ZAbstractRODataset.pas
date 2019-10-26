@@ -628,6 +628,8 @@ type
     {$ENDIF}
   public
     function NextResultSet: Boolean; virtual;
+    function NextRecordSet: Boolean;
+    function NextRowsAffected: Boolean;
   end;
 
   {$IFNDEF WITH_TFIELD_PARENTFIELD}
@@ -2992,23 +2994,23 @@ begin
       case Field.DataType of
         { Processes DateTime fields. }
         ftTime: begin
-                 RowAccessor.GetTime(ColumnIndex, Result, T{%H-});
-                 Result := not TryEncodeTime(T.Hour, T.Minute, T.Second, T.Fractions div NanoSecsPerMSec, DT);
-                 {$IFNDEF OLDFPC}
-                 if Result
-                 then PInteger(Buffer)^ := 0
-                 else begin
+                  RowAccessor.GetTime(ColumnIndex, Result, T{%H-});
+                  Result := Result or not TryEncodeTime(T.Hour, T.Minute, T.Second, T.Fractions div NanoSecsPerMSec, DT);
+                  {$IFNDEF OLDFPC}
+                  if Result
+                  then PInteger(Buffer)^ := 0
+                  else begin
                     PInteger(Buffer)^ := Trunc(DT * MSecsOfDay + 0.1);
                     if T.IsNegative then
                       PInteger(Buffer)^ := -PInteger(Buffer)^;
-                 end;
-                 {$ELSE}
-                 PDateTime(Buffer)^ := DT;
-                 {$ENDIF}
+                  end;
+                  {$ELSE}
+                  PDateTime(Buffer)^ := DT;
+                  {$ENDIF}
                 end;
         ftDate: begin
                  RowAccessor.GetDate(ColumnIndex, Result, D);
-                 Result := not TryEncodeDate(D.Year, D.Month, D.Day, DT);
+                 Result := Result or not TryEncodeDate(D.Year, D.Month, D.Day, DT);
                  {$IFNDEF OLDFPC}
                  if Result
                  then PInteger(Buffer)^ := 0
@@ -3023,9 +3025,13 @@ begin
                end;
         ftDateTime: begin
                     RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
-                    Result := not TryTimeStampToDateTime(TS, DT);
-                    S := DateTimeToTimeStamp(DT);
-                    PDateTime(Buffer)^ := TimeStampToMSecs(S);
+                    Result := Result or not TryTimeStampToDateTime(TS, DT);
+                    if Result then
+                      PDateTime(Buffer)^ := 0
+                    else begin
+                      S := DateTimeToTimeStamp(DT);
+                      PDateTime(Buffer)^ := TimeStampToMSecs(S);
+                    end;
                   end;
         {$IFDEF WITH_FTTIMESTAMP}
         ftTimeStamp: begin
@@ -3535,6 +3541,7 @@ var
   ColumnList: TObjectList;
   I: Integer;
   OldRS: IZResultSet;
+  MetaData: IZResultSetMetaData;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -3571,13 +3578,19 @@ begin
     {$ENDIF}
     begin
       CreateFields;
+      MetaData := ResultSet.GetMetadata;
       if not (doNoAlignDisplayWidth in FOptions) then
-        for i := 0 to Fields.Count -1 do
+        for i := 0 to Fields.Count -1 do begin
           if Fields[i].DataType = ftString then
-            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+            Fields[i].DisplayWidth := MetaData.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
           {$IFDEF WITH_FTGUID}
           else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
           {$ENDIF};
+          {$IFDEF WITH_TAUTOREFRESHFLAG}
+          if MetaData.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
+            Fields[i].AutoGenerateValue := arAutoInc;
+          {$ENDIF !WITH_TAUTOREFRESHFLAG}
+        end;
     end;
     BindFields(True);
 
@@ -4500,13 +4513,27 @@ begin
   Result := (not FilterEnabled);
 end;
 
+function TZAbstractRODataset.NextRecordSet: Boolean;
+begin
+  Result := NextResultSet;
+end;
+
 function TZAbstractRODataset.NextResultSet: Boolean;
 begin
-  Result := False;
   if Assigned(Statement) and Statement.GetMoreResults then begin
     Result := True;
     SetAnotherResultset(Statement.GetResultSet);
-  end;
+  end else
+    Result := False;
+end;
+
+function TZAbstractRODataset.NextRowsAffected: Boolean;
+begin
+  if Assigned(Statement) and Statement.GetMoreResults then begin
+    Result := True;
+    FRowsAffected := Statement.GetUpdateCount;
+  end else
+    Result := False;
 end;
 
 {**

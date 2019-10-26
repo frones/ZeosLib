@@ -3177,7 +3177,8 @@ Dbl:    DecodeDateTimeToTime(GetDouble(ColumnIndex, IsNull), Result);
     end;
   end else begin
     IsNull := True;
-Fill: FillChar(Result, SizeOf(TZTime), #0);
+Fill: PCardinal(@Result.Hour)^ := 0;
+    PInt64(@Result.Second)^ := 0;
   end;
 end;
 
@@ -3461,9 +3462,7 @@ Dbl:    DecodeDateTimeToDate(GetDouble(ColumnIndex, IsNull), Result);
     end;
   end else begin
     IsNull := True;
-Fill: if SizeOf(TZDate) = SizeOf(Int64)
-    then PInt64(@Result.Year)^ := 0
-    else FillChar(Result, SizeOf(TZDate), #0);
+Fill: PInt64(@Result.Year)^ := 0
   end;
 end;
 
@@ -3500,39 +3499,15 @@ begin
       stCurrency:   Result := EncodeCurrency(PCurrency(ValuePtr)^);
       stBigDecimal: Result := EncodeBigDecimal(PBCD(ValuePtr)^);
       stBoolean:    Result := EncodeBoolean(PWordBool(ValuePtr)^);
-      stDate:       begin
-                      InitializeVariant(Result, vtDateTime);
-                      {$IFDEF BCC32_vtDateTime_ERROR}
-                      IsNull := TryDateToDateTime(PZDate(ValuePtr)^, PDateTime(@Result.VDateTime)^);
-                      {$ELSE}
-                      IsNull := TryDateToDateTime(PZDate(ValuePtr)^, Result.VDateTime);
-                      {$ENDIF}
-                    end;
-      stTime:       begin
-                      InitializeVariant(Result, vtDateTime);
-                      {$IFDEF BCC32_vtDateTime_ERROR}
-                      IsNull := TryTimeToDateTime(PZTime(ValuePtr)^, PDateTime(@Result.VDateTime)^);
-                      {$ELSE}
-                      IsNull := TryTimeToDateTime(PZTime(ValuePtr)^, Result.VDateTime);
-                      {$ENDIF}
-                    end;
-      stTimestamp:  begin
-                      InitializeVariant(Result, vtDateTime);
-                      {$IFDEF BCC32_vtDateTime_ERROR}
-                      IsNull := TryTimeStampToDateTime(PZTimeStamp(ValuePtr)^, PDateTime(@Result.VDateTime)^);
-                      {$ELSE}
-                      IsNull := TryTimeStampToDateTime(PZTimeStamp(ValuePtr)^, Result.VDateTime);
-                      {$ENDIF}
-                    end;
+      stDate:       Result := EncodeZDate(PZDate(ValuePtr)^);
+      stTime:       Result := EncodeZTime(PZTime(ValuePtr)^);
+      stTimestamp:  Result := EncodeZTimeStamp(PZTimeStamp(ValuePtr)^);
       stString,
       stAsciiStream:Result := EncodeString(GetString(ColumnIndex, IsNull));
       stUnicodeString,
       stUnicodeStream: Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex, IsNull));
       stBytes, stBinaryStream: Result := EncodeBytes(GetBytes(ColumnIndex, IsNull));
-      stGUID: begin
-                      InitializeVariant(Result, vtGUID);
-                      Result.VGUID := PGUID(ValuePtr)^;
-                    end;
+      stGUID:       Result := EncodeGUID(PGUID(ValuePtr)^);
       else
         Result.VType := vtNull;
     end;
@@ -4706,10 +4681,13 @@ begin
     {$ENDIF}
     vtRawByteString: SetRawByteString(ColumnIndex, Value.VRawByteString);
     vtUnicodeString: SetUnicodeString(ColumnIndex, Value.VUnicodeString);
+    vtDate: SetDate(ColumnIndex, Value.VDate);
     vtDateTime: begin
         DecodeDateTimeToTimeStamp(Value.VDateTime, TS{%H-});
         SetTimestamp(ColumnIndex, TS);
       end;
+    vtTime: SetTime(ColumnIndex, Value.VTime);
+    vtTimeStamp: SetTimeStamp(ColumnIndex, Value.VTimeStamp);
     vtInterface: if Value.VInterface.QueryInterface(IZBLob, Lob) = S_OK then
                   SetBlob(ColumnIndex, Lob);
     vtCharRec:

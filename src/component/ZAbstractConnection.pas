@@ -1055,13 +1055,13 @@ begin
   begin
     ShowSQLHourGlass;
     try
+      FConnection.Commit;
  { TODO -oEgonHugeist : Change this code sequence on 7.3! My automation idea simply is wrong! A commit vs. commitupdate(clear the cache) shouldn't be same! }
       //See: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=19800
       for i := 0 to FDatasets.Count -1 do
         if (TObject(FDatasets[i]) is TZAbstractDataset) and (not THack_ZAbstractDataset(FDatasets[i]).UpdatesPending) then
           if Assigned(FDatasets[i]) then
             THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
-      FConnection.Commit;
     finally
       HideSQLHourGlass;
     end;

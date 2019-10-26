@@ -69,38 +69,46 @@ type
   protected
     function GetSupportedProtocols: string; override;
 
+  published
     procedure Test959307; //wrong defined????
     procedure Test953072; //is this test really solvable? I don't think so
-  published
     procedure Test728955;
     procedure Test833489;
     procedure Test907497;
     procedure Mantis54;
     procedure Mantis164;
     procedure Test_SelectInformation_Schema;
+    procedure TestSF378;
+    procedure TestSF380;
+    procedure TestSF382;
+    procedure TestSF383;
   end;
 
 implementation
 
-uses SysUtils, Types, ZStoredProcedure, ZTestCase;
+uses SysUtils, Types, FmtBCD,
+  ZSysUtils, ZStoredProcedure, ZAbstractRODataset, ZTestCase;
 
 { TZTestCompMSSqlBugReport }
 
 function TZTestCompMSSqlBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005';
+  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,OleDB,odbc_a,odbc_w,ado';
 end;
 
 {**
   Access Violation during ZReadOnlyQuery.Open
-  In method TZAbstractRODataset.InternalInitFieldDefs: 
+  In method TZAbstractRODataset.InternalInitFieldDefs:
 }
 procedure TZTestCompMSSqlBugReport.Test728955;
 var
   Query: TZReadOnlyQuery;
 begin
   if SkipForReason(srClosedBug) then Exit;
-
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
   Query := CreateReadOnlyQuery;
   try
     Query.SQL.Text := 'SELECT * FROM department';
@@ -125,7 +133,10 @@ end;
 procedure TZTestCompMSSqlBugReport.Test833489;
 begin
   if SkipForReason(srClosedBug) then Exit;
-
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.Connect;
@@ -136,7 +147,10 @@ var
   StoredProc: TZStoredProc;
 begin
   if SkipForReason(srClosedBug) then Exit;
-
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
   StoredProc := TZStoredProc.Create(nil);
   try
     StoredProc.Connection := Connection;
@@ -157,7 +171,10 @@ var
   Query: TZQuery;
 begin
   if SkipForReason(srClosedBug) then Exit;
-
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
   Query := CreateQuery;
   try
     Query.SQL.Text := 'select * from master..sysobjects';
@@ -200,12 +217,246 @@ begin
 
     StoredProc.ParamByName('@p').Value := Null;
     StoredProc.ExecProc;
+    Query.Open;
     CheckEquals('', Query.FieldByName('fld1').AsString);
     CheckEquals(True, Query.FieldByName('fld1').IsNull);
     Query.Close;
   finally
     StoredProc.Free;
     Query.Free;
+  end;
+end;
+(**
+  User:
+    Is this the expected behaviour for summing numeric types using
+      odbc or oledb protocol in mssql server?
+*)
+procedure TZTestCompMSSqlBugReport.TestSF378;
+var
+  Query: TZQuery;
+  eBCD, aBCD: TBCD;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults]; //turn of doPreferPrepared
+    Query.Sql.Text := 'create table #t (n numeric(16,2))';
+    Query.ExecSQL;
+    try
+      if Protocol = 'ado' then
+      try
+        Query.Sql.Text := 'select * from  #t';
+        Query.Open;
+        Check(False, 'ado-behavior changed, change the test!');
+      except
+        Exit;
+      end;
+      Query.Sql.Text := 'select * from  #t';
+      Query.Open;
+      CheckEquals(Ord(ftBCD), Ord(Query.FieldDefs[0].DataType), 'The returned type for numeric-field of the tmp-table');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (1)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      CheckEquals('1', Query.Fields[0].AsString, 'The value of the Sum() of the tmp-table');
+      CheckEquals(Ord(ftFmtBCD), Ord(Query.FieldDefs[0].DataType), 'The returned type for the Sum() of the tmp-table numeric type');
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('1'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 1');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (20)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      CheckEquals(Ord(ftFmtBCD), Ord(Query.FieldDefs[0].DataType), 'The returned type for the Sum() of the tmp-table numeric type');
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('21'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 21');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (300)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('321'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (0.1)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('321.1'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321.1');
+      Query.Close;
+      Query.Sql.Text := 'insert into #t values (0.02)';
+      Query.ExecSQL;
+      Query.Sql.Text := 'select sum(n) from #t';
+      Query.Open;
+      aBCD := Query.Fields[0].AsBCD;
+      eBCD := Str2BCD('321.12'{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321.12');
+    finally
+      if Protocol <> 'ado' then begin
+        Query.Sql.Text := 'drop table #t';
+        Query.ExecSQL;
+      end;
+    end;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+(**
+  User:
+  Is this the correct syntax and expected behaviour for using TZTable for
+    freetds, odbc, ado and oledb protocol in mssql server?
+  Answer doPreferPrepared needs to be omitted from the stmt options
+**)
+procedure TZTestCompMSSqlBugReport.TestSF380;
+var
+  Query: TZQuery;
+  Table: TZTable;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults];
+    Query.Sql.Add('create table #t (i int)');
+    Query.Sql.Add('insert into #t values (0)');
+    Query.ExecSQL; //this now kills the #t table using ADO, even if !NO! prepare oslt is called by us
+    Check((Query.RowsAffected = -1) or (Query.RowsAffected = 1), 'Rows affected of first command in batch');
+    //end up the command batch:
+    //Check(Query.NextRowsAffected, 'There is a second updatecount available');
+    CheckEquals(1, Query.RowsAffected, 'Rows affected of second command in batch');
+    if Protocol <> 'ado' then begin //just suppress exceptions we can't handle:
+      //ado seems to execute some sp's in background, thus (MS-Bug skope of temp-table ends with SP's)
+      //ado is not able to see the table any more
+      Query.Sql.Text := 'select * from #t';
+      Query.Open;
+      CheckEquals(0, Query.Fields[0].AsInteger, 'The previously set value should be returned.');
+      //the OleDB GetSchema() does not return any rows for the tempdb schema
+      //reason is unkown, we need to document this on our side..
+      Query.Edit;
+      Query.Fields[0].AsInteger := 3;
+      Query.Post;
+      Query.Close;
+      Query.Open;
+      CheckEquals(3, Query.Fields[0].AsInteger, 'The previously set value should be returned.');
+    end else try
+      Query.Sql.Text := 'select * from #t';
+      Query.Open;
+      Check(False, 'unexpected ado behaviour change! -> Change the test');
+    except end;
+  finally
+    FreeAndNil(Query);
+  end;
+
+  Table := CreateTable;
+  try
+    Table.Options := [doCalcDefaults];
+    if Protocol <> 'ado' then begin //just suppress exceptions we can't handle:
+      Table.TableName := '#t';
+      Table.Open;
+      CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+      Table.Edit;
+      Table.Fields[0].AsInteger := 0;
+      Table.Post;
+      Table.Close;
+      Table.Open;
+      CheckEquals(0, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+    end else try
+      Table.TableName := '#t';
+      Table.Open;
+      CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+      Table.Edit;
+      Table.Fields[0].AsInteger := 0;
+      Table.Post;
+      Table.Close;
+      Table.Open;
+      CheckEquals(0, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+      Connection.ExecuteDirect('drop table #t');
+      Check(False, 'unexpected ado behaviour change! -> Change the test');
+    except end;
+  finally
+    FreeAndNil(Table);
+    if Protocol <> 'ado' then
+      Connection.ExecuteDirect('drop table #t');
+  end;
+end;
+
+(*
+  When you use TZQuery.Locate with TLocateOptions.loPartialKey specified and
+  try to search for a whole string match it will not go past the first record or
+  if you try to search for partial string match and there is empty string
+  inbetween it will stop on the record with an empty string.
+*)
+procedure TZTestCompMSSqlBugReport.TestSF382;
+var
+  Query: TZQuery;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults];
+    Query.Sql.Text := 'select * from (values (''apple''), (''banana''), (''cherry'')) as x(fruit)';
+    Query.Open;
+    Query.Locate('fruit', 'cherry', [loPartialKey]);
+    CheckEquals(3, Query.RecNo, 'Wrong record number located');
+    Query.Close;
+    Query.Sql.Text := 'select * from (values (''apple''), (''''), (''banana''), (''cherry'')) as x(fruit)';
+    Query.Open;
+    Query.Locate('fruit', 'che', [loPartialKey]);
+    CheckEquals(4, Query.RecNo, 'Wrong record number located');
+    Query.Close;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+(*
+When I execute a query containing varchar(max) column with the odbc_w protocol
+in mssql server I get 'Division by zero' at line 1803 in dbc\ZDbcODBCResultSet.pas
+(fMaxFetchableRows := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult)))).
+I am using Zeos 7.3 6050, Delphi 10.2 25.0.26309.314,
+Microsoft SQL Server 13.0.1601.5 and Windows 10 1903 18362.418.
+*)
+procedure TZTestCompMSSqlBugReport.TestSF383;
+var
+  Query: TZQuery;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults];
+    Query.Sql.Text := 'create table #t (fruit varchar(max))';
+    Query.SQL.Add('insert into #t values (''apple''), (''banana''), (''cherry'')');
+    Query.SQL.Add('select * from #t');
+    Query.SQL.Add('drop table #t');
+    Query.Open; //devision by zero
+    Query.Close;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
@@ -230,7 +481,10 @@ var
   Query: TZQuery;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
-
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
   Query := CreateQuery;
   try
     Query.SQL.Text := 'select * from mantis54';
@@ -253,7 +507,10 @@ var
   Bts1, Bts2: TByteDynArray;
 begin
   if SkipForReason(srClosedBug) then Exit;
-
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
   Query := CreateQuery;
   try
     Query.SQL.Text := 'select * from Mantis164';
@@ -341,6 +598,10 @@ procedure TZTestCompMSSqlBugReport.Test_SelectInformation_Schema;
 var
   Query: TZQuery;
 begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
   Query := CreateQuery;
   try
     Query.SQL.Text := 'select * from INFORMATION_SCHEMA.TABLES';

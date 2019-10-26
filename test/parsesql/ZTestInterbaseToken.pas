@@ -96,9 +96,16 @@ const
     ttSymbol, ttWord, ttComment, ttWord, ttWhitespace);
   TokenValues1: array[0..4] of string = (
     '-', 'aaa', '/*bbb*/', 'ccc', #10);
+  TokenString2: string = '-aaa/*bbb*/ccc--simple line comment'#10#10;
+  TokenTypes2: array[0..5] of TZTokenType = (
+    ttSymbol, ttWord, ttComment, ttWord, ttComment, ttWhitespace);
+  TokenValues2: array[0..5] of string = (
+    '-', 'aaa', '/*bbb*/', 'ccc', '--simple line comment'#10, #10);
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);
+  CheckTokens(Tokenizer.TokenizeBuffer(TokenString2, [toSkipEOF]),
+    TokenTypes2, TokenValues2);
 end;
 
 {**

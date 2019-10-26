@@ -230,9 +230,15 @@ begin
                     raise Exception.Create('Unsupported String Variant');
                 end;
           stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
-          stDate:       Stmt.SetDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
-          stTime:       Stmt.SetTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
-          stTimestamp:  Stmt.SetTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
+          stDate:       if PZArray(BindList[i].Value).VArrayVariantType = vtDate
+                        then Stmt.SetDate(ParamIndex, TZDateDynArray(ZData)[j])
+                        else Stmt.SetDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
+          stTime:       if PZArray(BindList[i].Value).VArrayVariantType = vtTime
+                        then Stmt.SetTime(ParamIndex, TZTimeDynArray(ZData)[j])
+                        else Stmt.SetTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
+          stTimestamp:  if PZArray(BindList[i].Value).VArrayVariantType = vtTimeStamp
+                        then Stmt.SetTimestamp(ParamIndex, TZTimeStampDynArray(ZData)[j])
+                        else Stmt.SetTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
           stAsciiStream,
           stUnicodeStream,
           stBinaryStream: Stmt.SetBlob(ParamIndex, TZSQLType(PZArray(BindList[i].Value).VArrayType), TInterfaceDynArray(ZData)[j] as IZBlob);

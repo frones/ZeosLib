@@ -98,6 +98,7 @@ type
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
     procedure TestInsertNumbers;
+    procedure TestNullDateTimeValues;
     procedure TestDoubleFloatParams;
     procedure TestClobEmptyString;
     procedure TestLobModes;
@@ -1586,12 +1587,14 @@ Runs a test for time filter expressions.
 procedure TZGenericTestDataSet.TestTimeFilterExpression;
 var
   Query: TZQuery;
+  DT: TDateTime;
 begin
   Query := CreateQuery;
   try
+    DT := EncodeTime(8,30,0,50);
     Query.SQL.Text := 'SELECT * FROM people';
     //!! Oracle: depend from local settings
-    Query.Filter := 'p_begin_work >= "'+TimeToStr(EncodeTime(8,30,0,50))+'"';
+    Query.Filter := 'p_begin_work >= "'+TimeToStr(DT)+'"';
     Query.Filtered := True;
     Query.Open;
     CheckEquals(4, Query.RecordCount);
@@ -1782,6 +1785,56 @@ begin
     Query.Open;
     CheckEquals(false, Query.Locate('c_date_came',EncodeDateTime(2002,12,19,0,0,0,0),[]));
     Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestNullDateTimeValues;
+var
+  Query: TZQuery;
+  I, j, ID: Integer;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Could not establish a connection');
+  Query := CreateQuery;
+  try
+    ID := TEST_ROW_ID;
+    with Query do
+    begin
+      Sql.Text := 'select * from date_values';
+      Open;
+      Append;
+      {$IFDEF WITH_TAUTOREFRESHFLAG}
+      if Fields[0].AutoGenerateValue <> arAutoInc then
+      {$ENDIF}
+        Fields[0].AsInteger := ID;
+      Post;
+      {$IFDEF WITH_TAUTOREFRESHFLAG}
+      if Fields[0].AutoGenerateValue = arAutoInc then
+      {$ENDIF}
+        ID := Fields[0].AsInteger;
+      try
+        for i := 1 to Fields.Count-1 do begin
+          Check(Fields[i].IsNull, Fields[i].FieldName+' should be null');
+          Check(Fields[i].AsString='', Fields[i].FieldName+' should be empty');
+        end;
+        for j := 0 to 4 do begin //emulate fall into realprepared mode for some drivers
+          Close;
+          Open;
+          Last;
+          Check(RecordCount > 0, 'table date_values is not empty');
+          for i := 1 to Fields.Count-1 do begin
+            Check(Fields[i].IsNull, Fields[i].FieldName+' should be null');
+            Check(Fields[i].AsString='', Fields[i].FieldName+' should be empty');
+          end;
+          Close;
+        end;
+      finally
+        Connection.ExecuteDirect('DELETE FROM date_values where d_id='+ZFastCode.IntToStr(ID));
+      end;
+      Close;
+    end;
   finally
     Query.Free;
   end;

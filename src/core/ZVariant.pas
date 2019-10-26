@@ -193,7 +193,10 @@ type
     procedure SetAsRawByteString(out Value: TZVariant; const Data: RawByteString);
     procedure SetAsCharRec(out Value: TZVariant; const Data: TZCharRec);
     procedure SetAsUnicodeString(out Value: TZVariant; const Data: ZWideString);
+    procedure SetAsDate(out Value: TZVariant; const Data: TZDate);
     procedure SetAsDateTime(out Value: TZVariant; const Data: TDateTime);
+    procedure SetAsTime(out Value: TZVariant; const Data: TZTime);
+    procedure SetAsTimeStamp(out Value: TZVariant; const Data: TZTimeStamp);
     procedure SetAsPointer(out Value: TZVariant; const Data: Pointer);
     procedure SetAsInterface(out Value: TZVariant; const Data: IZInterface);
     procedure SetAsArray(out Value: TZVariant; const Data: TZArray);
@@ -308,7 +311,10 @@ type
     procedure SetAsRawByteString(out Value: TZVariant; const Data: RawByteString);
     procedure SetAsCharRec(out Value: TZVariant; const Data: TZCharRec);
     procedure SetAsUnicodeString(out Value: TZVariant; const Data: ZWideString);
+    procedure SetAsDate(out Value: TZVariant; const Data: TZDate);
     procedure SetAsDateTime(out Value: TZVariant; const Data: TDateTime);
+    procedure SetAsTime(out Value: TZVariant; const Data: TZTime);
+    procedure SetAsTimeStamp(out Value: TZVariant; const Data: TZTimeStamp);
     procedure SetAsPointer(out Value: TZVariant; const Data: Pointer);
     procedure SetAsInterface(out Value: TZVariant; const Data: IZInterface);
     procedure SetAsArray(out Value: TZVariant; const Data: TZArray);
@@ -372,6 +378,9 @@ type
     function GetDouble: Double;
     function GetCurrency: Currency;
     function GetBigDecimal: TBCD;
+    function GetDate: TZDate;
+    function GetTime: TZTime;
+    function GetTimeStamp: TZTimeStamp;
     function GetString: String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString: AnsiString;
@@ -408,6 +417,9 @@ type
     constructor CreateWithUnicodeString(const Value: WideString);
     {$ENDIF}
     constructor CreateWithDateTime(const Value: TDateTime);
+    constructor CreateWithDate(const Value: TZDate);
+    constructor CreateWithTime(const Value: TZTime);
+    constructor CreateWithTimeStamp(const Value: TZTimeStamp);
 
     function IsNull: Boolean;
     function GetValue: TZVariant;
@@ -427,6 +439,9 @@ type
     function GetUTF8String: UTF8String;
     {$ENDIF}
     function GetUnicodeString: ZWideString;
+    function GetDate: TZDate;
+    function GetTime: TZTime;
+    function GetTimeStamp: TZTimeStamp;
     function GetDateTime: TDateTime;
 
     function Equals(const Value: IZInterface): Boolean; override;
@@ -570,6 +585,25 @@ function EncodeUnicodeString(const Value: ZWideString): TZVariant; {$IFDEF WITH_
   @returns an encoded custom variant.
 }
 function EncodeDateTime(const Value: TDateTime): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{**
+  Encodes a Time value into a custom variant.
+  @param Value a TZTime value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeZTime(const Value: TZTime): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{**
+  Encodes a Date value into a custom variant.
+  @param Value a TZDate value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeZDate(const Value: TZDate): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{**
+  Encodes a TimeStamp value into a custom variant.
+  @param Value a TZTimeStamp value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeZTimeStamp(const Value: TZTimeStamp): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {**
   Encodes a pointer into a custom variant.
   @param Value a pointer value to be encoded.
@@ -1132,6 +1166,11 @@ begin
   Result := Convert(Value, vtString).{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF};
 end;
 
+{**
+  Gets a variant to time value.
+  @param Value a variant to be converted.
+  @param a result value.
+}
 procedure TZSoftVariantManager.GetAsTime(const Value: TZVariant;
   var Result: TZTime);
 var P: Pointer;
@@ -1430,6 +1469,30 @@ begin
 end;
 
 {**
+  Assigns a time value to variant.
+  @param Value a variant to store the value.
+  @param Data a value to be assigned.
+}
+procedure TZSoftVariantManager.SetAsTime(out Value: TZVariant;
+  const Data: TZTime);
+begin
+  Value.VType := vtTime;
+  Value.VTime := Data;
+end;
+
+{**
+  Assigns a timestamp value to variant.
+  @param Value a variant to store the value.
+  @param Data a value to be assigned.
+}
+procedure TZSoftVariantManager.SetAsTimeStamp(out Value: TZVariant;
+  const Data: TZTimeStamp);
+begin
+  Value.VType := vtTimeStamp;
+  Value.VTimeStamp := Data;
+end;
+
+{**
   Assigns a AnsiString value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
@@ -1486,6 +1549,18 @@ procedure TZSoftVariantManager.SetAsUnicodeString(out Value: TZVariant;
   const Data: ZWideString);
 begin
   Value := EncodeUnicodeString(Data);
+end;
+
+{**
+  Assigns a date value to variant.
+  @param Value a variant to store the value.
+  @param Data a value to be assigned.
+}
+procedure TZSoftVariantManager.SetAsDate(out Value: TZVariant;
+  const Data: TZDate);
+begin
+  Value.VType := vtDate;
+  Value.VDate := Data;
 end;
 
 {**
@@ -2789,6 +2864,15 @@ end;
 
 {**
   Constructs this object and assigns the main properties.
+  @param Value a date value.
+}
+constructor TZAnyValue.CreateWithDate(const Value: TZDate);
+begin
+  FValue := EncodeZDate(Value);
+end;
+
+{**
+  Constructs this object and assigns the main properties.
   @param Value a datetime value.
 }
 constructor TZAnyValue.CreateWithDateTime(const Value: TDateTime);
@@ -2852,6 +2936,24 @@ end;
 
 {**
   Constructs this object and assigns the main properties.
+  @param Value a time value.
+}
+constructor TZAnyValue.CreateWithTime(const Value: TZTime);
+begin
+  FValue := EncodeZTime(Value);
+end;
+
+{**
+  Constructs this object and assigns the main properties.
+  @param Value a timestamp value.
+}
+constructor TZAnyValue.CreateWithTimeStamp(const Value: TZTimeStamp);
+begin
+  FValue := EncodeZTimeStamp(Value);
+end;
+
+{**
+  Constructs this object and assigns the main properties.
   @param Value a unicode string value.
 }
 {$IFDEF UNICODE}
@@ -2881,7 +2983,7 @@ var
   Temp: IZAnyValue;
 begin
   if Value <> nil then begin
-    if Value.QueryInterface(IZAnyValue, Temp) = 0 then begin
+    if Value.QueryInterface(IZAnyValue, Temp) = S_OK then begin
       Result := SoftVarManager.Compare(FValue, Temp.GetValue) = 0;
       Temp := nil;
     end else
@@ -2972,6 +3074,29 @@ begin
 end;
 
 {**
+  Gets a stored value converted to time.
+  @return a stored value converted to time.
+}
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
+function TZAnyValue.GetTime: TZTime;
+begin
+  SoftVarManager.GetAsTime(FValue, Result);
+end;
+
+{**
+  Gets a stored value converted to timestamp.
+  @return a stored value converted to timestamp.
+}
+function TZAnyValue.GetTimeStamp: TZTimeStamp;
+begin
+  SoftVarManager.GetAsTimeStamp(FValue, Result);
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{**
   Gets a stored value converted to AnsiString.
   @return a stored value converted to string.
 }
@@ -3019,6 +3144,20 @@ function TZAnyValue.GetUnicodeString: ZWideString;
 begin
   Result := SoftVarManager.GetAsUnicodeString(FValue);
 end;
+
+{**
+  Gets a stored value converted to date.
+  @return a stored value converted to date.
+}
+{$IFDEF FPC} // parameters not used intentionally
+  {$PUSH}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+{$ENDIF}
+function TZAnyValue.GetDate: TZDate;
+begin
+  SoftVarManager.GetAsDate(FValue, Result);
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a stored value converted to datetime.
@@ -3312,6 +3451,39 @@ function EncodeDateTime(const Value: TDateTime): TZVariant;
 begin
   Result.VType := vtDateTime;
   Result.VDateTime := Value;
+end;
+
+{**
+  Encodes a Time value into a custom variant.
+  @param Value a TZTime value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeZTime(const Value: TZTime): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result.VType := vtTime;
+  Result.VTime := Value;
+end;
+
+{**
+  Encodes a Date value into a custom variant.
+  @param Value a TZDate value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeZDate(const Value: TZDate): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result.VType := vtDate;
+  Result.VDate := Value;
+end;
+
+{**
+  Encodes a TimeStamp value into a custom variant.
+  @param Value a TZTimeStamp value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeZTimeStamp(const Value: TZTimeStamp): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result.VType := vtTimeStamp;
+  Result.VTimeStamp := Value;
 end;
 
 {**

@@ -78,9 +78,7 @@ type
   end;
 
 {$ENDIF ZEOS_DISABLE_ODBC}
-
 implementation
-
 {$IFNDEF ZEOS_DISABLE_ODBC}
 
 { TZODBCTokenizer }
@@ -107,18 +105,22 @@ begin
   SetCharacterState('_', '_', WordState);
   SetCharacterState('$', '$', WordState);
   SetCharacterState('@', '@', WordState);
+  SetCharacterState('#', '#', WordState); //added for mssql temp tables
 
   SetCharacterState('0', '9', NumberState);
   SetCharacterState('.', '.', NumberState);
 
-  SetCharacterState('"', '"', QuoteState);
-  SetCharacterState(#39, #39, QuoteState);
-  SetCharacterState('[', '[', QuoteState);
-  SetCharacterState(']', ']', QuoteState);
+  SetCharacterState('`', '`', QuoteState); //MySQL
+  SetCharacterState('"', '"', QuoteState); //standard SQL
+  SetCharacterState(#39, #39, QuoteState); //standard SQL
+  SetCharacterState('[', '[', QuoteState); //ODBC syntax
+  SetCharacterState(']', ']', QuoteState); //ODBC syntax
 
   SetCharacterState('/', '/', CommentState);
+  SetCharacterState('-', '-', CommentState);
 end;
 
 {$ENDIF ZEOS_DISABLE_ODBC}
+
 
 end.

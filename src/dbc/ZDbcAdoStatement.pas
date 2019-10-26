@@ -329,9 +329,10 @@ begin
     FAdoCommand.CommandText := WSQL;
     FAdoCommand.CommandType := FCommandType;
    // FAdoCommand.Properties['Defer Prepare'].Value := False;
-    inherited Prepare;
-    if FTokenMatchIndex > -1 then
+    if (FWeakIntfPtrOfIPrepStmt <> nil) and (FTokenMatchIndex > -1) and
+       StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) then
       FAdoCommand.Prepared := True;
+    inherited Prepare;
   end;
 end;
 
@@ -433,9 +434,9 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
         RS.MoveToInsertRow;
         J := 0;
         for i := 0 to FAdoCommand.Parameters.Count -1 do begin
-          with FAdoCommand.Parameters.Item[i],
-               TZColumnInfo(ColumnsInfo[J]) do begin
-            if Direction in [adParamOutput, adParamInputOutput, adParamReturnValue] then begin
+          with FAdoCommand.Parameters.Item[i] do begin
+            if Direction in [adParamOutput, adParamInputOutput, adParamReturnValue] then
+            with TZColumnInfo(ColumnsInfo[J]) do begin
               Temp := Value;
               case tagVariant(Temp).vt of
                 VT_NULL, VT_EMPTY: ;
@@ -1023,7 +1024,7 @@ var V: OleVariant;
       end;
     end;
   end;
-label set_dbl, set_BSTR;
+label set_BSTR;
 begin
   if FEmulatedParams then
     SetEmulatedValue

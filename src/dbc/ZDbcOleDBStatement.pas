@@ -445,6 +445,7 @@ begin
           if (LastResultSet <> nil) then begin
             Result := LastResultSet;
             FLastResultSet := nil;
+            Break;
           end;
     end;
   finally
@@ -470,7 +471,14 @@ begin
   FRowsAffected := DB_COUNTUNAVAILABLE; //init
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil), lcExecute, FDBBINDSTATUSArray);
+  if FSupportsMultipleResultSets then begin
+    CheckError(FCommand.Execute(nil, IID_IMultipleResults, FDBParams,@FRowsAffected,@FMultipleResults),
+      lcExecute, fDBBINDSTATUSArray);
+    if Assigned(FMultipleResults) then
+      CheckError(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+        DB_NULLGUID, @FRowsAffected, nil), lcExecute);
+  end else
+    CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil), lcExecute, FDBBINDSTATUSArray);
   if BindList.HasOutOrInOutOrResultParam then
     FOutParamResultSet := CreateResultSet(nil);
   LastUpdateCount := FRowsAffected;
@@ -594,8 +602,7 @@ begin
       if Result then begin
         if Assigned(FRowSet)
         then LastResultSet := CreateResultSet(FRowSet)
-        else LastResultSet := nil;
-        LastUpdateCount := FRowsAffected;
+        else LastUpdateCount := FRowsAffected;
       end {else if Status <> DB_S_NORESULT then
         CheckError(Status, lcOther)};
     end;
@@ -655,15 +662,28 @@ procedure TZOleDBPreparedStatement.BindBatchDMLArrays;
 var
   ZData, Data, P: Pointer;
   PLen: PDBLENGTH;
+  PD: PZDate absolute PLen;
+  PT: PZTime absolute PLen;
+  PTS: PZTimeStamp absolute PLen;
+  P_BCD: PBCD absolute PLen;
   MaxL, CPL: DBLENGTH;
   ZArray: PZArray;
   I, j: Integer;
   BuffOffSet: NativeUInt;
   SQLType: TZSQLType;
   DateTimeTemp: TDateTime;
-  W1, MS: Word;
-  WType: Word;
+  W1, WType: Word;
   Native: Boolean;
+  BCD: TBCD;
+  TS: TZTimeStamp absolute BCD;
+  T: TZTime absolute TS;
+  D: TZDate absolute TS;
+  DBDate: PDBDate absolute Data;
+  DBTime: PDBTime absolute Data;
+  DBTIME2: PDBTIME2 absolute Data;
+  DBTimeStamp: PDBTimeStamp absolute Data;
+  DBTIMESTAMPOFFSET: PDBTIMESTAMPOFFSET absolute Data;
+  DB_NUMERIC: PDB_NUMERIC absolute Data;
 
   (*function IsNotNull(I, j: Cardinal): Boolean;
   var OffSet: NativeUInt;
@@ -963,45 +983,97 @@ W_Len:                if PLen^ > MaxL then
         DBType_BOOL:  if Native
                       then PWordBool(Data)^   := TBooleanDynArray(ZData)[j]
                       else PWordBool(Data)^   := ArrayValueToBoolean(ZArray, j);
-        DBTYPE_NUMERIC: if Native
-                      then BCD2SQLNumeric(TBCDDynArray(ZData)[j], PDB_NUMERIC(Data))
-                      else RaiseUnsupportedException;
-        DBTYPE_DATE, DBTYPE_DBDATE, DBTYPE_DBTIME, DBTYPE_DBTIME2, DBTYPE_DBTIMESTAMP:  begin
-            case SQLType of
-              stTime:       DateTimeTemp := ArrayValueToTime(ZArray, j, ConSettings.WriteFormatSettings);
-              stDate:       DateTimeTemp := ArrayValueToDate(ZArray, j, ConSettings.WriteFormatSettings);
-              else          DateTimeTemp := ArrayValueToDateTime(ZArray, j, ConSettings.WriteFormatSettings);
-            end;
-            case wType of
-              DBTYPE_DATE: PDateTime(Data)^ := DateTimeTemp;
-              DBTYPE_DBDATE: begin
-                  DecodeDate(DateTimeTemp, W1, PDBDate(Data)^.month, PDBDate(Data)^.day);
-                  PDBDate(Data)^.year := W1;
-                end;
-              DBTYPE_DBTIME: DecodeTime(DateTimeTemp, PDBTime(Data)^.hour, PDBTime(Data)^.minute, PDBTime(Data)^.second, MS);
-              DBTYPE_DBTIME2: begin
-                  DecodeTime(DateTimeTemp,
-                    PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute, PDBTIME2(Data)^.second, MS);
-                    PDBTIME2(Data)^.fraction := MS * 1000000;
-                end;
-              DBTYPE_DBTIMESTAMP: begin
-                  DecodeDate(DateTimeTemp, W1, PDBTimeStamp(Data)^.month, PDBTimeStamp(Data)^.day);
-                  PDBTimeStamp(Data)^.year := W1;
-                  if SQLType <> stDate then begin
-                    DecodeTime(DateTimeTemp, PDBTimeStamp(Data)^.hour, PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second, MS);
-                    {if fSupportsMilliseconds
-                    then} PDBTimeStamp(Data)^.fraction := MS * 1000*1000
-                    {else PDBTimeStamp(Data)^.fraction := 0};
-                  end else begin
-                    PDBTimeStamp(Data)^.hour := 0; PDBTimeStamp(Data)^.minute := 0;
-                    PDBTimeStamp(Data)^.second := 0; PDBTimeStamp(Data)^.fraction := 0;
-                  end;
-                end;
-            end;
-          end;
+        DBTYPE_NUMERIC: begin
+                        if Native
+                        then P_BCD := @TBCDDynArray(ZData)[j]
+                        else begin
+                          ArrayValueToBCD(ZArray, J, BCD);
+                          P_BCD := @BCD;
+                        end;
+                        BCD2SQLNumeric(P_BCD^, DB_NUMERIC)
+                      end;
+        DBTYPE_DATE:  PDateTime(Data)^ := ArrayValueToDateTime(ZArray, j, ConSettings.WriteFormatSettings);
+        DBTYPE_DBDATE: begin
+                        if ZArray.VArrayVariantType = vtDate then
+                          PD := @TZDateDynArray(ZData)[i]
+                        else begin
+                          PD := @D;
+                          if (ZArray.VArrayVariantType in [vtNull, vtDateTime])
+                          then DecodeDateTimeToDate(TDateTimeDynArray(ZData)[i], D)
+                          else begin
+                            DateTimeTemp := ArrayValueToDate(ZArray, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToDate(DateTimeTemp, D);
+                          end;
+                        end;
+                        DBDate^.year := PD^.Year;
+                        if PD^.IsNegative then
+                          DBDate^.year := -DBDate^.year;
+                        DBDate^.month := PD^.Month;
+                        DBDate^.day := PD^.Day;
+                      end;
+
+        DBTYPE_DBTIME, DBTYPE_DBTIME2: begin
+                        if ZArray.VArrayVariantType = vtTime then
+                          PT := @TZTimeDynArray(ZData)[i]
+                        else begin
+                          PT := @T;
+                          if (ZArray.VArrayVariantType in [vtNull, vtDateTime])
+                          then DecodeDateTimeToTime(TDateTimeDynArray(ZData)[i], T)
+                          else begin
+                            DateTimeTemp := ArrayValueToTime(ZArray, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToTime(DateTimeTemp, T);
+                          end;
+                        end;
+                        if wType = DBTYPE_DBTIME then begin
+                          DBTime.hour := PT^.Hour;
+                          DBTime.minute := PT^.Minute;
+                          DBTime.second := PT^.Second;
+                        end else begin
+                          DBTIME2.hour := PT^.Hour;
+                          DBTIME2.minute := PT^.Minute;
+                          DBTIME2.second := PT^.Second;
+                          DBTIME2.fraction := PT^.Fractions;
+                        end;
+                      end;
+        DBTYPE_DBTIMESTAMP, DBTYPE_DBTIMESTAMPOFFSET: begin
+                        if ZArray.VArrayVariantType = vtTimeStamp then
+                          PTS := @TZTimeStampDynArray(ZData)[i]
+                        else begin
+                          PTS := @TS;
+                          if (ZArray.VArrayVariantType in [vtNull, vtDateTime])
+                          then DecodeDateTimeToTimeStamp(TDateTimeDynArray(ZData)[i], TS)
+                          else begin
+                            DateTimeTemp := ArrayValueToDatetime(ZArray, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToTimeStamp(DateTimeTemp, TS);
+                          end;
+                        end;
+                        if wType = DBTYPE_DBTIMESTAMP then begin
+                          DBTimeStamp.year := PTS^.Year;
+                          if PTS^.IsNegative then
+                            DBTimeStamp^.year := -DBTimeStamp^.year;
+                          DBTimeStamp^.month := PTS^.Month;
+                          DBTimeStamp^.day := PTS^.Day;
+                          DBTimeStamp.hour := PTS^.Hour;
+                          DBTimeStamp.minute := PTS^.Minute;
+                          DBTimeStamp.second := PTS^.Second;
+                          DBTimeStamp.fraction := PTS^.Fractions;
+                        end else begin
+                          DBTIMESTAMPOFFSET.year := PTS^.Year;
+                          if PTS^.IsNegative then
+                            DBTIMESTAMPOFFSET^.year := -DBTIMESTAMPOFFSET^.year;
+                          DBTIMESTAMPOFFSET^.month := PTS^.Month;
+                          DBTIMESTAMPOFFSET^.day := PTS^.Day;
+                          DBTIMESTAMPOFFSET.hour := PTS^.Hour;
+                          DBTIMESTAMPOFFSET.minute := PTS^.Minute;
+                          DBTIMESTAMPOFFSET.second := PTS^.Second;
+                          DBTIMESTAMPOFFSET.fraction := PTS^.Fractions;
+                          DBTIMESTAMPOFFSET.timezone_hour := PTS^.TimeZoneHour;
+                          DBTIMESTAMPOFFSET.timezone_minute := PTS^.TimeZoneMinute;
+                        end;
+                      end;
         { next types are automatically prepared on binding the arrays }
         DBTYPE_GUID: ArrayValueToGUID(ZArray, j, PGUID(Data));
-        DBTYPE_GUID or DBTYPE_BYREF: PPointer(Data)^ := @TGUIDDynArray(ZData)[J].D1;
+        DBTYPE_GUID or DBTYPE_BYREF: ArrayValueToGUID(ZArray, j, PGUID(PPointer(Data)^));
         DBTYPE_BYTES: Bind_DBTYPE_BYTES(False);
         DBTYPE_BYTES or DBTYPE_BYREF: Bind_DBTYPE_BYTES(True);
         DBTYPE_WSTR, DBTYPE_WSTR or DBTYPE_BYREF: begin
@@ -2793,7 +2865,7 @@ procedure TZOleDBPreparedStatement.SetTime(Index: Integer;
 var Bind: PDBBINDING;
   Data: PAnsichar;
   DT: TDateTime;
-label TWConv, RConv;
+label TWConv;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -2872,7 +2944,7 @@ procedure TZOleDBPreparedStatement.SetTimestamp(Index: Integer;
 var Bind: PDBBINDING;
   Data: PAnsichar;
   DT: TDateTime;
-label TSWConv, RConv;
+label TSWConv;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;

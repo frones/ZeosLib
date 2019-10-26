@@ -2906,13 +2906,13 @@ Fmt:F := {$IFDEF UNICODE}PWord(PF)^ or $0020{$ELSE}PByte(PF)^ or $20{$ENDIF};
       Byte('-'):  if F = Byte('y') then begin
                     Date.IsNegative := PWord(Value)^ = Byte('-');
                     Inc(Value);
-                  end else if B = F
+                  end else if (B = F) or (F in [Ord('/'),Ord('\'),Ord(' ')])
                     then goto Next
                     else Exit;
       else if (B = F) or ((B = Byte('t')) and (Value+1 = VEnd)) then begin //delimiter?
 Next:   Inc(Value);
         Inc(PF);
-      end else if (Byte(B) in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
+      end else if (B in [Ord('-'),Ord('/'),Ord('\'),Ord(' ')]) then begin
         Inc(Value);
         if Value = VEnd then Break;
         B := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PF)^;
@@ -2982,7 +2982,7 @@ Fmt:F := {$IFDEF UNICODE}PWord(PF)^ or $0020{$ELSE}PByte(PF)^ or $20{$ENDIF};
       Byte('-'):  if F = Byte('y') then begin
                     Date.IsNegative := PWord(Value)^ = Byte('-');
                     Inc(Value);
-                  end else if B = F
+                  end else if (B = F) or (F in [Ord('/'),Ord('\'),Ord(' ')])
                     then goto Next
                     else Exit;
       else if (B = F) or ((B = Byte('t')) and (Value+1 = VEnd)) then begin //delimiter?
@@ -3334,7 +3334,7 @@ TimeZ:          PTZ := Value;
                 if {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PTZ)^ = Byte('-') then
                   TimeStamp.TimeZoneHour := -TimeStamp.TimeZoneHour;
               end
-            else if B = {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PF)^
+            else if (B = F) or (F in [Ord('/'),Ord('\'),Ord(' ')])
             then goto Next
             else Exit;
           end;
@@ -3484,7 +3484,7 @@ TimeZ:          PTZ := Value;
                     TimeStamp.TimeZoneHour := -TimeStamp.TimeZoneHour;
                 end
               end
-            else if B = F
+            else if (B = F) or (F in [Ord('/'),Ord('\'),Ord(' ')])
             then goto Next
             else Exit;
           end;

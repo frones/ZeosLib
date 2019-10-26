@@ -59,7 +59,6 @@ uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcProperties;
 
-{$IFNDEF FPC}
 type
 
   {** Implements a bug report test case for DbLib components. }
@@ -67,20 +66,24 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
+    {$IFNDEF FPC}
     procedure Test_NChar_Values;
+    {$ENDIF}    
+    procedure TestSF380;
   end;
-  {$ENDIF}
 
 implementation
 
 { ZTestCompDbLibBugReport }
 
-{$IFNDEF FPC}
+uses ZAbstractRODataset, SysUtils;
+
 function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
 begin
   Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
 end;
 
+{$IFNDEF FPC}
 procedure ZTestCompDbLibBugReport.Test_NChar_Values;
 var
   Query: TZQuery;
@@ -201,8 +204,45 @@ begin
 end;
 {$ENDIF}
 
+procedure ZTestCompDbLibBugReport.TestSF380;
+var
+  Query: TZQuery;
+  Table: TZTable;
+begin
+  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
+
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults];
+    Query.Sql.Add('create table #t (i int)');
+    Query.Sql.Add('insert into #t values (0)');
+    Query.ExecSQL;
+  finally
+    FreeAndNil(Query);
+  end;
+
+  Table := TZTable.Create(nil);
+  try
+    Table.Connection := Connection;
+    Table.Options := [doCalcDefaults];
+    Table.TableName := '#t';
+    Table.Open;
+    Table.Edit;
+    Table.Fields[0].AsInteger := 3;
+    Table.Post;
+    Table.Close;
+    Table.Open;
+    try
+      CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+    finally
+    Table.Close;
+    end;
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
 initialization
-{$IFNDEF FPC}
   RegisterTest('bugreport',ZTestCompDbLibBugReport.Suite);
-{$ENDIF}
 end.

@@ -624,48 +624,44 @@ end;
 *)
 procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
 var
-  Remainder, NextDigit: Word;
+  Remainder, NextDigit, Precision, Scale: Word;
   NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
-  pDigitCopy, pNumDigit, pNibble, pFirstNibble: PAnsiChar;
-  OddPrecision: Boolean;
-label Done, Fill;
+  pDigitCopy, pNumDigit, pNibble, pFirstNibble, pLastNibble: PAnsiChar;
+  ValueIsOdd: Boolean;
 begin
   // check for zero value and padd trailing zeroes away to reduce the main loop
   pNumDigit := @Src.val[0];
-  pNibble := pNumDigit + (NumericLen -1);
+  pNibble := pNumDigit + NumericLen-1;
   pFirstNibble := @Dest.Fraction[0];
-  Remainder := 0;
-
   while (pNibble >= pNumDigit) and (PByte(pNibble)^ = 0) do
     Dec(pNibble);
-  if pNibble < pNumDigit then begin
-    Dest.Precision := 10;
-    Dest.SignSpecialPlaces := 2;
-    OddPrecision := False;
-    goto Fill;
+  if pNibble < pNumDigit then begin //zero value
+    PCardinal(@Dest.Precision)^ := 0; //not the delphi default but the fastest bcd-rec to represent a zero value
+    Exit;
   end;
-  if Src.sign <> 0 //positive ?
-  then Dest.SignSpecialPlaces := Src.scale
-  else Dest.SignSpecialPlaces := (1 shl 7) + Src.scale;
   { prepare local buffer }
   NumericLen := (pNibble - pNumDigit);
   if NumericLen >= SQL_MAX_NUMERIC_LEN
   then GetMem(pDigitCopy, NumericLen+1)
   else pDigitCopy := @NumericVal[0];
   Move(pNumDigit^, pDigitCopy^, NumericLen+1); //localize all bytes for next calculation loop.
+  Precision := Src.precision;
+  Scale := Src.scale;
   { calcutate precision }
-  if Src.scale > Src.precision //normalize precision
-  then Dest.Precision := Src.precision + (Src.scale - Src.precision)
-  else Dest.Precision := Src.precision;
-  OddPrecision := Dest.Precision and 1 = 1;
-  { address last bcd nibble }
-  pNibble := pFirstNibble + (MaxFMTBcdDigits-1);
-  if OddPrecision then begin
+  if Src.scale > Precision then begin
+    NextDigit := Src.scale - Src.precision;
+    Precision := Precision + NextDigit;
+    FillChar(Dest.Fraction, MaxFMTBcdDigits, #0);
+  end;
+  ValueIsOdd := Precision and 1 = 1; //indicate how we write into the buffer
+  pLastNibble := pFirstNibble + MaxFMTBcdDigits -1;
+  pNibble := pFirstNibble + ((Precision-1) shr 1); { address last bcd nibble we write in}
+  if ValueIsOdd then begin
     PByte(pNibble)^ := 0; //clear last nibble
     Dec(pNibble);
   end;
-
   while NumericLen >= 0 do begin //outer bcd filler loop
+    Remainder := 0;
     pNumDigit := pDigitCopy+Cardinal(NumericLen);
     while pNumDigit > pDigitCopy do begin //inner digit calc loop
       NextDigit := PByte(pNumDigit)^ + Remainder;
@@ -676,26 +672,69 @@ begin
     NextDigit := PByte(pNumDigit)^ + Remainder;
     PByte(pNumDigit)^ := NextDigit div 100;
     Remainder := ZBase100Byte2BcdNibbleLookup[NextDigit - (PByte(pNumDigit)^ * 100){mod 100}];
-    if OddPrecision then begin //my new lookup version with bool algebra only
-      PByte(pNibble+1)^ := PByte(pNibble+1)^ or ((Byte(Remainder) and $0F) shl 4);
-      PByte(pNibble)^   := (Byte(Remainder) shr 4);
-    end else
-      PByte(pNibble)^   := Byte(Remainder); //*)
-    if pNibble > pFirstNibble //overflow save
-    then Dec(pNibble)
-    else goto Done; //ready....? Should not happen
-    Dec(NumericLen, Ord(PByte(pDigitCopy+NumericLen)^ = 0)); //as long we've no zero we've to loop again
-    Remainder := 0;
+    if PNibble <= PLastNibble then //overflow save
+      if ValueIsOdd then begin //my new lookup version with bool algebra only
+        PByte(pNibble+1)^ := PByte(pNibble+1)^ or ((Byte(Remainder) and $0F) shl 4);
+        PByte(pNibble)^   := (Byte(Remainder) shr 4);
+      end else
+        PByte(pNibble)^   := Byte(Remainder)
+    else begin
+      Dec(Precision, 2);
+      if Scale > 1 then
+        Dec(Scale, 2)
+      else if Scale > 0 then
+        Dec(Scale);
+    end;
+    Dec(pNibble);
+    if PByte(pDigitCopy+NumericLen)^ = 0 then
+      Dec(NumericLen); //as long we've no zero we've to loop again
   end;
-  if OddPrecision and (PByte(PNibble+1)^ = 0) then
-    Inc(PNibble);
-  Remainder := PAnsiChar(@Dest.Fraction[MaxFMTBcdDigits-1])-PNibble;
-  Move((PNibble+1)^, pFirstNibble^, Remainder);
-Done: //free possibly allocated mem
+  Inc(pNibble, 1+Ord(ValueIsOdd));
+  pLastNibble := pFirstNibble + ((Precision+1) shr 1)-1; { address last bcd nibble }
+  Precision := (PLastNibble +1 - PNibble) shl 1 - Ord(ValueIsOdd);
+  {left pack the Bcd fraction }
+  NextDigit := Precision - Src.Scale;
+  while (Precision >= NextDigit) do begin
+    if ValueIsOdd and (PByte(pNibble)^ and $0F = 0) then
+      Inc(pNibble)
+    else if not (not ValueIsOdd and (PByte(pNibble)^ shr 4 = 0)) then
+      Break;
+    Dec(Precision);
+    ValueIsOdd := not ValueIsOdd;
+  end;
+  {move or left pact the fraction}
+  ValueIsOdd := (PByte(pNibble)^ shr 4 = 0);
+  if (PNibble > PNumDigit) or ValueIsOdd then begin {move nibbles foreward}
+    PNumDigit := PFirstNibble;
+    while (pNibble <= pLastNibble) do begin
+      if (PNibble > PNumDigit) then
+        PByte(PNumDigit)^ := PByte(pNibble)^;
+      if ValueIsOdd then begin
+        if PNumDigit < pLastNibble then
+          PByte(PNumDigit)^ := ((PByte(PNumDigit)^ and $0f) shl 4) or (PByte(pNibble+1)^ shr 4);
+      end;
+      Inc(PNumDigit);
+      Inc(pNibble);
+    end;
+  end;
+  {right pack the Bcd scale fraction }
+  pLastNibble := pFirstNibble + ((Precision+1) shr 1)-1; { address last bcd nibble }
+  ValueIsOdd := Precision and 1 = 1;
+  while Scale > 0 do begin
+    if ValueIsOdd and (PByte(PLastNibble)^ shr 4 = 0) then
+      Dec(pLastNibble)
+    else if not (not ValueIsOdd and ((PByte(PLastNibble)^ and $0F) = 0)) then
+      Break;
+    Dec(Precision);
+    Dec(Scale);
+    ValueIsOdd := not ValueIsOdd;
+  end;
+  Dest.Precision := Precision;
+  if Src.sign = 0 then //negative ?
+    Scale := Scale + (1 shl 7);
+  Dest.SignSpecialPlaces := Scale;
   if Pointer(pDigitCopy) <> Pointer(@NumericVal[0]) then
     FreeMem(pDigitCopy);
-Fill: //clear all nibbles after new offset
-  FillChar((pFirstNibble+Remainder)^, MaxFMTBcdDigits-Remainder-Ord(OddPrecision), #0);
 end;
 
 Type

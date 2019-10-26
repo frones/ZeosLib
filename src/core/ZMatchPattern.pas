@@ -95,6 +95,7 @@ const
   MATCH_ABORT	  = 3;
   MATCH_END	  = 2;
   MATCH_VALID	  = 1;
+  MATCH_PROCESSING = 0;
 { Pattern defines }
 {  PATTERN_VALID	  =  0;
   PATTERN_ESC	  = -1;
@@ -110,171 +111,148 @@ const
   MATCH_CHAR_CARET_NEGATE       = '^';
   MATCH_CHAR_EXCLAMATION_NEGATE	= '!';
 
-function Matche(const Pattern, Text: string): Integer; forward;
-function MatchAfterStar(const Pattern, Text: string): Integer; forward;
+function Matche(PPattern, PLast, PText, TLast: PChar): Integer; forward;
+function MatchAfterStar(PPattern, PLast, PText, TLast: PChar): Integer; forward;
 
 function IsMatch(const Pattern, Text: string): Boolean;
 var aPattern, aText: string;
+  PPattern, PLast, PText, TLast: PChar;
 begin
+  {EH: Why is the (Ansi)LowerCase() required? We use it for the filter expressions only and the
+    Strings(non Unicode) my have a different encoding!
+    I would start from the premisse we match case-sensitive
+    otherwise a explicit Lower() or Upper() using the filters should be done, IMHO
+    The matche-method wasn't made for SQL }
   aPattern := AnsiLowerCase(Pattern);
   aText    := AnsiLowerCase(Text);
-  Result := (Matche(Pattern, Text) = 1);
+  PPattern := Pointer(aPattern);
+  PText := Pointer(aText);
+  if (PPattern = nil) then begin
+    Result := False;
+    Exit;
+  end;
+  PLast := PPattern + Length(aPattern) -1;
+  if (PText = nil) then begin
+    Result := (PPattern^ = MATCH_CHAR_KLEENE_CLOSURE) and (PPattern = PLast);
+    Exit;
+  end;
+  TLast := PText + Length(aText) -1;
+  Result := (Matche(PPattern, PLast, PText, TLast) = MATCH_VALID);
 end;
 
-function Matche(const Pattern, Text: string): Integer;
+function Matche(PPattern, PLast, PText, TLast: PChar): Integer;
 var
-  RangeStart, RangeEnd, P, T, PLen, TLen: Integer;
+  RangeStart, RangeEnd: PChar;
   Invert, MemberMatch, Loop: Boolean;
+Label MP;
 begin
-  P := 1;
-  T := 1;
-  PLen    := Length(Pattern);
-  TLen    := Length(Text);
-  Result  := 0;
-  while ((Result = 0) and (P <= PLen)) do begin
-    if T > TLen then begin
-      if (Pattern[P] = MATCH_CHAR_KLEENE_CLOSURE) and (P+1 > PLen)
+  If (PPattern^ = '*') and (PPattern = PLast) then begin { EH: a single '*' matches everything }
+    Result := MATCH_VALID;
+    exit;
+  end;
+  Result := MATCH_PROCESSING;
+  while ((Result = MATCH_PROCESSING) and (PPattern <= PLast)) do begin
+    if PText > TLast then begin
+      if (PPattern^ = MATCH_CHAR_KLEENE_CLOSURE) and (PPattern+1 > PLast)
       then Result := MATCH_VALID
       else Result := MATCH_ABORT;
       Exit;
     end else
-      case (Pattern[P]) of
+      case (PPattern^) of
         MATCH_CHAR_KLEENE_CLOSURE:
-          Result := MatchAfterStar(Copy(Pattern,P,PLen),Copy(Text,T,TLen));
+          Result := MatchAfterStar(PPattern,PLast, PText,TLast);
         MATCH_CHAR_RANGE_OPEN:
           begin
-            Inc(P);
-            if (p > plen) then begin
-              Result := MATCH_PATTERN;
-              exit;
-            end;
+            Inc(PPattern);
             Invert := False;
-            if (Pattern[P] = MATCH_CHAR_EXCLAMATION_NEGATE) or
-              (Pattern[P] = MATCH_CHAR_CARET_NEGATE) then begin
+            if (PPattern > PLast) then goto MP;
+            if (PPattern^ = MATCH_CHAR_EXCLAMATION_NEGATE) or
+               (PPattern^ = MATCH_CHAR_CARET_NEGATE) then begin
               Invert := True;
-              Inc(P);
-              if (p > plen) then begin
-                Result := MATCH_PATTERN;
-                exit;
-              end;
+              Inc(PPattern);
+              if (PPattern > PLast) then goto MP;
             end;
-            if (Pattern[P] = MATCH_CHAR_RANGE_CLOSE) then begin
-              Result := MATCH_PATTERN;
-              Exit;
-            end;
+            if (PPattern^ = MATCH_CHAR_RANGE_CLOSE) then goto MP;
             MemberMatch := False;
             Loop := True;
-            while (Loop and (Pattern[P] <> MATCH_CHAR_RANGE_CLOSE)) do begin
-              RangeStart := P;
-              RangeEnd := P;
-              Inc(P);
-              if P > PLen then begin
-                Result := MATCH_PATTERN;
-                Exit;
+            while (Loop and (PPattern^ <> MATCH_CHAR_RANGE_CLOSE)) do begin
+              RangeStart := PPattern;
+              RangeEnd := PPattern;
+              Inc(PPattern);
+              if PPattern > PLast then goto MP;
+              if PPattern^ = MATCH_CHAR_RANGE then begin
+                Inc(PPattern);
+                RangeEnd := PPattern;
+                if (PPattern > PLast) or (RangeEnd^ = MATCH_CHAR_RANGE_CLOSE) then goto MP;
+                Inc(PPattern);
               end;
-              if Pattern[P] = MATCH_CHAR_RANGE then begin
-                Inc(P);
-                RangeEnd := P;
-              if (P > PLen) or (Pattern[RangeEnd] = MATCH_CHAR_RANGE_CLOSE) then begin
-                Result := MATCH_PATTERN;
-                Exit;
+              if PPattern > PLast then goto MP;
+              if RangeStart < RangeEnd then begin
+                if (PText^ >= RangeStart^) and
+                   (PText^ <= RangeEnd^) then begin
+                  MemberMatch := True;
+                  Loop := False;
+                end;
+              end else begin
+                if (PText^ >= RangeEnd^) and
+                   (PText^ <= RangeStart^) then begin
+                  MemberMatch := True;
+                  Loop := False;
+                end;
               end;
-              Inc(P);
             end;
-            if P > PLen then begin
-              Result := MATCH_PATTERN;
+            if (Invert and MemberMatch) or (not (Invert or MemberMatch)) then begin
+              Result := MATCH_RANGE;
               Exit;
             end;
-            if RangeStart < RangeEnd then begin
-              if (Text[T] >= Pattern[RangeStart]) and
-                 (Text[T] <= Pattern[RangeEnd]) then begin
-                MemberMatch := True;
-                Loop := False;
+            if MemberMatch then
+              while (PPattern <= PLast) and (PPattern^ <> MATCH_CHAR_RANGE_CLOSE) do
+                Inc(PPattern);
+              if PPattern > PLast then begin
+MP:             Result := MATCH_PATTERN;
+                Exit;
               end;
-            end else begin
-              if (Text[T] >= Pattern[RangeEnd]) and
-                 (Text[T] <= Pattern[RangeStart]) then begin
-                MemberMatch := True;
-                Loop := False;
-              end;
-            end;
           end;
-          if (Invert and MemberMatch) or (not (Invert or MemberMatch)) then begin
-            Result := MATCH_RANGE;
-            Exit;
-          end;
-          if MemberMatch then
-            while (P <= PLen) and (Pattern[P] <> MATCH_CHAR_RANGE_CLOSE) do
-              Inc(P);
-            if P > PLen then begin
-              Result := MATCH_PATTERN;
-              Exit;
-            end;
-          end;
-        else
-          if Pattern[P] <> MATCH_CHAR_SINGLE then
-            if Pattern[P] <> Text[T] then
-              Result := MATCH_LITERAL;
+        else if (PPattern^ <> MATCH_CHAR_SINGLE) then
+          if (PPattern^ <> PText^) then
+            Result := MATCH_LITERAL;
       end;
-    Inc(P);
-    Inc(T);
+    Inc(PPattern);
+    Inc(PText);
   end;
-  if Result = 0 then
-    if T <= TLen
+  if Result = MATCH_PROCESSING then
+    if PText <= TLast
     then Result := MATCH_END
     else Result := MATCH_VALID;
 end;
 
-function MatchAfterStar(const Pattern, Text: string): Integer;
-var
-  P, T, PLen, TLen: Integer;
-  aPattern, aText: string;
+function MatchAfterStar(PPattern, PLast, PText, TLast: PChar): Integer;
+label MV, MA;
 begin
-  Result := 0;
-  P := 1;
-  T := 1;
-  PLen := Length(Pattern);
-  TLen := Length(Text);
-  if (plen > 0) then
-    While (( t <= tlen ) and (p <= plen)) and
-       (Ord(pattern[p]) in [Ord(MATCH_CHAR_SINGLE), Ord(MATCH_CHAR_KLEENE_CLOSURE)]) do begin
-      if Pattern[P] = MATCH_CHAR_SINGLE then
-        Inc(T);
-      Inc(P);
-    end;
-  If (T > Tlen) then begin
-    Result := MATCH_ABORT;
-    Exit;
+  Result := MATCH_PROCESSING;
+  While (( PText <= TLast ) and (PPattern <= PLast)) and
+     (Ord(PPattern^) in [Ord(MATCH_CHAR_SINGLE), Ord(MATCH_CHAR_KLEENE_CLOSURE)]) do begin
+    if PPattern^ = MATCH_CHAR_SINGLE then
+      Inc(PText);
+    Inc(PPattern);
   end;
-
-  If (plen > 0) and (p > plen) then begin
-    Result := MATCH_VALID;
-    Exit;
-  end;
+  If (PText > TLast) then goto MA;
+  If (PPattern > PLast) then goto MV;
   repeat
-    If (plen > 0) and ((pattern[p] = text[t]) or (pattern[p] = MATCH_CHAR_RANGE_OPEN)) then
-    begin
-      aPattern := Copy(Pattern, P, PLen);
-      aText    := Copy(Text, T, TLen);
-      PLen    := Length(Pattern);
-      TLen    := Length(Text);
-      p := 1;
-      t := 1;
-      Result  := Matche(aPattern, aText);
+    If (PLast >= PPattern) and ((PPattern^ = PText^) or (PPattern^ = MATCH_CHAR_RANGE_OPEN)) then begin
+      Result  := Matche(PPattern, PLast, PText, TLast);
       if Result <> MATCH_VALID then
-        Result := 0;//retry until end of Text, (check below) or Result valid
+        Result := MATCH_PROCESSING;//retry until end of Text, (check below) or Result valid
     end;
-    if (T > TLen) or (P > PLen) then begin
-      Result := MATCH_ABORT;
+    if (PText > TLast) or (PPattern > PLast) then begin
+MA:   Result := MATCH_ABORT;
       Exit;
     end;
-    Inc(T);
-  //until Result <> 0
-  Until (Result = 1) or (t > tlen);
-  if (p > plen) and (t > tlen) then
-    Result := MATCH_VALID;
+    Inc(PText);
+  //until Result <> MATCH_PROCESSING
+  Until (Result = MATCH_VALID) or (PText > TLast);
+  if (PPattern > PLast) and (PText > TLast) then
+MV: Result := MATCH_VALID;
 end;
 
 end.
-
-

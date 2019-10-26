@@ -1439,7 +1439,6 @@ var
   Second: Byte absolute ss;
   Millis: ub4 absolute fsec;
   Ptr: POraDate absolute P;
-label Fill;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);

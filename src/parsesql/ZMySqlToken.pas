@@ -195,32 +195,30 @@ begin
 
   if SPos+1 < NTerm then
   case SPos^ of
-    '-':
-      begin
+    '-': begin
         Inc(SPos);
-        if SPos^ = '-' then
-        begin
+        //MySQL sees the -- only if it's followed by a whitespace
+        //intentenion was substract a negative numer (: like
+        //UPDATE account SET credit=credit--1 funny isn't it
+        if (SPos^ = '-') and (SPos+1 < NTerm) and (Ord((SPos+1)^) <= Ord(' ')) then begin
           Result.TokenType := ttComment;
           GetSingleLineComment(SPos, NTerm);
         end else
           Dec(SPos);
       end;
-    '#':
-      begin
+    '#': begin
         Result.TokenType := ttComment;
         GetSingleLineComment(SPos, NTerm);
       end;
-    '/':
-      begin
+    '/': begin
         Inc(SPos);
         if SPos^ = '*' then begin
           Inc(Spos);
-          // Don't treat '/*!' comments as normal comments!!
+          // Don't treat '/*!' or '/*+'(optimizer hints) comments as normal comments!!
           if (SPos < NTerm) then begin
-            if (SPos^ <> '!') then
-              Result.TokenType := ttComment
-            else
-              Result.TokenType := ttSymbol;
+            if (SPos^ <> '!')
+            then Result.TokenType := ttComment
+            else Result.TokenType := ttSymbol;
             GetMultiLineComment(SPos, NTerm);
           end else
             Dec(SPos);
@@ -229,10 +227,9 @@ begin
       end;
   end;
 
-  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
-    Result := Tokenizer.SymbolState.NextToken(SPos, NTerm, Tokenizer)
-  else
-     Result.L := SPos-Result.P+1;
+  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil)
+  then Result := Tokenizer.SymbolState.NextToken(SPos, NTerm, Tokenizer)
+  else Result.L := SPos-Result.P+1;
 end;
 
 { TZMySQLSymbolState }

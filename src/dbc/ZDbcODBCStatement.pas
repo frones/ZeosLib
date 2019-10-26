@@ -831,7 +831,7 @@ const
 procedure TZAbstractODBCPreparedStatement.BindArrayColumnWise(Index: Integer);
 var ArrayLen, MaxL, I: Integer;
   Arr: PZArray;
-  D: Pointer;
+  DA: Pointer;
   P: PAnsiChar;
   SQL_DATE_STRUCT: PSQL_DATE_STRUCT absolute P;
   SQL_TIME_STRUCT: PSQL_TIME_STRUCT absolute P;
@@ -839,13 +839,17 @@ var ArrayLen, MaxL, I: Integer;
   SQL_SS_TIMESTAMPOFFSET_STRUCT: PSQL_SS_TIMESTAMPOFFSET_STRUCT absolute P;
   SQL_TIMESTAMP_STRUCT: PSQL_TIMESTAMP_STRUCT absolute P;
   ParamDataLobs: PLobArray absolute P;
+  TS: TZTimeStamp;
+  D: TZDate absolute TS;
+  T: TZTime absolute TS;
+  PD: PZDate;
+  PT: PZTime absolute PD;
+  PTS: PZTimeStamp absolute PD;
   N: PSQLLENArray;
   Bind: PZODBCParamBind;
   SQLType: TZSQLType;
   Native, BindAgain: Boolean;
   DT: TDateTime;
-  Fraction: Word;
-
 {$R-}
   Procedure BindRawStrings(CP: Word);
   var I, B: Integer;
@@ -856,7 +860,7 @@ var ArrayLen, MaxL, I: Integer;
         if IsNullFromArray(Arr, I)
         then N[I] := SQL_NULL_DATA
         else begin
-          B := ZEncoding.PRaw2PUnicode(Pointer(TRawByteStringDynArray(D)[i]), PWideChar(P), CP, LengthInt(Length(TRawByteStringDynArray(D)[i])), LengthInt(MaxL)) shl 1;
+          B := ZEncoding.PRaw2PUnicode(Pointer(TRawByteStringDynArray(DA)[i]), PWideChar(P), CP, LengthInt(Length(TRawByteStringDynArray(DA)[i])), LengthInt(MaxL)) shl 1;
           if B < Bind.BufferLength then begin
             PWord(P+B)^ := 0;
             N[I] := B;
@@ -872,10 +876,10 @@ var ArrayLen, MaxL, I: Integer;
           if IsNullFromArray(Arr, I)
           then N[I] := SQL_NULL_DATA
           else begin
-            B := Length(TRawByteStringDynArray(D)[i]);
+            B := Length(TRawByteStringDynArray(DA)[i]);
             if B <= MaxL then begin
               if B > 0
-              then Move(Pointer(TRawByteStringDynArray(D)[i])^, P^, B+1)
+              then Move(Pointer(TRawByteStringDynArray(DA)[i])^, P^, B+1)
               else PByte(P)^ := 0;
               N[I] := B;
             end else
@@ -888,8 +892,8 @@ var ArrayLen, MaxL, I: Integer;
           if IsNullFromArray(Arr, I)
           then N[I] := SQL_NULL_DATA
           else begin
-            B := ZEncoding.PRawToPRawBuf(Pointer(TRawByteStringDynArray(D)[i]), P,
-              Length(TRawByteStringDynArray(D)[i]), MaxL, CP, FClientCP);
+            B := ZEncoding.PRawToPRawBuf(Pointer(TRawByteStringDynArray(DA)[i]), P,
+              Length(TRawByteStringDynArray(DA)[i]), MaxL, CP, FClientCP);
             if B <= MaxL then begin
               PByte(P+B)^ := 0;
               N[I] := B;
@@ -913,37 +917,37 @@ var ArrayLen, MaxL, I: Integer;
                           case Arr.VArrayVariantType of
                             {$IFDEF UNICODE}vtString,{$ENDIF}
                             vtUnicodeString: ParamDataLobs[I] :=
-                              TZAbstractClob.CreateWithData(Pointer(TUnicodeStringDynArray(D)[i]),
-                              Length(TUnicodeStringDynArray(D)[i]), ConSettings);
-                            vtCharRec: if TZCharRecDynArray(D)[i].CP = zCP_UTF16
+                              TZAbstractClob.CreateWithData(Pointer(TUnicodeStringDynArray(DA)[i]),
+                              Length(TUnicodeStringDynArray(DA)[i]), ConSettings);
+                            vtCharRec: if TZCharRecDynArray(DA)[i].CP = zCP_UTF16
                               then ParamDataLobs[I] :=
-                                TZAbstractClob.CreateWithData(TZCharRecDynArray(D)[i].P,
-                                  TZCharRecDynArray(D)[i].Len, ConSettings)
+                                TZAbstractClob.CreateWithData(TZCharRecDynArray(DA)[i].P,
+                                  TZCharRecDynArray(DA)[i].Len, ConSettings)
                               else ParamDataLobs[I] :=
-                                TZAbstractClob.CreateWithData(TZCharRecDynArray(D)[i].P,
-                                  TZCharRecDynArray(D)[i].Len, TZCharRecDynArray(D)[i].CP, ConSettings);
+                                TZAbstractClob.CreateWithData(TZCharRecDynArray(DA)[i].P,
+                                  TZCharRecDynArray(DA)[i].Len, TZCharRecDynArray(DA)[i].CP, ConSettings);
                             vtRawByteString: ParamDataLobs[I] :=
-                                  TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
-                                    Length(TRawByteStringDynArray(D)[i]), FClientCP, ConSettings);
+                                  TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
+                                    Length(TRawByteStringDynArray(DA)[i]), FClientCP, ConSettings);
                             {$IFNDEF NO_UTF8STRING}
                             vtUTF8String: ParamDataLobs[I] :=
-                              TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
-                                  Length(TRawByteStringDynArray(D)[i]), zCP_UTF8, ConSettings);
+                              TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
+                                  Length(TRawByteStringDynArray(DA)[i]), zCP_UTF8, ConSettings);
                             {$ENDIF}
                             {$IFNDEF NO_ANSISTRING}
                             vtAnsiString: ParamDataLobs[I] :=
-                              TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
-                                  Length(TRawByteStringDynArray(D)[i]), ZOSCodePage, ConSettings);
+                              TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
+                                  Length(TRawByteStringDynArray(DA)[i]), ZOSCodePage, ConSettings);
                             {$ENDIF}
                             {$IFNDEF UNICODE}
                             vtString: if ConSettings^.AutoEncode then
                                         ParamDataLobs[I] :=
-                                          TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
-                                              Length(TRawByteStringDynArray(D)[i]), zCP_None, ConSettings)
+                                          TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
+                                              Length(TRawByteStringDynArray(DA)[i]), zCP_None, ConSettings)
                                       else
                                         ParamDataLobs[I] :=
-                                          TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(D)[i]),
-                                              Length(TRawByteStringDynArray(D)[i]), FClientCP, ConSettings);
+                                          TZAbstractClob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
+                                              Length(TRawByteStringDynArray(DA)[i]), FClientCP, ConSettings);
                             {$ENDIF}
                             else
                               raise EZSQLException.Create('Unsupported String Variant');
@@ -955,16 +959,16 @@ var ArrayLen, MaxL, I: Integer;
                         N[I] := SQL_DATA_AT_EXEC;
                       end;
       stBytes:          for I := 0 to ArrayLen-1 do begin
-                          if (TBytesDynArray(D)[i] = nil) or IsNullFromArray(Arr, I)
+                          if (TBytesDynArray(DA)[i] = nil) or IsNullFromArray(Arr, I)
                           then  ParamDataLobs[I] := nil
-                          else  ParamDataLobs[I] := TZAbstractBlob.CreateWithData(Pointer(TBytesDynArray(D)[i]),
-                            Length(TBytesDynArray(D)[i]));
+                          else  ParamDataLobs[I] := TZAbstractBlob.CreateWithData(Pointer(TBytesDynArray(DA)[i]),
+                            Length(TBytesDynArray(DA)[i]));
                           N[I] := SQL_DATA_AT_EXEC;
                         end;
       stAsciiStream, stUnicodeStream,
       stBinaryStream: begin
                         for I := 0 to ArrayLen-1 do begin
-                          if (TInterfaceDynArray(D)[i] <> nil) and (TInterfaceDynArray(D)[i].QueryInterface(IZBlob, TmpLob) = S_OK) and not TmpLob.IsEmpty then begin
+                          if (TInterfaceDynArray(DA)[i] <> nil) and (TInterfaceDynArray(DA)[i].QueryInterface(IZBlob, TmpLob) = S_OK) and not TmpLob.IsEmpty then begin
                             if not (Bind.SQLtype = stBinaryStream) then begin
                               if TmpLob.IsClob then
                                 if FClientEncoding = ceUTF16 then
@@ -985,8 +989,8 @@ var ArrayLen, MaxL, I: Integer;
 begin
   Bind := @fParamBindings[Index];
   Arr := BindList[Index].Value;
-  D := Arr.VArray;
-  ArrayLen := {%H-}PArrayLenInt({%H-}NativeUInt(D) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
+  DA := Arr.VArray;
+  ArrayLen := {%H-}PArrayLenInt({%H-}NativeUInt(DA) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
   SQLType := TZSQLType(Arr.VArrayType);
   if not Bind.Described  then
     if (Ord(SQLType) < Ord(stString)) then begin
@@ -999,18 +1003,18 @@ begin
       case Arr.VArrayVariantType of
         {$IFDEF UNICODE}vtString,{$ENDIF}
         vtUnicodeString: for I := 0 to ArrayLen -1 do
-                            MaxL := Max(MaxL, Length(TUnicodeStringDynArray(D)[i])*
+                            MaxL := Max(MaxL, Length(TUnicodeStringDynArray(DA)[i])*
                               (ConSettings.ClientCodePage.CharWidth*Ord(FClientEncoding <> ceUTF16)));
         {$IFNDEF UNICODE}vtString,{$ENDIF}
         {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
         {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
         vtRawByteString: for I := 0 to ArrayLen -1 do
-                            MaxL := Max(MaxL, Length(TRawByteStringDynArray(D)[i]));
+                            MaxL := Max(MaxL, Length(TRawByteStringDynArray(DA)[i]));
         vtCharRec:       for I := 0 to ArrayLen -1 do
-                            MaxL := Max(MaxL, Integer(TZCharRecDynArray(D)[i].Len)*
-                              (ConSettings.ClientCodePage.CharWidth*Ord((FClientEncoding <> ceUTF16) and (TZCharRecDynArray(D)[i].CP = zCP_UTF16))));
+                            MaxL := Max(MaxL, Integer(TZCharRecDynArray(DA)[i].Len)*
+                              (ConSettings.ClientCodePage.CharWidth*Ord((FClientEncoding <> ceUTF16) and (TZCharRecDynArray(DA)[i].CP = zCP_UTF16))));
         vtBytes:         for I := 0 to ArrayLen -1 do
-                            MaxL := Max(MaxL, Length(TBytesDynArray(D)[i]));
+                            MaxL := Max(MaxL, Length(TBytesDynArray(DA)[i]));
       end;
     end
   else MaxL := Bind.BufferLength;
@@ -1021,7 +1025,7 @@ begin
   BindAgain := False;
   if Native and (ArrayLen > 1) then begin
     InitBind(Index, 0, SQLType, MaxL);
-    Bind.ParameterValuePtr := D;
+    Bind.ParameterValuePtr := DA;
     Bind.ValueCount := ArrayLen;
     GetMem(Bind.StrLen_or_IndPtr, ArrayLen * SizeOf(SQLLEN));
     BindAgain := True;
@@ -1089,87 +1093,101 @@ begin
                         BCD2SQLNumeric(PBCD(@fWBuffer[0])^, Pointer(P+(I*SizeOf(TSQL_NUMERIC_STRUCT))));
                         N[I] := NullInd[IsNullFromArray(Arr, I)];
                       end;
-      stDate:         begin
-                        Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
-                        for I := 0 to ArrayLen -1 do begin
-                          if IsNullFromArray(Arr, I) then
-                            N[I] := SQL_NULL_DATA
+      stDate:         for I := 0 to ArrayLen -1 do begin
+                        if IsNullFromArray(Arr, I) then
+                          N[I] := SQL_NULL_DATA
+                        else begin
+                          if (Arr.VArrayVariantType in [vtNull, vtDateTime]) then begin
+                            DecodeDateTimeToDate(TDateTimeDynArray(DA)[i], D);
+                            PD := @D;
+                          end else if Arr.VArrayVariantType = vtDate then
+                            PD := @TZDateDynArray(DA)[i]
                           else begin
-                            if Native
-                            then DT := TDateTimeDynArray(D)[i]
-                            else DT := ArrayValueToDate(Arr, I, ConSettings^.WriteFormatSettings);
-                            DecodeDate(DT, PWord(@SQL_DATE_STRUCT.year)^, SQL_DATE_STRUCT.month,
-                              SQL_DATE_STRUCT.day);
-                            N[I] := SQL_NO_NULLS;
+                            DT := ArrayValueToDate(Arr, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToDate(DT, D);
+                            PD := @D;
                           end;
-                          Inc(P, SizeOf(TSQL_DATE_STRUCT));
+                          SQL_DATE_STRUCT.year := PD.Year;
+                          if D.IsNegative then
+                            SQL_DATE_STRUCT^.year := -SQL_DATE_STRUCT^.year;
+                          SQL_DATE_STRUCT^.month := PD.Month;
+                          SQL_DATE_STRUCT^.day := PD.Day;
+                          N[I] := SQL_NO_NULLS;
                         end;
+                        Inc(P, SizeOf(TSQL_DATE_STRUCT));
                       end;
-      stTime:         begin
-                        Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
-                        if Bind.ValueType = SQL_C_SS_TIME2 then begin
-                          for I := 0 to ArrayLen -1 do begin
-                            if IsNullFromArray(Arr, I) then
-                              N[I] := SQL_NULL_DATA
-                            else begin
-                              N[I] := SQL_NO_NULLS;
-                              if Native
-                              then DT := TDateTimeDynArray(D)[i]
-                              else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
-                              DecodeTime(DT, SQL_SS_TIME2_STRUCT.hour, SQL_SS_TIME2_STRUCT.minute,
-                                SQL_SS_TIME2_STRUCT.second, Fraction);
-                              SQL_SS_TIME2_STRUCT.fraction := fraction*1000000;
-                            end;
-                            Inc(P, SizeOf(TSQL_SS_TIME2_STRUCT));
-                          end;
-                        end else for I := 0 to ArrayLen -1 do begin
-                          if IsNullFromArray(Arr, I) then
-                            N[I] := SQL_NULL_DATA
+      stTime:         for I := 0 to ArrayLen -1 do begin
+                        if IsNullFromArray(Arr, I) then
+                          N[I] := SQL_NULL_DATA
+                        else begin
+                          if (Arr.VArrayVariantType in [vtNull, vtDateTime]) then begin
+                            DecodeDateTimeToTime(TDateTimeDynArray(DA)[i], T);
+                            PT := @T;
+                          end else if Arr.VArrayVariantType = vtDate then
+                            PT := @TZTimeDynArray(DA)[i]
                           else begin
-                            N[I] := SQL_NO_NULLS;
-                            if Native
-                            then DT := TDateTimeDynArray(D)[i]
-                            else DT := ArrayValueToTime(Arr, I, ConSettings^.WriteFormatSettings);
-                              DecodeTime(DT, SQL_TIME_STRUCT.hour, SQL_TIME_STRUCT.minute,
-                                SQL_TIME_STRUCT.second, Fraction);
+                            DT := ArrayValueTotime(Arr, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToTime(DT, T);
+                            PT := @T;
                           end;
-                          Inc(P, SizeOf(TSQL_TIME_STRUCT));
+                          if Bind.ValueType = SQL_C_SS_TIME2 then begin
+                            SQL_SS_TIME2_STRUCT.hour := PT.Hour;
+                            SQL_SS_TIME2_STRUCT.minute := PT.Minute;
+                            SQL_SS_TIME2_STRUCT.second := PT.Second;
+                            SQL_SS_TIME2_STRUCT.fraction := PT.Fractions
+                          end else begin
+                            SQL_TIME_STRUCT.hour := PT.Hour;
+                            SQL_TIME_STRUCT.minute := PT.Minute;
+                            SQL_TIME_STRUCT.second := PT.Second;
+                          end;
+                          N[I] := SQL_NO_NULLS;
                         end;
+                        if Bind.ValueType = SQL_C_SS_TIME2
+                        then Inc(P, SizeOf(TSQL_SS_TIME2_STRUCT))
+                        else Inc(P, SizeOf(TSQL_TIME_STRUCT));
                       end;
-      stTimeStamp:    begin
-                        Native := (Bind.SQLType = SQLType) and (Arr.VArrayVariantType = vtNull);
-                        if Bind.ValueType = SQL_C_SS_TIMESTAMPOFFSET then
-                          for I := 0 to ArrayLen -1 do begin
-                            if IsNullFromArray(Arr, I) then
-                              N[I] := SQL_NULL_DATA
-                            else begin
-                              N[I] := SQL_NO_NULLS;
-                            if Native
-                            then DT := TDateTimeDynArray(D)[i]
-                            else DT := ArrayValueToDateTime(Arr, I, ConSettings^.WriteFormatSettings);
-                            DecodeDateTime(DT, PWord(@SQL_SS_TIMESTAMPOFFSET_STRUCT.Year)^,
-                              SQL_SS_TIMESTAMPOFFSET_STRUCT.month, SQL_SS_TIMESTAMPOFFSET_STRUCT.day,
-                              SQL_SS_TIMESTAMPOFFSET_STRUCT.hour, SQL_SS_TIMESTAMPOFFSET_STRUCT.minute,
-                              SQL_SS_TIMESTAMPOFFSET_STRUCT.second, Fraction);
-                              SQL_SS_TIMESTAMPOFFSET_STRUCT.fraction := fraction*1000000;
-                            end;
-                          Inc(P, SizeOf(TSQL_SS_TIMESTAMPOFFSET_STRUCT));
-                        end else for I := 0 to ArrayLen -1 do begin
-                          if IsNullFromArray(Arr, I) then
-                            N[I] := SQL_NULL_DATA
+      stTimeStamp:    for I := 0 to ArrayLen -1 do begin
+                        if IsNullFromArray(Arr, I) then
+                          N[I] := SQL_NULL_DATA
+                        else begin
+                          if (Arr.VArrayVariantType in [vtNull, vtDateTime]) then begin
+                            DecodeDateTimeToTimeStamp(TDateTimeDynArray(DA)[i], TS);
+                            PTS := @TS;
+                          end else if Arr.VArrayVariantType = vtTimeStamp then
+                            PTS := @TZTimeStampDynArray(DA)[i]
                           else begin
-                            N[I] := SQL_NO_NULLS;
-                            if Native
-                            then DT := TDateTimeDynArray(D)[i]
-                            else DT := ArrayValueToDateTime(Arr, I, ConSettings^.WriteFormatSettings);
-                            DecodeDateTime(DT, PWord(@SQL_TIMESTAMP_STRUCT.Year)^,
-                              SQL_TIMESTAMP_STRUCT.month, SQL_TIMESTAMP_STRUCT.day,
-                              SQL_TIMESTAMP_STRUCT.hour, SQL_TIMESTAMP_STRUCT.minute,
-                              SQL_TIMESTAMP_STRUCT.second, Fraction);
-                              SQL_TIMESTAMP_STRUCT.fraction := fraction*1000000;
+                            DT := ArrayValueToDatetime(Arr, I, ConSettings^.WriteFormatSettings);
+                            DecodeDateTimeToTimeStamp(DT, TS);
+                            PTS := @TS;
                           end;
-                          Inc(P, SizeOf(TSQL_TIMESTAMP_STRUCT));
+                          if Bind.ValueType = SQL_C_SS_TIMESTAMPOFFSET then begin
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.year := Ts.Year;
+                            if Ts.IsNegative then
+                              SQL_SS_TIMESTAMPOFFSET_STRUCT.year := -SQL_SS_TIMESTAMPOFFSET_STRUCT.year;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.month := PTS.Month;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.day := PTS.Day;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.hour := PTS.Hour;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.minute := PTS.Minute;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.second := PTS.Second;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.fraction := PTS.Fractions;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.timezone_hour := PTS.TimeZoneHour;
+                            SQL_SS_TIMESTAMPOFFSET_STRUCT.timezone_minute := PTS.TimeZoneMinute;
+                          end else begin
+                            SQL_TIMESTAMP_STRUCT.year := PTS.Year;
+                            if Ts.IsNegative then
+                              SQL_TIMESTAMP_STRUCT.year := -SQL_TIMESTAMP_STRUCT.year;
+                            SQL_TIMESTAMP_STRUCT.month := PTS.Month;
+                            SQL_TIMESTAMP_STRUCT.day := PTS.Day;
+                            SQL_TIMESTAMP_STRUCT.hour := PTS.Hour;
+                            SQL_TIMESTAMP_STRUCT.minute := PTS.Minute;
+                            SQL_TIMESTAMP_STRUCT.second := PTS.Second;
+                            SQL_TIMESTAMP_STRUCT.fraction := PTS.Fractions;
+                          end;
+                          N[I] := SQL_NO_NULLS;
                         end;
+                        if Bind.ValueType = SQL_C_SS_TIMESTAMPOFFSET
+                        then Inc(P, SizeOf(TSQL_SS_TIMESTAMPOFFSET_STRUCT))
+                        else Inc(P, SizeOf(TSQL_TIMESTAMP_STRUCT));
                       end;
       stGUID:         for I := 0 to ArrayLen -1 do begin
                         ArrayValueToGUID(Arr, I, PGUID(P+(I*SizeOf(TGUID))));
@@ -1183,9 +1201,9 @@ begin
                                 if IsNullFromArray(Arr, I) then
                                   N[I] := SQL_NULL_DATA
                                 else begin
-                                  MaxL := Length(TUnicodeStringDynArray(D)[i]) shl 1;
+                                  MaxL := Length(TUnicodeStringDynArray(DA)[i]) shl 1;
                                   if MaxL < Bind.BufferLength then begin
-                                    Move(Pointer(TUnicodeStringDynArray(D)[i])^, P^, MaxL+2);
+                                    Move(Pointer(TUnicodeStringDynArray(DA)[i])^, P^, MaxL+2);
                                     N[I] := MaxL;
                                   end else
                                     RaiseExceeded(Index);
@@ -1197,10 +1215,10 @@ begin
                                 if IsNullFromArray(Arr, I) then
                                   N[I] := SQL_NULL_DATA
                                 else begin
-                                  MaxL := PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(D)[i]),
-                                    P, Length(TUnicodeStringDynArray(D)[i]), Bind.BufferLength-1, FClientCP);
+                                  MaxL := PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(DA)[i]),
+                                    P, Length(TUnicodeStringDynArray(DA)[i]), Bind.BufferLength-1, FClientCP);
                                   if MaxL < Bind.BufferLength then begin
-                                    Move(Pointer(TUnicodeStringDynArray(D)[i])^, P^, MaxL +2);
+                                    Move(Pointer(TUnicodeStringDynArray(DA)[i])^, P^, MaxL +2);
                                     N[i] := MaxL;
                                     PByte(P+MaxL)^ := 0;
                                   end else
@@ -1216,16 +1234,16 @@ begin
           {$IFNDEF NO_UTF8STRING}vtUTF8String: BindRawStrings(zCP_UTF8);{$ENDIF}
           vtRawByteString: BindRawStrings(FClientCP);
           vtCharRec:       for I := 0 to ArrayLen -1 do
-                              MaxL := Max(MaxL, Integer(TZCharRecDynArray(D)[i].Len));
+                              MaxL := Max(MaxL, Integer(TZCharRecDynArray(DA)[i].Len));
         end;
       stBytes:              for I := 0 to ArrayLen -1 do begin
                               if IsNullFromArray(Arr, I)
                               then N[I] := SQL_NULL_DATA
                               else begin
-                                MaxL := Length(TBytesDynArray(D)[i]);
+                                MaxL := Length(TBytesDynArray(DA)[i]);
                                 if MaxL <= Bind.BufferLength then begin
                                   if MaxL > 0
-                                  then Move(Pointer(TBytesDynArray(D)[i])^, P^, MaxL);
+                                  then Move(Pointer(TBytesDynArray(DA)[i])^, P^, MaxL);
                                   N[I] := MaxL;
                                 end else
                                   RaiseExceeded(Index)
@@ -2072,7 +2090,7 @@ begin
               Exit;
             end;
       else  begin
-              if TryDateToDateTime(Value, DT)
+              if TryDateToDateTime(Value, DT{%H-})
               then InternalBindDouble(Index, stDate, DT)
               else BindSInteger(Index, stDate, 1);
               Exit;
@@ -2534,7 +2552,7 @@ begin
               Exit;
             end;
       else  begin
-              if TryTimeToDateTime(Value, DT)
+              if TryTimeToDateTime(Value, DT{%H-})
               then InternalBindDouble(Index, stTime, DT)
               else BindSInteger(Index, stTime, 1);
               Exit;
@@ -2629,7 +2647,7 @@ begin
               Exit;
             end;
       else  begin
-              if TryTimeStampToDateTime(Value, DT)
+              if TryTimeStampToDateTime(Value, DT{%H-})
               then InternalBindDouble(Index, stTimeStamp, DT)
               else BindSInteger(Index, stTimeStamp, 1);
               Exit;

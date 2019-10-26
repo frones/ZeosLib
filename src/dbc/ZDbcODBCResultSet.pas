@@ -656,9 +656,7 @@ begin
       else DecodeDateTimeToDate(GetDouble(ColumnIndex), Result);
     end;
   end else
-Fill: if SizeOf(TZDate) = SizeOf(Int64)
-    then PInt64(@Result.Year)^ := 0
-    else FillChar(Result, SizeOf(TZDate), #0);
+Fill: PInt64(@Result.Year)^ := 0;
 end;
 
 function TAbstractODBCResultSet.GetDouble(ColumnIndex: Integer): Double;
@@ -1802,7 +1800,9 @@ begin
     end;
     //GetData don't work with multiple fetched rows for most drivers
     //calculate max count of rows for a single fetch call
-    fMaxFetchableRows := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult)));
+    if RowSize > 0 //see https://sourceforge.net/p/zeoslib/tickets/383/
+    then fMaxFetchableRows := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult)))
+    else fMaxFetchableRows := 1;
     if fMaxFetchableRows > 1 then begin
       CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, SQLPOINTER(fMaxFetchableRows), 0));
       CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROWS_FETCHED_PTR, @fFetchedRowCount, 0));
