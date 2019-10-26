@@ -3541,6 +3541,7 @@ var
   ColumnList: TObjectList;
   I: Integer;
   OldRS: IZResultSet;
+  MetaData: IZResultSetMetaData;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -3577,13 +3578,19 @@ begin
     {$ENDIF}
     begin
       CreateFields;
+      MetaData := ResultSet.GetMetadata;
       if not (doNoAlignDisplayWidth in FOptions) then
-        for i := 0 to Fields.Count -1 do
+        for i := 0 to Fields.Count -1 do begin
           if Fields[i].DataType = ftString then
-            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+            Fields[i].DisplayWidth := MetaData.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
           {$IFDEF WITH_FTGUID}
           else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
           {$ENDIF};
+          {$IFDEF WITH_TAUTOREFRESHFLAG}
+          if MetaData.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
+            Fields[i].AutoGenerateValue := arAutoInc;
+          {$ENDIF !WITH_TAUTOREFRESHFLAG}
+        end;
     end;
     BindFields(True);
 
