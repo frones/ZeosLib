@@ -342,11 +342,13 @@ SET ANSI_NULLS ON
 go
 
 /*==============================================================*/
-/* sequence: abtest                                     	*/
+/* sequence: generate_id                                     	*/
 /*==============================================================*/
-CREATE SEQUENCE generate_id
+if ((select Cast(Left(Cast(SERVERPROPERTY ('productversion') as varchar(50)), CHARINDEX('.', Cast(SERVERPROPERTY ('productversion') as varchar(50)), 2)-1) as Int)) >= 9/*V2005Andup*/)
+	EXECUTE(
+'CREATE SEQUENCE generate_id
 START WITH 90000250
-INCREMENT BY 1
+INCREMENT BY 1')
 go
 
 /*==============================================================*/
