@@ -1805,10 +1805,14 @@ begin
       Sql.Text := 'select * from date_values';
       Open;
       Append;
+      {$IFDEF WITH_TAUTOREFRESHFLAG}
       if Fields[0].AutoGenerateValue <> arAutoInc then
+      {$ENDIF}
         Fields[0].AsInteger := ID;
       Post;
+      {$IFDEF WITH_TAUTOREFRESHFLAG}
       if Fields[0].AutoGenerateValue = arAutoInc then
+      {$ENDIF}
         ID := Fields[0].AsInteger;
       try
         for i := 1 to Fields.Count-1 do begin
