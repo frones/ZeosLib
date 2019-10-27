@@ -451,6 +451,8 @@ type
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions): TZTokenDynArray; deprecated;
     function TokenizeStream(Stream: TStream; Options: TZTokenOptions): TZTokenDynArray; deprecated;
 
+    function NormalizeParamToken(const Token: TZToken; out ParamName: String): String;
+
     function GetCommentState: TZCommentState;
     function GetNumberState: TZNumberState;
     function GetQuoteState: TZQuoteState;
@@ -485,6 +487,8 @@ type
       TZTokenDynArray;
     function TokenizeStream(Stream: TStream; Options: TZTokenOptions):
       TZTokenDynArray;
+
+    function NormalizeParamToken(const Token: TZToken; out ParamName: String): String; virtual;
 
     function GetCharacterState(StartChar: Char): TZTokenizerState;
     procedure SetCharacterState(FromChar, ToChar: Char; State: TZTokenizerState);
@@ -1413,6 +1417,18 @@ end;
 function TZTokenizer.GetWordState: TZWordState;
 begin
   Result := WordState;
+end;
+
+{** EH: Noramlize the paremter token to a valid datbase SQL grammar
+  Parameter
+}
+function TZTokenizer.NormalizeParamToken(const Token: TZToken;
+  out ParamName: String): String;
+begin
+  Result := '?';
+  if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
+  then ParamName := GetQuoteState.DecodeToken(Token, Token.P^)
+  else System.SetString(ParamName, Token.P, Token.L);
 end;
 
 { TZTokenList }

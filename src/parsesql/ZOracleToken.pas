@@ -89,6 +89,8 @@ type
   TZOracleTokenizer = class (TZTokenizer)
   protected
     procedure CreateTokenStates; override;
+  public
+    function NormalizeParamToken(const Token: TZToken; out ParamName: String): String; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -162,6 +164,19 @@ begin
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
+end;
+
+function TZOracleTokenizer.NormalizeParamToken(const Token: TZToken;
+  out ParamName: String): String;
+var P: PChar;
+begin
+  if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
+  then ParamName := GetQuoteState.DecodeToken(Token, Token.P^)
+  else System.SetString(ParamName, Token.P, Token.L);
+  System.SetString(Result, nil, Token.L+1);
+  P := Pointer(Result);
+  P^ := ':';
+  Move(Token.P^, (P+1)^, Token.L*SizeOf(Char));
 end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
