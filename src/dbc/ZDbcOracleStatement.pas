@@ -168,14 +168,14 @@ uses
 const
   CommitMode: array[Boolean] of ub4 = (OCI_DEFAULT, OCI_COMMIT_ON_SUCCESS);
   StrGUIDLen = 36;
-  SQLType2OCIType: array[stBoolean..stBinaryStream] of ub2 = (
+  SQLType2OCIType: array[stUnknown..stBinaryStream] of ub2 = (SQLT_INT,
     SQLT_UIN, SQLT_UIN, SQLT_INT, SQLT_UIN, SQLT_INT, SQLT_UIN, SQLT_INT, SQLT_UIN, SQLT_INT,  //ordinals
     SQLT_BFLOAT, SQLT_BDOUBLE, SQLT_VNU, SQLT_VNU, //floats
     SQLT_DAT, SQLT_TIMESTAMP, SQLT_TIMESTAMP, //time values
     SQLT_AFC, //GUID
     SQLT_LVC, SQLT_LVC, SQLT_LVB, //varying size types in equal order
     SQLT_CLOB, SQLT_CLOB, SQLT_BLOB); //lob's
-  SQLType2OCISize: array[stBoolean..stBinaryStream] of sb2 = (
+  SQLType2OCISize: array[stUnknown..stBinaryStream] of sb2 = (SizeOf(Integer),
     SizeOf(Boolean), SizeOf(Byte), SizeOf(ShortInt), SizeOf(Word), SizeOf(SmallInt), SizeOf(Cardinal), SizeOf(Integer), SizeOf(UInt64), SizeOf(Int64),  //ordinals
     SizeOf(Single), SizeOf(Double), SizeOf(TOCINumber), SizeOf(TOCINumber), //floats
     SizeOf(TOraDate), SizeOf(POCIDescriptor), SizeOf(POCIDescriptor), //time values
@@ -443,7 +443,7 @@ begin
       CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, ASQL, ConSettings);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
-    if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then
+    if ((FStatementType = OCI_STMT_BEGIN) or (FStatementType = OCI_STMT_DECLARE)) and (BindList.HasOutOrInOutOrResultParam) then
       FOutParamResultSet := CreateResultSet;
   end;
   Result := LastUpdateCount;
@@ -694,6 +694,7 @@ procedure TZAbstractOraclePreparedStatement_A.RegisterParameter(
   const Name: String; PrecisionOrSize, Scale: LengthInt);
 var
   Bind: PZOCIParamBind;
+  i, j: Integer;
 begin
   if SQLType in [stUnicodeString, stUnicodeStream] then
     SQLType := TZSQLType(Ord(SQLType)-1);
@@ -706,6 +707,19 @@ begin
   Bind.Precision := PrecisionOrSize;
   Bind.Scale := Scale;
   Bind.ParamName := Name;
+  if (Name <> '') then begin
+    J := 0;
+    for i := 0 to high(FCachedQueryRaw) do
+      if FIsParamIndex[i] then begin
+        if (J = ParameterIndex) then begin
+          if (FCachedQueryRaw[j] = '?') then
+            FCachedQueryRaw[j] := ':'+ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+          Break;
+        end;
+        Inc(J);
+      end;
+    end;
+
   if ParamType <> pctUnknown then begin
     if (Scale > 0) and (SQLType in [stBoolean..stBigDecimal]) then
       SQLType := stBigDecimal;
@@ -1801,7 +1815,10 @@ begin
   Bind := @FOraVariables[Index];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) then
-    SQLType := BindList[Index].SQLType;
+    SQLType := BindList[Index].SQLType
+  else if SQLType = stUnknown then
+    SQLType := stInteger;
+
   if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
     InitBuffer(SQLType, Bind, Index, 1);
   Bind.indp[0] := -1;
