@@ -1963,7 +1963,7 @@ begin
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[CatalogNameIndex], Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
         if P <> nil then begin//there is a problem with the temp tables name:
-          //they are returned with a huge amount of trailing '_'chars and a 12digits hex session number
+          //they are returned with a huge amount of trailing '_'chars and a 12digits hex session number?
           T := GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len);
           Tend := T+Len-13;
           while (Tend >= T) and (PWord(Tend)^ = Word('_')) do Dec(Tend);

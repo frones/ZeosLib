@@ -302,13 +302,15 @@ function TZPostgreSQLTokenizer.NormalizeParamToken(const Token: TZToken;
   out ParamName: String): String;
 var P: PChar;
 begin
-  if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
-  then ParamName := GetQuoteState.DecodeToken(Token, Token.P^)
-  else System.SetString(ParamName, Token.P, Token.L);
-  System.SetString(Result, nil, Token.L+1);
-  P := Pointer(Result);
-  P^ := '$';
-  Move(Token.P^, (P+1)^, Token.L*SizeOf(Char));
+  {postgres just understands numeical tokens at least unti V12}
+  if Token.TokenType = ttInteger then begin
+    System.SetString(ParamName, Token.P, Token.L);
+    System.SetString(Result, nil, Token.L+1);
+    P := Pointer(Result);
+    P^ := '$';
+    Move(Token.P^, (P+1)^, Token.L*SizeOf(Char));
+  end else
+    Result := inherited NormalizeParamToken(Token, ParamName);
 end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}

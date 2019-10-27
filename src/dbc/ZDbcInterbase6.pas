@@ -1668,7 +1668,7 @@ begin
   if I > -1 then
     FOwner.FTransactions.Delete(I);
   for i := FOpenUncachedLobs.Count -1 downto 0 do
-    if Supports(FOpenUncachedLobs[i], IImmediatelyReleasable, ImmediatelyReleasable) and
+    if Supports(IZBlob(FOpenUncachedLobs[i]), IImmediatelyReleasable, ImmediatelyReleasable) and
        (Sender <> ImmediatelyReleasable) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
 end;

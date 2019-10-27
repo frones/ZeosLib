@@ -68,7 +68,6 @@ type
   TZStoredProc = class(TZAbstractDataset)
   private
     FMetaResultSet: IZResultset;
-    procedure RetrieveParamValues;
     function GetStoredProcName: string;
     procedure SetStoredProcName(const Value: string);
     //function GetParamType(const Value: TZProcedureColumnType): TParamType;
@@ -169,119 +168,11 @@ begin
 end;
 
 {**
-  Retrieves parameter values from callable statement.
-}
-procedure TZStoredProc.RetrieveParamValues;
-var
-  I: Integer;
-  Param: TParam;
-  FCallableStatement: IZCallableStatement;
-  TempBlob: IZBlob;
-  BCD: TBCD;
-begin
-  if (Statement = nil) or (Statement.QueryInterface(IZCallableStatement, FCallableStatement) <> S_OK) then
-    Exit;
-
-  for I := 0 to Params.Count - 1 do
-  begin
-    Param := Params[I];
-
-    if not (Param.ParamType in [ptResult, ptOutput, ptInputOutput]) then
-      Continue;
-
-    if FCallableStatement.IsNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
-      Param.Clear
-    else
-      case Param.DataType of
-        ftBoolean:
-          Param.AsBoolean := FCallableStatement.GetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$IFDEF WITH_FTBYTE}
-        ftByte:
-          Param.AsByte := FCallableStatement.GetByte(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF WITH_FTBYTE}
-        {$IFDEF WITH_FTSHORTINT}
-        ftShortInt:
-          Param.AsShortInt := FCallableStatement.GetShort(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF WITH_FTSHORTINT}
-        {$IFDEF WITH_FTSHORTINT}
-        ftWord:
-          Param.AsWord := FCallableStatement.GetWord(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF WITH_FTSHORTINT}
-        ftSmallInt:
-          Param.AsSmallInt := FCallableStatement.GetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$IFDEF WITH_FTLONGWORD}
-        ftLongWord:
-          Param.AsLongWord := FCallableStatement.GetUInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF WITH_FTLONGWORD}
-        ftInteger, ftAutoInc:
-          Param.AsInteger := FCallableStatement.GetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$IFDEF WITH_PARAM_ASLARGEINT}
-        ftLargeInt:
-          Param.AsLargeInt := FCallableStatement.GetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF}
-        {$IFDEF WITH_FTSINGLE}
-        ftSingle:
-          Param.AsSingle := FCallableStatement.GetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF WITH_FTSINGLE}
-        ftCurrency, ftFloat:
-          Param.AsFloat := FCallableStatement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$IFDEF WITH_FTEXTENDED}
-        ftExtended:
-          Param.AsFloat := FCallableStatement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF}
-        ftBCD:
-          Param.AsCurrency := FCallableStatement.GetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        ftFmtBCD: begin
-            FCallableStatement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD{%H-});
-            Param.AsFMTBCD := BCD;
-          end;
-        ftString:
-          begin
-            Param.AsString := FCallableStatement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-            {$IFDEF UNICODE}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
-          end;
-        ftWideString:
-          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        ftMemo:
-          begin
-            Param.AsMemo := FCallableStatement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-            {$IFDEF UNICODE}Param.DataType := ftMemo;{$ENDIF} //Hack: D12_UP sets ftWideMemo on assigning a UnicodeString
-          end;
-        {$IFDEF WITH_WIDEMEMO}
-        ftWideMemo:
-        begin
-          Param.AsWideString := FCallableStatement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-          Param.DataType := ftWideMemo;
-        end;
-        {$ENDIF}
-        ftBytes, ftVarBytes, ftGuid:
-          Param.Value := FCallableStatement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        ftDate:
-          Param.AsDate := FCallableStatement.GetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        ftTime:
-          Param.AsTime := FCallableStatement.GetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        ftDateTime:
-          Param.AsDateTime := FCallableStatement.GetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        ftBlob:
-          begin
-            TempBlob := FCallableStatement.GetValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).VInterface as IZBlob;
-            if not TempBlob.IsEmpty then
-              Param.SetBlobData({$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}(TempBlob.GetBuffer), TempBlob.Length);
-            TempBlob := nil;
-          end
-        else
-           raise EZDatabaseError.Create(SUnKnownParamDataType);
-      end;
-  end;
-end;
-
-{**
   Performs internal query opening.
 }
 procedure TZStoredProc.InternalOpen;
 begin
   inherited InternalOpen;
-  RetrieveParamValues;
   if Resultset.GetType <> rtForwardOnly then
     Resultset.BeforeFirst;
 end;
@@ -335,15 +226,7 @@ end;
 
 procedure TZStoredProc.ExecProc;
 begin
-  Connection.ShowSQLHourGlass;
-  try
-    if Active then
-      Close;
-    ExecSQL;
-    RetrieveParamValues;
-  finally
-    Connection.HideSQLHourGlass;
-  end;
+  ExecSQL;
 end;
 
 {**
