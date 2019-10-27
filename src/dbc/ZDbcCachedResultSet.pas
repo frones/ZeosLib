@@ -2358,7 +2358,7 @@ begin
     begin
       Currency := Metadata.IsCurrency(I);
       Signed := Metadata.IsSigned(I);
-      ColumnLabel := Metadata.GetColumnLabel(I);
+      ColumnLabel := Metadata.GetOrgColumnLabel(I);
       Precision := Metadata.GetPrecision(I);
       Scale := Metadata.GetScale(I);
       ColumnType := Metadata.GetColumnType(I);
