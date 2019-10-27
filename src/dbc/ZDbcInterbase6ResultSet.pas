@@ -142,14 +142,19 @@ type
   end;
 
   {** Implements external blob wrapper object for Intebase/Firbird. }
-  TZInterbase6UnCachedBlob = Class(TZAbstractUnCachedBlob, IZUnCachedLob)
+  TZInterbase6UnCachedBlob = Class(TZAbstractUnCachedBlob, IZUnCachedLob,
+    IImmediatelyReleasable)
   private
     FBlobId: TISC_QUAD;
     FPlainDriver: TZInterbasePlainDriver;
     FTransaction: IZIBTransaction;
     FIBConnection: IZInterbase6Connection;
+    FReleased: Boolean;
   protected
     procedure ReadLob; override;
+  public //IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    function GetConSettings: PZConSettings;
   public
     constructor Create(const PlainDriver: TZInterbasePlainDriver;
       var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
@@ -157,14 +162,19 @@ type
     procedure BeforeDestruction; override;
   end;
 
-  TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob, IZUnCachedLob)
+  TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob, IZUnCachedLob,
+    IImmediatelyReleasable)
   private
     FBlobId: TISC_QUAD;
     FPlainDriver: TZInterbasePlainDriver;
     FIBConnection: IZInterbase6Connection;
     FTransaction: IZIBTransaction;
+    FReleased: Boolean;
   protected
     procedure ReadLob; override;
+  public //IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    function GetConSettings: PZConSettings;
   public
     constructor Create(const PlainDriver: TZInterbasePlainDriver;
       var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
@@ -1873,6 +1883,13 @@ begin
   FIBConnection := Connection;
 end;
 
+function TZInterbase6UnCachedBlob.GetConSettings: PZConSettings;
+begin
+  if FIBConnection <> nil
+  then Result := FIBConnection.GetConSettings
+  else Result := nil;
+end;
+
 {**
   Reads the blob information by blob handle.
   @param handle a Interbase6 database connect handle.
@@ -1884,12 +1901,27 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  if FIBConnection <> nil then
+  if FIBConnection <> nil then begin
     ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
-      FBlobId, Size, Buffer, True, FIBConnection as IImmediatelyReleasable);
-  BlobSize := Size;
-  BlobData := Buffer;
+      FBlobId, Size, Buffer, True, Self);
+    BlobSize := Size;
+    BlobData := Buffer;
+  end;
   inherited ReadLob;
+end;
+
+procedure TZInterbase6UnCachedBlob.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var Imm: IImmediatelyReleasable;
+begin
+  if (FTransaction <> nil) and (FTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
+     (Sender <> imm) then begin
+    FTransaction.DeRegisterOpenUnCachedLob(Self);
+    FReleased := True;
+    Imm.ReleaseImmediat(Sender, AError);
+    FTransaction := nil;
+    FIBConnection := nil;
+  end;
 end;
 
 { TZInterbase6UnCachedClob }
@@ -1901,7 +1933,8 @@ end;
 }
 procedure TZInterbase6UnCachedClob.BeforeDestruction;
 begin
-  FTransaction.DeRegisterOpenUnCachedLob(Self);
+  if not FReleased and (FTransaction <> nil) then
+    FTransaction.DeRegisterOpenUnCachedLob(Self);
   inherited;
 end;
 
@@ -1918,19 +1951,40 @@ begin
   FPlainDriver := PlainDriver;
 end;
 
+function TZInterbase6UnCachedClob.GetConSettings: PZConSettings;
+begin
+  Result := FConSettings
+end;
+
 procedure TZInterbase6UnCachedClob.ReadLob;
 var
   Size: Integer;
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
-    FBlobId, Size, Buffer, False, FIBConnection as IImmediatelyReleasable);
-  AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
-  FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
-  FBlobSize := Size+1;
-  BlobData := Buffer;
+  if (FIBConnection <> nil) then begin
+    ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
+      FBlobId, Size, Buffer, False, Self);
+    AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
+    FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
+    FBlobSize := Size+1;
+    BlobData := Buffer;
+  end;
   inherited ReadLob;
+end;
+
+procedure TZInterbase6UnCachedClob.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var imm: IImmediatelyReleasable;
+begin
+  if (FTransaction <> nil) and (FTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
+     (Sender <> imm) then begin
+    FTransaction.DeRegisterOpenUnCachedLob(Self);
+    FReleased := True;
+    Imm.ReleaseImmediat(Sender, AError);
+    FTransaction := nil;
+    FIBConnection := nil;
+  end;
 end;
 
 { TZInterbaseResultSetMetadata }
