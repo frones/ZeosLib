@@ -93,6 +93,10 @@ type
     procedure Test_SF249;
     procedure Test_SF287;
     procedure TestTicket363;
+    procedure TestExecutBlockReturning_WithoutParamCheck;
+    procedure TestExecutBlockReturning_WithParamCheck;
+    procedure TestProcAbtest_WithParamCheck;
+    procedure TestProcAbtest_WithoutParamCheck;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -737,79 +741,162 @@ begin
   end;
 end;
 
-(*
-Hello,
-I am trying to use SynDB of mORMot with statement caching.
-Seems to be working fine, but the fix for ticket 228 causes error
-"Dynamic SQL Error; SQL error code = -502; Attempt to reopen an open cursor.".
-The problem is that reused statement opend the cursor in the
-ExecuteQueryPrepared call, but the FISC_TR_HANDLE property of reused
-resultset is not updated and TZInterbase6XSQLDAResultSet.Next() triggers the error.
-I have prepared a sample project to investigate the issue (it is attached).
-It also demonstrates duplicating of records described in ticket #362.
-code:
-
+procedure ZTestCompInterbaseBugReport.TestExecutBlockReturning_WithoutParamCheck;
 var
-  I: Integer;
-  LStmt: IZPreparedStatement;
-  LSet: IZResultSet;
+  Query: TZQuery;
+  SQL: String;
 begin
-  ZConnection1.Connected:= True;
-  // prepare sample table
-  ZQuery1.SQL.Text:= 'create table test73 (id integer primary key, "value" BLOB SUB_TYPE TEXT)';
-  ZQuery1.ExecSQL;
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
   try
-    // generate test data
-    for I:= 1 to 20 do begin
-      ZQuery1.SQL.Text:= 'insert into test73 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')';
-      ZQuery1.ExecSQL;
-    end;
-    // trigger fix for ticket #228
-    ZQuery1.SQL.Text:= 'select * from test73';
-    ZQuery1.Open;
-    while not ZQuery1.Eof do begin
-      Memo1.Lines.Add(ZQuery1.Fields[0].AsString);
-      if ZQuery1.RecNo = 2 then begin // go
-        ZConnection1.StartTransaction;
-        ZConnection1.Commit;
-      end;
-      ZQuery1.Next; // it works here with a TZQuery
-    end;
-    // direct approach (just like mORMot with SynDBZeos)
-    LStmt:= ZConnection1.DbcConnection.PrepareStatement('select * from test73 where id > ?');
-    LStmt.SetInt(1, 1);
-    LSet:= LStmt.ExecuteQueryPrepared;
-    I:= 1;
-    while LSet.Next do begin // BUG! duplicates the fetched row
-      Memo1.Lines[I]:= Memo1.Lines[I] + ', ' + LSet.GetString(1);
-      if I = 2 then begin // trigger
-        ZConnection1.StartTransaction;
-        ZConnection1.Commit;
-      end;
-      Inc(I);
-    end;
-//  LSet:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
-    LStmt.ClearParameters;
-    // trigger fix for ticket #228
-    ZConnection1.StartTransaction;
-    ZConnection1.Commit;
-
-    LStmt.SetInt(1, 0);
-    LSet:= LStmt.ExecuteQueryPrepared; // the transaction ID is not updated
-    I:= 0;
-    while LSet.Next do begin // BUG! fails here as the fix is trying to open the resultset already opened in ExecuteQueryPrepared
-      Memo1.Lines[I]:= Memo1.Lines[I] + ', ' + LSet.GetString(1);
-      Inc(I);
-    end;
+    Query.ParamCheck := False;
+    SQL := 'execute block (val1 int = ?, val2 int = ?)'+LineEnding+
+      'returns (largest int, smallest int, square bigint)'+LineEnding+
+      'as begin '+LineEnding+
+      '  if (val1 < val2) then begin'+LineEnding+
+      '    largest = val2;' +LineEnding+
+      '    smallest = val1;'+LineEnding+
+      '  end else if (val1 > val2) then begin '+LineEnding+
+      '    largest = val1;'+LineEnding+
+      '    smallest = val2;'+LineEnding+
+      '  end'+LineEnding+
+      '  square = val1 * val2;'+LineEnding+
+      '   suspend;'+LineEnding+
+      'end';
+    Query.SQL.Text := SQL;
+    Query.Params.CreateParam(ftInteger, 'val1', ptInPut);
+    Query.Params.CreateParam(ftInteger, 'val2', ptInPut);
+    Query.Params.CreateParam(ftInteger, 'largest', ptOutPut);
+    Query.Params.CreateParam(ftInteger, 'smallest', ptOutPut);
+    Query.Params.CreateParam(ftLargeInt, 'square',   ptOutPut);
+    Query.Params[0].AsInteger := 10;
+    Query.Params[1].AsInteger := 20;
+    Query.ExecSQL;
+    CheckEquals(20, Query.ParamByName('largest').AsInteger, 'The OutParam-Result of a anonymous execute block');
+    CheckEquals(10, Query.ParamByName('smallest').AsInteger, 'The OutParam-Result of a anonymous execute block');
+    CheckEquals(200, Query.ParamByName('square').AsInteger, 'The OutParam-Result of a anonymous execute block');
+    Query.Params[1].AsInteger := 10;
+    Query.ExecSQL;
+    Check(Query.ParamByName('largest').IsNull, 'The OutParam-Result of a anonymous execute block');
+    Check(Query.ParamByName('smallest').IsNull, 'The OutParam-Result of a anonymous execute block');
+    CheckEquals(100, Query.ParamByName('square').AsInteger, 'The OutParam-Result of a anonymous execute block');
   finally
-    if Assigned(LStmt) then
-      LStmt.Close;
-    LStmt:= nil;
-    ZQuery1.SQL.Text:= 'drop table test73';
-    ZQuery1.ExecSQL;
+    Query.Free;
   end;
+end;
 
-*)
+procedure ZTestCompInterbaseBugReport.TestExecutBlockReturning_WithParamCheck;
+var
+  Query: TZQuery;
+  SQL: String;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    SQL := 'execute block (val1 int = :val1, val2 int = :val2)'+LineEnding+
+      'returns (largest int, smallest int, square bigint)'+LineEnding+
+      'as begin '+LineEnding+
+      '  if (val1 < val2) then begin'+LineEnding+
+      '    largest = val2;' +LineEnding+
+      '    smallest = val1;'+LineEnding+
+      '  end else if (val1 > val2) then begin '+LineEnding+
+      '    largest = val1;'+LineEnding+
+      '    smallest = val2;'+LineEnding+
+      '  end else begin'+Lineending+
+      '    largest = null;'+LineEnding+
+      '    smallest = null;'+LineEnding+
+      '  end'+LineEnding+
+      '  square = val1 * val2;'+LineEnding+
+      '   suspend;'+LineEnding+
+      'end';
+    Query.SQL.Text := SQL;
+    Query.Params.CreateParam(ftInteger, 'largest', ptOutPut);
+    Query.Params.CreateParam(ftInteger, 'smallest', ptOutPut);
+    Query.Params.CreateParam(ftLargeInt, 'square',   ptOutPut);
+    Query.Params[0].AsInteger := 10;
+    Query.Params[1].AsInteger := 20;
+    Query.ExecSQL;
+    CheckEquals(20, Query.ParamByName('largest').AsInteger, 'The OutParam-Result of a anonymous execute block');
+    CheckEquals(10, Query.ParamByName('smallest').AsInteger, 'The OutParam-Result of a anonymous execute block');
+    CheckEquals(200, Query.ParamByName('square').AsInteger, 'The OutParam-Result of a anonymous execute block');
+    Query.Params[1].AsInteger := 10;
+    Query.ExecSQL;
+    Check(Query.ParamByName('largest').IsNull, 'The OutParam-Result of a anonymous execute block');
+    Check(Query.ParamByName('smallest').IsNull, 'The OutParam-Result of a anonymous execute block');
+    CheckEquals(100, Query.ParamByName('square').AsInteger, 'The OutParam-Result of a anonymous execute block');
+  finally
+    Query.Free;
+  end;
+end;
+
+
+procedure ZTestCompInterbaseBugReport.TestProcAbtest_WithoutParamCheck;
+var
+  Query: TZQuery;
+  SQL: String;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := False;
+    SQL := 'EXECUTE PROCEDURE abtest(?, ?, ?)';
+    Query.SQL.Text := SQL;
+    Query.Params.CreateParam(ftInteger, 'P1', ptInPut);
+    Query.Params[0].AsInteger := 10;
+    Query.Params.CreateParam(ftInteger, 'P2', ptInPut);
+    Query.Params[1].AsInteger := 20;
+    Query.Params.CreateParam(ftString, 'P3', ptInPut);
+    Query.Params[2].Precision := 20;
+    Query.Params[2].AsString := 'xx';
+    Query.Params.CreateParam(ftInteger, 'P4', ptOutPut);
+    Query.Params.CreateParam(ftString, 'P5', ptOutPut);
+    Query.Params[4].Precision := 20;
+    Query.ExecSQL;
+    CheckEquals(120, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+    Query.Params[0].AsInteger := Query.Params[3].AsInteger;
+    Query.Params[2].AsString := Query.Params[4].AsString;
+    Query.ExecSQL;
+    CheckEquals(1220, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxxxxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestProcAbtest_WithParamCheck;
+var
+  Query: TZQuery;
+  SQL: String;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    SQL := 'EXECUTE PROCEDURE abtest(:P1, :P2, :P3)';
+    Query.SQL.Text := SQL;
+    Query.Params[0].AsInteger := 10;
+    Query.Params[1].AsInteger := 20;
+    Query.Params[2].AsString := 'xx';
+    Query.Params.CreateParam(ftInteger, 'P4', ptOutPut);
+    Query.Params.CreateParam(ftString, 'P5', ptOutPut);
+    Query.Params[4].Precision := 10;
+    Query.ExecSQL;
+    CheckEquals(120, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+    Query.Params[0].AsInteger := Query.Params[3].AsInteger;
+    Query.Params[2].AsString := Query.Params[4].AsString;
+    Query.ExecSQL;
+    CheckEquals(1220, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxxxxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+  finally
+    Query.Free;
+  end;
+end;
+
 procedure ZTestCompInterbaseBugReport.TestTicket363;
 var
   I: Integer;
