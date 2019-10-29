@@ -76,11 +76,13 @@ type
     procedure Test934253;
     procedure Test_SourceForge192;
     procedure TestTicket363;
+    procedure TestTicket376_A;
+    procedure TestTicket376_B;
   end;
 
 implementation
 
-uses ZTestCase, ZTestConsts, ZDbcMetadata;
+uses ZTestCase, ZTestConsts, ZDbcMetadata, ZFastCode;
 
 { TZTestDbcInterbaseBugReport }
 
@@ -464,67 +466,6 @@ ExecuteQueryPrepared call, but the FISC_TR_HANDLE property of reused
 resultset is not updated and TZInterbase6XSQLDAResultSet.Next() triggers the error.
 I have prepared a sample project to investigate the issue (it is attached).
 It also demonstrates duplicating of records described in ticket #362.
-code:
-
-var
-  I: Integer;
-  LStmt: IZPreparedStatement;
-  LSet: IZResultSet;
-begin
-  ZConnection1.Connected:= True;
-  // prepare sample table
-  ZQuery1.SQL.Text:= 'create table test73 (id integer primary key, "value" BLOB SUB_TYPE TEXT)';
-  ZQuery1.ExecSQL;
-  try
-    // generate test data
-    for I:= 1 to 20 do begin
-      ZQuery1.SQL.Text:= 'insert into test73 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')';
-      ZQuery1.ExecSQL;
-    end;
-    // trigger fix for ticket #228
-    ZQuery1.SQL.Text:= 'select * from test73';
-    ZQuery1.Open;
-    while not ZQuery1.Eof do begin
-      Memo1.Lines.Add(ZQuery1.Fields[0].AsString);
-      if ZQuery1.RecNo = 2 then begin // go
-        ZConnection1.StartTransaction;
-        ZConnection1.Commit;
-      end;
-      ZQuery1.Next; // it works here with a TZQuery
-    end;
-    // direct approach (just like mORMot with SynDBZeos)
-    LStmt:= ZConnection1.DbcConnection.PrepareStatement('select * from test73 where id > ?');
-    LStmt.SetInt(1, 1);
-    LSet:= LStmt.ExecuteQueryPrepared;
-    I:= 1;
-    while LSet.Next do begin // BUG! duplicates the fetched row
-      Memo1.Lines[I]:= Memo1.Lines[I] + ', ' + LSet.GetString(1);
-      if I = 2 then begin // trigger
-        ZConnection1.StartTransaction;
-        ZConnection1.Commit;
-      end;
-      Inc(I);
-    end;
-//  LSet:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
-    LStmt.ClearParameters;
-    // trigger fix for ticket #228
-    ZConnection1.StartTransaction;
-    ZConnection1.Commit;
-
-    LStmt.SetInt(1, 0);
-    LSet:= LStmt.ExecuteQueryPrepared; // the transaction ID is not updated
-    I:= 0;
-    while LSet.Next do begin // BUG! fails here as the fix is trying to open the resultset already opened in ExecuteQueryPrepared
-      Memo1.Lines[I]:= Memo1.Lines[I] + ', ' + LSet.GetString(1);
-      Inc(I);
-    end;
-  finally
-    if Assigned(LStmt) then
-      LStmt.Close;
-    LStmt:= nil;
-    ZQuery1.SQL.Text:= 'drop table test73';
-    ZQuery1.ExecSQL;
-  end;
 
 *)
 procedure TZTestDbcInterbaseBugReport.TestTicket363;
@@ -540,7 +481,7 @@ begin
   try
     // generate test data
     for I:= 1 to 10 do
-      Stmt.ExecuteUpdate('insert into TestTicket363 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')');
+      Stmt.ExecuteUpdate('insert into TestTicket363 (id, "value") values (' + ZFastCode.IntTostr(I) + ', ''testing #' + ZFastCode.IntToStr(I) + ''')');
     // direct approach (just like mORMot with SynDBZeos)
     LStmt:= Connection.PrepareStatement('select * from TestTicket363 where id > ?');
     LStmt.SetInt(FirstDbcIndex, 1);
@@ -590,6 +531,105 @@ begin
       LStmt:= nil;
     end;
     Stmt.Close;
+    Stmt := nil;
+  end;
+end;
+
+(*
+Hello,
+today I noticed that when a prepared query is used multiple times
+(e.g. cached by the SynDB of mORMot) it fails to return correct results.
+Investigating a bit, I have found that a param value does not reset the
+"NULL" flag correctly, i.e. when a param was set to NULL previously, setting a
+value afterwards does not work (at least for some methods:
+  SetString, SetAnsiString, SetUTF8String).
+Attached is a sample project that currently fails.
+
+Best regards,
+Joe
+*)
+procedure TZTestDbcInterbaseBugReport.TestTicket376_A;
+var
+  I: Integer;
+  PStmt: IZPreparedStatement;
+  Stmt: IZStatement;
+  RS: IZResultSet;
+begin
+  Stmt := Connection.CreateStatement;
+  RS := nil;
+  PStmt := nil;
+  CheckFalse(Connection.IsClosed, 'Could not establish a connection');
+  // prepare sample table with integer key
+  try
+    Stmt.ExecuteUpdate('delete from Ticket376a where 1=1');
+    PStmt := Connection.PrepareStatement('insert into Ticket376a (id, "value") values (?, ?)');
+    // generate test data
+    for I:= 1 to 4 do begin
+      PStmt.SetInt(FirstDbcIndex, I);
+      PStmt.SetRawByteString(FirstDbcIndex + 1, IntToRaw(I));
+      CheckEquals(1, PStmt.ExecuteUpdatePrepared, 'the updatecount inserting a row');
+    end;
+    // check read
+    // direct approach (just like mORMot with SynDBZeos)
+    PStmt:= Connection.PrepareStatement('select * from Ticket376a where id = ?');
+    PStmt.SetNull(FirstDbcIndex, stInteger);
+    RS:= PStmt.ExecuteQueryPrepared;
+    CheckFalse(RS.Next, 'there is no row for null id');
+//  RS:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
+    PStmt.ClearParameters;
+
+    PStmt.SetInt(FirstDbcIndex, 3);
+    RS:= PStmt.ExecuteQueryPrepared; // the transaction ID is not updated
+    Check(RS.Next, 'there is a row for id 3');
+    CheckFalse(RS.Next, 'there is no second row for id 3');
+  finally
+    if Assigned(PStmt) then
+      PStmt.Close;
+    PStmt:= nil;
+    Stmt.ExecuteUpdate('delete from Ticket376a where 1=1');
+    Stmt := nil;
+  end;
+end;
+
+procedure TZTestDbcInterbaseBugReport.TestTicket376_B;
+var
+  I: Integer;
+  PStmt: IZPreparedStatement;
+  Stmt: IZStatement;
+  RS: IZResultSet;
+begin
+  Stmt := Connection.CreateStatement;
+  RS := nil;
+  PStmt := nil;
+  CheckFalse(Connection.IsClosed, 'Could not establish a connection');
+  // prepare sample table with integer key
+  try
+    Stmt.ExecuteUpdate('delete from Ticket376b where 1=1');
+    PStmt := Connection.PrepareStatement('insert into Ticket376b (id, "value") values (?, ?)');
+    // generate test data
+    for I:= 1 to 4 do begin
+      PStmt.SetRawByteString(FirstDbcIndex, IntToRaw(I));
+      PStmt.SetRawByteString(FirstDbcIndex + 1, IntToRaw(I));
+      CheckEquals(1, PStmt.ExecuteUpdatePrepared, 'the updatecount inserting a row');
+    end;
+    // check read
+    // direct approach (just like mORMot with SynDBZeos)
+    PStmt:= Connection.PrepareStatement('select * from Ticket376b where id = ?');
+    PStmt.SetNull(FirstDbcIndex, stString);
+    RS:= PStmt.ExecuteQueryPrepared;
+    CheckFalse(RS.Next, 'there is no row for null id');
+//  RS:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
+    PStmt.ClearParameters;
+
+    PStmt.SetRawByteString(FirstDbcIndex, '3');
+    RS:= PStmt.ExecuteQueryPrepared; // the transaction ID is not updated
+    Check(RS.Next, 'there is a row for id 3');
+    CheckFalse(RS.Next, 'there is no second row for id 3');
+  finally
+    if Assigned(PStmt) then
+      PStmt.Close;
+    PStmt:= nil;
+    Stmt.ExecuteUpdate('delete from Ticket376b where 1=1');
     Stmt := nil;
   end;
 end;
