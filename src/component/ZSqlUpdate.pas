@@ -842,13 +842,12 @@ begin
 
   if Dataset is TZAbstractRODataset then
     (Dataset as TZAbstractRODataset).Connection.ShowSqlHourGlass;
-  CalcDefaultValues :=
-    ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
+  CalcDefaultValues := ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
   try
     for I := 0 to Config.StatementCount - 1 do
     begin
       Statement := Sender.GetStatement.GetConnection.
-        PrepareStatement(Config.Statements[I].SQL);
+        PrepareStatementWithParams(Config.Statements[I].SQL, Sender.GetStatement.GetParameters);
       FillStatement(Sender, Statement, Config.Statements[I],
         OldRowAccessor, NewRowAccessor);
       {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
