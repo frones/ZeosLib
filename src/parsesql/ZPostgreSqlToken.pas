@@ -114,7 +114,7 @@ implementation
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
-uses ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+uses ZCompatibility, ZFastCode;
 
 const
   NameQuoteChar   = Char('"');
