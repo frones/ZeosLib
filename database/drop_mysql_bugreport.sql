@@ -43,3 +43,4 @@ drop table IF EXISTS table987022;
 drop table IF EXISTS table989474;
 drop table IF EXISTS table1045286;
 drop table IF EXISTS TableTicket240;
+drop table IF EXISTS TableTicked389;

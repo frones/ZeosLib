@@ -445,3 +445,11 @@ CREATE TABLE TableTicket240 (
   PRIMARY KEY (id_test)
 );
 
+/*==============================================================*/
+/* Tables for Ticket#389                                        */
+/*==============================================================*/
+CREATE TABLE TableTicked389 (
+  id_test BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  int_field BIGINT DEFAULT NULL,
+  PRIMARY KEY (id_test)
+);
