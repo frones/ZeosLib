@@ -4476,86 +4476,72 @@ begin
   while Ord(P^) = Ord(' ') do
     Inc(P);
   if Ord(P^) in [Ord('+'), Ord('-')] then
-    if Ord(P^) = Ord('-') then //can't be negative
-    begin
+    if Ord(P^) = Ord('-') then begin//can't be negative
       Code := P-S;
       Exit;
-    end
-    else
-    begin
+    end else begin
       Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
       inc(P);
     end;
-  if Ord(P^) = Ord('$') then
-    begin
+  if Ord(P^) = Ord('$') then begin
+    inc(P);
+    Flags := Flags or 4; {Hex := True}
+  end else begin
+    if Ord(P^) = Ord('0') then begin
+      Flags := Flags or 1; {Valid := True}
       inc(P);
+    end;
+    if (Ord(P^) or $20) = ord('x') then begin {S[Code+1] in ['X','x']}
       Flags := Flags or 4; {Hex := True}
-    end
-  else
-    begin
-      if Ord(P^) = Ord('0') then
-        begin
-          Flags := Flags or 1; {Valid := True}
-          inc(P);
-        end;
-      if (Ord(P^) or $20) = ord('x') then
-        begin {S[Code+1] in ['X','x']}
-          Flags := Flags or 4; {Hex := True}
-          inc(P);
-        end;
+      inc(P);
     end;
-  if (Flags and 4) <> 0 then
-    begin {Hex = True}
-      Flags := Flags and (not 1); {Valid := False}
-      while true do
-        begin
-          case Ord(P^) of
-            Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
-            Ord('a')..Ord('f'): Digit := Ord(P^) - AdjustLowercase;
-            Ord('A')..Ord('F'): Digit := Ord(P^) - AdjustUppercase;
-            else      Break;
-          end;
-          if UInt64(Result) > (High(UInt64) shr 3) then
-            Break;
-          if UInt64(Result) < (MaxInt div 16)-15 then
-            begin {Use Integer Math instead of Int64}
-              I := Result;
-              I := (I shl 4) + Digit;
-              Result := I;
-            end
-          else
-            Result := (Result shl 4) + Digit;
-          Flags := Flags or 1; {Valid := True}
-          Inc(P);
-        end;
-    end
-  else
-    begin
-      while true do
-        begin
-          if ( not (Ord(P^) in [Ord('0')..Ord('9')]) ) or ( (Ord(P^) > Ord('5')) and (Result = (High(UInt64) div 10)) ) then //prevent overflow
-            if (Ord(P^) > Ord('5')) and ( Result = (High(UInt64) div 10)) then
-              begin //overflow
-                Code := P-S+1;
-                Exit;
-              end
-              else
-              begin
-                inc(P, Ord(Ord(P^) <> Ord(#0)));
-                break;
-              end;
-          if UInt64(Result) < (MaxInt div 10)-9 then
-            begin {Use Integer Math instead of Int64}
-              I := Result;
-              I := (I * 10) + Ord(P^) - Ord('0');
-              Result := I;
-            end
-          else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
-            Result := (Result shl 1) + (Result shl 3) + Ord(P^) - Ord('0');
-          Flags := Flags or 1; {Valid := True}
-          Inc(P);
-        end;
+  end;
+  if (Flags and 4) <> 0 then begin {Hex = True}
+    Flags := Flags and (not 1); {Valid := False}
+    while true do begin
+      case Ord(P^) of
+        Ord('0')..Ord('9'): Digit := Ord(P^) - Ord('0');
+        Ord('a')..Ord('f'): Digit := Ord(P^) - AdjustLowercase;
+        Ord('A')..Ord('F'): Digit := Ord(P^) - AdjustUppercase;
+        else      Break;
+      end;
+      if UInt64(Result) > (High(UInt64) shr 3) then
+        Break;
+      if UInt64(Result) < (MaxInt div 16)-15 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I shl 4) + Digit;
+        Result := I;
+      end else
+        Result := (Result shl 4) + Digit;
+      Flags := Flags or 1; {Valid := True}
+      Inc(P);
     end;
+  end else begin
+    while true do begin
+      //High(Uint64) div 10 = $1999999999999999
+      {$IFDEF WITH_UINT64_C1118_ERROR}
+      if (( not (Ord(P^) in [Ord('0')..Ord('9')]) ) or ( (Ord(P^) > Ord('5')) and (Result >= $1999999999999999) )) then //prevent overflow
+        if (Ord(P^) > Ord('5')) and ( Result = $1999999999999999) then begin //overflow
+      {$ELSE}
+      if (( not (Ord(P^) in [Ord('0')..Ord('9')]) ) or ( (Ord(P^) > Ord('5')) and (Result >= (High(UInt64) div 10)) )) then //prevent overflow
+        if (Ord(P^) > Ord('5')) and ( Result = (High(UInt64) div 10)) then begin //overflow
+      {$ENDIF}
+          Code := P-S+1;
+          Exit;
+        end else begin
+          inc(P, Ord(Ord(P^) <> Ord(#0)));
+          break;
+        end;
+      if Result < (MaxInt div 10)-9 then begin {Use Integer Math instead of Int64}
+        I := Result;
+        I := (I * 10) + Ord(P^) - Ord('0');
+        Result := I;
+      end else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
+        Result := (Result shl 1) + (Result shl 3) + Ord(P^) - Ord('0');
+      Flags := Flags or 1; {Valid := True}
+      Inc(P);
+    end;
+  end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;
   if ((Flags and 1) <> 0) and (Ord(P^) = Ord(#0)) then
@@ -4634,8 +4620,13 @@ begin
       end;
   end else begin
     while true do begin
-      if ( not (W^ in [Ord('0')..Ord('9')]) ) or ( (W^ > Ord('5')) and (Result = (High(UInt64) div 10)) ) then //prevent overflow
-        if (W^ > Ord('5')) and ( Result = (High(UInt64) div 10)) then begin //overflow
+      {$IFDEF WITH_UINT64_C1118_ERROR}
+      if (( not (Ord(W^) in [Ord('0')..Ord('9')]) ) or ( (Ord(W^) > Ord('5')) and (Result >= $1999999999999999) )) then //prevent overflow
+        if (Ord(W^) > Ord('5')) and ( Result = $1999999999999999) then begin //overflow
+      {$ELSE}
+      if (( not (Ord(W^) in [Ord('0')..Ord('9')]) ) or ( (Ord(W^) > Ord('5')) and (Result >= (High(UInt64) div 10)) )) then //prevent overflow
+        if (Ord(W^) > Ord('5')) and ( Result = (High(UInt64) div 10)) then begin //overflow
+      {$ENDIF}
           Code := P-S+1;
           Exit;
         end else begin
@@ -6800,7 +6791,6 @@ end;
 function GetOrdinalDigits(const Value: UInt64): Byte;
 var I64Rec: Int64Rec absolute Value;
 begin
-  {$R-} {$Q-}
   if I64Rec.Hi = 0 then
     Result := GetOrdinalDigits(i64Rec.Lo) //faster cardinal version
   else if Value >= UInt64(100000000000000) then
@@ -6815,39 +6805,30 @@ begin
     Result := 11 + Ord(Value >= UInt64(100000000000))
   else
     Result := 10; //it's a nop -> GetOrdinalDigits(i64Rec.Lo)
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 function GetOrdinalDigits(const Value: Int64; out U: UInt64; out Negative: Boolean): Byte;
 begin
-  {$R-} {$Q-}
   Negative := Value < 0;
   if Negative
   then U := -Value
   else U := Value;
   Result := GetOrdinalDigits(U)
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 {$IFDEF HAVE_TRUE_NATIVE_TYPES}//some newer delphi's can't determine the correct overload ):
 function GetOrdinalDigits(const Value: NativeInt; out U: NativeUInt; out Negative: Boolean): Byte;
 begin
-  {$R-} {$Q-}
   Negative := Value < 0;
   if Negative
   then U := -Value
   else U := Value;
   Result := GetOrdinalDigits(U)
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 {$ENDIF}
 
 function GetOrdinalDigits(Value: Cardinal): Byte;
 begin
-  {$R-} {$Q-}
   if Value >= 10000 then
     if Value >= 1000000 then
       if Value >= 100000000
@@ -6858,38 +6839,29 @@ begin
     Result := 3 + Ord(Value >= 1000)
   else
     Result := 1 + Ord(Value >= 10);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 function GetOrdinalDigits(Value: Integer; out C: Cardinal; out Negative: Boolean): Byte;
 begin
-  {$R-} {$Q-}
   Negative := Value < 0;
   if Negative
   then C := -Value
   else C := Value;
   Result := GetOrdinalDigits(C)
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 function GetOrdinalDigits(Value: Word): Byte;
 begin
-  {$R-} {$Q-}
   if Value >= 10000 then
     Result := 5
   else if Value >= 100 then
     Result := 3 + Ord(Value >= 1000)
   else
     Result := 1 + Ord(Value >= 10);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 function GetOrdinalDigits(Value: SmallInt; out W: Word; out Negative: Boolean): Byte;
 begin
-  {$R-} {$Q-}
   Negative := Value < 0;
   if Negative
   then W := -Value
@@ -6901,24 +6873,18 @@ end;
 
 function GetOrdinalDigits(Value: Byte): Byte;
 begin
-  {$R-} {$Q-}
   if Value >= 100
   then Result := 3
   else Result := 1 + Ord(Value >= 10);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 function GetOrdinalDigits(Value: ShortInt; out B: Byte; out Negative: Boolean): Byte;
 begin
-  {$R-} {$Q-}
   Negative := Value < 0;
   if Negative
   then B := -Value
   else B := Value;
   Result := GetOrdinalDigits(B)
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 end;
 
 {$IFDEF USE_FAST_STRLEN}
