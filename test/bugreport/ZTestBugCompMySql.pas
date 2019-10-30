@@ -116,6 +116,8 @@ type
     procedure TestEvalue2Params;
     procedure TestTicked240;
     procedure TestTicked389;
+    procedure TestProcAbtest_WithParamCheck;
+    procedure TestProcAbtest_WithoutParamCheck;
   end;
 
 implementation
@@ -2000,6 +2002,71 @@ begin
     qy.SQL.Text := 'delete from TableMS56OBER9357';
     qy.ExecSQL;
     qy.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestProcAbtest_WithoutParamCheck;
+var
+  Query: TZQuery;
+  SQL: String;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    SQL := 'CALL abtest(:P1, :P2, :P3)';
+    Query.SQL.Text := SQL;
+    Query.Params[0].AsInteger := 10;
+    Query.Params[1].AsInteger := 20;
+    Query.Params[2].AsString := 'xx';
+    Query.Params.CreateParam(ftInteger, 'P4', ptOutPut);
+    Query.Params.CreateParam(ftString, 'P5', ptOutPut);
+    Query.Params[4].Precision := 10;
+    Query.ExecSQL;
+    CheckEquals(120, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+    Query.Params[0].AsInteger := Query.Params[3].AsInteger;
+    Query.Params[2].AsString := Query.Params[4].AsString;
+    Query.ExecSQL;
+    CheckEquals(1220, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxxxxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestProcAbtest_WithParamCheck;
+var
+  Query: TZQuery;
+  SQL: String;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := False;
+    SQL := 'CALL abtest(?, ?, ?)';
+    Query.SQL.Text := SQL;
+    Query.Params.CreateParam(ftInteger, 'P1', ptInPut);
+    Query.Params[0].AsInteger := 10;
+    Query.Params.CreateParam(ftInteger, 'P2', ptInPut);
+    Query.Params[1].AsInteger := 20;
+    Query.Params.CreateParam(ftString, 'P3', ptInPut);
+    Query.Params[2].Precision := 20;
+    Query.Params[2].AsString := 'xx';
+    Query.Params.CreateParam(ftInteger, 'P4', ptOutPut);
+    Query.Params.CreateParam(ftString, 'P5', ptOutPut);
+    Query.Params[4].Precision := 20;
+    Query.ExecSQL;
+    CheckEquals(120, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+    Query.Params[0].AsInteger := Query.Params[3].AsInteger;
+    Query.Params[2].AsString := Query.Params[4].AsString;
+    Query.ExecSQL;
+    CheckEquals(1220, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
+    CheckEquals('xxxxxxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
+  finally
+    Query.Free;
   end;
 end;
 
