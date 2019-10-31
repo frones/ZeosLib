@@ -2921,13 +2921,6 @@ Next:   Inc(Value);
         Exit;
     end;
   end;
-  if (Date.Day >= 31) then //reverse logic for the german format ... obsolete??
-    if Date.Year <= 31 then begin
-      B := Date.Year;
-      Date.Year := Date.Day;
-      Date.Day := B;
-    end else
-      Exit;
   Result := True;
 end;
 
@@ -2997,13 +2990,6 @@ IncF:   Inc(PF);
         Exit;
     end;
   end;
-  if (Date.Day >= 31) then //reverse logic for the german format ... obsolete??
-    if Date.Year <= 31 then begin
-      B := Date.Year;
-      Date.Year := Date.Day;
-      Date.Day := B;
-    end else
-      Exit;
   Result := True;
 end;
 
