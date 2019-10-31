@@ -454,7 +454,7 @@ type
   @param Value a custom variant value to be initialized.
   @param vType new variant type to be initialized.
 }
-procedure InitializeVariant(var Value: TZVariant; vType: TZVariantType);
+procedure InitializeVariant({$IFDEF FPC}Out{$ELSE}var{$ENDIF} Value: TZVariant; vType: TZVariantType);
 {**
   Encodes a custom variant value into standard variant.
   @param Value a custom variant value to be encoded.
@@ -1084,7 +1084,7 @@ begin
                         P := Pointer(Value.VUnicodeString);
                         ZSysUtils.ValidGUIDToBinary(PWideChar(P), @Result.D1);
                       end else Goto Fail;
-    vtCharRec:        if Length(Value.VUnicodeString) in [36,38] then
+    vtCharRec:        if Value.VCharRec.Len in [36,38] then
                         if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16)
                         then ZSysUtils.ValidGUIDToBinary(PWideChar(Value.VCharRec.P), @Result.D1)
                         else ZSysUtils.ValidGUIDToBinary(PWideChar(Value.VCharRec.P), @Result.D1)
@@ -3169,7 +3169,7 @@ begin
 end;
 
 
-procedure InitializeVariant(var Value: TZVariant; vType: TZVariantType);
+procedure InitializeVariant({$IFDEF FPC}Out{$ELSE}var{$ENDIF} Value: TZVariant; vType: TZVariantType);
 begin
   //clear me late on !!
   Value.VType := vType;
