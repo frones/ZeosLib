@@ -247,7 +247,9 @@ end;
 function TZAbstractMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
 begin
   Result := ((not FInitial_emulate_prepare) or (BatchDMLArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
-     ((BatchDMLArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare));
+     ((BatchDMLArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare) or
+     ((TokenMatchIndex = Ord(myCall)) and ((FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 100000)) or
+     (not FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 50608)))));
   if Result then begin
     FEmulatedParams := False;
     if (BindList.Count > 0) then
@@ -307,7 +309,9 @@ var
   ParamIndex: Integer;
   SQLWriter: TZRawSQLStringWriter;
 begin
-  ParamIndex := 0;
+  if (BindList.Count > 0) and (BindList[0].ParamType = pctReturn)
+  then ParamIndex := 1
+  else ParamIndex := 0;
   Result := '';
   SQLWriter := TZRawSQLStringWriter.Create(Length(FASQL)+(BindList.Count shl 5));
   try
@@ -788,9 +792,11 @@ begin
       if FieldCount = 0
       then Result := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
       else Result := -1;
-      if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then
-        FetchCallResults(FieldCount,Result)
-      else if FieldCount > 0 then
+      if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
+        FetchCallResults(FieldCount,Result);
+        if BindList.HasOutParam or BindList.HasInOutParam then
+          FOutParamResultSet := GetLastResultSet;
+      end else if FieldCount > 0 then
         if BindList.HasReturnParam //retrieve outparam
         then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
@@ -809,7 +815,7 @@ begin
   CallResultCache := TZCollection.Create;
   if FieldCount > 0 then begin
     CallResultCache.Add(CreateResultSet(SQL, 0, FieldCount));
-    FOpenResultSet := nil; //invoke closing the resu
+    FOpenResultSet := nil; //invoke closing the result
   end else CallResultCache.Add(TZAnyValue.CreateWithInteger(UpdateCount));
   while GetMoreresults do
     if LastResultSet <> nil then begin
@@ -2592,8 +2598,8 @@ begin
   SQLWriter.Finalize(SQL);
   FreeAndNil(SQLWriter);
   Result := TZMySQLPreparedStatement.Create(Connection as IZMySQLConnection, SQL, Info);
-  TZMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
-  TZMySQLPreparedStatement(Result).InternalRealPrepare;
+  {TZMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
+  TZMySQLPreparedStatement(Result).InternalRealPrepare;}
   TZMySQLPreparedStatement(Result).Prepare;
 end;
 

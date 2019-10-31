@@ -2014,14 +2014,19 @@ begin
 
   Query := CreateQuery;
   try
-    SQL := 'CALL abtest(:P1, :P2, :P3)';
+    SQL := 'CALL abtest(?, ?, ?, ?, ?)';
+    Query.ParamCheck := False;
     Query.SQL.Text := SQL;
+    Query.Params.CreateParam(ftInteger, 'P1', ptInPut);
     Query.Params[0].AsInteger := 10;
+    Query.Params.CreateParam(ftInteger, 'P2', ptInPut);
     Query.Params[1].AsInteger := 20;
+    Query.Params.CreateParam(ftString, 'P3', ptInPut);
     Query.Params[2].AsString := 'xx';
+    Query.Params[2].Precision := 10;
     Query.Params.CreateParam(ftInteger, 'P4', ptOutPut);
     Query.Params.CreateParam(ftString, 'P5', ptOutPut);
-    Query.Params[4].Precision := 10;
+    Query.Params[4].Precision := 20;
     Query.ExecSQL;
     CheckEquals(120, Query.ParamByName('P4').AsInteger, 'The OutParam-Result of a exec pro abtest');
     CheckEquals('xxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
@@ -2045,14 +2050,14 @@ begin
   Query := CreateQuery;
   try
     Query.ParamCheck := False;
-    SQL := 'CALL abtest(?, ?, ?)';
+    SQL := 'CALL abtest(?, ?, ?, ?, ?)';
     Query.SQL.Text := SQL;
     Query.Params.CreateParam(ftInteger, 'P1', ptInPut);
     Query.Params[0].AsInteger := 10;
     Query.Params.CreateParam(ftInteger, 'P2', ptInPut);
     Query.Params[1].AsInteger := 20;
     Query.Params.CreateParam(ftString, 'P3', ptInPut);
-    Query.Params[2].Precision := 20;
+    Query.Params[2].Precision := 10;
     Query.Params[2].AsString := 'xx';
     Query.Params.CreateParam(ftInteger, 'P4', ptOutPut);
     Query.Params.CreateParam(ftString, 'P5', ptOutPut);

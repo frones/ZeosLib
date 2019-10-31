@@ -317,7 +317,7 @@ end;
   User:
   Is this the correct syntax and expected behaviour for using TZTable for
     freetds, odbc, ado and oledb protocol in mssql server?
-  Answer doPreferPrepared needs to be omitted from the stmt options
+  Answer is !Yes!, we do not get metainformations from the server.
 **)
 procedure TZTestCompMSSqlBugReport.TestSF380a;
 var
