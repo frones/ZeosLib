@@ -240,7 +240,7 @@ type
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
 
     FSortType : TSortType; {bangfauzan addition}
-
+    FHasOutParams: Boolean;
     FSortedFields: string;
     FSortedFieldRefs: TObjectDynArray;
     FSortedFieldIndices: TIntegerDynArray;
@@ -348,7 +348,7 @@ type
     procedure MasterChanged(Sender: TObject);
     procedure MasterDisabled(Sender: TObject);
     procedure DoOnNewRecord; override;
-
+    procedure RetrieveParamValues;
     function GetDataSource: TDataSource; override;
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
@@ -2771,6 +2771,108 @@ begin
 end;
 
 {**
+  Retrieves parameter values from prepared statement.
+}
+procedure TZAbstractRODataset.RetrieveParamValues;
+var
+  I: Integer;
+  Param: TParam;
+  TempBlob: IZBlob;
+  BCD: TBCD;
+begin
+  for I := 0 to Params.Count - 1 do begin
+    Param := Params[I];
+
+    if not (Param.ParamType in [ptResult, ptOutput, ptInputOutput]) then
+      Continue;
+
+    if Statement.IsNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
+      Param.Clear
+    else
+      case Param.DataType of
+        ftBoolean:
+          Param.AsBoolean := Statement.GetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_FTBYTE}
+        ftByte:
+          Param.AsByte := Statement.GetByte(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTBYTE}
+        {$IFDEF WITH_FTSHORTINT}
+        ftShortInt:
+          Param.AsShortInt := Statement.GetShort(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTSHORTINT}
+        {$IFDEF WITH_FTSHORTINT}
+        ftWord:
+          Param.AsWord := Statement.GetWord(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTSHORTINT}
+        ftSmallInt:
+          Param.AsSmallInt := Statement.GetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_FTLONGWORD}
+        ftLongWord:
+          Param.AsLongWord := Statement.GetUInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTLONGWORD}
+        ftInteger, ftAutoInc:
+          Param.AsInteger := Statement.GetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_PARAM_ASLARGEINT}
+        ftLargeInt:
+          Param.AsLargeInt := Statement.GetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF}
+        {$IFDEF WITH_FTSINGLE}
+        ftSingle:
+          Param.AsSingle := Statement.GetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTSINGLE}
+        ftCurrency, ftFloat:
+          Param.AsFloat := Statement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_FTEXTENDED}
+        ftExtended:
+          Param.AsFloat := Statement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF}
+        ftBCD:
+          Param.AsCurrency := Statement.GetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftFmtBCD: begin
+            Statement.GetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD{%H-});
+            Param.AsFMTBCD := BCD;
+          end;
+        ftString:
+          begin
+            Param.AsString := Statement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+            {$IFDEF UNICODE}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
+          end;
+        ftWideString:
+          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftMemo:
+          begin
+            Param.AsMemo := Statement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+            {$IFDEF UNICODE}Param.DataType := ftMemo;{$ENDIF} //Hack: D12_UP sets ftWideMemo on assigning a UnicodeString
+          end;
+        {$IFDEF WITH_WIDEMEMO}
+        ftWideMemo:
+        begin
+          Param.AsWideString := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          Param.DataType := ftWideMemo;
+        end;
+        {$ENDIF}
+        ftBytes, ftVarBytes, ftGuid:
+          Param.Value := Statement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftDate:
+          Param.AsDate := Statement.GetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftTime:
+          Param.AsTime := Statement.GetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftDateTime:
+          Param.AsDateTime := Statement.GetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftBlob:
+          begin
+            TempBlob := Statement.GetValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).VInterface as IZBlob;
+            if not TempBlob.IsEmpty then
+              Param.SetBlobData({$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}(TempBlob.GetBuffer), TempBlob.Length);
+            TempBlob := nil;
+          end
+        else
+           raise EZDatabaseError.Create(SUnKnownParamDataType);
+      end;
+  end;
+end;
+
+{**
   Fill prepared statement with parameters.
   @param Statement a prepared SQL statement.
   @param ParamNames an array of parameter names.
@@ -3360,6 +3462,8 @@ begin
       FParams, FDataLink);
 
     FRowsAffected := Statement.ExecuteUpdatePrepared;
+    if FHasOutParams then
+      RetrieveParamValues;
   finally
     Connection.HideSQLHourGlass;
   end;
@@ -3439,6 +3543,8 @@ begin
               Attributes := Attributes + [faReadonly];
             Precision := GetPrecision(I);
             DisplayName := FName;
+            if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
+               Attributes := Attributes + [faUnNamed];
           end
         else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I) do begin
           if not (ReadOnly or IsUniDirectional) then begin
@@ -3446,6 +3552,8 @@ begin
             Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
             {$ENDIF}
             if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+            if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
+               Attributes := Attributes + [faUnNamed];
           end else
             Attributes := Attributes + [faReadonly];
           Precision := GetPrecision(I);
@@ -3630,6 +3738,8 @@ begin
     Connection.HideSQLHourGlass;
     OldRS := nil;
   end;
+  if FHasOutParams then
+    RetrieveParamValues;
 end;
 
 {**
@@ -4055,6 +4165,7 @@ end;
   Performs the internal preparation of the query.
 }
 procedure TZAbstractRODataset.InternalPrepare;
+var I: Integer;
 begin
   CheckSQLQuery;
   CheckInactive;  //AVZ - Need to check this
@@ -4062,9 +4173,17 @@ begin
 
   Connection.ShowSQLHourGlass;
   try
-    if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then
-      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties)
-    else if (Assigned(Statement)) then
+    if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then begin
+      Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
+      FHasOutParams := False;
+      for i := 0 to Params.Count -1 do
+        if (Params[I].ParamType <> ptUnknown) then begin
+          FHasOutParams := FHasOutParams or (Ord(Params[I].ParamType) >= Ord(ptOutput));
+          Statement.RegisterParameter(i, ConvertDatasetToDbcType(Params[I].DataType),
+            DatasetTypeToProcColDbc[Params[i].ParamType], Params[i].Name,
+            Max(Params[i].Precision, Params[i].Size), Params[i].NumericScale);
+        end;
+    end else if (Assigned(Statement)) then
       Statement.ClearParameters;
   finally
     Connection.HideSQLHourGlass;

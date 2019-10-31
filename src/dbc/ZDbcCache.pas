@@ -4359,10 +4359,10 @@ begin
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stTime: if SizeOf(TZTime) = 12 then begin
+    stTime: begin
               PCardinal(Data)^ := 0;
               PInt64(@PZTime(Data).Second)^ := 0;
-            end else FillChar(Data^, SizeOf(TZTime), #0);
+            end;
     stDate: PZDate(Data)^ := Value;
     stTimestamp: TimeStampFromDate(Value, PZTimeStamp(Data)^);
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin

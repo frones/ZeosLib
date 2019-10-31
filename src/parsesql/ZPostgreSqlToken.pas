@@ -98,8 +98,14 @@ type
 
   {** Implements a default tokenizer object. }
   TZPostgreSQLTokenizer = class (TZTokenizer)
+  private
+    FNormalizedParams: TStrings;
   protected
     procedure CreateTokenStates; override;
+  public
+    function NormalizeParamToken(const Token: TZToken; out ParamName: String): String; override;
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
@@ -108,7 +114,7 @@ implementation
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
-uses ZCompatibility{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+uses ZCompatibility, ZFastCode;
 
 const
   NameQuoteChar   = Char('"');
@@ -266,6 +272,18 @@ end;
 {**
   Constructs a default state table (as described in the class comment).
 }
+procedure TZPostgreSQLTokenizer.AfterConstruction;
+begin
+  inherited;
+  FNormalizedParams := TStringList.Create
+end;
+
+procedure TZPostgreSQLTokenizer.BeforeDestruction;
+begin
+  inherited;
+  FNormalizedParams.Free;
+end;
+
 procedure TZPostgreSQLTokenizer.CreateTokenStates;
 begin
   WhitespaceState := TZWhitespaceState.Create;
@@ -294,6 +312,42 @@ begin
 
   SetCharacterState('/', '/', CommentState);
   SetCharacterState('-', '-', CommentState);
+end;
+
+function TZPostgreSQLTokenizer.NormalizeParamToken(const Token: TZToken;
+  out ParamName: String): String;
+var
+  P: PChar;
+  I: Integer;
+  C: Cardinal;
+  B: Byte;
+label fill;
+begin
+  {postgres just understands numerical tokens only at least unti V12}
+  if Token.TokenType = ttInteger then begin
+    System.SetString(ParamName, Token.P, Token.L);
+    System.SetString(Result, nil, Token.L+1);
+    P := Pointer(Result);
+    P^ := '$';
+    Move(Token.P^, (P+1)^, Token.L*SizeOf(Char));
+  end else begin
+    if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
+    then ParamName := GetQuoteState.DecodeToken(Token, Token.P^)
+    else System.SetString(ParamName, Token.P, Token.L);
+    I := FNormalizedParams.IndexOf(ParamName);
+    if I = -1 then begin
+      C := FNormalizedParams.Count+1;
+      FNormalizedParams.Add(ParamName);
+      goto fill;
+    end else begin
+      C := I+1;
+fill: B := GetOrdinalDigits(C);
+      SetLength(Result, B+1);
+      P := Pointer(Result);
+      P^ := '$';
+      {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(C, P+1, B);
+    end;
+  end;
 end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}

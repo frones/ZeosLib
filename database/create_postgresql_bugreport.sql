@@ -146,4 +146,12 @@ create table sf354 (
   timestamp4 timestamp(4),
   timestamp5 timestamp(5),
   timestamp6 timestamp(6)
-)
+);
+
+create table TableSFTicket331(
+  id integer not null,
+  val1 numeric(15,4),
+  val2 numeric(5,2)
+);
+insert into TableSFTicket331(id,val1, val2) values (1,0.5214, 52.14);
+insert into TableSFTicket331(id,val1, val2) values (2,0.8358, 83.58);

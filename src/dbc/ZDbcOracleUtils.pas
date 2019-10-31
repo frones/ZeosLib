@@ -71,7 +71,7 @@ const
   Max_OCI_Raw_Size = 2000;
 
   NO_DTYPE = 0;
-  SQLType2OCIDescriptor: array[stBoolean..stBinaryStream] of sb2 = (
+  SQLType2OCIDescriptor: array[stUnknown..stBinaryStream] of sb2 = (NO_DTYPE,
     NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE,  //ordinals
     NO_DTYPE, NO_DTYPE, NO_DTYPE, NO_DTYPE, //floats
     NO_DTYPE, OCI_DTYPE_TIMESTAMP, OCI_DTYPE_TIMESTAMP, //time values

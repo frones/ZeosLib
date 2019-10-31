@@ -79,7 +79,8 @@ type
     procedure Mantis164;
     procedure Test_SelectInformation_Schema;
     procedure TestSF378;
-    procedure TestSF380;
+    procedure TestSF380a;
+    procedure TestSF380b;
     procedure TestSF382;
     procedure TestSF383;
   end;
@@ -87,7 +88,7 @@ type
 implementation
 
 uses SysUtils, Types, FmtBCD,
-  ZSysUtils, ZStoredProcedure, ZAbstractRODataset, ZTestCase;
+  ZSysUtils, ZStoredProcedure, ZAbstractRODataset, ZTestCase, ZSqlUpdate;
 
 { TZTestCompMSSqlBugReport }
 
@@ -316,9 +317,9 @@ end;
   User:
   Is this the correct syntax and expected behaviour for using TZTable for
     freetds, odbc, ado and oledb protocol in mssql server?
-  Answer doPreferPrepared needs to be omitted from the stmt options
+  Answer is !Yes!, we do not get metainformations from the server.
 **)
-procedure TZTestCompMSSqlBugReport.TestSF380;
+procedure TZTestCompMSSqlBugReport.TestSF380a;
 var
   Query: TZQuery;
   Table: TZTable;
@@ -347,17 +348,22 @@ begin
       CheckEquals(0, Query.Fields[0].AsInteger, 'The previously set value should be returned.');
       //the OleDB GetSchema() does not return any rows for the tempdb schema
       //reason is unkown, we need to document this on our side..
-      Query.Edit;
-      Query.Fields[0].AsInteger := 3;
-      Query.Post;
+      try
+        Query.Edit;
+        Query.Fields[0].AsInteger := 1;
+        Query.Post;
+        Check(False, 'unexpected behaviour change! -> Change the test');
+      except on E: Exception do
+        CheckNotTestFailure(E, 'Expected beahvior');
+      end;
       Query.Close;
-      Query.Open;
-      CheckEquals(3, Query.Fields[0].AsInteger, 'The previously set value should be returned.');
     end else try
       Query.Sql.Text := 'select * from #t';
       Query.Open;
       Check(False, 'unexpected ado behaviour change! -> Change the test');
-    except end;
+    except on E: Exception do
+        CheckNotTestFailure(E, 'Expected beahvior');
+    end;
   finally
     FreeAndNil(Query);
   end;
@@ -368,30 +374,111 @@ begin
     if Protocol <> 'ado' then begin //just suppress exceptions we can't handle:
       Table.TableName := '#t';
       Table.Open;
-      CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
-      Table.Edit;
-      Table.Fields[0].AsInteger := 0;
-      Table.Post;
-      Table.Close;
-      Table.Open;
       CheckEquals(0, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+      try
+        Table.Edit;
+        Table.Fields[0].AsInteger := 1;
+        Table.Post;
+        Check(False, 'unexpected behaviour change! -> Change the test');
+      except on E: Exception do
+        CheckNotTestFailure(E, 'Expected beahvior');
+      end;
+      Table.Close;
     end else try
       Table.TableName := '#t';
       Table.Open;
-      CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
-      Table.Edit;
-      Table.Fields[0].AsInteger := 0;
-      Table.Post;
-      Table.Close;
-      Table.Open;
       CheckEquals(0, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
-      Connection.ExecuteDirect('drop table #t');
       Check(False, 'unexpected ado behaviour change! -> Change the test');
-    except end;
+    except on E: Exception do
+        CheckNotTestFailure(E, 'Expected beahvior');
+    end;
   finally
     FreeAndNil(Table);
     if Protocol <> 'ado' then
       Connection.ExecuteDirect('drop table #t');
+  end;
+end;
+
+procedure TZTestCompMSSqlBugReport.TestSF380b;
+var
+  Query: TZQuery;
+  Table: TZTable;
+  UpdateSQL: TZUpdateSQL;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
+  Query := CreateQuery;
+  UpdateSQL := TZUpdateSQL.Create(nil);
+  try
+    Query.UpdateObject := UpdateSQL;
+    UpdateSQL.DeleteSQL.Text := 'delete from #t where i= :old_i';
+    UpdateSQL.InsertSQL.Text := 'insert into #t (i) values (:new_i)';
+    UpdateSQL.ModifySQL.Text := 'update #t set i = :new_i where i = :old_i';
+    try
+      Query.ParamCheck := false;
+      Query.Options := [doCalcDefaults];
+      Query.Sql.Add('create table #t (i int)');
+      Query.Sql.Add('insert into #t values (0)');
+      Query.ExecSQL; //this now kills the #t table using ADO, even if !NO! prepare oslt is called by us
+      Check((Query.RowsAffected = -1) or (Query.RowsAffected = 1), 'Rows affected of first command in batch');
+      //end up the command batch:
+      //Check(Query.NextRowsAffected, 'There is a second updatecount available');
+      CheckEquals(1, Query.RowsAffected, 'Rows affected of second command in batch');
+      if Protocol <> 'ado' then begin //just suppress exceptions we can't handle:
+        //ado seems to execute some sp's in background, thus (MS-Bug skope of temp-table ends with SP's)
+        //ado is not able to see the table any more
+        Query.Sql.Text := 'select * from #t';
+        Query.Open;
+        CheckEquals(0, Query.Fields[0].AsInteger, 'The previously set value should be returned.');
+        //the OleDB GetSchema() does not return any rows for the tempdb schema
+        //reason is unkown, we need to document this on our side..
+        Query.Fields[0].ReadOnly := False;
+        Query.Edit;
+        Query.Fields[0].AsInteger := 2;
+        Query.Post;
+        Query.Close;
+      end else try
+        Query.Sql.Text := 'select * from #t';
+        Query.Open;
+        Check(False, 'unexpected ado behaviour change! -> Change the test');
+      except on E: Exception do
+          CheckNotTestFailure(E, 'Expected beahvior');
+      end;
+    finally
+      FreeAndNil(Query);
+    end;
+
+    Table := CreateTable;
+    try
+      Table.Options := [doCalcDefaults];
+      if Protocol <> 'ado' then begin //just suppress exceptions we can't handle:
+        Table.UpdateObject := UpdateSQL;
+        Table.TableName := '#t';
+        Table.Open;
+        CheckEquals(2, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+        Table.Fields[0].ReadOnly := False;
+        Table.Edit;
+        Table.Fields[0].AsInteger := 1;
+        Table.Post;
+        Table.Close;
+      end else try
+        Table.TableName := '#t';
+        Table.Open;
+        CheckEquals(2, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+        Check(False, 'unexpected ado behaviour change! -> Change the test');
+      except on E: Exception do
+          CheckNotTestFailure(E, 'Expected beahvior');
+      end;
+    finally
+      FreeAndNil(Table);
+      if Protocol <> 'ado' then
+        Connection.ExecuteDirect('drop table #t');
+    end;
+  finally
+    UpdateSQL.Free;
   end;
 end;
 

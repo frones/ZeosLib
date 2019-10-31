@@ -161,3 +161,19 @@ create table Ticket192 (
     N41 NUMERIC (4,1),
     D51 DECIMAL (5,1)
 );
+
+/*==============================================================*/
+/* Table for Ticket#376 on Sourceforge                          */
+/*==============================================================*/
+create table Ticket376a (
+  id integer primary key, 
+  "value" BLOB SUB_TYPE TEXT
+);
+
+/*==============================================================*/
+/* Table for Ticket#376 on Sourceforge                          */
+/*==============================================================*/
+create table Ticket376b (
+  id varchar(15) primary key, 
+  "value" BLOB SUB_TYPE TEXT
+);

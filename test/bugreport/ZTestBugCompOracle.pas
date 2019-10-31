@@ -78,6 +78,8 @@ type
     procedure TestNestedDataSetFields2;
     procedure TestNCLOBValues;
     procedure TestTicket96;
+    procedure TestOutParam1;
+    procedure TestOutParam2;
   end;
 
 implementation
@@ -112,6 +114,47 @@ begin
     CheckEquals(Ord(ftFmtBCD), Ord(Query.Fields[1].DataType), 'Num field type');
     CheckEquals(1, Query.Fields[0].AsInteger, 'id value');
     CheckEquals(54321.0123456789, Query.Fields[1].AsFloat, 1E-11, 'Num value');
+  finally
+    Query.Free;
+  end;
+end;
+
+(* http://zeoslib.sourceforge.net/viewtopic.php?f=37&p=99195#p99195
+*)
+procedure ZTestCompOracleBugReport.TestOutParam1;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'begin :result ::= 42; end;';
+    CheckEquals(1, Query.Params.Count, 'Param count');
+    Query.Params[0].ParamType := ptOutPut;
+    Query.Params[0].DataType := ftInteger;
+    Query.ExecSQL;
+    CheckEquals(42, Query.ParamByName('result').AsInteger, 'The OutParam-Result of a anonymous begin ... end block');
+  finally
+    Query.Free;
+  end;
+end;
+
+(* http://zeoslib.sourceforge.net/viewtopic.php?f=37&p=99195#p99195
+*)
+procedure ZTestCompOracleBugReport.TestOutParam2;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := False;
+    Query.SQL.Text := 'begin :result := 42; end;';
+    Query.Params.CreateParam(ftInteger, 'result', ptOutPut);
+    Query.ExecSQL;
+    CheckEquals(42, Query.ParamByName('result').AsInteger, 'The OutParam-Result of a anonymous begin ... end block');
   finally
     Query.Free;
   end;

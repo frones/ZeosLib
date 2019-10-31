@@ -1933,7 +1933,6 @@ var
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
   Cat, Schem, Table, Column: ZWideString;
-  P, t, Tend: PWideChar;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
@@ -1943,10 +1942,6 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
   Column := DecomposeObjectString(ColumnNamePattern);
-  P := Pointer(Table);
-  if (P <> nil) and (PWord(P)^ = Word('#')) and (GetConnection.GetServerProvider = spMSSQL)
-  then Cat := 'tempdb'
-  else P := nil;
 
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
@@ -1962,15 +1957,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[CatalogNameIndex], Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
-        if P <> nil then begin//there is a problem with the temp tables name:
-          //they are returned with a huge amount of trailing '_'chars and a 12digits hex session number
-          T := GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len);
-          Tend := T+Len-13;
-          while (Tend >= T) and (PWord(Tend)^ = Word('_')) do Dec(Tend);
-          Len := Tend+1-T;
-          Result.UpdatePWideChar(TableNameIndex, T, Len);
-        end else
-          Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
         Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
         SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
@@ -2895,7 +2882,6 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl, Col: RawByteString;
-  P, t, Tend: PAnsiChar;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
@@ -2905,10 +2891,6 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Tabl := DecomposeObjectString(TableNamePattern);
   Col := DecomposeObjectString(ColumnNamePattern);
-  P := Pointer(Tabl);
-  if (P <> nil) and (P^ = AnsiChar('#')) and (GetConnection.GetServerProvider = spMSSQL)
-  then Cat := 'tempdb'
-  else P := nil;
 
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
@@ -2923,15 +2905,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[CatalogNameIndex], Len), Len);
         Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
-        if P <> nil then begin//there is a problem with the temp tables name:
-          //they are returned with a huge amount of trailing '_'chars and a 12digits hex session number
-          T := GetPAnsiChar(fTableColColumnMap.ColIndices[TableNameIndex], Len);
-          Tend := T+Len-13;
-          while (Tend >= T) and (Tend^ = AnsiChar('_')) do Dec(Tend);
-          Len := Tend+1-T;
-          Result.UpdatePAnsiChar(TableNameIndex, T, Len);
-        end else
-          Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
         Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
         SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),

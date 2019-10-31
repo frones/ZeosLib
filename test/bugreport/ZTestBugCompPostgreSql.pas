@@ -111,6 +111,9 @@ type
     procedure TestSF266;
     procedure TestSF274;
     procedure TestMarsupilami1;
+    {$IFDEF WITH_TDATASETPROVIDER}
+    procedure TestSF331;
+    {$ENDIF WITH_TDATASETPROVIDER}
     procedure TestSF354;
   end;
 
@@ -127,7 +130,8 @@ implementation
 
 uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
   ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver,
-  {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF};
+  {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}
+  {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF};
 
 { TZTestCompPostgreSQLBugReport }
 
@@ -1348,6 +1352,42 @@ begin
     Connection.Disconnect;
   end;
 end;
+
+{$IFDEF WITH_TDATASETPROVIDER}
+procedure TZTestCompPostgreSQLBugReport.TestSF331;
+var
+  Query: TZQuery;
+  Provider: TDataSetProvider;
+  ClientDataSet: TClientDataSet;
+begin
+  Query := CreateQuery;
+  Connection.Connect;
+  Provider := TDataSetProvider.Create(Query);
+  Provider.DataSet := Query;
+  Provider.Name := 'TestSF331Provider';
+  ClientDataSet := TClientDataSet.Create(Query);
+  ClientDataSet.ProviderName := Provider.Name;
+  try
+    Query.SQL.Text := 'select * from TableSFTicket331 order by id';
+    //Query.Open;
+    ClientDataSet.Open;
+    CheckFalse(ClientDataSet.EOF, 'ClientDataset should have a row');
+    CheckEquals(1, ClientDataSet.Fields[0].AsInteger, 'First row, value of field id');
+    CheckEquals(0.5214, ClientDataSet.Fields[1].AsCurrency, 'First row, value of field val1');
+    CheckEquals(52.14, ClientDataSet.Fields[2].AsCurrency, 'First row, value of field val2');
+    ClientDataSet.Next;
+    CheckFalse(ClientDataSet.EOF, 'ClientDataset should have a row');
+    CheckEquals(2, ClientDataSet.Fields[0].AsInteger, 'First row, value of field id');
+    CheckEquals(0.8358, ClientDataSet.Fields[1].AsCurrency, 'Second row, value of field val1');
+    CheckEquals(83.58, ClientDataSet.Fields[2].AsCurrency, 'Second row, value of field val2');
+    Query.Close;
+  finally
+    FreeAndNil(ClientDataSet);
+    FreeAndNil(Provider);
+    FreeAndNil(Query);
+  end;
+end;
+{$ENDIF WITH_TDATASETPROVIDER}
 
 procedure TZTestCompPostgreSQLBugReport.TestSF354;
 var

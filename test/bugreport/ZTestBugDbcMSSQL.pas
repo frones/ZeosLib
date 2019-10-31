@@ -69,6 +69,7 @@ type
     procedure TestTicket375;
     procedure TestTicket375_B;
     procedure TestTicket375_C;
+    procedure TestTicket380;
   end;
 
 implementation
@@ -94,9 +95,12 @@ var
   RS: IZResultSet;
 begin
   Stmt := Connection.CreateStatement;
-  Check(Stmt <> nil);
   RS := nil;
   try
+    CheckFalse(Connection.IsClosed, 'Failed to establish a connection');
+    if Connection.GetServerProvider <> spMSSQL then
+      Exit;
+    Check(Stmt <> nil);
     With Stmt do begin
       ExecuteUpdate('create table #t375 (i int)');
       CheckEquals(1, ExecuteUpdate('insert into #t375 values (0)'), 'UpdateCount');//Invalid object name #t
@@ -131,6 +135,9 @@ begin
   RS := nil;
   try
     Stmt := Connection.CreateStatementWithParams(Props);
+    CheckFalse(Connection.IsClosed, 'Failed to establish a connection');
+    if Connection.GetServerProvider <> spMSSQL then
+      Exit;
     Check(Stmt <> nil);
     With Stmt do begin
       ExecuteUpdate('set dateformat dmy'+LineEnding+
@@ -171,6 +178,9 @@ begin
   RS := nil;
   try
     Stmt := Connection.CreateStatementWithParams(Props);
+    CheckFalse(Connection.IsClosed, 'Failed to establish a connection');
+    if Connection.GetServerProvider <> spMSSQL then
+      Exit;
     Check(Stmt <> nil);
     With Stmt do begin
       ExecuteUpdate('set dateformat dmy'+LineEnding+
@@ -186,6 +196,61 @@ begin
   finally
     Props.Free;
     Stmt := nil;
+  end;
+end;
+
+procedure ZTestDbcMSSQLBugReport.TestTicket380;
+var
+  Stmt: IZStatement;
+  PStmt: IZPreparedStatement;
+  RS: IZResultSet;
+  Props: TStrings;
+  I: Integer;
+begin
+  Props := TStringList.Create;
+  Props.Values[DSProps_PreferPrepared] := 'False'; //turn off the prepared mode
+  PStmt := nil;
+  Stmt := Connection.CreateStatementWithParams(Props);;
+  RS := nil;
+  try
+    CheckFalse(Connection.IsClosed, 'Failed to establish a connection');
+    if Connection.GetServerProvider <> spMSSQL then
+      Exit;
+    PStmt := Connection.PrepareStatementWithParams('insert into #t380(i) values (?)', Props);
+    Check(Stmt <> nil);
+    With Stmt do begin
+      ExecuteUpdate('create table #t380(i int)');
+      close;
+    end;
+    with PStmt do begin
+      for I := 1 to 10 do begin
+        SetInt(FirstDbcIndex, i);
+        CheckEquals(1, ExecuteUpdatePrepared, 'update count, inserting into session temp table');
+      end;
+      Close;
+    end;
+    RS := Stmt.ExecuteQuery('select i from #t380 order by 1');
+    I := 0;
+    while RS.Next do begin
+      Inc(I);
+      CheckEquals(i, RS.GetInt(FirstDbcIndex), 'the inserted value of current row');
+    end;
+    CheckEquals(10, i, 'the last inserted value');
+  finally
+    Props.Free;
+    if Assigned(RS) then begin
+      Rs.Close;
+      RS := nil;
+    end;
+    if Assigned(PStmt) then begin
+      PStmt.Close;
+      PStmt := nil;
+    end;
+    try
+      Stmt.ExecuteUpdate('drop table #t380');
+    finally
+      Stmt := nil;
+    end;
   end;
 end;
 

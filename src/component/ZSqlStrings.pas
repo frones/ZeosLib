@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF},
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF}ZClasses,
   ZDbcIntfs, ZTokenizer, ZGenericSqlToken, ZCompatibility;
 
 type
@@ -348,14 +348,14 @@ procedure TZSQLStrings.RebuildAll;
 var
   Tokens: TZTokenList;
   Token: PZToken;
-  StartTokenIndex,
   TokenIndex: Integer;
   ParamIndex: Integer;
   ParamIndices: TIntegerDynArray;
   ParamIndexCount: Integer;
-  ParamName, SQL, S: string;
+  ParamName, S, NormalizeParam: string;
+  SQL: SQLString;
   Tokenizer: IZTokenizer;
-
+  SQLStringWriter: TZSQLStringWriter;
   procedure NextToken;
   begin
     Token := Tokens[TokenIndex];
@@ -372,9 +372,9 @@ begin
   SetLength(ParamIndices, ParamIndexCount);
 
   { Optimization for empty query. }
-  If Length(Trim(Text)) = 0 then
-    Exit;
   S := Text;
+  If Length(Trim(S)) = 0 then
+    Exit;
   { Optimization for single query without parameters. }
   if (not FParamCheck or (Pos(FParamChar, S) = 0))
     and (not FMultiStatements or (Pos(';', S) = 0)) then
@@ -384,58 +384,45 @@ begin
   end;
 
   Tokenizer := GetTokenizer;
+  SQLStringWriter := TZSQLStringWriter.Create(Length(S));
   Tokens := Tokenizer.TokenizeBufferToList(S, [toSkipComments, toUnifyWhitespaces]);
   try
     TokenIndex := 0;
-    StartTokenIndex := 0;
     repeat
       NextToken;
       { Processes parameters. }
       if ParamCheck and (Token.P^ = FParamChar) and (Token.L = 1) then begin
         NextToken;
         if (Token.TokenType <> ttEOF) then begin
-          if not ((Token.P^ = FParamChar) and (Token.L = 1)) then begin
+          if not ((Token.P^ = FParamChar) and (Token.L = 1)) then begin //test unescape FParamChar
             { Check for correct parameter type. }
-            if not (Token.TokenType in [ttWord, ttQuoted, ttQuotedIdentifier, ttKeyWord]) then
-              raise EZDatabaseError.Create(SIncorrectToken)
-            else begin
-              Dec(TokenIndex);
-              Tokens.Delete(TokenIndex-1);
-              Token := Tokens[TokenIndex-1];
-            end;
-  
-            if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
-            then ParamName := Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^)
-            else ParamName := TokenAsString(Token^);
-  
-            Token.P := pQuestionMark;
-            Token.L := 1;
-  
+            if not (Token.TokenType in [ttWord, ttQuoted, ttQuotedIdentifier, ttKeyWord, ttInteger]) then
+              raise EZDatabaseError.Create(SIncorrectToken);
+            NormalizeParam := Tokenizer.NormalizeParamToken(Token^, ParamName);
+            SQLStringWriter.AddText(NormalizeParam, SQL);
             ParamIndex := FindParam(ParamName);
             if ParamIndex < 0 then
               ParamIndex := FParams.Add(ParamName);
-  
+
             Inc(ParamIndexCount);
             SetLength(ParamIndices, ParamIndexCount);
             ParamIndices[ParamIndexCount - 1] := ParamIndex;
-  
+
             Continue;
-          end
-          else begin // unescape FParamChar
-            Tokens.Delete(TokenIndex-1);
-            Token := Tokens[TokenIndex-1];
-          end;
+          end else
+            SQLStringWriter.AddText(Token.P, 1, SQL);
         end;
-      end;
+      end else
+        SQLStringWriter.AddText(Token.P, Token.L, SQL);
 
       { Adds a DML statement. }
-      if (Token.TokenType = ttEOF) or (FMultiStatements and ((Token.P^ = ';') and (Token.L = 1))) then
-      begin
-        SQL := Trim(Tokens.AsString(StartTokenIndex, TokenIndex-2));
+      if (Token.TokenType = ttEOF) or (FMultiStatements and ((Token.P^ = ';') and (Token.L = 1))) then begin
+        SQLStringWriter.CancelLastCharIfExists(';', SQL);
+        SQLStringWriter.Finalize(SQL);
+        SQL := Trim(SQL);
         if SQL <> '' then
           FStatements.Add(TZSQLStatement.Create(SQL, ParamIndices, FParams));
         SQL := '';
-        StartTokenIndex := TokenIndex +1;
         ParamIndexCount := 0;
         SetLength(ParamIndices, ParamIndexCount);
       end;
@@ -443,6 +430,7 @@ begin
   finally
     S := ''; //hooking compiler optimisation
     Tokens.Free;
+    SQLStringWriter.Free;
   end;
 end;
 

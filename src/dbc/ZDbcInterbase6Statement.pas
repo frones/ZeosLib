@@ -60,7 +60,7 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils, ZClasses,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver, ZCompatibility,
-  ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet;
+  ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet, ZDbcUtils;
 
 type
   {** Implements Prepared SQL Statement for Interbase or FireBird. }
@@ -180,7 +180,7 @@ implementation
 
 uses Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet,
-  ZDbcUtils, ZDbcResultSet, ZTokenizer;
+  ZDbcResultSet, ZTokenizer;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
   Stmt: TZInterbase6PreparedStatement; ArrayOffSet, ArrayItersCount: Integer);
@@ -296,7 +296,7 @@ var iError: ISC_STATUS;
 begin
   if BatchDMLArrayCount = 0 then
     With FIBConnection do begin
-      if FStatementType = stExecProc
+      if (FStatementType = stExecProc)
       then iError := FPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
         @FStmtHandle, GetDialect, FParamXSQLDA, FResultXSQLDA.GetData) //expecting out params
       else iError := FPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
@@ -591,6 +591,7 @@ function TZAbstractInterbase6PreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   LastResultSet := nil;
+  PrepareOpenResultSetForReUse;
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
@@ -598,8 +599,12 @@ begin
   if BatchDMLArrayCount = 0 then
     case FStatementType of
       stCommit, stRollback, stUnknown: Result := -1;
-      stSelect: if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
-                  CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
+      stSelect: if BindList.HasOutParam then begin
+          FOutParamResultSet := CreateResultSet;
+          FOpenResultSet := nil;
+        end else if FResultXSQLDA.GetFieldCount <> 0 then
+          if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
+            CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
       stExecProc: { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
           FOutParamResultSet := CreateResultSet;

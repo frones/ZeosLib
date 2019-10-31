@@ -2505,24 +2505,11 @@ begin
       with ColumnInfo do
       begin
         //EH 10.07.2019 comment all getters who force LoadColumns of the NativeResultset-Metadata
-        //AutoIncrement := Metadata.IsAutoIncrement(i);
-        //CaseSensitive := Metadata.IsCaseSensitive(i);
-        //Searchable := Metadata.IsSearchable(i);
         Currency := Metadata.IsCurrency(i);
-        //Nullable := Metadata.IsNullable(i);
         Signed := Metadata.IsSigned(i);
-        ColumnLabel := Metadata.GetColumnLabel(i);
-        //ColumnName := Metadata.GetColumnName(i);
-        //SchemaName := Metadata.GetSchemaName(i);
+        ColumnLabel := Metadata.GetOrgColumnLabel(i);
         Precision := Metadata.GetPrecision(i);
-        //Scale := Metadata.GetScale(i);
-        //TableName := Metadata.GetTableName(i);
-        //CatalogName := Metadata.GetCatalogName(i);
         ColumnType := Metadata.GetColumnType(i);
-        //ReadOnly := Metadata.IsReadOnly(i);
-        //Writable := Metadata.IsWritable(i);
-        //DefinitelyWritable := Metadata.IsDefinitelyWritable(i);
-        //DefaultValue := Metadata.GetDefaultValue(i);
         ColumnCodePage := Metadata.GetColumnCodePage(i);
       end;
       ColumnsInfo.Add(ColumnInfo);
@@ -3288,7 +3275,7 @@ function TZAbstractDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColColumnsDynArray);
+  Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 end;
 
 {**

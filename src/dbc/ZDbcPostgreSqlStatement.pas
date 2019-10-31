@@ -1042,7 +1042,10 @@ var
     P: Pointer;
     BCD: TBCD;
   begin
-    SQLWriter := TZRawSQLStringWriter.Create(Length(FASQL));
+    I := Length(FASQL);
+    N := BindList.Count shr 4;
+    I := I + N;
+    SQLWriter := TZRawSQLStringWriter.Create(I);
     TmpSQL := '';
     N := 0;
     for I := 0 to High(FCachedQueryRaw) do
@@ -1124,6 +1127,7 @@ var
       end else
         SQLWriter.AddText(FCachedQueryRaw[i], TmpSQL);
     SQLWriter.Finalize(TmpSQL);
+    SQLWriter.Free;
     if (FPQResultFormat = ParamFormatBin)
     then Result := FPlainDriver.PQexecParams(FconnAddress^, Pointer(TmpSQL),
         0, nil, nil, nil, nil, ParamFormatBin)
@@ -1343,7 +1347,7 @@ begin
             end;
           ComparePrefixTokens := nil; //stop compare sequence
         end;
-        if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = '$') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttWord))) then begin
+        if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = '$') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttInteger))) then begin
           Inc(ParamsCnt);
           {$IFDEF UNICODE}
           Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, FClientCP);

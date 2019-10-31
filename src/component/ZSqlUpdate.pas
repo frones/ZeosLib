@@ -57,7 +57,7 @@ interface
 
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
-  ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings;
+  ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings, ZClasses;
 
 type
   {ADDED BY fduenas}
@@ -83,6 +83,10 @@ type
     //FOSPATCH
     FRefreshSQL: TZSQLStrings;
     //FOSPATCH
+    //EH: Stmt cache for performance boost using prepareds
+    FStmts: Array[utModified..utDeleted] of IZCollection;
+    FRefreshRS: IZResultSet;
+    FRefreshStmt: IZPreparedStatement;
 
     FParamCheck: Boolean;
     FParams: TParams;
@@ -129,7 +133,7 @@ type
 
   protected
     procedure Apply_RefreshResultSet(const Sender: IZCachedResultSet;
-      const RefreshResultSet: IZResultSet;const RefreshRowAccessor: TZRowAccessor);
+      const RefreshResultSet: IZResultSet; const RefreshRowAccessor: TZRowAccessor);
 
     procedure DefineProperties(Filer: TFiler); override;
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
@@ -223,7 +227,7 @@ implementation
 
 uses FmtBCD,
   ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset, ZAbstractDataset,
-  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZClasses;
+  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZCollections;
 
 { TZUpdateSQL }
 
@@ -232,6 +236,7 @@ uses FmtBCD,
   @param AOwner a component owner.
 }
 constructor TZUpdateSQL.Create(AOwner: TComponent);
+var RowUpdateType: TZRowUpdateType;
 begin
   inherited Create(AOwner);
 
@@ -250,6 +255,8 @@ begin
   FParams := TParams.Create(Self);
   FParamCheck := True;
   FMultiStatements := True;
+  for RowUpdateType := utModified to utDeleted do
+    FStmts[RowUpdateType] := TZCollection.Create;
 end;
 
 {**
@@ -266,7 +273,6 @@ begin
    else IntfAssign of FPC fails to clear the cached resolver of the CachedResultSet}
   if Assigned(FDataSet) and (FDataSet is TZAbstractDataset) then
     TZAbstractDataset(DataSet).UpdateObject := nil;
-
   inherited Destroy;
 end;
 
@@ -330,8 +336,7 @@ end;
 }
 procedure TZUpdateSQL.SetParamCheck(Value: Boolean);
 begin
-  if FParamCheck <> Value then
-  begin
+  if FParamCheck <> Value then begin
     FParamCheck := Value;
     FModifySQL.ParamCheck := Value;
     FInsertSQL.ParamCheck := Value;
@@ -346,8 +351,7 @@ end;
 }
 procedure TZUpdateSQL.SetMultiStatements(Value: Boolean);
 begin
-  if FMultiStatements <> Value then
-  begin
+  if FMultiStatements <> Value then begin
     FMultiStatements := Value;
     FModifySQL.MultiStatements := Value;
     FInsertSQL.MultiStatements := Value;
@@ -368,6 +372,11 @@ end;
 procedure TZUpdateSQL.SetRefreshSQL(Value: TStrings);
 begin
   FRefreshSQL.Assign(Value);
+  if (FRefreshRS <> nil) then begin
+    FRefreshRS.Close;
+    FRefreshRS := nil;
+  end;
+  FRefreshStmt := nil;
 end;
 
 procedure TZUpdateSQL.SetUseSequenceFieldForRefreshSQL(const Value: Boolean);
@@ -429,6 +438,7 @@ end;
 procedure TZUpdateSQL.SetDeleteSQL(Value: TStrings);
 begin
   FDeleteSQL.Assign(Value);
+  FStmts[utDeleted].Clear;
 end;
 
 {**
@@ -447,6 +457,7 @@ end;
 procedure TZUpdateSQL.SetInsertSQL(Value: TStrings);
 begin
   FInsertSQL.Assign(Value);
+  FStmts[utInserted].Clear;
 end;
 
 {**
@@ -465,6 +476,7 @@ end;
 procedure TZUpdateSQL.SetModifySQL(Value: TStrings);
 begin
   FModifySQL.Assign(Value);
+  FStmts[utModified].Clear;
 end;
 
 {**
@@ -554,28 +566,26 @@ var
   TS: TZTimeStamp absolute BCD;
   D: TZDate absolute BCD;
   T: TZTime absolute BCD;
+  Metadata: IZResultSetMetadata;
 begin
   WasNull := False;
-  for I := 0 to Config.ParamCount - 1 do
-  begin
+  Metadata := ResultSet.GetMetadata;
+  for I := 0 to Config.ParamCount - 1 do begin
     ParamValue := Params.FindParam(Config.ParamNames[I]);
     ParamName := Config.ParamNames[I];
     OldParam := False;{Seqparam:=False;}
     if StrLIComp(PChar(ParamName), 'NEW_', 4) = 0 then
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4)
-    else if StrLIComp(PChar(ParamName), 'OLD_', 4) = 0 then
-    begin
+    else if StrLIComp(PChar(ParamName), 'OLD_', 4) = 0 then begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4);
       OldParam := True;
     end;
 
     ColumnIndex := ResultSet.FindColumn(ParamName);
-    if ColumnIndex >= FirstDbcIndex then
-    begin
-      if OldParam then
-        RowAccessor := OldRowAccessor
-      else
-        RowAccessor := NewRowAccessor;
+    if ColumnIndex >= FirstDbcIndex then begin
+      if OldParam
+      then RowAccessor := OldRowAccessor
+      else RowAccessor := NewRowAccessor;
 
       (*if StrToBoolEx(DefineStatementParameter(
         ResultSet.GetStatement, DSProps_Defaults, 'true')) then
@@ -584,8 +594,8 @@ begin
 
       if RowAccessor.IsNull(ColumnIndex) then
         Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-          ResultSet.GetMetadata.GetColumnType(ColumnIndex))
-      else case ResultSet.GetMetadata.GetColumnType(ColumnIndex) of
+          Metadata.GetColumnType(ColumnIndex))
+      else case Metadata.GetColumnType(ColumnIndex) of
         stBoolean:
           Statement.SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
             RowAccessor.GetBoolean(ColumnIndex, WasNull));
@@ -694,22 +704,18 @@ var
 Label CheckColumnType;
 begin
   if Assigned(RefreshResultSet) then begin
-    if (RefreshResultSet.GetType = rtForwardOnly) then
-    begin
+    if (RefreshResultSet.GetType = rtForwardOnly) then begin
       if not RefreshResultSet.Next then
         raise EZDatabaseError.Create(SUpdateSQLNoResult);
-    end
-    else if not (RefreshResultSet.GetType = rtForwardOnly) and  not RefreshResultSet.First then
-        raise EZDatabaseError.Create(SUpdateSQLNoResult);
-    for I := FirstDbcIndex to RefreshResultSet.GetMetadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    begin
+    end else if not (RefreshResultSet.GetType = rtForwardOnly) and  not RefreshResultSet.First then
+      raise EZDatabaseError.Create(SUpdateSQLNoResult);
+    for I := FirstDbcIndex to RefreshResultSet.GetMetadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
       RefreshColumnName := RefreshResultSet.GetMetadata.GetColumnLabel(I); // What Column from Resultset should be updated
       RefreshColumnIndex := Sender.FindColumn(RefreshColumnName); // Is the Column available in the select ?
       if RefreshColumnIndex = InvalidDbcIndex then continue; // Column not found in Select from Dataset
       if RefreshResultSet.IsNull(I) then
         RefreshRowAccessor.SetNull(RefreshColumnIndex)
-      else
-      begin
+      else begin
         RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(I); // Type of Column ?
 CheckColumnType:
         case RefreshColumnType of
@@ -797,9 +803,7 @@ var
   CalcDefaultValues,
   ExecuteStatement,
   UpdateAutoIncFields: Boolean;
-  S,
-  Refresh_OldSQL:String;
-  RefreshResultSet: IZResultSet;
+  Tmp:String;
   lValidateUpdateCount : Boolean;
   lUpdateCount : Integer;
 
@@ -842,13 +846,17 @@ begin
 
   if Dataset is TZAbstractRODataset then
     (Dataset as TZAbstractRODataset).Connection.ShowSqlHourGlass;
-  CalcDefaultValues :=
-    ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
+  CalcDefaultValues := ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
   try
-    for I := 0 to Config.StatementCount - 1 do
-    begin
-      Statement := Sender.GetStatement.GetConnection.
-        PrepareStatement(Config.Statements[I].SQL);
+    for I := 0 to Config.StatementCount - 1 do begin
+      if (FStmts[UpdateType].Count <= i) or not (FStmts[UpdateType][i].QueryInterface(IZPreparedStatement, Statement) = S_OK) or
+         Statement.IsClosed or (Sender.GetStatement.GetParameters.Text <> Statement.GetParameters.Text) then begin
+        Statement := Sender.GetStatement.GetConnection.PrepareStatementWithParams(
+          Config.Statements[I].SQL, Sender.GetStatement.GetParameters);
+        if (FStmts[UpdateType].Count <= i)
+        then FStmts[UpdateType].Add(Statement)
+        else FStmts[UpdateType][i] := Statement;
+      end;
       FillStatement(Sender, Statement, Config.Statements[I],
         OldRowAccessor, NewRowAccessor);
       {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
@@ -864,8 +872,8 @@ begin
       end;
       if ExecuteStatement then begin
         // if Property ValidateUpdateCount isn't set : assume it's true
-        S := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
-        lValidateUpdateCount := (S = '') or StrToBoolEx(S);
+        Tmp := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
+        lValidateUpdateCount := (Tmp = '') or StrToBoolEx(Tmp);
 
         lUpdateCount := Statement.ExecuteUpdatePrepared;
         {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
@@ -875,8 +883,7 @@ begin
 
         case UpdateType of
           utDeleted: DoAfterDeleteSQLStatement(Self, I);
-          utInserted:
-            begin
+          utInserted: begin
              DoAfterInsertSQLStatement(Self, I, UpdateAutoIncFields);
              if CalcDefaultValues and UpdateAutoIncFields then
                 UpdateAutoIncrementFields(Sender, UpdateType,
@@ -890,28 +897,28 @@ begin
 //FOSPATCH
     case UpdateType of
       utInserted, utModified:
-        if FRefreshSql.Text <> '' then
-        begin
-          Refresh_OldSQL := FRefreshSql.Text;
+        if FRefreshSql.Text <> '' then begin
+          Tmp := FRefreshSql.Text;
           try
             Config:=FRefreshSQL;
-            if UpdateType=utInserted then
-              if Dataset is TZAbstractDataset then
+            if (UpdateType = utInserted) then
+              if (Dataset is TZAbstractDataset) then
                 if FUseSequenceFieldForRefreshSQL then
                   if (TZAbstractDataset(DataSet).Sequence <> nil) and
                      (TZAbstractDataset(DataSet).SequenceField<>'') then
                     Config.Text := StringReplace(UpperCase(Config.Text),
                       ':OLD_'+UpperCase(TZAbstractDataset(DataSet).SequenceField),
                       TZAbstractDataset(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
-            if CONFIG.StatementCount = 1 then
-            begin
-              Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
+            if CONFIG.StatementCount = 1 then begin
+              if (FRefreshStmt = nil) or FRefreshStmt.IsClosed
+              then Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL)
+              else Statement := FRefreshStmt;
               FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
-              RefreshResultSet:=Statement.ExecuteQueryPrepared;
-              Apply_RefreshResultSet(Sender,RefreshResultSet,NewRowAccessor);
+              FRefreshRS := Statement.ExecuteQueryPrepared;
+              Apply_RefreshResultSet(Sender,FRefreshRS,NewRowAccessor);
             end;
           finally
-            FRefreshSQL.Text:=Refresh_OldSQL;
+            FRefreshSQL.Text:=Tmp;
           end;
         end;
     end; {case... }

@@ -1660,12 +1660,17 @@ end;
 procedure TZIBTransaction.ReleaseImmediat(const Sender: IImmediatelyReleasable;
   var AError: EZSQLConnectionLost);
 var I: Integer;
+  ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   FTrHandle := 0;
   fSavepoints.Clear;
   I := FOwner.FTransactions.IndexOf(Self);
   if I > -1 then
     FOwner.FTransactions.Delete(I);
+  for i := FOpenUncachedLobs.Count -1 downto 0 do
+    if Supports(IZBlob(FOpenUncachedLobs[i]), IImmediatelyReleasable, ImmediatelyReleasable) and
+       (Sender <> ImmediatelyReleasable) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZIBTransaction.Rollback;

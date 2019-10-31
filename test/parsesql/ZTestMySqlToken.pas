@@ -92,11 +92,11 @@ end;
 }
 procedure TZTestMySQLTokenizer.TestCommentState;
 const
-  TokenString1: string = 'aaa/*bbb*/ccc#ddd'#10'--a'#10'/*!az*/';
+  TokenString1: string = 'aaa/*bbb*/ccc#ddd'#10'-- a'#10'/*!az*/';
   TokenTypes1: array[0..5] of TZTokenType = (
     ttWord, ttComment, ttWord, ttComment, ttComment, ttSymbol);
   TokenValues1: array[0..5] of string = (
-    'aaa', '/*bbb*/', 'ccc', '#ddd'#10, '--a'#10, '/*!az*/');
+    'aaa', '/*bbb*/', 'ccc', '#ddd'#10, '-- a'#10, '/*!az*/');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);
