@@ -3340,17 +3340,14 @@ zFlush: Inc(Value);
         if Value = VEnd then Break;
         B := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PF)^;
         while ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PF)^ = B) and (PF < FEnd) do Inc(PF);
+        F := {$IFDEF UNICODE}Byte(PWord(PF)^ or $0020){$ELSE}PByte(PF)^ or $20{$ENDIF};
+        B := PByte(Value-1)^ or $20;
+        if (F in [Byte(' '), Byte('t')]) and (B in [Byte(' '), Byte('t')]) then
+          Exit;
       end else
         Exit;
     end;
   end;
-  if (TimeStamp.Day >= 100) then //reverse logic for the german format ... obsolete??
-    if TimeStamp.Year <= 31 then begin
-      B := TimeStamp.Year;
-      TimeStamp.Year := TimeStamp.Day;
-      TimeStamp.Day := B;
-    end else
-      Exit;
   if (Len > 0) and (Len < 9) then
     TimeStamp.Fractions := TimeStamp.Fractions * FractionLength2NanoSecondMulTable[Len];
   Result := True;
@@ -3491,17 +3488,14 @@ zFlush: Inc(Value);
         if Value = VEnd then Break;
         B := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PF)^;
         while ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PF)^ = B) and (PF < FEnd) do Inc(PF);
+        F := {$IFDEF UNICODE}Byte(PWord(PF)^ or $0020){$ELSE}PByte(PF)^ or $20{$ENDIF};
+        B := Byte(PWord(Value-1)^ or $0020);
+        if (F in [Byte(' '), Byte('t')]) and (B in [Byte(' '), Byte('t')]) then
+          Exit;
       end else
         Exit;
     end;
   end;
-  if (TimeStamp.Day >= 100) then //reverse logic for the german format ... obsolete??
-    if TimeStamp.Year <= 31 then begin
-      B := TimeStamp.Year;
-      TimeStamp.Year := TimeStamp.Day;
-      TimeStamp.Day := B;
-    end else
-      Exit;
   if (Len > 0) and (Len < 9) then
     TimeStamp.Fractions := TimeStamp.Fractions * FractionLength2NanoSecondMulTable[Len];
   Result := True;
@@ -3699,11 +3693,8 @@ var TS: TZTimeStamp;
 begin
   if Len <= FormatSettings.DateFormatLen then begin
     Result := TryRawToDate(P,  Len, FormatSettings.DateFormat, Date);
-    if not Result then begin
-      if FormatCompare(FormatSettings.DateTimeFormat, DefDateFormatYMD, 10)
-      then Result := TryRawToDate(P,  Len, DefDateFormatDMY, Date)
-      else Result := TryRawToDate(P,  Len, DefDateFormatYMD, Date);
-    end;
+    if not Result and not FormatCompare(FormatSettings.DateFormat, DefDateFormatYMD, FormatSettings.DateFormatLen) then
+      Result := TryRawToDate(P,  Len, DefDateFormatYMD, Date);
   end else begin
     Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-});
     if Result then begin
@@ -3722,11 +3713,8 @@ var TS: TZTimeStamp;
 begin
   if Len <= FormatSettings.DateFormatLen then begin
     Result := TryUniToDate(P,  Len, FormatSettings.DateFormat, Date);
-    if not Result then begin
-      if FormatCompare(FormatSettings.DateTimeFormat, DefDateFormatYMD, 10)
-      then Result := TryUniToDate(P,  Len, DefDateFormatDMY, Date)
-      else Result := TryUniToDate(P,  Len, DefDateFormatYMD, Date);
-    end;
+    if not Result and not FormatCompare(FormatSettings.DateFormat, DefDateFormatYMD, FormatSettings.DateFormatLen) then
+      Result := TryUniToDate(P,  Len, DefDateFormatYMD, Date);
   end else begin
     Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-});
     if Result then begin
@@ -3800,11 +3788,8 @@ begin
        ((FormatSettings.DateTimeFormatLen - Len ) <= 4) then begin
       Result := TryRawToTimeStamp(P, Len,
         FormatSettings.DateTimeFormat, TimeStamp);
-      if not Result then begin
-        if FormatCompare(FormatSettings.DateTimeFormat, ZCompatibility.DefDateFormatYMD, 10)
-        then Result := TryRawToTimeStamp(P, Len, DefDateTimeFormatMsecsDMY, TimeStamp)
-        else Result := TryRawToTimeStamp(P, Len, DefDateTimeFormatMsecsYMD, TimeStamp)
-      end;
+      if not Result and not FormatCompare(FormatSettings.DateTimeFormat, DefDateFormatYMD, 10) then
+        Result := TryRawToTimeStamp(P,  Len, DefDateTimeFormatMsecsYMD, TimeStamp);
     end else begin
       PInt64(@TimeStamp.Hour)^ := 0;
       PInt64(@TimeStamp.Fractions)^ := 0;
@@ -3827,11 +3812,8 @@ begin
     end else if (Len >= FormatSettings.DateTimeFormatLen) or
        ((FormatSettings.DateTimeFormatLen - Len ) <= 4) then begin
       Result := TryUniToTimeStamp(P, Len, FormatSettings.DateTimeFormat, TimeStamp);
-      if not Result then begin
-        if FormatCompare(FormatSettings.DateTimeFormat, ZCompatibility.DefDateFormatYMD, 10)
-        then Result := TryUniToTimeStamp(P, Len, DefDateTimeFormatMsecsDMY, TimeStamp)
-        else Result := TryUniToTimeStamp(P, Len, DefDateTimeFormatMsecsYMD, TimeStamp)
-      end;
+      if not Result and not FormatCompare(FormatSettings.DateTimeFormat, DefDateFormatYMD, 10) then
+        Result := TryUniToTimeStamp(P,  Len, DefDateTimeFormatMsecsYMD, TimeStamp);
     end else begin
       PInt64(@TimeStamp.Hour)^ := 0;
       PInt64(@TimeStamp.Fractions)^ := 0;
