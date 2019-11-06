@@ -88,7 +88,7 @@ uses SysUtils, Types, ZStoredProcedure, ZTestCase;
 
 function TZTestCompMSSqlBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005';
+  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,ado';
 end;
 
 {**

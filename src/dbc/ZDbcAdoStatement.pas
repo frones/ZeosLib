@@ -288,8 +288,8 @@ begin
   LastUpdateCount := -1;
   BindInParameters;
   try
-      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adExecuteNoRecords);
-      LastUpdateCount := {%H-}RC;
+    AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adExecuteNoRecords);
+    LastUpdateCount := {%H-}RC;
     Result := LastUpdateCount;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except

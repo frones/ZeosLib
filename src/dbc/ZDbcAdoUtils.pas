@@ -529,7 +529,9 @@ begin
                 tagVariant(V).vt := VT_BOOL;
                 tagVariant(V).vbool := RetValue.VBoolean;
               end;
-    vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
+    vtBytes: if TmpSQLType = stGUID
+             then V := GUIDToUnicode(RetValue.VBytes)
+             else V := SoftVarManager.GetAsBytes(RetValue);
     vtInteger: begin
                 tagVariant(V).vt := VT_I8;
                 {$IFDEF WITH_tagVARIANT_UINT64}
@@ -574,7 +576,7 @@ begin
       end;
   end;
 
-  if VarIsNull(V) or (SQLType = stBytes) then
+  if VarIsNull(V) or (SQLType = stBytes) or (SQLType = stGUID) then
     T := ConvertSqlTypeToAdo(TmpSQLType)
   else
     T := ConvertVariantToAdo(VarType(V));
