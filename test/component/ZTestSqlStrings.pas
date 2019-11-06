@@ -73,6 +73,7 @@ type
     procedure TestParams;
     procedure TestParamChar;
     procedure TestUncompleted;
+    procedure TestTicket384;
  end;
 
 implementation
@@ -224,6 +225,28 @@ begin
   CheckEquals('NEW_ADDRESS', SQLStrings.Statements[1].ParamNames[1]);
   CheckEquals('ID', SQLStrings.Statements[1].ParamNames[2]);
   CheckEquals('NAME', SQLStrings.Statements[1].ParamNames[3]);
+end;
+
+(*
+Hello,
+today I have discovered a regression in 7.3alpha (since revision 4629).
+The TZSQLStrings does not correctly unescape colons in SQL
+(e.g. EXECUTE BLOCK with variables). Attached is a test and a patch.
+Best regards, Joe
+*)
+procedure TZTestSQLStringsCase.TestTicket384;
+begin
+  SQLStrings.Text :=
+      'EXECUTE BLOCK AS '#10+
+      'DECLARE CNT INT; '#10+
+      'BEGIN'#10+
+      'SELECT COUNT(*) FROM table1 WHERE key=1 INTO ::CNT;'#10+
+      'IF (CNT=0) THEN'#10+
+      'INSERT INTO table1 (key,value) VALUES (1, ''bug'');'#10+
+      'END';
+  Check((SQLStrings.ParamCount <> 0) or (SQLStrings.StatementCount <> 1)
+    or (SQLStrings.Statements[0].SQL <> 'EXECUTE BLOCK AS DECLARE CNT INT; BEGIN SELECT COUNT(*) FROM table1 WHERE key=1 INTO :CNT; IF (CNT=0) THEN INSERT INTO table1 (key,value) VALUES (1, ''bug''); END'),
+      'BUGCHECK! Ticked384');
 end;
 
 {**

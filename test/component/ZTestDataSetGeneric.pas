@@ -98,6 +98,7 @@ type
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
     procedure TestInsertNumbers;
+    procedure TestNullDateTimeValues;
     procedure TestDoubleFloatParams;
     procedure TestClobEmptyString;
     procedure TestLobModes;
@@ -118,7 +119,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  {$IFDEF UNICODE}ZEncoding,{$ENDIF}
+  {$IFDEF UNICODE}ZEncoding,{$ENDIF}ZFastCode,
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
   TypInfo;
@@ -212,9 +213,9 @@ begin
   try
     with Query do
     begin
-      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
-      SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM equipment where eq_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
     end;
 
@@ -387,9 +388,9 @@ begin
       CheckEquals(1, RowsAffected);
     end;
   finally
-    Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+    Query.SQL.Text := 'DELETE FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
-    Query.SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+    Query.SQL.Text := 'DELETE FROM equipment where eq_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
     Query.Free;
   end;
@@ -407,7 +408,7 @@ begin
   try
     with Query do
     begin
-      SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM equipment where eq_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
     end;
     //see http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=49966
@@ -521,36 +522,36 @@ begin
   //  Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
   //  Check(Statement.Execute('SELECT * FROM equipment'));
 
-      SQL.Text := 'DELETE FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
 
       { insert row to department table }
       SQL.Text := 'INSERT INTO department VALUES (' +
-        IntToStr(TEST_ROW_ID) + ',''Some agency'',''ENG'',''Some city'')';
+        SysUtils.IntToStr(TEST_ROW_ID) + ',''Some agency'',''ENG'',''Some city'')';
       ExecSQL;
       CheckEquals(1, RowsAffected);
 
       { check what row inserted }
-      SQL.Text := 'SELECT * FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'SELECT * FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       Open;
       CheckEquals(1, RecordCount);
       Close;
 
       { update row in department table }
       SQL.Text := 'UPDATE department SET dep_name=NULL, dep_shname=NULL, dep_address=NULL WHERE dep_id = ' +
-      IntToStr(TEST_ROW_ID);
+      SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
       CheckEquals(1, RowsAffected);
       Close;
 
       { delete value from department table }
-      SQL.Text := 'DELETE FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
       CheckEquals(1, RowsAffected);
       Close;
 
       { check what row deleted }
-      SQL.Text := 'SELECT * FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'SELECT * FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       Open;
       CheckEquals(True, IsEmpty);
       Close;
@@ -578,7 +579,7 @@ begin
     with TZAbstractRODatasetHack(Query) do
     begin
       Options := aOptions;
-      SQL.Text := 'SELECT * FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
+      SQL.Text := 'SELECT * FROM blob_values where b_id >= '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       Open;
       CheckEquals(2, RecordCount, 'RecordCount');
       CheckEquals(False, IsEmpty);
@@ -658,10 +659,10 @@ begin
   StrStream1 := nil;
   BinStream1 := nil;
   try
-    Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+    Query.SQL.Text := 'DELETE FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
 
-    Query.SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+    Query.SQL.Text := 'DELETE FROM equipment where eq_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
 
     {
@@ -671,7 +672,7 @@ begin
     with Query do
     begin
       { insert test record to equipment }
-      Sql_ := 'SELECT * FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+      Sql_ := 'SELECT * FROM equipment where eq_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       SQL.Text := Sql_;
       Open;
       CheckEquals(True, IsEmpty);
@@ -744,11 +745,11 @@ begin
       }
     with Query do
     begin
-      Sql_ := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      Sql_ := 'DELETE FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       SQL.Text := Sql_;
       ExecSQL;
 
-      Sql_ := 'SELECT * FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+      Sql_ := 'SELECT * FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       StrStream := TMemoryStream.Create();
       StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
 
@@ -1155,17 +1156,17 @@ begin
   //  Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
   //  Check(Statement.Execute('SELECT * FROM equipment'));
 
-      SQL.Text := 'DELETE FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
 
       { insert row to department table }
       SQL.Text := 'INSERT INTO department VALUES (' +
-      IntToStr(TEST_ROW_ID) + ',''Some agency'',''ENG'',''Some city'')';
+        SysUtils.IntToStr(TEST_ROW_ID) + ',''Some agency'',''ENG'',''Some city'')';
       ExecSQL;
       CheckEquals(1, RowsAffected);
 
       { check what row inserted }
-      SQL.Text := 'SELECT * FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'SELECT * FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       Open;
       CheckEquals(1, RecordCount);
       Close;
@@ -1173,19 +1174,19 @@ begin
       { update row in department table }
       SQL.Text :=
       'UPDATE department SET dep_name=NULL, dep_shname=NULL, dep_address=NULL WHERE dep_id = ' +
-      IntToStr(TEST_ROW_ID);
+        SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
       CheckEquals(1, RowsAffected);
       Close;
 
       { delete value from department table }
-      SQL.Text := 'DELETE FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
       CheckEquals(1, RowsAffected);
       Close;
 
       { chech what recird deleted }
-      SQL.Text := 'SELECT * FROM department where dep_id = ' + IntToStr(TEST_ROW_ID);
+      SQL.Text := 'SELECT * FROM department where dep_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       Open;
       CheckEquals(True, IsEmpty);
       Close;
@@ -1307,7 +1308,7 @@ begin
     //(*
     //SF.net ticket #200 ->
     CheckEquals(1, Connection.DbcConnection.CreateStatement.ExecuteUpdate('insert into equipment(eq_id, eq_name) values ('+
-      IntToStr(5)+','''+DateToStr(Encodedate(2000, 8, 7))+''')'), 'inserted row');
+      SysUtils.IntToStr(5)+','''+DateToStr(Encodedate(2000, 8, 7))+''')'), 'inserted row');
     try
       Open;
       CheckEquals(5, RecordCount);
@@ -1317,7 +1318,7 @@ begin
       CheckEquals(5, FieldByName('eq_id').AsInteger, 'field eq_id');
 
     finally
-      Connection.DbcConnection.CreateStatement.ExecuteUpdate('delete from equipment where eq_id = '+IntToStr(5));
+      Connection.DbcConnection.CreateStatement.ExecuteUpdate('delete from equipment where eq_id = '+SysUtils.IntToStr(5));
     end;
     //*)
   end;
@@ -1547,12 +1548,14 @@ Runs a test for time filter expressions.
 procedure TZGenericTestDataSet.TestTimeFilterExpression;
 var
   Query: TZQuery;
+  DT: TDateTime;
 begin
   Query := CreateQuery;
   try
+    DT := EncodeTime(8,30,0,50);
     Query.SQL.Text := 'SELECT * FROM people';
     //!! Oracle: depend from local settings
-    Query.Filter := 'p_begin_work >= "'+TimeToStr(EncodeTime(8,30,0,50))+'"';
+    Query.Filter := 'p_begin_work >= "'+TimeToStr(DT)+'"';
     Query.Filtered := True;
     Query.Open;
     CheckEquals(4, Query.RecordCount);
@@ -1679,9 +1682,9 @@ begin
     with Query do
     begin
       Query.Options := aOptions;
-      SQL.Text := 'DELETE FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
+      SQL.Text := 'DELETE FROM blob_values where b_id >= '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       ExecSQL;
-      Sql.Text := 'INSERT INTO blob_values (b_id) values ('+IntToStr(TEST_ROW_ID-1)+')';
+      Sql.Text := 'INSERT INTO blob_values (b_id) values ('+SysUtils.IntToStr(TEST_ROW_ID-1)+')';
       ExecSQL;
 
       case ProtocolType of
@@ -1709,7 +1712,7 @@ begin
     TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
   finally
     FreeAndNil(BinStreamE);
-    Query.SQL.Text := 'DELETE FROM blob_values where b_id >= '+ IntToStr(TEST_ROW_ID-1);
+    Query.SQL.Text := 'DELETE FROM blob_values where b_id >= '+ SysUtils.IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
       if Assigned(TempConnection) then
@@ -1748,6 +1751,56 @@ begin
   end;
 end;
 
+procedure TZGenericTestDataSet.TestNullDateTimeValues;
+var
+  Query: TZQuery;
+  I, j, ID: Integer;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Could not establish a connection');
+  Query := CreateQuery;
+  try
+    ID := TEST_ROW_ID;
+    with Query do
+    begin
+      Sql.Text := 'select * from date_values';
+      Open;
+      Append;
+      {$IFDEF WITH_TAUTOREFRESHFLAG}
+      if Fields[0].AutoGenerateValue <> arAutoInc then
+      {$ENDIF}
+        Fields[0].AsInteger := ID;
+      Post;
+      {$IFDEF WITH_TAUTOREFRESHFLAG}
+      if Fields[0].AutoGenerateValue = arAutoInc then
+      {$ENDIF}
+        ID := Fields[0].AsInteger;
+      try
+        for i := 1 to Fields.Count-1 do begin
+          Check(Fields[i].IsNull, Fields[i].FieldName+' should be null');
+          Check(Fields[i].AsString='', Fields[i].FieldName+' should be empty');
+        end;
+        for j := 0 to 4 do begin //emulate fall into realprepared mode for some drivers
+          Close;
+          Open;
+          Last;
+          Check(RecordCount > 0, 'table date_values is not empty');
+          for i := 1 to Fields.Count-1 do begin
+            Check(Fields[i].IsNull, Fields[i].FieldName+' should be null');
+            Check(Fields[i].AsString='', Fields[i].FieldName+' should be empty');
+          end;
+          Close;
+        end;
+      finally
+        Connection.ExecuteDirect('DELETE FROM date_values where d_id='+ZFastCode.IntToStr(ID));
+      end;
+      Close;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
 procedure TZGenericTestDataSet.TestDoubleFloatParams;
 var
   Query: TZQuery;
@@ -1756,7 +1809,7 @@ begin
   try
     with Query do
     begin
-      SQL.Text := 'DELETE FROM number_values where n_id = '+ IntToStr(TEST_ROW_ID);
+      SQL.Text := 'DELETE FROM number_values where n_id = '+ SysUtils.IntToStr(TEST_ROW_ID);
       ExecSQL;
       Sql.Text := 'INSERT INTO number_values (n_id,n_float,n_dprecission)'
           + ' VALUES (:n_id,:n_float,:n_real)';
@@ -1771,7 +1824,7 @@ begin
 
       CheckEquals(1, RowsAffected);
 
-      SQL.Text := 'SELECT * FROM number_values where n_id = '+ IntToStr(TEST_ROW_ID);
+      SQL.Text := 'SELECT * FROM number_values where n_id = '+ SysUtils.IntToStr(TEST_ROW_ID);
       CheckEquals(0, Query.Params.Count);
 
       Open;
@@ -1811,7 +1864,7 @@ begin
   try
     with Query do
     begin
-      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-2);
       ExecSQL;
       if ProtocolType = protOracle then
       begin
@@ -1850,7 +1903,7 @@ begin
 
       CheckEquals(1, RowsAffected);
 
-      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-2);
       CheckEquals(0, Query.Params.Count);
 
       Open;
@@ -1863,7 +1916,7 @@ begin
     end;
   finally
     try
-      Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-2);
       Query.ExecSQL;
     finally
       Query.Free;
@@ -1913,7 +1966,7 @@ begin
     end;
     with Query do
     begin
-      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       ExecSQL;
       case ProtocolType of
         protOracle:
@@ -1962,7 +2015,7 @@ begin
       BinStreamA.Free;
       Post;
 
-      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       Open;
       TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmRead);
       BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmRead);
@@ -2039,7 +2092,7 @@ begin
     FreeAndNil(BinStreamE);
     FreeAndNil(TextStreamA);
     FreeAndNil(TextStreamE);
-    Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+    Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
       if Assigned(TempConnection) then
@@ -2062,9 +2115,9 @@ var
         Result := LowerCase(Value);
       protOracle, protFirebird, protInterbase:
         Result := UpperCase(Value);
-    else
+      else
         Result := Value;
-  end;
+    end;
   end;
 begin
   Query := CreateQuery;
@@ -2144,7 +2197,7 @@ begin
     Query.Post;
   finally
     Query.SQL.Text := 'delete from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names')+
-      ' where cs_id > '+IntToStr(TEST_ROW_ID-1);
+      ' where cs_id > '+SysUtils.IntToStr(TEST_ROW_ID-1);
     Query.ExecSQL;
     Query.Free;
   end;
@@ -2177,7 +2230,7 @@ procedure TZGenericTestDataSet.TestDefineFields;
     Fields := DefineFields(FQuery, FieldList, Bool, CommonTokenizer);
     CheckEquals(Length(Expect), Length(Fields), 'FieldList "' + FieldList + '" - item count');
     for i := Low(Fields) to High(Fields) do
-      CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+      CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
   end;
 
   procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptClass; const ExpectMsg: string = '');
@@ -2229,8 +2282,8 @@ procedure TZGenericTestDataSet.TestDefineSortedFields;
     CheckEquals(Length(ExpectCompareKinds), Length(CompareKinds), 'FieldList "' + FieldList + '" - item count');
     for i := Low(Fields) to High(Fields) do
     begin
-      CheckSame(ExpectFields[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
-      CheckEquals(Integer(ExpectCompareKinds[i]), Integer(CompareKinds[i]), 'FieldList "' + FieldList + '" - item #' + IntToStr(i));
+      CheckSame(ExpectFields[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
+      CheckEquals(Integer(ExpectCompareKinds[i]), Integer(CompareKinds[i]), 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
     end;
   end;
 
@@ -2479,7 +2532,7 @@ begin
     end;
     with Query do
     begin
-      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       ExecSQL;
       case ProtocolType of
         protOracle:
@@ -2532,7 +2585,7 @@ begin
 
       CheckEquals(1, RowsAffected);
 
-      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       CheckEquals(0, Query.Params.Count);
 
       Open;
@@ -2553,7 +2606,7 @@ begin
     FreeAndNil(BinStreamE);
     FreeAndNil(BinStreamA);
     FreeAndNil(TextStream);
-    Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+    Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
       if Assigned(TempConnection) then

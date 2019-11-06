@@ -3081,7 +3081,6 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
-  {$IFNDEF CPU64}pi64: PInt64Rec absolute Buffer;{$ENDIF}
 begin
   WasNull := False;
   if not Active then
