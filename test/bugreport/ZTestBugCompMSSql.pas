@@ -78,11 +78,12 @@ type
     procedure Mantis54;
     procedure Mantis164;
     procedure Test_SelectInformation_Schema;
+    procedure TestSF380;
   end;
 
 implementation
 
-uses SysUtils, Types, ZStoredProcedure, ZTestCase;
+uses SysUtils, Types, ZStoredProcedure, ZTestCase, ZAbstractRODataset;
 
 { TZTestCompMSSqlBugReport }
 
@@ -206,6 +207,59 @@ begin
   finally
     StoredProc.Free;
     Query.Free;
+  end;
+end;
+
+(**
+  User:
+  Is this the correct syntax and expected behaviour for using TZTable for
+    freetds, odbc, ado and oledb protocol in mssql server?
+
+  Answer of EH:
+    1. You have to end up the command batch queue to avoid the bussy exception.
+    2. SQLServer does not store any MetaInformations for temporary tables. So
+       Zeos can't say if the field can be modiied or not..
+**)
+procedure TZTestCompMSSqlBugReport.TestSF380;
+var
+  Query: TZQuery;
+  Table: TZTable;
+begin
+  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
+
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := false;
+    Query.Options := [doCalcDefaults];
+    Query.Sql.Add('create table #t (i int)');
+    Query.Sql.Add('insert into #t values (0)');
+    Query.ExecSQL;
+    Check((Query.RowsAffected = -1) or (Query.RowsAffected = 1), 'Rows affected of first command in batch');
+    //end up the command batch:
+    //Check(Query.NextRowsAffected, 'There is a second updatecount available');
+    CheckEquals(1, Query.RowsAffected, 'Rows affected of second command in batch');
+    Query.Sql.Text := 'select * from #t';
+    Query.Open;
+    CheckEquals(0, Query.Fields[0].AsInteger, 'The previously set value should be returned.');
+  finally
+    FreeAndNil(Query);
+  end;
+
+  Table := CreateTable;
+  try
+    Table.Options := [doCalcDefaults];
+    Table.TableName := '#t';
+    Table.Open;
+    CheckEquals(0, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+    Table.Edit;
+    Table.Fields[0].AsInteger := 3;
+    Table.Post;
+    Table.Close;
+    Table.Open;
+    CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
+  finally
+    FreeAndNil(Table);
+    Connection.ExecuteDirect('drop table #t');
   end;
 end;
 

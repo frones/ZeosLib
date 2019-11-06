@@ -100,7 +100,7 @@ const
   TokenTypes2: array[0..5] of TZTokenType = (
     ttSymbol, ttWord, ttComment, ttWord, ttComment, ttWhitespace);
   TokenValues2: array[0..5] of string = (
-    '-', 'aaa', '/*bbb*/', 'ccc', 'simple line comment', #10);
+    '-', 'aaa', '/*bbb*/', 'ccc', '--simple line comment'#10, #10);
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);
