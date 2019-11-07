@@ -1767,7 +1767,7 @@ begin
       Open;
       Append;
       {$IFDEF WITH_TAUTOREFRESHFLAG}
-      if Fields[0].AutoGenerateValue <> arAutoInc then
+      if (Fields[0].AutoGenerateValue <> arAutoInc) or not Fields[0].ReadOnly then
       {$ENDIF}
         Fields[0].AsInteger := ID;
       Post;

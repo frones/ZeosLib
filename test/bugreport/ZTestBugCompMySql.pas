@@ -115,6 +115,7 @@ type
     procedure TestBin_Collation;
     procedure TestEvalue2Params;
     procedure TestTicked240;
+    procedure TestTicked389;
   end;
 
 implementation
@@ -1853,17 +1854,84 @@ begin
       Query.Post;
       {$IFDEF WITH_ASLARGEINT}
       if Query.Fields[0] is TLargeIntField then
-        Check(TLargeIntField(Query.Fields[0]).AsLargeInt <> 0, 'autoincrement af unsigned bigint is not retrieved')
+        Check(TLargeIntField(Query.Fields[0]).AsLargeInt <> 0, 'autoincrement of unsigned bigint is not retrieved')
       else
-        Check(Query.Fields[0].AsInteger <> 0, 'autoincrement af unsigned bigint is not retrieved');
+      Check(Query.Fields[0].AsInteger <> 0, 'autoincrement of unsigned bigint is not retrieved');
       {$ELSE}
-      Check(Query.Fields[0].AsInteger <> 0, 'autoincrement af unsigned bigint is not retrieved');
+      Check(Query.Fields[0].AsInteger <> 0, 'autoincrement of unsigned bigint is not retrieved');
       {$ENDIF}
     end;
     Query.Close;
   finally
     try
-      Query.SQL.Text := 'delete from TableTicket240';
+      Query.SQL.Text := 'delete from TableTicket240 where 1=1';
+      Query.ExecSQL;
+    finally
+      Query.Free;
+    end;
+  end;
+end;
+
+(*
+I have quite a strange problem. (Mariadb 10.1.16, Dephi7)
+I want to read a bigint from a table via dataset.FindField('fieldname').AsString;
+With some numbers (0,1,2,3,4,5,10,...) I get the real value but for other numers (6,7,8,9,69,..,609) I get "0"
+Any sugestions?
+*)
+procedure TZTestCompMySQLBugReport.TestTicked389;
+const
+  TestValues: array[0..10] of Integer = (6,7,8,9,69,77,78,88,96,99,609);
+var
+  Query: TZQuery;
+  I, j: Integer;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.CachedUpdates := False;
+    Query.SQL.Text := 'select * from TableTicked389 order by 1';
+    Query.Open;
+    for i := Low(TestValues) to High(TestValues) do begin
+      Query.Append;
+      Query.Fields[1].AsInteger := TestValues[i];
+      Query.Post;
+      {$IFDEF WITH_ASLARGEINT}
+      if Query.Fields[0] Is TLargeIntField
+      then Check(TLargeIntField(Query.Fields[0]).AsLargeInt > 0, 'autoincrement of unsigned bigint is not retrieved')
+      else Check(Query.Fields[0].AsInteger > 0, 'autoincrement of unsigned bigint is not retrieved');
+      {$ELSE}
+      Check(Query.Fields[0].AsInteger > 0, 'autoincrement of unsigned bigint is not retrieved');
+      {$ENDIF}
+    end;
+    Query.Close;
+    for J := 0 to 4 do begin
+      Query.Open;
+      I := 0;
+      while not Query.EOF do begin
+        {$IFDEF WITH_ASLARGEINT}
+        if Query.Fields[0] Is TLargeIntField
+        then Check(TLargeIntField(Query.Fields[0]).AsLargeInt > 0, 'autoincrement of unsigned bigint is not retrieved')
+        else Check(Query.Fields[0].AsInteger > 0, 'autoincrement of unsigned bigint is not retrieved');
+        {$ELSE}
+        Check(Query.Fields[0].AsInteger > 0, 'autoincrement of unsigned bigint is not retrieved');
+        {$ENDIF}
+        {$IFDEF WITH_ASLARGEINT}
+        if Query.Fields[1] Is TLargeIntField
+        then CheckEquals(TestValues[I], TLargeIntField(Query.Fields[1]).AsLargeInt, 'value signed bigint is not retrieved')
+        else CheckEquals(TestValues[I], Query.Fields[1].AsInteger, 'value signed bigint is not retrieved');
+        {$ELSE}
+        CheckEquals(TestValues[I], Query.Fields[1].AsInteger, 'value signed is not retrieved');
+        {$ENDIF}
+        CheckEquals(IntToStr(TestValues[i]), Query.Fields[1].AsString, 'value as String');
+        Query.Next;
+        Inc(I);
+      end;
+      Query.Close;
+    end;
+  finally
+    try
+      Query.SQL.Text := 'delete from TableTicked389 where 1=1';
       Query.ExecSQL;
     finally
       Query.Free;

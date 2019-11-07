@@ -423,7 +423,7 @@ begin
   CheckEquals('/*!SELECT * FROM people*/', FProcessor.Statements[0]);
   CheckEquals('SELECT * FROM cargo', FProcessor.Statements[1]);
 
-  SQLScript := '--SELECT * FROM people;' + #10 + 'SELECT * FROM cargo;';
+  SQLScript := '-- SELECT * FROM people;' + #10 + 'SELECT * FROM cargo;';
   FProcessor.CleanupStatements := True;
   FProcessor.Script.Text := SQLScript;
   FProcessor.Parse;
@@ -447,7 +447,7 @@ procedure TZTestSQLProcessorMysqlCase.TestMysqlCommentDefaultProcessor;
 var
   Line: string;
   Delimiter: string;
-  Comment: string;
+  Comment, Comment2, NoComment: string;
   Text: string;
   NewLine: string;
 begin
@@ -456,16 +456,20 @@ begin
   NewLine := LineEnding;
   Line := '/AAA/ BBB CCC';
   Comment := '# Comment...';
+  Comment2 := '-- Comment...';
+  NoComment := '--123';
   Delimiter := ';';
 
-  Text := Comment + NewLine + Line + Delimiter + NewLine + '   ' + NewLine + Line +
-    Comment + Delimiter + NewLine + Comment + NewLine + Line;
+  Text := Comment + NewLine + Line + Delimiter +
+    NewLine + '   ' + NewLine + Line + Comment2 + Delimiter + NewLine + Comment + NewLine + Line+Delimiter+
+    NoComment+NewLine+Line;
   FProcessor.Script.Text := Text;
   FProcessor.Parse;
 
-  CheckEquals(2, FProcessor.StatementCount);
+  CheckEquals(3, FProcessor.StatementCount);
   CheckEquals(Comment + NewLine + Line, FProcessor.Statements[0]);
-  CheckEquals(Line + Comment + Delimiter + NewLine + Comment + NewLine + Line, FProcessor.Statements[1]);
+  CheckEquals(Line + Comment2 + Delimiter + NewLine + Comment + NewLine + Line, FProcessor.Statements[1]);
+  CheckEquals(NoComment+NewLine+Line, FProcessor.Statements[2]);
 end;
 
 {**

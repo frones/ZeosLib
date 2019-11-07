@@ -93,6 +93,8 @@ type
     procedure Test_SF249;
     procedure Test_SF287;
     procedure Test_SF351;
+    procedure TestTicket363;
+    procedure TestTicket376;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -415,7 +417,7 @@ begin
     Query.Close;
   finally
     Query.Free;
-  end;  
+  end;
 end;
 
 {**
@@ -434,7 +436,7 @@ end;
 
 {**
    Runs a test for bug report #833489
-   Can't show messages from triggers  
+   Can't show messages from triggers
 }
 procedure ZTestCompInterbaseBugReport.Test841559;
 var
@@ -658,7 +660,7 @@ begin
     end;
   finally
     Query.Free;
-  end;  
+  end;
 end;
 
 procedure ZTestCompInterbaseBugReport.Test909181;
@@ -730,6 +732,167 @@ begin
       CheckNotTestFailure(E);
     end;
 
+  finally
+    Query.Free;
+  end;
+end;
+
+
+procedure ZTestCompInterbaseBugReport.TestTicket363;
+var
+  I: Integer;
+  PStmt: IZPreparedStatement;
+  RS: IZResultSet;
+  Query: TZQuery;
+begin
+  Exit;
+  Query := CreateQuery;
+  // prepare sample table
+  Query.SQL.Text:= 'create table test73 (id integer primary key, "value" BLOB SUB_TYPE TEXT)';
+  Query.ExecSQL;
+  try
+    // generate test data
+    for I:= 1 to 20 do begin
+      Query.SQL.Text:= 'insert into test73 (id, "value") values (' + IntTostr(I) + ', ''testing #' + IntToStr(I) + ''')';
+      Query.ExecSQL;
+    end;
+    // trigger fix for ticket #228
+    Query.SQL.Text:= 'select * from test73';
+    Query.Open;
+    I := 1;
+    while not Query.Eof do begin
+      if Query.RecNo = 2 then begin // go
+        Connection.StartTransaction;
+        Connection.Commit;
+      end;
+      Query.Next; // it works here with a TZQuery
+      Inc(I);
+      if I > 20 then Break;
+    end;
+    Check(I = 20, 'duplicated rows retrieved');
+    // direct approach (just like mORMot with SynDBZeos)
+    PStmt:= Connection.DbcConnection.PrepareStatement('select * from test73 where id > ?');
+    PStmt.SetInt(FirstDbcIndex, 1);
+    RS:= PStmt.ExecuteQueryPrepared;
+    I:= 0;
+    while RS.Next do begin // BUG! duplicates the fetched row
+      if I = 2 then begin // trigger
+        Connection.StartTransaction;
+        Connection.Commit;
+      end;
+      Inc(I);
+      if I > 21 then Break;
+    end;
+    Check(I = 20, 'duplicated rows retrieved');
+//  RS:= nil; // trigger stmt reuse (e.g. mORMot statement cache)
+    PStmt.ClearParameters;
+    // trigger fix for ticket #228
+    Connection.StartTransaction;
+    Connection.Commit;
+
+    PStmt.SetInt(FirstDbcIndex, 0);
+    RS:= PStmt.ExecuteQueryPrepared; // the transaction ID is not updated
+    I:= 0;
+    while RS.Next do begin // BUG! fails here as the fix is trying to open the resultset already opened in ExecuteQueryPrepared
+      Inc(I);
+      if I > 20 then
+        Break;
+    end;
+    Check(I = 20, 'duplicated rows retrieved');
+  finally
+    Query.SQL.Text:= 'drop table test73';
+    Query.ExecSQL;
+    if Assigned(PStmt) then
+      PStmt.Close;
+    PStmt:= nil;
+  end;
+end;
+
+(*
+Hello,
+today I noticed that when a prepared query is used multiple times
+(e.g. cached by the SynDB of mORMot) it fails to return correct results.
+Investigating a bit, I have found that a param value does not reset the
+"NULL" flag correctly, i.e. when a param was set to NULL previously, setting a
+value afterwards does not work (at least for some methods:
+  SetString, SetAnsiString, SetUTF8String).
+Attached is a sample project that currently fails.
+
+Best regards,
+Joe
+*)
+procedure ZTestCompInterbaseBugReport.TestTicket376;
+var
+  I: Integer;
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Connection.Connected:= True;
+
+    // prepare sample table with integer key
+    try
+      Query.SQL.Text := 'delete from Ticket376a where 1=1';
+      Query.ExecSQL;
+      // generate test data
+      for I:= 1 to 20 do begin
+        Query.SQL.Text:= 'insert into Ticket376a (id, "value") values (' + IntToStr(I) + ', ''testing #' + IntToStr(I) + ''')';
+        Query.ExecSQL;
+      end;
+      // check read
+      Query.SQL.Text:= 'select * from Ticket376a where id=:id';
+      Query.Params.ParamByName('id').Value:= Null;
+      Query.Open;
+      CheckEquals(0, Query.RecordCount, 'there is no row for null id');
+      Query.Close;
+      Query.Params.ParamByName('id').AsInteger:= 5;
+      Query.Open;
+      while not Query.Eof do begin
+        Check(Query.Fields[0].AsString <> '', 'clob should not be empty');
+        Query.Next; // it works here with a TZQuery
+      end;
+      CheckEquals(1, Query.RecordCount, 'the record count for id 5');
+      Query.Close;
+      Query.Params.ParamByName('id').Value:= Null;
+      Query.Open;
+      CheckEquals(0, Query.RecordCount, 'there is no row for null id');
+      Query.Close;
+    finally
+      Query.SQL.Text := 'delete from Ticket376a where 1=1';
+      Query.ExecSQL;
+    end;
+
+    // prepare sample table with varchar key
+    try
+      Query.SQL.Text := 'delete from Ticket376b where 1=1';
+      Query.ExecSQL;
+      // generate test data
+      for I:= 1 to 20 do begin
+        Query.SQL.Text:= 'insert into Ticket376b (id, "value") values (''' + IntToStr(I) + ''', ''testing #' + IntToStr(I) + ''')';
+        Query.ExecSQL;
+      end;
+      // check read
+      Query.SQL.Text:= 'select * from Ticket376b where id=:id';
+      Query.Params.ParamByName('id').Value:= Null;
+      Query.Open;
+      CheckEquals(0, Query.RecordCount, 'there is no row for null id');
+      Query.Close;
+      Query.Params.ParamByName('id').AsString:= '5';
+      Query.Open;
+      while not Query.Eof do begin
+        Check(Query.Fields[0].AsString <> '', 'clob should not be empty');
+        Query.Next; // it works here with a TZQuery
+      end;
+      CheckEquals(1, Query.RecordCount, 'the record count for id 5');
+      Query.Close;
+      Query.Params.ParamByName('id').Value:= Null;
+      Query.Open;
+      CheckEquals(0, Query.RecordCount, 'there is no row for null id');
+      Query.Close;
+    finally
+      Query.SQL.Text := 'delete from Ticket376b where 1=1';
+      Query.ExecSQL;
+    end;
   finally
     Query.Free;
   end;

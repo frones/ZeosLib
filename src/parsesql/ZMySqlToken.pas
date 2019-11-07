@@ -205,35 +205,37 @@ begin
   Result.Value := '';
 
   case FirstChar of
-    '-':
-      begin
+    '-': begin
         ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
         if ReadNum > 0 then
-          if ReadChar = '-' then
-          begin
-            Result.TokenType := ttComment;
+         //MySQL sees the -- only if it's followed by a whitespace
+         //intentenion was substract a negative numer (: like
+         //UPDATE account SET credit=credit--1 funny isn't it
+          if ReadChar = '-' then begin
             ToBuf(ReadChar, Result.Value);
-            GetSingleLineComment(Stream, Result.Value);
-          end
-          else
-            Stream.Seek(-SizeOf(Char), soFromCurrent);
+            ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
+            if (ReadNum > 0) then
+              if Ord(ReadChar) <= Ord(' ') then begin
+                Result.TokenType := ttComment;
+                ToBuf(ReadChar, Result.Value);
+                GetSingleLineComment(Stream, Result.Value);
+              end else
+                Stream.Seek(-(SizeOf(Char) * 2), soFromCurrent)
+          end else
+            Stream.Seek(-SizeOf(Char), soFromCurrent)
       end;
-    '#':
-      begin
+    '#': begin
         Result.TokenType := ttComment;
         GetSingleLineComment(Stream, Result.Value);
       end;
-    '/':
-      begin
+    '/': begin
         ReadNum := Stream.Read(ReadChar, SizeOf(Char));
         if ReadNum > 0 then
-          if ReadChar = '*' then
-          begin
+          if ReadChar = '*' then begin
             ToBuf(ReadChar, Result.Value);
             ReadNum2 := Stream.Read(ReadChar, SizeOf(Char));
             // Don't treat '/*!' comments as normal comments!!
-            if (ReadNum2 > 0) then
-            begin
+            if (ReadNum2 > 0) then begin
               ToBuf(ReadChar, Result.Value);
               if (ReadChar <> '!') then
                 Result.TokenType := ttComment
@@ -241,16 +243,14 @@ begin
                 Result.TokenType := ttSymbol;
               GetMultiLineComment(Stream, Result.Value);
             end;
-          end
-          else
+          end else
             Stream.Seek(-SizeOf(Char), soFromCurrent);
       end;
   end;
 
-  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) then
-    Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
-  else
-    FlushBuf(Result.Value);
+  if (Result.TokenType = ttUnknown) and (Tokenizer.SymbolState <> nil) 
+  then Result := Tokenizer.SymbolState.NextToken(Stream, FirstChar, Tokenizer)
+  else FlushBuf(Result.Value);
 end;
 
 { TZMySQLSymbolState }

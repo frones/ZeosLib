@@ -302,7 +302,7 @@ begin
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }
-  if StrToBoolEx(Info.Values['encrypted']) then
+  if StrToBoolEx(Info.Values['encrypted']) and (Password <> '') then
   begin
     SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
     CheckSQLiteError(FPlainDriver, FHandle,
