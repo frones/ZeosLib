@@ -83,7 +83,8 @@ type
     procedure TestSF380b;
     procedure TestSF382;
     procedure TestSF383;
-  end;
+    procedure TestSF391;
+ end;
 
 implementation
 
@@ -542,6 +543,24 @@ begin
     Query.SQL.Add('drop table #t');
     Query.Open; //devision by zero
     Query.Close;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestCompMSSqlBugReport.TestSF391;
+var
+  Query: TZQuery;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Query := CreateQuery;
+  try
+    Query.Sql.Text := 'select SUM(0.0)';
+    Query.Open;
+    CheckEquals(0, Query.Fields[0].AsFloat, 'SUM(0.0) should return a zero BCD');
   finally
     FreeAndNil(Query);
   end;

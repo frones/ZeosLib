@@ -636,7 +636,7 @@ begin
   while (pNibble >= pNumDigit) and (PByte(pNibble)^ = 0) do
     Dec(pNibble);
   if pNibble < pNumDigit then begin //zero value
-    PCardinal(@Dest.Precision)^ := 0; //not the delphi default but the fastest bcd-rec to represent a zero value
+    PCardinal(@Dest.Precision)^ := ZInitZeroBCD; //not the delphi default but the fastest bcd-rec to represent a zero value
     Exit;
   end;
   { prepare local buffer }

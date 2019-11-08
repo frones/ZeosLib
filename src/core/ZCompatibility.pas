@@ -534,6 +534,7 @@ const
   PEmptyUnicodeString: PWideChar = '';
   PEmptyAnsiString: PAnsiChar = '';
   EmptyRaw = {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}nil{$ELSE}RawByteString(''){$ENDIF};
+  ZInitZeroBCD: Cardinal = {$IFNDEF ENDIAN_BIG}$0000001{$ELSE}$1000000{$ENDIF};
 var
   ZOSCodePage: Word;
   ZOSCodePageMaxCharSize: Word;
