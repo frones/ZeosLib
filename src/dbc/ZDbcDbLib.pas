@@ -1031,7 +1031,7 @@ begin
 end;
 
 function TZDBLibConnection.GetServerProvider: TZServerProvider;
-const DBLib2ServerProv: Array[TDBLIBProvider] of TZServerProvider = (spMSSQL, spSybase);
+const DBLib2ServerProv: Array[TDBLIBProvider] of TZServerProvider = (spMSSQL, spASE);
 begin
   Result := DBLib2ServerProv[FProvider];
 end;
