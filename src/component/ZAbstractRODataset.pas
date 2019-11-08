@@ -220,7 +220,7 @@ type
     FResultSet: IZResultSet;
 
     FRefreshInProgress: Boolean;
-    FNativeFormatOverloadCalled: Boolean; //circumvent a TClientDataSet BCDField bug.
+    FNativeFormatOverloadOfBcdFieldCalled: Boolean; //circumvent a TClientDataSet BCDField bug.
       //The ClientDataSets do not call the Get/SetData overload with NativeFormat overload
       //so they use the slow TBCD record instead (while we are in Currency range)
       //and convert all values to/from the currency
@@ -3059,8 +3059,8 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 begin
   if Field.DataType in [ftWideString, ftBCD] then begin
     NativeFormat := True;
-    FNativeFormatOverloadCalled := True;
-  end else FNativeFormatOverloadCalled := NativeFormat;
+    FNativeFormatOverloadOfBcdFieldCalled := Field.DataType = ftBCD;
+  end;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
 
@@ -3181,9 +3181,12 @@ begin
         { Processes all other fields. }
         ftCurrency: //sade TCurrencyField is Descendant of TFloatField and uses Double values
           PDouble(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
-        ftBcd: if FNativeFormatOverloadCalled
-          then PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result)
-          else RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^,  Result);
+        ftBcd: begin
+            if FNativeFormatOverloadOfBcdFieldCalled //circumvent the T[BDE/Client]DataSet bug...
+            then PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result)
+            else RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^,  Result);
+            FNativeFormatOverloadOfBcdFieldCalled := False;
+          end;
         ftFmtBcd: RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^, Result);
         else
           {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
@@ -3218,8 +3221,8 @@ procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_T
 begin
   if Field.DataType in [ftWideString, ftBCD] then begin
     NativeFormat := True;
-    FNativeFormatOverloadCalled := True;
-  end else FNativeFormatOverloadCalled := NativeFormat;
+    FNativeFormatOverloadOfBcdFieldCalled := Field.DataType = ftBCD;
+  end;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
   inherited SetFieldData(Field, Buffer, NativeFormat);
@@ -3325,10 +3328,11 @@ begin
         {$ENDIF}
         ftCurrency:
           RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
-        ftBCD: if FNativeFormatOverloadCalled then begin
+        ftBCD: if FNativeFormatOverloadOfBcdFieldCalled then begin
             if (Field.Size < 4) then //right truncation? Using the Tbcd record's behaves equal
               PCurrency(Buffer)^ := RoundCurrTo(PCurrency(Buffer)^, Field.Size);
             RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
+            FNativeFormatOverloadOfBcdFieldCalled := False;
           end else
             RowAccessor.SetBigDecimal(ColumnIndex, PBCD(Buffer)^);
         {$IFDEF WITH_FTEXTENDED}
@@ -3660,7 +3664,7 @@ begin
   CurrentRow := 0;
   FetchCount := 0;
   CurrentRows.Clear;
-  FNativeFormatOverloadCalled := False;
+  FNativeFormatOverloadOfBcdFieldCalled := False;
 
   Connection.ShowSQLHourGlass;
   OldRS := FResultSet;
@@ -3751,8 +3755,7 @@ begin
     if not FResultSetWalking then
       ResultSet.ResetCursor;
   FCursorOpened := False;
-  FNativeFormatOverloadCalled := False;
-  //ResultSet := nil;
+  FNativeFormatOverloadOfBcdFieldCalled := False;
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then

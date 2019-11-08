@@ -195,7 +195,7 @@ var
   StoredProc: TZStoredProc;
 begin
   if SkipForReason(srClosedBug) then Exit;
-
+  {perfectly resolveable with ODBC, OleDB, ADO}
   StoredProc := TZStoredProc.Create(nil);
   Query := CreateQuery;
   try
