@@ -210,6 +210,7 @@ type
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
+    function AbortOperation: Integer; virtual;
     function EscapeString(const Value: RawByteString): RawByteString; overload; virtual;
 
     procedure Open; virtual;
@@ -876,6 +877,15 @@ end;
 function TZAbstractDbcConnection.GetClientVariantManager: IZClientVariantManager;
 begin
   Result := TZClientVariantManager.Create(ConSettings);
+end;
+
+function TZAbstractDbcConnection.AbortOperation: Integer;
+begin
+//  Would this work...?
+//  for i := fRegisteredStatements.Count-1 downto 0 do
+//   IZStatement(fRegisteredStatements[i]).Cancel;
+  Result := 1;
+  RaiseUnsupportedException;
 end;
 
 {**

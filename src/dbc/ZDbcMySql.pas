@@ -111,6 +111,7 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
+    function AbortOperation: Integer; override;
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -649,6 +650,26 @@ begin
   then Result := TZMySQLCallableStatement56up.Create(Self, SQL, Info)
   else Result := TZMySQLCallableStatement56down.Create(Self, SQL, Info);
 end;
+
+{**
+  Attempts to kill a long-running operation on the database server
+  side
+}
+Function TZMySQLConnection.AbortOperation: Integer;
+Var
+ killquery: String;
+ izc: IZConnection;
+Begin
+ killquery := 'KILL QUERY ' + FPlainDriver.mysql_thread_id(FHandle).ToString;
+ izc := DriverManager.GetConnection(DriverManager.ConstructURL('mysql',
+                                                               Self.HostName,
+                                                               Self.Database,
+                                                               Self.User,
+                                                               Self.Password,
+                                                               Self.Port,
+                                                               Self.GetParameters));
+ Result := izc.CreateStatement.ExecuteUpdate(killquery);
+End;
 
 {**
   Makes all changes made since the previous
