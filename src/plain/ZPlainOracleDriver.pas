@@ -112,7 +112,8 @@ type
       flags: ub4) :sword; cdecl;
 
     OCIPing: function(svchp: POCISvcCtx; errhp: POCIError; mode: ub4): sword; cdecl;
-    OCIPasswordChange: function(svchp: POCISvcCtx; errhp: POCIError;
+    OCIBreak: function(svchp: POCISvcCtx; errhp:POCIError): sword; cdecl;
+     OCIPasswordChange: function(svchp: POCISvcCtx; errhp: POCIError;
       user_name: text; usernm_len: ub4; opasswd: text; opasswd_len: ub4;
       npasswd: text; npasswd_len: sb4; mode: ub4): sword; cdecl;
 
@@ -367,6 +368,7 @@ begin
     @OCITransRollback             := GetAddress('OCITransRollback');
 
     @OCIPing                      := GetAddress('OCIPing');
+    @OCIBreak                     := GetAddress('OCIBreak');
     @OCIPasswordChange            := GetAddress('OCIPasswordChange');
 
     @OCIClientVersion             := GetAddress('OCIClientVersion');

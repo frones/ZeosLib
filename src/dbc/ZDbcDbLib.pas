@@ -131,6 +131,7 @@ type
 
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function AbortOperation: Integer; override;
 
     procedure Commit; override;
     procedure Rollback; override;
@@ -439,6 +440,12 @@ begin
       Open;
     end;
   Result := FHandle;
+end;
+
+function TZDBLibConnection.AbortOperation: Integer;
+begin
+ If FPlainDriver.dbcancel(FHandle) = DBSUCCEED Then Result := 0
+   Else Result := 1;
 end;
 
 procedure TZDBLibConnection.BeforeDestruction;
