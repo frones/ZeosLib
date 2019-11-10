@@ -444,6 +444,7 @@ end;
 
 function TZDBLibConnection.AbortOperation: Integer;
 begin
+ // http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.help.ocs_12.5.1.dblib/html/dblib/X57019.htm
  If FPlainDriver.dbcancel(FHandle) = DBSUCCEED Then Result := 0
    Else Result := 1;
 end;

@@ -660,7 +660,8 @@ Var
  killquery: String;
  izc: IZConnection;
 Begin
- killquery := 'KILL QUERY ' + FPlainDriver.mysql_thread_id(FHandle).ToString;
+ // https://dev.mysql.com/doc/refman/5.7/en/mysql-kill.html
+ killquery := 'KILL QUERY ' + IntToStr(FPlainDriver.mysql_thread_id(FHandle));
  izc := DriverManager.GetConnection(DriverManager.ConstructURL('mysql',
                                                                Self.HostName,
                                                                Self.Database,
