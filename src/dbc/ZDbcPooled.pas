@@ -150,7 +150,6 @@ type
     procedure CommitPrepared(const transactionid: string);
     procedure RollbackPrepared(const transactionid: string);
     function PingServer: Integer;
-    function AbortOperation: Integer;
     function EscapeString(const Value : RawByteString) : RawByteString;
     procedure Open;
     procedure Close;
@@ -680,14 +679,6 @@ end;
 procedure TZDbcPooledConnection.SetTransactionIsolation(Value: TZTransactIsolationLevel);
 begin
   GetConnection.SetTransactionIsolation(Value);
-end;
-
-{**
-  Attempts to kill a long-running operation on the database server
-  side
-}function TZDbcPooledConnection.AbortOperation: Integer;
-begin
-  Result := GetConnection.AbortOperation;
 end;
 
 {**

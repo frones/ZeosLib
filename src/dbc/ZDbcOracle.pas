@@ -122,7 +122,6 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
-    function AbortOperation: Integer; override;
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -509,18 +508,6 @@ begin
      Open;
   Result := TZOraclePreparedStatement_A.Create(Self, SQL, Info);
 end;
-
-{**
-  Attempts to kill a long-running operation on the database server
-  side
-}
-Function TZOracleConnection.AbortOperation: Integer;
-Begin
- // https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci16m96.htm
- Result := FPlainDriver.OCIBreak(FContextHandle, FErrorHandle);
- CheckOracleError(FPlainDriver, FErrorHandle, Result, lcExecute, 'Abort operation', ConSettings);
- Result := 0; //only possible if CheckOracleError dosn't raise an exception
-End;
 
 {**
   Makes all changes made since the previous

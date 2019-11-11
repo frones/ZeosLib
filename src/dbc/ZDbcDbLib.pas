@@ -131,7 +131,6 @@ type
 
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function AbortOperation: Integer; override;
 
     procedure Commit; override;
     procedure Rollback; override;
@@ -440,13 +439,6 @@ begin
       Open;
     end;
   Result := FHandle;
-end;
-
-function TZDBLibConnection.AbortOperation: Integer;
-begin
- // http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.help.ocs_12.5.1.dblib/html/dblib/X57019.htm
- If FPlainDriver.dbcancel(FHandle) = DBSUCCEED Then Result := 0
-   Else Result := 1;
 end;
 
 procedure TZDBLibConnection.BeforeDestruction;

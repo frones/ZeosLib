@@ -169,7 +169,7 @@ type
     mysql_ssl_set:                function(mysql: PMYSQL; const key, cert, CA, CApath, cipher: PAnsiChar): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     //mysql_stat:                   function(mysql: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_store_result:           function(mysql: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_thread_id:              function(mysql: PMYSQL): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //mysql_thread_id:              function(mysql: PMYSQL): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_use_result:             function(mysql: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     { Set up and bring down a thread; these function should be called for each thread in an application which
@@ -385,7 +385,7 @@ begin
   @mysql_ssl_set                := GetAddress('mysql_ssl_set');
   //@mysql_stat                   := GetAddress('mysql_stat');
   @mysql_store_result           := GetAddress('mysql_store_result');
-  @mysql_thread_id              := GetAddress('mysql_thread_id');
+  //@mysql_thread_id              := GetAddress('mysql_thread_id');
   @mysql_use_result             := GetAddress('mysql_use_result');
 
   @my_init                      := GetAddress('my_init');
