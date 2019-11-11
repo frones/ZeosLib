@@ -108,6 +108,7 @@ type
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
+    function AbortOperation: Integer; override;
     procedure Commit; override;
     procedure Rollback; override;
 
@@ -451,6 +452,18 @@ end;
 function TZSQLiteConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
   Result := FUndefinedVarcharAsStringLength;
+end;
+
+{**
+  Attempts to kill a long-running operation on the database server
+  side
+}
+function TZSQLiteConnection.AbortOperation: Integer;
+begin
+ {$MESSAGE '.AbortOperation with SQLite is untested and might cause unexpected results!'}
+ // https://sqlite.org/c3ref/interrupt.html
+ FPlainDriver.sqlite3_interrupt(FHandle);
+ Result := 1;
 end;
 
 {**
