@@ -223,6 +223,7 @@ type
     procedure CommitPrepared(const transactionid: string); virtual;
     procedure RollbackPrepared(const transactionid: string); virtual;
     function PingServer: Boolean; virtual;
+    Function AbortOperation: Boolean; virtual;
 
     procedure RegisterDataSet(DataSet: TDataset);
     procedure UnregisterDataSet(DataSet: TDataset);
@@ -1012,6 +1013,15 @@ procedure TZAbstractConnection.CheckNonAutoCommitMode;
 begin
   if FAutoCommit then
     raise EZDatabaseError.Create(SInvalidOpInAutoCommit);
+end;
+
+{**
+  Attempts to kill a long-running operation on the database server
+  side
+}
+function TZAbstractConnection.AbortOperation: Boolean;
+begin
+ Result := FConnection.AbortOperation = 0;
 end;
 
 {**
