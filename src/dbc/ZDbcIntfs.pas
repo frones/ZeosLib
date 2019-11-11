@@ -452,6 +452,7 @@ type
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
+    function AbortOperation: Integer;
     function EscapeString(const Value: RawByteString): RawByteString;
 
     procedure Open;
@@ -1879,7 +1880,6 @@ var
   Driver: IZDriver;
 begin
   FDriversCS.Enter;
-  Result := 0;
   try
     Driver := InternalGetDriver(URL);
     if Driver = nil then
