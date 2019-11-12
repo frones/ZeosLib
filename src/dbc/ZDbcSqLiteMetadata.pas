@@ -1381,14 +1381,14 @@ var
         if SchemaName <> '' then
           Result.UpdateRawByteString(CatalogNameIndex, SchemaName);
         Result.UpdateRawByteString(TableNameIndex, TableName);
-        Result.UpdatePAnsiChar(ColumnNameIndex, P, Len);
+        Result.UpdatePAnsiChar(ColumnNameIndex, P, @Len);
         TypeTmp := GetRawByteString(type_index);
         SQLType := ConvertSQLiteTypeToSQLType(TypeTmp, UndefinedVarcharAsStringLength,
           Precision, Decimals, ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
 
         Len := Length(TypeTmp);
-        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, Pointer(TypeTmp), Len);
+        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, Pointer(TypeTmp), @Len);
 
         Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
         if SQLType = stString then begin
