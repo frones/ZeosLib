@@ -167,11 +167,9 @@ type
       OldRowAccessor: TZRowAccessor): SQLString;
     function FormCalculateStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList): SQLString; virtual;
 
-    procedure CalculateDefaults(const Sender: IZCachedResultSet;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
+    procedure CalculateDefaults(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet;
-      UpdateType: TZRowUpdateType;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
+      UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType;
@@ -860,8 +858,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZGenericCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType;
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement            : IZPreparedStatement;
   S                    : string;
@@ -957,7 +954,7 @@ end;
   @param RowAccessor an accessor object to column values.
 }
 procedure TZGenericCachedResolver.CalculateDefaults(
-  const Sender: IZCachedResultSet; {$IFDEF AUTOREFCOUNT}const {$ENDIF}RowAccessor: TZRowAccessor);
+  const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 var
   I: Integer;
   SQL: string;

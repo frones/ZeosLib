@@ -926,7 +926,7 @@ begin
     SQL_QUAD      : BCD2ScaledOrdinal(Value, XSQLVAR.sqldata, SizeOf(ISC_INT64), -XSQLVAR.sqlscale);
     SQL_TEXT,
     SQL_VARYING   : begin
-                      EncodePData(XSQLVAR, @fABuffer[0], BcdToRaw(Value, @fABuffer[0], AnsiChar('.')));
+                      EncodePData(XSQLVAR, @fABuffer[0], BcdToRaw(Value, @fABuffer[0], '.'));
                       Exit;
                     end;
     else SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCDToDouble(Value));

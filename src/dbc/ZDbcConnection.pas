@@ -1933,12 +1933,12 @@ end;
 
 function TZOracleSequence.GetCurrentValueSQL: string;
 begin
-  Result := inherited+' FROM DUAL';
+  Result := inherited GetCurrentValueSQL+' FROM DUAL';
 end;
 
 function TZOracleSequence.GetNextValueSQL: string;
 begin
-  Result := inherited+' FROM DUAL';
+  Result := inherited GetNextValueSQL+' FROM DUAL';
 end;
 
 { TZFirebird2UpSequence }
