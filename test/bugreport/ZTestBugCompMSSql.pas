@@ -78,17 +78,20 @@ type
     procedure Mantis54;
     procedure Mantis164;
     procedure Test_SelectInformation_Schema;
+    procedure TestSF306;
     procedure TestSF378;
     procedure TestSF380a;
     procedure TestSF380b;
     procedure TestSF382;
     procedure TestSF383;
-  end;
+    procedure TestSF391;
+ end;
 
 implementation
 
 uses SysUtils, Types, FmtBCD,
-  ZSysUtils, ZStoredProcedure, ZAbstractRODataset, ZTestCase, ZSqlUpdate;
+  ZTestConsts, ZSysUtils, ZTestCase, ZStoredProcedure, ZAbstractRODataset,
+  ZSqlUpdate;
 
 { TZTestCompMSSqlBugReport }
 
@@ -195,7 +198,7 @@ var
   StoredProc: TZStoredProc;
 begin
   if SkipForReason(srClosedBug) then Exit;
-
+  {perfectly resolveable with ODBC, OleDB, ADO}
   StoredProc := TZStoredProc.Create(nil);
   Query := CreateQuery;
   try
@@ -227,6 +230,40 @@ begin
     Query.Free;
   end;
 end;
+
+(*
+When we open a query on this table and uses TZQuery.Append to add a new row with NO VALUE for the testcol,
+Zeos uses the Resultset-Metadata to find out the default value for the rows with no value set.
+MSSQL delivers for the row testcol the default value '(NULL)' instead of 'NULL'. Zeos interpretes this value correct as string and sends 'N'(NULL)'' to the database as default value.
+The result is: The new value for testcol is '(NULL)' as string instead of NULL as default null value.
+*)
+procedure TZTestCompMSSqlBugReport.TestSF306;
+var
+  Query: TZQuery;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Query := CreateQuery;
+  try
+    Query.Sql.Text := 'select * from TableTicked306';
+    Query.Open;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+//    CheckEquals(1, Query.RowsAffected,'The updateCount');
+    Query.Close;
+    Query.Open;
+    CheckEquals(1, Query.RecordCount,'The RecordCount');
+    Check(Query.Fields[1].IsNull ,'val1 should be null');
+    Check(Query.Fields[2].IsNull ,'val2 should be null');
+  finally
+    FreeAndNil(Query);
+    Connection.ExecuteDirect('delete from TableTicked306 where 1=1');
+  end;
+end;
+
 (**
   User:
     Is this the expected behaviour for summing numeric types using
@@ -542,6 +579,24 @@ begin
     Query.SQL.Add('drop table #t');
     Query.Open; //devision by zero
     Query.Close;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestCompMSSqlBugReport.TestSF391;
+var
+  Query: TZQuery;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Query := CreateQuery;
+  try
+    Query.Sql.Text := 'select SUM(0.0)';
+    Query.Open;
+    CheckEquals(0, Query.Fields[0].AsFloat, 'SUM(0.0) should return a zero BCD');
   finally
     FreeAndNil(Query);
   end;

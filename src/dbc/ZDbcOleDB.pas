@@ -302,7 +302,7 @@ end;
 procedure TZOleDBConnection.SetCatalog(const Catalog: string);
 begin
   if Catalog <> '' then
-    if GetServerProvider in [spSybase,spMSSQL] then begin
+    if GetServerProvider in [spASE,spMSSQL] then begin
       CreateRegularStatement(info).ExecuteUpdate('use '+Catalog);
       fCatalog := Catalog;
     end;

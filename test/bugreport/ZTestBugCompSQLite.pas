@@ -74,6 +74,7 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure TestUndefined_Varchar_AsString_Length;
+    procedure TestCompTicket386;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -93,6 +94,32 @@ uses
 function ZTestCompSQLiteBugReport.GetSupportedProtocols: string;
 begin
   Result := pl_all_sqlite;
+end;
+
+procedure ZTestCompSQLiteBugReport.TestCompTicket386;
+var SL: TStrings;
+begin
+  SL := TStringList.Create;
+  try
+    Connection.Connect;
+    Check(Connection.Connected, 'Could not open a connection');
+    Connection.GetColumnNames('table_ticket_386', '', SL);
+    CheckEquals(3, SL.Count, 'the fieldcount of table table_ticket_386');
+    Connection.GetColumnNames('table_ticket_386', 'id', SL);
+    CheckEquals(1, SL.Count, 'the fieldcount of table table_ticket_386 and id');
+    Connection.GetColumnNames('table_ticket_386', '%', SL);
+    CheckEquals(3, SL.Count, 'the fieldcount of table table_ticket_386 and all fields matching %');
+    Connection.GetColumnNames('table_ticket_386', 'Field_1', SL);
+    CheckEquals(1, SL.Count, 'the fieldcount of table table_ticket_386 and Field_1');
+    CheckEquals('Field_1', SL[0], 'the column_patternmatch of Field_1');
+    Connection.GetColumnNames('table_ticket_386', 'Field_2', SL);
+    CheckEquals(1, SL.Count, 'the fieldcount of table table_ticket_386 and Field_2');
+    CheckEquals('Field_2', SL[0], 'the column_patternmatch of Field_2');
+    Connection.GetColumnNames('table_ticket_386', 'Field%', SL);
+    CheckEquals(2, SL.Count, 'the fieldcount of table_ticket_386 for columnpattern Field%');
+  finally
+    Sl.Free;
+  end;
 end;
 
 procedure ZTestCompSQLiteBugReport.TestUndefined_Varchar_AsString_Length;

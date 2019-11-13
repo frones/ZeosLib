@@ -131,7 +131,7 @@ begin
 
   if (ProtocolType in [protOracle, protMSSQL, protSyBase, protFreeTDS]) or
     ( (ProtocolType in [protOleDB, protADO, protODBC]) and
-      (Connection.DbcConnection.GetServerProvider in [spOracle, spSybase, spMSSQL])) then
+      (Connection.DbcConnection.GetServerProvider in [spOracle, spASA, spASE, spMSSQL])) then
   begin
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_date').DataType));
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType))

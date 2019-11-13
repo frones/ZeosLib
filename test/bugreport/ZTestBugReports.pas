@@ -23,15 +23,13 @@ uses
 {$IFDEF ENABLE_INTERBASE}
   ZTestBugDbcInterbase, ZTestBugCompInterbase,
 {$ENDIF}
-{$IFDEF ENABLE_DBLIB}
-  ZTestBugDbcDbLib,
-  ZTestBugCompDbLib,
-  ZTestBugCompMSSql,
-{$ENDIF}
 {$IFDEF ENABLE_SQLITE}
   ZTestBugCompSQLite,
 {$ENDIF}
 {$IF defined(ENABLE_DBLIB) or defined(ENABLE_ADO) or defined(ENABLE_OLEDB) or defined(ENABLE_ODBC)}
+  ZTestBugDbcDbLib,
+  ZTestBugCompDbLib,
+  ZTestBugCompMSSql,
   ZTestBugDbcMSSQL,
 {$IFEND}
   ZTestBugDbcCore,

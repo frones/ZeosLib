@@ -75,11 +75,12 @@ type
     procedure Test961337;
     procedure TestBin_Collation;
     procedure TestTicket365;
+    procedure TestTicket284;
   end;
 
 implementation
 
-uses ZTestCase, ZSysUtils, FmtBCD;
+uses ZTestCase, ZSysUtils, ZPlainMySqlConstants, FmtBCD;
 
 { TZTestDbcMySQLBugReport }
 
@@ -406,6 +407,46 @@ begin
     end;
   finally
     Statement.Close;
+  end;
+end;
+
+{TZMySQLDatabaseInfo.GetDatabaseProductName always returns MySQL - even if the server is MariaDB.}
+procedure TZTestDbcMySQLBugReport.TestTicket284;
+var Stmt: IZStatement;
+  S: String;
+  function GetFork(S: String): TMySQLFork;
+  var F: String;
+  begin
+    S := LowerCase(S);
+    for Result := Low(TMySQLFork) to high(TMySQLFork) do begin
+      F := LowerCase(MySQLForkName[Result]);
+      if Pos(F, S) > 0 then
+        Break;
+    end;
+  end;
+begin
+  Stmt := Connection.CreateStatement;
+  CheckFalse(Connection.IsClosed);
+  S := '';
+  try
+    with Stmt.ExecuteQuery('show variables like ''version''') do try
+      Check(Next, 'there is a row');
+      S := GetString(FirstDbcIndex+1);
+    finally
+      Close;
+    end;
+    S := S+' ';
+    with Stmt.ExecuteQuery('show variables like ''version_comment''') do try
+      Check(Next, 'there is a row');
+      S := S + GetString(FirstDbcIndex+1);
+    finally
+      Close;
+    end;
+    CheckEquals(S, Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion, 'The product version');
+    CheckEquals(MySQLForkName[GetFork(S)], Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName);
+  finally
+    Stmt.Close;
+    Stmt := nil;
   end;
 end;
 

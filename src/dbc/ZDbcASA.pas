@@ -372,7 +372,7 @@ end;
 
 function TZASAConnection.GetServerProvider: TZServerProvider;
 begin
-  Result := spSybase;
+  Result := spASA;
 end;
 
 {**

@@ -115,6 +115,7 @@ type
     procedure TestSF331;
     {$ENDIF WITH_TDATASETPROVIDER}
     procedure TestSF354;
+    procedure TestSF394;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1377,9 +1378,19 @@ begin
     CheckEquals(52.14, ClientDataSet.Fields[2].AsCurrency, 'First row, value of field val2');
     ClientDataSet.Next;
     CheckFalse(ClientDataSet.EOF, 'ClientDataset should have a row');
-    CheckEquals(2, ClientDataSet.Fields[0].AsInteger, 'First row, value of field id');
+    CheckEquals(2, ClientDataSet.Fields[0].AsInteger, 'Second row, value of field id');
     CheckEquals(0.8358, ClientDataSet.Fields[1].AsCurrency, 'Second row, value of field val1');
     CheckEquals(83.58, ClientDataSet.Fields[2].AsCurrency, 'Second row, value of field val2');
+    ClientDataSet.Next;
+    CheckFalse(ClientDataSet.EOF, 'ClientDataset should have a row');
+    CheckEquals(3, ClientDataSet.Fields[0].AsInteger, 'Third row, value of field id');
+    CheckEquals(900, ClientDataSet.Fields[1].AsCurrency, 'Third row, value of field val1');
+    CheckEquals(0.08, ClientDataSet.Fields[2].AsCurrency, 'Third row, value of field val2');
+    ClientDataSet.Next;
+    CheckFalse(ClientDataSet.EOF, 'ClientDataset should have a row');
+    CheckEquals(4, ClientDataSet.Fields[0].AsInteger, 'Fourth row, value of field id');
+    CheckEquals(9000, ClientDataSet.Fields[1].AsCurrency, 'Fourth row, value of field val1');
+    CheckEquals(0.23, ClientDataSet.Fields[2].AsCurrency, 'Fourth row, value of field val2');
     Query.Close;
   finally
     FreeAndNil(ClientDataSet);
@@ -1422,6 +1433,31 @@ begin
   finally
     FreeAndNil(Query);
     Connection.Disconnect;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF394;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select 1::BIGINT';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'The record-count');
+    Query.ParamCheck := False;
+    Query.SQL.Text := 'select 1::BIGINT';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'The record-count');
+    Query.Close;
+    Query.ParamChar := '$';
+    Query.ParamCheck := True;
+    Query.SQL.Text := 'select 1::BIGINT';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'The record-count');
+    Query.Close;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 

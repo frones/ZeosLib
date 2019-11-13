@@ -704,9 +704,11 @@ TMYSQL_CLIENT_OPTIONS =
     buf:  Pdecimal_digit_ts;  //is an array of decimal_digit_t's
   end;
 
-  TMySQLForks = (fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta);
+  TMySQLFork = (fUnknown, fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta);
 
 const
+  MySQLForkName: array[TMySQLFork] of String = ('Unknown', 'MySQL', 'MariaDB',
+    'Sphinx', 'Percona', 'Drizzle', 'WebScaleSQL', 'OurDelta');
   DIG_PER_DEC1 = 9;
   Powers10: array[0..DIG_PER_DEC1] of Tdecimal_digit_t = (
     1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000);

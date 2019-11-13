@@ -108,6 +108,7 @@ type
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
+    function AbortOperation: Integer; override;
     procedure Commit; override;
     procedure Rollback; override;
 
@@ -317,10 +318,8 @@ begin
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }
-  if StrToBoolEx(Info.Values[ConnProps_Encrypted]) and Assigned(FPlainDriver.sqlite3_key) then
-  begin
+  if StrToBoolEx(Info.Values[ConnProps_Encrypted]) and Assigned(FPlainDriver.sqlite3_key) and (Password <> '') then begin
     SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
-    if Assigned(FPlainDriver.sqlite3_key) then
     CheckSQLiteError(FPlainDriver, FHandle,
       FPlainDriver.sqlite3_key(FHandle, Pointer(SQL), Length(SQL)),
       lcConnect, 'SQLite.Key', ConSettings);
@@ -453,6 +452,18 @@ end;
 function TZSQLiteConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
   Result := FUndefinedVarcharAsStringLength;
+end;
+
+{**
+  Attempts to kill a long-running operation on the database server
+  side
+}
+function TZSQLiteConnection.AbortOperation: Integer;
+begin
+ {$MESSAGE '.AbortOperation with SQLite is untested and might cause unexpected results!'}
+ // https://sqlite.org/c3ref/interrupt.html
+ FPlainDriver.sqlite3_interrupt(FHandle);
+ Result := 1;
 end;
 
 {**

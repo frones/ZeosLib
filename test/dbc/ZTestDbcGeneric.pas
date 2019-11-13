@@ -490,7 +490,6 @@ var RS: IZResultSet;
       CheckEquals(Ord(SQLType), Ord(RS.GetMetadata.GetColumnType(ColumnIndex)), Protocol+': SQLType mismatch, for column "'+S+'"');
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
     CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Value: '+Value);
-  //  CheckEquals(Value, RS.GetString(ColumnIndex), Protocol+': StrValue('+Value+') mismatch, for column "'+S+'"');
   end;
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;
@@ -608,6 +607,7 @@ begin
       SetString(Inserted_eq_name_Index, 'xyz1');
       SetInt(Inserted_eq_id_Index, TEST_ROW_ID);
       CheckEquals(1, ExecuteUpdatePrepared);
+      CheckEquals(1, GetUpdateCount);
     end;
     Statement := nil;
 
