@@ -165,7 +165,7 @@ type
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString; virtual;
     function FormDeleteStatement(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): SQLString;
-    function FormCalculateStatement({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList): SQLString; virtual;
+    function FormCalculateStatement(Columns: TObjectList): SQLString; virtual;
 
     procedure CalculateDefaults(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet;
@@ -693,7 +693,8 @@ end;
   @param Columns a collection of key columns.
   @param NewRowAccessor an accessor object to new column values.
 }
-function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList;
+function TZGenericCachedResolver.FormInsertStatement(
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
   {$IFDEF AUTOREFCOUNT}const {$ENDIF}NewRowAccessor: TZRowAccessor): SQLString;
 var
   I: Integer;
@@ -826,7 +827,7 @@ end;
   @param OldRowAccessor an accessor object to old column values.
 }
 function TZGenericCachedResolver.FormCalculateStatement(
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList): SQLString;
+  Columns: TObjectList): SQLString;
 var
   I: Integer;
   Current: TZResolverParameter;
