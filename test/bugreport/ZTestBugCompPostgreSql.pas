@@ -115,6 +115,7 @@ type
     procedure TestSF331;
     {$ENDIF WITH_TDATASETPROVIDER}
     procedure TestSF354;
+    procedure TestSF394;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1432,6 +1433,31 @@ begin
   finally
     FreeAndNil(Query);
     Connection.Disconnect;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF394;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select 1::BIGINT';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'The record-count');
+    Query.ParamCheck := False;
+    Query.SQL.Text := 'select 1::BIGINT';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'The record-count');
+    Query.Close;
+    Query.ParamChar := '$';
+    Query.ParamCheck := True;
+    Query.SQL.Text := 'select 1::BIGINT';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'The record-count');
+    Query.Close;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 

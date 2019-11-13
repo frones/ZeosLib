@@ -212,6 +212,7 @@ begin
   Add('~*');
   Add('!~');
   Add('!~*');
+  Add('::'); //parameter type marker such as 1::BIGINT
 end;
 
 function TZPostgreSQLSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
@@ -230,8 +231,6 @@ begin
     TempTag := nil;
     while (SPos < NTerm) do begin
       Inc(SPos);
-      //if Ord(SPos^) <= Ord(' ') then
-        //Break;
       if SPos^ = '$' then begin
         Inc(DollarCount);
         if DollarCount = 2 then
