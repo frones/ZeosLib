@@ -1169,9 +1169,9 @@ end;
 function TZDBLIBPLainDriver.dbcolsource(dbproc: PDBPROCESS;
   Column: Integer): PAnsiChar;
 begin
-  if Assigned(Fdbcolname)
-  then Result := Fdbcolname(dbproc, Column)
-  else Result := Fdbcolname_stdcall(dbproc, Column)
+  if Assigned(Fdbcolsource)
+  then Result := Fdbcolsource(dbproc, Column)
+  else Result := Fdbcolsource_stdcall(dbproc, Column)
 end;
 
 (** Return the datatype for a regular result column *)
