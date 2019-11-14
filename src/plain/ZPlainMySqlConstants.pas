@@ -138,10 +138,17 @@ type
     MYSQL_ENABLE_CLEARTEXT_PLUGIN,
     MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS,
     MYSQL_OPT_SSL_ENFORCE,
-
     MYSQL_OPT_MAX_ALLOWED_PACKET, MYSQL_OPT_NET_BUFFER_LENGTH,
     MYSQL_OPT_TLS_VERSION,
-    MYSQL_OPT_SSL_MODE
+    MYSQL_OPT_SSL_MODE,
+    {MySQL 8:}
+    MYSQL_OPT_GET_SERVER_PUBLIC_KEY,
+    MYSQL_OPT_RETRY_COUNT,
+    MYSQL_OPT_OPTIONAL_RESULTSET_METADATA,
+    MYSQL_OPT_SSL_FIPS_MODE,
+    MYSQL_OPT_TLS_CIPHERSUITES,
+    MYSQL_OPT_COMPRESSION_ALGORITHMS,
+    MYSQL_OPT_ZSTD_COMPRESSION_LEVEL
   );
 const
   TMySqlOptionMinimumVersion: array[TMySqlOption] of Integer =
@@ -187,8 +194,15 @@ const
       {MYSQL_OPT_SSL_ENFORCE}                   50703,
       {MYSQL_OPT_MAX_ALLOWED_PACKET}            60111,
       {MYSQL_OPT_NET_BUFFER_LENGTH}             60111,
+      {MYSQL_OPT_SSL_MODE}                      60111,
       {MYSQL_OPT_TLS_VERSION}                   60111,
-      {MYSQL_OPT_SSL_MODE}                      60111
+      {MYSQL_OPT_GET_SERVER_PUBLIC_KEY}         60111,
+      {MYSQL_OPT_RETRY_COUNT}                   60111,
+      {MYSQL_OPT_OPTIONAL_RESULTSET_METADATA}   60111,
+      {MYSQL_OPT_SSL_FIPS_MODE}                 60111,
+      {MYSQL_OPT_TLS_CIPHERSUITES}              60111,
+      {MYSQL_OPT_COMPRESSION_ALGORITHMS}        60111,
+      {MYSQL_OPT_ZSTD_COMPRESSION_LEVEL}        60111
     );
 
   STMT_INDICATOR_NTS=-1;      //String is null terminated
@@ -199,6 +213,8 @@ const
   STMT_INDICATOR_IGNORE_ROW=4; //Skip update of row
 
 type
+  Tmysql_protocol_type = ( MYSQL_PROTOCOL_DEFAULT, MYSQL_PROTOCOL_TCP, MYSQL_PROTOCOL_SOCKET,
+    MYSQL_PROTOCOL_PIPE, MYSQL_PROTOCOL_MEMORY);
   // EgonHugeist: Use always a 4Byte unsigned Integer for Windows otherwise MySQL64 has problems on Win64!
   // don't know anything about reported issues on other OS's
   ULong                 = {$IFDEF MSWINDOWS}LongWord{$ELSE}NativeUInt{$ENDIF};
