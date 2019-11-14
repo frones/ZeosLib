@@ -394,7 +394,7 @@ begin
   for i := 1 to DBLibColumnCount do
   begin
     ColumnInfo := TZColumnInfo.Create;
-    if FDBLibConnection.FreeTDS then
+    if (FPlainDriver.GetDBLibraryVendorType = lvtFreeTDS) then
     begin
       tdsColInfo.SizeOfStruct := SizeOf(TTDSDBCOL);
       FillChar(tdsColInfo.Name[0], tdsColInfo.SizeOfStruct- SizeOf(DBInt), #0);
@@ -1052,7 +1052,7 @@ begin
   begin
     //Perfect conversion no need to crack and reencode the date.
     if DT = tdsDateTime then
-      if FDBLibConnection.FreeTDS then //type diff
+      if (FPlainDriver.GetDBLibraryVendorType = lvtFreeTDS) then //type diff
         Result := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
       else
         Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
@@ -1063,19 +1063,15 @@ begin
           Result := RawSQLTimeStampToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
       else
         Result := RawSQLTimeToDateTime(Data, DL, ConSettings^.ReadFormatSettings, Failed)
-    else
-      if FDBLibConnection.FreeTDS then //type diff
-      begin
-        FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsDateTime),
-          @tdsTempDate, SizeOf(tdsTempDate));
-        Result := tdsTempDate.dtdays + 2 + (tdsTempDate.dttime / 25920000);
-      end
-      else
-      begin
-        FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsDateTime),
-          @TempDate, SizeOf(TempDate));
-        Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);
-      end;
+    else if (FPlainDriver.GetDBLibraryVendorType = lvtFreeTDS) then begin//type diff
+      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsDateTime),
+        @tdsTempDate, SizeOf(tdsTempDate));
+      Result := tdsTempDate.dtdays + 2 + (tdsTempDate.dttime / 25920000);
+    end else begin
+      FPlainDriver.dbconvert(FHandle, Ord(DT), Data, DL, Ord(tdsDateTime),
+        @TempDate, SizeOf(TempDate));
+      Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);
+    end;
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP');
 end;

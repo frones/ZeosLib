@@ -80,7 +80,6 @@ type
   IZDBLibConnection = interface (IZConnection)
     ['{6B0662A2-FF2A-4415-B6B0-AAC047EA0671}']
 
-    function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     function GetPlainDriver: IZDBLibPlainDriver;
     function GetConnectionHandle: PDBPROCESS;
@@ -92,10 +91,8 @@ type
   TZDBLibConnection = class(TZAbstractConnection, IZDBLibConnection)
   private
     FProvider: TDBLibProvider;
-    FFreeTDS: Boolean;
     FServerAnsiCodePage: Word;
     FPlainDriver: IZDBLibPlainDriver;
-    function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
@@ -241,20 +238,7 @@ begin
     end
     else
       FMetadata := nil;
-  FFreeTDS := ZFastCode.Pos('FreeTDS', Url.Protocol) > 0;
-  if FreeTDS and (Info.Values['codepage'] = '') then
-    Info.Values['codepage'] := 'ISO-8859-1'; //this is the default CP of free-tds
-  FHandle := nil;
 end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-function TZDBLibConnection.FreeTDS: Boolean;
-begin
-  Result := FFreeTDS;
-end;
-
 function TZDBLibConnection.GetProvider: TDBLibProvider;
 begin
   Result := FProvider;
@@ -290,10 +274,61 @@ var
   Loginrec: PLOGINREC;
   RawTemp, LogMessage: RawByteString;
   lLogFile  : String;
+  TDSVersion: DBINT;
+  Ret: RETCODE;
+  P: PChar;
 begin
   LogMessage := 'CONNECT TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage)+'"';
   LoginRec := GetPLainDriver.dbLogin;
   try
+    if (FPLainDriver.GetDBLibraryVendorType = lvtFreeTDS) and (Info.Values['codepage'] = '') then
+      Info.Values['codepage'] := 'ISO-8859-1'; //this is the default CP of free-tds
+    if FPLainDriver.GetDBLibraryVendorType <> lvtSybase then begin
+      //sybase does not support dbsetlversion nor dbsetlname() for TDSversion..
+      //they have a dbsetversion which is a one time parameter per dll-load
+
+      //FreeDTS SetVersion just sets a global variable which is deprecated,
+      //but they are able to set the tdsversion per login
+      //the ms lib always returns DBFAIL with dbsetlname(),  why?
+      lLogFile := URL.Properties.Values['TDSVersion'];
+      TDSVersion := StrToIntDef(lLogFile, TDSDBVERSION_UNKNOWN);
+      if TDSVersion = TDSDBVERSION_UNKNOWN then begin
+        lLogFile := URL.Properties.Values['TDSProtocolVersion'];
+        if (lLogFile <> '') and (FplainDriver.GetDBLibraryVendorType <> lvtMS) then begin
+          P := Pointer(lLogFile);
+          if P^ = Char('5') then
+            TDSVersion := TDSDBVERSION_100
+          else if P^ = Char('4') then
+            TDSVersion := TDSDBVERSION_42
+          else if P^ = Char('7') then begin
+            Inc(P, 1+Ord(Length(lLogFile) = 3));
+            TDSVersion := DBVERSION_70 + (Ord(P^)-Ord('0'));
+            if (TDSVersion < TDSDBVERSION_UNKNOWN) or (TDSVersion > DBVERSION_73) then
+              TDSVersion := TDSDBVERSION_UNKNOWN;
+          end;
+        end;
+        if TDSVersion = TDSDBVERSION_UNKNOWN then
+          if FplainDriver.GetDBLibraryVendorType = lvtMS then
+            TDSVersion := TDSDBVERSION_42
+          else begin {as long we left the protocol names this workaraound is possible}
+            lLogFile := plainDriver.GetProtocol;
+            if (ZFastCode.Pos('MsSQL 7.0', lLogFile) > 0) or (ZFastCode.Pos('MsSQL 2000', lLogFile) > 0) then
+              TDSVersion := DBVERSION_70
+            else if ZFastCode.Pos('MsSQL 2005+', lLogFile) > 0 then
+              TDSVersion := DBVERSION_72
+            else if ZFastCode.Pos('Sybase-10+', lLogFile) > 0 then
+              TDSVersion := TDSDBVERSION_100
+            else //old sybase and MSSQL <= 6.5
+              TDSVersion := TDSDBVERSION_42;
+          end;
+      end;
+      if TDSVersion <> TDSDBVERSION_UNKNOWN then begin
+        if FPLainDriver.GetDBLibraryVendorType = lvtFreeTDS
+        then Ret := FPlainDriver.dbsetversion(TDSVersion)// and FPlainDriver.dbsetlversion(LoginRec, TDSVersion)
+        else Ret := FPlainDriver.dbsetlname(LoginRec, nil, TDSVersion);
+        Assert(Ret = DBSUCCEED, 'failed to set the TDS version');
+      end;
+    end;
 //Common parameters
     RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['workstation'], ConSettings.CTRL_CP, ZOSCodePage);
     if Pointer(RawTemp) <> nil then
@@ -310,7 +345,7 @@ begin
     if Info.Values['timeout'] <> '' then
       GetPlainDriver.dbSetLoginTime(StrToIntDef(Info.Values['timeout'], 60));
 
-    if FFreeTDS then
+    if (FPLainDriver.GetDBLibraryVendorType = lvtFreeTDS) then
     begin
       if StrToBoolEx(Info.Values['log']) or StrToBoolEx(Info.Values['logging']) or
          StrToBoolEx(Info.Values['tds_dump']) then begin
@@ -327,7 +362,7 @@ begin
 
 
     if ( FProvider = dpMsSQL ) and ( StrToBoolEx(Info.Values['NTAuth']) or StrToBoolEx(Info.Values['trusted'])
-      or StrToBoolEx(Info.Values['secure']) ) and ( not FFreeTDS ) then
+      or StrToBoolEx(Info.Values['secure']) ) and ( not (FPLainDriver.GetDBLibraryVendorType <> lvtFreeTDS) ) then
       begin
         GetPlainDriver.dbsetlsecure(LoginRec);
         LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
@@ -341,7 +376,7 @@ begin
       GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(RawTemp));
         LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
       end;
-    if FFreeTDS or (FProvider = dpSybase) then begin
+    if (FPLainDriver.GetDBLibraryVendorType <> lvtMS) then begin
       RawTemp := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['codepage']);
       if Pointer(RawTemp) <> nil then begin
         GetPlainDriver.dbSetLCharSet(LoginRec, Pointer(RawTemp));
@@ -352,7 +387,7 @@ begin
     CheckDBLibError(lcConnect, LogMessage);
     RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage);
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
-    if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
+    if (FPLainDriver.GetDBLibraryVendorType = lvtFreeTDS) and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
       RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
     FHandle := GetPlainDriver.dbOpen(LoginRec, PAnsiChar(RawTemp));
     CheckDBLibError(lcConnect, LogMessage);
@@ -428,7 +463,7 @@ begin
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
 
-  if (FProvider = dpMsSQL) and (not FreeTDS) then
+  if FPLainDriver.GetDBLibraryVendorType = lvtMS then
   begin
   {note: this is a hack from a user-request of synopse project!
     Purpose is to notify Zeos all Character columns are
@@ -455,7 +490,7 @@ begin
     ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
     SetConvertFunctions(ConSettings);
   end else begin
-    if (FProvider = dpSybase) and (not FreeTDS)
+    if FPLainDriver.GetDBLibraryVendorType <> lvtFreeTDS
     then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
     FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
     ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';

@@ -213,10 +213,10 @@ begin
   if InParamCount <= ParamIndex
   then Result := 'NULL'
   else Result := PrepareSQLParameter(InParamValues[ParamIndex],
-      InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex]);
+      InParamTypes[ParamIndex], ClientVarManager, ConSettings, IsNCharIndex[ParamIndex] or (FClientCP = zCP_UTF8));
   P := Pointer(Result);
   if (P <> nil) and (PByte(P)^ = Ord(#39)) and not IsNCharIndex[ParamIndex] and
-     (FDBLibConnection.GetProvider = dpMsSQL) and FDBLibConnection.FreeTDS and
+     (FDBLibConnection.GetProvider = dpMsSQL) and (FPlainDriver.GetDBLibraryVendorType = lvtFreeTDS) and
      (PByte(P+Length(Result)-1)^ = Ord(#39)) and (FClientCP = zCP_UTF8)
   then Result := 'N' + Result;
 end;
