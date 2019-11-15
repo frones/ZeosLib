@@ -2,14 +2,14 @@ Unit ZMethodInThread;
 
 Interface
 
-Uses System.SysUtils, ZAbstractRODataSet, Data.DB, ZAbstractConnection;
+Uses SysUtils, ZAbstractRODataSet, DB, ZAbstractConnection;
 
 Type
  TProcedureOfObject = Procedure Of Object;
  TErrorEvent = Procedure(Sender: TObject; Error: Exception) Of Object;
 
  TZMethodInThread = Class
- strict private
+ private
   _dataset: TZAbstractRODataset;
   _afteropen: TDataSetNotifyEvent;
   _methodthread: TObject;
