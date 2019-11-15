@@ -4679,25 +4679,27 @@ var I: Integer;
       '', StoredProcName, '');
     RS.Last;
     I := RS.GetRow;
-    if FExecStatement = nil
-    then SetParamCount(I)
-    else FExecStatement.SetParamCount(I);
-    I := 0;
-    RS.BeforeFirst;
-    while RS.Next do begin
-      SQLType := TZSQLType(RS.GetInt(ProcColDataTypeIndex));
-      ParamIO := TZProcedureColumnType(RS.GetInt(ProcColColumnTypeIndex));
-      S := RS.GetString(ProcColColumnNameIndex);
-      Prec := RS.GetInt(ProcColPrecisionIndex);
-      Scale := RS.GetInt(ProcColScaleIndex);
-      if FExecStatement = nil then
-        RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale)
-      else begin
-        FExecStatement.RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
-        if BindList.Count < I+1 then
-          RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+    if I > 0 then begin
+      if FExecStatement = nil
+      then SetParamCount(I)
+      else FExecStatement.SetParamCount(I);
+      I := 0;
+      RS.BeforeFirst;
+      while RS.Next do begin
+        SQLType := TZSQLType(RS.GetInt(ProcColDataTypeIndex));
+        ParamIO := TZProcedureColumnType(RS.GetInt(ProcColColumnTypeIndex));
+        S := RS.GetString(ProcColColumnNameIndex);
+        Prec := RS.GetInt(ProcColPrecisionIndex);
+        Scale := RS.GetInt(ProcColScaleIndex);
+        if FExecStatement = nil then
+          RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale)
+        else begin
+          FExecStatement.RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+          if BindList.Count < I+1 then
+            RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+        end;
+        Inc(I);
       end;
-      Inc(I);
     end;
     FRegisteringParamFromMetadata := False;
 //      Assert(I = BindList.Count);

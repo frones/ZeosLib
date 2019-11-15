@@ -100,6 +100,7 @@ type
     procedure Test_composite;
     procedure Test_mixedorder;
     procedure Test_set;
+    procedure Test_proc_abtest;
   end;
 
   {** Implements a test case for class TZStoredProc. }
@@ -150,7 +151,7 @@ type
 
 implementation
 
-uses Classes, ZSysUtils, ZDbcIntfs,
+uses Classes, ZSysUtils, ZDbcIntfs, ZDbcPostgreSQL,
   ZCompatibility, ZVariant, ZEncoding;
 
 
@@ -475,6 +476,50 @@ begin
   CheckEquals(50, StoredProc.Params[2].AsInteger);
   CheckEquals(1, StoredProc.FieldCount);
   CheckEquals(50, StoredProc.Fields[0].AsInteger);
+end;
+
+procedure TZTestPostgreSQLStoredProcedure.Test_proc_abtest;
+var I: Integer;
+begin
+  Connection.Connect;
+  Check(Connection.Connected);
+  if (Connection.DbcConnection as IZPostgreSQLConnection).GetServerMajorVersion < 11 then
+    Exit;
+  StoredProc.StoredProcName := '"PROC_ABTEST"';
+  CheckEquals(5, StoredProc.Params.Count);
+  CheckEquals('p1', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals('p2', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals('p3', StoredProc.Params[2].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals('p4', StoredProc.Params[3].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals('p5', StoredProc.Params[4].Name);
+  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[4].ParamType));
+
+  StoredProc.ParamByName('p1').AsInteger := 50;
+  StoredProc.ParamByName('p2').AsInteger := 100;
+  StoredProc.ParamByName('p3').AsString := 'a';
+  StoredProc.ExecProc;
+  CheckEquals(600, StoredProc.ParamByName('p4').AsInteger);
+  CheckEquals('aa', StoredProc.ParamByName('p5').AsString);
+  CheckEquals(5, StoredProc.Params.Count);
+
+  StoredProc.Prepare;
+  for i:= 0 to 9 do
+  begin
+    StoredProc.Params[0].AsInteger:= i;
+    StoredProc.Params[1].AsInteger:= 100;
+    StoredProc.Params[2].AsString:= 'a';
+    StoredProc.ExecProc;
+  end;
+  StoredProc.Unprepare;
+  StoredProc.Open;
+  StoredProc.ParamByName('p1').AsInteger := 50;
+  StoredProc.ParamByName('p2').AsInteger := 100;
+  StoredProc.ParamByName('p3').AsString := 'a';
+  StoredProc.Open;
 end;
 
 procedure TZTestPostgreSQLStoredProcedure.Test_set;

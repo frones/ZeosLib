@@ -72,8 +72,10 @@ const
   InvalidDbcIndex = {$IFDEF GENERIC_INDEX}-1{$ELSE}0{$ENDIF};
 const
   { Constants from JDBC DatabaseMetadata }
-  TypeSearchable           = 3;
-  ProcedureReturnsResult   = 2;
+  TypeSearchable            = 3;
+  procedureResultUnknown    = 0;
+  procedureNoResult         = 1;
+  ProcedureReturnsResult    = 2;
 
 // Data types
 type
