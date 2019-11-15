@@ -178,12 +178,6 @@ begin
   inherited Create;
   AddSupportedProtocol(AddPlainDriverToCache(TMSSQLDBLibPLainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TSybaseDBLibPLainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS42MsSQLPlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS42SybasePlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS50PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS70PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS71PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS72PlainDriver.Create));
 end;
 
 {**
@@ -320,7 +314,7 @@ begin
       lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
       TDSVersion := StrToIntDef(lLogFile, TDSDBVERSION_UNKNOWN);
       if TDSVersion = TDSDBVERSION_UNKNOWN then begin
-        lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
+        lLogFile := URL.Properties.Values[ConnProps_TDSProtocolVersion];
         if (lLogFile <> '') and (FplainDriver.DBLibraryVendorType <> lvtMS) then begin
           P := Pointer(lLogFile);
           if P^ = Char('5') then
@@ -409,6 +403,12 @@ begin
       if Pointer(RawTemp) <> nil then begin
         FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(RawTemp));
         CheckCharEncoding(Info.Values[ConnProps_CodePage]);
+      end;
+    end else begin
+      lLogFile := UpperCase(Info.Values[ConnProps_CodePage]);
+      if (lLogFile = 'UTF-8') then begin
+        lLogFile := lLogFile+' invalid client characterset for ntwdblib.dll';
+        raise EZSQLException.Create(lLogFile);
       end;
     end;
 

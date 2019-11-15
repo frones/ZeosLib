@@ -57,21 +57,12 @@ interface
 {$I ZPlain.inc}
 
 {$IFNDEF ZEOS_DISABLE_DBLIB}
-{.$UNDEF MSWINDOWS}
 
 uses Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZCompatibility, ZPlainDriver, ZPlainDbLibConstants
   {$IFDEF TEST_CALLBACK}, ZClasses{$ENDIF}
   {$IFDEF TLIST_IS_DEPRECATED},ZSysUtils{$ENDIF};
 
-const
-  NTWDBLIB_DLL_LOCATION ='ntwdblib.dll';
-  LIBSYBDB_WINDOWS_DLL_LOCATION = 'libsybdb.dll';
-  LIBSYBDB_LINUX_DLL_LOCATION = 'libsybdb.so';
-  FREETDS_MSSQL_WINDOWS_DLL_LOCATION = 'sybdb.dll';
-  FREETDS_LINUX_DLL_LOCATION = 'dblib.so';
-  FREETDS_OSX_DLL_LOCATION = 'dblib.dylib';
-  FREETDS_SYBASE_WINDOWS_DLL_LOCATION = 'sybdb.dll';
 type
   {** Represents a generic interface to DBLIB native API. }
   IZDBLibPlainDriver = interface (IZPlainDriver)
@@ -296,6 +287,7 @@ type
     dberrhandle_stdcall: function(Handler: TDBERRHANDLE_PROC_stdcall): TDBERRHANDLE_PROC_stdcall; stdcall;
     dbmsghandle_stdcall: function(Handler: TDBMSGHANDLE_PROC_stdcall): TDBMSGHANDLE_PROC_stdcall; stdcall;
     FdbSetVersion_stdcall: function(Version: DBINT): RETCODE; stdcall;
+    fdbWinexit: procedure; cdecl; // MS only
     {$ENDIF}
     //Fdbtds: function(dbproc: PDBPROCESS): DBINT; cdecl;
     FdbLogin: function: PLOGINREC; cdecl;
@@ -309,7 +301,8 @@ type
     procedure AfterConstruction; override;
     {$IFDEF TEST_CALLBACK}
     procedure BeforeDestruction; override;
-    {$ENDIF}
+    {$ENDIF TEST_CALLBACK}
+    destructor Destroy; override;
   public //core
     dberrhandle: function(Handler: TDBERRHANDLE_PROC_cdecl): TDBERRHANDLE_PROC_cdecl; cdecl;
     dbmsghandle: function(Handler: TDBMSGHANDLE_PROC_cdecl): TDBMSGHANDLE_PROC_cdecl; cdecl;
@@ -530,43 +523,6 @@ type
     function GetDescription: string; override;
   end;
 
-  TZFreeTDS42MsSQLPlainDriver = class(TMSSQLDBLibPLainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-    procedure LoadCodePages; override;
-  public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-    function dbLogin: PLOGINREC; override;
-  end;
-
-  TZFreeTDS70PlainDriver = class(TMSSQLDBLibPLainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-    function dbLogin: PLOGINREC; override;
-  end;
-
-  TZFreeTDS71PlainDriver = class(TMSSQLDBLibPLainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-    function dbLogin: PLOGINREC; override;
-  end;
-
-  TZFreeTDS72PlainDriver = class(TMSSQLDBLibPLainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-    function dbLogin: PLOGINREC; override;
-  end;
-
   TSybaseDBLibPLainDriver = class(TZDBLIBPLainDriver, IZPlainDriver)
   protected
     procedure LoadCodePages; override;
@@ -574,23 +530,6 @@ type
     procedure LoadApi; override;
   public
     procedure AfterConstruction; override;
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  TZFreeTDS42SybasePlainDriver = class(TSybaseDBLibPLainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    function GetProtocol: string; override;
-    function GetDescription: string; override;
-  end;
-
-  TZFreeTDS50PlainDriver = class(TSybaseDBLibPLainDriver)
-  protected
-    function Clone: IZPlainDriver; override;
-  public
-    function dbLogin: PLOGINREC; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -888,15 +827,7 @@ begin
   FSQLMessageHandlerList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FCS := TCriticalSection.Create;
   {$ENDIF}
-  {$IFDEF MSWINDOWS}
-    FLoader.AddLocation(FREETDS_SYBASE_WINDOWS_DLL_LOCATION);
-  {$ELSE}
-    {$IFDEF UNIX}
-    FLoader.AddLocation(FREETDS_LINUX_DLL_LOCATION);
-    {$ELSE}
-    FLoader.AddLocation(FREETDS_OSX_DLL_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
+  FLoader.AddLocation('sybdb'+SharedSuffix);
   LoadCodePages;
 end;
 
@@ -935,6 +866,7 @@ begin
     ErrorCS.Leave;
   end;
 end;
+
 {$ENDIF TEST_CALLBACK}
 
 {$IFDEF MSWINDOWS}
@@ -1726,8 +1658,39 @@ begin
     then Result := Fdbvarylen_SYB(dbProc, Column)
     else Result := Fdbvarylen_stdcall(dbProc, Column);
 end;
-
 {$ENDIF MSWINDOWS}
+
+destructor TZDBLIBPLainDriver.Destroy;
+begin
+  if Loader.Loaded then
+    case FDBLibraryVendorType of
+      {$IFDEF MSWINDOWS}
+      lvtMS: begin
+          dberrhandle(OldMsSQLErrorHandle);
+          dbmsghandle(OldMsSQLMessageHandle);
+          fdbWinexit;
+          fdbExit;
+        end;
+      {$ENDIF}
+      lvtSybase: begin
+          {$IFDEF MSWINDOWS}
+          dberrhandle_stdcall(OldSybaseErrorHandle);
+          dbmsghandle_stdcall(OldSybaseMessageHandle);
+          fdbExit_stdcall;
+          {$ELSE}
+          dberrhandle(OldSybaseErrorHandle);
+          dbmsghandle(OldSybaseMessageHandle);
+          {$IFDEF MSWINDOWS}fdbExit{$ELSE}dbExit{$ENDIF};
+          {$ENDIF}
+        end;
+      else begin //FreeTDS
+          dberrhandle(OldFreeTDSErrorHandle);
+          dbmsghandle(OldFreeTDSMessageHandle);
+          {$IFDEF MSWINDOWS}fdbExit{$ELSE}dbExit{$ENDIF};
+        end;
+    end;
+  inherited Destroy;
+end;
 
 {$IFDEF TEST_CALLBACK}
 procedure TZDBLIBPLainDriver.DeRegisterErrorHandler(
@@ -1919,6 +1882,7 @@ begin
         end;
       {$IFDEF MSWINDOWS}
       lvtMS: begin
+          @FdbWinexit := GetAddress('dbwinexit');
           @Fdbdead_MS := GetAddress('dbdead', True);
           @Fdbcmdrow := GetAddress('dbcmdrow');
           @Fdbcount := GetAddress('dbcount');
@@ -2222,125 +2186,13 @@ end;
 {$ENDIF}
 {$ENDIF TEST_CALLBACK}
 
-{ TZFreeTDS42MsSQLPlainDriver }
-
-function TZFreeTDS42MsSQLPlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFreeTDS42MsSQLPlainDriver.Create;
-end;
-
-procedure TZFreeTDS42MsSQLPlainDriver.LoadCodePages;
-begin
-  AddmMSCodePages(Self);
-  inherited;
-end;
-
-function TZFreeTDS42MsSQLPlainDriver.GetProtocol: string;
-begin
-  Result := 'FreeTDS_MsSQL<=6.5';
-end;
-
-function TZFreeTDS42MsSQLPlainDriver.GetDescription: string;
-begin
-  Result := 'FreeTDS 4.2 protocol for MsSQL <=6.5 Servers';
-end;
-
-function TZFreeTDS42MsSQLPlainDriver.dbLogin: PLOGINREC;
-begin
-  Result := inherited dbLogin;
-  Assert(fdbsetversion(DBVERSION_42) = DBSUCCEED, 'failed to set the TDS version');
-end;
-
-{ TZFreeTDS42SybasePlainDriver }
-function TZFreeTDS42SybasePlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFreeTDS42SybasePlainDriver.Create;
-end;
-
-function TZFreeTDS42SybasePlainDriver.GetProtocol: string;
-begin
-  Result := 'FreeTDS_Sybase<10';
-end;
-
-function TZFreeTDS42SybasePlainDriver.GetDescription: string;
-begin
-  Result := 'FreeTDS 4.2 protocol for Sybase <10 Servers';
-end;
-
-{ TZFreeTDS70PlainDriver }
-
-function TZFreeTDS70PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFreeTDS70PlainDriver.Create;
-end;
-
-function TZFreeTDS70PlainDriver.GetProtocol: string;
-begin
-  Result := 'FreeTDS_MsSQL-7.0';
-end;
-
-function TZFreeTDS70PlainDriver.dbLogin: PLOGINREC;
-begin
-  Result := inherited dbLogin;
-  Assert(fdbsetversion(DBVERSION_70) = DBSUCCEED, 'failed to set the TDS version');
-end;
-
-function TZFreeTDS70PlainDriver.GetDescription: string;
-begin
-  Result := 'FreeTDS 7.0 Protocol for MsSQL 7.0 Servers';
-end;
-
-{ TZFreeTDS71PlainDriver }
-function TZFreeTDS71PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFreeTDS71PlainDriver.Create;
-end;
-
-function TZFreeTDS71PlainDriver.GetProtocol: string;
-begin
-  Result := 'FreeTDS_MsSQL-2000';
-end;
-
-function TZFreeTDS71PlainDriver.GetDescription: string;
-begin
-  Result := 'FreeTDS 7.1 Protocol for MsSQL 2000 Servers';
-end;
-
-function TZFreeTDS71PlainDriver.dbLogin: PLOGINREC;
-begin
-  Result := inherited dbLogin;
-  Assert(fdbsetversion(DBVERSION_70) = DBSUCCEED, 'failed to set the TDS version');
-end;
-
-{ TZFreeTDS72PlainDriver }
-function TZFreeTDS72PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFreeTDS72PlainDriver.Create;
-end;
-
-function TZFreeTDS72PlainDriver.GetProtocol: string;
-begin
-  Result := 'FreeTDS_MsSQL>=2005';
-end;
-
-function TZFreeTDS72PlainDriver.GetDescription: string;
-begin
-  Result := 'FreeTDS 7.2 Protocol for MsSQL 2005+';
-end;
-
-function TZFreeTDS72PlainDriver.dbLogin: PLOGINREC;
-begin
-  Result := inherited dbLogin;
-  Assert(fdbsetversion(TDSDBVERSION_72) = DBSUCCEED, 'failed to set the TDS version');
-end;
-
 { TMSSQLDBLibPLainDriver }
 
 procedure TMSSQLDBLibPLainDriver.AfterConstruction;
 begin
   inherited;
   {$IFDEF MSWINDOWS}
-    FLoader.AddLocation(FREETDS_MSSQL_WINDOWS_DLL_LOCATION);
+    FLoader.AddLocation('ntwdblib.dll');
   {$ENDIF}
 end;
 
@@ -2361,7 +2213,7 @@ end;
 
 procedure TMSSQLDBLibPLainDriver.LoadCodePages;
 begin
-  inherited;
+  inherited LoadCodePages;
   AddmMSCodePages(Self);
 end;
 
@@ -2370,13 +2222,7 @@ end;
 procedure TSybaseDBLibPLainDriver.AfterConstruction;
 begin
   inherited AfterConstruction;
-  {$IFDEF MSWINDOWS}
-    FLoader.AddLocation(LIBSYBDB_WINDOWS_DLL_LOCATION);
-  {$ELSE}
-    {$IFDEF UNIX}
-    FLoader.AddLocation(LIBSYBDB_LINUX_DLL_LOCATION);
-    {$ENDIF}
-  {$ENDIF}
+  FLoader.AddLocation('libsybdb'+SharedSuffix);
 end;
 
 function TSybaseDBLibPLainDriver.Clone: IZPlainDriver;
@@ -2409,28 +2255,6 @@ begin
     if dbSetVersion(TDSDBVERSION_100) = DBFAIL then
       Assert(dbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
   {$ENDIF}
-end;
-
-{ TZFreeTDS50PlainDriver }
-function TZFreeTDS50PlainDriver.Clone: IZPlainDriver;
-begin
-  Result := TZFreeTDS50PlainDriver.Create;
-end;
-
-function TZFreeTDS50PlainDriver.GetProtocol: string;
-begin
-  Result := 'FreeTDS_Sybase-10+';
-end;
-
-function TZFreeTDS50PlainDriver.GetDescription: string;
-begin
-  Result := 'FreeTDS 5.0 Protocol for Sybase >= 10 Servers ';
-end;
-
-function TZFreeTDS50PlainDriver.dbLogin: PLOGINREC;
-begin
-  Result := inherited dbLogin;
-  Assert(fdbsetversion(DBVERSION_100) = DBSUCCEED, 'failed to set the TDS version');
 end;
 
 procedure TSybaseDBLibPLainDriver.LoadCodePages;
