@@ -61,6 +61,7 @@ uses
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
   ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
@@ -272,37 +273,91 @@ type
   {** Implements Abstract Sequence generator. }
   TZAbstractSequence = class(TInterfacedObject, IZSequence)
   private
+    FConnection: IZConnection;
+    FNextValRS, FCurrValRS: IZResultSet;
+    FNextValStmt, FCurrValStmt: IZPreparedStatement;
+  protected
     FName: string;
     FBlockSize: Integer;
-    FConnection: IZConnection;
-  protected
-    function GetName: string; virtual;
-    function GetBlockSize: Integer; virtual;
     procedure SetName(const Value: string); virtual;
     procedure SetBlockSize(const Value: Integer); virtual;
     property Connection: IZConnection read FConnection write FConnection;
+    procedure FlushResults;
   public
     constructor Create(const Connection: IZConnection; const Name: string;
       BlockSize: Integer);
 
-    function GetCurrentValue: Int64; virtual;
-    function GetNextValue: Int64; virtual;
+    function GetCurrentValue: Int64;
+    function GetNextValue: Int64;
 
+    function GetName: string;
+    function GetBlockSize: Integer;
     function GetCurrentValueSQL: string; virtual; abstract;
     function GetNextValueSQL: string; virtual; abstract;
 
-    function GetConnection: IZConnection; virtual;
-
-    property Name: string read GetName write SetName;
-    property BlockSize: Integer read GetBlockSize write SetBlockSize;
+    function GetConnection: IZConnection;
   end;
+
+  TZIdentifierSequence = Class(TZAbstractSequence)
+  protected
+    procedure SetName(const Value: string); override;
+  End;
+
+  {** Implements a MSSQL sequence. }
+  TZMSSQLSequence = class(TZAbstractSequence)
+  public
+    function GetCurrentValueSQL: string; override;
+    function GetNextValueSQL: string; override;
+  end;
+
+  {** Implements an abstract sequence using the <Name>.CURRVAL/NEXTVAL Syntax}
+  TZDotCurrvalNextvalSequence = class(TZIdentifierSequence)
+  public
+    function GetCurrentValueSQL: string; override;
+    function GetNextValueSQL: string; override;
+  end;
+
+  {** Implements a Sybase SQL Anywhere sequence. }
+  TZSybaseASASquence = class(TZDotCurrvalNextvalSequence);
+
+  {** Implements an Informix sequence. }
+  TZInformixSquence = class(TZDotCurrvalNextvalSequence);
+
+  {** Implements an DB2 sequence. }
+  TZDB2Squence = class(TZDotCurrvalNextvalSequence);
+
+  {** Implements an CUBRID sequence. }
+  TZCubridSquence = class(TZDotCurrvalNextvalSequence);
+
+  {** Implements an Oracle sequence. }
+  TZOracleSequence = class(TZDotCurrvalNextvalSequence)
+  public
+    function GetCurrentValueSQL: string; override;
+    function GetNextValueSQL: string; override;
+  end;
+
+  {** Implements a FireBird2+ sequence. }
+  TZFirebird2UpSequence = class(TZIdentifierSequence)
+  public
+    function GetCurrentValueSQL: string; override;
+    function GetNextValueSQL: string; override;
+  end;
+
+  {** Implements a postresql sequence. }
+  TZPostgreSQLSequence = class(TZAbstractSequence)
+  public
+    function GetCurrentValueSQL: string; override;
+    function GetNextValueSQL: string; override;
+  end;
+
+  TZAbstractSequenceClass = class of TZAbstractSequence;
 
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
   ZDbcMetadata, ZDbcUtils, ZEncoding, StrUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}
+  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}, ZDbcLogging
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -1650,6 +1705,26 @@ end;
   Returns the assigned block size for this sequence.
   @return the assigned block size.
 }
+procedure TZAbstractSequence.FlushResults;
+begin
+  if FNextValRS <> nil then begin
+    FNextValRS.Close;
+    FNextValRS := nil;
+  end;
+  if FNextValStmt <> nil then begin
+    FNextValStmt.Close;
+    FNextValStmt := nil;
+  end;
+  if FCurrValRS <> nil then begin
+    FCurrValRS.Close;
+    FCurrValRS := nil;
+  end;
+  if FCurrValStmt <> nil then begin
+    FCurrValStmt.Close;
+    FCurrValStmt := nil;
+  end;
+end;
+
 function TZAbstractSequence.GetBlockSize: Integer;
 begin
   Result := FBlockSize;
@@ -1661,7 +1736,13 @@ end;
 }
 function TZAbstractSequence.GetCurrentValue: Int64;
 begin
-  Result := 0;
+  if (FCurrValStmt = nil) then
+    FCurrValStmt := FConnection.PrepareStatement(GetCurrentValueSQL);
+  FCurrValRS := FCurrValStmt.ExecuteQueryPrepared;
+  if (FCurrValRS = nil) or (not FCurrValRS.Next) then
+    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+  Result := FCurrValRS.GetLong(FirstDbcIndex);
+  FCurrValRS.ResetCursor;
 end;
 
 {**
@@ -1670,7 +1751,13 @@ end;
 }
 function TZAbstractSequence.GetNextValue: Int64;
 begin
-  Result := 0;
+  if (FNextValStmt = nil) then
+    FNextValStmt := FConnection.PrepareStatement(GetNextValueSQL);
+  FNextValRS := FNextValStmt.ExecuteQueryPrepared;
+  if (FNextValRS = nil) or (not FNextValRS.Next) then
+    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+  Result := FNextValRS.GetLong(FirstDbcIndex);
+  FNextValRS.ResetCursor;
 end;
 
 {**
@@ -1688,7 +1775,79 @@ end;
 }
 procedure TZAbstractSequence.SetName(const Value: string);
 begin
-  FName := Value;
+  if FName <> Value then begin
+    FlushResults;
+    FName := FName;
+  end;
+end;
+
+{ TZIdentifierSequence }
+
+procedure TZIdentifierSequence.SetName(const Value: string);
+var QuotedName: String;
+begin
+  QuotedName := FConnection.GetMetadata.GetIdentifierConvertor.Quote(Value);
+  inherited SetName(QuotedName);
+end;
+
+{ TZMSSQLSequence }
+
+function TZMSSQLSequence.GetCurrentValueSQL: string;
+begin
+  Result := 'select next value for '+FConnection.GetMetadata.GetIdentifierConvertor.Quote(FName);
+end;
+
+function TZMSSQLSequence.GetNextValueSQL: string;
+begin
+  Result := 'SELECT current_value FROM sys.sequences WHERE name = '+FName;
+end;
+
+{ TZDotCurrvalNextvalSequence }
+
+function TZDotCurrvalNextvalSequence.GetCurrentValueSQL: string;
+begin
+  Result := 'SELECT '+FName+'.CURRVAL';
+end;
+
+function TZDotCurrvalNextvalSequence.GetNextValueSQL: string;
+begin
+  Result := 'SELECT '+FName+'.NEXTVAL'
+end;
+
+{ TZOracleSequence }
+
+function TZOracleSequence.GetCurrentValueSQL: string;
+begin
+  Result := inherited GetCurrentValueSQL+' FROM DUAL';
+end;
+
+function TZOracleSequence.GetNextValueSQL: string;
+begin
+  Result := inherited GetCurrentValueSQL+' FROM DUAL';
+end;
+
+{ TZFirebird2UpSequence }
+
+function TZFirebird2UpSequence.GetCurrentValueSQL: string;
+begin
+  Result := 'SELECT GEN_ID('+FName+', 0) FROM RDB$DATABASE';
+end;
+
+function TZFirebird2UpSequence.GetNextValueSQL: string;
+begin
+  Result := 'SELECT NEXT VALUE FOR '+FName+' FROM RDB$DATABASE';
+end;
+
+{ TZPostgreSQLSequence }
+
+function TZPostgreSQLSequence.GetCurrentValueSQL: string;
+begin
+  Result := 'SELECT CURRVAL('''+FName+''')';
+end;
+
+function TZPostgreSQLSequence.GetNextValueSQL: string;
+begin
+  Result := 'SELECT NEXTVAL('''+FName+''')';
 end;
 
 end.

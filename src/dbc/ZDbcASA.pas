@@ -102,6 +102,8 @@ type
       IZPreparedStatement; override;
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
+    function CreateSequence(const Sequence: string; BlockSize: Integer):
+      IZSequence; override;
 
     procedure Commit; override;
     procedure Rollback; override;
@@ -360,6 +362,18 @@ begin
   if IsClosed then
      Open;
   Result := TZASAPreparedStatement.Create(Self, Info);
+end;
+
+{**
+  Creates a sequence generator object.
+  @param Sequence a name of the sequence generator.
+  @param BlockSize a number of unique keys requested in one trip to SQL server.
+  @returns a created sequence object.
+}
+function TZASAConnection.CreateSequence(const Sequence: string;
+  BlockSize: Integer): IZSequence;
+begin
+  Result := TZSybaseASASquence.Create(Self, Sequence, BlockSize);
 end;
 
 {**

@@ -495,6 +495,7 @@ begin
       SetString(Inserted_eq_name_Index, 'xyz1');
       SetInt(Inserted_eq_id_Index, TEST_ROW_ID);
       CheckEquals(1, ExecuteUpdatePrepared);
+      CheckEquals(1, GetUpdateCount);
     end;
     Statement := nil;
 

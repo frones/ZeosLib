@@ -83,9 +83,14 @@ type
     procedure InternalExecuteStatement(const SQL: ZWideString);
   end;
 
+  TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
+    spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
+    spInformix, spCUBRID, spFoxPro);
+
   {** Implements a generic Ado Connection. }
   TZAdoConnection = class(TZAbstractConnection, IZAdoConnection)
   private
+    fServerProvider: TZServerProvider;
     procedure ReStartTransactionSupport;
   protected
     FAdoConnection: ZPlainAdo.Connection;
@@ -103,6 +108,8 @@ type
       IZPreparedStatement; override;
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
+    function CreateSequence(const Sequence: string; BlockSize: Integer):
+      IZSequence; override;
 
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -115,8 +122,6 @@ type
 
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
-
-    procedure ClearWarnings; override;
   end;
 
 var
@@ -259,10 +264,45 @@ end;
 procedure TZAdoConnection.Open;
 var
   LogMessage: RawByteString;
+  ConnectStrings: TStrings;
   DBInitialize: IDBInitialize;
   Command: ZPlainAdo.Command;
   DBCreateCommand: IDBCreateCommand;
   GetDataSource: IGetDataSource;
+  function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
+  type
+    TDriverNameAndServerProvider = record
+      ProviderNamePrefix: String;
+      Provider: TZServerProvider;
+    end;
+  const
+    KnownDriverName2TypeMap: array[0..12] of TDriverNameAndServerProvider = (
+      (ProviderNamePrefix: 'ORAOLEDB';      Provider: spOracle),
+      (ProviderNamePrefix: 'MSDAORA';       Provider: spOracle),
+      (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
+      (ProviderNamePrefix: 'SQLOLEDB';      Provider: spMSSQL),
+      (ProviderNamePrefix: 'SSISOLEDB';     Provider: spMSSQL),
+      (ProviderNamePrefix: 'MSDASQL';       Provider: spMSSQL), //??
+      (ProviderNamePrefix: 'MYSQLPROV';     Provider: spMySQL),
+      (ProviderNamePrefix: 'IBMDA400';      Provider: spAS400),
+      (ProviderNamePrefix: 'IFXOLEDBC';     Provider: spInformix),
+      (ProviderNamePrefix: 'MICROSOFT.JET.OLEDB'; Provider: spMSJet),
+      (ProviderNamePrefix: 'IB';            Provider: spIB_FB),
+      (ProviderNamePrefix: 'POSTGRESSQL';   Provider: spPostgreSQL),
+      (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID)
+      );
+  var
+    I: Integer;
+    ProviderNamePrefixUp: string;
+  begin
+    Result := spMSSQL;
+    ProviderNamePrefixUp := UpperCase(ProviderNamePrefix);
+    for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
+      if StartsWith(ProviderNamePrefixUp, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
+        Result := KnownDriverName2TypeMap[i].Provider;
+        Break;
+      end;
+  end;
 begin
   if not Closed then Exit;
 
@@ -272,6 +312,11 @@ begin
       FAdoConnection.Set_Mode(adModeRead)
     else
       FAdoConnection.Set_Mode(adModeUnknown);
+
+    ConnectStrings := SplitString(DataBase, ';');
+    FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values['Provider']);
+    FreeAndNil(ConnectStrings);
+
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
@@ -330,6 +375,41 @@ function TZAdoConnection.CreateRegularStatement(Info: TStrings): IZStatement;
 begin
   if IsClosed then Open;
   Result := TZAdoStatement.Create(Self, Info);
+end;
+
+const
+  TZDefaultProviderSequenceClasses: array[TZServerProvider] of TZAbstractSequenceClass = (
+    {spUnknown}   nil,
+    {spMSSQL}     TZMSSQLSequence,
+    {spMSJet}     nil,
+    {spOracle}    TZOracleSequence,
+    {spASE}       nil,
+    {spASA}       TZDotCurrvalNextvalSequence,
+    {spPostgreSQL}TZPostgreSQLSequence,
+    {spIB_FB}     TZFirebird2UpSequence,
+    {spMySQL}     nil,
+    {spNexusDB}   nil,
+    {spSQLite}    nil,
+    {spDB2}       TZDB2Squence,
+    {spAS400}     nil,
+    {spInformix}  TZInformixSquence,
+    {spCUBRID}    TZCubridSquence,
+    {spFoxPro}    nil
+    );
+
+{**
+  Creates a sequence generator object.
+  @param Sequence a name of the sequence generator.
+  @param BlockSize a number of unique keys requested in one trip to SQL server.
+  @returns a created sequence object.
+}
+function TZAdoConnection.CreateSequence(const Sequence: string;
+  BlockSize: Integer): IZSequence;
+begin
+  if TZDefaultProviderSequenceClasses[fServerProvider] <> nil then
+    Result := TZDefaultProviderSequenceClasses[fServerProvider].Create(Self, Sequence, BlockSize)
+  else
+    Result := inherited CreateSequence(Sequence, BlockSize);
 end;
 
 {**
@@ -610,15 +690,6 @@ end;
 function TZAdoConnection.GetCatalog: string;
 begin
   Result := String(FAdoConnection.DefaultDatabase);
-end;
-
-{**
-  Clears all warnings reported for this <code>Connection</code> object.
-  After a call to this method, the method <code>getWarnings</code>
-    returns null until a new warning is reported for this Connection.
-}
-procedure TZAdoConnection.ClearWarnings;
-begin
 end;
 
 initialization

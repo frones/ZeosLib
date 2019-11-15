@@ -113,6 +113,8 @@ type
       IZPreparedStatement; override;
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
+    function CreateSequence(const Sequence: string; BlockSize: Integer):
+      IZSequence; override;
 
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -536,6 +538,20 @@ begin
   if IsClosed then
      Open;
   Result := TZDBLibStatement.Create(Self, Info);
+end;
+
+{**
+  Creates a sequence generator object.
+  @param Sequence a name of the sequence generator.
+  @param BlockSize a number of unique keys requested in one trip to SQL server.
+  @returns a created sequence object.
+}
+function TZDBLibConnection.CreateSequence(const Sequence: string;
+  BlockSize: Integer): IZSequence;
+begin
+  if FProvider = dpMsSQL
+  then Result := TZMSSQLSequence.Create(Self, Sequence, Blocksize)
+  else Result := inherited CreateSequence(Sequence, BlockSize);
 end;
 
 {**
