@@ -1021,7 +1021,8 @@ end;
 }
 function TZAbstractConnection.AbortOperation: Boolean;
 begin
- Result := FConnection.AbortOperation = 0;
+ If FConnection <> nil Then Result := FConnection.AbortOperation = 0
+   Else Result := False;
 end;
 
 {**
@@ -1754,4 +1755,3 @@ end;
 initialization
   SqlHourGlassLock := 0;
 end.
-
