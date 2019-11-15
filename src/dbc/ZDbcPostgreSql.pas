@@ -359,28 +359,31 @@ end;
   side
 }
 function TZPostgreSQLConnection.AbortOperation: Integer;
-Const
- len = 256;
-Var
- pcancel: PGCancel;
- perr: PChar;
+const
+  PGCancelBufLen = 256;
+var
+  pCancel: PGCancel;
+  ErrBuf: array[1..PGCancelBufLen] of AnsiChar;
+  ErrRaw: RawByteString;
 begin
- {$MESSAGE '.AbortOperation with PostgreSQL is untested and might cause unexpected results!'}
- // https://www.postgresql.org/docs/9.2/libpq-cancel.html
- Result := 1;
- pcancel := FPlainDriver.PQgetCancel(FConn);
- If pcancel <> nil Then Begin
-                        GetMem(perr, (len + 1) * SizeOf(Char));
-                        Try
-                         Try
-                          If FPlainDriver.PQcancel(pcancel, perr, len) = 1 Then Result := 0;
-                         Finally
-                          FPlainDriver.PQfreeCancel(pcancel);
-                         End;
-                        Finally
-                         FreeMem(perr);
-                        End;
-                        End;
+  {$MESSAGE '.AbortOperation with PostgreSQL is untested and might cause unexpected results!'}
+  // https://www.postgresql.org/docs/9.2/libpq-cancel.html
+  Result := 1;
+  pCancel := FPlainDriver.PQgetCancel(FConn);
+  if pCancel = nil then Exit;
+
+  try
+    // 0 - error, 1 - success
+    if FPlainDriver.PQcancel(pCancel, @ErrBuf, PGCancelBufLen) = 1 then
+      Result := 0
+    else
+    begin
+      ZSetString(PAnsiChar(@ErrBuf), StrLen(@ErrBuf), ErrRaw);
+      HandlePostgreSQLError(Self, FPlainDriver, Fconn, lcOther, ErrRaw, nil);
+    end;
+  finally
+    FPlainDriver.PQfreeCancel(pcancel);
+  end;
 end;
 
 {**
