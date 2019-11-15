@@ -15,3 +15,6 @@ go
 
 drop table Mantis164
 go
+
+drop table TableTicked306
+go

@@ -1730,7 +1730,9 @@ begin
   Bind^.buffer_Length_address := @FbindArray[ColOffset+FBindOffsets.buffer_length]; //save address
   Bind^.buffer_type_address := @FbindArray[ColOffset+FBindOffsets.buffer_type];
   Bind^.is_signed := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffSets.flags)^ and UNSIGNED_FLAG = 0;
-  Bind^.buffer_type_address^ := bind^.buffer_type;
+  if bind^.buffer_type = FIELD_TYPE_GEOMETRY
+  then Bind^.buffer_type_address^ := FIELD_TYPE_BLOB
+  else Bind^.buffer_type_address^ := bind^.buffer_type;
 
   PULong(Bind^.buffer_Length_address)^ := Bind^.length;
   PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= Ord(not Bind^.is_signed);

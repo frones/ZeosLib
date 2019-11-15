@@ -67,3 +67,9 @@ CREATE TABLE Mantis164 (
 ON [PRIMARY]
 GO
 
+CREATE TABLE TableTicked306 (
+  [ID] int NOT NULL PRIMARY KEY,
+  [val1] nvarchar(200) default null,
+  [val2] nvarchar(255) default (null)
+)
+GO

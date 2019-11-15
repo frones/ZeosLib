@@ -390,9 +390,14 @@ begin
           MYSQL_OPT_CONNECT_TIMEOUT,
           MYSQL_OPT_PROTOCOL,
           MYSQL_OPT_READ_TIMEOUT,
-          MYSQL_OPT_WRITE_TIMEOUT:
-            if Info.Values[sMyOpt] <> '' then
-            begin
+          MYSQL_OPT_WRITE_TIMEOUT,
+          MYSQL_OPT_MAX_ALLOWED_PACKET,
+          MYSQL_OPT_NET_BUFFER_LENGTH,
+          MYSQL_OPT_SSL_MODE,
+          MYSQL_OPT_RETRY_COUNT,
+          MYSQL_OPT_SSL_FIPS_MODE,
+          MYSQL_OPT_ZSTD_COMPRESSION_LEVEL:
+            if Info.Values[sMyOpt] <> '' then begin
 setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
               GetPlainDriver.SetOptions(FHandle, myopt, @UIntOpt);
             end;
@@ -419,15 +424,18 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
           MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
           MYSQL_ENABLE_CLEARTEXT_PLUGIN,
           MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS,
-          MYSQL_OPT_SSL_ENFORCE:
-            if Info.Values[sMyOpt] <> '' then
-            begin
+          MYSQL_OPT_SSL_ENFORCE,
+          MYSQL_OPT_GET_SERVER_PUBLIC_KEY,
+          MYSQL_OPT_OPTIONAL_RESULTSET_METADATA:
+            if Info.Values[sMyOpt] <> '' then begin
               MyBoolOpt := Ord(StrToBoolEx(Info.Values[sMyOpt]));
               GetPlainDriver.SetOptions(FHandle, myopt, @MyBoolOpt);
             end;
           { unsigned char * options }
           MYSQL_OPT_SSL_KEY, MYSQL_OPT_SSL_CERT,
-          MYSQL_OPT_SSL_CA, MYSQL_OPT_SSL_CAPATH, MYSQL_OPT_SSL_CIPHER: ;//skip, processed down below
+          MYSQL_OPT_SSL_CA, MYSQL_OPT_SSL_CAPATH, MYSQL_OPT_SSL_CIPHER,
+          MYSQL_OPT_TLS_CIPHERSUITES,
+          MYSQL_OPT_COMPRESSION_ALGORITHMS: ;//skip, processed down below
           else
             if Info.Values[sMyOpt] <> '' then
               GetPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(
