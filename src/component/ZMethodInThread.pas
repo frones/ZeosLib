@@ -34,7 +34,7 @@ Type
 
 Implementation
 
-Uses System.Classes;
+Uses System.Classes, ZClasses, ZMessages;
 
 Type
  TZMethodThread = Class(TThread)
@@ -69,7 +69,7 @@ End;
 
 Procedure TZMethodInThread.CheckRunning;
 Begin
- If Self.ThreadRunning Then Raise Exception.Create('BG operation is still running')
+ If Self.ThreadRunning Then Raise EZSQLException.Create(SBackgroundOperationStillRunning)
    Else
  If Assigned(_methodthread) Then FreeAndNil(_methodthread);
 End;
