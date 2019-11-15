@@ -34,11 +34,11 @@ Type
 
 Implementation
 
-Uses System.Classes, ZClasses, ZMessages;
+Uses Classes, ZClasses, ZMessages;
 
 Type
  TZMethodThread = Class(TThread)
- strict private
+ private
   _runmethod: TProcedureOfObject;
   _onerror: TErrorEvent;
  protected
