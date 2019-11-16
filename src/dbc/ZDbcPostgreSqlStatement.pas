@@ -993,7 +993,9 @@ begin
   if Length(CachedQueryRaw) <= 1 then  begin//only name in there?
     Unprepare; //reset cached query
     InParams := GenerateParamsStr(InParamCount);
-    Result := Format('SELECT * FROM %s(%s)', [SQL, InParams]);
+    if (Connection as IZPostgreSQLConnection).StoredProcedureIsSelectable(SQL)
+    then Result := Format('SELECT * FROM %s(%s)', [SQL, InParams])
+    else Result := Format('CALL %s(%s)', [SQL, InParams]);
     {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := Result; //sets the cached queries again
   end;
 end;
