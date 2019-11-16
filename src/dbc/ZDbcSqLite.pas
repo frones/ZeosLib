@@ -82,6 +82,8 @@ type
     function GetConnectionHandle: Psqlite;
     function GetUndefinedVarcharAsStringLength: Integer;
     function ExtendedErrorMessage: Boolean;
+    function enable_load_extension(OnOff: Integer): Integer;
+    function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
   end;
 
   {** Implements SQLite Database Connection. }
@@ -106,6 +108,8 @@ type
     procedure StartTransactionSupport;
     function GetUndefinedVarcharAsStringLength: Integer;
     function ExtendedErrorMessage: Boolean;
+    function enable_load_extension(OnOff: Integer): Integer;
+    function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
   public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
@@ -261,6 +265,12 @@ begin
   Result := ErrorCode;
 end;
 
+function TZSQLiteConnection.load_extension(zFile: PAnsiChar; zProc: Pointer;
+  var pzErrMsg: PAnsiChar): Integer;
+begin
+  Result := FPlainDriver.load_extension(FHandle, zFile, zProc, pzErrMsg);
+end;
+
 {**
   Reencrypt a database with a new key. The old/current key needs to be
   set before calling this function.
@@ -369,6 +379,11 @@ begin
     Open;
 
   Result := TZSQLiteStatement.Create(GetPlainDriver, Self, Info, FHandle);
+end;
+
+function TZSQLiteConnection.enable_load_extension(OnOff: Integer): Integer;
+begin
+  Result := FPlainDriver.enable_load_extension(FHandle, OnOff);
 end;
 
 procedure TZSQLiteConnection.ExecTransactionStmt(

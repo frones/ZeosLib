@@ -206,6 +206,9 @@ type
     function Complete(const sql: PAnsiChar): Integer;
     function Has_sqlite3_column_table_name: Boolean;
 
+    function enable_load_extension(db: Psqlite; OnOff: Integer): Integer;
+    function load_extension(db: Psqlite; const zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
+
     procedure BusyHandler(db: Psqlite; callback: Tsqlite_busy_callback;
       ptr: Pointer);
     procedure BusyTimeout(db: Psqlite; ms: Integer);
@@ -368,6 +371,8 @@ type
     sqlite3_finalize: function(pStmt: Psqlite3_stmt): Integer; cdecl;
     sqlite3_reset: function(pStmt: Psqlite3_stmt): Integer; cdecl;
     sqlite3_enable_load_extension: function(db: Psqlite; OnOff: Integer): Integer; cdecl;
+    sqlite3_load_extension: function(db: Psqlite; const zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer; cdecl;
+
 
     sqlite3_column_blob: function(Stmt: Psqlite3_stmt; iCol:integer): Pointer; cdecl;
     sqlite3_column_bytes: function(Stmt: Psqlite3_stmt; iCol: Integer): integer; cdecl;
@@ -443,6 +448,9 @@ type
     procedure FreeMem(ptr: Pointer);
     function LibVersion: PAnsiChar;
     function Has_sqlite3_column_table_name: Boolean;
+
+    function enable_load_extension(db: Psqlite; OnOff: Integer): Integer;
+    function load_extension(db: Psqlite; const zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
 
     function FunctionType({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
       {%H-}datatype: Integer): Integer;
@@ -566,6 +574,12 @@ begin
   AddCodePage('UTF-16le', 2, ceUTF16, zCP_UTF16, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
   AddCodePage('UTF-16be', 3, ceUTF16, zCP_UTF16BE, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
   AddCodePage('UTF-16', 4, ceUTF16, zCP_UTF16, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
+end;
+
+function TZSQLiteBaseDriver.load_extension(db: Psqlite; const zFile: PAnsiChar;
+  zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
+begin
+  Result := sqlite3_load_extension(db, zFile, zProc, pzErrMsg);
 end;
 
 constructor TZSQLiteBaseDriver.Create;
@@ -905,6 +919,12 @@ begin
   Result := sqlite3_data_count(pStmt);
 end;
 
+function TZSQLiteBaseDriver.enable_load_extension(db: Psqlite;
+  OnOff: Integer): Integer;
+begin
+  Result := sqlite3_enable_load_extension(db, OnOff);
+end;
+
 function TZSQLiteBaseDriver.backup_finish(p: Psqlite): Integer;
 begin
   Result := sqlite3_backup_finish(p);
@@ -1120,6 +1140,7 @@ begin
   @sqlite3_finalize               := GetAddress('sqlite3_finalize');
   @sqlite3_reset                  := GetAddress('sqlite3_reset');
   @sqlite3_enable_load_extension  := GetAddress('sqlite3_enable_load_extension');
+  @sqlite3_load_extension         := GetAddress('sqlite3_load_extension');
 
   @sqlite3_exec                   := GetAddress('sqlite3_exec');
   @sqlite3_last_insert_rowid      := GetAddress('sqlite3_last_insert_rowid');
