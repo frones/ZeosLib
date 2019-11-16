@@ -264,8 +264,8 @@ type
     FdbUse_stdcall: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; stdcall;
     Fdbvarylen_MS: function(Proc: PDBPROCESS; Column: Integer): LongBool; cdecl;
     Fdbvarylen_stdcall: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; stdcall;
-    dberrhandle_stdcall: function(Handler: SYBDBERRHANDLE_PROC): SYBDBERRHANDLE_PROC; stdcall;
-    dbmsghandle_stdcall: function(Handler: SYBDBMSGHANDLE_PROC): SYBDBMSGHANDLE_PROC; stdcall;
+    Fdberrhandle_stdcall: function(Handler: SYBDBERRHANDLE_PROC): SYBDBERRHANDLE_PROC; stdcall;
+    Fdbmsghandle_stdcall: function(Handler: SYBDBMSGHANDLE_PROC): SYBDBMSGHANDLE_PROC; stdcall;
     FdbSetVersion_stdcall: function(Version: DBINT): RETCODE; stdcall;
     FdbSetMaxprocs_stdcall: function(MaxProcs: DBINT): RETCODE; stdcall;
     // sybase has widened the type!
@@ -299,6 +299,7 @@ type
     // MS only others use dbsetlname
     Fdbsetlpacket: function(Login: PLOGINREC; PacketSize: Word): RETCODE; cdecl;
     FdbSetMaxprocs_MS: function(MaxProcs: SmallInt): RETCODE; cdecl;
+    fdbWinexit: procedure; cdecl; // MS only
 {$ENDIF}
     Fdbadata: function(dbProc: PDBPROCESS; ComputeId, Column: Integer): PByte; cdecl;
     Fdbadlen: function(dbProc: PDBPROCESS; ComputeId, Column: Integer)
@@ -1596,29 +1597,40 @@ end;
 function TZDBLibAbstractPlainDriver.dbUse(dbProc: PDBPROCESS;
   dbName: PAnsiChar): RETCODE;
 begin
-{$IFDEF MSWINDOWS} if Assigned(FdbUse_stdcall) then
-    Result := FdbUse_stdcall(dbProc, dbName)
+  {$IFDEF MSWINDOWS} if Assigned(FdbUse_stdcall)
+  then Result := FdbUse_stdcall(dbProc, dbName)
   else {$ENDIF MSWINDOWS}Result := FdbUse(dbProc, dbName);
 end;
 
 destructor TZDBLibAbstractPlainDriver.Destroy;
 begin
   if Loader.Loaded then
-  begin
-{$IFDEF MSWINDOWS} if Assigned(Fdbexit_stdcall) then
-      Fdbexit_stdcall
-    else {$ENDIF MSWINDOWS}Fdbexit;
-
-    (* DbLibAPI.dberrhandle(DbLibErrorHandle);
-      DbLibAPI.dbmsghandle(DbLibMessageHandle);
-      MsSQLAPI.dbWinexit;
-      DbLibAPI.dbExit;
-
-      DBLibAPI.dberrhandle(OldFreeTDSErrorHandle);
-      DBLibAPI.dbmsghandle(OldFreeTDSMessageHandle);
-      DBLibAPI.dbexit;
-    *)
-  end;
+    case FDBLibraryVendorType of
+      {$IFDEF MSWINDOWS}
+      lvtMS: begin
+          fdberrhandle(OldMsSQLErrorHandle);
+          fdbmsghandle(OldMsSQLMessageHandle);
+          fdbWinexit;
+          fdbExit;
+        end;
+      {$ENDIF}
+      lvtSybase: begin
+          {$IFDEF MSWINDOWS}
+          fdberrhandle_stdcall(OldSybaseErrorHandle);
+          fdbmsghandle_stdcall(OldSybaseMessageHandle);
+          fdbExit_stdcall;
+          {$ELSE}
+          fdberrhandle(OldSybaseErrorHandle);
+          fdbmsghandle(OldSybaseMessageHandle);
+          fdbExit;
+          {$ENDIF}
+        end;
+      else begin //FreeTDS
+          fdberrhandle(OldFreeTDSErrorHandle);
+          fdbmsghandle(OldFreeTDSMessageHandle);
+          fdbExit;
+        end;
+    end;
   inherited Destroy;
 end;
 
@@ -1800,6 +1812,7 @@ begin
 {$IFDEF MSWINDOWS}
       lvtMS:
         begin
+          @FdbWinexit := GetAddress('dbwinexit');
           @Fdbdead_MS := GetAddress('dbdead');
           @Fdbcmdrow := GetAddress('dbcmdrow');
           @Fdbcount := GetAddress('dbcount');
@@ -1884,10 +1897,25 @@ begin
       @FdbRpcSend_stdcall := GetAddress('dbrpcsend');
       @FdbUse_stdcall := GetAddress('dbuse');
 
-      @dberrhandle_stdcall := GetAddress('dberrhandle');
-      @dbmsghandle_stdcall := GetAddress('dbmsghandle');
-      OldSybaseErrorHandle := dberrhandle_stdcall(SybaseErrorHandle);
-      OldSybaseMessageHandle := dbmsghandle_stdcall(SybaseMessageHandle);
+      @fdberrhandle_stdcall := GetAddress('dberrhandle');
+      @fdbmsghandle_stdcall := GetAddress('dbmsghandle');
+      OldSybaseErrorHandle := fdberrhandle_stdcall(SybaseErrorHandle);
+      OldSybaseMessageHandle := fdbmsghandle_stdcall(SybaseMessageHandle);
+      @fbcp_batch_stdcall             := GetAddress('bcp_batch');
+      @fbcp_bind_stdcall              := GetAddress('bcp_bind');
+      @fbcp_colfmt_stdcall            := GetAddress('bcp_colfmt');
+      @fbcp_collen_stdcall            := GetAddress('bcp_collen');
+      @fbcp_colptr_stdcall            := GetAddress('bcp_colptr');
+      @fbcp_columns_stdcall           := GetAddress('bcp_columns');
+      @fbcp_control_stdcall           := GetAddress('bcp_control');
+      @fbcp_done_stdcall              := GetAddress('bcp_done');
+      @fbcp_exec_stdcall              := GetAddress('bcp_exec');
+      @fbcp_init_stdcall              := GetAddress('bcp_init');
+      @fbcp_moretext_stdcall          := GetAddress('bcp_moretext');
+      @fbcp_readfmt_stdcall           := GetAddress('bcp_readfmt');
+      @fbcp_sendrow_stdcall           := GetAddress('bcp_sendrow');
+      @fbcp_setl_stdcall              := GetAddress('bcp_setl');
+      @fbcp_writefmt_stdcall          := GetAddress('bcp_writefmt');
     end
     else {$ENDIF}begin
       @Fdbadata := GetAddress('dbadata');
@@ -1951,6 +1979,22 @@ begin
 
       @Fdbmsghandle := GetAddress('dbmsghandle');
       @Fdberrhandle := GetAddress('dberrhandle');
+
+      @fbcp_batch             := GetAddress('bcp_batch');
+      @fbcp_bind              := GetAddress('bcp_bind');
+      @fbcp_colfmt            := GetAddress('bcp_colfmt');
+      @fbcp_collen            := GetAddress('bcp_collen');
+      @fbcp_colptr            := GetAddress('bcp_colptr');
+      @fbcp_columns           := GetAddress('bcp_columns');
+      @fbcp_control           := GetAddress('bcp_control');
+      @fbcp_done              := GetAddress('bcp_done');
+      @fbcp_exec              := GetAddress('bcp_exec');
+      @fbcp_init              := GetAddress('bcp_init');
+      @fbcp_moretext          := GetAddress('bcp_moretext');
+      @fbcp_readfmt           := GetAddress('bcp_readfmt');
+      @fbcp_sendrow           := GetAddress('bcp_sendrow');
+      @fbcp_setl              := GetAddress('bcp_setl');
+      @fbcp_writefmt          := GetAddress('bcp_writefmt');
       if FDBLibraryVendorType = lvtFreeTDS then
       begin
         OldFreeTDSErrorHandle := Fdberrhandle(FreeTDSErrorHandle);
@@ -1964,21 +2008,6 @@ begin
       Assert(dbIntit = SUCCEED, 'dbinit failed');
     end;
   end;
-  (* @DBLibAPI.bcp_batch             := GetAddress('bcp_batch');
-    @DBLibAPI.bcp_bind              := GetAddress('bcp_bind');
-    @DBLibAPI.bcp_colfmt            := GetAddress('bcp_colfmt');
-    @DBLibAPI.bcp_collen            := GetAddress('bcp_collen');
-    @DBLibAPI.bcp_colptr            := GetAddress('bcp_colptr');
-    @DBLibAPI.bcp_columns           := GetAddress('bcp_columns');
-    @DBLibAPI.bcp_control           := GetAddress('bcp_control');
-    @DBLibAPI.bcp_done              := GetAddress('bcp_done');
-    @DBLibAPI.bcp_exec              := GetAddress('bcp_exec');
-    @DBLibAPI.bcp_init              := GetAddress('bcp_init');
-    @DBLibAPI.bcp_moretext          := GetAddress('bcp_moretext');
-    @DBLibAPI.bcp_readfmt           := GetAddress('bcp_readfmt');
-    @DBLibAPI.bcp_sendrow           := GetAddress('bcp_sendrow');
-    @DBLibAPI.bcp_setl              := GetAddress('bcp_setl');
-    @DBLibAPI.bcp_writefmt          := GetAddress('bcp_writefmt'); *)
 end;
 
 procedure TZDBLibAbstractPlainDriver.LoadCodePages;
