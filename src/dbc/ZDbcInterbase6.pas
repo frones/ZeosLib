@@ -272,6 +272,7 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
+    function AbortOperation: Integer; override;
 
     function ConstructConnectionString: String;
     procedure Open; override;
@@ -406,6 +407,15 @@ begin
     FTransactionManager := nil;
   end;
 end;
+
+Function TZInterbase6Connection.AbortOperation: Integer;
+Begin
+ {$MESSAGE '.AbortOperation with Firebird is untested and might cause unexpected results!'}
+ // https://github.com/Alexpux/firebird-git-svn/blob/master/doc/README.fb_cancel_operation
+ Result := 0;
+ If FPlainDriver.fb_cancel_operation(@FStatusVector, @FHandle, fb_cancel_raise) <> 0 Then
+   CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+End;
 
 procedure TZInterbase6Connection.AssignISC_Parameters;
 var
