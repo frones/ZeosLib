@@ -412,9 +412,13 @@ Function TZInterbase6Connection.AbortOperation: Integer;
 Begin
  {$MESSAGE '.AbortOperation with Firebird is untested and might cause unexpected results!'}
  // https://github.com/Alexpux/firebird-git-svn/blob/master/doc/README.fb_cancel_operation
- Result := 0;
- If FPlainDriver.fb_cancel_operation(@FStatusVector, @FHandle, fb_cancel_raise) <> 0 Then
-   CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+ if assigned(FPlainDriver.fb_cancel_operation) then begin
+   Result := 0;
+   If FPlainDriver.fb_cancel_operation(@FStatusVector, @FHandle, fb_cancel_raise) <> 0 Then
+     CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+ end else begin
+   Result := 1 //abort opertion is not supported by the current client library
+ end;
 End;
 
 procedure TZInterbase6Connection.AssignISC_Parameters;
