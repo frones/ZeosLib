@@ -220,7 +220,7 @@ type
     FResultSet: IZResultSet;
 
     FRefreshInProgress: Boolean;
-    FNativeFormatOverloadOfBcdFieldCalled: Boolean; //circumvent a TClientDataSet BCDField bug.
+    FNativeFormatOverloadCalled: array[ftBCD..ftDateTime] of Boolean; //circumvent a TClientDataSet BCDField bug.
       //The ClientDataSets do not call the Get/SetData overload with NativeFormat overload
       //so they use the slow TBCD record instead (while we are in Currency range)
       //and convert all values to/from the currency
@@ -3057,9 +3057,10 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
-  if Field.DataType in [ftWideString, ftBCD] then begin
+  if Field.DataType in [ftWideString, ftBCD, ftDate, ftTime, ftDateTime] then begin
     NativeFormat := True;
-    FNativeFormatOverloadOfBcdFieldCalled := Field.DataType = ftBCD;
+    if (Field.DataType <> ftWideString) then
+      FNativeFormatOverloadCalled[Field.DataType] := True;
   end;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
@@ -3098,49 +3099,60 @@ begin
         ftTime: begin
                   RowAccessor.GetTime(ColumnIndex, Result, T{%H-});
                   Result := Result or not TryEncodeTime(T.Hour, T.Minute, T.Second, T.Fractions div NanoSecsPerMSec, DT);
-                  {$IFNDEF OLDFPC}
-                  if Result
+                  {$IFNDEF WITH_FPC_FTTIME_BUG}
+                  if FNativeFormatOverloadCalled[ftTime] then
+                  {$ENDIF WITH_FPC_FTTIME_BUG}
+                    if Result
+                    then PDateTime(Buffer)^ := 0
+                    else PDateTime(Buffer)^ := DT
+                  {$IFNDEF WITH_FPC_FTTIME_BUG}
+                  else if Result
                   then PInteger(Buffer)^ := 0
                   else begin
                     PInteger(Buffer)^ := Trunc(DT * MSecsOfDay + 0.1);
                     if T.IsNegative then
                       PInteger(Buffer)^ := -PInteger(Buffer)^;
                   end;
-                  {$ELSE}
-                  PDateTime(Buffer)^ := DT;
-                  {$ENDIF}
+                  {$ENDIF WITH_FPC_FTTIME_BUG}
+                  FNativeFormatOverloadCalled[ftTime] := False;
                 end;
         ftDate: begin
-                 RowAccessor.GetDate(ColumnIndex, Result, D);
-                 Result := Result or not TryEncodeDate(D.Year, D.Month, D.Day, DT);
-                 {$IFNDEF OLDFPC}
-                 if Result
-                 then PInteger(Buffer)^ := 0
-                 else begin
+                  RowAccessor.GetDate(ColumnIndex, Result, D);
+                  Result := Result or not TryEncodeDate(D.Year, D.Month, D.Day, DT);
+                  {$IFNDEF OLDFPC}if FNativeFormatOverloadCalled[ftDate] then {$ENDIF OLDFPC}
+                    if Result
+                    then PDateTime(Buffer)^ := 0
+                    else PDateTime(Buffer)^ := DT
+                  {$IFNDEF OLDFPC}
+                  else if Result
+                  then PInteger(Buffer)^ := 0
+                  else begin
                     PInteger(Buffer)^ := Trunc(DT - D1M1Y1 + 1);
                     if D.IsNegative then
                       PInteger(Buffer)^ := -PInteger(Buffer)^;
-                 end;
-                 {$ELSE}
-                 PDateTime(Buffer)^ := DT;
-                 {$ENDIF}
+                  end;
+                  {$ENDIF OLDFPC}
+                  FNativeFormatOverloadCalled[ftDate] := False;
                end;
         ftDateTime: begin
-                    RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
-                    Result := Result or not TryTimeStampToDateTime(TS, DT);
-                    if Result then
-                      PDateTime(Buffer)^ := 0
+                  RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
+                  Result := Result or not TryTimeStampToDateTime(TS, DT);
+                  if Result
+                  then PDateTime(Buffer)^ := 0
+                  else if FNativeFormatOverloadCalled[ftDateTime]
+                    then PDateTime(Buffer)^ := DT
                     else begin
                       S := DateTimeToTimeStamp(DT);
                       PDateTime(Buffer)^ := TimeStampToMSecs(S);
                     end;
-                  end;
-        {$IFDEF WITH_FTTIMESTAMP}
+                  FNativeFormatOverloadCalled[ftDateTime] := False;
+                end;
+        {$IFDEF WITH_FTTIMESTAMP_FIELD}
         ftTimeStamp: begin
                       RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
                       PSQLTimeStamp(Buffer)^ := PSQLTimeStamp(@TS.Year)^
                     end;
-        {$ENDIF !WITH_FTTIMESTAMP}
+        {$ENDIF !WITH_FTTIMESTAMP_FIELD}
         {$IFDEF WITH_FTTIMESTAMP_OFFSET}
         ftTimeStampOffset: begin
                       RowAccessor.GetTimeStamp(ColumnIndex, Result, TS);
@@ -3182,10 +3194,10 @@ begin
         ftCurrency: //sade TCurrencyField is Descendant of TFloatField and uses Double values
           PDouble(Buffer)^ := RowAccessor.GetDouble(ColumnIndex, Result);
         ftBcd: begin
-            if FNativeFormatOverloadOfBcdFieldCalled //circumvent the T[BDE/Client]DataSet bug...
+            if FNativeFormatOverloadCalled[ftBcd] //circumvent the T[BDE/Client]DataSet bug...
             then PCurrency(Buffer)^ := RowAccessor.GetCurrency(ColumnIndex, Result)
             else RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^,  Result);
-            FNativeFormatOverloadOfBcdFieldCalled := False;
+            FNativeFormatOverloadCalled[ftBcd] := False;
           end;
         ftFmtBcd: RowAccessor.GetBigDecimal(ColumnIndex, PBCD(Buffer)^, Result);
         else
@@ -3219,9 +3231,10 @@ end;
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean);
 begin
-  if Field.DataType in [ftWideString, ftBCD] then begin
+  if Field.DataType in [ftWideString, ftBCD, ftDate, ftTime, ftDateTime] then begin
     NativeFormat := True;
-    FNativeFormatOverloadOfBcdFieldCalled := Field.DataType = ftBCD;
+    if (Field.DataType <> ftWideString) then
+      FNativeFormatOverloadCalled[Field.DataType] := True;
   end;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
@@ -3273,38 +3286,50 @@ begin
     {$ENDIF}
 
     if Assigned(Buffer) then
-    begin
       case Field.DataType of
         ftDate: begin
-           DT := PInteger(Buffer)^ - 1 + D1M1Y1;
-           DecodeDateTimeToDate(DT, D{%H-});
-           RowAccessor.SetDate(ColumnIndex, D);
+            if FNativeFormatOverloadCalled[ftDate]
+            then DT := PDateTime(Buffer)^
+            else DT := PInteger(Buffer)^ - 1 + D1M1Y1;
+            DecodeDateTimeToDate(DT, D{%H-});
+            RowAccessor.SetDate(ColumnIndex, D);
+            FNativeFormatOverloadCalled[ftDate] := False;
           end;
         ftTime: begin
-            DT := PInteger(Buffer)^ / MSecsOfDay;
+            if FNativeFormatOverloadCalled[ftTime]
+            then DT := PDateTime(Buffer)^
+            else DT := PInteger(Buffer)^ / MSecsOfDay;
             DecodeDateTimeToTime(DT, T);
             RowAccessor.SetTime(ColumnIndex, T);
+            FNativeFormatOverloadCalled[ftTime] := False;
           end;
         ftDateTime: begin
-            {$IFDEF FPC}
-            S := MSecsToTimeStamp(System.Trunc(PDouble(Buffer)^));
-            {$ELSE}
-            S := MSecsToTimeStamp(PDateTime(Buffer)^);
-            {$ENDIF}
-            DT := TimeStampToDateTime(S);
+            if FNativeFormatOverloadCalled[ftDateTime]
+            then DT := PDateTime(Buffer)^
+            else begin
+              {$IFDEF FPC}
+              S := MSecsToTimeStamp(System.Trunc(PDouble(Buffer)^));
+              {$ELSE}
+              S := MSecsToTimeStamp(PDateTime(Buffer)^);
+              {$ENDIF}
+              DT := TimeStampToDateTime(S);
+            end;
             DecodeDateTimeToTimeStamp(DT, TS);
             RowAccessor.SetTimestamp(ColumnIndex, TS);
+            FNativeFormatOverloadCalled[ftDateTime] := False;
           end;
-        {$IFDEF WITH_FTTIMESTAMP}
+        {$IFDEF WITH_FTTIMESTAMP_FIELD}
         ftTimeStamp: begin
             PInt64(PAnsiChar(@TS.Year)+SizeOf(TZTimeStamp)-SizeOf(Int64))^ := 0;
             PSQLTimeStamp(@TS.Year)^ := PSQLTimeStamp(Buffer)^;
+            RowAccessor.SetTimestamp(ColumnIndex, TS);
           end;
-        {$ENDIF WITH_FTTIMESTAMP}
+        {$ENDIF WITH_FTTIMESTAMP_FIELD}
         {$IFDEF WITH_FTTIMESTAMP_OFFSET}
         ftTimeStampOffset: begin
             TS.IsNegative := False; //not supported here
             PSQLTimeStampOffSet(@TS.Year)^ := PSQLTimeStampOffSet(Buffer)^;
+            RowAccessor.SetTimestamp(ColumnIndex, TS);
           end;
         {$ENDIF}
         ftVarBytes: { Processes varbinary fields. }
@@ -3328,11 +3353,11 @@ begin
         {$ENDIF}
         ftCurrency:
           RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency
-        ftBCD: if FNativeFormatOverloadOfBcdFieldCalled then begin
+        ftBCD: if FNativeFormatOverloadCalled[ftBCD] then begin
             if (Field.Size < 4) then //right truncation? Using the Tbcd record's behaves equal
               PCurrency(Buffer)^ := RoundCurrTo(PCurrency(Buffer)^, Field.Size);
             RowAccessor.SetCurrency(ColumnIndex, PCurrency(Buffer)^);
-            FNativeFormatOverloadOfBcdFieldCalled := False;
+            FNativeFormatOverloadCalled[ftBCD] := False;
           end else
             RowAccessor.SetBigDecimal(ColumnIndex, PBCD(Buffer)^);
         {$IFDEF WITH_FTEXTENDED}
@@ -3346,8 +3371,7 @@ begin
             RowAccessor.GetColumnDataSize(ColumnIndex));
             RowAccessor.SetNotNull(ColumnIndex);
           end;
-      end;
-    end
+      end
     else
       RowAccessor.SetNull(ColumnIndex);
 
@@ -3511,8 +3535,13 @@ begin
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       begin
         FieldType := ConvertDbcToDatasetType(GetColumnType(I));
-        if (FieldType = ftCurrency) and not ResultSet.GetMetadata.IsCurrency(I) then
-           FieldType := ftBCD;
+        if (FieldType = ftCurrency) and not IsCurrency(I) then
+          FieldType := ftBCD
+        (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
+        else if (FieldType = ftDateTime) and (GetScale(I) > 3) then
+          FieldType := ftTimeStamp
+        {$ENDIF WITH_FTTIMESTAMP_FIELD}*);
+
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           Size := GetPrecision(I);
           if (FieldType = ftString) then
@@ -3664,7 +3693,6 @@ begin
   CurrentRow := 0;
   FetchCount := 0;
   CurrentRows.Clear;
-  FNativeFormatOverloadOfBcdFieldCalled := False;
 
   Connection.ShowSQLHourGlass;
   OldRS := FResultSet;
@@ -3755,7 +3783,6 @@ begin
     if not FResultSetWalking then
       ResultSet.ResetCursor;
   FCursorOpened := False;
-  FNativeFormatOverloadOfBcdFieldCalled := False;
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
