@@ -629,6 +629,12 @@ const
   isc_info_blob_total_length = 6;
   isc_info_blob_type = 7;
 
+  {* Options for fb_cancel_operation *}
+  fb_cancel_disable              =  1;
+  fb_cancel_enable               =  2;
+  fb_cancel_raise                =  3;
+  fb_cancel_abort                =  4;
+
   {* error codes *}
   isc_facility                        = 20;
   isc_base                             = 335544320;

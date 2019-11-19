@@ -1676,7 +1676,9 @@ var
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   SQLWriter: TZSQLStringWriter;
 begin
-  SQL := 'SELECT * FROM ';
+  if (Connection as IZPostgreSQLConnection).StoredProcedureIsSelectable(StoredProcName)
+  then SQL := 'SELECT * FROM '
+  else SQL := 'CALL ';
   I := Length(StoredProcName);
   i := I + 14+BindList.Count shl 2;
   SQLWriter := TZSQLStringWriter.Create(I);

@@ -72,8 +72,10 @@ const
   InvalidDbcIndex = {$IFDEF GENERIC_INDEX}-1{$ELSE}0{$ENDIF};
 const
   { Constants from JDBC DatabaseMetadata }
-  TypeSearchable           = 3;
-  ProcedureReturnsResult   = 2;
+  TypeSearchable            = 3;
+  procedureResultUnknown    = 0;
+  procedureNoResult         = 1;
+  ProcedureReturnsResult    = 2;
 
 // Data types
 type
@@ -402,9 +404,23 @@ type
     ['{501FDB3C-4D44-4BE3-8BB3-547976E6500E}']
     procedure Commit;
     procedure Rollback;
-    function StartTransaction(ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
-      {$IFDEF AUTOREFCOUNT}const{$ENDIF} Params: TStrings): Integer;
-    function SaveTransaction: Integer;
+    procedure SavePoint(const AName: String = '');
+  end;
+
+  IZTransactionManger = interface(IZInterface)
+    ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
+    function CreateTransaction(AutoCommit, ReadOnly: Boolean;
+      TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    procedure ReleaseTransaction(const Transaction: IZTransaction);
+  end;
+
+  IZTransactionProperties = interface(IZInterface)
+    ['{D268A5BE-D1F3-40EB-80F6-1828803A38A8}']
+    function Equals(AutoCommit, ReadOnly: Boolean; TIL: TZTransactIsolationLevel;
+      Params: TStrings): Boolean;
+    procedure Change(AutoCommit, ReadOnly: Boolean; TIL: TZTransactIsolationLevel;
+      Params: TStrings; var CurrentTransaction: IZTransaction);
+    function GetAutoCommit: Boolean;
   end;
 
   IImmediatelyReleasable = interface(IZInterface)

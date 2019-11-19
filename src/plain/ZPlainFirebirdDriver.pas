@@ -177,6 +177,9 @@ type
     isc_get_client_minor_version: function(): NativeInt;
     {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
+    fb_cancel_operation: function(status_vector: PISC_STATUS; db_handle: PISC_DB_HANDLE; option: Short):
+      ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
     { Array processing routines }
     isc_array_gen_sdl: function(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
@@ -606,6 +609,7 @@ begin
     @isc_get_client_version := GetAddress('isc_get_client_version');
     @isc_get_client_major_version := GetAddress('isc_get_client_major_version');
     @isc_get_client_minor_version := GetAddress('isc_get_client_minor_version');
+    @fb_cancel_operation := GetAddress('fb_cancel_operation');
   end;
 end;
 

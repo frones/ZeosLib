@@ -144,6 +144,14 @@ function DefineStatementParameter(const Connection: IZConnection;
   const Default: string): string; overload;
 
 {**
+  Splits up a qualified object name into pieces. Catalog, schema
+  and objectname.
+}
+procedure SplitQualifiedObjectName(const QualifiedName: string;
+  const SupportsCatalogs, SupportsSchemas: Boolean;
+  out Catalog, Schema, ObjectName: string);
+
+{**
   ToLikeString returns the given string or if the string is empty it returns '%'
   @param Value the string
   @return given Value or '%'
@@ -525,6 +533,78 @@ begin
     Result := Default;
 end;
 
+{**
+  Splits up a qualified object name into pieces. Catalog, schema
+  and objectname.
+}
+procedure SplitQualifiedObjectName(const QualifiedName: string;
+  const SupportsCatalogs, SupportsSchemas: Boolean;
+  out Catalog, Schema, ObjectName: string);
+var
+  SL: TStrings;
+  I: Integer;
+begin
+  SL := ZSysUtils.SplitString(QualifiedName, '.');
+  try
+    Catalog := '';
+    Schema := '';
+    case SL.Count of
+      0, 1: ObjectName := QualifiedName;
+      2: begin
+          if SupportsCatalogs then begin
+            Catalog := SL.Strings[0];
+            if SupportsSchemas
+            then Schema := SL.Strings[1]
+            else ObjectName := SL.Strings[1];
+          end else if SupportsSchemas then begin
+            Schema := SL.Strings[0];
+            ObjectName := SL.Strings[1];
+          end else
+            ObjectName := SL.Strings[0]+'.'+SL.Strings[1];
+        end;
+      3: if SupportsCatalogs then begin
+          Catalog := SL.Strings[0];
+          if SupportsSchemas then begin
+            Schema := SL.Strings[1];
+            ObjectName := SL.Strings[2]
+          end else
+            ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
+        end else if SupportsSchemas then begin
+          Schema := SL.Strings[0];
+          ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
+        end else
+          ObjectName := SL.Strings[0]+'.'+SL.Strings[1]+'.'+SL.Strings[2];
+      else if SupportsCatalogs then begin
+        Catalog := SL.Strings[0];
+        if SupportsSchemas then begin
+          Schema := SL.Strings[1];
+          for i := 2 to SL.Count-1 do
+            if i = 2
+            then ObjectName := SL.Strings[i]
+            else ObjectName := ObjectName+'.'+SL.Strings[i];
+        end else begin
+          ObjectName := '';
+          for i := 2 to SL.Count-1 do
+            if I = 2
+            then ObjectName := SL.Strings[i]
+            else ObjectName := ObjectName+'.'+SL.Strings[i];
+        end;
+      end else if SupportsSchemas then begin
+        Schema := SL.Strings[0];
+        for i := 1 to SL.Count-1 do
+          if i = 1
+          then ObjectName := SL.Strings[i]
+          else ObjectName := ObjectName+'.'+SL.Strings[i];
+      end else
+        for i := 0 to SL.Count-1 do
+          if I = 0
+          then ObjectName := SL.Strings[i]
+          else ObjectName := ObjectName+'.'+SL.Strings[i];
+    end;
+  finally
+    SL.Free;
+  end;
+end;
 {**
   ToLikeString returns the given string or if the string is empty it returns '%'
   @param Value the string

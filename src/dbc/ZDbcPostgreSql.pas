@@ -96,6 +96,7 @@ type
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
     function CheckFieldVisibility: Boolean;
+    function StoredProcedureIsSelectable(const ProcName: String): Boolean;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -118,7 +119,8 @@ type
     //a collection of statement handles that are not used anymore. These can be
     //safely deallocated upon the next transaction start or immediately if we
     //are in autocommit mode. See SF#137:
-    FPreparedStatementTrashBin: TStringList;
+    FPreparedStatementTrashBin: TStrings;
+    FProcedureTypesCache: TStrings;
     FClientSettingsChanged: Boolean;
     FIs_bytea_output_hex: Boolean;
     FCheckFieldVisibility: Boolean;
@@ -180,6 +182,7 @@ type
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
     function GetServerSubVersion: Integer;
+    function StoredProcedureIsSelectable(const ProcName: String): Boolean;
 
     function PingServer: Integer; override;
 
@@ -211,7 +214,7 @@ implementation
 uses
   ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement, ZClasses, ZDbcUtils,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken, ZDbcProperties,
-  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties;
+  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcMetadata;
 
 const
   FON = String('ON');
@@ -306,6 +309,7 @@ end;
 }
 procedure TZPostgreSQLConnection.InternalCreate;
 begin
+  FProcedureTypesCache := TStringList.Create;
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
   FPlainDriver := TZPostgreSQLPlainDriver(PlainDriver.GetInstance);
   FPreparedStatementTrashBin := nil;
@@ -352,6 +356,7 @@ begin
     FreeAndNil(FTypeList);
   inherited Destroy;
   FreeAndNil(FPreparedStatementTrashBin);
+  FreeAndNil(FProcedureTypesCache);
 end;
 
 {**
@@ -1000,6 +1005,32 @@ begin
     end;
     inherited SetTransactionIsolation(Level);
   end;
+end;
+
+function TZPostgreSQLConnection.StoredProcedureIsSelectable(
+  const ProcName: String): Boolean;
+var I: Integer;
+  function AddToCache(const ProcName: String): Boolean;
+  var RS: IZResultSet;
+    //Stmt: IZStatement;
+    Catalog, Schema, ObjName: String;
+  begin
+    Result := True;
+    if GetServerMajorVersion < 11 then
+      Exit;
+    SplitQualifiedObjectName(ProcName, True, True, Catalog, Schema, ObjName);
+    if UseMetadata then with GetMetadata do begin
+      RS := GetProcedures(Catalog, AddEscapeCharToWildcards(Schema), AddEscapeCharToWildcards(ObjName));
+      if RS.Next then
+        Result := RS.GetInt(ProcedureTypeIndex) = ProcedureReturnsResult;
+    end;
+    FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
+  end;
+begin
+  I := FProcedureTypesCache.IndexOf(ProcName);
+  if I = -1
+  then Result := AddToCache(ProcName)
+  else Result := FProcedureTypesCache.Objects[I] <> nil;
 end;
 
 procedure TZPostgreSQLConnection.GetBinaryEscapeString(Buf: Pointer;

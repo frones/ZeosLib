@@ -1412,34 +1412,37 @@ var
 begin
   SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
   ProcedureCondition := ConstructNameCondition(ProcedureNamePattern,'p.proname');
-  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
-  begin
-    SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
-      + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
-      + ' NULL AS RESERVED3, d.description AS REMARKS, '
-      + ZFastCode.IntToStr(Ord(ProcedureReturnsResult)) + ' AS PROCEDURE_TYPE '
-      + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
-      + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '
-      + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
-      + ' c.relname=''pg_proc'') LEFT JOIN pg_catalog.pg_namespace pn ON'
-      + ' (c.relnamespace=pn.oid AND pn.nspname=''pg_catalog'') '
-      + ' WHERE p.pronamespace=n.oid';
-    if SchemaCondition <> '' then
-      SQL := SQL + ' AND ' + Schemacondition;
-    if ProcedureCondition <> '' then
-      SQL := SQL + ' AND ' + ProcedureCondition;
-    SQL := SQL + ' ORDER BY PROCEDURE_SCHEM, PROCEDURE_NAME';
-  end
-  else
-  begin
-    SQL := 'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
-      + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
-      + ' NULL AS RESERVED3, NULL AS REMARKS, '
-      + ZFastCode.IntToStr(Ord(ProcedureReturnsResult)) + ' AS PROCEDURE_TYPE'
-      + ' FROM pg_proc p';
-    if ProcedureCondition <> '' then
-      SQL := SQL + ' WHERE ' + ProcedureCondition;
-    SQL := SQL + ' ORDER BY PROCEDURE_NAME';
+  with (GetDatabaseInfo as IZPostgreDBInfo) do begin
+    if HasMinimumServerVersion(7, 3) then begin
+      SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
+        + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
+        + ' NULL AS RESERVED3, d.description AS REMARKS, ';
+      if HasMinimumServerVersion(11, 0) then
+        SQL := SQL+ 'case when p.prokind = ''p'' then '+ZFastCode.IntToStr(Ord(ProcedureNoResult))+ ' else '+ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+ ' end'
+      else
+        SQL := SQL+ ZFastCode.IntToStr(Ord(ProcedureReturnsResult));
+      SQL := SQL + ' AS PROCEDURE_TYPE '
+        + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
+        + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '
+        + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
+        + ' c.relname=''pg_proc'') LEFT JOIN pg_catalog.pg_namespace pn ON'
+        + ' (c.relnamespace=pn.oid AND pn.nspname=''pg_catalog'') '
+        + ' WHERE p.pronamespace=n.oid';
+      if SchemaCondition <> '' then
+        SQL := SQL + ' AND ' + Schemacondition;
+      if ProcedureCondition <> '' then
+        SQL := SQL + ' AND ' + ProcedureCondition;
+      SQL := SQL + ' ORDER BY PROCEDURE_SCHEM, PROCEDURE_NAME';
+    end else begin
+      SQL := 'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
+        + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
+        + ' NULL AS RESERVED3, NULL AS REMARKS, '
+        + ZFastCode.IntToStr(Ord(ProcedureReturnsResult)) + ' AS PROCEDURE_TYPE'
+        + ' FROM pg_proc p';
+      if ProcedureCondition <> '' then
+        SQL := SQL + ' WHERE ' + ProcedureCondition;
+      SQL := SQL + ' ORDER BY PROCEDURE_NAME';
+    end;
   end;
 
   Result := CopyToVirtualResultSet(
