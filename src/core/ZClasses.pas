@@ -58,6 +58,7 @@ interface
 uses
   SysUtils, Classes, SyncObjs, FmtBCD,
   ZCompatibility, ZSysUtils
+  {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}, DB{$ENDIF}
   {$IF defined(MSWINDOWS) and not defined(FPC)}, Windows{$IFEND} //some old comp. -> INFINITE
   {$IFDEF NO_UNIT_CONTNRS},System.Generics.Collections{$ENDIF};
 
@@ -217,7 +218,7 @@ type
   end;
 
   {** Abstract SQL exception. }
-  EZSQLThrowable = class(Exception)
+  EZSQLThrowable = class({$IFDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}Exception{$ELSE}EDATABASEERROR{$ENDIF})
   private
     FErrorCode: Integer;
     FStatusCode: String;
