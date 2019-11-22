@@ -1417,10 +1417,9 @@ begin
       SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
         + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
         + ' NULL AS RESERVED3, d.description AS REMARKS, ';
-      if HasMinimumServerVersion(11, 0) then
-        SQL := SQL+ 'case when p.prokind = ''p'' then '+ZFastCode.IntToStr(Ord(ProcedureNoResult))+ ' else '+ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+ ' end'
-      else
-        SQL := SQL+ ZFastCode.IntToStr(Ord(ProcedureReturnsResult));
+      if HasMinimumServerVersion(11, 0)
+      then SQL := SQL+ 'case when p.prokind = ''p'' then '+ZFastCode.IntToStr(Ord(ProcedureNoResult))+ ' else '+ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+ ' end'
+      else SQL := SQL+ ZFastCode.IntToStr(Ord(ProcedureReturnsResult));
       SQL := SQL + ' AS PROCEDURE_TYPE '
         + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
         + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '

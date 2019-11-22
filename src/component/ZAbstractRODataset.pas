@@ -220,7 +220,10 @@ type
     FResultSet: IZResultSet;
 
     FRefreshInProgress: Boolean;
-    FNativeFormatOverloadCalled: array[ftBCD..ftDateTime] of Boolean; //circumvent a TClientDataSet BCDField bug.
+    FNativeFormatOverloadCalled: array[ftBCD..ftDateTime] of Boolean;
+      //for the Date/Time/DateTimeFields: circumvent duplicate conversions
+      //TBCDField:
+      //circumvent a TClientDataSet BCDField bug.
       //The ClientDataSets do not call the Get/SetData overload with NativeFormat overload
       //so they use the slow TBCD record instead (while we are in Currency range)
       //and convert all values to/from the currency

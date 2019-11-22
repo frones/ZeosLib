@@ -770,7 +770,11 @@ begin
     Query.Params.CreateParam(ftInteger, 'val2', ptInPut);
     Query.Params.CreateParam(ftInteger, 'largest', ptOutPut);
     Query.Params.CreateParam(ftInteger, 'smallest', ptOutPut);
+    {$IFDEF WITH_ASLARGEINT}
     Query.Params.CreateParam(ftLargeInt, 'square',   ptOutPut);
+    {$ELSE WITH_ASLARGEINT}
+    Query.Params.CreateParam(ftInteger, 'square',   ptOutPut);
+    {$ENDIF}
     Query.Params[0].AsInteger := 10;
     Query.Params[1].AsInteger := 20;
     Query.ExecSQL;
@@ -815,7 +819,11 @@ begin
     Query.SQL.Text := SQL;
     Query.Params.CreateParam(ftInteger, 'largest', ptOutPut);
     Query.Params.CreateParam(ftInteger, 'smallest', ptOutPut);
+    {$IFDEF WITH_ASLARGEINT}
     Query.Params.CreateParam(ftLargeInt, 'square',   ptOutPut);
+    {$ELSE WITH_ASLARGEINT}
+    Query.Params.CreateParam(ftInteger, 'square',   ptOutPut);
+    {$ENDIF WITH_ASLARGEINT}
     Query.Params[0].AsInteger := 10;
     Query.Params[1].AsInteger := 20;
     Query.ExecSQL;

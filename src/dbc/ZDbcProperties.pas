@@ -384,6 +384,11 @@ const
   // Type: BOOLEAN
   // If set, directly use value of boolean fields. Otherwise, use intermediate string
   DSProps_BindOrdinalBoolValues = 'BindOrdinalBoolValues';
+  // Type: String
+  // see sqlite manuals
+  // if Value is 'EXCLUSIVE' we're assuming you want emulate a ReadCommitted transaction
+  // which blocks read transactions while the transaction is underway
+  DSProps_TransactionBehaviour = 'TransactionBehaviour';
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}

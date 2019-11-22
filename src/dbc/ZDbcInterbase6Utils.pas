@@ -206,6 +206,9 @@ type
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA);
 
 {Interbase6 Connection Functions}
+function BuildPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings; VersionCode: Byte;
+  const FilterPrefix: string; const ParamArr: array of TZIbParam;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
 function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
 function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings;

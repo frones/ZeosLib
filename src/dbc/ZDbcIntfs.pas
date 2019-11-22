@@ -404,14 +404,16 @@ type
     ['{501FDB3C-4D44-4BE3-8BB3-547976E6500E}']
     procedure Commit;
     procedure Rollback;
-    procedure SavePoint(const AName: String = '');
+    function SavePoint(const AName: String): IZTransaction;
+    function StartTransaction: Integer;
   end;
 
-  IZTransactionManger = interface(IZInterface)
+  IZTransactionManager = interface(IZInterface)
     ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Transaction: IZTransaction);
+    procedure SetActiveTransaction(const Transaction: IZTransaction);
   end;
 
   IZTransactionProperties = interface(IZInterface)
