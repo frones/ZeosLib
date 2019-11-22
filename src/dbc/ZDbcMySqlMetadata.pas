@@ -1287,7 +1287,7 @@ var
 
   TableNameList: TStrings;
   TableNameLength: Integer;
-  ColumnIndexes : Array[1..6] of integer;
+  ColumnIndexes : Array[1..7] of integer;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern,
     TableNamePattern, ColumnNamePattern);
@@ -1324,6 +1324,7 @@ begin
         ColumnIndexes[4] := FindColumn('Extra');
         ColumnIndexes[5] := FindColumn('Default');
         ColumnIndexes[6] := FindColumn('Collation');
+        ColumnIndexes[7] := FindColumn('Comment');
         while Next do
         begin
           {initialise some variables}
@@ -1362,7 +1363,7 @@ begin
             Result.UpdateInt(TableColColumnNullableIndex, 0);
             Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
           end;
-          Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(ColumnIndexes[4], Len), Len);
+          Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(ColumnIndexes[7], Len), Len);
           // MySQL is a bit bizarre.
           if IsNull(ColumnIndexes[5]) then
           begin
