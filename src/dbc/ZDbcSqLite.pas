@@ -136,6 +136,8 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
+	
+    function GetServerProvider: TZServerProvider; override;	
   end;
 
 var
@@ -584,6 +586,11 @@ end;
 function TZSQLiteConnection.GetConnectionHandle: Psqlite;
 begin
   Result := FHandle;
+end;
+
+function TZSQLiteConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spSQLite;
 end;
 
 {**

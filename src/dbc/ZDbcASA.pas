@@ -112,6 +112,8 @@ type
 
     procedure Open; override;
     procedure InternalClose; override;
+	
+	function GetServerProvider: TZServerProvider; override;
   end;
 
   {** Implements a specialized cached resolver for ASA. }
@@ -383,6 +385,11 @@ end;
 function TZASAConnection.GetDBHandle: PZASASQLCA;
 begin
   Result := FHandle;
+end;
+
+function TZASAConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spASA;
 end;
 
 {**

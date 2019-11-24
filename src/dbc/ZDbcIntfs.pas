@@ -160,6 +160,13 @@ type
   ///   Defines a locate mode.
   /// </summary>
   TZLocateUpdatesMode = (loWhereAll, loWhereChanged, loWhereKeyOnly);
+  
+  /// <summary>
+  ///  Defines the server type.
+  /// </summary>
+  TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
+    spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
+    spInformix, spCUBRID, spFoxPro);  
 
 // Interfaces
 type
@@ -456,6 +463,8 @@ type
     function GetTestMode : Byte;
     procedure SetTestMode(Mode: Byte);
     {$ENDIF}
+
+    function GetServerProvider: TZServerProvider;
   end;
 
   /// <summary>

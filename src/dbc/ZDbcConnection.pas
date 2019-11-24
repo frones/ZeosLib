@@ -242,7 +242,8 @@ type
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function UseMetadata: boolean;
-    procedure SetUseMetadata(Value: Boolean);
+    procedure SetUseMetadata(Value: Boolean); virtual;
+	function GetServerProvider: TZServerProvider; virtual;
     {$IFDEF ZEOS_TEST_ONLY}
     function GetTestMode : Byte;
     procedure SetTestMode(Mode: Byte);
@@ -642,6 +643,11 @@ end;
 function TZAbstractConnection.GetPort: Integer;
 begin
   Result := FURL.Port;
+end;
+
+function TZAbstractConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spUnknown;
 end;
 
 procedure TZAbstractConnection.SetConnPort(const Value: Integer);

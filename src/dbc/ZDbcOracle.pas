@@ -146,6 +146,7 @@ type
     function GetHostVersion: Integer; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
+    function GetServerProvider: TZServerProvider; override;	
   end;
 
   {** Implements a specialized cached resolver for Oracle. }
@@ -719,6 +720,11 @@ end;
 function TZOracleConnection.GetServerHandle: POCIServer;
 begin
   Result := FServerHandle;
+end;
+
+function TZOracleConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spOracle;
 end;
 
 {**

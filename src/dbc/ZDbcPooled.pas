@@ -186,6 +186,7 @@ type
     function GetTestMode : Byte;
     procedure SetTestMode(Mode: Byte);
     {$ENDIF}
+    function GetServerProvider: TZServerProvider;	
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -547,6 +548,11 @@ end;
 function TZDbcPooledConnection.GetParameters: TStrings;
 begin
   Result := GetConnection.GetParameters;
+end;
+
+function TZDbcPooledConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := GetConnection.GetServerProvider;
 end;
 
 function TZDbcPooledConnection.GetTransactionIsolation: TZTransactIsolationLevel;

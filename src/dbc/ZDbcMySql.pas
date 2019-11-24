@@ -137,6 +137,7 @@ type
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
     function GetDatabaseName: String;
+	  function GetServerProvider: TZServerProvider; override;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
   end;
@@ -858,6 +859,11 @@ end;
 function TZMySQLConnection.GetConnectionHandle: PMySQL;
 begin
   Result := FHandle;
+end;
+
+function TZMySQLConnection.GetServerProvider: TZServerProvider;
+begin
+  Result := spMySQL;
 end;
 
 {**

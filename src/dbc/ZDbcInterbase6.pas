@@ -220,6 +220,7 @@ type
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
+	function GetServerProvider: TZServerProvider; override;	
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -609,6 +610,11 @@ end;
 function TZInterbase6Connection.GetXSQLDAMaxSize: LongWord;
 begin
   Result := FXSQLDAMaxSize;
+end;
+
+function TZInterbase6Connection.GetServerProvider: TZServerProvider;
+begin
+  Result := spIB_FB;
 end;
 
 {**
