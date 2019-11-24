@@ -257,7 +257,7 @@ type
     procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload; virtual;
 
     function UseMetadata: boolean;
-    procedure SetUseMetadata(Value: Boolean);
+    procedure SetUseMetadata(Value: Boolean); virtual;
     function GetServerProvider: TZServerProvider; virtual;
   protected
     property Closed: Boolean read IsClosed write FClosed;
