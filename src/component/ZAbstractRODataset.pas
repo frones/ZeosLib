@@ -682,12 +682,12 @@ type
     { signed integer values }
     function GetAsShortInt: ShortInt;
     function GetAsSmallInt: SmallInt;
-    function GetAsInteger: Longint; override;
+    function GetAsInteger: Integer; override;
     function GetAsLargeInt: Largeint; {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ENDIF}
     { unsigned integer values }
     function GetAsByte: Byte;
     function GetAsWord: Word;
-    function GetAsLongWord: LongWord; {$IFDEF TFIELD_HAS_ASLONGWORD}override;{$ENDIF}
+    function GetAsLongWord: Cardinal; {$IFDEF TFIELD_HAS_ASLONGWORD}override;{$ENDIF}
     function GetAsUInt64: UInt64;
     { string values }
     function GetAsString: string; override;
@@ -724,12 +724,12 @@ type
     { signed integer values }
     procedure SetAsShortInt(Value: ShortInt); virtual;
     procedure SetAsSmallInt(Value: SmallInt); virtual;
-    procedure SetAsInteger(Value: Longint); override;
+    procedure SetAsInteger(Value: Integer); override;
     procedure SetAsLargeInt(Value: Largeint); {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ENDIF}
     { unsigned integer values }
     procedure SetAsByte(Value: Byte); virtual;
     procedure SetAsWord(Value: Word); virtual;
-    procedure SetAsLongWord(Value: LongWord); {$IFDEF TFIELD_HAS_ASLONGWORD}override;{$ELSE}virtual;{$ENDIF}
+    procedure SetAsLongWord(Value: Cardinal); {$IFDEF TFIELD_HAS_ASLONGWORD}override;{$ELSE}virtual;{$ENDIF}
     procedure SetAsUInt64(Value: UInt64); virtual;
     { string values }
     procedure SetAsString(const Value: string); override;
@@ -870,12 +870,12 @@ type
     { signed integer values }
     procedure SetAsShortInt(Value: ShortInt); override;
     procedure SetAsSmallInt(Value: SmallInt); override;
-    procedure SetAsInteger(Value: Longint); override;
+    procedure SetAsInteger(Value: Integer); override;
     procedure SetAsLargeInt(Value: Largeint); {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ENDIF}
     { unsigned integer values }
     procedure SetAsByte(Value: Byte); override;
     procedure SetAsWord(Value: Word); override;
-    procedure SetAsLongWord(Value: LongWord); override;
+    procedure SetAsLongWord(Value: Cardinal); override;
     procedure SetAsUInt64(Value: UInt64); override;
     { string values }
     procedure SetAsString(const Value: string); override;
@@ -986,7 +986,7 @@ type
   protected
     function GetDataSize: Integer; override;
   public
-    property Value: Longint read GetAsInteger write SetAsInteger;
+    property Value: Integer read GetAsInteger write SetAsInteger;
     constructor Create(AOwner: TComponent); override;
   published
     property MaxValue: Longint read FMaxValue write SetMaxValue default 0;
@@ -1005,7 +1005,7 @@ type
   protected
     function GetDataSize: Integer; override;
   public
-    property Value: LongWord read GetAsLongWord write SetAsLongWord;
+    property Value: Cardinal read GetAsLongWord write SetAsLongWord;
     constructor Create(AOwner: TComponent); override;
   published
     property MaxValue: LongWord read FMaxValue write SetMaxValue default 0;
@@ -3858,7 +3858,7 @@ end;
   Gets the maximum records count.
   @return the maximum records count.
 }
-function TZAbstractRODataset.GetRecordCount: LongInt;
+function TZAbstractRODataset.GetRecordCount: Integer;
 begin
   CheckActive;
   if not IsUniDirectional then
@@ -3870,7 +3870,7 @@ end;
   Gets the current record number.
   @return the current record number.
 }
-function TZAbstractRODataset.GetRecNo: Longint;
+function TZAbstractRODataset.GetRecNo: Integer;
 begin
   if Active then
     UpdateCursorPos;
@@ -5909,7 +5909,7 @@ begin
     Result := 0;
 end;
 
-function TZField.GetAsInteger: Longint;
+function TZField.GetAsInteger: Integer;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
@@ -5946,7 +5946,7 @@ begin
     Result := 0;
 end;
 
-function TZField.GetAsLongWord: LongWord;
+function TZField.GetAsLongWord: Cardinal;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
@@ -6214,7 +6214,7 @@ begin
   end;
 end;
 
-procedure TZField.SetAsInteger(Value: Longint);
+procedure TZField.SetAsInteger(Value: Integer);
 begin
   if IsFieldEditable then
   begin
@@ -6252,7 +6252,7 @@ begin
   end;
 end;
 
-procedure TZField.SetAsLongWord(Value: LongWord);
+procedure TZField.SetAsLongWord(Value: Cardinal);
 begin
   if IsFieldEditable then
   begin
@@ -6535,7 +6535,7 @@ begin
     inherited SetAsSmallInt(Value);
 end;
 
-procedure TZNumericField.SetAsInteger(Value: Longint);
+procedure TZNumericField.SetAsInteger(Value: Integer);
 begin
   if FRangeCheck then
     CheckRange(Value, stInteger)
@@ -6568,7 +6568,7 @@ begin
     inherited SetAsWord(Value);
 end;
 
-procedure TZNumericField.SetAsLongWord(Value: LongWord);
+procedure TZNumericField.SetAsLongWord(Value: Cardinal);
 begin
   if FRangeCheck then
     CheckRange(Value, stLongWord)
