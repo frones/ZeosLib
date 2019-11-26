@@ -515,7 +515,7 @@ end;
 procedure TZDBLibResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 begin
-  raise Exception.Create(SUnsupportedOperation);
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 {$ENDIF}
 

@@ -1064,8 +1064,7 @@ end;
 
 function TZDBLIBPreparedRPCStatement.Execute(const SQL: RawByteString): Boolean;
 begin
-  Result := False;
-  RaiseUnsupportedException
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZDBLIBPreparedRPCStatement.ExecutePrepared: Boolean;
@@ -1080,15 +1079,13 @@ end;
 
 function TZDBLIBPreparedRPCStatement.Execute(const SQL: ZWideString): Boolean;
 begin
-  Result := False;
-  RaiseUnsupportedException
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZDBLIBPreparedRPCStatement.ExecuteQuery(
   const SQL: RawByteString): IZResultSet;
 begin
-  Result := nil;
-  RaiseUnsupportedException
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZDBLIBPreparedRPCStatement.ExecuteQueryPrepared: IZResultSet;
@@ -1102,22 +1099,19 @@ end;
 function TZDBLIBPreparedRPCStatement.ExecuteQuery(
   const SQL: ZWideString): IZResultSet;
 begin
-  Result := nil;
-  RaiseUnsupportedException
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZDBLIBPreparedRPCStatement.ExecuteUpdate(
   const SQL: ZWideString): Integer;
 begin
-  Result := -1;
-  RaiseUnsupportedException
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZDBLIBPreparedRPCStatement.ExecuteUpdate(
   const SQL: RawByteString): Integer;
 begin
-  Result := -1;
-  RaiseUnsupportedException
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZDBLIBPreparedRPCStatement.ExecuteUpdatePrepared: Integer;

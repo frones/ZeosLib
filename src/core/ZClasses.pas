@@ -243,6 +243,9 @@ type
   {** Generic SQL warning. }
   EZSQLWarning = class(EZSQLThrowable);
 
+  {** Reqquested operation is not (yet) supported by Zeos }
+  EZUnsupportedException = class(EZSQLException);
+
   {$IFDEF NO_UNIT_CONTNRS}
   TObjectList = class(TObjectList<TObject>);
   {$ENDIF}

@@ -147,7 +147,6 @@ type
     function GetAutoEncodeStrings: Boolean; //EgonHugeist
     procedure SetAutoEncodeStrings(const Value: Boolean);
     procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
-    procedure RaiseUnsupportedException;
 
     procedure RegisterOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
     procedure RegisterStatement(const Value: IZStatement);
@@ -884,8 +883,7 @@ begin
 //  Would this work...?
 //  for i := fRegisteredStatements.Count-1 downto 0 do
 //   IZStatement(fRegisteredStatements[i]).Cancel;
-  Result := 1;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1050,14 +1048,6 @@ begin
 end;
 
 {**
-  Raises unsupported operation exception.
-}
-procedure TZAbstractDbcConnection.RaiseUnsupportedException;
-begin
-  raise EZSQLException.Create(SUnsupportedOperation);
-end;
-
-{**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
   SQL statements without parameters are normally
@@ -1112,8 +1102,7 @@ end;
 function TZAbstractDbcConnection.CreateRegularStatement(
   Info: TStrings): IZStatement;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1175,7 +1164,7 @@ end;
 
 procedure TZAbstractDbcConnection.PrepareTransaction(const transactionid: string);
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1187,8 +1176,7 @@ end;
 function TZAbstractDbcConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1261,8 +1249,7 @@ end;
 function TZAbstractDbcConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1272,8 +1259,7 @@ end;
 }
 function TZAbstractDbcConnection.CreateNotification(const Event: string): IZNotification;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1287,10 +1273,8 @@ function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
 begin
   if TZDefaultProviderSequenceClasses[GetServerProvider] <> nil then
     Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(Self, Sequence, BlockSize)
-  else begin
-    Result := nil;
-    RaiseUnsupportedException;
-  end;
+  else
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1352,12 +1336,12 @@ end;
 }
 procedure TZAbstractDbcConnection.Commit;
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractDbcConnection.CommitPrepared(const transactionid: string);
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1369,12 +1353,12 @@ end;
 }
 procedure TZAbstractDbcConnection.Rollback;
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractDbcConnection.RollbackPrepared(const transactionid: string);
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1384,8 +1368,7 @@ end;
 }
 function TZAbstractDbcConnection.PingServer: Integer;
 begin
-  Result := 1;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**

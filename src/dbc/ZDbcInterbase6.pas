@@ -1118,10 +1118,8 @@ var I: Integer;
       if RS.Next then begin
         Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
         FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
-      end else begin
-        RaiseUnsupportedException;
-        Result := False;
-      end;
+      end else
+        Raise EZUnsupportedException.Create(SUnsupportedOperation);
     finally
       RS.Close;
       RS := nil;

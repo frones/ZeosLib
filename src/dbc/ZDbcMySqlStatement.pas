@@ -1067,7 +1067,7 @@ begin
                       BuffSize := 0; //chunked
                       Bind^.buffer_type_address^ := FIELD_TYPE_BLOB;
                     end;
-    else raise EZSQLException.Create(sUnsupportedOperation);
+    else raise EZUnsupportedException.Create(sUnsupportedOperation);
   end;
   if BuffSize > 0 then
     ReAllocMem(Bind.buffer, BuffSize+Ord(Bind^.buffer_type_address^ in [FIELD_TYPE_STRING, FIELD_TYPE_NEWDECIMAL, FIELD_TYPE_BLOB,FIELD_TYPE_TINY_BLOB] ))

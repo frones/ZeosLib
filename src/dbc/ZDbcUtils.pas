@@ -2126,7 +2126,7 @@ begin
         stAsciiStream,
         stUnicodeStream,
         stBinaryStream: TInterfaceDynArray(Dest):= TInterfaceDynArray(aArray);
-        else raise EZSQLException.Create(sUnsupportedOperation);
+        else Raise EZUnsupportedException.Create(SUnsupportedOperation);
       end;
     end;
 end;
@@ -2164,7 +2164,7 @@ begin
         stAsciiStream,
         stUnicodeStream,
         stBinaryStream: TInterfaceDynArray(Dest):= nil;
-        else raise EZSQLException.Create(sUnsupportedOperation);
+        else raise EZUnsupportedException.Create(sUnsupportedOperation);
       end;
     end;
 end;

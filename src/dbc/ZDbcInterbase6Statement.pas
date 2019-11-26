@@ -828,7 +828,7 @@ procedure TZInterbase6PreparedStatement.RegisterParameter(
   const Name: String; PrecisionOrSize, Scale: LengthInt);
 begin
   if ParamType = pctResultSet then
-    RaiseUnsupportedException;
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
   inherited;
 end;
 

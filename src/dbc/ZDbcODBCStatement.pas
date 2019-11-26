@@ -983,7 +983,7 @@ var ArrayLen, MaxL, I: Integer;
                           N[I] := SQL_DATA_AT_EXEC;
                         end;
                       end;
-      else RaiseUnsupportedException;
+      else Raise EZUnsupportedException.Create(SUnsupportedOperation);
     end;
   end;
 begin
@@ -2303,7 +2303,7 @@ begin
                         Curr2ODBCNumeric(PCurrency(@fABuffer[0])^, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
                       end else begin
                         //ZFastCode.UnicodeToFloatDef(Value, '.', 0, PDouble(@fABuffer[0])^);
-                        RaiseUnsupportedException;
+                        Raise EZUnsupportedException.Create(SUnsupportedOperation);
                       end;
       SQL_C_WCHAR:  begin
                       PSQLLEN(Bind.StrLen_or_IndPtr)^ := ZEncoding.PRaw2PUnicodeBuf(Value, BLen, Bind.ColumnSize, Bind.ParameterValuePtr, FClientCP) shl 1;
@@ -2364,7 +2364,7 @@ begin
                         Curr2ODBCNumeric(PCurrency(@fABuffer[0])^, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
                       end else begin
                         //ZFastCode.UnicodeToFloatDef(Value, '.', 0, PDouble(@fABuffer[0])^);
-                        RaiseUnsupportedException;
+                        Raise EZUnsupportedException.Create(SUnsupportedOperation);
                       end;
       SQL_C_WCHAR:  begin
                       WLen := WLen shl 1;

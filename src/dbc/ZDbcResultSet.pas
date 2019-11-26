@@ -92,7 +92,6 @@ type
     FUniTemp: ZWideString;
     LastWasNull: Boolean;
 
-    procedure RaiseUnsupportedException;
     procedure RaiseForwardOnlyException;
     procedure RaiseReadOnlyException;
     procedure CheckClosed;
@@ -788,14 +787,6 @@ begin
   FreeAndNil(FMetadata);
   FreeAndNil(FColumnsInfo);
   inherited Destroy;
-end;
-
-{**
-  Raises unsupported operation exception.
-}
-procedure TZAbstractResultSet.RaiseUnsupportedException;
-begin
-  raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -2299,7 +2290,7 @@ end;
 procedure TZAbstractResultSet.SetFetchDirection(Direction: TZFetchDirection);
 begin
   if Direction <> fdForward then
-    RaiseUnsupportedException;
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -3199,7 +3190,7 @@ end;
 }
 procedure TZAbstractResultSet.RefreshRow;
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractResultSet.ReleaseImmediat(const Sender: IImmediatelyReleasable;
