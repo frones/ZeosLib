@@ -60,6 +60,7 @@ uses
   {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS}
+  {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}DB, {$ENDIF}
   FmtBcd, Types, Classes, SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
@@ -77,7 +78,43 @@ const
   procedureNoResult         = 1;
   ProcedureReturnsResult    = 2;
 
-// Data types
+// Exceptions
+type
+  TZExceptionSpecificData = class
+  public
+    function Clone: TZExceptionSpecificData; virtual; abstract;
+  end;
+
+  {** Abstract SQL exception. }
+  EZSQLThrowable = class({$IFDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}Exception{$ELSE}EDATABASEERROR{$ENDIF})
+  private
+    FErrorCode: Integer;
+    FStatusCode: String;
+  protected
+    FSpecificData: TZExceptionSpecificData;
+  public
+    constructor Create(const Msg: string);
+    constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
+    constructor CreateWithStatus(const StatusCode: String; const Msg: string);
+    constructor CreateWithCodeAndStatus(ErrorCode: Integer; const StatusCode: String; const Msg: string);
+    constructor CreateClone(const E:EZSQLThrowable);
+    destructor Destroy; override;
+
+    property ErrorCode: Integer read FErrorCode;
+    property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
+    property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
+  end;
+
+  {** Generic SQL exception. }
+  EZSQLException = class(EZSQLThrowable);
+
+  {** Generic SQL warning. }
+  EZSQLWarning = class(EZSQLThrowable);
+
+  {** Reqquested operation is not (yet) supported by Zeos }
+  EZUnsupportedException = class(EZSQLException);
+
+  // Data types
 type
   /// <summary>
   ///  Defines supported SQL types.
@@ -2098,6 +2135,70 @@ begin
     FDriversCS.Leave;
     FreeAndNil(ZURL);
   end;
+end;
+
+{ EZSQLThrowable }
+
+constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
+begin
+  inherited Create(E.Message);
+  FErrorCode:=E.ErrorCode;
+  FStatusCode:=E.Statuscode;
+  if E.SpecificData <> nil then
+    FSpecificData := E.SpecificData.Clone;
+end;
+
+{**
+  Creates an exception with message string.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.Create(const Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := -1;
+end;
+
+{**
+  Creates an exception with message string.
+  @param Msg a error description.
+  @param ErrorCode a native server error code.
+}
+constructor EZSQLThrowable.CreateWithCode(const ErrorCode: Integer;
+  const Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := ErrorCode;
+end;
+
+{**
+  Creates an exception with message string.
+  @param ErrorCode a native server error code.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.CreateWithCodeAndStatus(ErrorCode: Integer;
+  const StatusCode, Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := ErrorCode;
+  FStatusCode := StatusCode;
+end;
+
+{**
+  Creates an exception with message string.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
+begin
+  inherited Create(Msg);
+  FStatusCode := StatusCode;
+end;
+
+destructor EZSQLThrowable.Destroy;
+begin
+  FreeAndNil(FSpecificData);
+  inherited;
 end;
 
 initialization
