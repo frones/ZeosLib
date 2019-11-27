@@ -1803,7 +1803,7 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength*Get
             [rfIgnoreCase]));}
         TempStr := P;
         TempStr := Trim(TempStr);
-        P := @TempStr[1];
+        P := @TempStr[Low(TempStr)];
         L := Length(TempStr);
         if (L > 8) and SameText(P, Pointer(cDefault), Length(cDefault)) then begin
           Inc(P, 8);
