@@ -442,7 +442,6 @@ type
     procedure Commit;
     procedure Rollback;
     function SavePoint(const AName: String): IZTransaction;
-    function StartTransaction: Integer;
   end;
 
   IZTransactionManager = interface(IZInterface)

@@ -137,6 +137,7 @@ type
     FTestMode: Byte;
     {$ENDIF}
     procedure InternalCreate; virtual; abstract;
+    procedure InternalClose; virtual; abstract;
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
     procedure ResetCurrentClientCodePage(const Name: String;
       IsStringFieldCPConsistent: Boolean);
@@ -214,7 +215,7 @@ type
 
     procedure Open; virtual;
     procedure Close;
-    procedure InternalClose; virtual; abstract;
+
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
     function IsClosed: Boolean; virtual;
 

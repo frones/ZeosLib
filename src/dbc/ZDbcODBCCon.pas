@@ -81,7 +81,8 @@ type
     function ODBCVersion: SQLUSMALLINT;
   End;
 
-  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZODBCConnection)
+  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZODBCConnection,
+    IZTransaction)
   private
     fPlainDriver: TZODBC3PlainDriver;
     fHDBC: SQLHDBC;
@@ -92,7 +93,7 @@ type
     fODBCVersion: SQLUSMALLINT;
     fArraySelectSupported, fArrayRowSupported: Boolean;
     fServerProvider: TZServerProvider;
-    procedure StopTransaction;
+    FSavePoints: IZCollection;
   protected
     procedure InternalCreate; override;
   public
@@ -114,6 +115,7 @@ type
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
 
+    function SavePoint(const AName: String): IZTransaction; virtual; abstract;
     function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
@@ -133,6 +135,9 @@ type
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreateCallableStatement(const StoredProcedureName: string; Info: TStrings):
       IZCallableStatement; override;
+    procedure InternalExecute(const SQL: UnicodeString);
+  public
+    function SavePoint(const AName: String): IZTransaction; override;
   public
     function NativeSQL(const SQL: string): string; override;
     function GetCatalog: string; override;
@@ -146,6 +151,9 @@ type
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreateCallableStatement(const StoredProcedureName: string; Info: TStrings):
       IZCallableStatement; override;
+    procedure InternalExecute(const SQL: RawByteString);
+  public
+    function SavePoint(const AName: String): IZTransaction; override;
   public
     function NativeSQL(const SQL: string): string; override;
     function GetCatalog: string; override;
@@ -155,6 +163,29 @@ type
   TIZBlobDynArray = array of IZBlob;
   TIZBlobsDynArray = array of TIZBlobDynArray;
 
+  TZODBCSavePoint_A = class(TZCodePagedObject, IZTransaction)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZODBCConnectionA;
+    fName: RawByteString;
+  public //IZTransaction
+    procedure Commit;
+    procedure Rollback;
+    function SavePoint(const AName: String): IZTransaction;
+  public
+    Constructor Create(const Name: String; Owner: TZODBCConnectionA);
+  end;
+
+  TZODBCSavePoint_W = class(TZCodePagedObject, IZTransaction)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZODBCConnectionW;
+    fName: UnicodeString;
+  public //IZTransaction
+    procedure Commit;
+    procedure Rollback;
+    function SavePoint(const AName: String): IZTransaction;
+  public
+    Constructor Create(const Name: String; Owner: TZODBCConnectionW);
+  end;
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
@@ -163,7 +194,7 @@ uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
   ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZConnProperties, ZDbcProperties,
-  ZMessages {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  ZMessages, ZCollections {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZODBCDriver }
 
@@ -217,13 +248,9 @@ end;
 { TZAbstractODBCConnection }
 
 procedure TZAbstractODBCConnection.CheckDbcError(RETCODE: SQLRETURN);
-  procedure RaiseError;
-  begin
-    CheckODBCError(RetCode, fHDBC, SQL_HANDLE_DBC, '', self, Self);
-  end;
 begin
   if RetCode <> SQL_SUCCESS then
-    RaiseError;
+    CheckODBCError(RetCode, fHDBC, SQL_HANDLE_DBC, '', self, Self);
 end;
 
 {**
@@ -249,14 +276,20 @@ procedure TZAbstractODBCConnection.InternalClose;
 begin
   if Closed or not Assigned(fPLainDriver) then
     Exit;
-  StopTransaction;
   try
-    if fHDBC <> nil then
-      CheckDbcError(fPLainDriver.SQLDisconnect(fHDBC));
+    if not AutoCommit then begin
+      SetAutoCommit(True); //stop TA
+      AutoCommit := False; //remainder for reopen
+    end;
   finally
-    if Assigned(fHDBC) then begin
-      fPlainDriver.SQLFreeHandle(SQL_HANDLE_DBC, fHDBC);
-      fHDBC := nil;
+    try
+      if fHDBC <> nil then
+        CheckDbcError(fPLainDriver.SQLDisconnect(fHDBC));
+    finally
+      if Assigned(fHDBC) then begin
+        fPlainDriver.SQLFreeHandle(SQL_HANDLE_DBC, fHDBC);
+        fHDBC := nil;
+      end;
     end;
   end;
 end;
@@ -269,11 +302,16 @@ end;
   @see #setAutoCommit
 }
 procedure TZAbstractODBCConnection.Commit;
+var Tran: IZTransaction;
 begin
-  if GetAutoCommit then
-    raise Exception.Create(SInvalidOpInAutoCommit);
-  if (not AutoCommit) and (not Closed) then
-    CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_COMMIT));
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
+  if (not Closed) then
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Commit;
+    end else
+      CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_COMMIT));
 end;
 
 {**
@@ -357,6 +395,7 @@ var
   IPos, BytesPerChar, CodePage: Integer;
 label fail;
 begin
+  FSavePoints := TZCollection.Create;
   fPlainDriver := TZODBC3PlainDriver(GetIZPlainDriver.GetInstance);
   fHENV := nil;
   fHDBC := nil;
@@ -505,9 +544,9 @@ begin
   inherited Open;
   inherited SetTransactionIsolation(GetMetaData.GetDatabaseInfo.GetDefaultTransactionIsolation);
   inherited SetReadOnly(GetMetaData.GetDatabaseInfo.IsReadOnly);
-  if not GetAutoCommit then begin
-    inherited SetAutoCommit(True);
-    SetAutoCommit(False);
+  if not AutoCommit then begin
+    AutoCommit := True;
+    StartTransaction;
   end;
   fRetaining := GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossCommit and
                 GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossRollback;
@@ -528,11 +567,16 @@ end;
   @see #setAutoCommit
 }
 procedure TZAbstractODBCConnection.Rollback;
+var Tran: IZTransaction;
 begin
-  if GetAutoCommit then
-    raise Exception.Create(SInvalidOpInAutoCommit);
-  if (not AutoCommit) and (not Closed) then
-    CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_ROLLBACK));
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
+  if (not Closed) then
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Rollback;
+    end else
+      CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_ROLLBACK));
 end;
 
 {**
@@ -618,26 +662,28 @@ const ODBCTIL: array[TZTransactIsolationLevel] of Pointer =
 procedure TZAbstractODBCConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
-  if (TransactIsolationLevel <> Level) and Assigned(ODBCTIL[Level]) and Assigned(fHDBC) then begin
-    StopTransaction;
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_TXN_ISOLATION,ODBCTIL[Level],0));
-    StartTransaction;
+  if (TransactIsolationLevel <> Level) then begin
+    if not Closed then
+      CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_TXN_ISOLATION,ODBCTIL[Level],0));
     inherited SetTransactionIsolation(Level);
   end;
 end;
 
 function TZAbstractODBCConnection.StartTransaction: Integer;
+var Trans: IZTransaction;
+  S: String;
 begin
-  Result := 1;
-  if (not AutoCommit) and Assigned(fHDBC) then
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,0));
-end;
-
-procedure TZAbstractODBCConnection.StopTransaction;
-const CompletionType: array[Boolean] of SQLSMALLINT = (SQL_ROLLBACK, SQL_COMMIT);
-begin
-  if (not Closed) and Assigned(fHDBC) then
-    CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,CompletionType[AutoCommit]));
+  Result := 0;
+  if Assigned(fHDBC) then
+    if AutoCommit then begin
+      CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,0));
+      AutoCommit := False;
+      Result := 1;
+    end else begin
+      Result := FSavePoints.Count+1;
+      S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+      Trans := SavePoint(S);
+    end;
 end;
 
 { TZODBCConnectionW }
@@ -677,8 +723,7 @@ begin
   Result := TZODBCStatementW.Create(Self, fHDBC, Info);
 end;
 
-{**
-  Returns the Connection's current catalog name.
+{**  Returns the Connection's current catalog name.
   @return the current catalog name or null
 }
 function TZODBCConnectionW.GetCatalog: string;
@@ -705,6 +750,18 @@ begin
       {$ENDIF}
       inherited SetCatalog(Result);
     end;
+  end;
+end;
+
+procedure TZODBCConnectionW.InternalExecute(const SQL: UnicodeString);
+var STMT: SQLHSTMT;
+begin
+  CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
+  try
+    CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHDBC,
+      Pointer(SQL), Length(SQL)));
+  finally
+    CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));
   end;
 end;
 
@@ -738,6 +795,12 @@ begin
     SetLength(Result, NewLength);
     {$ENDIF}
   end else Result := '';
+end;
+
+function TZODBCConnectionW.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZODBCSavePoint_W.Create(AName, Self);
+  FSavePoints.Add(Result);
 end;
 
 {**
@@ -833,6 +896,18 @@ begin
   end;
 end;
 
+procedure TZODBCConnectionA.InternalExecute(const SQL: RawByteString);
+var STMT: SQLHSTMT;
+begin
+  CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
+  try
+    CheckDbcError(TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHDBC,
+      Pointer(SQL), Length(SQL)));
+  finally
+    CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));
+  end;
+end;
+
 {**
   Converts the given SQL statement into the system's native SQL grammar.
   A driver may convert the JDBC sql grammar into its system's
@@ -865,6 +940,12 @@ begin
   end else Result := '';
 end;
 
+function TZODBCConnectionA.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZODBCSavePoint_A.Create(AName, Self);
+  FSavePoints.Add(Result);
+end;
+
 {**
   Sets a catalog name in order to select
   a subspace of this Connection's database in which to work.
@@ -891,6 +972,126 @@ end;
 
 var
   ODBCDriver: IZDriver;
+
+{ TZODBCSavePoint_A }
+
+procedure TZODBCSavePoint_A.Commit;
+var Idx, i: Integer;
+  S: RawByteString;
+begin
+  try
+    if FOwner.GetServerProvider in [spMSSQL, spASE]
+    then S := 'COMMIT TRANSACTION '+FName
+    else S := 'RELEASE SAVEPOINT '+FName;
+    FOwner.InternalExecute(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+constructor TZODBCSavePoint_A.Create(const Name: String;
+  Owner: TZODBCConnectionA);
+var S: RawByteString;
+begin
+  inherited Create;
+  ConSettings := Owner.ConSettings;
+  {$IFDEF UNICODE}
+  fName := ZUnicodeToRaw(Name, zCP_UTF8);
+  {$ELSE}
+  fName := Name;
+  {$ENDIF}
+  FOwner := Owner;
+  if FOwner.GetServerProvider in [spMSSQL, spASE]
+  then S := 'SAVE TRANSACTION '+FName
+  else S := 'SAVE POINT '+FName;
+  FOwner.InternalExecute(S);
+end;
+
+procedure TZODBCSavePoint_A.Rollback;
+var Idx, i: Integer;
+  S: RawByteString;
+begin
+  try
+    if FOwner.GetServerProvider in [spMSSQL, spASE]
+    then S := 'ROLLBACK TRANSACTION '+FName
+    else S := 'ROLLBACK TO '+FName;
+    FOwner.InternalExecute(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+function TZODBCSavePoint_A.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZODBCSavePoint_A.Create(AName, FOwner);
+  FOwner.FSavePoints.Add(Result);
+end;
+
+{ TZODBCSavePoint_W }
+
+procedure TZODBCSavePoint_W.Commit;
+var Idx, i: Integer;
+  S: UnicodeString;
+begin
+  try
+    if FOwner.GetServerProvider in [spMSSQL, spASE]
+    then S := 'COMMIT TRANSACTION '+FName
+    else S := 'RELEASE SAVEPOINT '+FName;
+    FOwner.InternalExecute(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+constructor TZODBCSavePoint_W.Create(const Name: String;
+  Owner: TZODBCConnectionW);
+var S: UnicodeString;
+begin
+  inherited Create;
+  ConSettings := Owner.ConSettings;
+  {$IFNDEF UNICODE}
+  fName := ConSettings.ConvFuncs.ZStringToUnicode(Name, ConSettings.CTRL_CP);
+  {$ELSE}
+  fName := Name;
+  {$ENDIF}
+  FOwner := Owner;
+  if FOwner.GetServerProvider in [spMSSQL, spASE]
+  then S := 'SAVE TRANSACTION '+FName
+  else S := 'SAVE POINT '+FName;
+  FOwner.InternalExecute(S);
+end;
+
+procedure TZODBCSavePoint_W.Rollback;
+var Idx, i: Integer;
+  S: UnicodeString;
+begin
+  try
+    if FOwner.GetServerProvider in [spMSSQL, spASE]
+    then S := 'ROLLBACK TRANSACTION '+FName
+    else S := 'ROLLBACK TO '+FName;
+    FOwner.InternalExecute(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+function TZODBCSavePoint_W.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZODBCSavePoint_W.Create(AName, FOwner);
+  FOwner.FSavePoints.Add(Result);
+end;
 
 initialization
   ODBCDriver := TZODBCDriver.Create;

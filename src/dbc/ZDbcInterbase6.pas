@@ -92,6 +92,7 @@ type
     function GetOpenCursorCount: Integer;
     function IsReadOnly: Boolean;
     function GetTPB: RawByteString;
+    function StartTransaction: Integer;
   end;
 
   {** Represents a Interbase specific connection interface. }
@@ -199,7 +200,6 @@ type
     procedure Commit;
     procedure Rollback;
     function SavePoint(const AName: String): IZTransaction;
-    function StartTransaction: Integer;
   public { IFB_IB_SavePoint }
     function GetOwnerTransaction: IZIBTransaction;
   public
@@ -509,7 +509,7 @@ procedure TZInterbase6Connection.Commit;
 begin
   if Closed then
     Exit;
-  if GetAutoCommit
+  if AutoCommit
   then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
   GetActiveTransaction.Commit;
 end;
@@ -1112,6 +1112,7 @@ var I: Integer;
   var RS: IZResultSet;
     Stmt: IZStatement;
   begin
+    Result := False;
     Stmt := CreateRegularStatement(Info);
     RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
     try
@@ -1719,7 +1720,6 @@ begin
     raise Exception.Create(SInvalidOpInAutoCommit);
   Result := TZIB_FBSavePoint.Create(AName, Self);
   FSavePoints.Add(Result);
-  Result.StartTransaction;
 end;
 
 function TZIBTransaction.StartTransaction: Integer;
@@ -1802,6 +1802,7 @@ begin
   fName := Name;
   {$ENDIF}
   FOwner := Owner;
+  FOwner.InternalExecute('SAVE POINT '+FName);
 end;
 
 function TZIB_FBSavePoint.GetOwnerTransaction: IZIBTransaction;
@@ -1821,12 +1822,7 @@ end;
 function TZIB_FBSavePoint.SavePoint(const AName: String): IZTransaction;
 begin
   Result := TZIB_FBSavePoint.Create(AName, FOwner);
-end;
-
-function TZIB_FBSavePoint.StartTransaction: Integer;
-begin
-  FOwner.InternalExecute('SAVE POINT '+FName);
-  Result := FOwner.FSavePoints.Count+1;
+  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization

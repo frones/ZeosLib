@@ -85,67 +85,44 @@ type
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
   end;
 
-  IZSQLiteSavePoint = interface(IZTransaction)
-    ['{37210672-F9DD-45D7-843D-6259FCD2AD6D}']
-    function GetOwnerSession: IZSQLiteConnection;
-  end;
-
-  TZSQLiteConnection = class;
-
-  TSQLite3TransactionBehavior = (tbDEFERRED, tbIMMEDIATE, tbEXCLUSIVE);
-
-  TZSQLiteSavePoint = class(TZCodePagedObject, IZTransaction, IZSQLiteSavePoint)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZSQLiteConnection;
-    fName: RawByteString;
-  public //IZTransaction
-    procedure Commit;
-    procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
-    function StartTransaction: Integer;
-  public
-    function GetOwnerSession: IZSQLiteConnection;
-  public
-    Constructor Create(const Name: String; Owner: TZSQLiteConnection);
-  end;
+  TSQLite3TransactionAction = (traBeginDEFERRED, traBeginIMMEDIATE, traBeginEXCLUSIVE, traCommit, traRollBack);
 
   {** Implements SQLite Database Connection. }
 
-  TSQLite3TransactionAction = (traBeginDEFERRED, traBeginIMMEDIATE, traBeginEXCLUSIVE, traCommit, traRollBack);
-  TSQLite3TransactionStmt = record
-    Stmt: Psqlite3_stmt;
-    SQL: RawByteString;
-  end;
   { TZSQLiteConnection }
-  TZSQLiteConnection = class(TZAbstractDbcConnection, IZSQLiteConnection)
+  TZSQLiteConnection = class(TZAbstractDbcConnection, IZSQLiteConnection,
+    IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;
     FCatalog: string;
     FHandle: Psqlite;
     FPlainDriver: TZSQLitePlainDriver;
-    FTransactionStmts: array[TSQLite3TransactionAction] of TSQLite3TransactionStmt;
+    FTransactionStmts: array[TSQLite3TransactionAction] of Psqlite3_stmt;
     FSavePoints: IZCollection;
     procedure InternalExecute(const SQL: RawByteString); overload;
     procedure InternalExecute(const SQL: RawByteString; var Stmt: Psqlite3_stmt); overload;
   protected
     procedure InternalCreate; override;
+    procedure InternalClose; override;
   public //IZSQLiteConnection
     function GetUndefinedVarcharAsStringLength: Integer;
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
+  public //IZTransaction
+    function SavePoint(const AName: String): IZTransaction;
   public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
     function AbortOperation: Integer; override;
-
-    function StartTransaction: Integer;
-    procedure Commit; override;
-    procedure Rollback; override;
+  public
 
     procedure Open; override;
-    procedure InternalClose; override;
+
+    procedure Commit; override;
+    procedure Rollback; override;
+    function StartTransaction: Integer;
 
     procedure SetAutoCommit(Value: Boolean); override;
 
@@ -163,6 +140,18 @@ type
     function Key(const Key: string): Integer;
 
     function GetServerProvider: TZServerProvider; override;
+  end;
+
+  TZSQLiteSavePoint = class(TZCodePagedObject, IZTransaction)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZSQLiteConnection;
+    fName: RawByteString;
+  public //IZTransaction
+    procedure Commit;
+    procedure Rollback;
+    function SavePoint(const AName: String): IZTransaction;
+  public
+    Constructor Create(const Name: String; Owner: TZSQLiteConnection);
   end;
 
 var
@@ -255,6 +244,13 @@ begin
   Result := TZSQLiteStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
+const cTransactionActionStmt: Array[TSQLite3TransactionAction] of RawByteString = (
+  'BEGIN DEFERRED TRANSACTION',
+  'BEGIN IMMEDIATE TRANSACTION',
+  'BEGIN EXCLUSIVE TRANSACTION',
+  'COMMIT TRANSACTION',
+  'ROLLBACK TRANSACTION');
+
 { TZSQLiteConnection }
 
 {**
@@ -269,11 +265,6 @@ begin
   FSavePoints := TZCollection.Create;
   CheckCharEncoding('UTF-8');
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
-  FTransactionStmts[traBeginDEFERRED].SQL := 'BEGIN DEFERRED TRANSACTION';
-  FTransactionStmts[traBeginIMMEDIATE].SQL := 'BEGIN IMMEDIATE TRANSACTION';
-  FTransactionStmts[traBeginEXCLUSIVE].SQL := 'BEGIN EXCLUSIVE TRANSACTION';
-  FTransactionStmts[traCommit].SQL := 'COMMIT TRANSACTION';
-  FTransactionStmts[traRollBack].SQL := 'ROLLBACK TRANSACTION';
 end;
 
 procedure TZSQLiteConnection.InternalExecute(const SQL: RawByteString);
@@ -435,8 +426,10 @@ begin
 
   if Info.Values[ConnProps_ForeignKeys] <> '' then
     Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])] );
-  if not GetAutoCommit then
+  if not AutoCommit then begin
+    AutoCommit := True;
     StartTransaction;
+  end;
 end;
 
 {**
@@ -531,14 +524,19 @@ end;
   @see #setAutoCommit
 }
 procedure TZSQLiteConnection.Commit;
+var Tran: IZTransaction;
 begin
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if not Closed then
-    if not AutoCommit then begin
-      InternalExecute(FTransactionStmts[traCommit].SQL, FTransactionStmts[traCommit].Stmt);
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Commit;
+    end else begin
+      InternalExecute(cTransactionActionStmt[traCommit], FTransactionStmts[traCommit]);
       AutoCommit := True;
       StartTransaction;
-    end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+    end
 end;
 
 {**
@@ -549,14 +547,19 @@ end;
   @see #setAutoCommit
 }
 procedure TZSQLiteConnection.Rollback;
+var Tran: IZTransaction;
 begin
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if not Closed then
-    if not AutoCommit then begin
-      InternalExecute(FTransactionStmts[traRollBack].SQL, FTransactionStmts[traRollBack].Stmt);
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Rollback;
+    end else begin
+      InternalExecute(cTransactionActionStmt[traRollBack], FTransactionStmts[traRollBack]);
       AutoCommit := True;
       StartTransaction;
-    end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+    end;
 end;
 
 {**
@@ -576,11 +579,15 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
+  if not AutoCommit then begin
+    SetAutoCommit(True);
+    AutoCommit := False;
+  end;
   LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
   for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
-    if FTransactionStmts[TransactionAction].Stmt <> nil then begin
-      FPlainDriver.sqlite3_finalize(FTransactionStmts[TransactionAction].Stmt);
-      FTransactionStmts[TransactionAction].Stmt := nil;
+    if FTransactionStmts[TransactionAction] <> nil then begin
+      FPlainDriver.sqlite3_finalize(FTransactionStmts[TransactionAction]);
+      FTransactionStmts[TransactionAction] := nil;
     end;
   ErrorCode := FPlainDriver.sqlite3_close(FHandle);
   FHandle := nil;
@@ -602,6 +609,12 @@ end;
 function TZSQLiteConnection.GetClientVersion: Integer;
 begin
   Result := ConvertSQLiteVersionToSQLVersion(FPlainDriver.sqlite3_libversion);
+end;
+
+function TZSQLiteConnection.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZSQLiteSavePoint.Create(AName, Self);
+  FSavePoints.Add(Result);
 end;
 
 {**
@@ -626,14 +639,17 @@ end;
 }
 procedure TZSQLiteConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value <> GetAutoCommit then begin
-    if not GetAutoCommit and not Closed then begin
-      FSavePoints.Clear;
-      InternalExecute(FTransactionStmts[traRollBack].SQL, FTransactionStmts[traRollBack].Stmt);
+  if Value <> AutoCommit then begin
+    if Closed then
+      AutoCommit := Value
+    else begin
+      if Value then begin
+        FSavePoints.Clear;
+        InternalExecute(cTransactionActionStmt[traRollBack], FTransactionStmts[traRollBack]);
+      end;
+      if not Value then
+        StartTransaction;
     end;
-    inherited SetAutoCommit(Value);
-    if not Value and not Closed then
-      StartTransaction;
   end;
 end;
 
@@ -655,7 +671,7 @@ procedure TZSQLiteConnection.SetTransactionIsolation(
 begin
   if Level <> GetTransactionIsolation then begin
     if not GetAutoCommit and not Closed then
-      InternalExecute(FTransactionStmts[traRollBack].SQL, FTransactionStmts[traRollBack].Stmt);
+      InternalExecute(cTransactionActionStmt[traRollBack], FTransactionStmts[traRollBack]);
     inherited SetTransactionIsolation(Level);
     if not GetAutoCommit and not Closed then
       StartTransaction;
@@ -663,31 +679,26 @@ begin
 end;
 
 function TZSQLiteConnection.StartTransaction: Integer;
-var SavePoint: IZSQLiteSavePoint;
+var ASavePoint: IZTransaction;
   TransactionAction: TSQLite3TransactionAction;
   S: String;
   P: PChar;
 begin
-  if ReadOnly
-  then raise EZSQLException.Create('useless savepoints for readonly transaction')
-  else begin
-    if AutoCommit then begin
-      AutoCommit := False;
-      S := ZDbcUtils.DefineStatementParameter(Self, Info, DSProps_TransactionBehaviour, 'DEFERRED');
-      P := Pointer(S);
-      case {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(P)^ or $20 of
-        Ord('e'): TransactionAction := traBeginEXCLUSIVE;
-        Ord('i'): TransactionAction := traBeginIMMEDIATE;
-        else      TransactionAction := traBeginDEFERRED;
-      end;
-      InternalExecute(FTransactionStmts[TransactionAction].SQL, FTransactionStmts[TransactionAction].Stmt);
-      Result := 1;
-    end else begin
-      S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count+1);
-      SavePoint := TZSQLiteSavePoint.Create(S, Self);
-      Result := SavePoint.StartTransaction;
-      FSavePoints.Add(SavePoint);
+  if AutoCommit then begin
+    AutoCommit := False;
+    S := ZDbcUtils.DefineStatementParameter(Self, Info, DSProps_TransactionBehaviour, 'DEFERRED');
+    P := Pointer(S);
+    case {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(P)^ or $20 of
+      Ord('e'): TransactionAction := traBeginEXCLUSIVE;
+      Ord('i'): TransactionAction := traBeginIMMEDIATE;
+      else      TransactionAction := traBeginDEFERRED;
     end;
+    InternalExecute(cTransactionActionStmt[TransactionAction], FTransactionStmts[TransactionAction]);
+    Result := 1;
+  end else begin
+    Result := FSavePoints.Count+1;
+    S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    ASavePoint := SavePoint(S);
   end;
 end;
 
@@ -714,11 +725,15 @@ end;
 { TZSQLiteSavePoint }
 
 procedure TZSQLiteSavePoint.Commit;
+var Idx, i: Integer;
 begin
   try
     FOwner.InternalExecute('RELEASE SAVEPOINT '+FName);
   finally
-   // ReleaseSavePoint(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
   end;
 end;
 
@@ -733,31 +748,26 @@ begin
   fName := Name;
   {$ENDIF}
   FOwner := Owner;
-end;
-
-function TZSQLiteSavePoint.GetOwnerSession: IZSQLiteConnection;
-begin
-  Result := FOwner;
+  FOwner.InternalExecute('SAVE POINT '+FName);
 end;
 
 procedure TZSQLiteSavePoint.Rollback;
+var Idx, i: Integer;
 begin
   try
     FOwner.InternalExecute('ROLLBACK TO '+FName);
   finally
-    //FOwner.ReleaseSavePoint(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
   end;
 end;
 
 function TZSQLiteSavePoint.SavePoint(const AName: String): IZTransaction;
 begin
   Result := TZSQLiteSavePoint.Create(AName, FOwner);
-end;
-
-function TZSQLiteSavePoint.StartTransaction: Integer;
-begin
-  FOwner.InternalExecute('SAVE POINT '+FName);
-  Result := FOwner.FSavePoints.Count+1;
+  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization

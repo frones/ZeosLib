@@ -63,7 +63,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainAdoDriver,
-  ZPlainAdo, ZURL, ZTokenizer;
+  ZPlainAdo, ZURL, ZTokenizer, ZClasses;
 
 type
   {** Implements Ado Database Driver. }
@@ -80,20 +80,23 @@ type
   IZAdoConnection = interface (IZConnection)
     ['{50D1AF76-0174-41CD-B90B-4FB770EFB14F}']
     function GetAdoConnection: ZPlainAdo.Connection;
-    procedure InternalExecuteStatement(const SQL: ZWideString);
+    procedure InternalExecuteStatement(const SQL: WideString);
   end;
 
   {** Implements a generic Ado Connection. }
-  TZAdoConnection = class(TZAbstractDbcConnection, IZAdoConnection)
+  TZAdoConnection = class(TZAbstractDbcConnection, IZAdoConnection, IZTransaction)
   private
     fServerProvider: TZServerProvider;
-    procedure ReStartTransactionSupport;
+    FSavePoints: IZCollection;
+    FTransactionLevel: Integer;
   protected
     FAdoConnection: ZPlainAdo.Connection;
     function GetAdoConnection: ZPlainAdo.Connection;
-    procedure InternalExecuteStatement(const SQL: ZWideString);
-    procedure StartTransaction;
+    procedure InternalExecuteStatement(const SQL: WideString);
     procedure InternalCreate; override;
+    procedure InternalClose; override;
+  public //IZTransaction
+    function SavePoint(const AName: String): IZTransaction;
   public
     destructor Destroy; override;
 
@@ -108,16 +111,28 @@ type
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
+    function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
 
     procedure Open; override;
-    procedure InternalClose; override;
 
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
     function GetServerProvider: TZServerProvider; override;
+  end;
+
+  TZAdoSavePoint = class(TZCodePagedObject, IZTransaction)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZAdoConnection;
+    fName: UnicodeString;
+  public //IZTransaction
+    procedure Commit;
+    procedure Rollback;
+    function SavePoint(const AName: String): IZTransaction;
+  public
+    Constructor Create(const Name: String; Owner: TZAdoConnection);
   end;
 
 var
@@ -131,7 +146,7 @@ implementation
 uses
   Variants, ActiveX, ZOleDB,
   ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties,
-  ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding,
+  ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding, ZCollections,
   ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
 
 const                                                //adXactUnspecified
@@ -203,6 +218,7 @@ begin
   CoInit;
   FAdoConnection := CoConnection.Create;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
+  FSavePoints := TZCollection.Create;
 end;
 
 {**
@@ -227,7 +243,7 @@ end;
 {**
   Executes simple statements internally.
 }
-procedure TZAdoConnection.InternalExecuteStatement(const SQL: ZWideString);
+procedure TZAdoConnection.InternalExecuteStatement(const SQL: WideString);
 var
   RowsAffected: OleVariant;
 begin
@@ -242,17 +258,6 @@ begin
       raise;
     end;
   end;
-end;
-
-{**
-  Starts a transaction support.
-}
-procedure TZAdoConnection.ReStartTransactionSupport;
-begin
-  if Closed then Exit;
-
-  if not (AutoCommit) then
-    StartTransaction;
 end;
 
 {**
@@ -307,7 +312,8 @@ begin
   if not GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(GetTransactionIsolation) then
     inherited SetTransactionIsolation(GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation);
   FAdoConnection.IsolationLevel := IL[GetTransactionIsolation];
-  ReStartTransactionSupport;
+  if not AutoCommit then
+    StartTransaction;
 end;
 
 function TZAdoConnection.GetBinaryEscapeString(const Value: TBytes): String;
@@ -408,6 +414,12 @@ begin
   Result := TZAdoCallableStatement2.Create(Self, SQL, Info);
 end;
 
+function TZAdoConnection.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZAdoSavePoint.Create(AName, Self);
+  FSavePoints.Add(Result);
+end;
+
 {**
   Sets this connection's auto-commit mode.
   If a connection is in auto-commit mode, then all its SQL
@@ -431,17 +443,17 @@ end;
 procedure TZAdoConnection.SetAutoCommit(Value: Boolean);
 begin
   if AutoCommit = Value then  Exit;
-  if not Closed and Value then
-  begin
-    if (FAdoConnection.State = adStateOpen) and
-       (GetTransactionIsolation <> tiNone) then
-      begin
-        FAdoConnection.CommitTrans;
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
-      end;
-  end;
-  inherited;
-  ReStartTransactionSupport;
+  if Closed then
+    AutoCommit := Value
+  else if Value and (FAdoConnection.State = adStateOpen) then begin
+    while FTransactionLevel > 0 do begin
+      FAdoConnection.RollbackTrans;
+      Dec(FTransactionLevel);
+    end;
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
+    inherited;
+  end else if not Value and (FAdoConnection.State = adStateOpen) then
+    StartTransaction;
 end;
 
 {**
@@ -459,41 +471,35 @@ end;
 procedure TZAdoConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
-  if GetTransactionIsolation = Level then Exit;
-
-  if not Closed and not AutoCommit and (GetTransactionIsolation <> tiNone) then
-  begin
-    FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
-  end;
-
-  inherited;
-
-  if not Closed then
+  if TransactIsolationLevel = Level then Exit;
+  if not Closed then begin
     FAdoConnection.IsolationLevel := IL[Level];
-
-  RestartTransactionSupport;
+    if not AutoCommit then
+      StartTransaction;
+  end;
+  TransactIsolationLevel := Level;
 end;
 
 {**
   Starts a new transaction. Used internally.
 }
-procedure TZAdoConnection.StartTransaction;
+function TZAdoConnection.StartTransaction: Integer;
 var
   LogMessage: RawByteString;
 begin
   LogMessage := 'BEGIN TRANSACTION';
   try
-    FAdoConnection.BeginTrans;
+    FTransactionLevel := FAdoConnection.BeginTrans;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+    AutoCommit := False;
   except
-    on E: Exception do
-    begin
+    on E: Exception do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
+      raise EZSQLException.Create(E.Message);
     end;
   end;
+  Result := FTransactionLevel;
 end;
 
 {**
@@ -504,15 +510,22 @@ end;
   @see #setAutoCommit
 }
 procedure TZAdoConnection.Commit;
-var
-  LogMessage: RawByteString;
+var LogMessage: RawByteString;
+    Tran: IZTransaction;
 begin
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
+  if Closed then Exit;
   LogMessage := 'COMMIT';
-  if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
   try
-    FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
-    StartTransaction;
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Commit;
+    end else begin
+      FAdoConnection.CommitTrans;
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      StartTransaction;
+    end;
   except
     on E: Exception do
     begin
@@ -533,13 +546,21 @@ end;
 procedure TZAdoConnection.Rollback;
 var
   LogMessage: RawbyteString;
+  Tran: IZTransaction;
 begin
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
   LogMessage := 'ROLLBACK';
   if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
   try
-    FAdoConnection.RollbackTrans;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
-    StartTransaction;
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Rollback;
+    end else begin
+      FAdoConnection.RollbackTrans;
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      StartTransaction;
+    end;
   except
     on E: Exception do
     begin
@@ -566,7 +587,11 @@ begin
   if Closed or (not Assigned(PlainDriver)) then
     Exit;
 
-  SetAutoCommit(True);
+  FSavePoints.Clear;
+  if not AutoCommit then begin
+    SetAutoCommit(True);
+    AutoCommit := False;
+  end;
   try
     LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.Database+'"';
     if FAdoConnection.State = adStateOpen then
@@ -621,6 +646,66 @@ end;
 function TZAdoConnection.GetServerProvider: TZServerProvider;
 begin
   Result := fServerProvider;
+end;
+
+{ TZAdoSavePoint }
+
+procedure TZAdoSavePoint.Commit;
+var Idx, i: Integer;
+  S: WideString;
+begin
+  try
+    if FOwner.GetServerProvider in [spMSSQL, spASE]
+    then S := 'COMMIT TRANSACTION '+FName
+    else S := 'RELEASE SAVEPOINT '+FName;
+    FOwner.InternalExecuteStatement(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+constructor TZAdoSavePoint.Create(const Name: String;
+  Owner: TZAdoConnection);
+var S: ZWideString;
+begin
+  inherited Create;
+  ConSettings := Owner.ConSettings;
+  {$IFNDEF UNICODE}
+  fName := ConSettings.ConvFuncs.ZStringToUnicode(Name, ConSettings.CTRL_CP);
+  {$ELSE}
+  fName := Name;
+  {$ENDIF}
+  FOwner := Owner;
+  if FOwner.GetServerProvider in [spMSSQL, spASE]
+  then S := 'SAVE TRANSACTION '+FName
+  else S := 'SAVE POINT '+FName;
+  FOwner.InternalExecuteStatement(S);
+end;
+
+procedure TZAdoSavePoint.Rollback;
+var Idx, i: Integer;
+  S: WideString;
+begin
+  try
+    if FOwner.GetServerProvider in [spMSSQL, spASE]
+    then S := 'ROLLBACK TRANSACTION '+FName
+    else S := 'ROLLBACK TO '+FName;
+    FOwner.InternalExecuteStatement(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+function TZAdoSavePoint.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZAdoSavePoint.Create(AName, FOwner);
+  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization
