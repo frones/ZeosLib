@@ -105,8 +105,6 @@ type
     procedure InternalSetTIL(Level: TZTransactIsolationLevel);
     procedure InternalExecute(const SQL: UnicodeString);
     procedure InternalClose; override;
-  public //IZTransaction
-    function SavePoint(const AName: String): IZTransaction;
   public
     destructor Destroy; override;
 
@@ -119,13 +117,14 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure SetAutoCommit(Value: Boolean); override;
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     procedure Open; override;
 
     procedure Commit; override;
     procedure Rollback; override;
+    function SavePoint(const AName: String): IZTransaction;
+    procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer;
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
@@ -311,6 +310,10 @@ end;
 
 function TZOleDBConnection.SavePoint(const AName: String): IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
   Result := TZOleDBSavePoint.Create(AName, Self);
   FSavePoints.Add(Result);
 end;
@@ -337,8 +340,10 @@ end;
 }
 procedure TZOleDBConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value <> AutoCommit then begin
-    if not AutoCommit and not Closed then begin
+  if Value <> AutoCommit then
+    if Closed
+    then AutoCommit := Value
+    else if Value then begin
       FSavePoints.Clear;
       while FpulTransactionLevel > 0 do begin
         CheckError(fTransaction.Abort(nil, FRetaining, False), ocaRollback, True);
@@ -347,11 +352,9 @@ begin
       fTransaction := nil;
       if FAutoCommitTIL <> TIL[TransactIsolationLevel] then
         InternalSetTIL(TransactIsolationLevel);
-    end;
-    inherited SetAutoCommit(Value);
-    if not Value and not Closed then
+      AutoCommit := True;
+    end else
       StartTransaction;
-  end;
 end;
 
 {**
@@ -447,14 +450,13 @@ end;
 function TZOleDBConnection.StartTransaction: Integer;
 var Res: HResult;
 begin
-  if not Closed then begin
-    if not Assigned(fTransaction) then
-      OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
-    Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
-    CheckError(Res, ocaStartTransaction, True);
-    if AutoCommit then
-      AutoCommit := False;
-  end;
+  if Closed then
+    Open;
+  if not Assigned(fTransaction) then
+    OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
+  Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+  CheckError(Res, ocaStartTransaction, True);
+  AutoCommit := False;
   Result := FpulTransactionLevel;
 end;
 
@@ -636,9 +638,12 @@ end;
 procedure TZOleDBConnection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
   if (TransactIsolationLevel <> Level) then begin
-    if not Closed then
+    if not Closed then begin
+      if not AutoCommit then
+        raise EZSQLException.Create(SInvalidOpInNonAutoCommit);
       InternalSetTIL(Level);
-    inherited SetTransactionIsolation(Level);
+    end;
+    TransactIsolationLevel := Level;
   end;
 end;
 
@@ -661,9 +666,10 @@ end;
 procedure TZOleDBConnection.Commit;
 var Tran: IZTransaction;
 begin
-  if Closed then Exit;
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
-    raise EZSQLException.Create(SInvalidOpInAutoCommit);
+    raise EZSQLException.Create(SCannotUseCommit);
   if FSavePoints.Count > 0 then begin
     Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
     Tran.Commit;
@@ -700,9 +706,10 @@ end;
 procedure TZOleDBConnection.Rollback;
 var Tran: IZTransaction;
 begin
-  if Closed then Exit;
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
-    raise EZSQLException.Create(SInvalidOpInAutoCommit);
+    raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
     Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
     Tran.Commit;

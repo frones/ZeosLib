@@ -109,16 +109,16 @@ type
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
 
-    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetReadOnly(Value: Boolean); override;
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
 
-    function SavePoint(const AName: String): IZTransaction; virtual; abstract;
-    function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
+    function SavePoint(const AName: String): IZTransaction; virtual; abstract;
+    procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -304,6 +304,8 @@ end;
 procedure TZAbstractODBCConnection.Commit;
 var Tran: IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if (not Closed) then
@@ -569,6 +571,8 @@ end;
 procedure TZAbstractODBCConnection.Rollback;
 var Tran: IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if (not Closed) then
@@ -603,9 +607,10 @@ const CommitMode: Array[Boolean] of Pointer = (SQL_AUTOCOMMIT_OFF, SQL_AUTOCOMMI
 procedure TZAbstractODBCConnection.SetAutoCommit(Value: Boolean);
 begin
   if Value <> AutoCommit then begin
+    FSavePoints.Clear;
     if not Closed then
       CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,CommitMode[Value],0));
-    inherited SetAutoCommit(Value);
+    AutoCommit := Value;
   end;
 end;
 
@@ -673,17 +678,17 @@ function TZAbstractODBCConnection.StartTransaction: Integer;
 var Trans: IZTransaction;
   S: String;
 begin
-  Result := 0;
-  if Assigned(fHDBC) then
-    if AutoCommit then begin
-      CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,0));
-      AutoCommit := False;
-      Result := 1;
-    end else begin
-      Result := FSavePoints.Count+1;
-      S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
-      Trans := SavePoint(S);
-    end;
+  if Closed then
+    Open;
+  if AutoCommit then begin
+    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,0));
+    AutoCommit := False;
+    Result := 1;
+  end else begin
+    Result := FSavePoints.Count+2;
+    S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    Trans := SavePoint(S);
+  end;
 end;
 
 { TZODBCConnectionW }
@@ -799,6 +804,10 @@ end;
 
 function TZODBCConnectionW.SavePoint(const AName: String): IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
   Result := TZODBCSavePoint_W.Create(AName, Self);
   FSavePoints.Add(Result);
 end;
@@ -942,6 +951,10 @@ end;
 
 function TZODBCConnectionA.SavePoint(const AName: String): IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
   Result := TZODBCSavePoint_A.Create(AName, Self);
   FSavePoints.Add(Result);
 end;

@@ -108,12 +108,11 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure SetAutoCommit(Value: Boolean); override;
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-
-    function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
+    procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 
@@ -416,6 +415,10 @@ end;
 
 function TZAdoConnection.SavePoint(const AName: String): IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
   Result := TZAdoSavePoint.Create(AName, Self);
   FSavePoints.Add(Result);
 end;
@@ -442,18 +445,19 @@ end;
 }
 procedure TZAdoConnection.SetAutoCommit(Value: Boolean);
 begin
-  if AutoCommit = Value then  Exit;
-  if Closed then
-    AutoCommit := Value
-  else if Value and (FAdoConnection.State = adStateOpen) then begin
-    while FTransactionLevel > 0 do begin
-      FAdoConnection.RollbackTrans;
-      Dec(FTransactionLevel);
-    end;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
-    inherited;
-  end else if not Value and (FAdoConnection.State = adStateOpen) then
-    StartTransaction;
+  if Value <> AutoCommit then
+    if Closed
+    then AutoCommit := Value
+    else if Value then begin
+      FSavePoints.Clear;
+      while FTransactionLevel > 0 do begin
+        FAdoConnection.CommitTrans;
+        Dec(FTransactionLevel);
+      end;
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
+      AutoCommit := True;
+    end else
+      StartTransaction;
 end;
 
 {**
@@ -484,9 +488,10 @@ end;
   Starts a new transaction. Used internally.
 }
 function TZAdoConnection.StartTransaction: Integer;
-var
-  LogMessage: RawByteString;
+var LogMessage: RawByteString;
 begin
+  if Closed then
+    Open;
   LogMessage := 'BEGIN TRANSACTION';
   try
     FTransactionLevel := FAdoConnection.BeginTrans;
@@ -513,6 +518,8 @@ procedure TZAdoConnection.Commit;
 var LogMessage: RawByteString;
     Tran: IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if Closed then Exit;

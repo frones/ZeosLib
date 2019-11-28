@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZSysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZSysUtils, ZClasses,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
   ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
 
@@ -80,7 +80,6 @@ type
   IZDBLibConnection = interface (IZConnection)
     ['{6B0662A2-FF2A-4415-B6B0-AAC047EA0671}']
 
-    function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     function GetConnectionHandle: PDBPROCESS;
     function GetServerAnsiCodePage: Word;
@@ -88,19 +87,18 @@ type
   end;
 
   {** Implements a generic DBLib Connection. }
-  TZDBLibConnection = class(TZAbstractDbcConnection, IZDBLibConnection)
+  TZDBLibConnection = class(TZAbstractDbcConnection, IZDBLibConnection, IZTransaction)
   private
     FSQLErrors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FSQLMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FProvider: TDBLibProvider;
-    FFreeTDS: Boolean;
     FServerAnsiCodePage: Word;
     FPlainDriver: TZDBLIBPLainDriver;
+    FSavePoints: IZCollection;
     {$IFDEF TEST_CALLBACK}
     FDBLibErrorHandler: IZDBLibErrorHandler;
     FDBLibMessageHandler: IZDBLibMessageHandler;
     {$ENDIF TEST_CALLBACK}
-    function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
@@ -120,6 +118,7 @@ type
     function GetConnectionHandle: PDBPROCESS;
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawbyteString); virtual;
     function GetServerCollation: String;
+    procedure InternalClose; override;
   public
     procedure BeforeDestruction; override;
   public
@@ -129,15 +128,16 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure SetAutoCommit(Value: Boolean); override;
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function AbortOperation: Integer; override;
 
     procedure Commit; override;
     procedure Rollback; override;
+    function SavePoint(const AName: String): IZTransaction;
+    procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
-    procedure InternalClose; override;
 
     procedure SetReadOnly(ReadOnly: Boolean); override;
 
@@ -151,6 +151,17 @@ type
     function GetServerProvider: TZServerProvider; override;
   end;
 
+  TZDBLibSavePoint = class(TZCodePagedObject, IZTransaction)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZDBLibConnection;
+    fName: RawByteString;
+  public //IZTransaction
+    procedure Commit;
+    procedure Rollback;
+    function SavePoint(const AName: String): IZTransaction;
+  public
+    Constructor Create(const Name: String; Owner: TZDBLibConnection);
+  end;
 var
   {** The common driver manager object. }
   DBLibDriver: IZDriver;
@@ -162,8 +173,8 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZConnProperties, ZDbcProperties,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
-  ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode,
-  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser, ZClasses;
+  ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode, ZCollections,
+  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser;
 
 var
   DBLIBCriticalSection: TCriticalSection;
@@ -248,23 +259,9 @@ begin
     FProvider := dpSybase;
   end else
     FMetadata := nil;
-  FFreeTDS := FPlainDriver.DBLibraryVendorType = lvtFreeTDS;
-  if FreeTDS and (Info.Values[ConnProps_CodePage] = '') then
+  if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (Info.Values[ConnProps_CodePage] = '') then
     Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
-  FHandle := nil;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-function TZDBLibConnection.FreeTDS: Boolean;
-begin
-  Result := FFreeTDS;
-end;
-
-function TZDBLibConnection.GetProvider: TDBLibProvider;
-begin
-  Result := FProvider;
+  FSavePoints := TZCollection.Create;
 end;
 
 {**
@@ -363,7 +360,7 @@ begin
     if Info.Values[ConnProps_Timeout] <> '' then
       FPlainDriver.dbSetLoginTime(StrToIntDef(Info.Values[ConnProps_Timeout], 60));
 
-    if FFreeTDS then begin
+    if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) then begin
       if StrToBoolEx(Info.Values[ConnProps_Log]) or StrToBoolEx(Info.Values[ConnProps_Logging]) or
          StrToBoolEx(Info.Values[ConnProps_TDSDump]) then begin
         lLogFile := Info.Values[ConnProps_LogFile];
@@ -381,7 +378,7 @@ begin
 
 
     if ( FProvider = dpMsSQL ) and ( StrToBoolEx(Info.Values[ConnProps_NTAuth]) or StrToBoolEx(Info.Values[ConnProps_Trusted])
-      or StrToBoolEx(Info.Values[ConnProps_Secure]) ) and ( not FFreeTDS ) then
+      or StrToBoolEx(Info.Values[ConnProps_Secure]) ) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS) then
     begin
       FPlainDriver.dbsetlsecure(LoginRec);
       LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
@@ -395,7 +392,7 @@ begin
       FPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(RawTemp));
       LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
     end;
-    if FFreeTDS or (FProvider = dpSybase) then begin
+    if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) or (FProvider = dpSybase) then begin
       RawTemp := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_CodePage]);
       if Pointer(RawTemp) <> nil then begin
         FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(RawTemp));
@@ -412,7 +409,7 @@ begin
     CheckDBLibError(lcConnect, LogMessage);
     RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage);
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
-    if FreeTDS and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
+    if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
       RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
     FHandle := FPlainDriver.dbOpen(LoginRec, PAnsiChar(RawTemp));
     CheckDBLibError(lcConnect, LogMessage);
@@ -437,6 +434,11 @@ begin
       Open;
     end;
   Result := FHandle;
+end;
+
+function TZDBLibConnection.GetProvider: TDBLibProvider;
+begin
+  Result := FProvider;
 end;
 
 function TZDBLibConnection.AbortOperation: Integer;
@@ -554,14 +556,16 @@ begin
 
   inherited Open;
 
-  if not (GetTransactionIsolation in [tiNone, tiReadCommitted]) then
+  if TransactIsolationLevel = tiNone then
+    TransactIsolationLevel := tiReadCommitted; //use default til
+  if TransactIsolationLevel <> tiReadCommitted then
     InternalSetTransactionIsolation(GetTransactionIsolation);
 
   if not AutoCommit then
     InternalExecuteStatement('begin transaction');
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
-  if (FProvider = dpMsSQL) and (not FreeTDS) then
+  if (FProvider = dpMsSQL) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS) then
   begin
   {note: this is a hack from a user-request of synopse project!
     Purpose is to notify Zeos all Character columns are
@@ -588,7 +592,7 @@ begin
     ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
     SetConvertFunctions(ConSettings);
   end else begin
-    if (FProvider = dpSybase) and (not FreeTDS)
+    if (FProvider = dpSybase) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS)
     then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
     FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
     ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
@@ -704,6 +708,16 @@ begin
   Result := TZDBLibCallableStatement.Create(Self, SQL, Info);
 end;
 
+function TZDBLibConnection.SavePoint(const AName: String): IZTransaction;
+begin
+  if Closed then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
+  Result := TZDBLibSavePoint.Create(AName, Self);
+  FSavePoints.Add(Result);
+end;
+
 {**
   Sets this connection's auto-commit mode.
   If a connection is in auto-commit mode, then all its SQL
@@ -726,13 +740,15 @@ end;
 }
 procedure TZDBLibConnection.SetAutoCommit(Value: Boolean);
 begin
-  if GetAutoCommit = Value then
-    Exit;
-  if not Closed and Value
-  then InternalExecuteStatement('commit');
-  inherited SetAutoCommit(Value);
-  if not Closed and not Value then
-    InternalExecuteStatement('begin transaction');
+  if Value <> AutoCommit then
+    if Closed
+    then AutoCommit := Value
+    else if Value then begin
+      FSavePoints.Clear;
+      InternalExecuteStatement('commit');
+      AutoCommit := True;
+    end else
+      StartTransaction;
 end;
 
 const
@@ -885,16 +901,32 @@ end;
 procedure TZDBLibConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
-  if GetTransactionIsolation = Level then
-    Exit;
+  if Level = tiNone then
+    TransactIsolationLevel := tiReadCommitted; //use default til
+  if Level <> TransactIsolationLevel then begin
+    if not Closed then begin
+      if not AutoCommit then
+        raise EZSQLException.Create(SInvalidOpInNonAutoCommit);
+      InternalSetTransactionIsolation(Level);
+    end;
+    TransactIsolationLevel := Level;
+  end;
+end;
 
-  if not Closed and not AutoCommit then
-    InternalExecuteStatement('commit');
-  inherited;
-  if not Closed then begin
-    InternalSetTransactionIsolation(Level);
-    if not GetAutoCommit then
-      InternalExecuteStatement('begin transaction');
+function TZDBLibConnection.StartTransaction: Integer;
+var ASavePoint: IZTransaction;
+  S: String;
+begin
+  if Closed then
+    Open;
+  if AutoCommit then begin
+    InternalExecuteStatement('begin transaction');
+    AutoCommit := False;
+    Result := 1;
+  end else begin
+    Result := FSavePoints.Count+2;
+    S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    ASavePoint := SavePoint(S);
   end;
 end;
 
@@ -906,13 +938,21 @@ end;
   @see #setAutoCommit
 }
 procedure TZDBLibConnection.Commit;
+var Tran: IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
-    raise Exception.Create(SCannotUseCommit);
-  if not Closed then begin
-    InternalExecuteStatement('commit');
-    InternalExecuteStatement('begin transaction');
-  end;
+    raise EZSQLException.Create(SCannotUseCommit);
+  if not Closed then
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Commit;
+    end else begin
+      InternalExecuteStatement('commit');
+      AutoCommit := True;
+      StartTransaction;
+    end
 end;
 
 {**
@@ -923,13 +963,21 @@ end;
   @see #setAutoCommit
 }
 procedure TZDBLibConnection.Rollback;
+var Tran: IZTransaction;
 begin
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
-    raise Exception.Create(SCannotUseRollBack);
-  if not Closed then begin
-    InternalExecuteStatement('rollback');
-    InternalExecuteStatement('begin transaction');
-  end;
+    raise EZSQLException.Create(SCannotUseRollBack);
+  if not Closed then
+    if FSavePoints.Count > 0 then begin
+      Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
+      Tran.Rollback;
+    end else begin
+      InternalExecuteStatement('rollback');
+      AutoCommit := True;
+      StartTransaction;
+    end
 end;
 
 {**
@@ -948,9 +996,13 @@ var
 begin
   if Closed or not Assigned(PlainDriver) then
     Exit;
+  if not AutoCommit then begin
+    SetAutoCommit(True);
+    AutoCommit := False;
+  end;
   try
-    if not FPlainDriver.dbDead(FHandle) <> 0 then
-      InternalExecuteStatement('if @@trancount > 0 rollback');
+    //if not FPlainDriver.dbDead(FHandle) <> 0 then
+      //InternalExecuteStatement('if @@trancount > 0 rollback');
 
     LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
@@ -982,6 +1034,8 @@ procedure TZDBLibConnection.SetReadOnly(ReadOnly: Boolean);
 begin
 { TODO -ofjanos -cAPI : I think it is not supported in this way }
   inherited;
+  //sql server and sybase do not support RO-Transaction or Sessions
+  //all we have is a readonly database ...
 end;
 
 {**
@@ -998,12 +1052,10 @@ begin
   begin
     RawCat := ConSettings^.ConvFuncs.ZStringToRaw(Catalog, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
     LogMessage := 'SET CATALOG '+RawCat;
-    if FProvider = dpMsSQL then
-    begin
+    if FProvider = dpMsSQL then begin
       if FPlainDriver.dbUse(FHandle, PAnsiChar(RawCat)) <> DBSUCCEED then
         CheckDBLibError(lcOther, LogMessage);
-    end
-    else
+    end else
       if FPlainDriver.dbUse(FHandle, PAnsiChar(RawCat)) <> DBSUCCEED then
         CheckDBLibError(lcOther, LogMessage);
     DriverManager.LogMessage(lcOther, ConSettings^.Protocol, LogMessage);
@@ -1039,6 +1091,60 @@ function TZDBLibConnection.GetServerProvider: TZServerProvider;
 const DBLib2ServerProv: Array[TDBLIBProvider] of TZServerProvider = (spMSSQL, spASE);
 begin
   Result := DBLib2ServerProv[FProvider];
+end;
+
+{ TZDBLibSavePoint }
+
+procedure TZDBLibSavePoint.Commit;
+var Idx, i: Integer;
+  S: RawByteString;
+begin
+  try
+    S := 'COMMIT TRANSACTION '+FName;
+    FOwner.InternalExecuteStatement(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+constructor TZDBLibSavePoint.Create(const Name: String;
+  Owner: TZDBLibConnection);
+var S: RawByteString;
+begin
+  inherited Create;
+  ConSettings := Owner.ConSettings;
+  {$IFDEF UNICODE}
+  fName := ZUnicodeToRaw(Name, ConSettings.ClientCodePage.CP);
+  {$ELSE}
+  fName := Name;
+  {$ENDIF}
+  FOwner := Owner;
+  S := 'SAVE TRANSACTION '+FName;
+  FOwner.InternalExecuteStatement(S);
+end;
+
+procedure TZDBLibSavePoint.Rollback;
+var Idx, i: Integer;
+  S: RawByteString;
+begin
+  try
+    S := 'ROLLBACK TRANSACTION '+FName;
+    FOwner.InternalExecuteStatement(S);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+function TZDBLibSavePoint.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZDBLibSavePoint.Create(AName, FOwner);
+  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization
