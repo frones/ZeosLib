@@ -1697,7 +1697,6 @@ var
   GUIDProps: TZInterbase6ConnectionGUIDProps;
   L: NativeUInt;
   P: PAnsiChar;
-  TempStr: AnsiString;
 label GUID_Size, Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
@@ -1798,13 +1797,7 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength*Get
       if L = 0 then
         P := GetPAnsiChar(DEFAULT_SOURCE_DOMAIN_Index, L);
       if P <> nil then begin
-        {      if StartsWith(Trim(UpperCase(DefaultValue)), 'DEFAULT') then
-          DefaultValue := Trim(StringReplace(DefaultValue, 'DEFAULT ', '',
-            [rfIgnoreCase]));}
-        TempStr := P;
-        TempStr := Trim(TempStr);
-        P := @TempStr[Low(TempStr)];
-        L := Length(TempStr);
+        ZSysUtils.Trim(L, P);
         if (L > 8) and SameText(P, Pointer(cDefault), Length(cDefault)) then begin
           Inc(P, 8);
           Dec(L, 8);
