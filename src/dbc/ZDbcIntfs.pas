@@ -496,6 +496,7 @@ type
 
     procedure Commit;
     procedure Rollback;
+    function StartTransaction: Integer;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
     procedure PrepareTransaction(const transactionid: string);

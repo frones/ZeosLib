@@ -267,13 +267,12 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
 
+    procedure Commit; override;
+    procedure Rollback; override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetAutoCommit(Value: Boolean); override;
-
-    function StartTransaction: Integer;
-    procedure Commit; override;
-    procedure Rollback; override;
+    function StartTransaction: Integer; override;
 
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;

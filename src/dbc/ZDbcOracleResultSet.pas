@@ -1854,7 +1854,7 @@ begin
       SQLT_LVC: Result := TZAbstractClob.CreateWithData(PAnsiChar(@POCILong(P).data[0]),
         POCILong(P)^.Len, FClientCP, ConSettings);
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE: begin
-          Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FOCISvcCtx,
+            Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FOCISvcCtx,
             FConnection.GetErrorHandle, PPOCIDescriptor(P)^, FChunkSize, ConSettings);
           (Result as IZOracleBlob).ReadLob; //nasty: we've got only one descriptor if we fetch the rows. Loading on demand isn't possible
         end;

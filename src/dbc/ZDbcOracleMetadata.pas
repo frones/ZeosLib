@@ -1060,7 +1060,7 @@ end;
 function TZOracleDatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  Result := True;
+  Result := Level in [tiReadCommitted, tiSerializable];
 end;
 
 {**

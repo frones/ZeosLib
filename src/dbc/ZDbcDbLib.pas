@@ -135,7 +135,7 @@ type
     function SavePoint(const AName: String): IZTransaction;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer;
+    function StartTransaction: Integer; override;
 
     procedure Open; override;
 
@@ -996,16 +996,13 @@ var
 begin
   if Closed or not Assigned(PlainDriver) then
     Exit;
-  if not AutoCommit then begin
-    SetAutoCommit(True);
-    AutoCommit := False;
-  end;
   try
+    if not AutoCommit then begin
+      SetAutoCommit(True);
+      AutoCommit := False;
+    end;
     //if not FPlainDriver.dbDead(FHandle) <> 0 then
       //InternalExecuteStatement('if @@trancount > 0 rollback');
-
-    LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   finally
     FPlainDriver.dbclose(FHandle);
     FHandle := nil;
@@ -1017,6 +1014,8 @@ begin
       Dispose(PDBLibError(FSQLErrors[i]));
     for i := FSQLMessages.Count -1 downto 0 do
       Dispose(PDBLibMessage(FSQLErrors[i]));
+    LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
+    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   end;
 end;
 

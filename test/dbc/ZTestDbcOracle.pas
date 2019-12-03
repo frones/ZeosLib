@@ -111,11 +111,20 @@ end;
 procedure TZTestDbcOracleCase.TestConnection;
 begin
   CheckEquals(False, Connection.IsReadOnly);
-//  CheckEquals(True, Connection.IsClosed);
+  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
-  CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
+  CheckEquals(Ord(tiReadCommitted), Ord(Connection.GetTransactionIsolation));
 
   { Checks without transactions. }
+  Connection.CreateStatement;
+  CheckEquals(False, Connection.IsClosed);
+  //Connection.Commit;
+  //Connection.Rollback;
+  Connection.Close;
+  CheckEquals(True, Connection.IsClosed);
+
+  { Checks with transactions. }
+  Connection.SetAutoCommit(False);
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
   Connection.Commit;
@@ -123,8 +132,21 @@ begin
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
-  { Checks with transactions. }
+  Connection.SetTransactionIsolation(tiSerializable);
+  Connection.CreateStatement;
+  CheckEquals(False, Connection.IsClosed);
+  Connection.Commit;
+  Connection.Rollback;
+  Connection.Close;
+  CheckEquals(True, Connection.IsClosed);
+
+  try
+    Connection.SetReadOnly(True);
+    Check(False, 'Oracle does not support Serializable ReadOnly transactions');
+  except
+  end;
   Connection.SetTransactionIsolation(tiReadCommitted);
+  Connection.SetReadOnly(True);
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
   Connection.Commit;

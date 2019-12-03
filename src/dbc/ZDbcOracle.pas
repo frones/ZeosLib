@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF},
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainOracleDriver, ZDbcLogging,
-  ZTokenizer, ZDbcGenericResolver, ZURL, ZGenericSqlAnalyser,
+  ZTokenizer, ZDbcGenericResolver, ZURL, ZGenericSqlAnalyser, ZClasses,
   ZPlainOracleConstants;
 
 type
@@ -90,6 +90,17 @@ type
     function GetDescribeHandle: POCIDescribe;
   end;
 
+  IZOracleTransaction = interface(IZTransaction)
+    ['{07C8E090-BE86-4CA9-B2CB-1583DA94AFA6}']
+    procedure CloseTransaction;
+    function GetTrHandle: POCITrans;
+    function IsStarted: Boolean;
+    function StartTransaction: Integer;
+  end;
+
+  /// <summary>
+  ///  implements an oracle OCI connection.
+  /// </summary>
   {** Implements Oracle Database Connection. }
   TZOracleConnection = class(TZAbstractDbcConnection, IZOracleConnection)
   private
@@ -99,39 +110,48 @@ type
     FErrorHandle: POCIError;
     FServerHandle: POCIServer;
     FSessionHandle: POCISession;
-    FTransHandle: POCITrans;
+    //FTransHandle: POCITrans;
     FDescibeHandle: POCIDescribe;
     FStatementPrefetchSize: Integer;
     FBlobPrefetchSize: Integer;
     FStmtMode: ub4;
     FPlainDriver: TZOraclePlainDriver;
+    fGlobalTransactions: array[Boolean] of IZCollection; //simultan global read-Only/Write transaction container
+    fLocalTransaction, fAttachedTransaction: IZOracleTransaction; //oracle allows just one Local transaction
+    //function GetActiveTransaction: IZOracleTransaction;
   protected
     procedure InternalCreate; override;
+    procedure InternalClose; override;
+  public { IZTransactionManager }
+    function CreateTransaction(AutoCommit, ReadOnly: Boolean;
+      TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    procedure ReleaseTransaction(const Transaction: IZTransaction);
+    procedure SetActiveTransaction(const Value: IZTransaction);
+    //function GetActiveTransaction: IZTransaction;
   public
     destructor Destroy; override;
-
+  public
+    function CreateCallableStatement(const SQL: string; Info: TStrings):
+      IZCallableStatement; override;
+    function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; override;
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;
-
-    function StartTransaction: Integer;
     procedure Commit; override;
     procedure Rollback; override;
+    procedure SetReadOnly(Value: Boolean); override;
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function StartTransaction: Integer; override;
 
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;
 
     procedure Open; override;
-    procedure InternalClose; override;
 
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; override;
 
     function GetConnectionHandle: POCIEnv;
     function GetServiceContextHandle: POCISvcCtx;
@@ -153,6 +173,70 @@ type
     function FormCalculateStatement(Columns: TObjectList): string; override;
   end;
 
+  /// <summary>
+  ///  Defines a oracle transaction mode.
+  /// </summary>
+  TZOCITxnMode = (tmDefault, tmReadOnly, tmReadWrite, tmSerializable);
+
+  /// <summary>
+  ///  Defines a oracle transaction spawning mode.
+  /// </summary>
+  TZOCITxnSpawnMode = (smNew, smJoin{not supported}, smResume);
+
+  /// <summary>
+  ///  Defines a oracle transaction couple mode.
+  /// </summary>
+  TZOCITxnCoupleMode = (cmTightly, cmLoosely);
+
+  {** EH: implements an oracle transaction }
+  TZOracleTransaction = class(TZCodePagedObject, IImmediatelyReleasable,
+    IZTransaction, IZOracleTransaction)
+  private
+    fSavepoints: IZCollection;
+    fDoLog, FStarted, fLocal: Boolean;
+    FOCITrans: POCITrans;
+    FTxnMode: TZOCITxnMode;
+    FCoupleMode: TZOCITxnCoupleMode;
+    FSpawnMode: TZOCITxnSpawnMode;
+    //FTXID: TXID;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZOracleConnection;
+    procedure InternalExecute(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload;
+    procedure InternalExecute(const SQL: RawByteString; LoggingCategory: TZLoggingCategory; var Stmt: POCIStmt); overload;
+  public { IZTransaction }
+    procedure Commit;
+    procedure Rollback;
+    function SavePoint(const AName: String): IZTransaction;
+    function StartTransaction: Integer;
+  public { IZOracleTransaction }
+    procedure CloseTransaction;
+    function GetTrHandle: POCITrans;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    function IsStarted: Boolean;
+  public
+    constructor CreateLocal(const Owner: TZOracleConnection);
+    constructor CreateGlobal(const Owner: TZOracleConnection; TxnMode: TZOCITxnMode;
+      SpawnMode: TZOCITxnSpawnMode; CoupleMode: TZOCITxnCoupleMode);
+    procedure BeforeDestruction; override;
+  end;
+
+  IZOracleSavePoint = interface(IZTransaction)
+    ['{0D85B2DD-B9AF-4CFB-989A-2939929F93F8}']
+    function GetTransaction: IZOracleTransaction;
+  end;
+
+  TZOracleSavePoint = class(TZCodePagedObject, IZTransaction, IZOracleSavePoint)
+  private
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZOracleTransaction;
+    fName: RawByteString;
+  public //IZTransaction
+    procedure Commit;
+    procedure Rollback;
+    function SavePoint(const AName: String): IZTransaction;
+  public { IZOracleSavePoint }
+    function GetTransaction: IZOracleTransaction;
+  public
+    Constructor Create(const Name: String; Owner: TZOracleTransaction);
+  end;
 var
   {** The common driver manager object. }
   OracleDriver: IZDriver;
@@ -163,8 +247,8 @@ implementation
 
 uses
   ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZFastCode,
-  ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser, ZDbcProperties
-  {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
+  ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser, ZDbcProperties,
+  ZCollections, ZEncoding;
 
 { TZOracleDriver }
 
@@ -250,6 +334,9 @@ procedure TZOracleConnection.InternalCreate;
 begin
   FPlainDriver := TZOraclePlainDriver(PlainDriver.GetInstance);
   FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
+  fGlobalTransactions[False] := TZCollection.Create;
+  fGlobalTransactions[True ] := TZCollection.Create;
+  TransactIsolationLevel := tiReadCommitted;
 
   { Sets a default properties }
   if Self.Port = 0 then
@@ -391,9 +478,9 @@ begin
   FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
-
-  StartTransaction;
-
+  fLocalTransaction := TZOracleTransaction.CreateLocal(Self);
+  SetActiveTransaction(fLocalTransaction);
+  fLocalTransaction.StartTransaction;
   inherited Open;
 end;
 
@@ -401,47 +488,10 @@ end;
   Starts a transaction support.
 }
 function TZOracleConnection.StartTransaction: Integer;
-var
-  SQL: RawByteString;
-  Status: Integer;
-  Isolation: Integer;
 begin
-  if TransactIsolationLevel = tiNone then begin
-    SQL := 'SET TRANSACTION ISOLATION LEVEL DEFAULT';
-    Isolation := OCI_DEFAULT;
-  end else if TransactIsolationLevel = tiReadCommitted then begin
-// Behaviour changed by mdaems 31/05/2006 : Read Committed is the default
-// isolation level used by oracle. This property should not be abused to add
-// the non-standard isolation level 'read only' thats invented by oracle.
-//    SQL := 'SET TRANSACTION ISOLATION LEVEL READONLY';
-//    Isolation := OCI_TRANS_READONLY;
-    SQL := 'SET TRANSACTION ISOLATION LEVEL DEFAULT';
-    Isolation := OCI_DEFAULT;
-  end else if TransactIsolationLevel = tiRepeatableRead then begin
-    SQL := 'SET TRANSACTION ISOLATION LEVEL READWRITE';
-    Isolation := OCI_TRANS_READWRITE;
-  end else if TransactIsolationLevel = tiSerializable then begin
-    SQL := 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-    Isolation := OCI_TRANS_SERIALIZABLE;
-  end else
-    raise EZSQLException.Create(SIsolationIsNotSupported);
-
-  FTransHandle := nil;
-  FPlainDriver.OCIHandleAlloc(FHandle, FTransHandle, OCI_HTYPE_TRANS, 0, nil);
-  FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FTransHandle, 0,
-    OCI_ATTR_TRANS, FErrorHandle);
-
-  Status := FPlainDriver.OCITransStart(FContextHandle, FErrorHandle, 0, Isolation);
-  CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
-
-  if FStmtMode = OCI_STMT_CACHE  then begin
-    Status := FPlainDriver.OCIAttrSet(FContextHandle,OCI_HTYPE_SVCCTX,@FStatementPrefetchSize,0,
-        OCI_ATTR_STMTCACHESIZE,FErrorHandle);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
-  end;
-
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-  Result := 1;
+  if Closed then
+    Open;
+  Result := fAttachedTransaction.StartTransaction;
 end;
 
 {**
@@ -508,10 +558,10 @@ end;
 }
 Function TZOracleConnection.AbortOperation: Integer;
 Begin
- // https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci16m96.htm
- Result := FPlainDriver.OCIBreak(FContextHandle, FErrorHandle);
- CheckOracleError(FPlainDriver, FErrorHandle, Result, lcExecute, 'Abort operation', ConSettings);
- Result := 0; //only possible if CheckOracleError dosn't raise an exception
+  // https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci16m96.htm
+  Result := FPlainDriver.OCIBreak(FContextHandle, FErrorHandle);
+  CheckOracleError(FPlainDriver, FErrorHandle, Result, lcExecute, 'Abort operation', ConSettings);
+  Result := 0; //only possible if CheckOracleError dosn't raise an exception
 End;
 
 {**
@@ -522,19 +572,20 @@ End;
   @see #setAutoCommit
 }
 procedure TZOracleConnection.Commit;
-var
-  Status: Integer;
-  SQL: RawByteString;
 begin
-  if not Closed then begin
-    SQL := 'COMMIT';
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
+  fAttachedTransaction.Commit;
+  if not fAttachedTransaction.IsStarted then
+    fAttachedTransaction.StartTransaction;
+end;
 
-    Status := FPlainDriver.OCITransCommit(FContextHandle, FErrorHandle,
-      OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
+procedure TZOracleConnection.ReleaseTransaction(
+  const Transaction: IZTransaction);
+begin
 
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-  end;
 end;
 
 {**
@@ -545,20 +596,14 @@ end;
   @see #setAutoCommit
 }
 procedure TZOracleConnection.Rollback;
-var
-  Status: Integer;
-  SQL: RawByteString;
 begin
-  if not Closed then
-  begin
-    SQL := 'ROLLBACK';
-
-    Status := FPlainDriver.OCITransRollback(FContextHandle, FErrorHandle,
-      OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
-
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-  end;
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
+  fAttachedTransaction.Rollback;
+  if not fAttachedTransaction.IsStarted then
+    fAttachedTransaction.StartTransaction;
 end;
 
 {**
@@ -585,40 +630,54 @@ end;
 procedure TZOracleConnection.InternalClose;
 var
   LogMessage: RawByteString;
+  B: Boolean;
 begin
   if Closed or not Assigned(PlainDriver) then
     Exit;
   LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-  { Closes started transaction }
-  CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCITransRollback(FContextHandle, FErrorHandle, OCI_DEFAULT),
-    lcDisconnect, LogMessage, ConSettings);
-  FPlainDriver.OCIHandleFree(FTransHandle, OCI_HTYPE_TRANS);
-  FTransHandle := nil;
+  try
+    for B := False to True do
+      fGlobalTransactions[b].Clear;
+    fAttachedTransaction := nil;
+    fLocalTransaction := nil;
+  finally
+    try
+      if FSessionHandle <> nil then
+        { Closes the session }
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.OCISessionEnd(FContextHandle, FErrorHandle, FSessionHandle,
+          OCI_DEFAULT), lcDisconnect, LogMessage, ConSettings);
 
-  { Closes the session }
-  CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCISessionEnd(FContextHandle, FErrorHandle, FSessionHandle,
-    OCI_DEFAULT), lcDisconnect, LogMessage, ConSettings);
-
-  { Detaches from the server }
-  CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCIServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
-    lcDisconnect, LogMessage, ConSettings);
-
-  { Frees all handlers }
-  FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
-  FDescibeHandle := nil;
-  FPlainDriver.OCIHandleFree(FSessionHandle, OCI_HTYPE_SESSION);
-  FSessionHandle := nil;
-  FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
-  FContextHandle := nil;
-  FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
-  FServerHandle := nil;
-  FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
-  FErrorHandle := nil;
-
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+      if FServerHandle <> nil then
+        { Detaches from the server }
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.OCIServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
+          lcDisconnect, LogMessage, ConSettings);
+    finally
+      { Frees all handlers }
+      if FDescibeHandle <> nil then begin
+        FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
+        FDescibeHandle := nil;
+      end;
+      if FSessionHandle <> nil then begin
+        FPlainDriver.OCIHandleFree(FSessionHandle, OCI_HTYPE_SESSION);
+        FSessionHandle := nil;
+      end;
+      if FContextHandle <> nil then begin
+        FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
+        FContextHandle := nil;
+      end;
+      if FServerHandle <> nil then begin
+        FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
+        FServerHandle := nil;
+      end;
+      if FErrorHandle <> nil then begin
+        FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
+        FErrorHandle := nil;
+      end;
+      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+    end;
+  end;
 end;
 
 {**
@@ -628,6 +687,28 @@ end;
 function TZOracleConnection.GetCatalog: string;
 begin
   Result := FCatalog;
+end;
+
+procedure TZOracleConnection.SetActiveTransaction(const Value: IZTransaction);
+var OCITA: IZOracleTransaction;
+  OCISP: IZOracleSavePoint;
+  Status: sword;
+begin
+  if Supports(Value, IZOracleSavePoint, OCISP)
+  then OCITA := OCISP.GetTransaction
+  else OCITA := Value as IZOracleTransaction;
+  { set new transaction handle to service context }
+  Status := FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, OCITA.GetTrHandle, 0,
+    OCI_ATTR_TRANS, FErrorHandle);
+  if Status <> OCI_SUCCESS then
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, 'OCIAttrSet(OCI_ATTR_TRANS)', ConSettings);
+  if FStmtMode = OCI_STMT_CACHE then begin
+    Status := FPlainDriver.OCIAttrSet(FContextHandle,OCI_HTYPE_SVCCTX,
+      @FStatementPrefetchSize, 0, OCI_ATTR_STMTCACHESIZE, FErrorHandle);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, 'OCIAttrSet(OCI_ATTR_STMTCACHESIZE)', ConSettings);
+  end;
+  fAttachedTransaction := OCITA;
 end;
 
 {**
@@ -640,30 +721,40 @@ begin
 end;
 
 {**
+  Puts this connection in read-only mode as a hint to enable
+  database optimizations.
+
+  <P><B>Note:</B> This method cannot be called while in the
+  middle of a transaction.
+
+  @param readOnly true enables read-only mode; false disables
+    read-only mode.
+}
+procedure TZOracleConnection.SetReadOnly(Value: Boolean);
+begin
+   if (Value and (TransactIsolationLevel = tiSerializable)) then
+    raise EZSQLException.Create(SIsolationIsNotSupported);
+  ReadOnly := Value;
+end;
+
+{**
   Sets a new transact isolation level.
   @param Level a new transact isolation level.
 }
 procedure TZOracleConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
-var
-  SQL: RawByteString;
 begin
-  if TransactIsolationLevel <> Level then
-  begin
-    inherited SetTransactionIsolation(Level);
-
+  if Level = tiNone
+  then Level := tiReadCommitted
+  else if (Level = tiReadUncommitted) or (Level = tiRepeatableRead) or
+    (Readonly and (Level = tiSerializable)) then
+    raise EZSQLException.Create(SIsolationIsNotSupported);
+  if TransactIsolationLevel <> Level then begin
     if not Closed then
-    begin
-      SQL := 'END TRANSACTION';
-      CheckOracleError(FPlainDriver, FErrorHandle,
-        FPlainDriver.OCITransRollback(FContextHandle, FErrorHandle, OCI_DEFAULT),
-          lcExecute, SQL, ConSettings);
-      FPlainDriver.OCIHandleFree(FTransHandle, OCI_HTYPE_TRANS);
-      FTransHandle := nil;
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
-
-      StartTransaction;
-    end;
+      if AutoCommit
+      then fLocalTransaction := nil //reastart new TA
+      else raise EZSQLException.Create(SInvalidOpInNonAutoCommit);
+    TransactIsolationLevel := Level;
   end;
 end;
 
@@ -676,6 +767,31 @@ end;
 function TZOracleConnection.CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
 begin
   Result := TZOracleSequence.Create(Self, Sequence, BlockSize);
+end;
+
+function ZDbc2OCITxnMode(ReadOnly: Boolean; TIL: TZTransactIsolationLevel): TZOCITxnMode;
+begin
+  if (ReadOnly and (TIL = tiSerializable)) or
+      (TIL = tiReadUncommitted) or
+      (TIL = tiRepeatableRead) then
+    raise EZSQLException.Create(SIsolationIsNotSupported);
+  if ReadOnly then
+    Result := tmReadOnly
+  else if TIL = tiSerializable then
+    Result := tmSerializable
+  else if TIL = tiReadCommitted then
+    Result := tmReadWrite
+  else Result := tmDefault;
+end;
+
+function TZOracleConnection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
+  TransactIsolationLevel: TZTransactIsolationLevel;
+  Params: TStrings): IZTransaction;
+var TxnMode: TZOCITxnMode;
+begin
+  //2Phase Txn/global?
+  TxnMode := ZDbc2OCITxnMode(ReadOnly, TransactIsolationLevel);
+  Result := TZOracleTransaction.CreateGlobal(Self, TxnMode, smNew, cmLoosely);
 end;
 
 {**
@@ -734,7 +850,7 @@ end;
 }
 function TZOracleConnection.GetTransactionHandle: POCITrans;
 begin
-  Result := FTransHandle;
+  Result := fAttachedTransaction.GetTrHandle;
 end;
 
 {**
@@ -821,6 +937,273 @@ begin
       Result := Result + ' FROM DUAL';
     end;
   end;
+end;
+
+{ TZOracleTransaction }
+
+const
+  TransactionModeLogMessage: array[TZOCITxnMode] of RawByteString = (
+    'SET TRANSACTION ISOLATION LEVEL DEFAULT',
+    'SET TRANSACTION ISOLATION LEVEL READONLY',
+    'SET TRANSACTION ISOLATION LEVEL READWRITE',
+    'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+
+procedure TZOracleTransaction.BeforeDestruction;
+var Status: sword;
+begin
+  inherited;
+  if FOCITrans <> nil then begin
+    try
+      if FStarted then
+        RollBack;
+      Status := FOwner.FPlainDriver.OCIHandleFree(FOCITrans, OCI_HTYPE_TRANS);
+      if Status <> OCI_SUCCESS then
+        CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status,
+          lcTransaction, 'OCIHandleFree', ConSettings);
+    finally
+      FOCITrans := nil;
+    end;
+  end;
+end;
+
+procedure TZOracleTransaction.CloseTransaction;
+begin
+end;
+
+procedure TZOracleTransaction.Commit;
+var Status: sword;
+  SavePoint: IZTransaction;
+begin
+  if fSavepoints.Count > 0 then begin
+    fSavepoints[fSavepoints.Count-1].QueryInterface(IZTransaction, SavePoint);
+    SavePoint.Commit;
+  end else if not FStarted then
+    raise EZSQLException.Create(SCannotUseCommit)
+  else try
+    Status := FOwner.FPlainDriver.OCITransCommit(FOwner.FContextHandle,
+      FOwner.FErrorHandle, OCI_DEFAULT);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status,
+        lcTransaction, 'TRANSACTION COMMIT', ConSettings);
+  finally
+    FStarted := False;
+    if fDoLog and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+  end;
+end;
+
+constructor TZOracleTransaction.CreateGlobal(const Owner: TZOracleConnection;
+  TxnMode: TZOCITxnMode; SpawnMode: TZOCITxnSpawnMode;
+  CoupleMode: TZOCITxnCoupleMode);
+begin
+  inherited Create;
+  FTxnMode := TxnMode;
+  FSpawnMode := SpawnMode;
+  FCoupleMode := CoupleMode;
+  fDoLog := True;
+  FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FHandle, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
+end;
+
+constructor TZOracleTransaction.CreateLocal(const Owner: TZOracleConnection);
+begin
+  inherited Create;
+  { alloc transaction handle }
+  FOwner := Owner;
+  FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FHandle, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
+  fSavepoints := TZCollection.Create;
+  ConSettings := Owner.ConSettings;
+  fLocal := True;
+end;
+
+function TZOracleTransaction.GetTrHandle: POCITrans;
+begin
+  Result := FOCITrans
+end;
+
+procedure TZOracleTransaction.InternalExecute(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+var Stmt: POCIStmt;
+  Status: sword;
+begin
+  Stmt := nil;
+  try
+    InternalExecute(SQL, LoggingCategory, Stmt);
+  finally
+    if Stmt <> nil then begin
+      Status := FOwner.FPlainDriver.OCIHandleFree(Stmt, OCI_HTYPE_STMT);
+      if Status <> OCI_SUCCESS then
+        CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status, lcUnprepStmt, SQL, ConSettings);
+    end;
+  end;
+end;
+
+procedure TZOracleTransaction.InternalExecute(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory; var Stmt: POCIStmt);
+var Status: sword;
+begin
+  if Pointer(SQL) = nil then
+    Exit;
+  if Stmt = nil then begin
+    Status := FOwner.FPlainDriver.OCIHandleAlloc(FOwner.GetConnectionHandle,
+      Stmt, OCI_HTYPE_STMT, 0, nil);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status, LoggingCategory, 'OCIHandleAlloc(OCIStmt-Handle)', ConSettings);
+    Status := FOwner.FPlainDriver.OCIStmtPrepare(Stmt, FOwner.FErrorHandle, Pointer(SQL),
+      Length(SQL)+1, OCI_NTV_SYNTAX, OCI_DEFAULT);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status, LoggingCategory, SQL, ConSettings);
+  end;
+  try
+    Status := FOwner.FPlainDriver.OCIStmtExecute(FOwner.FContextHandle,
+        Stmt, FOwner.FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status, LoggingCategory, SQL, ConSettings);
+  finally
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
+  end;
+end;
+
+function TZOracleTransaction.IsStarted: Boolean;
+begin
+  Result := FStarted;
+end;
+
+procedure TZOracleTransaction.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+
+end;
+
+procedure TZOracleTransaction.Rollback;
+var Status: sword;
+  SavePoint: IZTransaction;
+begin
+  if fSavepoints.Count > 0 then begin
+    fSavepoints[fSavepoints.Count-1].QueryInterface(IZTransaction, SavePoint);
+    SavePoint.Rollback;
+  end else if not FStarted then
+    raise EZSQLException.Create(SCannotUseRollback)
+  else try
+    Status := FOwner.FPlainDriver.OCITransRollback(FOwner.FContextHandle,
+      FOwner.FErrorHandle, OCI_DEFAULT);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status,
+        lcTransaction, 'TRANSACTION ROLLBACK', ConSettings);
+  finally
+    FStarted := False;
+    if fDoLog and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
+  end;
+end;
+
+function TZOracleTransaction.SavePoint(const AName: String): IZTransaction;
+begin
+  if FOCITrans = nil then
+    raise EZSQLException.Create(cSConnectionIsNotOpened);
+  if not FStarted then
+    raise EZSQLException.Create(SInvalidOpInAutoCommit);
+  Result := TZOracleSavePoint.Create(AName, Self);
+  FSavePoints.Add(Result);
+end;
+
+const
+  OCITransStartFlagsLog: Array[TZOCITxnMode] of RawByteString = (
+    'SET TRANSACTION ISOLATION LEVEL DEFAULT',
+    'SET TRANSACTION ISOLATION LEVEL READONLY',
+    'SET TRANSACTION ISOLATION LEVEL READWRITE',
+    'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+
+  OCITransStartTILFlags: Array[TZOCITxnMode] of ub4 = (
+    OCI_DEFAULT, OCI_TRANS_READONLY, OCI_TRANS_READWRITE, OCI_TRANS_SERIALIZABLE);
+  OCITransStartCoupleFlags: Array[TZOCITxnCoupleMode] of ub4 = (
+    OCI_TRANS_TIGHT, OCI_TRANS_LOOSE);
+  OCITransStartSpawnFlags: Array[TZOCITxnSpawnMode] of ub4 = (
+    OCI_TRANS_NEW, OCI_TRANS_JOIN, OCI_TRANS_RESUME);
+
+function TZOracleTransaction.StartTransaction: Integer;
+var
+  Status: Integer;
+  TxnFlags: ub4;
+  S: String;
+  ASavePoint: IZTransaction;
+begin
+  if FStarted then
+    if FOwner.AutoCommit
+    then Result := 1
+    else begin
+      Result := FSavePoints.Count+2;
+      S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+      ASavePoint := SavePoint(S);
+    end
+  else begin
+    if FLocal then
+      FTxnMode := ZDbc2OCITxnMode(FOwner.ReadOnly, FOwner.TransactIsolationLevel);
+    TxnFlags := OCITransStartTILFlags[FTxnMode];
+    if not FLocal then begin
+      TxnFlags := TxnFlags or OCITransStartCoupleFlags[FCoupleMode];
+      TxnFlags := TxnFlags or OCITransStartSpawnFlags[FSpawnMode];
+    end;
+    Status := FOwner.FPlainDriver.OCITransStart(FOwner.FContextHandle,
+      FOwner.FErrorHandle, 0, TxnFlags);
+    CheckOracleError(FOwner.FPlainDriver, FOwner.FErrorHandle, Status, lcExecute, OCITransStartFlagsLog[FTxnMode], ConSettings);
+    FStarted := True;
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, OCITransStartFlagsLog[FTxnMode]);
+    Result := Ord(not FOwner.AutoCommit);
+  end;
+end;
+
+{ TZOracleSavePoint }
+
+procedure TZOracleSavePoint.Commit;
+var Idx, i: Integer;
+begin
+  try
+    FOwner.InternalExecute('COMMIT', lcTransaction);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+constructor TZOracleSavePoint.Create(const Name: String;
+  Owner: TZOracleTransaction);
+begin
+  inherited Create;
+  ConSettings := Owner.ConSettings;
+  {$IFDEF UNICODE}
+  fName := ZUnicodeToRaw(Name, zCP_UTF8);
+  {$ELSE}
+  fName := Name;
+  {$ENDIF}
+  FOwner := Owner;
+  FOwner.InternalExecute('SAVEPOINT '+FName, lcTransaction);
+end;
+
+function TZOracleSavePoint.GetTransaction: IZOracleTransaction;
+begin
+  Result := FOwner;
+end;
+
+procedure TZOracleSavePoint.Rollback;
+var Idx, i: Integer;
+begin
+  try
+    FOwner.InternalExecute('ROLLBACK TO '+FName, lcTransaction);
+  finally
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx do
+        FOwner.FSavePoints.Delete(I);
+  end;
+end;
+
+function TZOracleSavePoint.SavePoint(const AName: String): IZTransaction;
+begin
+  Result := TZOracleSavePoint.Create(AName, FOwner);
+  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization

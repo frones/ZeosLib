@@ -115,7 +115,7 @@ type
     function SavePoint(const AName: String): IZTransaction;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetAutoCommit(Value: Boolean); override;
-    function StartTransaction: Integer;
+    function StartTransaction: Integer; override;
 
     procedure SetReadOnly(Value: Boolean); override;
 

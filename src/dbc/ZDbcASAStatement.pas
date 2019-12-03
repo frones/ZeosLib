@@ -338,7 +338,8 @@ end;
 function TZAbstractASAStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
-  BindInParameters;
+  if FWeakIntfPtrOfIPrepStmt <> nil then
+    BindInParameters;
   if FMoreResults or FHasOutParams
   then LastResultSet := ExecuteQueryPrepared
   else begin
@@ -366,7 +367,8 @@ function TZAbstractASAStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Prepare;
   PrepareOpenResultSetForReUse;
-  BindInParameters;
+  if FWeakIntfPtrOfIPrepStmt <> nil then
+    BindInParameters;
 
   with FASAConnection do begin
     if not FHasOutParams then begin
@@ -404,25 +406,32 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZAbstractASAStatement.ExecuteUpdatePrepared: Integer;
+var Handle: PZASASQLCA;
 begin
   Prepare;
-  BindInParameters;
+  if FWeakIntfPtrOfIPrepStmt <> nil then
+    BindInParameters;
   if FHasOutParams and (FOpenResultSet = nil) then begin
     //first create the ResultSet -> exact types are described
     FOutParamResultSet := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, True);
     FOpenResultSet := Pointer(FOutParamResultSet);
   end;
   with FASAConnection do begin
-    FPlainDriver.dbpp_execute_into(GetDBHandle, nil, nil, @FStmtNum,
+    Handle := GetDBHandle;
+    FPlainDriver.dbpp_execute_into(Handle, nil, nil, @FStmtNum,
       FInParamSQLDA, FResultSQLDA);
-    ZDbcASAUtils.CheckASAError(FPlainDriver, GetDBHandle, lcExecute, ConSettings,
+    ZDbcASAUtils.CheckASAError(FPlainDriver, Handle, lcExecute, ConSettings,
       ASQL, SQLE_TOO_MANY_RECORDS);
     Result := GetDBHandle.sqlErrd[2];
     LastUpdateCount := Result;
+    { Autocommit statement.
+      EH: we've a chained mode only(deprecated by sybase)
+      no idea if that's correct, it's alltime code}
+    if GetAutoCommit then begin
+      FPlainDriver.dbpp_commit(Handle, 0);
+      CheckASAError(FPlainDriver, Handle, lcTransaction, ConSettings);
+    end;
   end;
-  { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
   { Logging SQL Command and values }
   inherited ExecuteUpdatePrepared;
 end;

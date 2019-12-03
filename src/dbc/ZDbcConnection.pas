@@ -202,6 +202,7 @@ type
 
     procedure Commit; virtual;
     procedure Rollback; virtual;
+    function StartTransaction: Integer; virtual; abstract;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
     procedure PrepareTransaction(const {%H-}transactionid: string);virtual;

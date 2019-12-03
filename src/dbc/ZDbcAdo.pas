@@ -112,7 +112,7 @@ type
     procedure Rollback; override;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer;
+    function StartTransaction: Integer;  override;
 
     procedure Open; override;
 

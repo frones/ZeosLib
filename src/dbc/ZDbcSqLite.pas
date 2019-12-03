@@ -123,7 +123,7 @@ type
     function SavePoint(const AName: String): IZTransaction;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer;
+    function StartTransaction: Integer; override;
 
 
     procedure SetCatalog(const Catalog: string); override;
@@ -755,7 +755,7 @@ begin
   fName := Name;
   {$ENDIF}
   FOwner := Owner;
-  FOwner.InternalExecute('SAVE POINT '+FName);
+  FOwner.InternalExecute('SAVEPOINT '+FName);
 end;
 
 procedure TZSQLiteSavePoint.Rollback;

@@ -118,7 +118,7 @@ type
     function SavePoint(const AName: String): IZTransaction; virtual; abstract;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer;
+    function StartTransaction: Integer; override;
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -1019,7 +1019,7 @@ begin
   FOwner := Owner;
   if FOwner.GetServerProvider in [spMSSQL, spASE]
   then S := 'SAVE TRANSACTION '+FName
-  else S := 'SAVE POINT '+FName;
+  else S := 'SAVEPOINT '+FName;
   FOwner.InternalExecute(S);
 end;
 
@@ -1079,7 +1079,7 @@ begin
   FOwner := Owner;
   if FOwner.GetServerProvider in [spMSSQL, spASE]
   then S := 'SAVE TRANSACTION '+FName
-  else S := 'SAVE POINT '+FName;
+  else S := 'SAVEPOINT '+FName;
   FOwner.InternalExecute(S);
 end;
 
