@@ -1133,6 +1133,7 @@ begin
     then Result := 1
     else begin
       Result := FSavePoints.Count+2;
+      //just numbered names do disturb the oracle .. you'll get invalid statement error
       S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
       ASavePoint := SavePoint(S);
     end
@@ -1157,11 +1158,22 @@ end;
 
 procedure TZOracleSavePoint.Commit;
 var Idx, i: Integer;
+  Trn: IZTransaction;
 begin
   try
+    QueryInterface(IZTransaction, Trn);
+    {oracle does not support the release savepoint syntax
+     instead your have a "commit" per savepoint
+     so we've to drill down the commit counter to current savepoint position }
+    idx := FOwner.FSavePoints.IndexOf(Trn);
+    if idx <> -1 then
+      for I := FOwner.FSavePoints.Count -1 downto idx+1 do
+        if Supports(FOwner.FSavePoints[i], IZTransaction, Trn) then
+          Trn.Commit;
     FOwner.InternalExecute('COMMIT', lcTransaction);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
+    QueryInterface(IZTransaction, Trn);
+    idx := FOwner.FSavePoints.IndexOf(Trn);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
