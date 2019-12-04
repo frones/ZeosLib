@@ -925,7 +925,7 @@ begin
     Result := 1;
   end else begin
     Result := FSavePoints.Count+2;
-    S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    S := '"'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result)+'"';
     ASavePoint := SavePoint(S);
   end;
 end;
@@ -1096,17 +1096,13 @@ end;
 
 procedure TZDBLibSavePoint.Commit;
 var Idx, i: Integer;
-  S: RawByteString;
 begin
-  try
-    S := 'COMMIT TRANSACTION '+FName;
-    FOwner.InternalExecuteStatement(S);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
+  {MSSQL/Sybase committing all save points if the first COMMIT Transaction is send.
+    identifiers are ignored, so this is a fake call for those providers }
+  idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
+  if idx <> -1 then
+    for I := FOwner.FSavePoints.Count -1 downto idx do
+      FOwner.FSavePoints.Delete(I);
 end;
 
 constructor TZDBLibSavePoint.Create(const Name: String;
@@ -1133,7 +1129,7 @@ begin
     S := 'ROLLBACK TRANSACTION '+FName;
     FOwner.InternalExecuteStatement(S);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);

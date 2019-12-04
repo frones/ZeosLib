@@ -103,7 +103,7 @@ type
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
     procedure InternalSetTIL(Level: TZTransactIsolationLevel);
-    procedure InternalExecute(const SQL: UnicodeString);
+    procedure InternalExecute(const SQL: UnicodeString; LogAction: TOleCheckAction);
     procedure InternalClose; override;
   public
     destructor Destroy; override;
@@ -255,14 +255,15 @@ begin
   //Open;
 end;
 
-procedure TZOleDBConnection.InternalExecute(const SQL: UnicodeString);
+procedure TZOleDBConnection.InternalExecute(const SQL: UnicodeString;
+  LogAction: TOleCheckAction);
 var Cmd: ICommandText;
   pParams: TDBPARAMS;
 begin
   Cmd := CreateCommand;
   FillChar(pParams, SizeOf(TDBParams), #0);
-  CheckError(Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL)), ocaOther, False);
-  CheckError(Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil), ocaOther, True);
+  CheckError(Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL)), LogAction, False);
+  CheckError(Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil), LogAction, True);
 end;
 
 const
@@ -449,15 +450,23 @@ end;
 
 function TZOleDBConnection.StartTransaction: Integer;
 var Res: HResult;
+  ASavePoint: IZTransaction;
+  S: UnicodeString;
 begin
   if Closed then
     Open;
-  if not Assigned(fTransaction) then
-    OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
-  Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
-  CheckError(Res, ocaStartTransaction, True);
   AutoCommit := False;
-  Result := FpulTransactionLevel;
+  if FpulTransactionLevel = 0 then begin
+    if not Assigned(fTransaction) then
+      OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
+    Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+    CheckError(Res, ocaStartTransaction, True);
+    Result := FpulTransactionLevel;
+  end else begin
+    Result := FSavePoints.Count+2;
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    ASavePoint := SavePoint(S);
+  end;
 end;
 
 // returns property value(-s) from Data Source Information group as string,
@@ -712,7 +721,7 @@ begin
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
     Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Commit;
+    Tran.Rollback;
   end else begin
     CheckError(fTransaction.Abort(nil, FRetaining, False), ocaRollback, True);
     Dec(FpulTransactionLevel);
@@ -871,12 +880,16 @@ var Idx, i: Integer;
   S: UnicodeString;
 begin
   try
-    if FOwner.GetServerProvider in [spMSSQL, spASE]
-    then S := 'COMMIT TRANSACTION '+FName
-    else S := 'RELEASE SAVEPOINT '+FName;
-    FOwner.InternalExecute(S);
+    {oracle does not support the "release savepoint <identifier>" syntax.
+     the first commit just releases all saveponts.
+     MSSQL/Sybase committing all save points if the first COMMIT Transaction is send. identifiers are ignored
+     so this is a fake call for those providers }
+    if not (FOwner.GetServerProvider in [spOracle, spMSSQL, spASE]) then begin
+      S := 'RELEASE SAVEPOINT '+FName;
+      FOwner.InternalExecute(S, ocaCommit);
+    end;
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
@@ -898,7 +911,7 @@ begin
   if FOwner.GetServerProvider in [spMSSQL, spASE]
   then S := 'SAVE TRANSACTION '+FName
   else S := 'SAVEPOINT '+FName;
-  FOwner.InternalExecute(S);
+  FOwner.InternalExecute(S, ocaStartTransaction);
 end;
 
 procedure TZOleDBSavePoint.Rollback;
@@ -909,9 +922,9 @@ begin
     if FOwner.GetServerProvider in [spMSSQL, spASE]
     then S := 'ROLLBACK TRANSACTION '+FName
     else S := 'ROLLBACK TO '+FName;
-    FOwner.InternalExecute(S);
+    FOwner.InternalExecute(S, ocaRollback);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);

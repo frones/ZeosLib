@@ -686,7 +686,7 @@ begin
     Result := 1;
   end else begin
     Result := FSavePoints.Count+2;
-    S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
     Trans := SavePoint(S);
   end;
 end;
@@ -761,9 +761,10 @@ end;
 procedure TZODBCConnectionW.InternalExecute(const SQL: UnicodeString);
 var STMT: SQLHSTMT;
 begin
+  STMT := nil;
   CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
   try
-    CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHDBC,
+    CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(STMT,
       Pointer(SQL), Length(SQL)));
   finally
     CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));
@@ -908,9 +909,10 @@ end;
 procedure TZODBCConnectionA.InternalExecute(const SQL: RawByteString);
 var STMT: SQLHSTMT;
 begin
+  STMT := nil;
   CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
   try
-    CheckDbcError(TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHDBC,
+    CheckDbcError(TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(STMT,
       Pointer(SQL), Length(SQL)));
   finally
     CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));
@@ -993,12 +995,16 @@ var Idx, i: Integer;
   S: RawByteString;
 begin
   try
-    if FOwner.GetServerProvider in [spMSSQL, spASE]
-    then S := 'COMMIT TRANSACTION '+FName
-    else S := 'RELEASE SAVEPOINT '+FName;
-    FOwner.InternalExecute(S);
+    {oracle does not support the "release savepoint <identifier>" syntax.
+     the first commit just releases all saveponts.
+     MSSQL/Sybase committing all save points if the first COMMIT Transaction is send. identifiers are ignored
+     so this is a fake call for those providers }
+    if not (FOwner.GetServerProvider in [spOracle, spMSSQL, spASE]) then begin
+      S := 'RELEASE SAVEPOINT '+FName;
+      FOwner.InternalExecute(S);
+    end;
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
@@ -1033,7 +1039,7 @@ begin
     else S := 'ROLLBACK TO '+FName;
     FOwner.InternalExecute(S);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
@@ -1053,12 +1059,16 @@ var Idx, i: Integer;
   S: UnicodeString;
 begin
   try
-    if FOwner.GetServerProvider in [spMSSQL, spASE]
-    then S := 'COMMIT TRANSACTION '+FName
-    else S := 'RELEASE SAVEPOINT '+FName;
-    FOwner.InternalExecute(S);
+    {oracle does not support the "release savepoint <identifier>" syntax.
+     the first commit just releases all saveponts.
+     MSSQL/Sybase committing all save points if the first COMMIT Transaction is send. identifiers are ignored
+     so this is a fake call for those providers }
+    if not (FOwner.GetServerProvider in [spOracle, spMSSQL, spASE]) then begin
+      S := 'RELEASE SAVEPOINT '+FName;
+      FOwner.InternalExecute(S);
+    end;
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
@@ -1093,7 +1103,7 @@ begin
     else S := 'ROLLBACK TO '+FName;
     FOwner.InternalExecute(S);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);

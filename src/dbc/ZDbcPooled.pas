@@ -484,7 +484,7 @@ end;
 
 function TZDbcPooledConnection.StartTransaction: Integer;
 begin
-  //Result := GetConnection.StartTransaction;
+  Result := GetConnection.StartTransaction;
 end;
 
 {**

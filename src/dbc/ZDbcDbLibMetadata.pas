@@ -1140,7 +1140,7 @@ end;
 function TZDbLibDatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  Result := True;
+  Result := Level <> tiNone;
 end;
 
 {**

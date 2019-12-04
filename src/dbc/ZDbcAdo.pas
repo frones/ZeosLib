@@ -63,7 +63,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainAdoDriver,
-  ZPlainAdo, ZURL, ZTokenizer, ZClasses;
+  ZPlainAdo, ZURL, ZTokenizer, ZClasses, ZDbcLogging;
 
 type
   {** Implements Ado Database Driver. }
@@ -80,7 +80,7 @@ type
   IZAdoConnection = interface (IZConnection)
     ['{50D1AF76-0174-41CD-B90B-4FB770EFB14F}']
     function GetAdoConnection: ZPlainAdo.Connection;
-    procedure InternalExecuteStatement(const SQL: WideString);
+    procedure InternalExecute(const SQL: WideString; LoggingCategory: TZLoggingCategory);
   end;
 
   {** Implements a generic Ado Connection. }
@@ -92,7 +92,7 @@ type
   protected
     FAdoConnection: ZPlainAdo.Connection;
     function GetAdoConnection: ZPlainAdo.Connection;
-    procedure InternalExecuteStatement(const SQL: WideString);
+    procedure InternalExecute(const SQL: WideString; LoggingCategory: TZLoggingCategory);
     procedure InternalCreate; override;
     procedure InternalClose; override;
   public //IZTransaction
@@ -144,7 +144,7 @@ implementation
 
 uses
   Variants, ActiveX, ZOleDB,
-  ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties,
+  ZDbcUtils, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties,
   ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding, ZCollections,
   ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
 
@@ -242,17 +242,18 @@ end;
 {**
   Executes simple statements internally.
 }
-procedure TZAdoConnection.InternalExecuteStatement(const SQL: WideString);
+procedure TZAdoConnection.InternalExecute(const SQL: WideString;
+  LoggingCategory: TZLoggingCategory);
 var
   RowsAffected: OleVariant;
 begin
   try
     FAdoConnection.Execute(SQL, RowsAffected, adExecuteNoRecords);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ZUnicodeToRaw(SQL, ZOSCodePage));
+    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ZUnicodeToRaw(SQL, ZOSCodePage));
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ZUnicodeToRaw(SQL, ZOSCodePage), 0,
+      DriverManager.LogError(LoggingCategory, ConSettings^.Protocol, ZUnicodeToRaw(SQL, ZOSCodePage), 0,
         ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
@@ -489,14 +490,23 @@ end;
 }
 function TZAdoConnection.StartTransaction: Integer;
 var LogMessage: RawByteString;
+  ASavePoint: IZTransaction;
+  S: String;
 begin
   if Closed then
     Open;
   LogMessage := 'BEGIN TRANSACTION';
+  AutoCommit := False;
   try
-    FTransactionLevel := FAdoConnection.BeginTrans;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
-    AutoCommit := False;
+    if FTransactionLevel = 0 then begin
+      FTransactionLevel := FAdoConnection.BeginTrans;
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      Result := FTransactionLevel;
+    end else begin
+      Result := FSavePoints.Count+2;
+      S := 'SP'+IntToStr(NativeUint(Self))+'_'+IntToStr(Result);
+      ASavePoint := SavePoint(S);
+    end;
   except
     on E: Exception do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
@@ -504,7 +514,6 @@ begin
       raise EZSQLException.Create(E.Message);
     end;
   end;
-  Result := FTransactionLevel;
 end;
 
 {**
@@ -531,6 +540,7 @@ begin
     end else begin
       FAdoConnection.CommitTrans;
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      FTransactionLevel := 0;
       StartTransaction;
     end;
   except
@@ -566,6 +576,7 @@ begin
     end else begin
       FAdoConnection.RollbackTrans;
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      FTransactionLevel := 0;
       StartTransaction;
     end;
   except
@@ -660,14 +671,20 @@ end;
 procedure TZAdoSavePoint.Commit;
 var Idx, i: Integer;
   S: WideString;
+  Trn: IZTransaction;
 begin
   try
-    if FOwner.GetServerProvider in [spMSSQL, spASE]
-    then S := 'COMMIT TRANSACTION '+FName
-    else S := 'RELEASE SAVEPOINT '+FName;
-    FOwner.InternalExecuteStatement(S);
+    {oracle does not support the "release savepoint <identifier>" syntax.
+     the first commit just releases all saveponts.
+     MSSQL/Sybase committing all save points if the first COMMIT Transaction is send. identifiers are ignored
+     so this is a fake call for those providers }
+    if not (FOwner.GetServerProvider in [spOracle, spMSSQL, spASE]) then begin
+      S := 'RELEASE SAVEPOINT '+FName;
+      FOwner.InternalExecute(S, lcTransaction);
+    end;
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    QueryInterface(IZTransaction, Trn);
+    idx := FOwner.FSavePoints.IndexOf(Trn);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
@@ -688,8 +705,8 @@ begin
   FOwner := Owner;
   if FOwner.GetServerProvider in [spMSSQL, spASE]
   then S := 'SAVE TRANSACTION '+FName
-  else S := 'SAVE POINT '+FName;
-  FOwner.InternalExecuteStatement(S);
+  else S := 'SAVEPOINT '+FName;
+  FOwner.InternalExecute(S, lcTransaction);
 end;
 
 procedure TZAdoSavePoint.Rollback;
@@ -700,9 +717,9 @@ begin
     if FOwner.GetServerProvider in [spMSSQL, spASE]
     then S := 'ROLLBACK TRANSACTION '+FName
     else S := 'ROLLBACK TO '+FName;
-    FOwner.InternalExecuteStatement(S);
+    FOwner.InternalExecute(S, lcTransaction);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);

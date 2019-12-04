@@ -858,7 +858,7 @@ begin
     Result := 1;
   end else begin
     Result := FSavePoints.Count+2;
-    S := ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
     ASavePoint := SavePoint(S);
   end;
 end;
@@ -1003,7 +1003,7 @@ begin
   try
     FOwner.InternalExecute('RELEASE SAVEPOINT '+FName);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
@@ -1030,7 +1030,7 @@ begin
   try
     FOwner.InternalExecute('ROLLBACK TO SAVEPOINT '+FName);
   finally
-    idx := FOwner.FSavePoints.IndexOf(Self);
+    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
     if idx <> -1 then
       for I := FOwner.FSavePoints.Count -1 downto idx do
         FOwner.FSavePoints.Delete(I);
