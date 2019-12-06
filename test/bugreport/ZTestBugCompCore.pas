@@ -124,6 +124,7 @@ type
     procedure TestSF286_getBigger;
     procedure TestSF286_getSmaller;
     procedure TestSF301;
+    procedure TestSF238;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1742,10 +1743,12 @@ begin
   Connection.TransactIsolationLevel := tiSerializable;
   try
     Connection.StartTransaction;
-    Fail('StartTransaction should be allowed only in AutoCommit mode');
+    Fail('StartTransaction should be allowed only if Connected');
   except on E: Exception do
     CheckNotTestFailure(E);
   end;
+  Connection.Connect;
+  CheckEquals(2, Connection.StartTransaction, 'The txn-level');
   Connection.Disconnect;
 end;
 
@@ -1813,6 +1816,68 @@ begin
     Check(Query.RecordCount = 5);
     Query.Close;
   finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF238;
+const TEST_ROW_ID = 1000;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+  Query := CreateQuery;
+  try
+    CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
+    Connection.Disconnect;
+    Connection.AutoCommit := True;
+    Connection.TransactIsolationLevel := tiSerializable;
+    Connection.Connect;
+    Query.SQL.Text := 'select p_id, p_name from people where p_id > '+IntToStr(TEST_ROW_ID);
+    Query.Open;
+    CheckEquals(1, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+1;
+    Query.Fields[1].AsString := 'marsupilami';
+    Query.Post;
+    CheckEquals(2, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+2;
+    Query.Fields[1].AsString := 'FrOst';
+    Query.Post;
+    CheckEquals(3, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+3;
+    Query.Fields[1].AsString := 'Mark';
+    Query.Post;
+    CheckEquals(4, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+4;
+    Query.Fields[1].AsString := 'EgonHugeist';
+    Query.Post;
+    CheckEquals(4, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Query.Open;
+    CheckEquals(4, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(3, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(0, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+  finally
+    Query.SQL.Text := 'delete from people where p_id > '+IntToStr(TEST_ROW_ID);
+    Query.ExecSQL;
     Query.Free;
   end;
 end;

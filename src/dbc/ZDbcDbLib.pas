@@ -909,8 +909,7 @@ begin
     AutoCommit := False;
     Result := 1;
   end else begin
-    Result := FSavePoints.Count+2;
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
     ExecuteImmediat('SAVE TRANSACTION '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S)+2;
   end;
@@ -958,6 +957,7 @@ begin
     if FSavePoints.Count > 0 then begin
       S := 'ROLLBACK TRANSACTION '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
       ExecuteImmediat(S, lcTransaction);
+      FSavePoints.Delete(FSavePoints.Count-1);
     end else begin
       ExecuteImmediat(RawByteString('rollback'), lcTransaction);
       AutoCommit := True;

@@ -136,10 +136,12 @@ begin
   Connection.TransactIsolationLevel := tiSerializable;
   try
     Connection.StartTransaction;
-    Fail('StartTransaction should be allowed only in AutoCommit mode');
+    Fail('StartTransaction should be allowed only if Connected');
   except on E: Exception do
     CheckNotTestFailure(E);
   end;
+  Connection.Connect;
+  CheckEquals(2, Connection.StartTransaction, 'The txn-level');
   Connection.Disconnect;
 end;
 

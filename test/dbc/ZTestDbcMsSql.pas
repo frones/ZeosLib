@@ -104,9 +104,8 @@ begin
 
   { Check without transactions }
   Connection.CreateStatement;
-  CheckEquals(False, Connection.IsClosed);
-  //Connection.Commit;
-  //Connection.Rollback;
+  CheckFalse(Connection.IsClosed);
+  CheckFalse(Connection.GetAutoCommit);
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
