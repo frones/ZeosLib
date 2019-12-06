@@ -1741,13 +1741,7 @@ begin
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.TransactIsolationLevel := tiSerializable;
-  try
-    Connection.StartTransaction;
-    Fail('StartTransaction should be allowed only if Connected');
-  except on E: Exception do
-    CheckNotTestFailure(E);
-  end;
-  Connection.Connect;
+  CheckEquals(1, Connection.StartTransaction, 'The txn-level');
   CheckEquals(2, Connection.StartTransaction, 'The txn-level');
   Connection.Disconnect;
 end;

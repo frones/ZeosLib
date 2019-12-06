@@ -1040,11 +1040,16 @@ end;
   Starts a new transaction or saves the transaction.
 }
 function TZAbstractConnection.StartTransaction: Integer;
+var WasConnected: Boolean;
 begin
-  CheckConnected;
+  WasConnected := Connected;
+  if not WasConnected then
+    Connect;
   ShowSQLHourGlass;
   try
-    FExplicitTransactionCounter := FConnection.StartTransaction;
+    if not WasConnected and not FAutoCommit
+    then FExplicitTransactionCounter := 1
+    else FExplicitTransactionCounter := FConnection.StartTransaction;
     FAutoCommit := False;
   finally
     Result := FExplicitTransactionCounter;
