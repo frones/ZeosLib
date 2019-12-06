@@ -766,7 +766,7 @@ var
   end;
 label W_Len, WStr;
 begin
-  {$R-}
+  {.$R-}
   MaxL := 0; CPL := 0; W1 := 0; Native := False;//satisfy the compiler
   //http://technet.microsoft.com/de-de/library/ms174522%28v=sql.110%29.aspx
   for i := 0 to BindList.Count -1 do begin

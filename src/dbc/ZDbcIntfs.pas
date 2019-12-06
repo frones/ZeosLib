@@ -227,8 +227,6 @@ type
 
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
 
-  //TZTimeType = (ttTime, ttDate, ttDateTime, ttInterval);
-
 // Interfaces
 type
 
@@ -441,7 +439,6 @@ type
     ['{501FDB3C-4D44-4BE3-8BB3-547976E6500E}']
     procedure Commit;
     procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
   end;
 
   IZTransactionManager = interface(IZInterface)
@@ -450,15 +447,6 @@ type
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Transaction: IZTransaction);
     procedure SetActiveTransaction(const Transaction: IZTransaction);
-  end;
-
-  IZTransactionProperties = interface(IZInterface)
-    ['{D268A5BE-D1F3-40EB-80F6-1828803A38A8}']
-    function Equals(AutoCommit, ReadOnly: Boolean; TIL: TZTransactIsolationLevel;
-      Params: TStrings): Boolean;
-    procedure Change(AutoCommit, ReadOnly: Boolean; TIL: TZTransactIsolationLevel;
-      Params: TStrings; var CurrentTransaction: IZTransaction);
-    function GetAutoCommit: Boolean;
   end;
 
   IImmediatelyReleasable = interface(IZInterface)
@@ -496,6 +484,18 @@ type
 
     procedure Commit;
     procedure Rollback;
+    /// <summary>
+    ///  Starts transaction support or saves the current transaction.
+    ///  If the connection is closed, the connection will be opened.
+    ///  If a transaction is underway a nested transaction or a savepoint will be spawned.
+    ///  While the tranaction(s) is/are underway the AutoCommit property is set to False.
+    ///  Ending up the transaction with a commit/rollback the autocommit property will be restored
+    ///  if changing the autocommit mode was triggered by a starttransaction call.
+    /// </summary>
+    /// <returns>
+    ///  Returns the current txn-level. 1 means a transaction was started.
+    ///  2 means the transaction was saved. 3 means the previous savepoint got saved too and so on
+    /// </returns>
     function StartTransaction: Integer;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006

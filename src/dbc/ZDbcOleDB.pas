@@ -94,8 +94,9 @@ type
     FServerProvider: TZServerProvider;
     fTransaction: ITransactionLocal;
     fCatalog: String;
-    FSavePoints: IZCollection;
+    FSavePoints: TStrings;
     FAutoCommitTIL: ISOLATIONLEVEL;
+    FRestartTransaction: Boolean;
     procedure SetProviderProps(DBinit: Boolean);
     procedure CheckError(Status: HResult; Action: TOleCheckAction; DoLog: Boolean);
   protected
@@ -103,7 +104,7 @@ type
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
     procedure InternalSetTIL(Level: TZTransactIsolationLevel);
-    procedure InternalExecute(const SQL: UnicodeString; LogAction: TOleCheckAction);
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure InternalClose; override;
   public
     destructor Destroy; override;
@@ -122,7 +123,6 @@ type
 
     procedure Commit; override;
     procedure Rollback; override;
-    function SavePoint(const AName: String): IZTransaction;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer; override;
@@ -146,18 +146,6 @@ type
     function SupportsMARSConnection: Boolean;
   end;
 
-  TZOleDBSavePoint = class(TZCodePagedObject, IZTransaction)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZOleDBConnection;
-    fName: UnicodeString;
-  public //IZTransaction
-    procedure Commit;
-    procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
-  public
-    Constructor Create(const Name: String; Owner: TZOleDBConnection);
-  end;
-
 var
   {** The common driver manager object. }
   OleDBDriver: IZDriver;
@@ -173,7 +161,7 @@ const
 implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
-uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils,
+uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils, ZEncoding,
   ZMessages, ZFastCode, ZConnProperties, ZDbcProperties, ZCollections;
 
 { TZOleDBDriver }
@@ -250,20 +238,9 @@ begin
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
   CheckCharEncoding('CP_UTF16');
-  FSavePoints := TZCollection.Create;
+  FSavePoints := TStringList.Create;
   Inherited SetAutoCommit(True);
   //Open;
-end;
-
-procedure TZOleDBConnection.InternalExecute(const SQL: UnicodeString;
-  LogAction: TOleCheckAction);
-var Cmd: ICommandText;
-  pParams: TDBPARAMS;
-begin
-  Cmd := CreateCommand;
-  FillChar(pParams, SizeOf(TDBParams), #0);
-  CheckError(Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL)), LogAction, False);
-  CheckError(Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil), LogAction, True);
 end;
 
 const
@@ -302,6 +279,7 @@ begin
   try
     inherited Destroy; // call Disconnect;
   finally
+    FreeAndNil(FSavePoints);
     FDBCreateCommand := nil;
     fDBInitialize := nil;
     fMalloc := nil;
@@ -309,14 +287,26 @@ begin
   end;
 end;
 
-function TZOleDBConnection.SavePoint(const AName: String): IZTransaction;
+procedure TZOleDBConnection.ExecuteImmediat(const SQL: UnicodeString;
+  LoggingCategory: TZLoggingCategory);
+var Cmd: ICommandText;
+  pParams: TDBPARAMS;
+  Status: HResult;
+  procedure DoLog;
+  begin
+    DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(SQL, ConSettings.ClientCodePage^.CP));
+  end;
 begin
-  if Closed then
-    raise EZSQLException.Create(cSConnectionIsNotOpened);
-  if AutoCommit then
-    raise EZSQLException.Create(SInvalidOpInAutoCommit);
-  Result := TZOleDBSavePoint.Create(AName, Self);
-  FSavePoints.Add(Result);
+  Cmd := CreateCommand;
+  FillChar(pParams, SizeOf(TDBParams), #0);
+  Status := Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL));
+  if Status <> S_OK then
+    OleDbCheck(Status, SQL, Self, nil);
+  Status := Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil);
+  if Status <> S_OK then
+    OleDbCheck(Status, SQL, Self, nil);
+  if DriverManager.HasLoggingListener then
+    DoLog;
 end;
 
 {**
@@ -341,7 +331,8 @@ end;
 }
 procedure TZOleDBConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value <> AutoCommit then
+  if Value <> AutoCommit then begin
+    FRestartTransaction := AutoCommit;
     if Closed
     then AutoCommit := Value
     else if Value then begin
@@ -356,6 +347,7 @@ begin
       AutoCommit := True;
     end else
       StartTransaction;
+  end;
 end;
 
 {**
@@ -450,8 +442,7 @@ end;
 
 function TZOleDBConnection.StartTransaction: Integer;
 var Res: HResult;
-  ASavePoint: IZTransaction;
-  S: UnicodeString;
+  S: String;
 begin
   if Closed then
     Open;
@@ -463,9 +454,11 @@ begin
     CheckError(Res, ocaStartTransaction, True);
     Result := FpulTransactionLevel;
   end else begin
-    Result := FSavePoints.Count+2;
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
-    ASavePoint := SavePoint(S);
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
+      raise EZSQLException.Create(SUnsupportedOperation);
+    ExecuteImmediat(cSavePointSyntaxW[fServerProvider][spqtSavePoint]+ {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S)+2;
   end;
 end;
 
@@ -673,22 +666,27 @@ end;
   @see #setAutoCommit
 }
 procedure TZOleDBConnection.Commit;
-var Tran: IZTransaction;
+var S: UnicodeString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Commit;
+    S := cSavePointSyntaxW[fServerProvider][spqtCommit];
+    if S <> '' then begin
+      S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+      ExecuteImmediat(S, lcTransaction);
+    end;
+    FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     CheckError(fTransaction.Commit(FRetaining,XACTTC_SYNC,0), ocaCommit, True);
     Dec(FpulTransactionLevel);
     if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
       AutoCommit := True;
-      StartTransaction;
+      if FRestartTransaction then
+        StartTransaction;
     end;
   end;
 end;
@@ -713,22 +711,27 @@ end;
   @see #setAutoCommit
 }
 procedure TZOleDBConnection.Rollback;
-var Tran: IZTransaction;
+var S: UnicodeString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Rollback;
+    S := cSavePointSyntaxW[fServerProvider][spqtRollback];
+    if S <> '' then begin
+      S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+      ExecuteImmediat(S, lcTransaction);
+    end;
+    FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     CheckError(fTransaction.Abort(nil, FRetaining, False), ocaRollback, True);
     Dec(FpulTransactionLevel);
     if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
       AutoCommit := True;
-      StartTransaction;
+      if FRestartTransaction then
+        StartTransaction;
     end;
   end;
 end;
@@ -831,7 +834,7 @@ begin
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
     if not AutoCommit then begin
       AutoCommit := True;
-      StartTransaction;
+      SetAutoCommit(False);;
     end;
   except
     on E: Exception do
@@ -870,71 +873,6 @@ begin
   fDBInitialize := nil;
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
     'DISCONNECT FROM "'+ConSettings^.Database+'"');
-end;
-
-
-{ TZOleDBSavePoint }
-
-procedure TZOleDBSavePoint.Commit;
-var Idx, i: Integer;
-  S: UnicodeString;
-begin
-  try
-    {oracle does not support the "release savepoint <identifier>" syntax.
-     the first commit just releases all saveponts.
-     MSSQL/Sybase committing all save points if the first COMMIT Transaction is send. identifiers are ignored
-     so this is a fake call for those providers }
-    if not (FOwner.GetServerProvider in [spOracle, spMSSQL, spASE]) then begin
-      S := 'RELEASE SAVEPOINT '+FName;
-      FOwner.InternalExecute(S, ocaCommit);
-    end;
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-constructor TZOleDBSavePoint.Create(const Name: String;
-  Owner: TZOleDBConnection);
-var S: UnicodeString;
-begin
-  inherited Create;
-  ConSettings := Owner.ConSettings;
-  {$IFNDEF UNICODE}
-  fName := ConSettings.ConvFuncs.ZStringToUnicode(Name, ConSettings.CTRL_CP);
-  {$ELSE}
-  fName := Name;
-  {$ENDIF}
-  FOwner := Owner;
-  if FOwner.GetServerProvider in [spMSSQL, spASE]
-  then S := 'SAVE TRANSACTION '+FName
-  else S := 'SAVEPOINT '+FName;
-  FOwner.InternalExecute(S, ocaStartTransaction);
-end;
-
-procedure TZOleDBSavePoint.Rollback;
-var Idx, i: Integer;
-  S: UnicodeString;
-begin
-  try
-    if FOwner.GetServerProvider in [spMSSQL, spASE]
-    then S := 'ROLLBACK TRANSACTION '+FName
-    else S := 'ROLLBACK TO '+FName;
-    FOwner.InternalExecute(S, ocaRollback);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-function TZOleDBSavePoint.SavePoint(const AName: String): IZTransaction;
-begin
-  Result := TZOleDBSavePoint.Create(AName, FOwner);
-  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization

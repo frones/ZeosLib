@@ -63,8 +63,8 @@ uses
   {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
-  ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
+  ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken, ZVariant,
+  ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZDbcLogging;
 
 type
 
@@ -129,6 +129,7 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
     FChunkSize: Integer; //indicates reading / writing lobs in Chunks of x Byte
     FClientCodePage: String;
@@ -138,6 +139,8 @@ type
     {$ENDIF}
     procedure InternalCreate; virtual; abstract;
     procedure InternalClose; virtual; abstract;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; virtual;
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; virtual;
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
     procedure ResetCurrentClientCodePage(const Name: String;
       IsStringFieldCPConsistent: Boolean);
@@ -365,12 +368,60 @@ type
 
   TZAbstractSequenceClass = class of TZAbstractSequence;
 
+type
+  TZSavePointQueryType = (spqtSavePoint, spqtCommit, spqtRollback);
+
+const
+  cSavePoint = 'SAVEPOINT ';
+  cSaveTrans = 'SAVE TRANSACTION ';
+  cReleaseSP = 'RELEASE SAVEPOINT ';
+  cEmpty = '';
+  cRollbackTran = 'ROLLBACK TRANSACTION ';
+  cRollbackTo = 'ROLLBACK TO ';
+  cUnknown = '';
+  //(*
+  cSavePointSyntaxW: array[TZServerProvider, TZSavePointQueryType] of UnicodeString =
+    ( ({spUnknown}    cUnknown,   cUnknown,   cUnknown),
+      ({spMSSQL}      cSaveTrans, cEmpty,     cRollbackTran),
+      ({spMSJet}      cUnknown,   cUnknown,   cUnknown),
+      ({spOracle}     cSavePoint, cEmpty,     cRollbackTo),
+      ({spASE}        cSaveTrans, cEmpty,     cRollbackTran),
+      ({spASA}        cSavePoint, cReleaseSP, cRollbackTo),
+      ({spPostgreSQL} cSavePoint, cReleaseSP, cRollbackTo),
+      ({spIB_FB}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spMySQL}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spNexusDB}    cUnknown,   cUnknown,   cUnknown),
+      ({spSQLite}     cSavePoint, cReleaseSP, cRollbackTo),
+      ({spDB2}        cUnknown,   cUnknown,   cUnknown),
+      ({spAS400}      cUnknown,   cUnknown,   cUnknown),
+      ({spInformix}   cUnknown,   cUnknown,   cUnknown),
+      ({spCUBRID}     cUnknown,   cUnknown,   cUnknown),
+      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
+    );
+  cSavePointSyntaxA: array[TZServerProvider, TZSavePointQueryType] of RawByteString =
+    ( ({spUnknown}    cUnknown,   cUnknown,   cUnknown),
+      ({spMSSQL}      cSaveTrans, cEmpty,     cRollbackTran),
+      ({spMSJet}      cUnknown,   cUnknown,   cUnknown),
+      ({spOracle}     cSavePoint, cEmpty,     cRollbackTo),
+      ({spASE}        cSaveTrans, cEmpty,     cRollbackTran),
+      ({spASA}        cSavePoint, cReleaseSP, cRollbackTo),
+      ({spPostgreSQL} cSavePoint, cReleaseSP, cRollbackTo),
+      ({spIB_FB}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spMySQL}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spNexusDB}    cUnknown,   cUnknown,   cUnknown),
+      ({spSQLite}     cSavePoint, cReleaseSP, cRollbackTo),
+      ({spDB2}        cUnknown,   cUnknown,   cUnknown),
+      ({spAS400}      cUnknown,   cUnknown,   cUnknown),
+      ({spInformix}   cUnknown,   cUnknown,   cUnknown),
+      ({spCUBRID}     cUnknown,   cUnknown,   cUnknown),
+      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
+    );
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
   ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties, StrUtils,
   ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}, ZDbcLogging
+  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -395,6 +446,7 @@ const
     {spFoxPro}    nil
     );
 
+  //*)
 { TZAbstractDriver }
 
 {**
@@ -1381,6 +1433,18 @@ end;
 function TZAbstractDbcConnection.EscapeString(const Value : RawByteString) : RawByteString;
 begin
   Result := EncodeCString(Value);
+end;
+
+procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  ExecuteImmediat(ZRawToUnicode(SQL, ConSettings.CTRL_CP), LoggingCategory);
+end;
+
+procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: UnicodeString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  ExecuteImmediat(ZUnicodeToRaw(SQL, ConSettings.ClientCodePage.CP), LoggingCategory);
 end;
 
 {**

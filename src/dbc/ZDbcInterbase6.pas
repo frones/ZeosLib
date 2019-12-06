@@ -88,7 +88,7 @@ type
     procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
-    function GetExplicitTransactionCount: Integer;
+    function GetTransactionLevel: Integer;
     function GetOpenCursorCount: Integer;
     function IsReadOnly: Boolean;
     function GetTPB: RawByteString;
@@ -174,7 +174,10 @@ type
     procedure TransactionParameterPufferChanged;
   protected
     procedure InternalCreate; override;
+    procedure InternalClose; override;
     procedure OnPropertiesChange({%H-}Sender: TObject); override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory); overload;
   public
     constructor Create(const ZUrl: TZURL);
     destructor Destroy; override;
@@ -195,7 +198,6 @@ type
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Transaction: IZTransaction);
     procedure SetActiveTransaction(const Value: IZTransaction);
-    //function GetActiveTransaction: IZTransaction;
   public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
@@ -218,7 +220,6 @@ type
 
     function ConstructConnectionString: String;
     procedure Open; override;
-    procedure InternalClose; override;
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
@@ -240,7 +241,7 @@ type
   TZIBTransaction = class(TZCodePagedObject, IImmediatelyReleasable,
     IZTransaction, IZIBTransaction)
   private
-    fSavepoints: IZCollection;
+    fSavepoints: TStrings;
     fDoCommit, fDoLog: Boolean;
     FOpenCursors, FOpenUncachedLobs: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FReadOnly, FAutoCommit: Boolean;
@@ -250,11 +251,9 @@ type
     FExplicitTransactionCounter: Integer;
     {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZInterbase6Connection;
     function TestCachedResultsAndForceFetchAll: Boolean;
-    procedure InternalExecute(const SQL: RawByteString);
   public { IZTransaction }
     procedure Commit;
     procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
     function StartTransaction: Integer;
   public { IZIBTransaction }
     procedure CloseTransaction;
@@ -264,7 +263,7 @@ type
     procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
-    function GetExplicitTransactionCount: Integer;
+    function GetTransactionLevel: Integer;
     function GetOpenCursorCount: Integer;
     function GetTPB: RawByteString;
     function IsReadOnly: Boolean;
@@ -277,21 +276,6 @@ type
   IFB_IB_SavePoint = interface
     ['{96D74A82-A1ED-4190-9CF1-A969BF73A1E9}']
     function GetOwnerTransaction: IZIBTransaction;
-  end;
-
-  {** EH: implements a IB/FB savepoint }
-  TZIB_FBSavePoint = class(TZCodePagedObject, IZTransaction, IFB_IB_SavePoint)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZIBTransaction;
-    fName: RawByteString;
-  public { IZTransaction }
-    procedure Commit;
-    procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
-  public { IFB_IB_SavePoint }
-    function GetOwnerTransaction: IZIBTransaction;
-  public
-    Constructor Create(const Name: String; Owner: TZIBTransaction);
   end;
 
 var
@@ -504,10 +488,14 @@ end;
 procedure TZInterbase6Connection.Commit;
 begin
   if Closed then
-    Exit;
-  if AutoCommit
-  then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
-  GetActiveTransaction.Commit;
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
+  with GetActiveTransaction do begin
+    Commit;
+    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
+      SetAutoCommit(True)
+  end;
 end;
 
 {**
@@ -635,6 +623,24 @@ begin
   end;
 
   FClientVersion := Major * 1000000 + Minor * 1000 + Release;
+end;
+
+procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
+  ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory);
+begin
+  if SQL = '' then
+    Exit;
+  if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle,
+      ISC_TR_HANDLE, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF},
+      Pointer(SQL), GetDialect, nil) <> 0 then
+    CheckInterbase6Error(FPlainDriver, FStatusVector, Self, LoggingCategory);
+  DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
+end;
+
+procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  ExecuteImmediat(SQL, GetActiveTransaction.GetTrHandle, LoggingCategory);
 end;
 
 {**
@@ -867,11 +873,11 @@ reconnect:
   end;
 
   inherited SetAutoCommit(AutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
+  FRestartTransaction := not AutoCommit;
 
   FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
-  { Start transaction }
-  //if not FHardCommit then
-    GetActiveTransaction;//.StartTransaction;
+  { Start a transaction }
+  GetActiveTransaction;
   if DBCP <> '' then
     Exit;
   inherited Open;
@@ -1061,10 +1067,14 @@ end;
 procedure TZInterbase6Connection.Rollback;
 begin
   if Closed then
-    Exit;
-  if GetAutoCommit
-  then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
-  GetActiveTransaction.Rollback;
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseRollback);
+  with GetActiveTransaction do begin
+    Rollback;
+    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
+      SetAutoCommit(True);
+  end;
 end;
 
 {**
@@ -1098,9 +1108,12 @@ end;
 }
 function TZInterbase6Connection.StartTransaction: Integer;
 begin
-  SetAutoCommit(False);
   if Closed then
     Open;
+  if AutoCommit then begin
+    AutoCommit := False;
+    TransactionParameterPufferChanged;
+  end;
   Result := GetActiveTransaction.StartTransaction
 end;
 
@@ -1387,7 +1400,8 @@ end;
 }
 procedure TZInterbase6Connection.SetAutoCommit(Value: Boolean);
 begin
-  if (Value <> GetAutoCommit) then begin
+  FRestartTransaction := not Value;
+  if (Value <> AutoCommit) then begin
     TransactionParameterPufferChanged;
     AutoCommit := Value;
     //restart automatically happens on GetTrHandle
@@ -1407,7 +1421,6 @@ end;
 procedure TZInterbase6Connection.SetReadOnly(Value: Boolean);
 begin
   if (ReadOnly <> Value) then begin
-    TransactionParameterPufferChanged;
     ReadOnly := Value;
     //restart automatically happens on GetTrHandle
   end;
@@ -1537,6 +1550,7 @@ begin
     if fDoCommit
     then Commit
     else RollBack;
+  FreeAndNil(fSavepoints);
   FreeAndNil(FOpenCursors);
   FreeAndNil(FOpenUncachedLobs);
   inherited BeforeDestruction;
@@ -1553,11 +1567,12 @@ end;
 
 procedure TZIBTransaction.Commit;
 var Status: ISC_STATUS;
-  SavePoint: IZTransaction;
+  S: RawByteString;
 begin
   if fSavepoints.Count > 0 then begin
-    fSavepoints[fSavepoints.Count-1].QueryInterface(IZTransaction, SavePoint);
-    SavePoint.Commit;
+    S := 'RELEASE SAVEPOINT '+ {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    FOwner.ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
     FExplicitTransactionCounter := fSavepoints.Count +1;
   end else if FTrHandle <> 0 then with FOwner do try
     if FHardCommit or
@@ -1588,7 +1603,7 @@ begin
   fTPB := TPB;
   fTEB.tpb_length := Length(fTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   fTEB.tpb_address := Pointer(fTPB);
-  fSavepoints := TZCollection.Create;
+  fSavepoints := TStringList.Create;
   fDoLog := True;
   FReadOnly := ReadOnly;
   FAutoCommit := AutoCommit;
@@ -1613,7 +1628,7 @@ begin
   FOpenUncachedLobs.Delete(I);
 end;
 
-function TZIBTransaction.GetExplicitTransactionCount: Integer;
+function TZIBTransaction.GetTransactionLevel: Integer;
 begin
   Result := FExplicitTransactionCounter;
 end;
@@ -1633,16 +1648,6 @@ begin
   if FTrHandle = 0 then
     StartTransaction;
   Result := @FTrHandle
-end;
-
-procedure TZIBTransaction.InternalExecute(const SQL: RawByteString);
-begin
-  with FOwner do begin
-    if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle,
-        @FTrHandle, Length(SQL), Pointer(SQL), GetDialect, nil) <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner, lcTransaction);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
-  end;
 end;
 
 function TZIBTransaction.IsReadOnly: Boolean;
@@ -1678,12 +1683,12 @@ end;
 
 procedure TZIBTransaction.Rollback;
 var Status: ISC_STATUS;
-  SavePoint: IZTransaction;
+  S: RawByteString;
 begin
   if fSavepoints.Count > 0 then begin
-    fSavepoints[fSavepoints.Count-1].QueryInterface(IZTransaction, SavePoint);
-    SavePoint.Rollback;
-    FExplicitTransactionCounter := fSavepoints.Count+1;
+    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    FOwner.ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
   end else if FTrHandle <> 0 then with FOwner do try
     if FHardCommit or
       ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
@@ -1704,18 +1709,8 @@ begin
   end;
 end;
 
-function TZIBTransaction.SavePoint(const AName: String): IZTransaction;
-begin
-  if FAutoCommit then
-    raise Exception.Create(SInvalidOpInAutoCommit);
-  Result := TZIB_FBSavePoint.Create(AName, Self);
-  FSavePoints.Add(Result);
-end;
-
 function TZIBTransaction.StartTransaction: Integer;
-var
-  Transaction: IZTransaction;
-  S: String;
+var S: String;
 begin
   if FTrHandle = 0 then with FOwner do begin
     Result := Ord(not AutoCommit);
@@ -1725,8 +1720,9 @@ begin
     DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
   end else begin
     Result := FSavePoints.Count+2;
-    S := 'SP'+ZFastCode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);
-    Transaction := SavePoint(S);
+    S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);
+    FOwner.ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S)+2;
   end;
   FExplicitTransactionCounter := Result;
 end;
@@ -1771,58 +1767,6 @@ begin
     FlushResults;
     inherited SetBlockSize(Value);
   end;
-end;
-
-{ TZIB_FBSavePoint }
-
-procedure TZIB_FBSavePoint.Commit;
-var idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('RELEASE SAVEPOINT '+FName);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-constructor TZIB_FBSavePoint.Create(const Name: String; Owner: TZIBTransaction);
-begin
-  inherited Create;
-  ConSettings := Owner.ConSettings;
-  {$IFDEF UNICODE}
-  fName := ZUnicodeToRaw(Name, zCP_UTF8);
-  {$ELSE}
-  fName := Name;
-  {$ENDIF}
-  FOwner := Owner;
-  FOwner.InternalExecute('SAVEPOINT '+FName);
-end;
-
-function TZIB_FBSavePoint.GetOwnerTransaction: IZIBTransaction;
-begin
-  Result := FOwner;
-end;
-
-procedure TZIB_FBSavePoint.Rollback;
-var idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('ROLLBACK TO '+FName);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-function TZIB_FBSavePoint.SavePoint(const AName: String): IZTransaction;
-begin
-  Result := TZIB_FBSavePoint.Create(AName, FOwner);
-  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization

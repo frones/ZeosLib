@@ -111,7 +111,7 @@ type
     Fconn: TPGconn;
 //  Jan: Not sure wether we still need that. What was its intended use?
 //    FBeginRequired: Boolean;
-    FTypeList: TStrings;
+    FTypeList, FSavePoints: TStrings;
     FOidAsBlob, Finteger_datetimes: Boolean;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
@@ -126,7 +126,6 @@ type
     FIs_bytea_output_hex: Boolean;
     FCheckFieldVisibility: Boolean;
     FNoTableInfoCache: Boolean;
-    FSavePoints: IZCollection;
     fPlainDriver: TZPostgreSQLPlainDriver;
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
   protected
@@ -143,7 +142,7 @@ type
     function EscapeString(const FromChar: PAnsiChar; len: NativeUInt; Quoted: Boolean): RawByteString; overload;
     procedure RegisterTrashPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
-    procedure InternalExecute(const SQL: RawByteString; LoggingCategory: TZLoggingCategory);
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
     procedure InternalClose; override;
   public
     destructor Destroy; override;
@@ -158,8 +157,8 @@ type
 
     procedure Commit; override;
     procedure Rollback; override;
-    function SavePoint(const AName: String): IZTransaction;
     procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetReadOnly(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer; override;
 
@@ -190,8 +189,6 @@ type
 
     function PingServer: Integer; override;
 
-    procedure SetReadOnly(Value: Boolean); override;
-
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
@@ -205,18 +202,6 @@ type
     constructor Create(const ZUrl: TZURL);
     {$ENDIF}
     function GetServerProvider: TZServerProvider; override;
-  end;
-
-  TZPostgreSQLSavePoint = class(TZCodePagedObject, IZTransaction)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZPostgreSQLConnection;
-    fName: RawByteString;
-  public //IZTransaction
-    procedure Commit;
-    procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
-  public
-    Constructor Create(const Name: String; Owner: TZPostgreSQLConnection);
   end;
 
 var
@@ -347,26 +332,12 @@ begin
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
   FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
   FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
-  FSavePoints := TZCollection.Create;
+  FSavePoints := TStringList.Create;
   OnPropertiesChange(nil);
 
   FNoticeProcessor := DefaultNoticeProcessor;
 end;
 
-
-procedure TZPostgreSQLConnection.InternalExecute(const SQL: RawByteString;
-  LoggingCategory: TZLoggingCategory);
-var QueryHandle: TPGresult;
-begin
-  QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(SQL));
-  if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
-    FPlainDriver.PQclear(QueryHandle);
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
-  end else
-    HandlePostgreSQLError(Self, GetPlainDriver, Fconn, LoggingCategory,
-      SQL, QueryHandle);
-end;
 
 function TZPostgreSQLConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
@@ -399,6 +370,7 @@ begin
   inherited Destroy;
   FreeAndNil(FPreparedStatementTrashBin);
   FreeAndNil(FProcedureTypesCache);
+  FreeAndNil(FSavePoints);
 end;
 
 {**
@@ -542,7 +514,7 @@ begin
     try
       for x := FPreparedStatementTrashBin.Count - 1 downto 0 do begin
         SQL := 'DEALLOCATE "' + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FPreparedStatementTrashBin.Strings[x]) + '";';;
-        InternalExecute(SQL, lcUnprepStmt);
+        ExecuteImmediat(SQL, lcUnprepStmt);
       end;
     finally
       FPreparedStatementTrashBin.Clear;
@@ -630,7 +602,7 @@ begin
     end;
     if not AutoCommit then begin
       AutoCommit := True;
-      StartTransaction;
+      SetAutoCommit(False);
     end;
 
     { Gets the current codepage if it wasn't set..}
@@ -674,8 +646,8 @@ begin
     raise EZSQLException.Create(SConnectionIsNotOpened);
   SQL :='PREPARE TRANSACTION '''+copy(ConSettings^.ConvFuncs.ZStringToRaw(transactionid,
     ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),1,200)+'''';
-  InternalExecute(SQL, lcTransaction);
-  InternalExecute(cBegin, lcTransaction);
+  ExecuteImmediat(SQL, lcTransaction);
+  ExecuteImmediat(cBegin, lcTransaction);
   AutoCommit := False;
 end;
 
@@ -772,16 +744,6 @@ begin
   Result := TZPostgreSQLCallableStatement.Create(Self, SQL, Info);
 end;
 
-function TZPostgreSQLConnection.SavePoint(const AName: String): IZTransaction;
-begin
-  if Closed then
-    raise EZSQLException.Create(cSConnectionIsNotOpened);
-  if AutoCommit then
-    raise EZSQLException.Create(SInvalidOpInAutoCommit);
-  Result := TZPostgreSQLSavePoint.Create(AName, Self);
-  FSavePoints.Add(Result);
-end;
-
 {**
   Sets this connection's auto-commit mode.
   If a connection is in auto-commit mode, then all its SQL
@@ -804,15 +766,17 @@ end;
 }
 procedure TZPostgreSQLConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value <> AutoCommit then
+  if Value <> AutoCommit then begin
+    FRestartTransaction := AutoCommit;
     if Closed
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      InternalExecute(cCommit, lcTransaction);
+      ExecuteImmediat(cCommit, lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
+  end;
 end;
 
 {**
@@ -823,21 +787,23 @@ end;
   @see #setAutoCommit
 }
 procedure TZPostgreSQLConnection.Commit;
-var Tran: IZTransaction;
+var S: RawByteString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Commit;
+    S := 'RELEASE SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
     DeallocatePreparedStatements;
   end else begin
-    InternalExecute(cCommit, lcTransaction);
+    ExecuteImmediat(cCommit, lcTransaction);
     AutoCommit := True;
     DeallocatePreparedStatements;
-    StartTransaction;
+    if FRestartTransaction then
+      StartTransaction;
   end
 end;
 
@@ -854,7 +820,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   SQL := 'COMMIT PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
-  InternalExecute(SQL, lcTransaction);
+  ExecuteImmediat(SQL, lcTransaction);
 end;
 
 {**
@@ -866,21 +832,23 @@ end;
   @see #setAutoCommit
 }
 procedure TZPostgreSQLConnection.Rollback;
-var Tran: IZTransaction;
+var S: RawByteString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Rollback;
+    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
     DeallocatePreparedStatements;
   end else begin
-    InternalExecute(cRollback, lcTransaction);
+    ExecuteImmediat(cRollback, lcTransaction);
     AutoCommit := True;
     DeallocatePreparedStatements;
-    StartTransaction;
+    if FRestartTransaction then
+      StartTransaction;
   end;
 end;
 
@@ -898,7 +866,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   SQL := 'ROLLBACK PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
-  InternalExecute(SQL, lcTransaction);
+  ExecuteImmediat(SQL, lcTransaction);
 end;
 
 {**
@@ -977,26 +945,25 @@ begin
               SQL := SQL + RawByteString('SERIALIZABLE');
         else  SQL := SQL + RawByteString('READ COMMITTED');
       end;
-      InternalExecute(SQL, lcTransaction);
+      ExecuteImmediat(SQL, lcTransaction);
     end;
     TransactIsolationLevel := Level;
   end;
 end;
 
 function TZPostgreSQLConnection.StartTransaction: Integer;
-var ASavePoint: IZTransaction;
-  S: String;
+var S: String;
 begin
   if Closed then
     Open;
   if AutoCommit then begin
-    InternalExecute(cBegin, lcTransaction);
+    ExecuteImmediat(cBegin, lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin
-    Result := FSavePoints.Count+2;
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result); //PG also has problems with numbered tokens..
-    ASavePoint := SavePoint(S);
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count); //PG also has problems with numbered tokens..
+    ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S)+2;
   end;
 end;
 
@@ -1280,7 +1247,7 @@ procedure TZPostgreSQLConnection.SetReadOnly(Value: Boolean);
 begin
   if Value <> ReadOnly then begin
     if not Closed and HasMinimumServerVersion(7,4,0) then
-      InternalExecute(cRWSession[Value], lcTransaction);
+      ExecuteImmediat(cRWSession[Value], lcTransaction);
     ReadOnly := Value;
   end;
 end;
@@ -1288,6 +1255,20 @@ end;
 function TZPostgreSQLConnection.EscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := EscapeString(Pointer(Value), Length(Value), True)
+end;
+
+procedure TZPostgreSQLConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+var QueryHandle: TPGresult;
+begin
+  QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(SQL));
+  if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
+    FPlainDriver.PQclear(QueryHandle);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
+  end else
+    HandlePostgreSQLError(Self, GetPlainDriver, Fconn, LoggingCategory,
+      SQL, QueryHandle);
 end;
 
 {**
@@ -1473,55 +1454,6 @@ begin
   end else
     Result := ZDbcPostgreSqlUtils.PGEscapeString(FromChar, Len, ConSettings, Quoted);
 end;
-
-{ TZPostgreSQLSavePoint }
-
-procedure TZPostgreSQLSavePoint.Commit;
-var Idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('RELEASE SAVEPOINT '+FName, lcTransaction);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-constructor TZPostgreSQLSavePoint.Create(const Name: String;
-  Owner: TZPostgreSQLConnection);
-begin
-  inherited Create;
-  ConSettings := Owner.ConSettings;
-  {$IFDEF UNICODE}
-  fName := ZUnicodeToRaw(Name, zCP_UTF8);
-  {$ELSE}
-  fName := Name;
-  {$ENDIF}
-  FOwner := Owner;
-  FOwner.InternalExecute('SAVEPOINT '+FName, lcTransaction);
-end;
-
-procedure TZPostgreSQLSavePoint.Rollback;
-var Idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('ROLLBACK TO '+FName, lcTransaction);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-function TZPostgreSQLSavePoint.SavePoint(const AName: String): IZTransaction;
-begin
-  Result := TZPostgreSQLSavePoint.Create(AName, FOwner);
-  FOwner.FSavePoints.Add(Result);
-end;
-
 
 initialization
   PostgreSQLDriver := TZPostgreSQLDriver.Create;

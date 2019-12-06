@@ -1257,18 +1257,21 @@ begin
     for i := 0 to 5 do begin
       Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
       Connection.Commit;
+      CheckFalse(Connection.GetAutoCommit, 'Fallback to AutoCommit mode');
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
         Check(Next, 'wrong commit behavior');
         Close;
       end;
       Stmt.ExecuteUpdate('delete from people where p_id = 1000');
       Connection.Rollback;
+      CheckFalse(Connection.GetAutoCommit, 'Fallback to AutoCommit mode');
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
         Check(Next, 'wrong rollback behavior');
         Close;
       end;
       Stmt.ExecuteUpdate('delete from people where p_id = 1000');
       Connection.Commit;
+      CheckFalse(Connection.GetAutoCommit, 'Fallback to AutoCommit mode');
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
         Check(not Next, 'wrong commit behavior');
         Close;
@@ -1303,47 +1306,59 @@ begin
     CheckEquals(True, Connection.IsClosed);
 
     Connection.SetAutoCommit(True);
-    CheckEquals(1, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
+    Check(Connection.GetAutoCommit);
     { Checks with transactions. }
     Stmt := Connection.CreateStatement;
     CheckNotNull(Stmt);
     CheckEquals(False, Connection.IsClosed);
     for i := 0 to 4 do begin
-      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
+      CheckEquals(1, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
+      CheckFalse(Connection.GetAutoCommit);
+      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''EgonHugeist'')');
       Connection.Commit;
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
         Check(Next, 'wrong commit behavior');
         Close;
       end;
+      Check(Connection.GetAutoCommit, 'Fallback to AutoCommit mode');
+      CheckEquals(1, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
       Stmt.ExecuteUpdate('delete from people where p_id = 1000');
       Connection.Rollback;
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
         Check(Next, 'wrong rollback behavior');
         Close;
       end;
-      CheckEquals(2, Connection.StartTransaction, 'second starttransaction call');
+      Check(Connection.GetAutoCommit, 'Fallback to AutoCommit mode');
+      CheckEquals(1, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
       Stmt.ExecuteUpdate('delete from people where p_id = 1000');
       Connection.Rollback;
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
         Check(Next, 'wrong rollback behavior');
         Close;
       end;
+      Check(Connection.GetAutoCommit, 'Fallback to AutoCommit mode');
+      CheckEquals(1, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
       Stmt.ExecuteUpdate('delete from people where p_id = 1000');
       Connection.Commit;
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
         Check(not Next, 'wrong commit behavior');
         Close;
       end;
-      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
+      Check(Connection.GetAutoCommit, 'Fallback to AutoCommit mode');
+      CheckEquals(1, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
+      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''EgonHugeist'')');
       CheckEquals(2, Connection.StartTransaction, 'second starttransaction call');
-      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1001, ''miab3'')');
+      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1001, ''EgonHugeist'')');
       CheckEquals(3, Connection.StartTransaction, 'third starttransaction call');
-      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1002, ''miab3'')');
+      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1002, ''EgonHugeist'')');
       CheckEquals(4, Connection.StartTransaction, 'fourth starttransaction call');
-      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1003, ''miab3'')');
+      Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1003, ''EgonHugeist'')');
       Connection.Commit;
+      CheckFalse(Connection.GetAutoCommit, 'AutoCommit mode');
       Connection.Commit;
+      CheckFalse(Connection.GetAutoCommit, 'AutoCommit mode');
       Connection.Commit;
+      CheckFalse(Connection.GetAutoCommit, 'AutoCommit mode');
       with Stmt.ExecuteQuery('select * from people where p_id in (1000,1001,1002,1003)') do begin
         Check(Next, 'wrong commit behavior');
         Check(Next, 'wrong commit behavior');
@@ -1356,8 +1371,8 @@ begin
         Check(not Next, 'wrong rollback behavior');
         Close;
       end;
-
       Stmt.Close;
+      Check(Connection.GetAutoCommit, 'Fallback to Autocommit');
     end;
     Connection.Close;
     CheckEquals(True, Connection.IsClosed);

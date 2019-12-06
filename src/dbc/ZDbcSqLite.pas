@@ -98,12 +98,12 @@ type
     FHandle: Psqlite;
     FPlainDriver: TZSQLitePlainDriver;
     FTransactionStmts: array[TSQLite3TransactionAction] of Psqlite3_stmt;
-    FSavePoints: IZCollection;
-    procedure InternalExecute(const SQL: RawByteString); overload;
-    procedure InternalExecute(const SQL: RawByteString; var Stmt: Psqlite3_stmt); overload;
+    FSavePoints: TStrings;
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt); overload;
   public //IZSQLiteConnection
     function GetUndefinedVarcharAsStringLength: Integer;
     function enable_load_extension(OnOff: Integer): Integer;
@@ -115,12 +115,12 @@ type
 
     function AbortOperation: Integer; override;
   public
+    destructor Destroy; override;
 
     procedure Open; override;
 
     procedure Commit; override;
     procedure Rollback; override;
-    function SavePoint(const AName: String): IZTransaction;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer; override;
@@ -139,18 +139,6 @@ type
     function Key(const Key: string): Integer;
 
     function GetServerProvider: TZServerProvider; override;
-  end;
-
-  TZSQLiteSavePoint = class(TZCodePagedObject, IZTransaction)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZSQLiteConnection;
-    fName: RawByteString;
-  public //IZTransaction
-    procedure Commit;
-    procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
-  public
-    Constructor Create(const Name: String; Owner: TZSQLiteConnection);
   end;
 
 var
@@ -261,49 +249,9 @@ begin
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   //https://sqlite.org/pragma.html#pragma_read_uncommitted
   inherited SetTransactionIsolation(tiSerializable);
-  FSavePoints := TZCollection.Create;
+  FSavePoints := TStringList.Create;
   CheckCharEncoding('UTF-8');
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
-end;
-
-procedure TZSQLiteConnection.InternalExecute(const SQL: RawByteString);
-var Stmt: Psqlite3_stmt;
-  Status: Integer;
-begin
-  Stmt := nil;
-  try
-    InternalExecute(SQL, Stmt);
-  finally
-    if Stmt <> nil then begin
-      Status := FPlainDriver.sqlite3_finalize(Stmt);
-      CheckSQLiteError(FPlainDriver, FHandle, Status, lcTransaction, SQL, ConSettings);
-    end;
-  end;
-end;
-
-procedure TZSQLiteConnection.InternalExecute(const SQL: RawByteString;
-  var Stmt: Psqlite3_stmt);
-var PZTail: PAnsiChar;
-  Status: Integer;
-begin
-  if Pointer(SQL) = nil then
-    Exit;
-  if Stmt = nil then begin
-    Status := FPlainDriver.sqlite3_prepare_v2(FHandle,
-      Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Stmt, pZTail);
-    if not Status in [SQLITE_OK, SQLITE_DONE] then
-      CheckSQLiteError(FPlainDriver, FHandle, Status, lcPrepStmt,
-        SQL, ConSettings)
-  end;
-  Status := FPlainDriver.sqlite3_step(Stmt);
-  try
-    if not Status in [SQLITE_OK, SQLITE_DONE] then
-      CheckSQLiteError(FPlainDriver, FHandle, Status, lcTransaction, SQL, ConSettings)
-  finally
-    FPlainDriver.sqlite3_reset(Stmt);
-    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
-  end;
 end;
 
 {**
@@ -427,7 +375,7 @@ begin
     Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])] );
   if not AutoCommit then begin
     AutoCommit := True;
-    StartTransaction;
+    SetAutoCommit(False);
   end;
 end;
 
@@ -454,9 +402,56 @@ begin
   Result := TZSQLiteStatement.Create(Self, Info, FHandle);
 end;
 
+destructor TZSQLiteConnection.Destroy;
+begin
+  FSavePoints.Free;
+  inherited;
+end;
+
 function TZSQLiteConnection.enable_load_extension(OnOff: Integer): Integer;
 begin
   Result := FPlainDriver.sqlite3_enable_load_extension(FHandle, OnOff);
+end;
+
+procedure TZSQLiteConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt);
+var PZTail: PAnsiChar;
+  Status: Integer;
+begin
+  if Pointer(SQL) = nil then
+    Exit;
+  if Stmt = nil then begin
+    Status := FPlainDriver.sqlite3_prepare_v2(FHandle,
+      Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Stmt, pZTail);
+    if not Status in [SQLITE_OK, SQLITE_DONE] then
+      CheckSQLiteError(FPlainDriver, FHandle, Status, lcPrepStmt,
+        SQL, ConSettings)
+  end;
+  Status := FPlainDriver.sqlite3_step(Stmt);
+  try
+    if not Status in [SQLITE_OK, SQLITE_DONE] then
+      CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings)
+  finally
+    FPlainDriver.sqlite3_reset(Stmt);
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
+  end;
+end;
+
+procedure TZSQLiteConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+var Stmt: Psqlite3_stmt;
+  Status: Integer;
+begin
+  Stmt := nil;
+  try
+    ExecuteImmediat(SQL, LoggingCategory, Stmt);
+  finally
+    if Stmt <> nil then begin
+      Status := FPlainDriver.sqlite3_finalize(Stmt);
+      CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings);
+    end;
+  end;
 end;
 
 {**
@@ -523,19 +518,21 @@ end;
   @see #setAutoCommit
 }
 procedure TZSQLiteConnection.Commit;
-var Tran: IZTransaction;
+var S: RawByteString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Commit;
+    S := 'RELEASE SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    InternalExecute(cTransactionActionStmt[traCommit], FTransactionStmts[traCommit]);
+    ExecuteImmediat(cTransactionActionStmt[traCommit], lcTransaction, FTransactionStmts[traCommit]);
     AutoCommit := True;
-    StartTransaction;
+    if FRestartTransaction then
+      StartTransaction;
   end
 end;
 
@@ -547,19 +544,21 @@ end;
   @see #setAutoCommit
 }
 procedure TZSQLiteConnection.Rollback;
-var Tran: IZTransaction;
+var S: RawByteString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Rollback;
+    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    InternalExecute(cTransactionActionStmt[traRollBack], FTransactionStmts[traRollBack]);
+    ExecuteImmediat(cTransactionActionStmt[traRollBack], lcTransaction, FTransactionStmts[traRollBack]);
     AutoCommit := True;
-    StartTransaction;
+    if FRestartTransaction then
+      StartTransaction;
   end;
 end;
 
@@ -615,16 +614,6 @@ begin
   Result := ConvertSQLiteVersionToSQLVersion(FPlainDriver.sqlite3_libversion);
 end;
 
-function TZSQLiteConnection.SavePoint(const AName: String): IZTransaction;
-begin
-  if Closed then
-    raise EZSQLException.Create(cSConnectionIsNotOpened);
-  if AutoCommit then
-    raise EZSQLException.Create(SInvalidOpInAutoCommit);
-  Result := TZSQLiteSavePoint.Create(AName, Self);
-  FSavePoints.Add(Result);
-end;
-
 {**
   Sets this connection's auto-commit mode.
   If a connection is in auto-commit mode, then all its SQL
@@ -647,15 +636,17 @@ end;
 }
 procedure TZSQLiteConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value <> AutoCommit then
+  if Value <> AutoCommit then begin
+    FRestartTransaction := AutoCommit;
     if Closed
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      InternalExecute(cTransactionActionStmt[traCommit], FTransactionStmts[traCommit]);
+      ExecuteImmediat(cTransactionActionStmt[traCommit], lcTransaction, FTransactionStmts[traCommit]);
       AutoCommit := True;
     end else
       StartTransaction;
+  end;
 end;
 
 {**
@@ -684,8 +675,7 @@ begin
 end;
 
 function TZSQLiteConnection.StartTransaction: Integer;
-var ASavePoint: IZTransaction;
-  TransactionAction: TSQLite3TransactionAction;
+var TransactionAction: TSQLite3TransactionAction;
   S: String;
   P: PChar;
 begin
@@ -699,13 +689,13 @@ begin
       Ord('i'): TransactionAction := traBeginIMMEDIATE;
       else      TransactionAction := traBeginDEFERRED;
     end;
-    InternalExecute(cTransactionActionStmt[TransactionAction], FTransactionStmts[TransactionAction]);
+    ExecuteImmediat(cTransactionActionStmt[TransactionAction], lcTransaction, FTransactionStmts[TransactionAction]);
     AutoCommit := False;
     Result := 1;
   end else begin
-    Result := FSavePoints.Count+2;
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
-    ASavePoint := SavePoint(S);
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S) + 2;
   end;
 end;
 
@@ -726,55 +716,6 @@ end;
 function TZSQLiteConnection.GetHostVersion: Integer;
 begin
   Result := ConvertSQLiteVersionToSQLVersion(fPlainDriver.sqlite3_libversion);
-end;
-
-
-{ TZSQLiteSavePoint }
-
-procedure TZSQLiteSavePoint.Commit;
-var Idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('RELEASE SAVEPOINT '+FName);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-constructor TZSQLiteSavePoint.Create(const Name: String;
-  Owner: TZSQLiteConnection);
-begin
-  inherited Create;
-  ConSettings := Owner.ConSettings;
-  {$IFDEF UNICODE}
-  fName := ZUnicodeToRaw(Name, zCP_UTF8);
-  {$ELSE}
-  fName := Name;
-  {$ENDIF}
-  FOwner := Owner;
-  FOwner.InternalExecute('SAVEPOINT '+FName);
-end;
-
-procedure TZSQLiteSavePoint.Rollback;
-var Idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('ROLLBACK TO '+FName);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-function TZSQLiteSavePoint.SavePoint(const AName: String): IZTransaction;
-begin
-  Result := TZSQLiteSavePoint.Create(AName, FOwner);
-  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization

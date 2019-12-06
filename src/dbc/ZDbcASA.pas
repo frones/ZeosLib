@@ -82,20 +82,21 @@ type
   end;
 
   {** Implements ASA Database Connection. }
-  TZASAConnection = class(TZAbstractDbcConnection, IZASAConnection)
+  TZASAConnection = class(TZAbstractDbcConnection, IZASAConnection, IZTransaction)
   private
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
     FPlainDriver: TZASAPlainDriver;
-    FSavePoints: IZCollection;
+    FSavePoints: TStrings;
   private
     function DetermineASACharSet: String;
     procedure SetOption(Temporary: Integer; User: PAnsiChar; const Option, Value: RawByteString);
-    procedure InternalExecute(const SQL: RawByteString; LoggingCategory: TZLoggingCategory);
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
+    destructor Destroy; override;
     function GetDBHandle: PZASASQLCA;
 //    procedure CreateNewDatabase(const SQL: String);
 
@@ -110,7 +111,6 @@ type
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer; override;
-    function SavePoint(const AName: String): IZTransaction;
 
     procedure Open; override;
 
@@ -121,18 +121,6 @@ type
   TZASACachedResolver = class(TZGenericCachedResolver)
   public
     function FormCalculateStatement(Columns: TObjectList): string; override;
-  end;
-
-  TZASASavePoint = class(TZCodePagedObject, IZTransaction)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZASAConnection;
-    fName: RawByteString;
-  public //IZTransaction
-    procedure Commit;
-    procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
-  public
-    Constructor Create(const Name: String; Owner: TZASAConnection);
   end;
 
 var
@@ -272,24 +260,26 @@ end;
    Commit current transaction
 }
 procedure TZASAConnection.Commit;
-var Tran: IZTransaction;
+var S: RawByteString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Commit;
+    S := 'RELEASE SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    InternalExecute('COMMIT', lcTransaction);
+    ExecuteImmediat('COMMIT', lcTransaction);
 //    FPlainDriver.dbpp_commit(FHandle, 0);
   //  CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);}
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, 'TRANSACTION COMMIT');
     SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
-    StartTransaction;
+    if FRestartTransaction then
+      StartTransaction;
   end;
 end;
 
@@ -300,16 +290,7 @@ procedure TZASAConnection.InternalCreate;
 begin
   FPlainDriver := TZASAPlainDriver(GetIZPlainDriver.GetInstance);
   Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
-  FSavePoints := TZCollection.Create;
-end;
-
-procedure TZASAConnection.InternalExecute(const SQL: RawByteString;
-  LoggingCategory: TZLoggingCategory);
-begin
-  FPlainDriver.dbpp_execute_imm(nil, Pointer(SQL), 0);
-  CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
-  DriverManager.LogMessage(lcTransaction,
-    ConSettings^.Protocol, SQL);
+  FSavePoints := TStringList.Create;
 end;
 
 {**
@@ -505,7 +486,7 @@ begin
     SetOption(1, nil, 'ISOLATION_LEVEL', ASATIL[TransactIsolationLevel]);
   if not AutoCommit then begin
     AutoCommit := True;
-    StartTransaction;
+    SetAutoCommit(False);
   end;
   if FClientCodePage = ''  then
     CheckCharEncoding(DetermineASACharSet);
@@ -519,15 +500,16 @@ end;
   @see #setAutoCommit
 }
 procedure TZASAConnection.Rollback;
-var Tran: IZTransaction;
+var S: RawByteString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    Assert(FSavePoints[FSavePoints.Count-1].QueryInterface(IZTransaction, Tran) = S_OK);
-    Tran.Rollback;
+    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     //InternalExecute('ROLLBACK', lcTransaction);
     FPlainDriver.dbpp_rollback(FHandle, 0);
@@ -536,18 +518,9 @@ begin
       ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
     SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
-    StartTransaction;
+    if FRestartTransaction then
+      StartTransaction;
   end;
-end;
-
-function TZASAConnection.SavePoint(const AName: String): IZTransaction;
-begin
-  if Closed then
-    raise EZSQLException.Create(cSConnectionIsNotOpened);
-  if AutoCommit then
-    raise EZSQLException.Create(SInvalidOpInAutoCommit);
-  Result := TZASASavePoint.Create(AName, Self);
-  FSavePoints.Add(Result);
 end;
 
 {**
@@ -572,7 +545,8 @@ end;
 }
 procedure TZASAConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value <> AutoCommit then
+  if Value <> AutoCommit then begin
+    FRestartTransaction := AutoCommit;
     if Closed
     then AutoCommit := Value
     else if Value then begin
@@ -581,6 +555,7 @@ begin
       AutoCommit := True;
     end else
       StartTransaction;
+  end;
 end;
 
 procedure TZASAConnection.SetOption(Temporary: Integer; User: PAnsiChar;
@@ -628,8 +603,7 @@ end;
    Start transaction
 }
 function TZASAConnection.StartTransaction: Integer;
-var ASavePoint: IZTransaction;
-  S: String;
+var S: String;
 begin
   if Closed then
     Open;
@@ -639,9 +613,9 @@ begin
     AutoCommit := False;
     Result := 1;
   end else begin
-    Result := FSavePoints.Count+2;
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
-    ASavePoint := SavePoint(S);
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S) +2;
   end;
 
 (*   if AutoCommit then
@@ -653,6 +627,12 @@ begin
     ASATL := ASATL - 1;
   SetOption(1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr(ASATL));
 *)
+end;
+
+destructor TZASAConnection.Destroy;
+begin
+  inherited;
+  FSavePoints.Free;
 end;
 
 function TZASAConnection.DetermineASACharSet: String;
@@ -669,6 +649,14 @@ begin
   RS := nil;
   Stmt.Close;
   Stmt := nil;
+end;
+
+procedure TZASAConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  FPlainDriver.dbpp_execute_imm(nil, Pointer(SQL), 0);
+  CheckASAError(FPlainDriver, FHandle, LoggingCategory, ConSettings);
+  DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 
 { TZASACachedResolver }
@@ -700,55 +688,6 @@ begin
   end;
   Result := 'SELECT ' + Result;
 end;
-
-{ TZASASavePoint }
-
-procedure TZASASavePoint.Commit;
-var Idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('RELEASE SAVEPOINT '+FName, lcTransaction);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-constructor TZASASavePoint.Create(const Name: String;
-  Owner: TZASAConnection);
-begin
-  inherited Create;
-  ConSettings := Owner.ConSettings;
-  {$IFDEF UNICODE}
-  fName := ZUnicodeToRaw(Name, zCP_UTF8);
-  {$ELSE}
-  fName := Name;
-  {$ENDIF}
-  FOwner := Owner;
-  FOwner.InternalExecute('SAVEPOINT '+FName, lcTransaction);
-end;
-
-procedure TZASASavePoint.Rollback;
-var Idx, i: Integer;
-begin
-  try
-    FOwner.InternalExecute('ROLLBACK TO '+FName, lcTransaction);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-function TZASASavePoint.SavePoint(const AName: String): IZTransaction;
-begin
-  Result := TZASASavePoint.Create(AName, FOwner);
-  FOwner.FSavePoints.Add(Result);
-end;
-
 
 initialization
   ASADriver := TZASADriver.Create;

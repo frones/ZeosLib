@@ -110,7 +110,6 @@ type
     FErrorHandle: POCIError;
     FServerHandle: POCIServer;
     FSessionHandle: POCISession;
-    //FTransHandle: POCITrans;
     FDescibeHandle: POCIDescribe;
     FStatementPrefetchSize: Integer;
     FBlobPrefetchSize: Integer;
@@ -120,11 +119,11 @@ type
     fLocalTransaction, //oracle allows just one Local transaction
     fAttachedTransaction: IZOracleTransaction;
     procedure HandleError(Status: sword; LoggingCategory: TZLoggingCategory; const Msg: RawByteString);
-    procedure InternalExecute(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload;
-    procedure InternalExecute(const SQL: RawByteString; LoggingCategory: TZLoggingCategory; var Stmt: POCIStmt); overload;
+    procedure ExecuteImmediat(const SQL: RawByteString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -143,9 +142,10 @@ type
     procedure Commit; override;
     procedure Rollback; override;
     procedure SetReadOnly(Value: Boolean); override;
+    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer; override;
-
+  public
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;
 
@@ -183,7 +183,7 @@ type
   /// <summary>
   ///  Defines a oracle transaction spawning mode.
   /// </summary>
-  TZOCITxnSpawnMode = (smNew, smJoin{not supported}, smResume);
+  TZOCITxnSpawnMode = (smNew, smJoin{not supported by OCI}, smResume);
 
   /// <summary>
   ///  Defines a oracle transaction couple mode.
@@ -194,7 +194,8 @@ type
   TZOracleTransaction = class(TZCodePagedObject, IImmediatelyReleasable,
     IZTransaction, IZOracleTransaction)
   private
-    fSavepoints: IZCollection;
+    fSavepoints: TStrings;
+    fBranches: IZCollection;
     fDoLog, FStarted, fLocal: Boolean;
     FOCITrans: POCITrans;
     FTxnMode: TZOCITxnMode;
@@ -205,7 +206,6 @@ type
   public { IZTransaction }
     procedure Commit;
     procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
     function StartTransaction: Integer;
   public { IZOracleTransaction }
     procedure CloseTransaction;
@@ -219,24 +219,6 @@ type
     procedure BeforeDestruction; override;
   end;
 
-  IZOracleSavePoint = interface(IZTransaction)
-    ['{0D85B2DD-B9AF-4CFB-989A-2939929F93F8}']
-    function GetTransaction: IZOracleTransaction;
-  end;
-
-  TZOracleSavePoint = class(TZCodePagedObject, IZTransaction, IZOracleSavePoint)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZOracleTransaction;
-    fName: RawByteString;
-  public //IZTransaction
-    procedure Commit;
-    procedure Rollback;
-    function SavePoint(const AName: String): IZTransaction;
-  public { IZOracleSavePoint }
-    function GetTransaction: IZOracleTransaction;
-  public
-    Constructor Create(const Name: String; Owner: TZOracleTransaction);
-  end;
 var
   {** The common driver manager object. }
   OracleDriver: IZDriver;
@@ -353,14 +335,39 @@ begin
   FBlobPrefetchSize := FChunkSize;
 end;
 
-procedure TZOracleConnection.InternalExecute(const SQL: RawByteString;
+function TZOracleConnection.CreateCallableStatement(const SQL: string;
+  Info: TStrings): IZCallableStatement;
+begin
+  if IsClosed then
+     Open;
+  Result := TZOracleCallableStatement_A.Create(Self, SQL, Info);
+end;
+
+{**
+  Destroys this object and cleanups the memory.
+}
+destructor TZOracleConnection.Destroy;
+begin
+  if not IsClosed then
+     Close;
+
+  if FHandle <> nil then
+  begin
+    FPlainDriver.OCIHandleFree(FHandle, OCI_HTYPE_ENV);
+    FHandle := nil;
+  end;
+
+  inherited Destroy;
+end;
+
+procedure TZOracleConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var Stmt: POCIStmt;
   Status: sword;
 begin
   Stmt := nil;
   try
-    InternalExecute(SQL, LoggingCategory, Stmt);
+    ExecuteImmediat(SQL, Stmt, LoggingCategory);
   finally
     if Stmt <> nil then begin
       Status := FPlainDriver.OCIHandleFree(Stmt, OCI_HTYPE_STMT);
@@ -370,8 +377,8 @@ begin
   end;
 end;
 
-procedure TZOracleConnection.InternalExecute(const SQL: RawByteString;
-  LoggingCategory: TZLoggingCategory; var Stmt: POCIStmt);
+procedure TZOracleConnection.ExecuteImmediat(const SQL: RawByteString;
+  var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory);
 var Status: sword;
 begin
   if Pointer(SQL) = nil then
@@ -396,31 +403,6 @@ begin
     if Assigned(DriverManager) and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
   end;
-end;
-
-function TZOracleConnection.CreateCallableStatement(const SQL: string;
-  Info: TStrings): IZCallableStatement;
-begin
-  if IsClosed then
-     Open;
-  Result := TZOracleCallableStatement_A.Create(Self, SQL, Info);
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZOracleConnection.Destroy;
-begin
-  if not IsClosed then
-     Close;
-
-  if FHandle <> nil then
-  begin
-    FPlainDriver.OCIHandleFree(FHandle, OCI_HTYPE_ENV);
-    FHandle := nil;
-  end;
-
-  inherited Destroy;
 end;
 
 {**
@@ -537,8 +519,7 @@ begin
   if Closed then
     Open;
   Result := fAttachedTransaction.StartTransaction;
-  if AutoCommit then
-    AutoCommit := False;
+  AutoCommit := False;
 end;
 
 {**
@@ -625,14 +606,15 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   fAttachedTransaction.Commit;
-  if not fAttachedTransaction.IsStarted then
+  if not fAttachedTransaction.IsStarted then begin
     fAttachedTransaction.StartTransaction;
+    AutoCommit := not FRestartTransaction;
+  end;
 end;
 
 procedure TZOracleConnection.ReleaseTransaction(
   const Transaction: IZTransaction);
 var OraTxn: IZOracleTransaction;
-  OraSN: IZOracleSavePoint;
   I: Integer;
   B: Boolean;
 begin
@@ -647,9 +629,7 @@ begin
         if I <> -1 then
           fGlobalTransactions[b].Delete(I);
       end;
-    end else if (Transaction.QueryInterface(IZOracleSavePoint, OraSN) = S_OK) then
-      OraSN.Rollback
-    else raise EZSQLException.Create('unknown transaction');
+    end else raise EZSQLException.Create('unknown transaction');
   end;
 end;
 
@@ -667,8 +647,10 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   fAttachedTransaction.Rollback;
-  if not fAttachedTransaction.IsStarted then
+  if not fAttachedTransaction.IsStarted then begin
     fAttachedTransaction.StartTransaction;
+    AutoCommit := not FRestartTransaction;
+  end;
 end;
 
 {**
@@ -756,12 +738,9 @@ end;
 
 procedure TZOracleConnection.SetActiveTransaction(const Value: IZTransaction);
 var OCITA: IZOracleTransaction;
-  OCISP: IZOracleSavePoint;
   Status: sword;
 begin
-  if Supports(Value, IZOracleSavePoint, OCISP)
-  then OCITA := OCISP.GetTransaction
-  else OCITA := Value as IZOracleTransaction;
+  OCITA := Value as IZOracleTransaction;
   { set new transaction handle to service context }
   Status := FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, OCITA.GetTrHandle, 0,
     OCI_ATTR_TRANS, FErrorHandle);
@@ -774,6 +753,32 @@ begin
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, 'OCIAttrSet(OCI_ATTR_STMTCACHESIZE)', ConSettings);
   end;
   fAttachedTransaction := OCITA;
+end;
+
+{**
+  Sets this connection's auto-commit mode.
+  If a connection is in auto-commit mode, then all its SQL
+  statements will be executed and committed as individual
+  transactions.  Otherwise, its SQL statements are grouped into
+  transactions that are terminated by a call to either
+  the method <code>commit</code> or the method <code>rollback</code>.
+  By default, new connections are in auto-commit mode.
+
+  The commit occurs when the statement completes or the next
+  execute occurs, whichever comes first. In the case of
+  statements returning a ResultSet, the statement completes when
+  the last row of the ResultSet has been retrieved or the
+  ResultSet has been closed. In advanced cases, a single
+  statement may return multiple results as well as output
+  parameter values. In these cases the commit occurs when all results and
+  output parameter values have been retrieved.
+
+  @param autoCommit true enables auto-commit; false disables auto-commit.
+}
+procedure TZOracleConnection.SetAutoCommit(Value: Boolean);
+begin
+  AutoCommit := Value;
+  FRestartTransaction := not Value;
 end;
 
 {**
@@ -1023,6 +1028,7 @@ procedure TZOracleTransaction.BeforeDestruction;
 var Status: sword;
 begin
   inherited;
+  fSavepoints.Free;
   if FOCITrans <> nil then begin
     try
       if FStarted then
@@ -1043,12 +1049,10 @@ end;
 
 procedure TZOracleTransaction.Commit;
 var Status: sword;
-  SavePoint: IZTransaction;
 begin
-  if fSavepoints.Count > 0 then begin
-    fSavepoints[fSavepoints.Count-1].QueryInterface(IZTransaction, SavePoint);
-    SavePoint.Commit;
-  end else if not FStarted then
+  if fSavepoints.Count > 0
+  then fSavepoints.Delete(fSavepoints.Count-1)
+  else if not FStarted then
     raise EZSQLException.Create(SCannotUseCommit)
   else try
     Status := FOwner.FPlainDriver.OCITransCommit(FOwner.FContextHandle,
@@ -1072,6 +1076,7 @@ begin
   FSpawnMode := SpawnMode;
   FCoupleMode := CoupleMode;
   fDoLog := True;
+  fBranches := TZCollection.Create;
   FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FHandle, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
 end;
 
@@ -1081,7 +1086,7 @@ begin
   { alloc transaction handle }
   FOwner := Owner;
   FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FHandle, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
-  fSavepoints := TZCollection.Create;
+  fSavepoints := TStringList.Create;
   ConSettings := Owner.ConSettings;
   fLocal := True;
 end;
@@ -1104,11 +1109,10 @@ end;
 
 procedure TZOracleTransaction.Rollback;
 var Status: sword;
-  SavePoint: IZTransaction;
 begin
   if fSavepoints.Count > 0 then begin
-    fSavepoints[fSavepoints.Count-1].QueryInterface(IZTransaction, SavePoint);
-    SavePoint.Rollback;
+    FOwner.ExecuteImmediat('ROLLBACK TO '+fSavepoints[fSavepoints.Count-1], lcTransaction);
+    fSavepoints.Delete(fSavepoints.Count -1);
   end else if not FStarted then
     raise EZSQLException.Create(SCannotUseRollback)
   else try
@@ -1122,16 +1126,6 @@ begin
     if fDoLog and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
   end;
-end;
-
-function TZOracleTransaction.SavePoint(const AName: String): IZTransaction;
-begin
-  if FOCITrans = nil then
-    raise EZSQLException.Create(cSConnectionIsNotOpened);
-  if not FStarted then
-    raise EZSQLException.Create(SInvalidOpInAutoCommit);
-  Result := TZOracleSavePoint.Create(AName, Self);
-  FSavePoints.Add(Result);
 end;
 
 const
@@ -1153,16 +1147,15 @@ var
   Status: Integer;
   TxnFlags: ub4;
   S: String;
-  ASavePoint: IZTransaction;
 begin
   if FStarted then
     if FOwner.AutoCommit
     then Result := 1
     else begin
-      Result := FSavePoints.Count+2;
       //just numbered names do disturb the oracle .. you'll get invalid statement error
-      S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(Result);
-      ASavePoint := SavePoint(S);
+      S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+      FOwner.ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+      Result := FSavePoints.Add(S)+2;
     end
   else begin
     if FLocal then
@@ -1179,59 +1172,6 @@ begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, OCITransStartFlagsLog[FTxnMode]);
     Result := Ord(not FOwner.AutoCommit);
   end;
-end;
-
-{ TZOracleSavePoint }
-
-procedure TZOracleSavePoint.Commit;
-var Idx, i: Integer;
-  Trn: IZTransaction;
-begin
-  {oracle does not support the "release savepoint <identifier>" syntax
-   the first commit just releases all saveponts. so this is a fake call }
-  QueryInterface(IZTransaction, Trn);
-  idx := FOwner.FSavePoints.IndexOf(Trn);
-  if idx <> -1 then
-    for I := FOwner.FSavePoints.Count -1 downto idx do
-      FOwner.FSavePoints.Delete(I);
-end;
-
-constructor TZOracleSavePoint.Create(const Name: String;
-  Owner: TZOracleTransaction);
-begin
-  inherited Create;
-  ConSettings := Owner.ConSettings;
-  {$IFDEF UNICODE}
-  fName := ZUnicodeToRaw(Name, zCP_UTF8);
-  {$ELSE}
-  fName := Name;
-  {$ENDIF}
-  FOwner := Owner;
-  FOwner.Fowner.InternalExecute('SAVEPOINT '+FName, lcTransaction);
-end;
-
-function TZOracleSavePoint.GetTransaction: IZOracleTransaction;
-begin
-  Result := FOwner;
-end;
-
-procedure TZOracleSavePoint.Rollback;
-var Idx, i: Integer;
-begin
-  try
-    FOwner.Fowner.InternalExecute('ROLLBACK TO '+FName, lcTransaction);
-  finally
-    idx := FOwner.FSavePoints.IndexOf(Self as IZTransaction);
-    if idx <> -1 then
-      for I := FOwner.FSavePoints.Count -1 downto idx do
-        FOwner.FSavePoints.Delete(I);
-  end;
-end;
-
-function TZOracleSavePoint.SavePoint(const AName: String): IZTransaction;
-begin
-  Result := TZOracleSavePoint.Create(AName, FOwner);
-  FOwner.FSavePoints.Add(Result);
 end;
 
 initialization
