@@ -689,7 +689,7 @@ begin
 end;
 
 {**
-  Forms a where clause for INSERT statements.
+  Forms a INSERT statements.
   @param Columns a collection of key columns.
   @param NewRowAccessor an accessor object to new column values.
 }
@@ -754,7 +754,7 @@ begin
 end;
 
 {**
-  Forms a where clause for UPDATE statements.
+  Forms an UPDATE statements.
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.

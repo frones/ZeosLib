@@ -386,7 +386,9 @@ begin
     Result := LastUpdateCount
   else begin
     CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-    LastUpdateCount := LastUpdateCount + RowCount;
+    if (RowCount = -1) and GetMoreResults and (fLastResultSet = nil)
+    then RowCount := LastUpdateCount
+    else LastUpdateCount := LastUpdateCount + RowCount;
     Result := RowCount;
   end;
 end;
