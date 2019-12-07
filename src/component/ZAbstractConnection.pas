@@ -128,7 +128,8 @@ type
 
     FLoginPrompt: Boolean;
     FStreamedConnected: Boolean;
-    FExplicitTransactionCounter: Integer;
+    FExplicitTransactionCounter: Integer; //this counter is required to find out setting autocommit mode back to True without loosing changes
+    FTxnLevel: Integer; //the current nested_transaction/savepoint level
     FSQLHourGlass: Boolean;
     FDesignConnection: Boolean;
 
@@ -917,6 +918,10 @@ begin
     finally
       HideSqlHourGlass;
     end;
+    FTxnLevel := Ord(not FAutoCommit);
+    FExplicitTransactionCounter := FTxnLevel;
+    if not FAutoCommit then
+      DoStartTransaction;
 
     if not FConnection.IsClosed then
       DoAfterConnect;
@@ -946,8 +951,7 @@ end;
 }
 procedure TZAbstractConnection.Disconnect;
 begin
-  if FConnection <> nil then
-  begin
+  if FConnection <> nil then begin
     DoBeforeDisconnect;
 
     ShowSqlHourGlass;
@@ -961,7 +965,8 @@ begin
       FConnection := nil;
       HideSqlHourGlass;
     end;
-
+    FTxnLevel := 0;
+    FExplicitTransactionCounter := 0;
     DoAfterDisconnect;
   end;
 end;
@@ -1040,21 +1045,17 @@ end;
   Starts a new transaction or saves the transaction.
 }
 function TZAbstractConnection.StartTransaction: Integer;
-var WasConnected: Boolean;
 begin
-  WasConnected := Connected;
-  if not WasConnected then
-    Connect;
+  CheckConnected;
   ShowSQLHourGlass;
   try
-    if not WasConnected and not FAutoCommit
-    then FExplicitTransactionCounter := 1
-    else FExplicitTransactionCounter := FConnection.StartTransaction;
+    FTxnLevel := FConnection.StartTransaction;
     FAutoCommit := False;
   finally
-    Result := FExplicitTransactionCounter;
     HideSQLHourGlass;
   end;
+  FExplicitTransactionCounter := FTxnLevel;
+  Result := FTxnLevel;
   DoStartTransaction;
 end;
 
@@ -1082,6 +1083,9 @@ begin
     Dec(FExplicitTransactionCounter);
     HideSQLHourGlass;
     FAutoCommit := FConnection.GetAutoCommit;
+    Dec(FTxnLevel);
+    if FTxnLevel = 0 then
+      FTxnLevel := Ord(not FAutoCommit);
   end;
   DoCommit;
 end;
@@ -1112,6 +1116,9 @@ begin
     Dec(FExplicitTransactionCounter);
     HideSQLHourGlass;
     FAutoCommit := FConnection.GetAutoCommit;
+    Dec(FTxnLevel);
+    if FTxnLevel = 0 then
+      FTxnLevel := Ord(not FAutoCommit);
   end;
   DoRollback;
 end;

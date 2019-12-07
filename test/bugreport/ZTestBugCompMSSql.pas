@@ -234,7 +234,8 @@ end;
 (*
 When we open a query on this table and uses TZQuery.Append to add a new row with NO VALUE for the testcol,
 Zeos uses the Resultset-Metadata to find out the default value for the rows with no value set.
-MSSQL delivers for the row testcol the default value '(NULL)' instead of 'NULL'. Zeos interpretes this value correct as string and sends 'N'(NULL)'' to the database as default value.
+MSSQL delivers for the row testcol the default value '(NULL)' instead of 'NULL'.
+Zeos interpretes this value correct as string and sends 'N'(NULL)'' to the database as default value.
 The result is: The new value for testcol is '(NULL)' as string instead of NULL as default null value.
 *)
 procedure TZTestCompMSSqlBugReport.TestSF306;

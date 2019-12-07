@@ -2721,6 +2721,7 @@ begin
   Query := CreateQuery;
   try
     try
+      Query.Connection.Connect;
       Query.Connection.StartTransaction;
       try
         Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';

@@ -72,6 +72,7 @@ type
     procedure TestExecuteDirect2;
     procedure TestLoginPromptConnection;
     procedure TestIdentifierQuotes;
+    procedure TestTransactionBehavior;
    end;
 
 implementation
@@ -147,6 +148,57 @@ begin
   gloPassword := locPassword;
   Connection.Connect;
   CheckEquals(true,Connection.Connected);
+end;
+
+procedure TZTestConnectionCase.TestTransactionBehavior;
+begin
+  CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
+  if Protocol = 'ado' then
+    Exit; //ado just starts a transaction if a query is fired #):
+  Connection.Disconnect;
+  Connection.AutoCommit := False;
+  Connection.TransactIsolationLevel := tiSerializable;
+  try
+    Connection.StartTransaction; // behavior change of 7.3+ starttransaction can be called only if we are connected
+    Fail('Inserted wrong StartTransaction behavior');
+  except on E: Exception do
+    CheckNotTestFailure(E);
+  end;
+  Connection.Connect;
+  CheckEquals(2, Connection.StartTransaction, 'The txn-level');
+  Connection.Disconnect;
+  Connection.AutoCommit := True;
+  Connection.Connect;
+  CheckEquals(1, Connection.StartTransaction, 'The txn-level');
+  CheckFalse(Connection.AutoCommit, 'AutoCommit should be disabled');
+  CheckEquals(2, Connection.StartTransaction, 'The txn-level');
+  Connection.Rollback;
+  Connection.Rollback;
+  try
+    Connection.Rollback;
+    Fail('Wrong Rollback behavior');
+  except on E: Exception do
+    CheckNotTestFailure(E);
+  end;
+  Check(Connection.AutoCommit, 'AutoCommit should be enabled');
+  CheckEquals(1, Connection.StartTransaction, 'The txn-level');
+  CheckFalse(Connection.AutoCommit, 'AutoCommit should be disabled');
+  Connection.Commit;
+  try
+    Connection.Commit;
+    Fail('Wrong Commit behavior');
+  except on E: Exception do
+    CheckNotTestFailure(E);
+  end;
+  Check(Connection.AutoCommit, 'AutoCommit should be enabled');
+  (* CheckEquals(1, Connection.StartTransaction, 'The txn-level');
+  try
+    Connection.Disconnect;
+    Fail('Wrong Disconnect behavior: transaction is active');
+  except on E: Exception do
+    CheckNotTestFailure(E);
+  end; *)
+  Connection.Disconnect;
 end;
 
 procedure TZTestConnectionCase.TestLibrary;

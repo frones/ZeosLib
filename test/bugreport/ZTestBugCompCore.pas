@@ -115,7 +115,6 @@ type
     procedure Test1049821;
     procedure Test1045500;
     procedure Test1036916;
-    procedure Test1004584;
     procedure TestParamUx;
     procedure TestTicket228;
     procedure TestSF270_1;
@@ -1730,22 +1729,6 @@ begin
   end;
 end;
 
-{**
-   Test for Bug#1004584 - problem start transaction in non autocommit mode
-}
-procedure ZTestCompCoreBugReport.Test1004584;
-begin
-  if SkipForReason(srClosedBug) then Exit;
-
-  CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
-  Connection.Disconnect;
-  Connection.AutoCommit := False;
-  Connection.TransactIsolationLevel := tiSerializable;
-  CheckEquals(1, Connection.StartTransaction, 'The txn-level');
-  CheckEquals(2, Connection.StartTransaction, 'The txn-level');
-  Connection.Disconnect;
-end;
-
 procedure ZTestCompCoreBugReport.TestParamUx;
 var
   Query: TZQuery;
@@ -1803,10 +1786,11 @@ begin
 
   Query := CreateQuery;
   try
+    Query.Connection.Connect;
     Query.SQL.Text := 'SELECT * from people';
     Connection.StartTransaction;
     Query.Open;
-    //Connection.Commit; <- this crash with FB only
+    //Connection.Commit; //<- this crash with FB/IB and MSSQL(oledb,odbc,ado) only
     Check(Query.RecordCount = 5);
     Query.Close;
   finally

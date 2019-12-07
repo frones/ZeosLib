@@ -83,7 +83,6 @@ type
     procedure Test897631;
     procedure Test909181;
     procedure Test984305;
-    procedure Test1004584;
     procedure Test1021705;
     procedure Test_Decimal;
     procedure Test_Ticket54;
@@ -121,22 +120,6 @@ uses
 function ZTestCompInterbaseBugReport.GetSupportedProtocols: string;
 begin
   Result := pl_all_interbase;
-end;
-
-{**
-   Test for Bug#1004584 - problem start transaction in non autocommit mode
-}
-procedure ZTestCompInterbaseBugReport.Test1004584;
-begin
-  if SkipForReason(srClosedBug) then Exit;
-
-  CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
-  Connection.Disconnect;
-  Connection.AutoCommit := False;
-  Connection.TransactIsolationLevel := tiSerializable;
-  CheckEquals(1, Connection.StartTransaction, 'The txn-level');
-  CheckEquals(2, Connection.StartTransaction, 'The txn-level');
-  Connection.Disconnect;
 end;
 
 {**
@@ -1074,6 +1057,7 @@ begin
     Query.SQL.Text := 'SELECT RDB$RELATION_NAME' +
       ' FROM RDB$RELATIONS' +
       ' WHERE RDB$SYSTEM_FLAG=0;';
+    Connection.Connect;
     Connection.StartTransaction;
     Query.Open;
     Connection.Commit;
