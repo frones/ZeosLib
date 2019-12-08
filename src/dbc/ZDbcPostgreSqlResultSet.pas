@@ -665,7 +665,14 @@ begin
       end;
     TIMESTAMPOID, TIMESTAMPTZOID, ABSTIMEOID: begin
       ColumnInfo.ColumnType := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
-      ColumnInfo.Scale := TypeModifier; //milliseconds or negative if not specified
+      if TypeModifier <> -1 then
+        ColumnInfo.Scale := TypeModifier; //milliseconds or negative if not specified
+      Exit;
+    end;
+    TIMEOID, TIMETZOID: begin
+      ColumnInfo.ColumnType := stTime;
+      if TypeModifier <> -1 then
+        ColumnInfo.Scale := TypeModifier;
       Exit;
     end;
   end;

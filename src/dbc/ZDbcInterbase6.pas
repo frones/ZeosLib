@@ -80,19 +80,19 @@ type
 
   TZInterbase6ConnectionGUIDProps = class;
 
-  IZIBTransaction = interface(IZInterface)
+  IZIBTransaction = interface(IZTransaction)
     ['{FACB5CA2-4400-470E-A1DC-ECE29CDE4E6F}']
-    procedure Commit;
-    procedure Rollback;
     procedure CloseTransaction;
-    function StartTransaction: Integer;
     function GetTrHandle: PISC_TR_HANDLE;
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
     procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
-    function GetExplicitTransactionCount: Integer;
+    function GetTransactionLevel: Integer;
     function GetOpenCursorCount: Integer;
+    function IsReadOnly: Boolean;
+    function GetTPB: RawByteString;
+    function StartTransaction: Integer;
   end;
 
   {** Represents a Interbase specific connection interface. }
@@ -145,77 +145,11 @@ type
     function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnName: string): Boolean;
   end;
 
-  TZInterbase6Connection = class;
-  TZIBTransactionManager = class;
-  TZIBTransaction = class;
-
-  {** EH: implements a IB/FB savepoint }
-  TZIBSavePoint = class(TObject)
-  private
-    FName: RawByteString;
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZIBTransaction;
-    procedure InternalExecute(const Stmt: RawbyteString);
-  public
-    constructor Create(const Owner: TZIBTransaction);
-  public
-    procedure Savepoint;
-    procedure Release;
-    procedure RollBackTo;
-  end;
-
-  {** EH: implements a IB/FB transaction }
-  TZIBTransaction = class(TZCodePagedObject, IImmediatelyReleasable,
-    IZIBTransaction)
-  private
-    fSavepoints: TObjectList;
-    fDoCommit, fDoLog: Boolean;
-    FOpenCursors, FOpenUncachedLobs: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
-    //FReadOnly, FAutoCommit: Boolean;
-    //FTransactIsolationLevel: TZTransactIsolationLevel;
-    FTrHandle: TISC_TR_HANDLE;
-    //FTPB: RawByteString;
-    //FTEB: TISC_TEB;
-    FExplicitTransactionCounter: Integer;
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZIBTransactionManager;
-    function TestCachedResultsAndForceFetchAll: Boolean;
-  public
-    procedure Commit;
-    procedure Rollback;
-    procedure CloseTransaction;
-    function StartTransaction: Integer; overload;
-    function GetTrHandle: PISC_TR_HANDLE;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-    procedure RegisterOpencursor(const CursorRS: IZResultSet);
-    procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
-    procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
-    procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
-    function GetExplicitTransactionCount: Integer;
-    function GetOpenCursorCount: Integer;
-  public
-    constructor Create(const Owner: TZIBTransactionManager);
-    procedure BeforeDestruction; override;
-  end;
-
-  {** EH: implements a IB/FB transaction manager }
-  TZIBTransactionManager = class(TZCodePagedObject, IImmediatelyReleasable)
-  private
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZInterbase6Connection;
-    FTransactions: TZCollection; //just prepared multiple Transaction
-    //FReadTransaction, FWriteTransaction: TZIBTransaction; eh: that should logical follow next
-  public
-    function GetTrHandle: PISC_TR_HANDLE;
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-    function GetActiveTransaction: IZIBTransaction;
-    procedure RemoveTransactionFromList(const Transaction: IZIBTransaction);
-  public
-    Constructor Create(const Owner: TZInterbase6Connection);
-    procedure BeforeDestruction; override;
-  end;
-
   {** Implements Interbase6 Database Connection. }
 
   { TZInterbase6Connection }
-  TZInterbase6Connection = class(TZAbstractDbcConnection, IZInterbase6Connection)
+  TZInterbase6Connection = class(TZAbstractDbcConnection, IZInterbase6Connection,
+    IZTransactionManager)
   private
     FDialect: Word;
     FHandle: TISC_DB_HANDLE;
@@ -225,19 +159,25 @@ type
     FClientVersion: Integer;
     FIsFirebirdLib: Boolean; // never use this directly, always use IsFirbirdLib
     FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
+    FPB_CP: Word; //the parameter buffer codepage
     FXSQLDAMaxSize: LongWord;
     FPlainDriver: TZInterbasePlainDriver;
     FProcedureTypesCache: TStrings;
     FGUIDProps: TZInterbase6ConnectionGUIDProps;
     FTPBs: array[Boolean,Boolean,TZTransactIsolationLevel] of RawByteString;
-    FTEBs: array[Boolean,Boolean,TZTransactIsolationLevel] of TISC_TEB;
-    FTransactionManager: TZIBTransactionManager;
+    fTransactions: array[Boolean] of IZCollection; //simultan (not nested) readonly/readwrite transaction container
+    fActiveTransaction: array[Boolean] of IZIBTransaction;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
-    procedure GenerateTDBAndTEB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel);
+    function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
+      Info: TStrings): RawByteString;
+    procedure TransactionParameterPufferChanged;
   protected
     procedure InternalCreate; override;
+    procedure InternalClose; override;
     procedure OnPropertiesChange({%H-}Sender: TObject); override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory); overload;
   public
     constructor Create(const ZUrl: TZURL);
     destructor Destroy; override;
@@ -253,6 +193,11 @@ type
     procedure CreateNewDatabase(const SQL: RawByteString);
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     function GetActiveTransaction: IZIBTransaction;
+  public { IZTransactionManager }
+    function CreateTransaction(AutoCommit, ReadOnly: Boolean;
+      TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    procedure ReleaseTransaction(const Transaction: IZTransaction);
+    procedure SetActiveTransaction(const Value: IZTransaction);
   public
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
@@ -263,20 +208,18 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
 
+    procedure Commit; override;
+    procedure Rollback; override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetAutoCommit(Value: Boolean); override;
-
-    procedure StartTransaction;
-    procedure Commit; override;
-    procedure Rollback; override;
+    function StartTransaction: Integer; override;
 
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;
 
     function ConstructConnectionString: String;
     procedure Open; override;
-    procedure InternalClose; override;
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
@@ -292,6 +235,47 @@ type
     function GetCurrentValueSQL: string; override;
     function GetNextValueSQL: string; override;
     procedure SetBlockSize(const Value: Integer); override;
+  end;
+
+  {** EH: implements a IB/FB transaction }
+  TZIBTransaction = class(TZCodePagedObject, IImmediatelyReleasable,
+    IZTransaction, IZIBTransaction)
+  private
+    fSavepoints: TStrings;
+    fDoCommit, fDoLog: Boolean;
+    FOpenCursors, FOpenUncachedLobs: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FReadOnly, FAutoCommit: Boolean;
+    FTrHandle: TISC_TR_HANDLE;
+    FTPB: RawByteString;
+    FTEB: TISC_TEB;
+    FExplicitTransactionCounter: Integer;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZInterbase6Connection;
+    function TestCachedResultsAndForceFetchAll: Boolean;
+  public { IZTransaction }
+    procedure Commit;
+    procedure Rollback;
+    function StartTransaction: Integer;
+  public { IZIBTransaction }
+    procedure CloseTransaction;
+    function GetTrHandle: PISC_TR_HANDLE;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    procedure RegisterOpencursor(const CursorRS: IZResultSet);
+    procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
+    procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
+    procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
+    function GetTransactionLevel: Integer;
+    function GetOpenCursorCount: Integer;
+    function GetTPB: RawByteString;
+    function IsReadOnly: Boolean;
+  public
+    constructor Create(const Owner: TZInterbase6Connection; AutoCommit, ReadOnly: Boolean;
+      const TPB: RawByteString);
+    procedure BeforeDestruction; override;
+  end;
+
+  IFB_IB_SavePoint = interface
+    ['{96D74A82-A1ED-4190-9CF1-A969BF73A1E9}']
+    function GetOwnerTransaction: IZIBTransaction;
   end;
 
 var
@@ -402,10 +386,6 @@ begin
   FreeAndNil(FProcedureTypesCache);
   FreeAndNil(FGUIDProps);
   inherited Destroy;
-  if FTransactionManager <> nil then begin //test_library would make mem-leaks
-    FTransactionManager._Release;
-    FTransactionManager := nil;
-  end;
 end;
 
 Function TZInterbase6Connection.AbortOperation: Integer;
@@ -465,9 +445,11 @@ begin
   if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
     if (Idx = -1) and ((FClientCodePage = 'UTF8') or (FClientCodePage = 'UNICODE_FSS')) then
       Info.Add('isc_dpb_utf8_filename');
-  end
-  else if Idx <> -1 then
+    FPB_CP := zCP_UTF8;
+  end else if Idx <> -1 then begin
     Info.Delete(Idx);
+    FPB_CP := ConSettings.ClientCodePage.CP;
+  end;
   Info.EndUpdate;
 end;
 
@@ -481,15 +463,22 @@ end;
   Connection.
 }
 procedure TZInterbase6Connection.InternalClose;
+var B: Boolean;
 begin
-  FTransactionManager.GetActiveTransaction.CloseTransaction;
-  if Assigned(DriverManager) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-        'DISCONNECT FROM "'+ConSettings^.DataBase+'"');
-  if FHandle <> 0 then begin
-    FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-    FHandle := 0;
-    CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcDisconnect);
+  try
+    for B := False to True do begin
+      fTransactions[b].Clear;
+      fActiveTransaction[b] := nil;
+    end;
+  finally
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+          'DISCONNECT FROM "'+ConSettings^.DataBase+'"');
+    if FHandle <> 0 then begin
+      FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+      FHandle := 0;
+      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcDisconnect);
+    end;
   end;
 end;
 
@@ -499,10 +488,14 @@ end;
 procedure TZInterbase6Connection.Commit;
 begin
   if Closed then
-    Exit;
-  if GetAutoCommit
-  then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
-  FTransactionManager.GetActiveTransaction.Commit;
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
+  with GetActiveTransaction do begin
+    Commit;
+    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
+      SetAutoCommit(True)
+  end;
 end;
 
 {**
@@ -512,9 +505,8 @@ procedure TZInterbase6Connection.InternalCreate;
 begin
   FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
-  FTransactionManager := TZIBTransactionManager.Create(Self);
-  FTransactionManager._AddRef;
-
+  fTransactions[False] := TZCollection.Create;
+  fTransactions[True] := TZCollection.Create;
   { set default sql dialect it can be overriden }
   FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
 
@@ -529,17 +521,18 @@ var
   TIL: TZTransactIsolationLevel;
 begin
   HC := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
-  if (HC <> FHardCommit) and Assigned(FTransactionManager) then //*** ADDED THIS CHECK by EMartin ***
-    FTransactionManager.GetActiveTransaction.CloseTransaction;
-  FHardCommit := HC;
   FGUIDProps.InitFromProps(Info);
-  for AC := false to true do
-    for RO := false to true do
-      for til := low(TZTransactIsolationLevel) to high(TZTransactIsolationLevel) do begin
+  for RO := false to true do begin
+    for AC := false to true do
+      for til := low(TZTransactIsolationLevel) to high(TZTransactIsolationLevel) do
         FTPBs[AC][RO][TIL] := '';
-        FTEBs[AC][RO][TIL].tpb_length := 0;
-        FTEBs[AC][RO][TIL].tpb_address := nil;
-      end;
+    if FHandle <> 0 then
+      FTPBs[AutoCommit][RO][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
+    if (fActiveTransaction[RO] <> nil) and ((HC <> FHardCommit) or
+       (fActiveTransaction[RO].GetTPB <> FTPBs[AutoCommit][RO][TransactIsolationLevel])) then//*** ADDED THIS CHECK by EMartin ***
+      TransactionParameterPufferChanged;
+  end;
+  FHardCommit := HC;
 end;
 
 {**
@@ -632,6 +625,24 @@ begin
   FClientVersion := Major * 1000000 + Minor * 1000 + Release;
 end;
 
+procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
+  ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory);
+begin
+  if SQL = '' then
+    Exit;
+  if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle,
+      ISC_TR_HANDLE, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF},
+      Pointer(SQL), GetDialect, nil) <> 0 then
+    CheckInterbase6Error(FPlainDriver, FStatusVector, Self, LoggingCategory);
+  DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
+end;
+
+procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  ExecuteImmediat(SQL, GetActiveTransaction.GetTrHandle, LoggingCategory);
+end;
+
 {**
   Gets the client's full version number. Initially this should be 0.
   The format of the version returned must be XYYYZZZ where
@@ -709,7 +720,7 @@ end;
 function TZInterbase6Connection.GetTrHandle: PISC_TR_HANDLE;
 begin
   if not Closed
-  then Result := FTransactionManager.GetActiveTransaction.GetTrHandle
+  then Result := GetActiveTransaction.GetTrHandle
   else Result := nil;
 end;
 
@@ -861,12 +872,12 @@ reconnect:
         'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
   end;
 
-  inherited SetAutoCommit(GetAutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
+  inherited SetAutoCommit(AutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
+  FRestartTransaction := not AutoCommit;
 
   FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
-  { Start transaction }
-  if not FHardCommit then
-    StartTransaction;
+  { Start a transaction }
+  GetActiveTransaction;
   if DBCP <> '' then
     Exit;
   inherited Open;
@@ -1008,14 +1019,42 @@ end;
 procedure TZInterbase6Connection.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var ImmediatelyReleasable: IImmediatelyReleasable;
+  B: Boolean;
 begin
   FHandle := 0;
-  if FTransactionManager.FTransactions.Count > 0 then begin
-     FTransactionManager.QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable);
-    if ImmediatelyReleasable <> Sender then
-      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+  for B := False to True do begin
+    if (fActiveTransaction[b] <> nil) and
+       (fActiveTransaction[b].QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable) = S_OK) and
+        (ImmediatelyReleasable <> Sender) then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+    while fTransactions[b].Count > 0 do begin
+      fTransactions[b][0].QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable);
+      if ImmediatelyReleasable <> Sender then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+    end;
   end;
   inherited ReleaseImmediat(Sender, AError);
+end;
+
+procedure TZInterbase6Connection.ReleaseTransaction(
+  const Transaction: IZTransaction);
+var idx: Integer;
+  Trans: IZTransaction;
+  B: Boolean;
+begin
+  for B := False to True do begin
+    if (fActiveTransaction[B] <> nil) then begin
+      fActiveTransaction[B].QueryInterface(IZTransaction, Trans);
+      if (Trans = Transaction) then
+        fActiveTransaction[B] := nil;
+    end;
+    Idx := fTransactions[b].IndexOf(Transaction);
+    if Idx <> -1 then begin
+      fTransactions[b].Delete(Idx);
+      Exit;
+    end;
+  end;
+  raise EZSQLException.Create('release an invalid Transaction');
 end;
 
 {**
@@ -1028,10 +1067,14 @@ end;
 procedure TZInterbase6Connection.Rollback;
 begin
   if Closed then
-    Exit;
-  if GetAutoCommit
-  then raise EZSQLException.Create(cSInvalidOpInAutoCommit);
-  FTransactionManager.GetActiveTransaction.Rollback;
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseRollback);
+  with GetActiveTransaction do begin
+    Rollback;
+    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
+      SetAutoCommit(True);
+  end;
 end;
 
 {**
@@ -1050,10 +1093,8 @@ var
   ErrorCode: ISC_STATUS;
 begin
   DatabaseInfoCommand := Char(isc_info_reads);
-
   ErrorCode := FPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @DatabaseInfoCommand,
                            IBLocalBufferLength, @Buffer[0]);
-
   case ErrorCode of
     isc_network_error..isc_net_write_err:
       Result := -1
@@ -1065,9 +1106,15 @@ end;
 {**
    Start Interbase transaction
 }
-procedure TZInterbase6Connection.StartTransaction;
+function TZInterbase6Connection.StartTransaction: Integer;
 begin
-  FTransactionManager.GetActiveTransaction.StartTransaction
+  if Closed then
+    Open;
+  if AutoCommit then begin
+    AutoCommit := False;
+    TransactionParameterPufferChanged;
+  end;
+  Result := GetActiveTransaction.StartTransaction
 end;
 
 function TZInterbase6Connection.StoredProcedureIsSelectable(
@@ -1077,16 +1124,15 @@ var I: Integer;
   var RS: IZResultSet;
     Stmt: IZStatement;
   begin
+    Result := False;
     Stmt := CreateRegularStatement(Info);
     RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
     try
       if RS.Next then begin
         Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
         FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
-      end else begin
-        RaiseUnsupportedException;
-        Result := False;
-      end;
+      end else
+        Raise EZUnsupportedException.Create(SUnsupportedOperation);
     finally
       RS.Close;
       RS := nil;
@@ -1098,6 +1144,15 @@ begin
   if I = -1
   then Result := AddToCache(ProcName)
   else Result := FProcedureTypesCache.Objects[I] <> nil;
+end;
+
+procedure TZInterbase6Connection.TransactionParameterPufferChanged;
+begin
+  if (fActiveTransaction[ReadOnly] <> nil) then begin
+    fActiveTransaction[ReadOnly].CloseTransaction;
+    if (fActiveTransaction[ReadOnly] <> nil) then
+      ReleaseTransaction(fActiveTransaction[ReadOnly]);
+  end;
 end;
 
 {**
@@ -1115,8 +1170,8 @@ end;
 procedure TZInterbase6Connection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
   if (Level <> TransactIsolationLevel) then begin
-    FTransactionManager.GetActiveTransaction.CloseTransaction;
-    Inherited SetTransactionIsolation(Level);
+    TransactionParameterPufferChanged;
+    TransactIsolationLevel := Level;
     //restart automatically happens on GetTrHandle
   end;
 end;
@@ -1153,8 +1208,10 @@ end;
 const
   Tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
   tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
-procedure TZInterbase6Connection.GenerateTDBAndTEB(AutoCommit, ReadOnly: Boolean;
-  TransactIsolationLevel: TZTransactIsolationLevel);
+function TZInterbase6Connection.GenerateTPB(AutoCommit, ReadOnly: Boolean;
+  TransactIsolationLevel: TZTransactIsolationLevel; Info: TStrings): RawByteString;
+var
+  Params: TStrings;
 { List of parameters that are assigned according to values of properties but
   could be overwritten by user.
   These parameters are all simple flags having no value so no splitting is required. }
@@ -1189,73 +1246,91 @@ type
          (SrcPar = 'isc_tpb_no_rec_version') then
         OverwritableParams[parRecVer] := SrcPar
       else
+      if (SrcPar = 'isc_tpb_autocommit') then
+        OverwritableParams[parAutoCommit] := SrcPar
+      else if StartsWith(SrcPar, TPBPrefix) then  //skip all non isc_tpb params
         Dest.Add(Src[I]);
     end;
   end;
 var
-  Params: TStrings;
   OverwritableParams: TOverwritableParamValues;
 begin
-  Params := TStringList.Create;
-  OverwritableParams[parRW] := tpb_Access[ReadOnly];
-  OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
-
-  { Set transaction parameters by TransactIsolationLevel }
-  case TransactIsolationLevel of
-    tiReadCommitted:
-      begin
-        if GetHostVersion >= 4000000
-        then OverwritableParams[parRecVer] := 'isc_tpb_read_consistency'
-        else OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
-        OverwritableParams[parWait] := 'isc_tpb_nowait';
-        AddStrings(Params, Info, OverwritableParams);
-        OverwritableParams[parRW] := tpb_Access[ReadOnly];
-        OverwritableParams[parTIL] := 'isc_tpb_read_committed';
-      end;
-    tiRepeatableRead:
-      begin
-        OverwritableParams[parWait] := 'isc_tpb_nowait';
-        AddStrings(Params, Info, OverwritableParams);
-        OverwritableParams[parRW] := tpb_Access[ReadOnly];
-        OverwritableParams[parTIL] := 'isc_tpb_concurrency';
-      end;
-    tiSerializable:
-      begin
-        AddStrings(Params, Info, OverwritableParams);
-        OverwritableParams[parRW] := tpb_Access[ReadOnly];
-        OverwritableParams[parTIL] := 'isc_tpb_consistency';
-      end;
-    else begin
-      OverwritableParams[parRW] := tpb_Access[ReadOnly];
-      { FB default values for non-standard TIL }
-      OverwritableParams[parTIL] := 'isc_tpb_concurrency';
-      OverwritableParams[parWait] := 'isc_tpb_wait';
-      AddStrings(Params, Info, OverwritableParams);
-    end;
-  end;
-
-  { Add overwitable parameters to the beginning of list }
-  if OverwritableParams[parRW] <> '' then
-    Params.Insert(0, OverwritableParams[parRW]);
-  if OverwritableParams[parWait] <> '' then
-    Params.Insert(0, OverwritableParams[parWait]);
-  if OverwritableParams[parRecVer] <> '' then
-    Params.Insert(0, OverwritableParams[parRecVer]);
-  if OverwritableParams[parTIL] <> '' then
-    Params.Insert(0, OverwritableParams[parTIL]);
-  if OverwritableParams[parAutoCommit] <> '' then
-    Params.Insert(0, OverwritableParams[parAutoCommit]);
+  Params := TStringlist.Create;
   try
-    fTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] := GenerateTPB(FPlainDriver, Params, ConSettings, ConSettings^.ClientCodePage^.CP);
-    GenerateTEB(@FHandle, fTPBs[AutoCommit][ReadOnly][TransactIsolationLevel], fTEBs[AutoCommit][ReadOnly][TransactIsolationLevel]);
+    Params.Capacity := Ord(High(TOverwritableParams))+Info.Count;
+    //OverwritableParams[parRW] := tpb_Access[ReadOnly]; will be set always below
+    OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
+
+    { Set transaction parameters by TransactIsolationLevel }
+    case TransactIsolationLevel of
+      tiReadCommitted:
+        begin
+          if GetHostVersion >= 4000000
+          then OverwritableParams[parRecVer] := 'isc_tpb_read_consistency'
+          else OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
+          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          AddStrings(Params, Info, OverwritableParams);
+          OverwritableParams[parRW] := tpb_Access[ReadOnly];
+          OverwritableParams[parTIL] := 'isc_tpb_read_committed';
+        end;
+      tiRepeatableRead:
+        begin
+          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          AddStrings(Params, Info, OverwritableParams);
+          OverwritableParams[parRW] := tpb_Access[ReadOnly];
+          OverwritableParams[parTIL] := 'isc_tpb_concurrency';
+        end;
+      tiSerializable:
+        begin
+          AddStrings(Params, Info, OverwritableParams);
+          OverwritableParams[parRW] := tpb_Access[ReadOnly];
+          OverwritableParams[parTIL] := 'isc_tpb_consistency';
+        end;
+      else begin
+        OverwritableParams[parRW] := tpb_Access[ReadOnly]; //eh: why is this done before AddStrings is called?
+        { FB default values for non-standard TIL }
+        OverwritableParams[parTIL] := 'isc_tpb_concurrency';
+        OverwritableParams[parWait] := 'isc_tpb_wait';
+        AddStrings(Params, Info, OverwritableParams);
+      end;
+    end;
+    { EH: as long we allow to overwrite the two params we need to sync our settings: }
+    if OverwritableParams[parRW] <> tpb_Access[ReadOnly] then //overwrite seems to be allowed for tiNone
+      inherited SetReadOnly(not ReadOnly);
+    if OverwritableParams[parAutoCommit] <> tpb_AutoCommit[AutoCommit] then //overwrite seems to be allowed allways
+      inherited SetAutoCommit(not AutoCommit);
+
+
+    { Add overwitable parameters to the beginning of list }
+    if OverwritableParams[parRW] <> '' then
+      Params.Insert(0, OverwritableParams[parRW]);
+    if OverwritableParams[parWait] <> '' then
+      Params.Insert(0, OverwritableParams[parWait]);
+    if OverwritableParams[parRecVer] <> '' then
+      Params.Insert(0, OverwritableParams[parRecVer]);
+    if OverwritableParams[parTIL] <> '' then
+      Params.Insert(0, OverwritableParams[parTIL]);
+    if OverwritableParams[parAutoCommit] <> '' then
+      Params.Insert(0, OverwritableParams[parAutoCommit]);
+
+    Result := BuildPB(FPlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams, ConSettings, FPB_CP);
   finally
     FreeAndNil(Params);
   end;
 end;
 
 function TZInterbase6Connection.GetActiveTransaction: IZIBTransaction;
+var TA: IZTransaction;
 begin
-  Result := FTransactionManager.GetActiveTransaction;
+  if FHandle <> 0 then begin
+    if fActiveTransaction[ReadOnly] = nil then begin
+      TA := CreateTransaction(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
+      TA.QueryInterface(IZIBTransaction, fActiveTransaction[ReadOnly]);
+      fTransactions[ReadOnly].Add(TA);
+    end;
+    Result := fActiveTransaction[ReadOnly];
+  end else
+    Result := nil;
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
@@ -1280,6 +1355,29 @@ begin
   Result := TZInterbase6Sequence.Create(Self, Sequence, BlockSize);
 end;
 
+function TZInterbase6Connection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
+  TransactIsolationLevel: TZTransactIsolationLevel;
+  Params: TStrings): IZTransaction;
+begin
+  if FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] = EmptyRaw then
+    FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
+  Result := TZIBTransaction.Create(Self, AutoCommit, ReadOnly, FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel]);
+end;
+
+procedure TZInterbase6Connection.SetActiveTransaction(
+  const Value: IZTransaction);
+var Transaction: IZIBTransaction;
+  SavePoint: IFB_IB_SavePoint;
+begin
+  SavePoint := nil;
+  if (Value = nil) or (Value.QueryInterface(IZIBTransaction, Transaction) <> S_OK)
+    or (Value.QueryInterface(IFB_IB_SavePoint, SavePoint) <> S_OK) then
+    raise EZSQLException.Create('invalid IB/FB transaction');
+  if SavePoint <> nil then
+    Transaction := SavePoint.GetOwnerTransaction;
+  fActiveTransaction[Transaction.IsReadOnly] := Transaction;
+end;
+
 {**
   Sets this connection's auto-commit mode.
   If a connection is in auto-commit mode, then all its SQL
@@ -1302,9 +1400,10 @@ end;
 }
 procedure TZInterbase6Connection.SetAutoCommit(Value: Boolean);
 begin
-  if (Value <> GetAutoCommit) then begin
-    FTransactionManager.GetActiveTransaction.CloseTransaction;
-    inherited SetAutoCommit(Value);
+  FRestartTransaction := not Value;
+  if (Value <> AutoCommit) then begin
+    TransactionParameterPufferChanged;
+    AutoCommit := Value;
     //restart automatically happens on GetTrHandle
   end;
 end;
@@ -1322,8 +1421,7 @@ end;
 procedure TZInterbase6Connection.SetReadOnly(Value: Boolean);
 begin
   if (ReadOnly <> Value) then begin
-    FTransactionManager.GetActiveTransaction.CloseTransaction;
-    inherited SetReadOnly(Value);
+    ReadOnly := Value;
     //restart automatically happens on GetTrHandle
   end;
 end;
@@ -1441,102 +1539,43 @@ begin
   Result := inherited ColumnIsGUID(SQLType, DataSize, '', ColumnName);
 end;
 
-{ TZIBTransactionManager }
-
-procedure TZIBTransactionManager.BeforeDestruction;
-begin
-  inherited BeforeDestruction;
-  FTransactions.Clear;
-  FreeAndNil(FTransactions);
-end;
-
-constructor TZIBTransactionManager.Create(const Owner: TZInterbase6Connection);
-begin
-  FTransactions := TZCollection.Create;
-  ConSettings := Owner.ConSettings;
-  FOwner := Owner;
-end;
-
-function TZIBTransactionManager.GetActiveTransaction: IZIBTransaction;
-begin
-  if FTransactions.Count > 0
-  then FTransactions[0].QueryInterface(IZIBTransaction, Result)
-  else begin
-    Result := TZIBTransaction.Create(Self);
-    FTransactions.Insert(0, Result);
-  end;
-end;
-
-function TZIBTransactionManager.GetTrHandle: PISC_TR_HANDLE;
-begin
-  Result := GetActiveTransaction.GetTrHandle;
-end;
-
-procedure TZIBTransactionManager.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-var I: Integer;
-  ImmediatelyReleasable: IImmediatelyReleasable;
-begin
-  if FTransactions.Count > 0 then begin
-    for I := FTransactions.Count -1 downto 0 do
-      if Supports(FTransactions[i], IImmediatelyReleasable, ImmediatelyReleasable) and
-         (Sender <> ImmediatelyReleasable) then
-        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
-    FTransactions.Clear;
-    FOwner.QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable);
-    if ImmediatelyReleasable <> Sender then
-      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
-  end;
-end;
-
-procedure TZIBTransactionManager.RemoveTransactionFromList(
-  const Transaction: IZIBTransaction);
-var I: Integer;
-begin
-  I := FTransactions.IndexOf(Transaction);
-  {$IFDEF DEBUG}Assert(i > -1, 'Wrong remove transaction behavior');{$ENDIF}
-  FTransactions.Delete(I);
-end;
-
 { TZIBTransaction }
 
 procedure TZIBTransaction.BeforeDestruction;
 begin
-  try
-    FOpenCursors.Clear;
-    FOpenUncachedLobs.Clear;
-    fSavepoints.Clear;
-    if FTrHandle <> 0 then
-      if fDoCommit
-      then Commit
-      else RollBack;
-  finally
-    FreeAndNil(FOpenCursors);
-    FreeAndNil(fSavepoints);
-    FreeAndNil(FOpenUncachedLobs);
-    inherited BeforeDestruction;
-  end;
+  FOpenCursors.Clear;
+  FOpenUncachedLobs.Clear;
+  fSavepoints.Clear;
+  if FTrHandle <> 0 then
+    if fDoCommit
+    then Commit
+    else RollBack;
+  FreeAndNil(fSavepoints);
+  FreeAndNil(FOpenCursors);
+  FreeAndNil(FOpenUncachedLobs);
+  inherited BeforeDestruction;
 end;
 
 procedure TZIBTransaction.CloseTransaction;
 begin
   fSavepoints.Clear;
   if FTrHandle <> 0 then
-    if FOwner.FOwner.AutoCommit
+    if FOwner.AutoCommit
     then Commit
     else RollBack;
 end;
 
 procedure TZIBTransaction.Commit;
 var Status: ISC_STATUS;
-  IBSavePoint: TZIBSavePoint;
+  S: RawByteString;
 begin
   if fSavepoints.Count > 0 then begin
-    IBSavePoint := TZIBSavePoint(fSavepoints[fSavepoints.Count-1]);
-    IBSavePoint.Release;
+    S := 'RELEASE SAVEPOINT '+ {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    FOwner.ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
     FExplicitTransactionCounter := fSavepoints.Count +1;
-  end else if FTrHandle <> 0 then with FOwner.FOwner do try
-    if FOwner.FOwner.FHardCommit or
+  end else if FTrHandle <> 0 then with FOwner do try
+    if FHardCommit or
       ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then Status := FPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle)
@@ -1544,24 +1583,31 @@ begin
       fDoCommit := True;
       fDoLog := False;
       Status := FPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
-      FOwner.RemoveTransactionFromList(Self);
+      ReleaseTransaction(Self);
     end;
     FExplicitTransactionCounter := 0;
     if Status <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner.FOwner);
+      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
   end;
 end;
 
-constructor TZIBTransaction.Create(const Owner: TZIBTransactionManager);
+constructor TZIBTransaction.Create(const Owner: TZInterbase6Connection;
+  AutoCommit, ReadOnly: Boolean; const TPB: RawByteString);
 begin
   FOwner := Owner;
   FOpenCursors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FOpenUncachedLobs := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  fSavepoints := TObjectList.Create(True);
+  fTPB := TPB;
+  fTEB.tpb_length := Length(fTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  fTEB.tpb_address := Pointer(fTPB);
+  fSavepoints := TStringList.Create;
   fDoLog := True;
+  FReadOnly := ReadOnly;
+  FAutoCommit := AutoCommit;
+  ConSettings := Owner.ConSettings;
 end;
 
 procedure TZIBTransaction.DeRegisterOpencursor(const CursorRS: IZResultSet);
@@ -1582,7 +1628,7 @@ begin
   FOpenUncachedLobs.Delete(I);
 end;
 
-function TZIBTransaction.GetExplicitTransactionCount: Integer;
+function TZIBTransaction.GetTransactionLevel: Integer;
 begin
   Result := FExplicitTransactionCounter;
 end;
@@ -1592,11 +1638,21 @@ begin
   Result := FOpenCursors.Count;
 end;
 
+function TZIBTransaction.GetTPB: RawByteString;
+begin
+  Result := FTPB;
+end;
+
 function TZIBTransaction.GetTrHandle: PISC_TR_HANDLE;
 begin
   if FTrHandle = 0 then
     StartTransaction;
   Result := @FTrHandle
+end;
+
+function TZIBTransaction.IsReadOnly: Boolean;
+begin
+  Result := FReadOnly;
 end;
 
 procedure TZIBTransaction.RegisterOpencursor(const CursorRS: IZResultSet);
@@ -1616,9 +1672,9 @@ var I: Integer;
 begin
   FTrHandle := 0;
   fSavepoints.Clear;
-  I := FOwner.FTransactions.IndexOf(Self);
+  I := FOwner.FTransactions[FReadOnly].IndexOf(Self);
   if I > -1 then
-    FOwner.FTransactions.Delete(I);
+    FOwner.FTransactions[FReadOnly].Delete(I);
   for i := FOpenUncachedLobs.Count -1 downto 0 do
     if Supports(IZBlob(FOpenUncachedLobs[i]), IImmediatelyReleasable, ImmediatelyReleasable) and
        (Sender <> ImmediatelyReleasable) then
@@ -1627,14 +1683,14 @@ end;
 
 procedure TZIBTransaction.Rollback;
 var Status: ISC_STATUS;
-  IBSavePoint: TZIBSavePoint;
+  S: RawByteString;
 begin
   if fSavepoints.Count > 0 then begin
-    IBSavePoint := TZIBSavePoint(fSavepoints[fSavepoints.Count-1]);
-    IBSavePoint.RollBackTo;
-    FExplicitTransactionCounter := fSavepoints.Count+1;
-  end else if FTrHandle <> 0 then with FOwner.FOwner do try
-    if FOwner.FOwner.FHardCommit or
+    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    FOwner.ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
+  end else if FTrHandle <> 0 then with FOwner do try
+    if FHardCommit or
       ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then Status := FPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle)
@@ -1642,11 +1698,11 @@ begin
       fDoCommit := False;
       fDoLog := False;
       Status := FPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
-      FOwner.RemoveTransactionFromList(Self);
+      ReleaseTransaction(Self);
     end;
     FExplicitTransactionCounter := 0;
     if Status <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner.FOwner);
+      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
@@ -1654,23 +1710,19 @@ begin
 end;
 
 function TZIBTransaction.StartTransaction: Integer;
-var IBSavePoint: TZIBSavePoint;
+var S: String;
 begin
-//  {$IFDEF DEBUG}Assert(FTrHandle = 0, 'Wrong transaction behavior');{$ENDIF}
-  if FTrHandle = 0 then begin
-    Result := 1;
-    with fOwner.FOwner do begin
-      if fTEBs[AutoCommit][ReadOnly][TransactIsolationLevel].tpb_address = nil then
-        fOwner.FOwner.GenerateTDBAndTEB(AutoCommit, ReadOnly, TransactIsolationLevel);
-      if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEBs[AutoCommit][ReadOnly][TransactIsolationLevel]) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner.FOwner, lcTransaction);
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
-    end;
+  if FTrHandle = 0 then with FOwner do begin
+    Result := Ord(not AutoCommit);
+    fTEB.db_handle := @FHandle;
+    if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEB) <> 0 then
+      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner, lcTransaction);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
   end else begin
-    IBSavePoint := TZIBSavePoint.Create(Self);
-    fSavepoints.Add(IBSavePoint);
-    Result := fSavepoints.Count +1;
-    IBSavePoint.Savepoint;
+    Result := FSavePoints.Count+2;
+    S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);
+    FOwner.ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S)+2;
   end;
   FExplicitTransactionCounter := Result;
 end;
@@ -1690,46 +1742,6 @@ begin
     IZResultSet(P).Last; //now the pointer will be removed from the open cursor list
     IZResultSet(P).MoveAbsolute(RowNo); //restore current position
   end;
-end;
-
-{ TZIBSavePoint }
-
-constructor TZIBSavePoint.Create(const Owner: TZIBTransaction);
-begin
-  FName := IntToRaw(Owner.FTrHandle)+'_'+IntToRaw(NativeUint(Self));
-end;
-
-procedure TZIBSavePoint.InternalExecute(const Stmt: RawbyteString);
-begin
-  with fOwner.FOwner.FOwner do begin
-    if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle,
-      @fOwner.FTrHandle, Length(Stmt), Pointer(Stmt), GetDialect, nil) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, fOwner.FOwner.FOwner, lcTransaction);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, Stmt);
-  end;
-end;
-
-procedure TZIBSavePoint.Release;
-var r: RawByteString;
-begin
-  R := 'RELEASE SAVEPOINT '+FName;
-  InternalExecute(R);
-  fOwner.fSavepoints.Remove(Self)
-end;
-
-procedure TZIBSavePoint.RollBackTo;
-var r: RawByteString;
-begin
-  R := 'ROLLBACK TO '+FName;
-  InternalExecute(R);
-  fOwner.fSavepoints.Remove(Self)
-end;
-
-procedure TZIBSavePoint.Savepoint;
-var r: RawByteString;
-begin
-  R := 'SAVEPOINT '+FName;
-  InternalExecute(R);
 end;
 
 { TZInterbase6Sequence }

@@ -115,7 +115,6 @@ type
     procedure Test1049821;
     procedure Test1045500;
     procedure Test1036916;
-    procedure Test1004584;
     procedure TestParamUx;
     procedure TestTicket228;
     procedure TestSF270_1;
@@ -124,6 +123,7 @@ type
     procedure TestSF286_getBigger;
     procedure TestSF286_getSmaller;
     procedure TestSF301;
+    procedure TestSF238;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1729,26 +1729,6 @@ begin
   end;
 end;
 
-{**
-   Test for Bug#1004584 - problem start transaction in non autocommit mode
-}
-procedure ZTestCompCoreBugReport.Test1004584;
-begin
-  if SkipForReason(srClosedBug) then Exit;
-
-  CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
-  Connection.Disconnect;
-  Connection.AutoCommit := False;
-  Connection.TransactIsolationLevel := tiSerializable;
-  try
-    Connection.StartTransaction;
-    Fail('StartTransaction should be allowed only in AutoCommit mode');
-  except on E: Exception do
-    CheckNotTestFailure(E);
-  end;
-  Connection.Disconnect;
-end;
-
 procedure ZTestCompCoreBugReport.TestParamUx;
 var
   Query: TZQuery;
@@ -1806,13 +1786,76 @@ begin
 
   Query := CreateQuery;
   try
+    Query.Connection.Connect;
     Query.SQL.Text := 'SELECT * from people';
     Connection.StartTransaction;
     Query.Open;
-    //Connection.Commit; <- this crash with FB only
+    //Connection.Commit; //<- this crash with FB/IB and MSSQL(oledb,odbc,ado) only
     Check(Query.RecordCount = 5);
     Query.Close;
   finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF238;
+const TEST_ROW_ID = 1000;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+  Query := CreateQuery;
+  try
+    CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
+    Connection.Disconnect;
+    Connection.AutoCommit := True;
+    Connection.TransactIsolationLevel := tiSerializable;
+    Connection.Connect;
+    Query.SQL.Text := 'select p_id, p_name from people where p_id > '+IntToStr(TEST_ROW_ID);
+    Query.Open;
+    CheckEquals(1, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+1;
+    Query.Fields[1].AsString := 'marsupilami';
+    Query.Post;
+    CheckEquals(2, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+2;
+    Query.Fields[1].AsString := 'FrOst';
+    Query.Post;
+    CheckEquals(3, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+3;
+    Query.Fields[1].AsString := 'Mark';
+    Query.Post;
+    CheckEquals(4, Connection.StartTransaction, 'The txn-level');
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+4;
+    Query.Fields[1].AsString := 'EgonHugeist';
+    Query.Post;
+    CheckEquals(4, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Query.Open;
+    CheckEquals(4, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(3, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+    Connection.Rollback;
+    Query.Open;
+    CheckEquals(0, Query.RecordCount, 'the record count after rollback');
+    Query.Close;
+  finally
+    Query.SQL.Text := 'delete from people where p_id > '+IntToStr(TEST_ROW_ID);
+    Query.ExecSQL;
     Query.Free;
   end;
 end;

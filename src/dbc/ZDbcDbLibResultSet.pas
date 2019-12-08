@@ -414,7 +414,7 @@ begin
   for i := 1 to DBLibColumnCount do
   begin
     ColumnInfo := TZDBLIBColumnInfo.Create;
-    if FDBLibConnection.FreeTDS then begin
+    if FPlainDriver.DBLibraryVendorType = lvtFreeTDS then begin
       tdsColInfo.SizeOfStruct := SizeOf(TTDSDBCOL);
       FillChar(tdsColInfo.Name[0], tdsColInfo.SizeOfStruct- SizeOf(DBInt), #0);
       if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @tdsColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
@@ -515,7 +515,7 @@ end;
 procedure TZDBLibResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 begin
-  raise Exception.Create(SUnsupportedOperation);
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 {$ENDIF}
 
@@ -978,7 +978,7 @@ Fill: Fillchar(Result, SizeOf(TZTimeStamp), #0)
     else begin
       //Perfect conversion no need to crack and reencode the date.
       if TDSType = tdsDateTime then begin
-Enc:    if FDBLibConnection.FreeTDS //type diff
+Enc:    if FPlainDriver.DBLibraryVendorType = lvtFreeTDS //type diff
         then DT := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
         else DT := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000);
         DecodeDateTimeToTimeStamp(DT, Result);

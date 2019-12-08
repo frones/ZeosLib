@@ -128,7 +128,8 @@ type
 
     FLoginPrompt: Boolean;
     FStreamedConnected: Boolean;
-    FExplicitTransactionCounter: Integer;
+    FExplicitTransactionCounter: Integer; //this counter is required to find out setting autocommit mode back to True without loosing changes
+    FTxnLevel: Integer; //the current nested_transaction/savepoint level
     FSQLHourGlass: Boolean;
     FDesignConnection: Boolean;
 
@@ -215,7 +216,7 @@ type
     procedure Reconnect;
     function Ping: Boolean; virtual;
 
-    procedure StartTransaction; virtual;
+    function StartTransaction: Integer; virtual;
     procedure Commit; virtual;
     procedure Rollback; virtual;
 
@@ -603,17 +604,19 @@ end;
 }
 procedure TZAbstractConnection.SetAutoCommit(Value: Boolean);
 begin
-  if FAutoCommit <> Value then
-  begin
+  if FAutoCommit <> Value then begin
     if FExplicitTransactionCounter > 0 then
       raise Exception.Create(SInvalidOperationInTrans);
     FAutoCommit := Value;
-    ShowSQLHourGlass;
-    try
-      if FConnection <> nil then
+    if Value then
+      FExplicitTransactionCounter := 0;
+    if FConnection <> nil then begin
+      if not FConnection.IsClosed then ShowSQLHourGlass;
+      try
         FConnection.SetAutoCommit(Value);
-    finally
-      HideSqlHourGlass
+      finally
+        if not FConnection.IsClosed then HideSqlHourGlass
+      end;
     end;
   end;
 end;
@@ -624,17 +627,17 @@ end;
 }
 procedure TZAbstractConnection.SetReadOnly(Value: Boolean);
 begin
-  if FReadOnly <> Value then
-  begin
+  if FReadOnly <> Value then begin
     if FExplicitTransactionCounter > 0 then
       raise Exception.Create(SInvalidOperationInTrans);
     FReadOnly := Value;
-    ShowSQLHourGlass;
-    try
-      if FConnection <> nil then
+    if FConnection <> nil then begin
+      if not FConnection.IsClosed then ShowSQLHourGlass;
+      try
         FConnection.SetReadOnly(Value);
-    finally
-      HideSqlHourGlass
+      finally
+        if not FConnection.IsClosed then HideSqlHourGlass
+      end;
     end;
   end;
 end;
@@ -649,12 +652,13 @@ begin
   if FTransactIsolationLevel <> Value then
   begin
     FTransactIsolationLevel := Value;
-    ShowSqlhourGlass;
-    try
-      if FConnection <> nil then
+    if FConnection <> nil then begin
+      if not FConnection.IsClosed then ShowSQLHourGlass;
+      try
         FConnection.SetTransactionIsolation(Value);
-    finally
-      HideSqlHourGlass
+      finally
+        if not FConnection.IsClosed then HideSqlHourGlass
+      end;
     end;
   end;
 end;
@@ -914,6 +918,10 @@ begin
     finally
       HideSqlHourGlass;
     end;
+    FTxnLevel := Ord(not FAutoCommit);
+    FExplicitTransactionCounter := FTxnLevel;
+    if not FAutoCommit then
+      DoStartTransaction;
 
     if not FConnection.IsClosed then
       DoAfterConnect;
@@ -943,8 +951,7 @@ end;
 }
 procedure TZAbstractConnection.Disconnect;
 begin
-  if FConnection <> nil then
-  begin
+  if FConnection <> nil then begin
     DoBeforeDisconnect;
 
     ShowSqlHourGlass;
@@ -958,7 +965,8 @@ begin
       FConnection := nil;
       HideSqlHourGlass;
     end;
-
+    FTxnLevel := 0;
+    FExplicitTransactionCounter := 0;
     DoAfterDisconnect;
   end;
 end;
@@ -1034,16 +1042,21 @@ begin
 end;
 
 {**
-  Commits the current transaction.
+  Starts a new transaction or saves the transaction.
 }
-procedure TZAbstractConnection.StartTransaction;
+function TZAbstractConnection.StartTransaction: Integer;
 begin
-  CheckAutoCommitMode;
-
-  if FExplicitTransactionCounter = 0 then
-    AutoCommit := False;
+  CheckConnected;
+  ShowSQLHourGlass;
+  try
+    FTxnLevel := FConnection.StartTransaction;
+    FAutoCommit := False;
+  finally
+    HideSQLHourGlass;
+  end;
+  FExplicitTransactionCounter := FTxnLevel;
+  Result := FTxnLevel;
   DoStartTransaction;
-  Inc(FExplicitTransactionCounter);
 end;
 
 {**
@@ -1052,38 +1065,29 @@ end;
 type //To get protected methodes
   THack_ZAbstractDataset = Class(TZAbstractDataset);
 procedure TZAbstractConnection.Commit;
-var
-  ExplicitTran: Boolean;
-  i: Integer;
+var i: Integer;
 begin
   CheckConnected;
   CheckNonAutoCommitMode;
 
-  ExplicitTran := FExplicitTransactionCounter > 0;
-  if FExplicitTransactionCounter < 2 then
-  //when 0 then AutoCommit was turned off, when 1 StartTransaction was used
-  begin
-    ShowSQLHourGlass;
-    try
-      FConnection.Commit;
- { TODO -oEgonHugeist : Change this code sequence on 7.3! My automation idea simply is wrong! A commit vs. commitupdate(clear the cache) shouldn't be same! }
-      //See: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=19800
-      for i := 0 to FDatasets.Count -1 do
-        if (TObject(FDatasets[i]) is TZAbstractDataset) and (not THack_ZAbstractDataset(FDatasets[i]).UpdatesPending) then
-          if Assigned(FDatasets[i]) then
-            THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
-    finally
-      HideSQLHourGlass;
-    end;
-
-    FExplicitTransactionCounter := 0;
-    if ExplicitTran then
-      AutoCommit := True;
-
-    DoCommit;
-  end
-  else
+  ShowSQLHourGlass;
+  try
+    FConnection.Commit;
+{ TODO -oEgonHugeist : Change this code sequence on 7.3! My automation idea simply is wrong! A commit vs. commitupdate(clear the cache) shouldn't be same! }
+    //See: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=19800
+    for i := 0 to FDatasets.Count -1 do
+      if (TObject(FDatasets[i]) is TZAbstractDataset) and (not THack_ZAbstractDataset(FDatasets[i]).UpdatesPending) then
+        if Assigned(FDatasets[i]) then
+          THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
+  finally
     Dec(FExplicitTransactionCounter);
+    HideSQLHourGlass;
+    FAutoCommit := FConnection.GetAutoCommit;
+    Dec(FTxnLevel);
+    if FTxnLevel = 0 then
+      FTxnLevel := Ord(not FAutoCommit);
+  end;
+  DoCommit;
 end;
 
 procedure TZAbstractConnection.CommitPrepared(const transactionid: string);
@@ -1101,32 +1105,22 @@ end;
   Rollbacks the current transaction.
 }
 procedure TZAbstractConnection.Rollback;
-var
-  ExplicitTran: Boolean;
 begin
   CheckConnected;
   CheckNonAutoCommitMode;
 
-  ExplicitTran := FExplicitTransactionCounter > 0;
-  if FExplicitTransactionCounter < 2 then
-  //when 0 then AutoCommit was turned off, when 1 StartTransaction was used
-  begin
-    ShowSQLHourGlass;
-    try
-      try
-        FConnection.RollBack;
-      finally
-        FExplicitTransactionCounter := 0;
-        if ExplicitTran then
-          AutoCommit := True;
-      end;
-    finally
-      HideSQLHourGlass;
-    end;
-    DoRollback;
-  end
-  else
+  ShowSQLHourGlass;
+  try
+    FConnection.RollBack;
+  finally
     Dec(FExplicitTransactionCounter);
+    HideSQLHourGlass;
+    FAutoCommit := FConnection.GetAutoCommit;
+    Dec(FTxnLevel);
+    if FTxnLevel = 0 then
+      FTxnLevel := Ord(not FAutoCommit);
+  end;
+  DoRollback;
 end;
 
 procedure TZAbstractConnection.RollbackPrepared(const transactionid: string);

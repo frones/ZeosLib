@@ -104,7 +104,6 @@ type
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
-    procedure RaiseUnsupportedException;
     procedure ReleaseConnection; virtual;
     property MaxFieldSize: Integer read FMaxFieldSize write FMaxFieldSize;
     property MaxRows: Integer read FMaxRows write FMaxRows;
@@ -767,14 +766,6 @@ begin
   end;
 end;
 
-{**
-  Raises unsupported operation exception.
-}
-procedure TZAbstractStatement.RaiseUnsupportedException;
-begin
-  raise EZSQLException.Create(SUnsupportedOperation);
-end;
-
 procedure TZAbstractStatement.ReleaseConnection;
 begin
   FConnection := nil;
@@ -1034,7 +1025,7 @@ end;
 }
 procedure TZAbstractStatement.Cancel;
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -3226,7 +3217,7 @@ begin
     aArray.VIsNullArrayVariantType := vtNull;
     BindArray(Index, aArray);
   end else
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -3353,7 +3344,7 @@ begin
     PZArray(BindValue.Value).VIsNullArrayType := Ord(SQLType);
     PZArray(BindValue.Value).VIsNullArrayVariantType := VariantType;
   end else
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -3519,7 +3510,7 @@ begin
         else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetBlob(ParameterIndex, stBinaryStream, TempBlob);
         TempBlob := nil;
       end else
-        raise EZSQLException.Create(sUnsupportedOperation);
+        raise EZUnsupportedException.Create(sUnsupportedOperation);
     else IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(ParameterIndex, stUnknown);
   end;
 end;
@@ -3585,7 +3576,7 @@ begin
     stUnicodeString: if not (VariantType in [vtUnicodeString, vtCharRec]) then
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
     stArray, stDataSet:
-          raise Exception.Create(sUnsupportedOperation);
+          raise EZUnsupportedException.Create(sUnsupportedOperation);
   end;
   Len := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
   if (BindList.ParamTypes[ParamIndex] <> pctResultSet) then
@@ -4144,15 +4135,13 @@ end;
 
 function TZAbstractCallableStatement.Execute(const SQL: ZWideString): Boolean;
 begin
-  Result := False;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZAbstractCallableStatement.Execute(
   const SQL: RawByteString): Boolean;
 begin
-  Result := False;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZAbstractCallableStatement.ExecutePrepared: Boolean;
@@ -4174,15 +4163,13 @@ end;
 function TZAbstractCallableStatement.ExecuteQuery(
   const SQL: RawByteString): IZResultSet;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZAbstractCallableStatement.ExecuteQuery(
   const SQL: ZWideString): IZResultSet;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZAbstractCallableStatement.ExecuteQueryPrepared: IZResultSet;
@@ -4212,15 +4199,13 @@ end;
 function TZAbstractCallableStatement.ExecuteUpdate(
   const SQL: RawByteString): Integer;
 begin
-  Result := -1;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZAbstractCallableStatement.ExecuteUpdate(
   const SQL: ZWideString): Integer;
 begin
-  Result := -1;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZAbstractCallableStatement.ExecuteUpdatePrepared: Integer;

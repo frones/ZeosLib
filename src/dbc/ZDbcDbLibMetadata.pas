@@ -1140,7 +1140,7 @@ end;
 function TZDbLibDatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  Result := True;
+  Result := Level <> tiNone;
 end;
 
 {**
@@ -1798,18 +1798,14 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQLType: TZSQLType;
   tmp: String;
-  ResultHasRows: Boolean;
 begin
-  ResultHasRows := False;
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
   with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+'sp_columns '+
       ComposeObjectString(TableNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+
       ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do
   begin
-    while Next do
-    begin
-      ResultHasRows := True;
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdateString(CatalogNameIndex, GetStringByName('TABLE_QUALIFIER'));
       Result.UpdateString(SchemaNameIndex, GetStringByName('TABLE_OWNER'));
@@ -1867,7 +1863,7 @@ begin
     Close;
   end;
 
-  if ResultHasRows then begin
+  if not Result.IsBeforeFirst then begin
 
     // hint by Jan: I am not sure wether this statement still works with SQL Server 2000 or before.
     Result.BeforeFirst;

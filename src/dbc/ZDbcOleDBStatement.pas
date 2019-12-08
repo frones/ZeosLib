@@ -766,7 +766,7 @@ var
   end;
 label W_Len, WStr;
 begin
-  {$R-}
+  {.$R-}
   MaxL := 0; CPL := 0; W1 := 0; Native := False;//satisfy the compiler
   //http://technet.microsoft.com/de-de/library/ms174522%28v=sql.110%29.aspx
   for i := 0 to BindList.Count -1 do begin
@@ -995,13 +995,13 @@ W_Len:                if PLen^ > MaxL then
         DBTYPE_DATE:  PDateTime(Data)^ := ArrayValueToDateTime(ZArray, j, ConSettings.WriteFormatSettings);
         DBTYPE_DBDATE: begin
                         if ZArray.VArrayVariantType = vtDate then
-                          PD := @TZDateDynArray(ZData)[i]
+                          PD := @TZDateDynArray(ZData)[J]
                         else begin
                           PD := @D;
                           if (ZArray.VArrayVariantType in [vtNull, vtDateTime])
-                          then DecodeDateTimeToDate(TDateTimeDynArray(ZData)[i], D)
+                          then DecodeDateTimeToDate(TDateTimeDynArray(ZData)[J], D)
                           else begin
-                            DateTimeTemp := ArrayValueToDate(ZArray, I, ConSettings^.WriteFormatSettings);
+                            DateTimeTemp := ArrayValueToDate(ZArray, J, ConSettings^.WriteFormatSettings);
                             DecodeDateTimeToDate(DateTimeTemp, D);
                           end;
                         end;
@@ -1014,13 +1014,13 @@ W_Len:                if PLen^ > MaxL then
 
         DBTYPE_DBTIME, DBTYPE_DBTIME2: begin
                         if ZArray.VArrayVariantType = vtTime then
-                          PT := @TZTimeDynArray(ZData)[i]
+                          PT := @TZTimeDynArray(ZData)[J]
                         else begin
                           PT := @T;
                           if (ZArray.VArrayVariantType in [vtNull, vtDateTime])
-                          then DecodeDateTimeToTime(TDateTimeDynArray(ZData)[i], T)
+                          then DecodeDateTimeToTime(TDateTimeDynArray(ZData)[J], T)
                           else begin
-                            DateTimeTemp := ArrayValueToTime(ZArray, I, ConSettings^.WriteFormatSettings);
+                            DateTimeTemp := ArrayValueToTime(ZArray, J, ConSettings^.WriteFormatSettings);
                             DecodeDateTimeToTime(DateTimeTemp, T);
                           end;
                         end;
@@ -1037,13 +1037,13 @@ W_Len:                if PLen^ > MaxL then
                       end;
         DBTYPE_DBTIMESTAMP, DBTYPE_DBTIMESTAMPOFFSET: begin
                         if ZArray.VArrayVariantType = vtTimeStamp then
-                          PTS := @TZTimeStampDynArray(ZData)[i]
+                          PTS := @TZTimeStampDynArray(ZData)[J]
                         else begin
                           PTS := @TS;
                           if (ZArray.VArrayVariantType in [vtNull, vtDateTime])
-                          then DecodeDateTimeToTimeStamp(TDateTimeDynArray(ZData)[i], TS)
+                          then DecodeDateTimeToTimeStamp(TDateTimeDynArray(ZData)[J], TS)
                           else begin
-                            DateTimeTemp := ArrayValueToDatetime(ZArray, I, ConSettings^.WriteFormatSettings);
+                            DateTimeTemp := ArrayValueToDatetime(ZArray, J, ConSettings^.WriteFormatSettings);
                             DecodeDateTimeToTimeStamp(DateTimeTemp, TS);
                           end;
                         end;

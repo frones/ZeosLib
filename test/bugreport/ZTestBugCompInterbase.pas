@@ -83,7 +83,6 @@ type
     procedure Test897631;
     procedure Test909181;
     procedure Test984305;
-    procedure Test1004584;
     procedure Test1021705;
     procedure Test_Decimal;
     procedure Test_Ticket54;
@@ -121,26 +120,6 @@ uses
 function ZTestCompInterbaseBugReport.GetSupportedProtocols: string;
 begin
   Result := pl_all_interbase;
-end;
-
-{**
-   Test for Bug#1004584 - problem start transaction in non autocommit mode
-}
-procedure ZTestCompInterbaseBugReport.Test1004584;
-begin
-  if SkipForReason(srClosedBug) then Exit;
-
-  CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
-  Connection.Disconnect;
-  Connection.AutoCommit := False;
-  Connection.TransactIsolationLevel := tiSerializable;
-  try
-    Connection.StartTransaction;
-    Fail('StartTransaction should be allowed only in AutoCommit mode');
-  except on E: Exception do
-    CheckNotTestFailure(E);
-  end;
-  Connection.Disconnect;
 end;
 
 {**
@@ -770,7 +749,11 @@ begin
     Query.Params.CreateParam(ftInteger, 'val2', ptInPut);
     Query.Params.CreateParam(ftInteger, 'largest', ptOutPut);
     Query.Params.CreateParam(ftInteger, 'smallest', ptOutPut);
+    {$IFDEF WITH_ASLARGEINT}
     Query.Params.CreateParam(ftLargeInt, 'square',   ptOutPut);
+    {$ELSE WITH_ASLARGEINT}
+    Query.Params.CreateParam(ftInteger, 'square',   ptOutPut);
+    {$ENDIF}
     Query.Params[0].AsInteger := 10;
     Query.Params[1].AsInteger := 20;
     Query.ExecSQL;
@@ -815,7 +798,11 @@ begin
     Query.SQL.Text := SQL;
     Query.Params.CreateParam(ftInteger, 'largest', ptOutPut);
     Query.Params.CreateParam(ftInteger, 'smallest', ptOutPut);
+    {$IFDEF WITH_ASLARGEINT}
     Query.Params.CreateParam(ftLargeInt, 'square',   ptOutPut);
+    {$ELSE WITH_ASLARGEINT}
+    Query.Params.CreateParam(ftInteger, 'square',   ptOutPut);
+    {$ENDIF WITH_ASLARGEINT}
     Query.Params[0].AsInteger := 10;
     Query.Params[1].AsInteger := 20;
     Query.ExecSQL;
@@ -1070,6 +1057,7 @@ begin
     Query.SQL.Text := 'SELECT RDB$RELATION_NAME' +
       ' FROM RDB$RELATIONS' +
       ' WHERE RDB$SYSTEM_FLAG=0;';
+    Connection.Connect;
     Connection.StartTransaction;
     Query.Open;
     Connection.Commit;

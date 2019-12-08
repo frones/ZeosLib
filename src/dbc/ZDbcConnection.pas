@@ -63,8 +63,8 @@ uses
   {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
-  ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
+  ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken, ZVariant,
+  ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZDbcLogging;
 
 type
 
@@ -129,6 +129,7 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
     FChunkSize: Integer; //indicates reading / writing lobs in Chunks of x Byte
     FClientCodePage: String;
@@ -137,6 +138,9 @@ type
     FTestMode: Byte;
     {$ENDIF}
     procedure InternalCreate; virtual; abstract;
+    procedure InternalClose; virtual; abstract;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; virtual;
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; virtual;
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
     procedure ResetCurrentClientCodePage(const Name: String;
       IsStringFieldCPConsistent: Boolean);
@@ -147,7 +151,6 @@ type
     function GetAutoEncodeStrings: Boolean; //EgonHugeist
     procedure SetAutoEncodeStrings(const Value: Boolean);
     procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
-    procedure RaiseUnsupportedException;
 
     procedure RegisterOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
     procedure RegisterStatement(const Value: IZStatement);
@@ -202,6 +205,7 @@ type
 
     procedure Commit; virtual;
     procedure Rollback; virtual;
+    function StartTransaction: Integer; virtual; abstract;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
     procedure PrepareTransaction(const {%H-}transactionid: string);virtual;
@@ -215,7 +219,7 @@ type
 
     procedure Open; virtual;
     procedure Close;
-    procedure InternalClose; virtual; abstract;
+
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
     function IsClosed: Boolean; virtual;
 
@@ -257,7 +261,7 @@ type
     procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload; virtual;
 
     function UseMetadata: boolean;
-    procedure SetUseMetadata(Value: Boolean);
+    procedure SetUseMetadata(Value: Boolean); virtual;
     function GetServerProvider: TZServerProvider; virtual;
   protected
     property Closed: Boolean read IsClosed write FClosed;
@@ -364,12 +368,60 @@ type
 
   TZAbstractSequenceClass = class of TZAbstractSequence;
 
+type
+  TZSavePointQueryType = (spqtSavePoint, spqtCommit, spqtRollback);
+
+const
+  cSavePoint = 'SAVEPOINT ';
+  cSaveTrans = 'SAVE TRANSACTION ';
+  cReleaseSP = 'RELEASE SAVEPOINT ';
+  cEmpty = '';
+  cRollbackTran = 'ROLLBACK TRANSACTION ';
+  cRollbackTo = 'ROLLBACK TO ';
+  cUnknown = '';
+  //(*
+  cSavePointSyntaxW: array[TZServerProvider, TZSavePointQueryType] of UnicodeString =
+    ( ({spUnknown}    cUnknown,   cUnknown,   cUnknown),
+      ({spMSSQL}      cSaveTrans, cEmpty,     cRollbackTran),
+      ({spMSJet}      cUnknown,   cUnknown,   cUnknown),
+      ({spOracle}     cSavePoint, cEmpty,     cRollbackTo),
+      ({spASE}        cSaveTrans, cEmpty,     cRollbackTran),
+      ({spASA}        cSavePoint, cReleaseSP, cRollbackTo),
+      ({spPostgreSQL} cSavePoint, cReleaseSP, cRollbackTo),
+      ({spIB_FB}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spMySQL}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spNexusDB}    cUnknown,   cUnknown,   cUnknown),
+      ({spSQLite}     cSavePoint, cReleaseSP, cRollbackTo),
+      ({spDB2}        cUnknown,   cUnknown,   cUnknown),
+      ({spAS400}      cUnknown,   cUnknown,   cUnknown),
+      ({spInformix}   cUnknown,   cUnknown,   cUnknown),
+      ({spCUBRID}     cUnknown,   cUnknown,   cUnknown),
+      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
+    );
+  cSavePointSyntaxA: array[TZServerProvider, TZSavePointQueryType] of RawByteString =
+    ( ({spUnknown}    cUnknown,   cUnknown,   cUnknown),
+      ({spMSSQL}      cSaveTrans, cEmpty,     cRollbackTran),
+      ({spMSJet}      cUnknown,   cUnknown,   cUnknown),
+      ({spOracle}     cSavePoint, cEmpty,     cRollbackTo),
+      ({spASE}        cSaveTrans, cEmpty,     cRollbackTran),
+      ({spASA}        cSavePoint, cReleaseSP, cRollbackTo),
+      ({spPostgreSQL} cSavePoint, cReleaseSP, cRollbackTo),
+      ({spIB_FB}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spMySQL}      cSavePoint, cReleaseSP, cRollbackTo),
+      ({spNexusDB}    cUnknown,   cUnknown,   cUnknown),
+      ({spSQLite}     cSavePoint, cReleaseSP, cRollbackTo),
+      ({spDB2}        cUnknown,   cUnknown,   cUnknown),
+      ({spAS400}      cUnknown,   cUnknown,   cUnknown),
+      ({spInformix}   cUnknown,   cUnknown,   cUnknown),
+      ({spCUBRID}     cUnknown,   cUnknown,   cUnknown),
+      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
+    );
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
   ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties, StrUtils,
   ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}, ZDbcLogging
+  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -394,6 +446,7 @@ const
     {spFoxPro}    nil
     );
 
+  //*)
 { TZAbstractDriver }
 
 {**
@@ -884,8 +937,7 @@ begin
 //  Would this work...?
 //  for i := fRegisteredStatements.Count-1 downto 0 do
 //   IZStatement(fRegisteredStatements[i]).Cancel;
-  Result := 1;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1050,14 +1102,6 @@ begin
 end;
 
 {**
-  Raises unsupported operation exception.
-}
-procedure TZAbstractDbcConnection.RaiseUnsupportedException;
-begin
-  raise EZSQLException.Create(SUnsupportedOperation);
-end;
-
-{**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
   SQL statements without parameters are normally
@@ -1112,8 +1156,7 @@ end;
 function TZAbstractDbcConnection.CreateRegularStatement(
   Info: TStrings): IZStatement;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1175,7 +1218,7 @@ end;
 
 procedure TZAbstractDbcConnection.PrepareTransaction(const transactionid: string);
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1187,8 +1230,7 @@ end;
 function TZAbstractDbcConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1261,8 +1303,7 @@ end;
 function TZAbstractDbcConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1272,8 +1313,7 @@ end;
 }
 function TZAbstractDbcConnection.CreateNotification(const Event: string): IZNotification;
 begin
-  Result := nil;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1287,10 +1327,8 @@ function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
 begin
   if TZDefaultProviderSequenceClasses[GetServerProvider] <> nil then
     Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(Self, Sequence, BlockSize)
-  else begin
-    Result := nil;
-    RaiseUnsupportedException;
-  end;
+  else
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1352,12 +1390,12 @@ end;
 }
 procedure TZAbstractDbcConnection.Commit;
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractDbcConnection.CommitPrepared(const transactionid: string);
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1369,12 +1407,12 @@ end;
 }
 procedure TZAbstractDbcConnection.Rollback;
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractDbcConnection.RollbackPrepared(const transactionid: string);
 begin
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1384,8 +1422,7 @@ end;
 }
 function TZAbstractDbcConnection.PingServer: Integer;
 begin
-  Result := 1;
-  RaiseUnsupportedException;
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1396,6 +1433,18 @@ end;
 function TZAbstractDbcConnection.EscapeString(const Value : RawByteString) : RawByteString;
 begin
   Result := EncodeCString(Value);
+end;
+
+procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  ExecuteImmediat(ZRawToUnicode(SQL, ConSettings.CTRL_CP), LoggingCategory);
+end;
+
+procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: UnicodeString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  ExecuteImmediat(ZUnicodeToRaw(SQL, ConSettings.ClientCodePage.CP), LoggingCategory);
 end;
 
 {**

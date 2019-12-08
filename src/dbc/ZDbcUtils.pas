@@ -2126,7 +2126,7 @@ begin
         stAsciiStream,
         stUnicodeStream,
         stBinaryStream: TInterfaceDynArray(Dest):= TInterfaceDynArray(aArray);
-        else raise EZSQLException.Create(sUnsupportedOperation);
+        else Raise EZUnsupportedException.Create(SUnsupportedOperation);
       end;
     end;
 end;
@@ -2142,6 +2142,9 @@ begin
       {$IFDEF UNICODE}vtString,{$Endif}
       vtUnicodeString:  TUnicodeStringDynArray(Dest) := nil;
       vtCharRec:        TZCharRecDynArray(Dest) := nil;
+      vtDate:           TZDateDynArray(Dest) := nil;
+      vtTime:           TZTimeDynArray(Dest) := nil;
+      vtTimeStamp:      TZTimeStampDynArray(Dest) := nil;
       else case SQLType of
         stBoolean:      TBooleanDynArray(Dest)  := nil;
         stByte:         TByteDynArray(Dest)     := nil;
@@ -2164,7 +2167,7 @@ begin
         stAsciiStream,
         stUnicodeStream,
         stBinaryStream: TInterfaceDynArray(Dest):= nil;
-        else raise EZSQLException.Create(sUnsupportedOperation);
+        else raise EZUnsupportedException.Create(sUnsupportedOperation);
       end;
     end;
 end;

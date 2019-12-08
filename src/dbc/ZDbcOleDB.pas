@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
-  ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
+  ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer, ZClasses,
   ZGenericSqlAnalyser, ZURL, ZCompatibility, ZDbcOleDBUtils,
   ZOleDB, ZPlainOleDBDriver, ZOleDBToken;
 
@@ -81,7 +81,6 @@ type
     function SupportsMARSConnection: Boolean;
   end;
 
-  TOleCheckAction = (ocaOther, ocaStartTransaction, ocaCommit, ocaRollback);
   {** Implements a generic OleDB Connection. }
   TZOleDBConnection = class(TZAbstractDbcConnection, IZOleDBConnection)
   private
@@ -94,13 +93,19 @@ type
     FServerProvider: TZServerProvider;
     fTransaction: ITransactionLocal;
     fCatalog: String;
-    procedure StopTransaction;
+    FSavePoints: TStrings;
+    FAutoCommitTIL: ISOLATIONLEVEL;
+    FRestartTransaction: Boolean;
     procedure SetProviderProps(DBinit: Boolean);
-    procedure CheckError(Status: HResult; Action: TOleCheckAction; DoLog: Boolean);
+    procedure CheckError(Status: HResult; LoggingCateGory: TZLoggingCategory;
+      const LogMsg: RawByteString);
   protected
     procedure InternalCreate; override;
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
+    procedure InternalSetTIL(Level: TZTransactIsolationLevel);
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
+    procedure InternalClose; override;
   public
     destructor Destroy; override;
 
@@ -113,15 +118,14 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure SetAutoCommit(Value: Boolean); override;
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-
-    function StartTransaction: Integer;
-    procedure Commit; override;
-    procedure Rollback; override;
 
     procedure Open; override;
-    procedure InternalClose; override;
+
+    procedure Commit; override;
+    procedure Rollback; override;
+    procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function StartTransaction: Integer; override;
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
@@ -135,8 +139,7 @@ type
     procedure ClearWarnings; override;}
 
     function GetServerProvider: TZServerProvider; override;
-  public
-    { OleDB speziffic }
+  public { IZOleDBConnection }
     function GetSession: IUnknown;
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
@@ -146,20 +149,13 @@ type
 var
   {** The common driver manager object. }
   OleDBDriver: IZDriver;
-const
-  ROleCheckActions: array[TOleCheckAction] of RawByteString = ('',
-    'Start Transaction', 'Commit Transaction', 'Rollback Transaction');
-  {$IFDEF UNICODE}
-  UOleCheckActions: array[TOleCheckAction] of UnicodeString = ('',
-    'Start Transaction', 'Commit Transaction', 'Rollback Transaction');
-  {$ENDIF}
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
-uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils,
-  ZMessages, ZFastCode, ZConnProperties, ZDbcProperties;
+uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils, ZEncoding,
+  ZMessages, ZFastCode, ZConnProperties, ZDbcProperties, ZCollections;
 
 { TZOleDBDriver }
 
@@ -235,9 +231,37 @@ begin
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
   CheckCharEncoding('CP_UTF16');
-  fTransaction := nil;
+  FSavePoints := TStringList.Create;
   Inherited SetAutoCommit(True);
   //Open;
+end;
+
+const
+  TIL: array[TZTransactIsolationLevel] of ISOLATIONLEVEL =
+   ( ISOLATIONLEVEL_CHAOS,
+     ISOLATIONLEVEL_READUNCOMMITTED,
+     ISOLATIONLEVEL_READCOMMITTED,
+     ISOLATIONLEVEL_REPEATABLEREAD,
+     ISOLATIONLEVEL_SERIALIZABLE);
+
+procedure TZOleDBConnection.InternalSetTIL(Level: TZTransactIsolationLevel);
+var
+  rgDBPROPSET_DBPROPSET_SESSION: TDBProp;
+  prgPropertySets: TDBPROPSET;
+  SessionProperties: ISessionProperties;
+begin
+  SessionProperties := nil;
+  if (FDBCreateCommand.QueryInterface(IID_ISessionProperties, SessionProperties) = S_OK) then begin
+    prgPropertySets.cProperties     := 1;
+    prgPropertySets.guidPropertySet := DBPROPSET_SESSION;
+    prgPropertySets.rgProperties    := @rgDBPROPSET_DBPROPSET_SESSION;
+    rgDBPROPSET_DBPROPSET_SESSION.dwPropertyID := DBPROP_SESS_AUTOCOMMITISOLEVELS;
+    rgDBPROPSET_DBPROPSET_SESSION.dwOptions    := DBPROPOPTIONS_REQUIRED;
+    rgDBPROPSET_DBPROPSET_SESSION.colid        := DB_NULLID;
+    rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[TransactIsolationLevel];
+    CheckError(SessionProperties.SetProperties(1, @prgPropertySets), lcOther, EmptyRaw);
+    FAutoCommitTIL := TIL[TransactIsolationLevel];
+  end;
 end;
 
 {**
@@ -248,6 +272,7 @@ begin
   try
     inherited Destroy; // call Disconnect;
   finally
+    FreeAndNil(FSavePoints);
     FDBCreateCommand := nil;
     fDBInitialize := nil;
     fMalloc := nil;
@@ -255,13 +280,26 @@ begin
   end;
 end;
 
-procedure TZOleDBConnection.StopTransaction;
-begin
-  if Assigned(fTransaction) then begin
-    CheckError(fTransaction.Abort(nil, False, False), ocaRollback, True);
-    fTransaction := nil;
-    Dec(FpulTransactionLevel, Ord(FpulTransactionLevel > 0));
+procedure TZOleDBConnection.ExecuteImmediat(const SQL: UnicodeString;
+  LoggingCategory: TZLoggingCategory);
+var Cmd: ICommandText;
+  pParams: TDBPARAMS;
+  Status: HResult;
+  procedure DoLog;
+  begin
+    DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(SQL, ConSettings.ClientCodePage^.CP));
   end;
+begin
+  Cmd := CreateCommand;
+  FillChar(pParams, SizeOf(TDBParams), #0);
+  Status := Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL));
+  if Status <> S_OK then
+    OleDbCheck(Status, SQL, Self, nil);
+  Status := Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil);
+  if Status <> S_OK then
+    OleDbCheck(Status, SQL, Self, nil);
+  if DriverManager.HasLoggingListener then
+    DoLog;
 end;
 
 {**
@@ -287,9 +325,21 @@ end;
 procedure TZOleDBConnection.SetAutoCommit(Value: Boolean);
 begin
   if Value <> AutoCommit then begin
-    StopTransaction;
-    inherited SetAutoCommit(Value);
-    StartTransaction;
+    FRestartTransaction := AutoCommit;
+    if Closed
+    then AutoCommit := Value
+    else if Value then begin
+      FSavePoints.Clear;
+      while FpulTransactionLevel > 0 do begin
+        CheckError(fTransaction.Abort(nil, FRetaining, False), lcTransaction, 'Rollback Transaction');
+        Dec(FpulTransactionLevel);
+      end;
+      fTransaction := nil;
+      if FAutoCommitTIL <> TIL[TransactIsolationLevel] then
+        InternalSetTIL(TransactIsolationLevel);
+      AutoCommit := True;
+    end else
+      StartTransaction;
   end;
 end;
 
@@ -302,7 +352,7 @@ end;
 procedure TZOleDBConnection.SetCatalog(const Catalog: string);
 begin
   if Catalog <> '' then
-    if GetServerProvider in [spASE,spMSSQL] then begin
+    if GetServerProvider in [spASE,spMSSQL, spMySQL] then begin
       CreateRegularStatement(info).ExecuteUpdate('use '+Catalog);
       fCatalog := Catalog;
     end;
@@ -376,52 +426,33 @@ begin
       else
         cPropertySets := 0;
     try
-      CheckError(DBProps.SetProperties(cPropertySets,@PropertySets[0]), ocaOther, False);
+      CheckError(DBProps.SetProperties(cPropertySets,@PropertySets[0]), lcTransaction, EmptyRaw);
     finally
       DBProps := nil;
     end;
   end;
 end;
 
-const
-  TIL: array[TZTransactIsolationLevel] of ISOLATIONLEVEL =
-   ( ISOLATIONLEVEL_CHAOS,
-     ISOLATIONLEVEL_READUNCOMMITTED,
-     ISOLATIONLEVEL_READCOMMITTED,
-     ISOLATIONLEVEL_REPEATABLEREAD,
-     ISOLATIONLEVEL_SERIALIZABLE);
-
 function TZOleDBConnection.StartTransaction: Integer;
-var
-  rgDBPROPSET_DBPROPSET_SESSION: TDBProp;
-  prgPropertySets: TDBPROPSET;
-  SessionProperties: ISessionProperties;
-  Res: HResult;
+var Res: HResult;
+  S: String;
 begin
-  Result := 1;
-  if (not Closed) and Self.GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(TransactIsolationLevel) then
-    if AutoCommit then begin
-      SessionProperties := nil;
-      if (FDBCreateCommand.QueryInterface(IID_ISessionProperties, SessionProperties) = S_OK) then begin
-        prgPropertySets.cProperties     := 1;
-        prgPropertySets.guidPropertySet := DBPROPSET_SESSION;
-        prgPropertySets.rgProperties    := @rgDBPROPSET_DBPROPSET_SESSION;
-        rgDBPROPSET_DBPROPSET_SESSION.dwPropertyID := DBPROP_SESS_AUTOCOMMITISOLEVELS;
-        rgDBPROPSET_DBPROPSET_SESSION.dwOptions    := DBPROPOPTIONS_REQUIRED;
-        rgDBPROPSET_DBPROPSET_SESSION.colid        := DB_NULLID;
-        rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[TransactIsolationLevel];
-        CheckError(SessionProperties.SetProperties(1, @prgPropertySets), ocaOther, False);
-      end;
-    end else if not Assigned(fTransaction) and
-       Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then begin
-      Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
-      if not Succeeded(Res) then begin
-        Dec(FpulTransactionLevel);
-        fTransaction := nil;
-        CheckError(Res, ocaStartTransaction, True);
-      end else
-        Result := FpulTransactionLevel;
-    end;
+  if Closed then
+    Open;
+  AutoCommit := False;
+  if FpulTransactionLevel = 0 then begin
+    if not Assigned(fTransaction) then
+      OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
+    Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+    CheckError(Res, lcTransaction, 'Start Transaction');
+    Result := FpulTransactionLevel;
+  end else begin
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
+      raise EZSQLException.Create(SUnsupportedOperation);
+    ExecuteImmediat(cSavePointSyntaxW[fServerProvider][spqtSavePoint]+ {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S)+2;
+  end;
 end;
 
 // returns property value(-s) from Data Source Information group as string,
@@ -438,14 +469,14 @@ var
 begin
   Result := '';
   DBProperties := nil;
-  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), ocaOther, False);
+  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), lcOther, EmptyRaw);
   try
     PropIDSet.rgPropertyIDs   := @APropIDs;
     PropIDSet.cPropertyIDs    := High(APropIDs)+1;
     PropIDSet.guidPropertySet := DBPROPSET_DATASOURCEINFO;
     nPropertySets := 0;
     prgPropertySets := nil;
-    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), ocaOther, False);
+    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), lcOther, EmptyRaw);
     Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
@@ -582,7 +613,7 @@ end;
 function TZOleDBConnection.CreateCommand: ICommandText;
 begin
   Result := nil;
-  CheckError(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)), ocaOther, False);
+  CheckError(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)), lcOther, EmptyRaw);
 end;
 
 function TZOleDBConnection.GetMalloc: IMalloc;
@@ -601,11 +632,23 @@ end;
 }
 procedure TZOleDBConnection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
-  if (TransactIsolationLevel <> Level) and GetMetadata.GetDatabaseInfo.SupportsTransactionIsolationLevel(Level) then begin
-    StopTransaction;
-    inherited SetTransactionIsolation(Level);
-    StartTransaction;
+  if (TransactIsolationLevel <> Level) then begin
+    if not Closed then begin
+      if not AutoCommit then
+        raise EZSQLException.Create(SInvalidOpInNonAutoCommit);
+      InternalSetTIL(Level);
+    end;
+    TransactIsolationLevel := Level;
   end;
+end;
+
+procedure TZOleDBConnection.CheckError(Status: HResult; LoggingCateGory: TZLoggingCategory;
+  const LogMsg: RawByteString);
+begin
+  if (Pointer(LogMsg) <> nil) and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMsg);
+  if Status <> S_OK then
+    OleDbCheck(Status, '', Self, nil);
 end;
 
 {**
@@ -615,23 +658,28 @@ end;
   used only when auto-commit mode has been disabled.
   @see #setAutoCommit
 }
-procedure TZOleDBConnection.CheckError(Status: HResult; Action: TOleCheckAction;
-  DoLog: Boolean);
-begin
-  if DoLog and (Action <> ocaOther) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, ROleCheckActions[Action]);
-  if Status <> S_OK then
-    OleDbCheck(Status, {$IFDEF UNICODE}UOleCheckActions{$ELSE}ROleCheckActions{$ENDIF}[Action], Self, nil);
-end;
-
 procedure TZOleDBConnection.Commit;
+var S: UnicodeString;
 begin
-  if (FpulTransactionLevel > 0) and assigned(fTransaction) then begin
-    CheckError(fTransaction.Commit(FRetaining,XACTTC_SYNC,0), ocaCommit, True);
-    if not FRetaining then begin
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
+  if FSavePoints.Count > 0 then begin
+    S := cSavePointSyntaxW[fServerProvider][spqtCommit];
+    if S <> '' then begin
+      S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+      ExecuteImmediat(S, lcTransaction);
+    end;
+    FSavePoints.Delete(FSavePoints.Count-1);
+  end else begin
+    CheckError(fTransaction.Commit(FRetaining,XACTTC_SYNC,0), lcTransaction, 'Commit Transaction');
+    Dec(FpulTransactionLevel);
+    if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
-      Dec(FpulTransactionLevel);
-      StartTransaction;
+      AutoCommit := True;
+      if FRestartTransaction then
+        StartTransaction;
     end;
   end;
 end;
@@ -656,14 +704,27 @@ end;
   @see #setAutoCommit
 }
 procedure TZOleDBConnection.Rollback;
+var S: UnicodeString;
 begin
-  if (FpulTransactionLevel > 0) and assigned(fTransaction) then begin
-    CheckError(fTransaction.Abort(nil, FRetaining, False), ocaRollback, True);
-    if not FRetaining then
-    begin
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseRollback);
+  if FSavePoints.Count > 0 then begin
+    S := cSavePointSyntaxW[fServerProvider][spqtRollback];
+    if S <> '' then begin
+      S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+      ExecuteImmediat(S, lcTransaction);
+    end;
+    FSavePoints.Delete(FSavePoints.Count-1);
+  end else begin
+    CheckError(fTransaction.Abort(nil, FRetaining, False), lcTransaction, 'Rollback Transaction');
+    Dec(FpulTransactionLevel);
+    if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
-      Dec(FpulTransactionLevel);
-      StartTransaction;
+      AutoCommit := True;
+      if FRestartTransaction then
+        StartTransaction;
     end;
   end;
 end;
@@ -679,14 +740,14 @@ var
 begin
   Result := 0;
   DBProperties := nil;
-  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), ocaOther, False);
+  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), lcOther, EmptyRaw);
   try
     PropIDSet.rgPropertyIDs   := @APropID;
     PropIDSet.cPropertyIDs    := 1;
     PropIDSet.guidPropertySet := DBPROPSET_DATASOURCEINFO;
     nPropertySets := 0;
     prgPropertySets := nil;
-    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), ocaOther, False);
+    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), lcOther, EmptyRaw);
     Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
@@ -711,7 +772,7 @@ procedure TZOleDBConnection.Open;
 var
   DataInitialize : IDataInitialize;
   ConnectStrings: TStrings;
-  ConnectString: ZWideString;
+  ConnectString: UnicodeString;
   FDBCreateSession: IDBCreateSession;
 begin
   if not Closed then
@@ -723,12 +784,12 @@ begin
     //https://msdn.microsoft.com/de-de/library/ms131686%28v=sql.120%29.aspx
     FSupportsMARSConnnection := StrToBoolEx(ConnectStrings.Values[ConnProps_MarsConn]);
     if StrToBoolEx(ConnectStrings.Values[ConnProps_TrustedConnection]) then
-      ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(DataBase)
+      ConnectString := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(DataBase)
     else
     begin
       ConnectStrings.Values[ConnProps_UserId] := User;
       ConnectStrings.Values[ConnProps_Password] := PassWord;
-      ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(ComposeString(ConnectStrings, ';'));
+      ConnectString := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(ComposeString(ConnectStrings, ';'));
     end;
     FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values[ConnProps_Provider]);
     fCatalog := ConnectStrings.Values[ConnProps_Initial_Catalog];
@@ -737,10 +798,8 @@ begin
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));
     DataInitialize := nil; //no longer required!
     SetProviderProps(True); //set's timeout values
-    if TransactIsolationLevel = tiNone then
-      Inherited SetTransactionIsolation(tiReadCommitted);
     // open the connection to the DB
-    CheckError(fDBInitialize.Initialize, ocaOther, False);
+    CheckError(fDBInitialize.Initialize, lcOther, EmptyRaw);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
     //some Providers do NOT support commands, so let's check if we can use it
     OleCheck(FDBCreateSession.CreateSession(nil, IID_IDBCreateCommand, IUnknown(FDBCreateCommand)));
@@ -748,6 +807,11 @@ begin
     //if FServerProvider = spMSSQL then
       //SetProviderProps(False); //provider properties -> don't work??
     inherited Open;
+    if TransactIsolationLevel = tiNone then
+      Inherited SetTransactionIsolation(GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation)
+    else if TransactIsolationLevel <> GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation then
+      InternalSetTIL(TransactIsolationLevel);
+    FAutoCommitTIL := TIL[TransactIsolationLevel];
     (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
     if (GetServerProvider = spMSSQL) and ((Info.Values[ConnProps_DateWriteFormat] = '') or (Info.Values[ConnProps_DateTimeWriteFormat] = '')) then begin
       if (Info.Values[ConnProps_DateWriteFormat] = '') then begin
@@ -761,7 +825,10 @@ begin
     end;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
-    StartTransaction;
+    if not AutoCommit then begin
+      AutoCommit := True;
+      SetAutoCommit(False);;
+    end;
   except
     on E: Exception do
     begin
@@ -788,9 +855,14 @@ begin
   if Closed or not Assigned(fDBInitialize) then
     Exit;
 
-  StopTransaction;
+  FSavePoints.Clear;
+
+  if not AutoCommit then begin
+    SetAutoCommit(True); //close all pending transactions without restarting the TA
+    AutoCommit := False; //remainder for reopen
+  end;
   FDBCreateCommand := nil;
-  CheckError(fDBInitialize.Uninitialize, ocaOther, False);
+  CheckError(fDBInitialize.Uninitialize, lcOther, EmptyRaw);
   fDBInitialize := nil;
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
     'DISCONNECT FROM "'+ConSettings^.Database+'"');

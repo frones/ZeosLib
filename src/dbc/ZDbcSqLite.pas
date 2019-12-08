@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2019 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZURL, ZCompatibility;
+  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZClasses;
 
 type
 
@@ -75,6 +75,7 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
 
+
   {** Represents a SQLite specific connection interface. }
   IZSQLiteConnection = interface (IZConnection)
     ['{A4B797A9-7CF7-4DE9-A5BB-693DD32D07D2}']
@@ -84,26 +85,26 @@ type
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
   end;
 
+  TSQLite3TransactionAction = (traBeginDEFERRED, traBeginIMMEDIATE, traBeginEXCLUSIVE, traCommit, traRollBack);
+
   {** Implements SQLite Database Connection. }
 
   { TZSQLiteConnection }
-  TSQLite3TransactionAction = (traBegin, traCommit, traRollBack);
-  TSQLite3TransactionStmt = record
-    Stmt: Psqlite3_stmt;
-    SQL: RawByteString;
-    nBytes: Integer;
-  end;
-  TZSQLiteConnection = class(TZAbstractDbcConnection, IZSQLiteConnection)
+  TZSQLiteConnection = class(TZAbstractDbcConnection, IZSQLiteConnection,
+    IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;
     FCatalog: string;
     FHandle: Psqlite;
     FPlainDriver: TZSQLitePlainDriver;
-    FTransactionStmts: array[TSQLite3TransactionAction] of TSQLite3TransactionStmt;
-    procedure ExecTransactionStmt(Action: TSQLite3TransactionAction);
+    FTransactionStmts: array[TSQLite3TransactionAction] of Psqlite3_stmt;
+    FSavePoints: TStrings;
   protected
     procedure InternalCreate; override;
-    procedure StartTransactionSupport;
+    procedure InternalClose; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt); overload;
+  public //IZSQLiteConnection
     function GetUndefinedVarcharAsStringLength: Integer;
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
@@ -113,18 +114,21 @@ type
       IZPreparedStatement; override;
 
     function AbortOperation: Integer; override;
-    procedure Commit; override;
-    procedure Rollback; override;
+  public
+    destructor Destroy; override;
 
     procedure Open; override;
-    procedure InternalClose; override;
 
+    procedure Commit; override;
+    procedure Rollback; override;
     procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    function StartTransaction: Integer; override;
+
 
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
@@ -147,7 +151,8 @@ implementation
 
 uses
   ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode, ZDbcProperties,
-  ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser, ZEncoding, ZMessages
+  ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser, ZEncoding, ZMessages,
+  ZCollections, ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteDriver }
@@ -226,6 +231,13 @@ begin
   Result := TZSQLiteStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
+const cTransactionActionStmt: Array[TSQLite3TransactionAction] of RawByteString = (
+  'BEGIN DEFERRED TRANSACTION',
+  'BEGIN IMMEDIATE TRANSACTION',
+  'BEGIN EXCLUSIVE TRANSACTION',
+  'COMMIT TRANSACTION',
+  'ROLLBACK TRANSACTION');
+
 { TZSQLiteConnection }
 
 {**
@@ -237,14 +249,9 @@ begin
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   //https://sqlite.org/pragma.html#pragma_read_uncommitted
   inherited SetTransactionIsolation(tiSerializable);
+  FSavePoints := TStringList.Create;
   CheckCharEncoding('UTF-8');
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
-  FTransactionStmts[traBegin].SQL := 'BEGIN TRANSACTION';
-  FTransactionStmts[traBegin].nBytes := Length(FTransactionStmts[traBegin].SQL);
-  FTransactionStmts[traCommit].SQL := 'COMMIT TRANSACTION';
-  FTransactionStmts[traCommit].nBytes := Length(FTransactionStmts[traCommit].SQL);
-  FTransactionStmts[traRollBack].SQL := 'ROLLBACK TRANSACTION';
-  FTransactionStmts[traRollBack].nBytes := Length(FTransactionStmts[traRollBack].SQL);
 end;
 
 {**
@@ -366,8 +373,10 @@ begin
 
   if Info.Values[ConnProps_ForeignKeys] <> '' then
     Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])] );
-  if not GetAutoCommit then
-    ExecTransactionStmt(traBegin);
+  if not AutoCommit then begin
+    AutoCommit := True;
+    SetAutoCommit(False);
+  end;
 end;
 
 {**
@@ -393,28 +402,54 @@ begin
   Result := TZSQLiteStatement.Create(Self, Info, FHandle);
 end;
 
+destructor TZSQLiteConnection.Destroy;
+begin
+  FSavePoints.Free;
+  inherited;
+end;
+
 function TZSQLiteConnection.enable_load_extension(OnOff: Integer): Integer;
 begin
   Result := FPlainDriver.sqlite3_enable_load_extension(FHandle, OnOff);
 end;
 
-procedure TZSQLiteConnection.ExecTransactionStmt(
-  Action: TSQLite3TransactionAction);
-var
-  pzTail: PAnsiChar;
+procedure TZSQLiteConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt);
+var PZTail: PAnsiChar;
+  Status: Integer;
 begin
-  with FTransactionStmts[Action] do begin
-    if Stmt = nil then
-      CheckSQLiteError(FPlainDriver, FHandle,
-        FPlainDriver.sqlite3_Prepare_v2(FHandle, Pointer(SQL), nBytes, Stmt, pzTail{%H-}),
-          lcExecute, SQL, ConSettings);
-    try
-      CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.sqlite3_step(Stmt),
-        lcExecute, SQL, ConSettings);
-    finally
-      if Assigned(DriverManager) and DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
-      FPlainDriver.sqlite3_reset(Stmt);
+  if Pointer(SQL) = nil then
+    Exit;
+  if Stmt = nil then begin
+    Status := FPlainDriver.sqlite3_prepare_v2(FHandle,
+      Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Stmt, pZTail);
+    if not Status in [SQLITE_OK, SQLITE_DONE] then
+      CheckSQLiteError(FPlainDriver, FHandle, Status, lcPrepStmt,
+        SQL, ConSettings)
+  end;
+  Status := FPlainDriver.sqlite3_step(Stmt);
+  try
+    if not Status in [SQLITE_OK, SQLITE_DONE] then
+      CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings)
+  finally
+    FPlainDriver.sqlite3_reset(Stmt);
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
+  end;
+end;
+
+procedure TZSQLiteConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+var Stmt: Psqlite3_stmt;
+  Status: Integer;
+begin
+  Stmt := nil;
+  try
+    ExecuteImmediat(SQL, LoggingCategory, Stmt);
+  finally
+    if Stmt <> nil then begin
+      Status := FPlainDriver.sqlite3_finalize(Stmt);
+      CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings);
     end;
   end;
 end;
@@ -458,12 +493,6 @@ end;
 {**
   Starts a transaction support.
 }
-procedure TZSQLiteConnection.StartTransactionSupport;
-begin
-  if not Closed and not AutoCommit then
-    ExecTransactionStmt(traBegin);
-end;
-
 function TZSQLiteConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
   Result := FUndefinedVarcharAsStringLength;
@@ -475,10 +504,10 @@ end;
 }
 function TZSQLiteConnection.AbortOperation: Integer;
 begin
- {$MESSAGE '.AbortOperation with SQLite is untested and might cause unexpected results!'}
- // https://sqlite.org/c3ref/interrupt.html
- FPlainDriver.sqlite3_interrupt(FHandle);
- Result := 1;
+  {$MESSAGE '.AbortOperation with SQLite is untested and might cause unexpected results!'}
+  // https://sqlite.org/c3ref/interrupt.html
+  FPlainDriver.sqlite3_interrupt(FHandle);
+  Result := 1;
 end;
 
 {**
@@ -489,13 +518,22 @@ end;
   @see #setAutoCommit
 }
 procedure TZSQLiteConnection.Commit;
+var S: RawByteString;
 begin
-  if not Closed then
-    if not GetAutoCommit then begin
-      ExecTransactionStmt(traCommit);
-      ExecTransactionStmt(traBegin);
-    end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
+  if FSavePoints.Count > 0 then begin
+    S := 'RELEASE SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
+  end else begin
+    ExecuteImmediat(cTransactionActionStmt[traCommit], lcTransaction, FTransactionStmts[traCommit]);
+    AutoCommit := True;
+    if FRestartTransaction then
+      StartTransaction;
+  end
 end;
 
 {**
@@ -506,13 +544,22 @@ end;
   @see #setAutoCommit
 }
 procedure TZSQLiteConnection.Rollback;
+var S: RawByteString;
 begin
-  if not Closed then
-    if not GetAutoCommit then begin
-      ExecTransactionStmt(traRollback);
-      ExecTransactionStmt(traBegin);
-    end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseRollback);
+  if FSavePoints.Count > 0 then begin
+    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    ExecuteImmediat(S, lcTransaction);
+    FSavePoints.Delete(FSavePoints.Count-1);
+  end else begin
+    ExecuteImmediat(cTransactionActionStmt[traRollBack], lcTransaction, FTransactionStmts[traRollBack]);
+    AutoCommit := True;
+    if FRestartTransaction then
+      StartTransaction;
+  end;
 end;
 
 {**
@@ -532,18 +579,25 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-  for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
-    if FTransactionStmts[TransactionAction].Stmt <> nil then begin
-      FPlainDriver.sqlite3_finalize(FTransactionStmts[TransactionAction].Stmt);
-      FTransactionStmts[TransactionAction].Stmt := nil;
+  try
+    if not AutoCommit then begin
+      SetAutoCommit(True);
+      AutoCommit := False;
     end;
-  ErrorCode := FPlainDriver.sqlite3_close(FHandle);
-  FHandle := nil;
-  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode,
-    lcOther, LogMessage, ConSettings);
-  if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  finally
+    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+    for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
+      if FTransactionStmts[TransactionAction] <> nil then begin
+        FPlainDriver.sqlite3_finalize(FTransactionStmts[TransactionAction]);
+        FTransactionStmts[TransactionAction] := nil;
+      end;
+    ErrorCode := FPlainDriver.sqlite3_close(FHandle);
+    FHandle := nil;
+    CheckSQLiteError(FPlainDriver, FHandle, ErrorCode,
+      lcOther, LogMessage, ConSettings);
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
+      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  end;
 end;
 
 {**
@@ -561,20 +615,44 @@ begin
 end;
 
 {**
-  Sets a new selected catalog name.
-  @param Catalog a selected catalog name.
+  Sets this connection's auto-commit mode.
+  If a connection is in auto-commit mode, then all its SQL
+  statements will be executed and committed as individual
+  transactions.  Otherwise, its SQL statements are grouped into
+  transactions that are terminated by a call to either
+  the method <code>commit</code> or the method <code>rollback</code>.
+  By default, new connections are in auto-commit mode.
+
+  The commit occurs when the statement completes or the next
+  execute occurs, whichever comes first. In the case of
+  statements returning a ResultSet, the statement completes when
+  the last row of the ResultSet has been retrieved or the
+  ResultSet has been closed. In advanced cases, a single
+  statement may return multiple results as well as output
+  parameter values. In these cases the commit occurs when all results and
+  output parameter values have been retrieved.
+
+  @param autoCommit true enables auto-commit; false disables auto-commit.
 }
 procedure TZSQLiteConnection.SetAutoCommit(Value: Boolean);
 begin
-  if Value <> GetAutoCommit then begin
-    if not GetAutoCommit and not Closed then
-      ExecTransactionStmt(traRollBack);
-    inherited SetAutoCommit(Value);
-    if not Value and not Closed then
-      ExecTransactionStmt(traBegin);
+  if Value <> AutoCommit then begin
+    FRestartTransaction := AutoCommit;
+    if Closed
+    then AutoCommit := Value
+    else if Value then begin
+      FSavePoints.Clear;
+      ExecuteImmediat(cTransactionActionStmt[traCommit], lcTransaction, FTransactionStmts[traCommit]);
+      AutoCommit := True;
+    end else
+      StartTransaction;
   end;
 end;
 
+{**
+  Sets a new selected catalog name.
+  @param Catalog a selected catalog name.
+}
 procedure TZSQLiteConnection.SetCatalog(const Catalog: string);
 begin
   FCatalog := Catalog;
@@ -587,12 +665,37 @@ end;
 procedure TZSQLiteConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
-  if Level <> GetTransactionIsolation then begin
-    if not GetAutoCommit and not Closed then
-      ExecTransactionStmt(traRollBack);
-    inherited SetTransactionIsolation(Level);
-    if not GetAutoCommit and not Closed then
-      ExecTransactionStmt(traBegin);
+  if Level = tiNone then
+    Level := tiSerializable;
+  if Level <> TransactIsolationLevel then begin
+    if not AutoCommit and not Closed then
+      raise EZSQLException.Create(SInvalidOpInNonAutoCommit);
+    TransactIsolationLevel := Level;
+  end;
+end;
+
+function TZSQLiteConnection.StartTransaction: Integer;
+var TransactionAction: TSQLite3TransactionAction;
+  S: String;
+  P: PChar;
+begin
+  if Closed then
+    Open;
+  if AutoCommit then begin
+    S := ZDbcUtils.DefineStatementParameter(Self, Info, DSProps_TransactionBehaviour, 'DEFERRED');
+    P := Pointer(S);
+    case {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(P)^ or $20 of
+      Ord('e'): TransactionAction := traBeginEXCLUSIVE;
+      Ord('i'): TransactionAction := traBeginIMMEDIATE;
+      else      TransactionAction := traBeginDEFERRED;
+    end;
+    ExecuteImmediat(cTransactionActionStmt[TransactionAction], lcTransaction, FTransactionStmts[TransactionAction]);
+    AutoCommit := False;
+    Result := 1;
+  end else begin
+    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    Result := FSavePoints.Add(S) + 2;
   end;
 end;
 
@@ -625,3 +728,4 @@ finalization
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 end.
+

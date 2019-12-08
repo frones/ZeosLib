@@ -178,7 +178,6 @@ type
 
     procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
 
-    procedure ClearParameters; override;
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       Scale: LengthInt = 0); override;
@@ -386,7 +385,9 @@ begin
     Result := LastUpdateCount
   else begin
     CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
-    LastUpdateCount := LastUpdateCount + RowCount;
+    if (RowCount = -1) and GetMoreResults and (fLastResultSet = nil)
+    then RowCount := LastUpdateCount
+    else LastUpdateCount := LastUpdateCount + RowCount;
     Result := RowCount;
   end;
 end;
@@ -983,7 +984,7 @@ var ArrayLen, MaxL, I: Integer;
                           N[I] := SQL_DATA_AT_EXEC;
                         end;
                       end;
-      else RaiseUnsupportedException;
+      else Raise EZUnsupportedException.Create(SUnsupportedOperation);
     end;
   end;
 begin
@@ -1218,7 +1219,7 @@ begin
                                   MaxL := PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(DA)[i]),
                                     P, Length(TUnicodeStringDynArray(DA)[i]), Bind.BufferLength-1, FClientCP);
                                   if MaxL < Bind.BufferLength then begin
-                                    Move(Pointer(TUnicodeStringDynArray(DA)[i])^, P^, MaxL +2);
+                                    //Move(Pointer(TUnicodeStringDynArray(DA)[i])^, P^, MaxL +2);
                                     N[i] := MaxL;
                                     PByte(P+MaxL)^ := 0;
                                   end else
@@ -1404,11 +1405,6 @@ begin
     if fBindImmediat
     then raise EZSQLException.Create(SInvalidInputParameterCount)
     else inherited CheckParameterIndex(Value);
-end;
-
-procedure TZAbstractODBCPreparedStatement.ClearParameters;
-begin
-  inherited ClearParameters;
 end;
 
 constructor TZAbstractODBCPreparedStatement.Create(
@@ -2281,6 +2277,7 @@ begin
       if Value = nil then Value := PEmptyAnsiString;
       PIZlob(Bind.ParameterValuePtr)^ := TZAbstractClob.CreateWithData(Value, BLen, FClientCP, ConSettings);
       Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
+      Exit;
     end else case Bind.ValueType of
       SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(StrToBoolEx(Value, Value+BLen, True, False));
       SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := RawToIntDef(Value, Value+BLen, 0);
@@ -2303,7 +2300,7 @@ begin
                         Curr2ODBCNumeric(PCurrency(@fABuffer[0])^, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
                       end else begin
                         //ZFastCode.UnicodeToFloatDef(Value, '.', 0, PDouble(@fABuffer[0])^);
-                        RaiseUnsupportedException;
+                        Raise EZUnsupportedException.Create(SUnsupportedOperation);
                       end;
       SQL_C_WCHAR:  begin
                       PSQLLEN(Bind.StrLen_or_IndPtr)^ := ZEncoding.PRaw2PUnicodeBuf(Value, BLen, Bind.ColumnSize, Bind.ParameterValuePtr, FClientCP) shl 1;
@@ -2344,6 +2341,7 @@ begin
       if Value = nil then Value := PEmptyUnicodeString;
       PIZlob(Bind.ParameterValuePtr)^ := TZAbstractClob.CreateWithData(Value, WLen, ConSettings);
       Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
+      Exit;
     end else case Bind.ValueType of
       SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^      := Ord(StrToBoolEx(Value, Value+WLen, True, False));
       SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^  := UnicodeToIntDef(Value, Value+WLen, 0);
@@ -2364,7 +2362,7 @@ begin
                         Curr2ODBCNumeric(PCurrency(@fABuffer[0])^, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
                       end else begin
                         //ZFastCode.UnicodeToFloatDef(Value, '.', 0, PDouble(@fABuffer[0])^);
-                        RaiseUnsupportedException;
+                        Raise EZUnsupportedException.Create(SUnsupportedOperation);
                       end;
       SQL_C_WCHAR:  begin
                       WLen := WLen shl 1;
@@ -2741,30 +2739,15 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetUnicodeString(Index: Integer;
   const Value: ZWideString);
-var Bind: PZODBCParamBind;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);
-  if fBindImmediat then begin
-    {$R-}
-    Bind := @fParamBindings[Index];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
-    if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and ((stUnicodeString <> Bind.SQLType) or (Bind.BufferLength < (Length(Value)+1) shl 1))) then
-      InitBind(Index, 1, stUnicodeString);
-    case Bind.ValueType of
-      SQL_C_WChar:    if Bind.SQLType in [stString, stUnicodeString] then begin
-                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := Length(Value) shl 1;
-                        if PSQLLEN(Bind.StrLen_or_IndPtr)^ >= Bind.BufferLength then
-                          RaiseExceeded(Index);
-                        Move(Pointer(Value)^, Bind.ParameterValuePtr^, PSQLLEN(Bind.StrLen_or_IndPtr)^);
-                        PWord(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := 0;
-                      end else
-                        SetPWideChar(Index, Pointer(Value), Length(Value));
-      else SetPWideChar(Index, Pointer(Value), Length(Value));
-    end;
-  end else
+  if fBindImmediat
+  then SetPWideChar(Index, Pointer(Value), Length(Value))
+  else begin
+    CheckParameterIndex(Index);
     BindList.Put(Index, stUnicodeString, Value);
+  end;
 end;
 
 {$IFNDEF NO_UTF8STRING}

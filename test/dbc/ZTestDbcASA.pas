@@ -102,12 +102,13 @@ begin
   { Checks without transactions. }
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);
-  Connection.Commit;
-  Connection.Rollback;
+  //Connection.Commit;
+  //Connection.Rollback;
   Connection.Close;
   CheckEquals(True, Connection.IsClosed);
 
   { Checks with transactions. }
+  Connection.SetAutoCommit(False);
   Connection.SetTransactionIsolation(tiSerializable);
   Connection.CreateStatement;
   CheckEquals(False, Connection.IsClosed);

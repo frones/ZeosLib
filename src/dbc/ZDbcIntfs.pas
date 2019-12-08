@@ -60,6 +60,7 @@ uses
   {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS}
+  {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}DB, {$ENDIF}
   FmtBcd, Types, Classes, SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
@@ -77,7 +78,43 @@ const
   procedureNoResult         = 1;
   ProcedureReturnsResult    = 2;
 
-// Data types
+// Exceptions
+type
+  TZExceptionSpecificData = class
+  public
+    function Clone: TZExceptionSpecificData; virtual; abstract;
+  end;
+
+  {** Abstract SQL exception. }
+  EZSQLThrowable = class({$IFDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}Exception{$ELSE}EDATABASEERROR{$ENDIF})
+  private
+    FErrorCode: Integer;
+    FStatusCode: String;
+  protected
+    FSpecificData: TZExceptionSpecificData;
+  public
+    constructor Create(const Msg: string);
+    constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
+    constructor CreateWithStatus(const StatusCode: String; const Msg: string);
+    constructor CreateWithCodeAndStatus(ErrorCode: Integer; const StatusCode: String; const Msg: string);
+    constructor CreateClone(const E:EZSQLThrowable);
+    destructor Destroy; override;
+
+    property ErrorCode: Integer read FErrorCode;
+    property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
+    property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
+  end;
+
+  {** Generic SQL exception. }
+  EZSQLException = class(EZSQLThrowable);
+
+  {** Generic SQL warning. }
+  EZSQLWarning = class(EZSQLThrowable);
+
+  {** Reqquested operation is not (yet) supported by Zeos }
+  EZUnsupportedException = class(EZSQLException);
+
+  // Data types
 type
   /// <summary>
   ///  Defines supported SQL types.
@@ -189,8 +226,6 @@ type
   EZSQLConnectionLost = class(EZSQLException);
 
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
-
-  //TZTimeType = (ttTime, ttDate, ttDateTime, ttInterval);
 
 // Interfaces
 type
@@ -404,23 +439,14 @@ type
     ['{501FDB3C-4D44-4BE3-8BB3-547976E6500E}']
     procedure Commit;
     procedure Rollback;
-    procedure SavePoint(const AName: String = '');
   end;
 
-  IZTransactionManger = interface(IZInterface)
+  IZTransactionManager = interface(IZInterface)
     ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Transaction: IZTransaction);
-  end;
-
-  IZTransactionProperties = interface(IZInterface)
-    ['{D268A5BE-D1F3-40EB-80F6-1828803A38A8}']
-    function Equals(AutoCommit, ReadOnly: Boolean; TIL: TZTransactIsolationLevel;
-      Params: TStrings): Boolean;
-    procedure Change(AutoCommit, ReadOnly: Boolean; TIL: TZTransactIsolationLevel;
-      Params: TStrings; var CurrentTransaction: IZTransaction);
-    function GetAutoCommit: Boolean;
+    procedure SetActiveTransaction(const Transaction: IZTransaction);
   end;
 
   IImmediatelyReleasable = interface(IZInterface)
@@ -458,6 +484,19 @@ type
 
     procedure Commit;
     procedure Rollback;
+    /// <summary>
+    ///  Starts transaction support or saves the current transaction.
+    ///  If the connection is closed, the connection will be opened.
+    ///  If a transaction is underway a nested transaction or a savepoint will be spawned.
+    ///  While the tranaction(s) is/are underway the AutoCommit property is set to False.
+    ///  Ending up the transaction with a commit/rollback the autocommit property will be restored
+    ///  if changing the autocommit mode was triggered by a starttransaction call.
+    /// </summary>
+    /// <returns>
+    ///  Returns the current txn-level. 1 means a transaction was started.
+    ///  2 means the transaction was saved. 3 means the previous savepoint got saved too and so on
+    /// </returns>
+    function StartTransaction: Integer;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
     procedure PrepareTransaction(const transactionid: string);
@@ -2096,6 +2135,70 @@ begin
     FDriversCS.Leave;
     FreeAndNil(ZURL);
   end;
+end;
+
+{ EZSQLThrowable }
+
+constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
+begin
+  inherited Create(E.Message);
+  FErrorCode:=E.ErrorCode;
+  FStatusCode:=E.Statuscode;
+  if E.SpecificData <> nil then
+    FSpecificData := E.SpecificData.Clone;
+end;
+
+{**
+  Creates an exception with message string.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.Create(const Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := -1;
+end;
+
+{**
+  Creates an exception with message string.
+  @param Msg a error description.
+  @param ErrorCode a native server error code.
+}
+constructor EZSQLThrowable.CreateWithCode(const ErrorCode: Integer;
+  const Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := ErrorCode;
+end;
+
+{**
+  Creates an exception with message string.
+  @param ErrorCode a native server error code.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.CreateWithCodeAndStatus(ErrorCode: Integer;
+  const StatusCode, Msg: string);
+begin
+  inherited Create(Msg);
+  FErrorCode := ErrorCode;
+  FStatusCode := StatusCode;
+end;
+
+{**
+  Creates an exception with message string.
+  @param StatusCode a server status code.
+  @param Msg a error description.
+}
+constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
+begin
+  inherited Create(Msg);
+  FStatusCode := StatusCode;
+end;
+
+destructor EZSQLThrowable.Destroy;
+begin
+  FreeAndNil(FSpecificData);
+  inherited;
 end;
 
 initialization

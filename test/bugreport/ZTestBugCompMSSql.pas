@@ -234,7 +234,8 @@ end;
 (*
 When we open a query on this table and uses TZQuery.Append to add a new row with NO VALUE for the testcol,
 Zeos uses the Resultset-Metadata to find out the default value for the rows with no value set.
-MSSQL delivers for the row testcol the default value '(NULL)' instead of 'NULL'. Zeos interpretes this value correct as string and sends 'N'(NULL)'' to the database as default value.
+MSSQL delivers for the row testcol the default value '(NULL)' instead of 'NULL'.
+Zeos interpretes this value correct as string and sends 'N'(NULL)'' to the database as default value.
 The result is: The new value for testcol is '(NULL)' as string instead of NULL as default null value.
 *)
 procedure TZTestCompMSSqlBugReport.TestSF306;
@@ -460,9 +461,6 @@ begin
       Query.Sql.Add('create table #t (i int)');
       Query.Sql.Add('insert into #t values (0)');
       Query.ExecSQL; //this now kills the #t table using ADO, even if !NO! prepare oslt is called by us
-      Check((Query.RowsAffected = -1) or (Query.RowsAffected = 1), 'Rows affected of first command in batch');
-      //end up the command batch:
-      //Check(Query.NextRowsAffected, 'There is a second updatecount available');
       CheckEquals(1, Query.RowsAffected, 'Rows affected of second command in batch');
       if Protocol <> 'ado' then begin //just suppress exceptions we can't handle:
         //ado seems to execute some sp's in background, thus (MS-Bug skope of temp-table ends with SP's)

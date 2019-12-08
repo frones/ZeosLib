@@ -68,8 +68,8 @@ type
   published
     {$IFNDEF FPC}
     procedure Test_NChar_Values;
-    {$ENDIF}    
-    procedure TestSF380;
+    {$ENDIF}
+    procedure BlankTest;
   end;
 
 implementation
@@ -78,9 +78,14 @@ implementation
 
 uses ZAbstractRODataset, SysUtils;
 
+procedure ZTestCompDbLibBugReport.BlankTest;
+begin
+  Check(True);
+end;
+
 function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
+  Result := 'mssql,sybase,OleDB,ado,odbc_w,odbc_a';
 end;
 
 {$IFNDEF FPC}
@@ -96,7 +101,6 @@ begin
   Str3 := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199);
   Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
   Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
-
 
   Query := CreateQuery;
   try
@@ -203,45 +207,6 @@ begin
   end;
 end;
 {$ENDIF}
-
-procedure ZTestCompDbLibBugReport.TestSF380;
-var
-  Query: TZQuery;
-  Table: TZTable;
-begin
-  Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
-
-  Query := CreateQuery;
-  try
-    Query.ParamCheck := false;
-    Query.Options := [doCalcDefaults];
-    Query.Sql.Add('create table #t (i int)');
-    Query.Sql.Add('insert into #t values (0)');
-    Query.ExecSQL;
-  finally
-    FreeAndNil(Query);
-  end;
-
-  Table := TZTable.Create(nil);
-  try
-    Table.Connection := Connection;
-    Table.Options := [doCalcDefaults];
-    Table.TableName := '#t';
-    Table.Open;
-    Table.Edit;
-    Table.Fields[0].AsInteger := 3;
-    Table.Post;
-    Table.Close;
-    Table.Open;
-    try
-      CheckEquals(3, Table.Fields[0].AsInteger, 'The previously set value should be returned.');
-    finally
-    Table.Close;
-    end;
-  finally
-    FreeAndNil(Table);
-  end;
-end;
 
 initialization
   RegisterTest('bugreport',ZTestCompDbLibBugReport.Suite);

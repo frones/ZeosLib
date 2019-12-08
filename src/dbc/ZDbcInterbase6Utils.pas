@@ -206,6 +206,9 @@ type
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA);
 
 {Interbase6 Connection Functions}
+function BuildPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings; VersionCode: Byte;
+  const FilterPrefix: string; const ParamArr: array of TZIbParam;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
 function GenerateDPB(PlainDriver: TZInterbasePlainDriver; Info: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
 function GenerateTPB(PlainDriver: TZInterbasePlainDriver; Params: TStrings;
@@ -215,7 +218,7 @@ function GetInterbase6DatabaseParamNumber(const Value: String): word;
 function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
-function GetNameSqlType(Value: Word): RawByteString;
+function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
@@ -240,6 +243,7 @@ function GetAffectedRows(const PlainDriver: TZInterbasePlainDriver;
 function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSqlType;
 
+function GetNameSqlType(Value: Word): RawByteString;
 { interbase blob routines }
 procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
   const BlobHandle: TISC_BLOB_HANDLE; out BlobInfo: TIbBlobInfo;
@@ -1101,6 +1105,17 @@ begin
     Result := ConSettings^.ConvFuncs.ZStringToRaw(Src, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
   else
     Result := RawByteString(Src);
+end;
+
+{**
+  Checks if Interbase status vector indicates successful operation.
+  @param StatusVector a status vector
+
+  @return flag of success
+}
+function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean;
+begin
+  Result := not ((StatusVector[0] = 1) and (StatusVector[1] > 0));
 end;
 
 {**

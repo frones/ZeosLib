@@ -1060,7 +1060,7 @@ end;
 function TZOracleDatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  Result := True;
+  Result := Level in [tiReadCommitted, tiSerializable];
 end;
 
 {**
@@ -1678,6 +1678,7 @@ const
   NULLABLE_Index       = FirstDbcIndex + 7;
   DATA_DEFAULT_Index   = FirstDbcIndex + 8;
   COLUMN_ID_Index      = FirstDbcIndex + 9;
+  REMARKS_Index        = FirstDbcIndex + 10;
 var
   Len: NativeUInt;
   SQL, oDataType: string;
@@ -1689,19 +1690,19 @@ var
   begin
     Result := '';
     If OwnerCondition <> '' then
-      Result := OwnerCondition;
+      Result := 'ALL_TAB_COLUMNS.' + OwnerCondition;
     If TableCondition <> '' then
       If Result <> '' then
-        Result := Result + ' AND ' + TableCondition
+        Result := Result + ' AND ' + 'ALL_TAB_COLUMNS.' + TableCondition
       Else
-        Result := TableCondition;
+        Result := 'ALL_TAB_COLUMNS.' + TableCondition;
     If ColumnCondition <> '' then
       If Result <> '' then
-        Result := Result + ' AND ' + ColumnCondition
+        Result := Result + ' AND ' + 'ALL_TAB_COLUMNS.' + ColumnCondition
       Else
-        Result := ColumnCondition;
+        Result := 'ALL_TAB_COLUMNS.' + ColumnCondition;
     If Result <> '' then
-      Result := ' Where ' + Result;
+      Result := ' WHERE ' + Result;
   end;
 
 begin
@@ -1710,10 +1711,12 @@ begin
   ColumnCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  SQL := 'SELECT OWNER, TABLE_NAME, COLUMN_NAME, DATA_TYPE,'
-    + ' DATA_LENGTH, DATA_PRECISION, DATA_SCALE, NULLABLE, '
-    + ' DATA_DEFAULT, COLUMN_ID FROM SYS.ALL_TAB_COLUMNS'
-    + CreateWhere+' order by COLUMN_ID';
+  SQL := 'SELECT ALL_TAB_COLUMNS.OWNER, ALL_TAB_COLUMNS.TABLE_NAME, ALL_TAB_COLUMNS.COLUMN_NAME, ' +
+         'ALL_TAB_COLUMNS.DATA_TYPE, ALL_TAB_COLUMNS.DATA_LENGTH, ALL_TAB_COLUMNS.DATA_PRECISION, ' +
+         'ALL_TAB_COLUMNS.DATA_SCALE, ALL_TAB_COLUMNS.NULLABLE, ALL_TAB_COLUMNS.DATA_DEFAULT, '+
+         'ALL_TAB_COLUMNS.COLUMN_ID, ALL_COL_COMMENTS.COMMENTS FROM ALL_TAB_COLUMNS JOIN ALL_COL_COMMENTS '+
+         'ON ALL_COL_COMMENTS.TABLE_NAME = ALL_TAB_COLUMNS.TABLE_NAME AND ALL_COL_COMMENTS.COLUMN_NAME = '+
+         'ALL_TAB_COLUMNS.COLUMN_NAME AND ALL_COL_COMMENTS.OWNER = ALL_TAB_COLUMNS.OWNER ' + CreateWhere + ' ORDER BY ALL_TAB_COLUMNS.COLUMN_ID';
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
@@ -1759,6 +1762,7 @@ begin
         Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
       end;
 
+      Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(REMARKS_Index, Len), Len);
       Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(DATA_DEFAULT_Index, Len), Len);
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index));
 

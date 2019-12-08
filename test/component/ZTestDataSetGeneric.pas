@@ -1806,12 +1806,12 @@ begin
       Open;
       Append;
       {$IFDEF WITH_TAUTOREFRESHFLAG}
-      if Fields[0].AutoGenerateValue <> arAutoInc then
+      if (Fields[0].AutoGenerateValue <> arAutoInc) or (not Fields[0].ReadOnly) then
       {$ENDIF}
         Fields[0].AsInteger := ID;
       Post;
       {$IFDEF WITH_TAUTOREFRESHFLAG}
-      if Fields[0].AutoGenerateValue = arAutoInc then
+      if (Fields[0].AutoGenerateValue <> arAutoInc) or (not Fields[0].ReadOnly) then
       {$ENDIF}
         ID := Fields[0].AsInteger;
       try
@@ -2721,6 +2721,7 @@ begin
   Query := CreateQuery;
   try
     try
+      Query.Connection.Connect;
       Query.Connection.StartTransaction;
       try
         Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';

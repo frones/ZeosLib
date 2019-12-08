@@ -1246,6 +1246,7 @@ function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; o
 function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean; overload;
 function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean; overload;
 
+procedure Trim(var L: NativeUInt; var P: PAnsiChar); overload;
 function Trim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
 function LTrim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
 function RTrim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
@@ -7557,6 +7558,17 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+
+procedure Trim(var L: NativeUInt; var P: PAnsiChar);
+var PEnd: PAnsiChar;
+begin
+  PEnd := P + L -1;
+  while (P <= PEnd) and (Ord(P^   ) <= Ord(' ')) do
+    Inc(P);
+  while (PEnd >= P) and (Ord(PEnd^) <= Ord(' ')) do
+    Dec(PEnd);
+  L := (PEnd+1)-P;
+end;
 
 function Trim(P: PAnsiChar; L: LengthInt): RawByteString;
 var PEnd: PAnsiChar;

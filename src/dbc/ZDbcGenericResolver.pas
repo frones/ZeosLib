@@ -689,7 +689,7 @@ begin
 end;
 
 {**
-  Forms a where clause for INSERT statements.
+  Forms a INSERT statements.
   @param Columns a collection of key columns.
   @param NewRowAccessor an accessor object to new column values.
 }
@@ -754,7 +754,7 @@ begin
 end;
 
 {**
-  Forms a where clause for UPDATE statements.
+  Forms an UPDATE statements.
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
   @param NewRowAccessor an accessor object to new column values.
@@ -868,6 +868,7 @@ var
   lUpdateCount         : Integer;
   lValidateUpdateCount : Boolean;
   TempKey              : IZAnyValue;
+  SenderStatement      : IZStatement;
 begin
   if (UpdateType = utDeleted) and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
@@ -927,8 +928,13 @@ begin
 
   FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
   // if Property ValidateUpdateCount isn't set : assume it's true
-  S := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
-  lValidateUpdateCount := (S = '') or StrToBoolEx(S);
+  SenderStatement := Sender.GetStatement;
+  if Assigned(SenderStatement) then begin
+    S := SenderStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
+    lValidateUpdateCount := (S = '') or StrToBoolEx(S);
+  end else begin
+    lValidateUpdateCount := true;
+  end;
 
   lUpdateCount := Statement.ExecuteUpdatePrepared;
   {$IFDEF WITH_VALIDATE_UPDATE_COUNT}

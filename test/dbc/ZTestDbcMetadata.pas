@@ -516,6 +516,7 @@ type
   TDummyDbcConnection = class(TZAbstractDbcConnection)
   public
     procedure InternalClose; override;
+    function StartTransaction: Integer; override;
   protected
     procedure InternalCreate; override;
   public
@@ -528,6 +529,11 @@ procedure TDummyDbcConnection.InternalCreate;
 begin
   Metadata := TZAbstractDatabaseMetadata.Create(Self, Url);
   FMetadata := Metadata;
+end;
+
+function TDummyDbcConnection.StartTransaction: Integer;
+begin
+  Result := 0;
 end;
 
 procedure TDummyDbcConnection.InternalClose;

@@ -146,6 +146,7 @@ type
     function GetAutoCommit: Boolean;
     procedure Commit;
     procedure Rollback;
+    function StartTransaction: Integer;
     procedure PrepareTransaction(const transactionid: string);
     procedure CommitPrepared(const transactionid: string);
     procedure RollbackPrepared(const transactionid: string);
@@ -479,6 +480,11 @@ end;
 procedure TZDbcPooledConnection.SetUseMetadata(Value: Boolean);
 begin
   FUseMetadata := Value;
+end;
+
+function TZDbcPooledConnection.StartTransaction: Integer;
+begin
+  Result := GetConnection.StartTransaction;
 end;
 
 {**
