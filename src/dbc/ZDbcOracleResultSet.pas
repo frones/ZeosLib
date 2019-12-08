@@ -63,7 +63,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver, ZClasses,
+  ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver,
   ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils,
   ZPlainOracleConstants, ZPlainDriver, ZDbcStatement;
 
@@ -1434,10 +1434,6 @@ var
   Year: SmallInt absolute yr;
   Month: Byte absolute mnth;
   Day: Byte absolute dy;
-  Hour: Byte absolute hr;
-  Minute: Byte absolute mm;
-  Second: Byte absolute ss;
-  Millis: ub4 absolute fsec;
   Ptr: POraDate absolute P;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1529,10 +1525,7 @@ var
   P: PAnsiChar absolute DT;
   Len: NativeUInt;
   Status: sword absolute Len;
-  yr, mnth, dy, hr, mm, ss, fsec: sb4;
-  Year: SmallInt absolute yr;
-  Month: Byte absolute mnth;
-  Day: Byte absolute dy;
+  dy, hr, mm, ss, fsec: sb4;
   Hour: Byte absolute hr;
   Minute: Byte absolute mm;
   Second: Byte absolute ss;

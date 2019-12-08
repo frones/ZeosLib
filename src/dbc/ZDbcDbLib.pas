@@ -584,6 +584,7 @@ begin
       ExecuteImmediat(RawByteString('SET ANSI_DEFAULTS OFF'), lcOther);
       ExecuteImmediat(RawByteString('SET ANSI_PADDING OFF'), lcOther);
     end;
+  //ExecuteImmediat(RawByteString('SET NO_BROWSETABLE ON'), lcOther)
 end;
 
 {**

@@ -58,9 +58,9 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF},
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF} ZClasses,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainOracleDriver, ZDbcLogging,
-  ZTokenizer, ZDbcGenericResolver, ZURL, ZGenericSqlAnalyser, ZClasses,
+  ZTokenizer, ZDbcGenericResolver, ZURL, ZGenericSqlAnalyser,
   ZPlainOracleConstants;
 
 type

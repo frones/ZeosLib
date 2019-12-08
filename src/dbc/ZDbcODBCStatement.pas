@@ -2739,7 +2739,6 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetUnicodeString(Index: Integer;
   const Value: ZWideString);
-var Bind: PZODBCParamBind;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);
