@@ -81,7 +81,6 @@ type
     function SupportsMARSConnection: Boolean;
   end;
 
-  TOleCheckAction = (ocaOther, ocaStartTransaction, ocaCommit, ocaRollback);
   {** Implements a generic OleDB Connection. }
   TZOleDBConnection = class(TZAbstractDbcConnection, IZOleDBConnection)
   private
@@ -98,7 +97,8 @@ type
     FAutoCommitTIL: ISOLATIONLEVEL;
     FRestartTransaction: Boolean;
     procedure SetProviderProps(DBinit: Boolean);
-    procedure CheckError(Status: HResult; Action: TOleCheckAction; DoLog: Boolean);
+    procedure CheckError(Status: HResult; LoggingCateGory: TZLoggingCategory;
+      const LogMsg: RawByteString);
   protected
     procedure InternalCreate; override;
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
@@ -149,13 +149,6 @@ type
 var
   {** The common driver manager object. }
   OleDBDriver: IZDriver;
-const
-  ROleCheckActions: array[TOleCheckAction] of RawByteString = ('',
-    'Start Transaction', 'Commit Transaction', 'Rollback Transaction');
-  {$IFDEF UNICODE}
-  UOleCheckActions: array[TOleCheckAction] of UnicodeString = ('',
-    'Start Transaction', 'Commit Transaction', 'Rollback Transaction');
-  {$ENDIF}
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
@@ -266,7 +259,7 @@ begin
     rgDBPROPSET_DBPROPSET_SESSION.dwOptions    := DBPROPOPTIONS_REQUIRED;
     rgDBPROPSET_DBPROPSET_SESSION.colid        := DB_NULLID;
     rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[TransactIsolationLevel];
-    CheckError(SessionProperties.SetProperties(1, @prgPropertySets), ocaOther, False);
+    CheckError(SessionProperties.SetProperties(1, @prgPropertySets), lcOther, EmptyRaw);
     FAutoCommitTIL := TIL[TransactIsolationLevel];
   end;
 end;
@@ -338,7 +331,7 @@ begin
     else if Value then begin
       FSavePoints.Clear;
       while FpulTransactionLevel > 0 do begin
-        CheckError(fTransaction.Abort(nil, FRetaining, False), ocaRollback, True);
+        CheckError(fTransaction.Abort(nil, FRetaining, False), lcTransaction, 'Rollback Transaction');
         Dec(FpulTransactionLevel);
       end;
       fTransaction := nil;
@@ -433,7 +426,7 @@ begin
       else
         cPropertySets := 0;
     try
-      CheckError(DBProps.SetProperties(cPropertySets,@PropertySets[0]), ocaOther, False);
+      CheckError(DBProps.SetProperties(cPropertySets,@PropertySets[0]), lcTransaction, EmptyRaw);
     finally
       DBProps := nil;
     end;
@@ -451,7 +444,7 @@ begin
     if not Assigned(fTransaction) then
       OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
     Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
-    CheckError(Res, ocaStartTransaction, True);
+    CheckError(Res, lcTransaction, 'Start Transaction');
     Result := FpulTransactionLevel;
   end else begin
     S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
@@ -476,14 +469,14 @@ var
 begin
   Result := '';
   DBProperties := nil;
-  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), ocaOther, False);
+  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), lcOther, EmptyRaw);
   try
     PropIDSet.rgPropertyIDs   := @APropIDs;
     PropIDSet.cPropertyIDs    := High(APropIDs)+1;
     PropIDSet.guidPropertySet := DBPROPSET_DATASOURCEINFO;
     nPropertySets := 0;
     prgPropertySets := nil;
-    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), ocaOther, False);
+    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), lcOther, EmptyRaw);
     Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
@@ -620,7 +613,7 @@ end;
 function TZOleDBConnection.CreateCommand: ICommandText;
 begin
   Result := nil;
-  CheckError(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)), ocaOther, False);
+  CheckError(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)), lcOther, EmptyRaw);
 end;
 
 function TZOleDBConnection.GetMalloc: IMalloc;
@@ -649,13 +642,13 @@ begin
   end;
 end;
 
-procedure TZOleDBConnection.CheckError(Status: HResult; Action: TOleCheckAction;
-  DoLog: Boolean);
+procedure TZOleDBConnection.CheckError(Status: HResult; LoggingCateGory: TZLoggingCategory;
+  const LogMsg: RawByteString);
 begin
-  if DoLog and (Action <> ocaOther) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, ROleCheckActions[Action]);
+  if (Pointer(LogMsg) <> nil) and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMsg);
   if Status <> S_OK then
-    OleDbCheck(Status, {$IFDEF UNICODE}UOleCheckActions{$ELSE}ROleCheckActions{$ENDIF}[Action], Self, nil);
+    OleDbCheck(Status, '', Self, nil);
 end;
 
 {**
@@ -680,7 +673,7 @@ begin
     end;
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    CheckError(fTransaction.Commit(FRetaining,XACTTC_SYNC,0), ocaCommit, True);
+    CheckError(fTransaction.Commit(FRetaining,XACTTC_SYNC,0), lcTransaction, 'Commit Transaction');
     Dec(FpulTransactionLevel);
     if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
@@ -725,7 +718,7 @@ begin
     end;
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    CheckError(fTransaction.Abort(nil, FRetaining, False), ocaRollback, True);
+    CheckError(fTransaction.Abort(nil, FRetaining, False), lcTransaction, 'Rollback Transaction');
     Dec(FpulTransactionLevel);
     if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
@@ -747,14 +740,14 @@ var
 begin
   Result := 0;
   DBProperties := nil;
-  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), ocaOther, False);
+  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), lcOther, EmptyRaw);
   try
     PropIDSet.rgPropertyIDs   := @APropID;
     PropIDSet.cPropertyIDs    := 1;
     PropIDSet.guidPropertySet := DBPROPSET_DATASOURCEINFO;
     nPropertySets := 0;
     prgPropertySets := nil;
-    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), ocaOther, False);
+    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), lcOther, EmptyRaw);
     Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
@@ -779,7 +772,7 @@ procedure TZOleDBConnection.Open;
 var
   DataInitialize : IDataInitialize;
   ConnectStrings: TStrings;
-  ConnectString: ZWideString;
+  ConnectString: UnicodeString;
   FDBCreateSession: IDBCreateSession;
 begin
   if not Closed then
@@ -791,12 +784,12 @@ begin
     //https://msdn.microsoft.com/de-de/library/ms131686%28v=sql.120%29.aspx
     FSupportsMARSConnnection := StrToBoolEx(ConnectStrings.Values[ConnProps_MarsConn]);
     if StrToBoolEx(ConnectStrings.Values[ConnProps_TrustedConnection]) then
-      ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(DataBase)
+      ConnectString := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(DataBase)
     else
     begin
       ConnectStrings.Values[ConnProps_UserId] := User;
       ConnectStrings.Values[ConnProps_Password] := PassWord;
-      ConnectString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(ComposeString(ConnectStrings, ';'));
+      ConnectString := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(ComposeString(ConnectStrings, ';'));
     end;
     FServerProvider := ProviderNamePrefix2ServerProvider(ConnectStrings.Values[ConnProps_Provider]);
     fCatalog := ConnectStrings.Values[ConnProps_Initial_Catalog];
@@ -806,7 +799,7 @@ begin
     DataInitialize := nil; //no longer required!
     SetProviderProps(True); //set's timeout values
     // open the connection to the DB
-    CheckError(fDBInitialize.Initialize, ocaOther, False);
+    CheckError(fDBInitialize.Initialize, lcOther, EmptyRaw);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
     //some Providers do NOT support commands, so let's check if we can use it
     OleCheck(FDBCreateSession.CreateSession(nil, IID_IDBCreateCommand, IUnknown(FDBCreateCommand)));
@@ -869,7 +862,7 @@ begin
     AutoCommit := False; //remainder for reopen
   end;
   FDBCreateCommand := nil;
-  CheckError(fDBInitialize.Uninitialize, ocaOther, False);
+  CheckError(fDBInitialize.Uninitialize, lcOther, EmptyRaw);
   fDBInitialize := nil;
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
     'DISCONNECT FROM "'+ConSettings^.Database+'"');
