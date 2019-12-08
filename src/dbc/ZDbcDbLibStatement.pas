@@ -374,16 +374,15 @@ var
   NativeResultSet: TZDBLibResultSet;
   CachedResultSet: TZCachedResultSet;
   RowsAffected: Integer;
-  Status: Integer;
+  ResultsRETCODE, cmdRowRETCODE: RETCODE;
 begin
-  while True do begin
-    Status := FPlainDriver.dbresults(FHandle);
-    if Status = NO_MORE_RESULTS then
-      Break;
-    if Status <> DBSUCCEED then
+  repeat
+    ResultsRETCODE := FPlainDriver.dbresults(FHandle);
+    if ResultsRETCODE = DBFAIL then
       FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS/dbresults');
-    Status := FPlainDriver.dbcmdrow(FHandle);
-    if Status = DBSUCCEED then begin
+    cmdRowRETCODE := FPlainDriver.dbcmdrow(FHandle);
+    //EH: if NO_MORE_RESULTS there might be a final update count see TestSF380(a/b)
+    if (cmdRowRETCODE = DBSUCCEED) and (ResultsRETCODE <> NO_MORE_RESULTS) then begin
       {EH: Developer notes:
        the TDS protocol does NOT support any stmt handles. All actions are
        executed sequentially so in ALL cases we need cached Results NO WAY around!!!}
@@ -401,7 +400,7 @@ begin
         FResults.Add(TZAnyValue.CreateWithInteger(RowsAffected));
     end;
     FPlainDriver.dbCanQuery(FHandle);
-  end;
+  until ResultsRETCODE = NO_MORE_RESULTS;
   if BindList.HasOutOrInOutOrResultParam then
     CreateOutParamResultSet;
 end;
