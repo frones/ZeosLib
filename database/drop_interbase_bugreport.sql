@@ -23,7 +23,7 @@ drop table PLUSA;
 drop table PLUS__;
 drop table Ticket192;
 drop table TABLE1;
-drop domain CURRENCY_D;DROP TABLE TestTicket363;
+drop domain CURRENCY_D;
 DROP TABLE TestTicket363;
 DROP TABLE Ticket376a;
 DROP TABLE Ticket376b;
