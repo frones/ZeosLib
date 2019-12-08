@@ -799,6 +799,7 @@ var
   lUpdateCount         : Integer;
   lValidateUpdateCount : Boolean;
   TempKey              : IZAnyValue;
+  SenderStatement      : IZStatement;
 begin
   if (UpdateType = utDeleted) and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
@@ -859,8 +860,13 @@ begin
   FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
 
   // if Property ValidateUpdateCount isn't set : assume it's true
-  lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
-                          or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
+  SenderStatement := Sender.GetStatement;
+  if Assigned(SenderStatement) then begin
+    SQL := SenderStatement.GetParameters.Values['ValidateUpdateCount'];
+    lValidateUpdateCount := (SQL = '') or StrToBoolEx(SQL);
+  end else begin
+    lValidateUpdateCount := true;
+  end;
 
   lUpdateCount := Statement.ExecuteUpdatePrepared;
   {$IFDEF WITH_VALIDATE_UPDATE_COUNT}

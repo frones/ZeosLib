@@ -243,7 +243,7 @@ type
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean); virtual;
-	function GetServerProvider: TZServerProvider; virtual;
+    function GetServerProvider: TZServerProvider; virtual;
     {$IFDEF ZEOS_TEST_ONLY}
     function GetTestMode : Byte;
     procedure SetTestMode(Mode: Byte);

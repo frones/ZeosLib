@@ -336,11 +336,15 @@ var
   NativeResultSet: TZDBLibResultSet;
   CachedResultSet: TZCachedResultSet;
   RowsAffected: Integer;
+  ResultsRETCODE, cmdRowRETCODE: RETCODE;
 begin
-//Sybase does not seem to return dbCount at all, so a workaround is made
-  //RowsAffected := -2;
-  while FPlainDriver.dbresults(FHandle) = DBSUCCEED do begin
-    if FPlainDriver.dbcmdrow(FHandle) = DBSUCCEED then begin
+  repeat
+    ResultsRETCODE := FPlainDriver.dbresults(FHandle);
+    if ResultsRETCODE = DBFAIL then
+      FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS/dbresults');
+    cmdRowRETCODE := FPlainDriver.dbcmdrow(FHandle);
+    //EH: if NO_MORE_RESULTS there might be a final update count see TestSF380(a/b)
+    if (cmdRowRETCODE = DBSUCCEED) and (ResultsRETCODE <> NO_MORE_RESULTS) then begin
       {EH: Developer notes:
        the TDS protocol does NOT support any stmt handles. All actions are
        executed sequentially so in ALL cases we need cached Results NO WAY around!!!}
@@ -358,7 +362,7 @@ begin
         FResults.Add(TZAnyValue.CreateWithInteger(RowsAffected));
     end;
     FPlainDriver.dbCanQuery(FHandle);
-  end;
+  until ResultsRETCODE = NO_MORE_RESULTS;
   FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
 
   (*if not FDBLibConnection.FreeTDS then

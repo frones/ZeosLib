@@ -279,7 +279,7 @@ go
 /*==============================================================*/
 create table high_load (
 hl_id		      INTEGER NOT NULL,
-stBoolean             BIT,
+stBoolean             BIT null,
 stByte                TINYINT null,
 stShort               SMALLINT null,
 stInteger             INTEGER null,
@@ -299,6 +299,24 @@ stUnicodeStream       ntext null,
 stBinaryStream        IMAGE null,
 primary key (hl_id)
 )
+go
+
+/*==============================================================*/
+/* Table : bcd_values                                           */
+/*==============================================================*/
+create table bcd_values
+(
+   id                             INTEGER NOT NULL,
+   curr18_4                       NUMERIC(18,4),
+   curr15_2                       NUMERIC(15,2),
+   curr10_4                       NUMERIC(10,4),
+   curr4_4                        NUMERIC(4,4),
+   bigd18_1                       NUMERIC(18,1),
+   bigd18_5                       NUMERIC(18,5),
+   bigd12_10                      NUMERIC(12,10),
+   bigd18_18                      NUMERIC(18,18),
+   primary key (id)
+);
 go
 
 /*==============================================================*/

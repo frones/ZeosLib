@@ -175,7 +175,8 @@ CREATE TABLE TABLE1
   PREZZO CURRENCY_D DEFAULT 0.00,
   CONSTRAINT PK_TABLE1 PRIMARY KEY (ID)
 );
-);
+
+CREATE TABLE TestTicket363 (id integer primary key, "value" BLOB SUB_TYPE TEXT);
 
 /*==============================================================*/
 /* Table for Ticket#376 on Sourceforge                          */
