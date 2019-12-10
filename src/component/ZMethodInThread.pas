@@ -31,9 +31,12 @@ Type
   Property OnFinish: TNotifyEvent Read _methodfinish Write SetOnFinish;
   Procedure ApplyUpdates(inDataSet: TZAbstractDataset);
   Procedure Connect(inConnection: TZAbstractConnection);
+  Procedure Commit(inConnection: TZAbstractConnection);
+  Procedure ExecSQL(inDataSet: TZAbstractRODataSet);
   Procedure Open(inDataSet: TZAbstractRODataset);
   Procedure Post(inDataSet: TZAbstractRODataset);
   Procedure Refresh(inDataSet: TZAbstractRODataset);
+  Procedure Rollback(inConnection: TZAbstractConnection);
   Procedure WaitFor;
   Procedure Kill(inAreYouSure: Boolean);
  End;
@@ -90,6 +93,11 @@ Begin
  If Assigned(_methodthread) Then FreeAndNil(_methodthread);
 End;
 
+Procedure TZMethodInThread.Commit(inConnection: TZAbstractConnection);
+Begin
+ StartMethodThread(inConnection.Commit);
+End;
+
 Procedure TZMethodInThread.Connect(inConnection: TZAbstractConnection);
 Begin
  StartMethodThread(inConnection.Connect);
@@ -108,6 +116,11 @@ Begin
  Self.WaitFor;
  If Assigned(_methodthread) Then FreeAndNil(_methodthread);
  inherited;
+End;
+
+Procedure TZMethodInThread.ExecSQL(inDataSet: TZAbstractRODataSet);
+Begin
+ StartMethodThread(inDataSet.ExecSQL);
 End;
 
 Procedure TZMethodInThread.InternalOpen;
@@ -158,6 +171,11 @@ End;
 Procedure TZMethodInThread.Refresh(inDataSet: TZAbstractRODataset);
 Begin
  StartMethodThread(inDataSet.Refresh);
+End;
+
+Procedure TZMethodInThread.Rollback(inConnection: TZAbstractConnection);
+Begin
+ StartMethodThread(inConnection.Rollback);
 End;
 
 Procedure TZMethodInThread.SetOnError(Const inErrorEvent: TErrorEvent);
