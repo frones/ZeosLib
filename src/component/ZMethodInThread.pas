@@ -28,7 +28,10 @@ Type
   Property IsRunning: Boolean Read ThreadRunning;
   Property OnError: TErrorEvent Read _methoderror Write SetOnError;
   Procedure Connect(inConnection: TZAbstractConnection);
+  Procedure Commit(inConnection: TZAbstractConnection);
+  Procedure ExecSQL(inDataSet: TZAbstractRODataSet);
   Procedure Open(inDataSet: TZAbstractRODataset);
+  Procedure Rollback(inConnection: TZAbstractConnection);
   Procedure WaitFor;
  End;
 
@@ -74,6 +77,11 @@ Begin
  If Assigned(_methodthread) Then FreeAndNil(_methodthread);
 End;
 
+Procedure TZMethodInThread.Commit(inConnection: TZAbstractConnection);
+Begin
+ StartMethodThread(inConnection.Commit);
+End;
+
 Procedure TZMethodInThread.Connect(inConnection: TZAbstractConnection);
 Begin
  CheckRunning;
@@ -98,6 +106,11 @@ Begin
  inherited;
 End;
 
+Procedure TZMethodInThread.ExecSQL(inDataSet: TZAbstractRODataSet);
+Begin
+ StartMethodThread(inDataSet.ExecSQL);
+End;
+
 Procedure TZMethodInThread.InternalOpen;
 Begin
  _afteropen := _dataset.AfterOpen;
@@ -120,6 +133,11 @@ Begin
  _methodthread := TZMethodThread.Create(InternalOpen, ThreadError);
  (_methodthread As TZMethodThread).NameThreadForDebugging('TZMethodInThread_Open');
  (_methodthread As TZMethodThread).Start;
+End;
+
+Procedure TZMethodInThread.Rollback(inConnection: TZAbstractConnection);
+Begin
+ StartMethodThread(inConnection.Rollback);
 End;
 
 Procedure TZMethodInThread.SetOnError(Const inErrorEvent: TErrorEvent);
