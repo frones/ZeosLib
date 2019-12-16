@@ -1389,10 +1389,27 @@ Type TCurrRoundToScale = 0..4;
 {** EH:
    round a currency value half away from zero to it's exact scale digits
    @param Value the value to be rounded
-   @param Scale the exact scale digt we want to round valid is 0..4. even if 4 is a nop
+   @param Scale the exact scale digt we want to round valid is 0..4. even if 4 is a noop
    @return a rounded value
 }
 function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;
+
+Type TFractionRoundToScale = 0..9;
+
+{** EH:
+   round a fraction cardinal value half away from zero to it's exact scale digits
+   @param Value the value to be rounded
+   @param Scale the exact scale digt we want to round valid is 0..9. even if 9 is a noop
+   @return a rounded value
+}
+function RoundNanoFractionTo(const Value: Cardinal; Scale: TFractionRoundToScale): Cardinal;
+
+{** EH:
+   round a fraction cardinal value half away from zero
+   @param Value the value to be rounded
+   @return a rounded value with millisecond precision
+}
+function RoundNanoFractionToMillis(const Value: Cardinal): Word;
 
 var
   ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
@@ -8787,6 +8804,44 @@ begin
         d64 := d64 + CInt64Table[Scale];
   end else
     Result := Value
+end;
+
+const HalfFractModulos:     array [TFractionRoundToScale] of Cardinal = ( 444444445, 44444445,  4444445,  444445,  44445,  4445,  445, 45, 5,0);
+const FractionRoundSummant: array [TFractionRoundToScale] of Cardinal = (1000000000,100000000, 10000000, 1000000, 100000, 10000, 1000,100,10,1);
+
+{** EH:
+   round a fraction cardinal value half away from zero to it's exact scale digits
+   @param Value the value to be rounded
+   @param Scale the exact scale digt we want to round valid is 0..8. even if 9 is a noop
+   @return a rounded value
+}
+function RoundNanoFractionTo(const Value: Cardinal; Scale: TFractionRoundToScale): Cardinal;
+var Modulo: Cardinal;
+begin
+  if Scale = 0 then
+    Result := 0
+  else if (Scale < 9) and (Value > 0) then begin
+    Result := Value div FractionLength2NanoSecondMulTable[Scale];
+    Result := Result * FractionLength2NanoSecondMulTable[Scale];
+    Modulo := Value - Result;
+    if (Scale > 0) and (Modulo >= HalfFractModulos[Scale]) then
+      Result := Result + FractionRoundSummant[Scale];
+  end else Result := Value;
+end;
+
+{** EH:
+   round a fraction cardinal value half away from zero
+   @param Value the value to be rounded
+   @return a rounded value with millisecond precision
+}
+function RoundNanoFractionToMillis(const Value: Cardinal): Word;
+var F, Modulo: Cardinal;
+begin
+  Result := Value div NanoSecsPerMSec;
+  F :=  Result * NanoSecsPerMSec;
+  Modulo := Value - F;
+  if Modulo >= HalfFractModulos[3] then
+    Result := Result + 1;
 end;
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

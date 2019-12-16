@@ -632,6 +632,7 @@ procedure TZAbstractPostgreSQLStringResultSet.DefinePostgreSQLToSQLType(
 var
   SQLType: TZSQLType;
   Connection: IZPostgreSQLConnection;
+label asignTScaleAndPrec;
 begin
   Connection := Statement.GetConnection as IZPostgreSQLConnection;
 
@@ -665,14 +666,24 @@ begin
       end;
     TIMESTAMPOID, TIMESTAMPTZOID, ABSTIMEOID: begin
       ColumnInfo.ColumnType := stTimestamp; { timestamp,timestamptz/abstime. no 'datetime' any more}
-      if TypeModifier <> -1 then
-        ColumnInfo.Scale := TypeModifier; //milliseconds or negative if not specified
-      Exit;
+      goto asignTScaleAndPrec;
     end;
     TIMEOID, TIMETZOID: begin
       ColumnInfo.ColumnType := stTime;
-      if TypeModifier <> -1 then
-        ColumnInfo.Scale := TypeModifier;
+asignTScaleAndPrec:
+      if TypeModifier = -1 then begin
+        ColumnInfo.Scale := 6;
+        //pg allows max millisecond fractions. these are variable
+        if (TypeOid = TIMESTAMPOID) or (TypeOid = TIMESTAMPTZOID)
+        then ColumnInfo.Precision := 19
+        else ColumnInfo.Precision := 10;
+      end else begin
+        ColumnInfo.Scale := TypeModifier; //fixed second fractions..
+        //add the fraction dot to precision
+        if (TypeOid = TIMESTAMPOID) or (TypeOid = TIMESTAMPTZOID)
+        then ColumnInfo.Precision := 20+TypeModifier
+        else ColumnInfo.Precision := 11+TypeModifier;
+      end;
       Exit;
     end;
   end;
