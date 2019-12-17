@@ -1673,6 +1673,7 @@ end;
 procedure TAbstractColumnODBCResultSet.Open;
 var
   bufSQLLEN: SQLLEN;
+  DESC_CONCISE_TYPE: SQLLEN absolute bufSQLLEN;
   ColumnNumber: SQLUSMALLINT;
   ColumnInfo: TZODBCColumnInfo;
   RowSize: NativeUInt;
@@ -1749,7 +1750,10 @@ begin
             bufSQLLEN := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), fSigned);
             Signed := fSigned;
           end;
-          case bufSQLLEN of
+          case DESC_CONCISE_TYPE of
+            SQL_DATETIME, SQL_TIMESTAMP, SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP,
+            SQL_SS_TIME2, SQL_SS_TIMESTAMPOFFSET:
+              Scale := ColNumAttribute(ColumnNumber, SQL_DESC_SCALE);
             SQL_NUMERIC, SQL_DECIMAL, SQL_FLOAT, SQL_REAL, SQL_DOUBLE: begin
                 Precision := ColNumAttribute(ColumnNumber, SQL_DESC_PRECISION);
                 Scale := ColNumAttribute(ColumnNumber, SQL_DESC_SCALE);
@@ -1766,7 +1770,7 @@ begin
                 Signed := ColNumAttribute(ColumnNumber, SQL_DESC_UNSIGNED) = SQL_FALSE;
           end;
 
-          ColumnType := ConvertODBCTypeToSQLType(bufSQLLEN, Scale, Precision,
+          ColumnType := ConvertODBCTypeToSQLType(DESC_CONCISE_TYPE, Scale, Precision,
               not Signed, ConSettings, @ODBC_CType);
           {numeric data type infos: }
           if (ColumnType in [stDouble, stCurrency]) then

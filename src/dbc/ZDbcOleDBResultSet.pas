@@ -2153,8 +2153,9 @@ begin
         if (prgInfo^.wType = DBTYPE_CY)
         then ColumnInfo.Scale := 4
         else ColumnInfo.Scale := prgInfo.bScale;
-      end else
-        ColumnInfo.Precision := FieldSize;
+      end else if ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] then
+        ColumnInfo.Scale := prgInfo.bScale
+      else ColumnInfo.Precision := FieldSize;
       ColumnInfo.Currency := prgInfo.wType = DBTYPE_CY;
       ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
       ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stCurrency, stBigDecimal];

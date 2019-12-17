@@ -512,9 +512,10 @@ type
 
     procedure InternalPrepare; virtual;
     procedure InternalUnPrepare; virtual;
-    //function GetFieldClass(FieldType: TFieldType): TFieldClass; override; //we don't use it. we override CreateFields
     {$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
-    //function GetFieldClass(FieldDef: TFieldDef): TFieldClass; override; //we don't use it. we override CreateFields by now
+    function GetFieldClass(FieldDef: TFieldDef): TFieldClass; override; //we don't use it. we override CreateFields by now
+    {$ELSE}
+    function GetFieldClass(FieldType: TFieldType): TFieldClass; override; //we don't use it. we override CreateFields
     {$ENDIF}
   protected
   {$IFDEF WITH_IPROVIDER}
@@ -2620,6 +2621,28 @@ begin
   end;
   Result := RowBuffer <> nil;
 end;
+
+{$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+function TZAbstractRODataset.GetFieldClass(FieldDef: TFieldDef): TFieldClass;
+begin
+  case FieldDef.DataType of
+    ftDate: Result := TZDateField;
+    ftTime: Result := TZTimeField;
+    ftDateTime: Result := TZDateTimeField;
+    else Result := inherited GetFieldClass(FieldDef);
+  end;
+end;
+{$ELSE}
+function TZAbstractRODataset.GetFieldClass(FieldType: TFieldType): TFieldClass;
+begin
+  case FieldType of
+    ftDate: Result := TZDateField;
+    ftTime: Result := TZTimeField;
+    ftDateTime: Result := TZDateTimeField;
+    else Result := inherited GetFieldClass(FieldType);
+  end;
+end;
+{$ENDIF}
 
 function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
@@ -7538,7 +7561,7 @@ begin
             Fraction := t.Fractions;
             Fraction := RoundNanoFractionTo(Fraction, FScale);
             Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
-            {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, FScale);
+            {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
             if FScale > FFractionLen[B] then begin
               J := I+FScale;
               P := Pointer(Text);
@@ -7695,7 +7718,7 @@ begin
             Fraction := ts.Fractions;
             Fraction := RoundNanoFractionTo(Fraction, FScale);
             Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
-            {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, FScale);
+            {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
             if FScale > FFractionLen[B] then begin
               J := I+FScale;
               P := Pointer(Text);

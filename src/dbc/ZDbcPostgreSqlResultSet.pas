@@ -671,19 +671,9 @@ begin
     TIMEOID, TIMETZOID: begin
       ColumnInfo.ColumnType := stTime;
 asignTScaleAndPrec:
-      if TypeModifier = -1 then begin
-        ColumnInfo.Scale := 6;
-        //pg allows max millisecond fractions. these are variable
-        if (TypeOid = TIMESTAMPOID) or (TypeOid = TIMESTAMPTZOID)
-        then ColumnInfo.Precision := 19
-        else ColumnInfo.Precision := 10;
-      end else begin
-        ColumnInfo.Scale := TypeModifier; //fixed second fractions..
-        //add the fraction dot to precision
-        if (TypeOid = TIMESTAMPOID) or (TypeOid = TIMESTAMPTZOID)
-        then ColumnInfo.Precision := 20+TypeModifier
-        else ColumnInfo.Precision := 11+TypeModifier;
-      end;
+      if TypeModifier = -1 //variable precision of second fractions
+      then ColumnInfo.Scale := {-}6 //tag variable
+      else ColumnInfo.Scale := TypeModifier; //fixed second fractions..
       Exit;
     end;
   end;

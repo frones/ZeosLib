@@ -1798,6 +1798,8 @@ begin
               then ColumnCodePage := ZCodePageInfo.CP
               else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
               Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
+              if XSQLVAR.sqltype and not 1 = SQL_TEXT then
+                Scale := Precision;
               if ColumnType = stString
               then CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
               else CharOctedLength := Precision shl 1;
@@ -1819,6 +1821,7 @@ begin
                   SQL_INT64:  Precision := 18;
                 end;
               end;
+              stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of milli second fractions
             end;
           end;
         end;

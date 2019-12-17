@@ -3357,9 +3357,7 @@ begin
       SQLType := GetSQLTypeByOid(TypeOid, AttTypMod);
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
       Result.UpdateString(TableColColumnTypeNameIndex, PgType);
-
       Result.UpdateInt(TableColColumnBufLengthIndex, 0);
-
       if (PgType = 'bpchar') or (PgType = 'varchar') or (PgType = 'enum') then
       begin
         if AttTypMod <> -1 then begin
@@ -3373,9 +3371,12 @@ FillSizes:
             Result.UpdateInt(TableColColumnBufLengthIndex, (Precision+1) shl 1);
             Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision shl 1);
           end;
+          if (TypeOid = CHAROID) or (TypeOid = BPCHAROID) then
+            //tag fixed size fields by having scale equal to precision
+            Result.UpdateInt(TableColColumnDecimalDigitsIndex, Precision);
         end else if (PgType = 'varchar') then
           if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then begin
-            Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(25, -1))); //Assume text-lob instead
+            Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(TEXTOID, -1))); //Assume text-lob instead
             Result.UpdateInt(TableColColumnSizeIndex, 0); // need no size for streams
           end else begin //keep the string type but with user defined count of chars
             Precision := (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
@@ -3383,13 +3384,17 @@ FillSizes:
           end
         else
           Result.UpdateInt(TableColColumnSizeIndex, 0);
-      end else if (PgType = 'uuid') then begin
+      end else if (TypeOID = UUIDOID) then begin
         // I set break point and see code reaching here. Below assignments, I have no idea what I am doing.
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, 16); // MSSQL returns 16 here - which makes sense since a GUID is 16 bytes long.
         Result.UpdateInt(TableColColumnSizeIndex, 38); //maximum visible characters
-      end else if (PgType = 'numeric') or (PgType = 'decimal') then begin
-        Result.UpdateInt(TableColColumnSizeIndex, ((AttTypMod - 4) div 65536)); //precision
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, ((AttTypMod -4) mod 65536)); //scale
+      end else if (TypeOID = TIMESTAMPOID) or (TypeOID = TIMESTAMPTZOID) or (TypeOID = ABSTIMEOID) or (TypeOID = TIMEOID) or (TypeOID = TIMETZOID) then begin
+        if AttTypMod = -1
+        then Result.UpdateInt(TableColColumnDecimalDigitsIndex, 6) //scale
+        else Result.UpdateInt(TableColColumnDecimalDigitsIndex, AttTypMod); //scale
+      end else if (TypeOID = NUMERICOID) or (PgType = 'decimal') then begin
+        Result.UpdateInt(TableColColumnSizeIndex, ((AttTypMod - VARHDRSZ) shr 16 and $FFFF)); //precision
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, ((AttTypMod - VARHDRSZ) and $FFFF)); //scale
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10); //base? ten as default
       end else if (PgType = 'bit') or (PgType = 'varbit') then begin
         Result.UpdateInt(TableColColumnSizeIndex, AttTypMod);

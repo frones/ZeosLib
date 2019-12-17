@@ -202,6 +202,7 @@
               {$DEFINE WITH_PARAM_ASLARGEINT}           // TParam.AsLargint is supported
               {$DEFINE WITH_VARIANT_UINT64}             // System.TVariant supports UInt64 Values
               {$DEFINE WITH_VARIANT_UNICODESTRING}      // System.TVariant supports UnicodeString Values
+              {$DEFINE WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD} // TDataSet has the GetFieldClass(TFieldDef) overload
 
               {$IF CompilerVersion >= 21} //Delphi 2010+
                 {$WEAKLINKRTTI ON}                    //suppress extended RTTI
