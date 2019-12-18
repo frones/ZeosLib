@@ -326,8 +326,8 @@ const
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math
-  {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math;
+  //{$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -791,7 +791,7 @@ begin
         PByte(PNumDigit)^ := PByte(pNibble)^;
       if ValueIsOdd then begin
         if PNumDigit < pLastNibble then
-          PByte(PNumDigit)^ := ((PByte(PNumDigit)^ and $0f) shl 4) or (PByte(pNibble+1)^ shr 4);
+          PByte(PNumDigit)^ := Byte((PByte(PNumDigit)^ and $0f) shl 4) or Byte(PByte(pNibble+1)^ shr 4);
       end;
       Inc(PNumDigit);
       Inc(pNibble);

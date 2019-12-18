@@ -2892,6 +2892,8 @@ begin
             then DT := PDateTime(Buffer)^
             else DT := PInteger(Buffer)^ / MSecsOfDay;
             DecodeDateTimeToTime(DT, T);
+            if (T.Fractions > 0) and Field.InheritsFrom(TZTimeField) then
+              T.Fractions := ZSysUtils.RoundNanoFractionTo(T.Fractions, TZTimeField(Field).fScale);
             RowAccessor.SetTime(ColumnIndex, T);
             FNativeFormatOverloadCalled[ftTime] := False;
           end;
@@ -2907,6 +2909,8 @@ begin
               DT := TimeStampToDateTime(S);
             end;
             DecodeDateTimeToTimeStamp(DT, TS);
+            if (TS.Fractions > 0) and Field.InheritsFrom(TZDateTimeField) then
+              TS.Fractions := ZSysUtils.RoundNanoFractionTo(TS.Fractions, TZDateTimeField(Field).fScale);
             RowAccessor.SetTimestamp(ColumnIndex, TS);
             FNativeFormatOverloadCalled[ftDateTime] := False;
           end;
@@ -3310,7 +3314,7 @@ begin
       else ResultSet := CreateResultSet('', -1);
       if not Assigned(ResultSet) then
         if not (doSmartOpen in FOptions)
-        then raise Exception.Create(SCanNotOpenResultSet)
+        then raise EZDatabaseError.Create(SCanNotOpenResultSet)
         else Exit;
     FCursorOpened := True;
     { Initializes field and index defs. }
@@ -5182,22 +5186,23 @@ begin
           not ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
           CreateField(Self);
   end else
-    for I := 0 to FieldDefList.Count - 1 do
+    for I := 0 to {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}.Count - 1 do
       with FieldDefs[I] do
         if (DataType in [ftDate,ftDateTime,ftTime]) and
-          not ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
+          not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
             TZFieldDef(FieldDefs[I]).CreateField(Self)
         else if FUseZFields then begin
           with TZFieldDef(FieldDefList[I]) do
             if (DataType <> ftUnknown) and not (DataType in ObjectFieldTypes) and
               not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
               CreateField(Self, nil, FieldDefList.Strings[I]);
-        end else
-      with FieldDefList[I] do
-        if (DataType <> ftUnknown) and not (DataType in ObjectFieldTypes) and
-          not ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
-          CreateField(Self);
+        end else with {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}[I] do
+          if (DataType <> ftUnknown) and not (DataType in ObjectFieldTypes) and
+            not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
+            CreateField(Self);
+  {$IFNDEF FPC}
   SetKeyFields;
+  {$ENDIF}
   //else inherited CreateFields;
 end;
 

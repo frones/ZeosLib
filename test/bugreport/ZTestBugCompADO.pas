@@ -79,13 +79,13 @@ uses SysUtils, ZTestCase;
 
 function ZTestCompADOBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'ado;odbc_w;odbc_a;OleDB';
+  Result := 'ado;odbc_w;odbc_a;OleDB;mssql;sybase';
 end;
 
 procedure ZTestCompADOBugReport.TestTrailingSpaces;
 const
   RowID = 500;
-  TestString = String('TrailingSpaces    ');
+  TestString: String = 'TrailingSpaces    ';
 var
   Query: TZQuery;
 begin
@@ -100,8 +100,8 @@ begin
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[0].DataType));
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
     CheckStringFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
-    CheckEquals(ord(ftDateTime), ord(Query.Fields[3].DataType));
-    CheckEquals(ord(ftDateTime), ord(Query.Fields[4].DataType));
+    Check(Query.Fields[3].DataType in [ftDateTime, ftTime]); //create scripts?
+    Check(Query.Fields[4].DataType in [ftDateTime, ftTime]); //create scripts?
     CheckEquals(ord(ftBlob), ord(Query.Fields[5].DataType));
     CheckMemoFieldType(Query.Fields[6].DataType, Connection.DbcConnection.GetConSettings);
     {$IFDEF WITH_FTBYTE}
@@ -162,8 +162,8 @@ begin
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[0].DataType));
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
     CheckStringFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
-    CheckEquals(ord(ftDateTime), ord(Query.Fields[3].DataType));
-    CheckEquals(ord(ftDateTime), ord(Query.Fields[4].DataType));
+    Check(Query.Fields[3].DataType in [ftDateTime, ftTime]); //create scripts?
+    Check(Query.Fields[4].DataType in [ftDateTime, ftTime]); //create scripts?
     CheckEquals(ord(ftBlob), ord(Query.Fields[5].DataType));
     CheckMemoFieldType(Query.Fields[6].DataType, Connection.DbcConnection.GetConSettings);
     {$IFDEF WITH_FTBYTE}

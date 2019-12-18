@@ -151,7 +151,7 @@ type
 //    function SupportsResultSetConcurrency(_Type: TZResultSetType;
 //      Concurrency: TZResultSetConcurrency): Boolean; override; -> Not implemented
     function SupportsArrayBindings: Boolean; override;
-    function SupportsMilliSeconds: Boolean; override;
+    //function SupportsMilliSeconds: Boolean; override; default is true
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -955,11 +955,6 @@ begin
   end;
 end;
 
-function TZMySQLDatabaseInfo.SupportsMilliSeconds: Boolean;
-begin
-  Result := False;
-end;
-
 {**
   Are multiple <code>ResultSet</code> from a single execute supported?
   @return <code>true</code> if so; <code>false</code> otherwise
@@ -1346,8 +1341,10 @@ begin
           Result.UpdateRawByteString(TableColColumnTypeNameIndex, TypeName);
           Result.UpdateInt(TableColColumnSizeIndex, ColumnSize);
 
-          Result.UpdateInt(TableColColumnDecimalDigitsIndex, ColumnDecimals);
-          Result.UpdateNull(TableColColumnNumPrecRadixIndex);
+          if MySQLType in [stCurrency, stBigDecimal, stString, stUnicodeString] then
+            Result.UpdateInt(TableColColumnDecimalDigitsIndex, ColumnDecimals);
+
+          //Result.UpdateNull(TableColColumnNumPrecRadixIndex);
 
           { Sets nullable fields. }
           Nullable := GetString(ColumnIndexes[3]);

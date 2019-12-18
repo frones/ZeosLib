@@ -1801,9 +1801,8 @@ begin
     {$R-}
     Bind := @fParamBindings[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
     if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (Bind.ValueCount > 1) or (not Bind.Described and (stCurrency <> Bind.SQLType)) then
-      InitBind(Index, 1, stCurrency);
+      InitBind(Index, 1, stBigDecimal);
     case Bind.ValueType of
       SQL_C_BIT:      PByte(Bind.ParameterValuePtr)^     := Ord(BCDCompare(NullBCD, Value) <> 0);
       SQL_C_STINYINT: PShortInt(Bind.ParameterValuePtr)^ := BCD2Int64(Value);
@@ -1821,6 +1820,7 @@ begin
       SQL_C_CHAR:     SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.BcdToRaw(Value, @fABuffer[0], '.'));
       else RaiseUnsupportedParamType(Index, Bind.ValueType, stBigDecimal);
     end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
     BindList.Put(Index, Value);
 end;
@@ -1938,17 +1938,20 @@ begin
     if Bind.SQLType = stBinaryStream then begin
       PIZlob(Bind.ParameterValuePtr)^ := TZAbstractBlob.CreateWithData(Pointer(Value), Length(Value));
       Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
-    end else case Bind.ValueType of
-      SQL_C_BINARY:   begin
-                        PSQLLEN(Bind.StrLen_or_IndPtr)^ := Length(Value);
-                        if PSQLLEN(Bind.StrLen_or_IndPtr)^ > Bind.BufferLength then
-                          RaiseExceeded(Index);
-                        Move(Pointer(Value)^, Bind.ParameterValuePtr^, PSQLLEN(Bind.StrLen_or_IndPtr)^);
-                      end;
-      SQL_C_GUID:     if Length(Value) = 16
-                      then PGUID(Bind.ParameterValuePtr)^ := PGUID(Value)^
-                      else RaiseExceeded(Index);
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+    end else begin
+      case Bind.ValueType of
+        SQL_C_BINARY:   begin
+                          PSQLLEN(Bind.StrLen_or_IndPtr)^ := Length(Value);
+                          if PSQLLEN(Bind.StrLen_or_IndPtr)^ > Bind.BufferLength then
+                            RaiseExceeded(Index);
+                          Move(Pointer(Value)^, Bind.ParameterValuePtr^, PSQLLEN(Bind.StrLen_or_IndPtr)^);
+                        end;
+        SQL_C_GUID:     if Length(Value) = 16
+                        then PGUID(Bind.ParameterValuePtr)^ := PGUID(Value)^
+                        else RaiseExceeded(Index);
+        else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+      end;
+      PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
     end;
   end else
     BindList.Put(Index, stByte, Value);
@@ -1989,7 +1992,6 @@ begin
     {$R-}
     Bind := @fParamBindings[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
     if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (Bind.ValueCount > 1) or (not Bind.Described and (stCurrency <> Bind.SQLType)) then
       InitBind(Index, 1, stCurrency);
     case Bind.ValueType of
@@ -2015,6 +2017,7 @@ begin
                       end;
       else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
     end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
     BindList.Put(Index, stCurrency, P8Bytes(@Value));
 end;
@@ -2140,7 +2143,6 @@ begin
     {$R-}
     Bind := @fParamBindings[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
     if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (stGUID <> Bind.SQLType)) then
       InitBind(Index, 1, stGUID);
     case Bind.ValueType of
@@ -2165,6 +2167,7 @@ begin
                       end;
       else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
     end;
+    PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
     BindList.Put(Index, Value);
 end;

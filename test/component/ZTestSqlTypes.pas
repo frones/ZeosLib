@@ -75,7 +75,7 @@ type
 
 implementation
 
-uses Classes, ZDbcIntfs,
+uses Classes, ZDbcIntfs, ZCompatibility, ZAbstractRODataSet, DateUtils,
   ZTestConsts, ZSysUtils, ZTestCase;
 
 { TZTestSQLTypesCase }
@@ -106,6 +106,8 @@ end;
 procedure TZTestSQLTypesCase.TestDateTypes;
 var
   NowDate: TDateTime;
+  F: TField;
+  TS: TZTimeStamp;
 begin
   NowDate := Now();
 
@@ -129,15 +131,19 @@ begin
 
   Query.FieldByName('d_id').AsInteger := TEST_ROW_ID;
 
-  if (ProtocolType in [protOracle, protMSSQL, protSyBase, protFreeTDS]) or
-    ( (ProtocolType in [protOleDB, protADO, protODBC]) and
-      (Connection.DbcConnection.GetServerProvider in [spOracle, spASA, spASE, spMSSQL])) then
-  begin
+  if (Connection.DbcConnection.GetServerProvider in [spOracle, spASA, spASE]) then begin
+    //those do not have a native date or time field? Oracle for sure
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_date').DataType));
-    CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType))
-  end
-  else
-  begin
+    CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType));
+  end else if (Connection.DbcConnection.GetServerProvider = spMSSQL) then begin //depends to serverversion
+    Check(Query.FieldByName('d_date').DataType in [ftDate, ftDateTime], 'MSSQL d_date fieldType');
+    Check(Query.FieldByName('d_time').DataType in [ftTime, ftDateTime], 'MSSQL d_time fieldType');
+    if Query.FieldByName('d_time').DataType <> ftTime then begin //depends to our create script
+      DecodeDateTimeToTimeStamp(NowDate, TS); //sqlserver: Rounded to increments of .000, .003, or .007 seconds for Type DATETIME not DATETIME2
+      TS.Fractions := 0;        //this keeps the random fails away
+      Check(TryTimeStampToDateTime(TS, NowDate));
+    end;
+  end else begin //those support all type
     CheckEquals(Ord(ftDate), Ord(Query.FieldByName('d_date').DataType));
     CheckEquals(Ord(ftTime), Ord(Query.FieldByName('d_time').DataType));
   end;
@@ -149,44 +155,68 @@ begin
   Query.FieldByName('d_datetime').AsDateTime := NowDate;
   Query.FieldByName('d_timestamp').AsDateTime := NowDate;
 
+  f := Query.FieldByName('d_date'); //some provider do not have a datefield
+  if F.DataType = ftDate then
+    CheckEquals(Int(NowDate), Query.FieldByName('d_date').AsDateTime, 1e-10)
+  else if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+    then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+    else CheckEquals(NowDate, F.AsDateTime, 1e-10);
+
   {$IFNDEF WITH_FPC_FTTIME_BUG}
-  if (ProtocolType in [protOracle, protMSSQL, protSyBase, protADO]) then
-  begin
-    CheckEquals(NowDate, Query.FieldByName('d_date').AsDateTime, 1e-10);
-    CheckEquals(NowDate, Query.FieldByName('d_time').AsDateTime, 1e-10);
-  end
-  else
-  begin
-    CheckEquals(Trunc(NowDate),
-      Trunc(Query.FieldByName('d_date').AsDateTime), 1e-10);
-    CheckEquals(Frac(NowDate),
-      Frac(Abs(Query.FieldByName('d_time').AsDateTime)), 1e-10);
-  end;
-  CheckEquals(NowDate, Query.FieldByName('d_datetime').AsDateTime, 1e-10);
-  CheckEquals(NowDate, Query.FieldByName('d_timestamp').AsDateTime, 1e-10);
+  f := Query.FieldByName('d_time'); //some provider do not have a timefield
+  if F.DataType = ftTime then
+    if F.InheritsFrom(TZTimeField) and (TZTimeField(F).FractionalSecondsScale < 3)
+    then CheckEqualsDate(Frac(NowDate), F.AsDateTime, [dpYear..dpSec])
+    else CheckEquals(Frac(NowDate), F.AsDateTime, 1e-10)
+  else if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+    then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+    else CheckEquals(NowDate, F.AsDateTime, 1e-10);
   {$ENDIF}
+
+  f := Query.FieldByName('d_datetime');
+  if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+  then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+  else CheckEquals(NowDate, F.AsDateTime, 1e-10);
+
+  f := Query.FieldByName('d_timestamp');
+  if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+  then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+  else CheckEquals(NowDate, F.AsDateTime, 1e-10);
   Query.Post;
 
   Query.Close;
   Query.Open;
 
   CheckEquals(1, Query.RecordCount);
+  f := Query.FieldByName('d_date'); //some provider do not have a datefield
+  if F.DataType = ftDate then
+    CheckEquals(Int(NowDate), Query.FieldByName('d_date').AsDateTime, 1e-10)
+  else if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+    then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+    else CheckEquals(NowDate, F.AsDateTime, 1e-10);
+
   {$IFNDEF WITH_FPC_FTTIME_BUG}
-  if (ProtocolType in [protOracle, protMSSQL, protSyBase]) then
-  begin
-    CheckEqualsDate(NowDate, Query.FieldByName('d_date').AsDateTime, [dpYear..dpSec]);
-    CheckEquals(NowDate, Query.FieldByName('d_time').AsDateTime, 1e-4);
-  end
-  else
-  begin
-    CheckEquals(Trunc(NowDate),
-      Trunc(Query.FieldByName('d_date').AsDateTime), 1e-4);
-    CheckEquals(Frac(NowDate),
-      Frac(Abs(Query.FieldByName('d_time').AsDateTime)), 1e-4);
-  end;
-  CheckEqualsDate(NowDate, Query.FieldByName('d_datetime').AsDateTime, [dpYear..dpSec]);
-  CheckEqualsDate(NowDate, Query.FieldByName('d_timestamp').AsDateTime, [dpYear..dpSec]);
+  f := Query.FieldByName('d_time'); //some provider do not have a timefield
+  if F.DataType = ftTime then
+    if F.InheritsFrom(TZTimeField) and (TZTimeField(F).FractionalSecondsScale < 3)
+    then CheckEqualsDate(Frac(NowDate), F.AsDateTime, [dpYear..dpSec])
+    else CheckEquals(Frac(NowDate), F.AsDateTime, 1e-10)
+  else if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+    then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+    else if True then
+
+      CheckEquals(NowDate, F.AsDateTime, 1e-10);
   {$ENDIF}
+
+  f := Query.FieldByName('d_datetime');
+  if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+  then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+  else CheckEquals(NowDate, F.AsDateTime, 1e-10);
+
+  f := Query.FieldByName('d_timestamp');
+  if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).FractionalSecondsScale < 3)
+  then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
+  else CheckEquals(NowDate, F.AsDateTime, 1e-10);
   Query.SQL.Text := 'DELETE FROM date_values WHERE d_id=:Id';
   Query.Params[0].DataType := ftInteger;
   Query.Params[0].Value := TEST_ROW_ID;

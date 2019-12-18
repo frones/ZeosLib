@@ -1387,9 +1387,10 @@ begin
                         Result.Fractions := PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction;
                         Result.IsNegative := False;
                       end;
-                      Result.Year := Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year);
-                      PCardinal(@Result.TimeZoneHour)^ := 0;
                       Result.IsNegative := PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year < 0;
+                      if Result.IsNegative then
+                        Result.Year := Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year);
+                      PCardinal(@Result.TimeZoneHour)^ := 0;
                     end;
       stString, stUnicodeString: begin
                 if fIsUnicodeDriver then begin
@@ -1674,6 +1675,7 @@ procedure TAbstractColumnODBCResultSet.Open;
 var
   bufSQLLEN: SQLLEN;
   DESC_CONCISE_TYPE: SQLLEN absolute bufSQLLEN;
+  DESC_NULLABLE: SQLLEN absolute bufSQLLEN;
   ColumnNumber: SQLUSMALLINT;
   ColumnInfo: TZODBCColumnInfo;
   RowSize: NativeUInt;
@@ -1717,10 +1719,10 @@ begin
           AutoIncrement := ColNumAttribute(ColumnNumber, SQL_DESC_AUTO_UNIQUE_VALUE) = SQL_TRUE;
           CaseSensitive := ColNumAttribute(ColumnNumber, SQL_DESC_CASE_SENSITIVE) = SQL_TRUE;
           Precision := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
-          bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_NULLABLE);
-          if bufSQLLEN = SQL_NULLABLE then
+          DESC_NULLABLE := ColNumAttribute(ColumnNumber, SQL_DESC_NULLABLE);
+          if DESC_NULLABLE = SQL_NULLABLE then
             Nullable := ntNullable
-          else if bufSQLLEN = SQL_NO_NULLS then
+          else if DESC_NULLABLE = SQL_NO_NULLS then
             Nullable := ntNoNulls
           else
             Nullable := ntNullableUnknown;
@@ -1745,9 +1747,9 @@ begin
           end;
           //DefaultValue -> not implemented
           //DefaultExpression -> not implemented
-          bufSQLLEN := ColNumAttribute(ColumnNumber, SQL_DESC_CONCISE_TYPE);
-          if bufSQLLEN = SQL_TYPE_VARIANT then begin//SQL Server type
-            bufSQLLEN := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), fSigned);
+          DESC_CONCISE_TYPE := ColNumAttribute(ColumnNumber, SQL_DESC_CONCISE_TYPE);
+          if DESC_CONCISE_TYPE = SQL_TYPE_VARIANT then begin//SQL Server type
+            DESC_CONCISE_TYPE := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), fSigned);
             Signed := fSigned;
           end;
           case DESC_CONCISE_TYPE of
@@ -1759,7 +1761,10 @@ begin
                 Scale := ColNumAttribute(ColumnNumber, SQL_DESC_SCALE);
                 Signed := True;
               end;
-            SQL_CHAR, SQL_WCHAR: FixedWidth := True;
+            SQL_CHAR, SQL_WCHAR: begin
+                FixedWidth := True;
+                Scale := Precision;
+              end;
             SQL_BINARY: begin
                 Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
                 FixedWidth := True;
