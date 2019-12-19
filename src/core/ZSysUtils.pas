@@ -1384,6 +1384,9 @@ function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const
 
 procedure Double2BCD(const Value: Double; var Result: TBCD);
 
+procedure GetPacketBCDOffSets({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
+  out PNibble, PLastNibble: PAnsiChar; out Precision, Scale: Word; out GetFirstBCDHalfByte: Boolean);
+
 Type TCurrRoundToScale = 0..4;
 
 {** EH:
@@ -8459,6 +8462,49 @@ begin
   {$ELSE}
   TryRawToBCD(@Buffer[0], FloatToSqlRaw(Value, @Buffer[0]), Result, '.');
   {$ENDIF}
+end;
+
+procedure GetPacketBCDOffSets({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF}
+  Value: TBCD; out PNibble, PLastNibble: PAnsiChar;
+  out Precision, Scale: Word; out GetFirstBCDHalfByte: Boolean);
+var Digit: Word;
+  B: Boolean;
+begin
+  pNibble := @Value.Fraction[0];
+  Precision := Value.Precision;
+  B := Precision and 1 = 1;
+  Scale :=  Value.SignSpecialPlaces and 63;
+  pLastNibble := pNibble + (Precision-1) shr 1;
+  GetFirstBCDHalfByte := True;
+  { padd leading zeroes away }
+  while (Precision > Scale) do begin
+    if PByte(pNibble)^ = 0 then begin
+      Inc(PNibble);
+      Dec(Precision, 1+Ord(Precision > 1));
+      Dec(Scale, Ord(Scale>0)+Ord(Scale>1));
+      Continue;
+    end else if (PByte(pNibble)^ shr 4) = 0 then begin
+      GetFirstBCDHalfByte := False;
+      Dec(Precision);
+      Dec(Scale, Ord(Scale>0));
+    end;
+    Break;
+  end;
+  { padd trailing zeroes away }
+  while (pLastNibble >= pNibble ) and (Scale > 0) do begin
+    if B
+    then Digit := (PByte(pLastNibble)^ shr 4)
+    else begin
+      Digit := (PByte(pLastNibble)^ and $0F);
+      Dec(pLastNibble);
+    end;
+    if Digit = 0 then begin
+      Dec(Scale);
+      Dec(Precision);
+    end else
+      Break;
+    B := not B;
+  end;
 end;
 
 (*function GetStringReplaceAllIndices(Source, OldPattern: PAnsiChar; SourceLen, OldPatternLen: Integer): TIntegerDynArray; overload;

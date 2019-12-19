@@ -2210,6 +2210,7 @@ var
   LastNibbleByteIDX, BCDScale, P, I, F: Byte;
   i64: Int64;
   Negative, LastByteIsHalfByte: boolean;
+label finalize;
 begin
   LastNibbleByteIDX := (Value.Precision-1) shr 1;
   F := Value.SignSpecialPlaces;
@@ -2219,16 +2220,16 @@ begin
   P := 0;
   i64 := 0;
   { scan for leading zeroes to skip them }
-  if LastNibbleByteIDX > 0 then begin
-    for I := 0 to LastNibbleByteIDX do begin
-      F := Value.Fraction[i];
-      if F = 0
-      then Inc(P)
-      else begin
-        i64 := ZBcdNibble2Base100ByteLookup[F];
-        Break;
-      end;
-    end
+  for I := 0 to LastNibbleByteIDX do begin
+    F := Value.Fraction[i];
+    if F = 0
+    then Inc(P)
+    else begin
+      i64 := ZBcdNibble2Base100ByteLookup[F];
+      if P = LastNibbleByteIDX
+      then goto finalize
+      else Break;
+    end;
   end;
   { initialize the Result }
   if P < LastNibbleByteIDX then begin
@@ -2240,6 +2241,7 @@ begin
       if (BCDScale and 1 = 1) and (Value.Precision and 1 = 0) then
         Dec(BCDScale);
     end;
+finalize:
     if negative then
       i64 := -i64;
     if BCDScale < Scale then

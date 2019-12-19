@@ -1504,6 +1504,7 @@ end;
 
 //each postgres num digit is a base 0...9999 digit, so we need to multiply
 const WordFactors: array[0..3] of Word = (1000, 100, 10, 1);
+
 {** written by EgonHugeist
   converts a bigdecimal value into a postgres numeric value
    @param src the value which should be converted
@@ -1513,59 +1514,21 @@ const WordFactors: array[0..3] of Word = (1000, 100, 10, 1);
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 var
   pNibble, PLastNibble, pWords: PAnsichar;
-  FactorIndexOrScale, x, y, z: Integer;
+  FactorIndexOrScale, x, y: Integer;
   Precision, Scale: Word;
   Weight: SmallInt;
-  Digit: Word absolute Weight;
   GetFirstBCDHalfByte: Boolean;
   label Done;
 begin
   //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html
-  pNibble := @Src.Fraction[0];
-  Precision := Src.Precision;
-  Scale :=  Src.SignSpecialPlaces and 63;
-  pLastNibble := pNibble + (Precision-1) shr 1;
-  X := 1;
-  Y := Precision;
-  { padd leading zeroes away }
-  while (Precision > Scale) do begin
-    if PByte(pNibble)^ = 0 then begin
-      Inc(PNibble);
-      Dec(Precision, 1+Ord(Precision > 1));
-      Dec(Scale, Ord(Scale>0)+Ord(Scale>1));
-      Continue;
-    end else if (PByte(pNibble)^ shr 4) = 0 then begin
-      X := 0;
-      Dec(Precision);
-      Dec(Scale, Ord(Scale>0));
-    end;
-    Break;
-  end;
-  { padd trailing zeroes away }
-  GetFirstBCDHalfByte := Y and 1 = 1; //skip first half byte?
-  while (pLastNibble >= pNibble ) and (Scale > 0) do begin
-    if GetFirstBCDHalfByte
-    then Digit := (PByte(pLastNibble)^ shr 4)
-    else begin
-      Digit := (PByte(pLastNibble)^ and $0F);
-      Dec(pLastNibble);
-    end;
-    if Digit = 0 then begin
-      Dec(Scale);
-      Dec(Precision);
-    end else
-      Break;
-    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
-  end;
+  GetPacketBCDOffSets(Src, pNibble, PLastNibble, Precision, Scale, GetFirstBCDHalfByte);
   if Precision = 0 then begin//zero
     PInt64(Dst)^ := 0; //clear NBSEDigit, weight, sign, dscale  once
     Size := 8;
     Exit;
   end;
-  GetFirstBCDHalfByte := X = 1;
   Y := Precision -1;
   Precision := (Precision - Scale);
-  Z := Y -1;
   { align word factor index }
   FactorIndexOrScale :=  BASE1000Digits - Precision mod 4;
   if FactorIndexOrScale = BASE1000Digits then
