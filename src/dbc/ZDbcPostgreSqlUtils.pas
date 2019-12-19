@@ -1514,8 +1514,9 @@ procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 var
   pNibble, PLastNibble, pWords: PAnsichar;
   FactorIndexOrScale, x, y, z: Integer;
-  Precision, Scale, Digit: Word;
+  Precision, Scale: Word;
   Weight: SmallInt;
+  Digit: Word absolute Weight;
   GetFirstBCDHalfByte: Boolean;
   label Done;
 begin
@@ -1554,6 +1555,7 @@ begin
       Dec(Precision);
     end else
       Break;
+    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
   end;
   if Precision = 0 then begin//zero
     PInt64(Dst)^ := 0; //clear NBSEDigit, weight, sign, dscale  once

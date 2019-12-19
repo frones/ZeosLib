@@ -8610,7 +8610,7 @@ begin
   pDN := pLN+1-((Scale+Ord(Scale > 0)+(Precision and 1)) shr 1); //pin middle nibble or after decimal sep
   while (pLN > pDN) and (PByte(pLN)^ = 0) do Dec(pLN);//skip trailing zeroes
   while (pCN < pDN) and (PByte(pCN)^ = 0) do Inc(pCN);//skip leading zeroes
-  if (pCN = pLN) and (PByte(pCN)^ = 0) then begin
+  if ((pCN = pLN) and (PByte(pCN)^ = 0)) or ((pCN > pLN) and (PByte(pLN)^ = 0)) then begin
 zero: Result := 1;
     Exit;
   end;
@@ -8683,7 +8683,7 @@ begin
   pDN := pLN+1-((Scale+Ord(Scale > 0)+(Precision and 1)) shr 1); //pin middle nibble or after decimal sep
   while (pLN > pDN) and (PByte(pLN)^ = 0) do Dec(pLN);//skip trailing zeroes
   while (pCN < pDN) and (PByte(pCN)^ = 0) do Inc(pCN);//skip leading zeroes
-  if (pCN = pLN) and (PByte(pCN)^ = 0) then begin
+  if ((pCN = pLN) and (PByte(pCN)^ = 0)) or ((pCN > pLN) and (PByte(pLN)^ = 0)) then begin
 zero: Result := 1;
     Exit;
   end;

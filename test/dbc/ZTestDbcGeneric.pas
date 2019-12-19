@@ -466,7 +466,7 @@ const
   id_Value        = 1;
   Curr18_4_Value  = '12345678901234.5678';
   Curr15_2_Value  = '1234567890123.45';
-  Curr10_4_Value  = '123456,7890';
+  Curr10_4_Value  = '123456.7890';
   Curr4_4_Value   = '0.1234';
   BigD18_1_Value  = '12345678901234567.8';
   BigD18_5_Value  = '1234567890123.45678';
@@ -474,6 +474,8 @@ const
   BigD18_18_Value = '0.123456789012345678';
 var RS: IZResultSet;
   SelStmt: IZPreparedStatement;
+  I: Integer;
+  C: Currency;
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
     BCD: TBCD;
@@ -504,6 +506,7 @@ var RS: IZResultSet;
         CheckEquals(1, RS.GetInt(id_Index));
         CheckField(Curr18_4_Index,  18, 4,  stCurrency,    Curr18_4_Value);
         CheckField(Curr15_2_Index,  15, 2,  stCurrency,    Curr15_2_Value);
+        CheckField(Curr10_4_Index,  10, 4,  stCurrency,    Curr10_4_Value);
         CheckField(Curr4_4_Index,    4, 4,  stCurrency,    Curr4_4_Value);
         CheckField(BigD18_1_Index,  18, 1,  stBigDecimal,  BigD18_1_Value);
         CheckField(BigD18_5_Index,  18, 5,  stBigDecimal,  BigD18_5_Value);
@@ -519,6 +522,45 @@ begin
   SelStmt := Connection.PrepareStatement('select * from bcd_values');
   TestColTypes(rtForwardOnly);
   TestColTypes(rtScrollSensitive);
+  SelStmt.SetResultSetConcurrency(rcUpdatable);
+  RS := SelStmt.ExecuteQueryPrepared;
+  try
+    C := 4;
+    I := 4;
+    RS.MoveToInsertRow;
+    RS.UpdateInt(id_Index, I);
+    RS.UpdateCurrency(Curr18_4_Index, C);
+    RS.UpdateCurrency(Curr15_2_Index, C/100);
+    RS.UpdateCurrency(Curr10_4_Index, C/10);
+    RS.UpdateCurrency(Curr4_4_Index, C/1000);
+    if (ProtocolType <> protSQLite)  then begin
+      RS.UpdateCurrency(BigD18_1_Index, C);
+      RS.UpdateCurrency(BigD18_5_Index, C);
+      RS.UpdateCurrency(BigD12_10_Index, 0);
+      RS.UpdateCurrency(BigD18_18_Index, C/10000);
+    end;
+    RS.InsertRow;
+    RS.Close;
+    RS := SelStmt.ExecuteQueryPrepared;
+    Check(Rs.Next);
+    Check(RS.Next);
+    CheckEquals(i, RS.GetInt(id_Index));
+    CheckEquals(C, RS.GetCurrency(Curr18_4_Index));
+    CheckEquals(C/100, RS.GetCurrency(Curr15_2_Index));
+    CheckEquals(C/10, RS.GetCurrency(Curr10_4_Index));
+    CheckEquals(C/1000, RS.GetCurrency(Curr4_4_Index));
+    if (ProtocolType <> protSQLite)  then begin
+      CheckEquals(C, RS.GetCurrency(BigD18_1_Index));
+      CheckEquals(C, RS.GetCurrency(BigD18_5_Index));
+      CheckEquals(0, RS.GetCurrency(BigD12_10_Index));
+      CheckEquals(C/10000, RS.GetCurrency(BigD18_18_Index));
+    end;
+    RS.Close;
+  finally
+    RS.Close;
+    SelStmt.Close;
+    Connection.CreateStatement.ExecuteUpdate('delete from bcd_values where id > 1');
+  end;
 end;
 
 {**

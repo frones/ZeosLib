@@ -705,6 +705,8 @@ end;
 procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
 var
   Remainder, NextDigit, Precision, Scale: Word;
+  remPrecision: SmallInt absolute NextDigit;
+  signPrecision: SmallInt absolute Precision;
   NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
   pDigitCopy, pNumDigit, pNibble, pFirstNibble, pLastNibble: PAnsiChar;
   ValueIsOdd: Boolean;
@@ -773,8 +775,8 @@ begin
   pLastNibble := pFirstNibble + ((Precision+1) shr 1)-1; { address last bcd nibble }
   Precision := (PLastNibble +1 - PNibble) shl 1 - Ord(ValueIsOdd);
   {left pack the Bcd fraction }
-  NextDigit := Precision - Src.Scale;
-  while (Precision >= NextDigit) do begin
+  remPrecision := Precision - Src.Scale;
+  while (signPrecision >= remPrecision) do begin
     if ValueIsOdd and (PByte(pNibble)^ and $0F = 0) then
       Inc(pNibble)
     else if not (not ValueIsOdd and (PByte(pNibble)^ shr 4 = 0)) then
