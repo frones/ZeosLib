@@ -1124,7 +1124,6 @@ var I: Integer;
   var RS: IZResultSet;
     Stmt: IZStatement;
   begin
-    Result := False;
     Stmt := CreateRegularStatement(Info);
     RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
     try

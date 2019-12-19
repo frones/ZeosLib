@@ -769,6 +769,7 @@ begin
     and not Found do
   begin
     TableRef := SelectSchema.Tables[I];
+    If TableRef.Schema = '' Then Tableref.Schema := FMetadata.GetConnection.GetCatalog;
     if Assigned(FieldRef) then
       Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(FieldRef.Field), TableRef, ColumnInfo)
     else
@@ -795,6 +796,7 @@ begin
     Current := SelectSchema.Fields[I];
     if (Current.Field = '*') and (Current.TableRef <> nil) then begin
       TableRef := Current.TableRef;
+      If TableRef.Schema = '' Then Tableref.Schema := FMetadata.GetConnection.GetCatalog;
       ResultSet := Self.GetTableColumns(TableRef);
       if ResultSet <> nil then begin
         ResultSet.BeforeFirst;
