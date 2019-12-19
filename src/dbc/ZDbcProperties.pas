@@ -270,6 +270,11 @@ const
   ConnProps_SSLCrl = 'sslcrl';
   ConnProps_SSLKey = 'sslkey';
   ConnProps_SSLRootcert = 'sslrootcert';
+  { keepalives by Luca Olivetti }
+  ConnProps_keepalives = 'keepalives';
+  ConnProps_keepalives_idle = 'keepalives_idle';
+  ConnProps_keepalives_interval = 'keepalives_interval';
+  ConnProps_keepalives_count = 'keepalives_count';
 
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
