@@ -552,10 +552,10 @@ begin
       0, 1: ObjectName := QualifiedName;
       2: begin
           if SupportsCatalogs then begin
-            Catalog := SL.Strings[0];
             if SupportsSchemas
-            then Schema := SL.Strings[1]
-            else ObjectName := SL.Strings[1];
+            then Schema := SL.Strings[0]
+            else Catalog := SL.Strings[0];
+            ObjectName := SL.Strings[1];
           end else if SupportsSchemas then begin
             Schema := SL.Strings[0];
             ObjectName := SL.Strings[1];

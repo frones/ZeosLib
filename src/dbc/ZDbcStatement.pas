@@ -4131,8 +4131,11 @@ begin
   end;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
-
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5033 off : Function result does not seem to be set}
+{$ENDIF} // abstract base class - parameters not used intentionally
 function TZAbstractCallableStatement.Execute(const SQL: ZWideString): Boolean;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
@@ -4143,6 +4146,7 @@ function TZAbstractCallableStatement.Execute(
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZAbstractCallableStatement.ExecutePrepared: Boolean;
 begin
@@ -4160,6 +4164,11 @@ begin
   CopyCallResults;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5033 off : Function result does not seem to be set}
+{$ENDIF} // abstract base class - parameters not used intentionally
 function TZAbstractCallableStatement.ExecuteQuery(
   const SQL: RawByteString): IZResultSet;
 begin
@@ -4171,6 +4180,7 @@ function TZAbstractCallableStatement.ExecuteQuery(
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZAbstractCallableStatement.ExecuteQueryPrepared: IZResultSet;
 begin
@@ -4196,6 +4206,11 @@ begin
     Result := FExecStatement.FOutParamResultSet;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5033 off : Function result does not seem to be set}
+{$ENDIF} // abstract base class - parameters not used intentionally
 function TZAbstractCallableStatement.ExecuteUpdate(
   const SQL: RawByteString): Integer;
 begin
@@ -4207,6 +4222,7 @@ function TZAbstractCallableStatement.ExecuteUpdate(
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZAbstractCallableStatement.ExecuteUpdatePrepared: Integer;
 begin
@@ -4601,8 +4617,6 @@ begin
   Result := FExecStatement.GetValue(ParameterIndex);
 end;
 
-{$IFDEF FPC} {$POP} {$ENDIF}
-
 function TZAbstractCallableStatement.IsFunction: Boolean;
 var I: Integer;
 begin
@@ -4656,37 +4670,46 @@ var I: Integer;
     S: String;
     SQLType: TZSQLType;
     ParamIO: TZProcedureColumnType;
+    Catalog, Schema, ObjName: String;
   begin
     FParamsRegistered := True;
     FRegisteringParamFromMetadata := True;
     //Register the ParamNames
-    RS := Connection.GetMetadata.GetProcedureColumns(Connection.GetCatalog,
-      '', StoredProcName, '');
-    RS.Last;
-    I := RS.GetRow;
-    if I > 0 then begin
-      if FExecStatement = nil
-      then SetParamCount(I)
-      else FExecStatement.SetParamCount(I);
-      I := 0;
-      RS.BeforeFirst;
-      while RS.Next do begin
-        SQLType := TZSQLType(RS.GetInt(ProcColDataTypeIndex));
-        ParamIO := TZProcedureColumnType(RS.GetInt(ProcColColumnTypeIndex));
-        S := RS.GetString(ProcColColumnNameIndex);
-        Prec := RS.GetInt(ProcColPrecisionIndex);
-        Scale := RS.GetInt(ProcColScaleIndex);
-        if FExecStatement = nil then
-          RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale)
-        else begin
-          FExecStatement.RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
-          if BindList.Count < I+1 then
-            RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+    with Connection.GetMetadata do begin
+      with GetDatabaseInfo do
+      SplitQualifiedObjectName(StoredProcName, SupportsCatalogsInProcedureCalls,
+        SupportsSchemasInProcedureCalls, Catalog, Schema, ObjName);
+      Schema := AddEscapeCharToWildcards(Schema);
+      ObjName := AddEscapeCharToWildcards(ObjName);
+      if Catalog = '' then
+        Catalog := Connection.GetCatalog;
+      RS := Connection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjName, '');
+      RS.Last;
+      I := RS.GetRow;
+      if I > 0 then begin
+        if FExecStatement = nil
+        then SetParamCount(I)
+        else FExecStatement.SetParamCount(I);
+        I := 0;
+        RS.BeforeFirst;
+        while RS.Next do begin
+          SQLType := TZSQLType(RS.GetInt(ProcColDataTypeIndex));
+          ParamIO := TZProcedureColumnType(RS.GetInt(ProcColColumnTypeIndex));
+          S := RS.GetString(ProcColColumnNameIndex);
+          Prec := RS.GetInt(ProcColPrecisionIndex);
+          Scale := RS.GetInt(ProcColScaleIndex);
+          if FExecStatement = nil then
+            RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale)
+          else begin
+            FExecStatement.RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+            if BindList.Count < I+1 then
+              RegisterParameter(I, SQLType, ParamIO, S, Prec, Scale);
+          end;
+          Inc(I);
         end;
-        Inc(I);
       end;
+      FRegisteringParamFromMetadata := False;
     end;
-    FRegisteringParamFromMetadata := False;
 //      Assert(I = BindList.Count);
   end;
 begin

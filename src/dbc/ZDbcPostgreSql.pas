@@ -215,7 +215,7 @@ implementation
 uses
   ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement, ZDbcUtils,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken, ZDbcProperties,
-  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcMetadata, ZCollections;
+  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcMetadata;
 
 const
   FON = String('ON');
@@ -983,11 +983,17 @@ var I: Integer;
     Result := True;
     if GetServerMajorVersion < 11 then
       Exit;
-    SplitQualifiedObjectName(ProcName, True, True, Catalog, Schema, ObjName);
-    if UseMetadata then with GetMetadata do begin
-      RS := GetProcedures(Catalog, AddEscapeCharToWildcards(Schema), AddEscapeCharToWildcards(ObjName));
-      if RS.Next then
-        Result := RS.GetInt(ProcedureTypeIndex) = ProcedureReturnsResult;
+    with GetMetadata do begin
+      with GetDatabaseInfo do
+      SplitQualifiedObjectName(ProcName, SupportsCatalogsInProcedureCalls,
+        SupportsSchemasInProcedureCalls, Catalog, Schema, ObjName);
+      Schema := AddEscapeCharToWildcards(Schema);
+      ObjName := AddEscapeCharToWildcards(ObjName);
+      if UseMetadata then with GetMetadata do begin
+        RS := GetProcedures(Catalog, Schema, ObjName);
+        if RS.Next then
+          Result := RS.GetInt(ProcedureTypeIndex) = ProcedureReturnsResult;
+      end;
     end;
     FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
   end;
