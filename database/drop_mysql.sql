@@ -31,4 +31,5 @@ drop table IF EXISTS `Spaced Names`;
 drop table IF EXISTS TEST_BIT_FIELDS;
 drop table IF EXISTS TEST_MYSQL_BOOLEANS;
 drop table IF EXISTS bcd_values;
+drop table IF EXISTS time_fraction_values;
 

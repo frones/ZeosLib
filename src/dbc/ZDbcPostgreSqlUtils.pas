@@ -193,21 +193,28 @@ function PG2Int64(P: Pointer): Int64; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERRO
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
 {** written by EgonHugeist
-  converts a postgres numeric into a native currenncy value
+  converts a postgres numeric into a native currency value
    @param P is a pointer to a valid numeric value
    @return a converted currency value
 }
 function PGNumeric2Currency(P: Pointer): Currency;
 
 {** written by EgonHugeist
-  converts a native currenncy value into a postgres numeric value
+  converts a native currency value into a postgres numeric value
   the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
    @param Value the value which should be converted
-   @param buf the numeric buffrr we write into
+   @param buf the numeric buffer we write into
    @param size return the number of bytes we finally used
 }
 procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
 
+{** written by EgonHugeist
+  converts a native currency value into a postgres numeric value
+  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
+   @param Value the value which should be converted
+   @param buf the numeric buffer we write into
+   @param size return the number of bytes we finally used
+}
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 
 {** written by EgonHugeist
@@ -1453,7 +1460,7 @@ begin
   {$ENDIF}
   if NBASEDigit = 0
   then Numeric_External.dscale := 0
-  else Word2PG(GetOrdinalDigits(Word(NBASEDigit)), @Numeric_External.dscale);
+  else Word2PG(4{GetOrdinalDigits(Word(NBASEDigit))}, @Numeric_External.dscale);
   Word2PG(NBASEDigit, @Numeric_External.digits[(NBASEDigits-1)]); //set last scale digit
   {$IFDEF CPU64}
   if NBASEDigits > 1 then begin
@@ -1496,70 +1503,75 @@ end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 //each postgres num digit is a base 0...9999 digit, so we need to multiply
-const WordFactors: array[0..3] of Integer = (1000, 100, 10, 1);
+const WordFactors: array[0..3] of Word = (1000, 100, 10, 1);
+
+{** written by EgonHugeist
+  converts a bigdecimal value into a postgres numeric value
+   @param src the value which should be converted
+   @param dst the numeric buffer we write into
+   @param size return the number of bytes we finally used
+}
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 var
   pNibble, PLastNibble, pWords: PAnsichar;
-  FactorIndexOrScale: Integer;
+  FactorIndexOrScale, x, y: Integer;
+  Precision, Scale: Word;
+  Weight: SmallInt;
   GetFirstBCDHalfByte: Boolean;
-  label next_nibble, SetWord, Done;
+  label Done;
 begin
-  //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html#a3ae98a87bbc2d0dfc9cbe3d5845e0035
-  pNibble := @Src.Fraction[0];
-  if Src.Precision > 0 then begin
-    pLastNibble := pNibble + (Src.Precision+1) shr 1;
-    if PByte(pNibble)^ = 0 then begin
-      // ... skip leading zeroes (scale > precision)
-      while (pNibble <= pLastNibble-1) and (PWord(pNibble)^ = 0) do
-        Inc(pNibble, 2);
-      Inc(pNibble, Ord((pNibble <= pLastNibble) and (PByte(pNibble)^ = 0)));
-    end;
-  end else
-    pLastNibble := pNibble -1;
-  if (pLastNibble < pNibble) then begin //zero!
+  //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html
+  GetPacketBCDOffSets(Src, pNibble, PLastNibble, Precision, Scale, GetFirstBCDHalfByte);
+  if Precision = 0 then begin//zero
     PInt64(Dst)^ := 0; //clear NBSEDigit, weight, sign, dscale  once
     Size := 8;
     Exit;
   end;
-  GetFirstBCDHalfByte := (PByte(pNibble)^ shr 4) <> 0; //skip first half byte?
-
-  FactorIndexOrScale := 0;
+  Y := Precision -1;
+  Precision := (Precision - Scale);
+  { align word factor index }
+  FactorIndexOrScale :=  BASE1000Digits - Precision mod 4;
+  if FactorIndexOrScale = BASE1000Digits then
+    FactorIndexOrScale := 0;
   PWords := Dst + 8; //set entry ptr
   pWord(PWords)^ := 0; //init first NBASE digit
-next_nibble:
-  if GetFirstBCDHalfByte
-  then PWord(pWords)^ := PWord(pWords)^ + ((PByte(pNibble)^ shr 4) * WordFactors[FactorIndexOrScale])
-  else begin
-    PWord(pWords)^ := PWord(pWords)^ + ((PByte(pNibble)^ and $0f) * WordFactors[FactorIndexOrScale]);
-    Inc(pNibble); //next nibble
-    if (pNibble > pLastNibble)
-    then goto SetWord;
-  end;
-  if FactorIndexOrScale = 3 then begin
-SetWord:
-    {$IFNDEF ENDIAN_BIG}
-    Reverse2Bytes(PWords);
-    {$ENDIF !ENDIAN_BIG}
-    Inc(pWords, SizeOf(Word));
-    if (pNibble <= pLastNibble) then begin
-      PWord(pWords)^ := 0;
+  Weight := 0;
+  for X := 0 to Y do begin
+    if GetFirstBCDHalfByte
+    then PWord(pWords)^ := PWord(pWords)^ + ((PByte(pNibble)^ shr 4) * WordFactors[FactorIndexOrScale])
+    else begin
+      PWord(pWords)^ := PWord(pWords)^ + ((PByte(pNibble)^ and $0f) * WordFactors[FactorIndexOrScale]);
+      Inc(pNibble); //next nibble
+    end;
+    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
+    if FactorIndexOrScale = 3 then begin
+      {$IFNDEF ENDIAN_BIG}
+      Reverse2Bytes(PWords);
+      {$ENDIF !ENDIAN_BIG}
       FactorIndexOrScale := 0;
+      if X < Precision then
+        Inc(Weight);
+      Inc(PWords, SizeOf(Word));
+      if X < y then
+        PWord(PWords)^ := 0;
     end else
-      goto Done;
-  end else
-    Inc(FactorIndexOrScale);
-  GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
-  goto next_nibble;
-Done:
-  Size := (PWords - Dst - 8) shr 1; //count of nbase digits
-  Word2PG(Word(Size), Dst); //NBASEDigits
-  FactorIndexOrScale := Src.SignSpecialPlaces and 63;
+      Inc(FactorIndexOrScale);
+  end;
+  {$IFNDEF ENDIAN_BIG}
+  if (FactorIndexOrScale <> 0) then
+    Reverse2Bytes(PWords);
+  {$ENDIF !ENDIAN_BIG}
+  if (Weight >= 0) or (Integer(Scale) - Y = 1) then
+    Dec(Weight);
+  Size := (PWords - Dst - 8) shr 1; //calc count of nbase digits
+  //now fill static varlena values
+  Word2PG(Word(Size), Dst); //NBASEDigit count
   //https://www.postgresql.org/message-id/491DC5F3D279CD4EB4B157DDD62237F404E27FE9%40zipwire.esri.com
-  SmallInt2PG(Size-((FactorIndexOrScale+1) shr 2), Dst+2);//weight
+  SmallInt2PG(Weight, Dst+2);//weight
   if Src.SignSpecialPlaces and (1 shl 7) <> 0 //sign
   then Word2PG(NUMERIC_NEG, Dst+4)
   else PWord(Dst+4)^ := NUMERIC_POS;
-  Word2PG(Word(FactorIndexOrScale), Dst+6); //dscale
+  Word2PG(Scale, Dst+6); //dscale
   Size := (pWords - Dst); //return size in bytes
 end;
 

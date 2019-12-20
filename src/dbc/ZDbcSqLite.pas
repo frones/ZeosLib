@@ -163,7 +163,6 @@ uses
 constructor TZSQLiteDriver.Create;
 begin
   inherited Create;
-  AddSupportedProtocol(AddPlainDriverToCache(TZSQLite3PlainDriver.Create, 'sqlite'));
   AddSupportedProtocol(AddPlainDriverToCache(TZSQLite3PlainDriver.Create));
 end;
 

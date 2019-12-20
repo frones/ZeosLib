@@ -1961,6 +1961,14 @@ begin
       ColumnInfo.Precision := CurrentVar.Precision;
       if CurrentVar.Scale > 0 then
         ColumnInfo.Scale := CurrentVar.Scale;
+    end else if CurrentVar^.dty in [SQLT_DATE..SQLT_TIMESTAMP_LTZ] then begin
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.Precision, nil, OCI_ATTR_LFPRECISION, FErrorHandle);
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.Scale, nil, OCI_ATTR_FSPRECISION, FErrorHandle);
+      ColumnInfo.Precision := CurrentVar.Precision;
+      if CurrentVar.Scale > 0 then
+        ColumnInfo.Scale := CurrentVar.Scale;
     end else begin
       CurrentVar^.Scale := 0;
       CurrentVar^.Precision := 0;

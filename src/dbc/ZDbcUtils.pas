@@ -326,8 +326,8 @@ const
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math
-  {$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math;
+  //{$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -552,10 +552,10 @@ begin
       0, 1: ObjectName := QualifiedName;
       2: begin
           if SupportsCatalogs then begin
-            Catalog := SL.Strings[0];
             if SupportsSchemas
-            then Schema := SL.Strings[1]
-            else ObjectName := SL.Strings[1];
+            then Schema := SL.Strings[0]
+            else Catalog := SL.Strings[0];
+            ObjectName := SL.Strings[1];
           end else if SupportsSchemas then begin
             Schema := SL.Strings[0];
             ObjectName := SL.Strings[1];
@@ -705,6 +705,8 @@ end;
 procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
 var
   Remainder, NextDigit, Precision, Scale: Word;
+  remPrecision: SmallInt absolute NextDigit;
+  signPrecision: SmallInt absolute Precision;
   NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
   pDigitCopy, pNumDigit, pNibble, pFirstNibble, pLastNibble: PAnsiChar;
   ValueIsOdd: Boolean;
@@ -773,8 +775,8 @@ begin
   pLastNibble := pFirstNibble + ((Precision+1) shr 1)-1; { address last bcd nibble }
   Precision := (PLastNibble +1 - PNibble) shl 1 - Ord(ValueIsOdd);
   {left pack the Bcd fraction }
-  NextDigit := Precision - Src.Scale;
-  while (Precision >= NextDigit) do begin
+  remPrecision := Precision - Src.Scale;
+  while (signPrecision >= remPrecision) do begin
     if ValueIsOdd and (PByte(pNibble)^ and $0F = 0) then
       Inc(pNibble)
     else if not (not ValueIsOdd and (PByte(pNibble)^ shr 4 = 0)) then
@@ -791,7 +793,7 @@ begin
         PByte(PNumDigit)^ := PByte(pNibble)^;
       if ValueIsOdd then begin
         if PNumDigit < pLastNibble then
-          PByte(PNumDigit)^ := ((PByte(PNumDigit)^ and $0f) shl 4) or (PByte(pNibble+1)^ shr 4);
+          PByte(PNumDigit)^ := Byte((PByte(PNumDigit)^ and $0f) shl 4) or Byte(PByte(pNibble+1)^ shr 4);
       end;
       Inc(PNumDigit);
       Inc(pNibble);

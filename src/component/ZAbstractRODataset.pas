@@ -512,6 +512,11 @@ type
 
     procedure InternalPrepare; virtual;
     procedure InternalUnPrepare; virtual;
+    {$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+    function GetFieldClass(FieldDef: TFieldDef): TFieldClass; override; //we don't use it. we override CreateFields by now
+    {$ELSE}
+    function GetFieldClass(FieldType: TFieldType): TFieldClass; override; //we don't use it. we override CreateFields
+    {$ENDIF}
   protected
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
@@ -817,6 +822,73 @@ type
     property EmptyStringAsNull: Boolean read FEmptyAsNull write FEmptyAsNull default False;
     property OnValidate;
   end;
+
+  TZDateField = Class(TDateField)
+  private
+    FLastFormat: array[Boolean] of String;
+    FSimpleFormat: array[Boolean] of Boolean;
+    FBuff: array[0..cMaxDateLen] of Char;
+    FFieldIndex: Integer;
+  protected
+    procedure GetAsZDate(Out IsNull: Boolean; var Result: TZDate);
+    function GetAsDate: TZDate;
+    procedure SetAsDate(const Value: TZDate);
+    procedure GetText(var Text: string; DisplayText: Boolean); override;
+    {$IFDEF WITH_TSQLTIMESTAMP_RECORD}
+    function GetAsSQLTimeStamp: TSQLTimeStamp; override;
+    {$ENDIF}
+  public
+    property ZDate: TZDate read GetAsDate write SetAsDate;
+  End;
+
+  TZDateTimeField = Class(TDateTimeField)
+  private
+    FLastFormat: array[Boolean] of String;
+    FFractionFormat: array[Boolean] of String;
+    FFractionLen: array[Boolean] of Integer;
+    FSimpleFormat: array[Boolean] of Boolean;
+    FBuff: array[0..cMaxTimeStampLen] of Char;
+    FFieldIndex, FScale: Integer;
+    FShowSecFrac: Boolean;
+    procedure SetAdjSecFracFmt(Value: Boolean);
+  protected
+    class procedure CheckTypeSize(Value: Integer); override;
+    procedure GetAsZTimeStamp(Out IsNull: Boolean; Var Result: TZTimeStamp);
+    function GetAsTimeStamp: TZTimeStamp;
+    {$IFDEF WITH_TSQLTIMESTAMP_RECORD}
+    function GetAsSQLTimeStamp: TSQLTimeStamp; override;
+    {$ENDIF}
+    procedure SetAsTimeStamp(const Value: TZTimeStamp);
+    procedure GetText(var Text: string; DisplayText: Boolean); override;
+  public
+    property ZTimeStamp: TZTimeStamp read GetAsTimeStamp write SetAsTimeStamp;
+  published
+    property FractionalSecondsScale: Integer read FScale;
+    property AlwaysShowSecondFractions: Boolean read FShowSecFrac write SetAdjSecFracFmt default True;
+  End;
+
+  TZTimeField = Class(TTimeField)
+  private
+    FLastFormat: array[Boolean] of String;
+    FFractionFormat: array[Boolean] of String;
+    FFractionLen: array[Boolean] of Integer;
+    FSimpleFormat: array[Boolean] of Boolean;
+    FBuff: array[0..cMaxTimeLen] of Char;
+    FFieldIndex, fScale: Integer;
+    FShowSecFrac: Boolean;
+    procedure SetAdjSecFracFmt(Value: Boolean);
+  protected
+    class procedure CheckTypeSize(Value: Integer); override;
+    procedure GetAsZTime(Out IsNull: Boolean; var Result: TZTime);
+    function GetAsTime: TZTime;
+    procedure SetAsTime(const Value: TZTime);
+    procedure GetText(var Text: string; DisplayText: Boolean); override;
+  public
+    property ZTime: TZTime read GetAsTime write SetAsTime;
+  published
+    property FractionalSecondsScale: Integer read fScale;
+    property AlwaysShowSecondFractions: Boolean read FShowSecFrac write SetAdjSecFracFmt default True;
+  End;
 
   TZStringField = Class(TZField)
   private
@@ -1171,370 +1243,6 @@ type
     property Precision default 15;
   end;
 
-(*{ TBooleanField }
-
-  TBooleanField = class(TField)
-  private
-    FDisplayValues: string;
-    FTextValues: array[Boolean] of string;
-    procedure LoadTextValues;
-    procedure SetDisplayValues(const Value: string);
-  protected
-    function GetAsBoolean: Boolean; override;
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    function GetDataSize: Integer; override;
-    function GetDefaultWidth: Integer; override;
-    procedure SetAsBoolean(Value: Boolean); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: Boolean read GetAsBoolean write SetAsBoolean;
-  published
-    property DisplayValues: string read FDisplayValues write SetDisplayValues;
-  end;
-
-{ TDateTimeField }
-
-  TDateTimeField = class(TField)
-  private
-    FDisplayFormat: string;
-    function GetValue(var Value: TDateTime): Boolean; inline;
-    procedure SetDisplayFormat(const Value: string);
-  protected
-    procedure CopyData(Source, Dest: Pointer); override;
-    function GetAsDateTime: TDateTime; override;
-    function GetAsFloat: Double; override;
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    function GetDataSize: Integer; override;
-    function GetDefaultWidth: Integer; override;
-    function GetAsSQLTimeStamp: TSQLTimeStamp; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    procedure SetAsDateTime(Value: TDateTime); override;
-    procedure SetAsFloat(Value: Double); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-    procedure SetAsSQLTimeStamp(const Value: TSQLTimeStamp); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: TDateTime read GetAsDateTime write SetAsDateTime;
-  published
-    property DisplayFormat: string read FDisplayFormat write SetDisplayFormat;
-    property EditMask;
-  end;
-
-{ TSQLTimeStampField }
-
-  TSQLTimeStampField = class(TField)
-  private
-    FDisplayFormat: string;
-    function GetValue(var Value: TSQLTimeStamp): Boolean; inline;
-    procedure SetDisplayFormat(const Value: string);
-  protected
-    procedure CopyData(Source, Dest: Pointer); override;
-    function GetAsSQLTimeStamp: TSQLTimeStamp; override;
-    function GetAsDateTime: TDateTime; override;
-    function GetAsFloat: Double; override;
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    function GetDataSize: Integer; override;
-    function GetDefaultWidth: Integer; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    procedure SetAsSQLTimeStamp(const Value: TSQLTimeStamp); override;
-    procedure SetAsDateTime(Value: TDateTime); override;
-    procedure SetAsFloat(Value: Double); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: TSQLTimeStamp read GetAsSQLTimeStamp write SetAsSQLTimeStamp;
-  published
-    property DisplayFormat: string read FDisplayFormat write SetDisplayFormat;
-    property EditMask;
-  end;
-
-  TSQLTimeStampOffsetField = class(TSQLTimeStampField)
-  private
-    function GetValue(var Value: TSQLTimeStampOffset): Boolean;
-  protected
-    procedure CopyData(Source, Dest: Pointer); override;
-    function GetAsDateTime: TDateTime; override;
-    function GetAsVariant: Variant; override;
-    function GetAsSQLTimeStampOffset: TSQLTimeStampOffset; override;
-    function GetDataSize: Integer; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    procedure SetAsDateTime(Value: TDateTime); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetAsSQLTimeStampOffset(const Value: TSQLTimeStampOffset); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: TSQLTimeStampOffset read GetAsSQLTimeStampOffset write SetAsSQLTimeStampOffset;
-  end;
-
-{ TDateField }
-
-  TDateField = class(TDateTimeField)
-  protected
-    function GetDataSize: Integer; override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  end;
-
-{ TTimeField }
-
-  TTimeField = class(TDateTimeField)
-  protected
-    function GetDataSize: Integer; override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  end;
-
-{ TBinaryField }
-
-  TBinaryField = class(TField)
-  protected
-    class procedure CheckTypeSize(Value: Integer); override;
-    procedure CopyData(Source, Dest: Pointer); override;
-    function GetAsString: string; override;
-    function GetAsAnsiString: AnsiString; override;
-    function GetAsBytes: TBytes; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    function GetAsVariant: Variant; override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetAsAnsiString(const Value: AnsiString); override;
-    procedure SetAsBytes(const Value: TBytes); override;
-    procedure SetText(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  published
-    property Size default 16;
-  end;
-
-{ TBytesField }
-
-  TBytesField = class(TBinaryField)
-  protected
-    function GetDataSize: Integer; override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  end;
-
-{ TVarBytesField }
-
-  TVarBytesField = class(TBytesField)
-  protected
-    function GetDataSize: Integer; override;
-    procedure SetAsByteArray(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  end;
-
-{ TBCDField }
-
-  {PBcd struct moved to FmtBcd.pas}
-
-  TBCDField = class(TNumericField)
-  private
-    FCurrency: Boolean;
-    FCheckRange: Boolean;
-    FMinValue: Currency;
-    FMaxValue: Currency;
-    FPrecision: Integer;
-    procedure SetCurrency(Value: Boolean);
-    procedure SetMaxValue(Value: Currency);
-    procedure SetMinValue(Value: Currency);
-    procedure SetPrecision(Value: Integer);
-    procedure UpdateCheckRange;
-  protected
-    class procedure CheckTypeSize(Value: Integer); override;
-    procedure CopyData(Source, Dest: Pointer); override;
-    function GetAsBCD: TBcd; override;
-    function GetAsCurrency: Currency; override;
-    function GetAsSingle: Single; override;
-    function GetAsFloat: Double; override;
-    function GetAsInteger: Longint; override;
-    function GetAsLargeInt: Largeint; override;
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    function GetDataSize: Integer; override;
-    function GetDefaultWidth: Integer; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    function GetValue(var Value: Currency): Boolean; inline;
-    procedure SetAsBCD(const Value: TBcd); override;
-    procedure SetAsCurrency(Value: Currency); override;
-    procedure SetAsSingle(Value: Single); override;
-    procedure SetAsFloat(Value: Double); override;
-    procedure SetAsInteger(Value: Longint); override;
-    procedure SetAsLargeInt(Value: Largeint); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: Currency read GetAsCurrency write SetAsCurrency;
-  published
-    { Lowercase to avoid name clash with C++ Currency type }
-    property currency: Boolean read FCurrency write SetCurrency default False;
-    property MaxValue: Currency read FMaxValue write SetMaxValue;
-    property MinValue: Currency read FMinValue write SetMinValue;
-    property Precision: Integer read FPrecision write SetPrecision default 0;
-    property Size default 4;
-  end;
-
-{ TFMTBCDField }
-
-  TFMTBCDField = class(TNumericField)
-  private
-    FCurrency: Boolean;
-    FCheckRange: Boolean;
-    FMinValue: string;
-    FMaxValue: string;
-    FPrecision: Integer;
-    procedure BcdRangeError(Value: Variant; Max, Min: string);
-    procedure SetCurrency(Value: Boolean);
-    procedure SetMaxValue(const Value: string);
-    procedure SetMinValue(const Value: string);
-    procedure SetPrecision(Value: Integer);
-    procedure UpdateCheckRange;
-  protected
-    class procedure CheckTypeSize(Value: Integer); override;
-    procedure CopyData(Source, Dest: Pointer); override;
-    function GetAsCurrency: Currency; override;
-    function GetAsBCD: TBcd; override;
-    function GetAsSingle: Single; override;
-    function GetAsFloat: Double; override;
-    function GetAsInteger: Longint; override;
-    function GetAsLargeInt: Largeint; override;
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    function GetDataSize: Integer; override;
-    function GetDefaultWidth: Integer; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    function GetValue(var Value: TBcd): Boolean; inline;
-    procedure SetAsCurrency(Value: Currency); override;
-    procedure SetAsBCD(const Value: TBcd); override;
-    procedure SetAsSingle(Value: Single); override;
-    procedure SetAsFloat(Value: Double); override;
-    procedure SetAsInteger(Value: Longint); override;
-    procedure SetAsLargeInt(Value: Largeint); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: TBcd read GetAsBCD write SetAsBCD;
-  published
-    { Lowercase to avoid name clash with C++ Currency type }
-    property currency: Boolean read FCurrency write SetCurrency default False;
-    property MaxValue: string read FMaxValue write SetMaxValue;
-    property MinValue: string read FMinValue write SetMinValue;
-    property Precision: Integer read FPrecision write SetPrecision default 0;
-    property Size default 8;
-  end;
-
-
-
-{ TBlobField }
-
-  TBlobType = ftBlob..ftWideMemo;
-
-  TBlobField = class(TField)
-  private
-    FModifiedRecord: Integer;
-    FModified: Boolean;
-    FGraphicHeader: Boolean;
-    FTransliterate: Boolean;
-    function GetBlobType: TBlobType;
-    function GetModified: Boolean;
-    procedure LoadFromBlob(Blob: TBlobField);
-    procedure LoadFromStrings(Strings: TWideStrings); overload;
-    procedure LoadFromStrings(Strings: TStrings); overload;
-    procedure LoadFromStreamPersist(StreamPersist: IStreamPersist);
-    procedure SaveToStrings(Strings: TWideStrings); overload;
-    procedure SaveToStrings(Strings: TStrings); overload;
-    procedure SaveToStreamPersist(StreamPersist: IStreamPersist);
-    procedure SetBlobType(Value: TBlobType);
-    procedure SetModified(Value: Boolean);
-    function SupportsStreamPersist(const Persistent: TPersistent;
-      var StreamPersist: IStreamPersist): Boolean;
-  protected
-    procedure AssignTo(Dest: TPersistent); override;
-    procedure FreeBuffers; override;
-    function GetAsString: string; override;
-    function GetAsWideString: UnicodeString; override;
-    function GetAsAnsiString: AnsiString; override;
-    function GetAsVariant: Variant; override;
-    function GetAsBytes: TBytes; override;
-    function GetBlobSize: Integer; virtual;
-    function GetClassDesc: string; override;
-    function GetIsNull: Boolean; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    procedure SetAsAnsiString(const Value: AnsiString); override;
-    procedure SetAsBytes(const Value: TBytes); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetAsWideString(const Value: UnicodeString); override;
-    procedure SetData(Buffer: Pointer; Len: Integer); overload;
-    procedure SetVarValue(const Value: Variant); override;
-    function GetDataSize: Integer; override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    procedure Assign(Source: TPersistent); override;
-    procedure Clear; override;
-    class function IsBlob: Boolean; override;
-    procedure LoadFromFile(const FileName: string);
-    procedure LoadFromStream(Stream: TStream);
-    procedure SaveToFile(const FileName: string);
-    procedure SaveToStream(Stream: TStream);
-    procedure SetFieldType(Value: TFieldType); override;
-    property BlobSize: Integer read GetBlobSize;
-    property Modified: Boolean read GetModified write SetModified;
-    property Value: TBytes read GetAsBytes write SetAsBytes;
-    property Transliterate: Boolean read FTransliterate write FTransliterate;
-  published
-    property BlobType: TBlobType read GetBlobType write SetBlobType default ftBlob;
-    property GraphicHeader: Boolean read FGraphicHeader write FGraphicHeader default True;
-    property Size default 0;
-  end;
-
-{ TMemoField }
-
-  TMemoField = class(TBlobField)
-  public
-    constructor Create(AOwner: TComponent); override;
-    function GetAsString: string; override;
-    function GetAsWideString: UnicodeString; override;
-    function GetAsVariant: Variant; override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetAsWideString(const Value: UnicodeString); override;
-    property Value: AnsiString read GetAsAnsiString write SetAsAnsiString;
-  published
-    property Transliterate default True;
-  end;
-
-{ TWideMemoField }
-
-  TWideMemoField = class(TBlobField)
-  protected
-    function GetAsAnsiString: AnsiString; override;
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    procedure SetAsAnsiString(const Value: AnsiString); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: UnicodeString read GetAsWideString write SetAsWideString;
-  end;
-
-{ TGraphicField }
-
-  TGraphicField = class(TBlobField)
-  public
-    constructor Create(AOwner: TComponent); override;
-  end;   *)
-
 { TObjectField }
 
   {$IFNDEF WITH_TOBJECTFIELD}
@@ -1581,17 +1289,7 @@ type
     property ObjectType: string read FObjectType write FObjectType;
   end;
   {$ENDIF !WITH_TOBJECTFIELD}
-(*
-{ TADTField }
 
-  TADTField = class(TObjectField)
-  private
-    procedure FieldsChanged(Sender: TObject);
-  protected
-    function GetSize: Integer; override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  end;*)
 {$IFNDEF WITH_TARRAYFIELD}
 { TArrayField }
 
@@ -1627,137 +1325,6 @@ type
     property IncludeObjectField: Boolean read FIncludeObjectField write SetIncludeObjectField default False;
   end;
 {$ENDIF}
-(*
-{ TReferenceField }
-
-  TReferenceField = class(TDataSetField)
-  private
-    FReferenceTableName: string;
-  protected
-    function GetAsVariant: Variant; override;
-    function GetDataSize: Integer; override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    procedure Assign(Source: TPersistent); override;
-  published
-    property ReferenceTableName: string read FReferenceTableName write FReferenceTableName;
-    property Size default 0;
-  end;
-
-{ TVariantField }
-
-  TVariantField = class(TField)
-  protected
-    class procedure CheckTypeSize(Value: Integer); override;
-    function GetAsBCD: TBcd; override;
-    function GetAsBoolean: Boolean; override;
-    function GetAsDateTime: TDateTime; override;
-    function GetAsSQLTimeStamp: TSqlTimeStamp; override;
-    function GetAsSingle: Single; override;
-    function GetAsFloat: Double; override;
-    function GetAsInteger: Longint; override;
-    function GetAsLargeInt: Largeint; override;
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    function GetDefaultWidth: Integer; override;
-    procedure SetAsBCD(const Value: TBcd); override;
-    procedure SetAsBoolean(Value: Boolean); override;
-    procedure SetAsSQLTimeStamp(const Value: TSqlTimeStamp); override;
-    procedure SetAsDateTime(Value: TDateTime); override;
-    procedure SetAsSingle(Value: Single); override;
-    procedure SetAsFloat(Value: Double); override;
-    procedure SetAsInteger(Value: Longint); override;
-    procedure SetAsLargeInt(Value: Largeint); override;
-    procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  end;
-
-{ TInterfaceField }
-
-  TInterfaceField = class(TField)
-  protected
-    class procedure CheckTypeSize(Value: Integer); override;
-    function GetValue: IUnknown;
-    function GetAsVariant: Variant; override;
-    procedure SetValue(const Value: IUnknown);
-    procedure SetVarValue(const Value: Variant); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: IUnknown read GetValue write SetValue;
-  end;
-
-{ TIDispatchField }
-
-  TIDispatchField = class(TInterfaceField)
-  protected
-    function GetValue: IDispatch;
-    procedure SetValue(const Value: IDispatch);
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Value: IDispatch read GetValue write SetValue;
-  end;
-
-{ TGuidField }
-
-  TGuidField = class(TStringField)
-  protected
-    class procedure CheckTypeSize(Value: Integer); override;
-    function GetAsGuid: TGUID;
-    function GetDefaultWidth: Integer; override;
-    procedure SetAsGuid(const Value: TGUID);
-  public
-    constructor Create(AOwner: TComponent); override;
-    property AsGuid: TGUID read GetAsGuid write SetAsGuid;
-  end;
-
-{ TAggregateField }
-
-  TAggregateField = class(TField)
-  private
-    FActive: Boolean;
-    FCurrency: Boolean;
-    FDisplayName: string;
-    FDisplayFormat: string;
-    FExpression: string;
-    FGroupingLevel: Integer;
-    FIndexName: string;
-    FHandle: Pointer;
-    FPrecision: Integer;
-    FResultType: TFieldType;
-    procedure SetHandle(Value: Pointer); virtual;
-    procedure SetActive(Value: Boolean);
-    function GetHandle: Pointer; virtual;
-    procedure SetGroupingLevel(Value: Integer);
-    procedure SetIndexName(const Value: string);
-    procedure SetExpression(const Value: string);
-    procedure SetPrecision(Value: Integer);
-    procedure SetCurrency(Value: Boolean);
-  protected
-    function GetAsString: string; override;
-    function GetAsVariant: Variant; override;
-    procedure GetText(var Text: string; DisplayText: Boolean); override;
-    procedure Reset;
-    procedure SetDisplayFormat(const Value: string);
-  public
-    constructor Create(AOwner: TComponent); override;
-    property Handle: Pointer read GetHandle write SetHandle;
-    property ResultType: TFieldType read FResultType write FResultType;
-  published
-    property Active: Boolean read FActive write SetActive default False;
-    { Lowercase to avoid name clash with C++ Currency type }
-    property currency: Boolean read FCurrency write SetCurrency default False;
-    property DisplayName: string read FDisplayName write FDisplayName;
-    property DisplayFormat: string read FDisplayFormat write SetDisplayFormat;
-    property Expression: string read FExpression write SetExpression;
-    property FieldKind default fkAggregate;
-    property GroupingLevel: Integer read FGroupingLevel write SetGroupingLevel default 0;
-    property IndexName: string read FIndexName write SetIndexName;
-    property Precision: Integer read FPrecision write SetPrecision default 15;
-    property Visible default False;
-  end;  *)
 
   TZFieldDef = Class(TFieldDef)
   private
@@ -1801,9 +1368,9 @@ const
     TZSmallIntField,           { stSmall }
     TZLongWordField,           { stLongWord }
     TZIntegerField,            { stInteger }
-    TZUInt64Field,          { stULong }
-    TZInt64Field,           { stLong }
-    TZSingleField,               { stFloat }
+    TZUInt64Field,             { stULong }
+    TZInt64Field,              { stLong }
+    TZSingleField,             { stFloat }
     TZDoubleField,             { stDouble }
     TZCurrencyField,           { stCurrency }
     TZExtendedField,           { stBigDecimal }
@@ -1811,9 +1378,9 @@ const
     TZWideStringField,         { stUnicodeString }
     TBytesField,               { stBytes }
     TStringField,              { stGUID }
-    TDateField,                { stDate }
-    TTimeField,                { stTime }
-    TDateTimeField,            { stTimestamp }
+    TZDateField,               { stDate }
+    TZTimeField,               { stTime }
+    TZDateTimeField,           { stTimestamp }
     TArrayField,               { stArray }
     TDataSetField,             { stDataSet }
     TMemoField,                { stAsciiStream }
@@ -3055,6 +2622,28 @@ begin
   Result := RowBuffer <> nil;
 end;
 
+{$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+function TZAbstractRODataset.GetFieldClass(FieldDef: TFieldDef): TFieldClass;
+begin
+  case FieldDef.DataType of
+    ftDate: Result := TZDateField;
+    ftTime: Result := TZTimeField;
+    ftDateTime: Result := TZDateTimeField;
+    else Result := inherited GetFieldClass(FieldDef);
+  end;
+end;
+{$ELSE}
+function TZAbstractRODataset.GetFieldClass(FieldType: TFieldType): TFieldClass;
+begin
+  case FieldType of
+    ftDate: Result := TZDateField;
+    ftTime: Result := TZTimeField;
+    ftDateTime: Result := TZDateTimeField;
+    else Result := inherited GetFieldClass(FieldType);
+  end;
+end;
+{$ENDIF}
+
 function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
   {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
@@ -3303,6 +2892,8 @@ begin
             then DT := PDateTime(Buffer)^
             else DT := PInteger(Buffer)^ / MSecsOfDay;
             DecodeDateTimeToTime(DT, T);
+            if (T.Fractions > 0) and Field.InheritsFrom(TZTimeField) then
+              T.Fractions := ZSysUtils.RoundNanoFractionTo(T.Fractions, TZTimeField(Field).fScale);
             RowAccessor.SetTime(ColumnIndex, T);
             FNativeFormatOverloadCalled[ftTime] := False;
           end;
@@ -3318,6 +2909,8 @@ begin
               DT := TimeStampToDateTime(S);
             end;
             DecodeDateTimeToTimeStamp(DT, TS);
+            if (TS.Fractions > 0) and Field.InheritsFrom(TZDateTimeField) then
+              TS.Fractions := ZSysUtils.RoundNanoFractionTo(TS.Fractions, TZDateTimeField(Field).fScale);
             RowAccessor.SetTimestamp(ColumnIndex, TS);
             FNativeFormatOverloadCalled[ftDateTime] := False;
           end;
@@ -3555,7 +3148,7 @@ begin
             Size := Size shl 1; //two bytes per char
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38
-        else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD] then
+        else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD, ftTime, ftDateTime] then
           Size := GetScale(I)
         else
           Size := 0;
@@ -3568,7 +3161,21 @@ begin
           FName := Format('%s_%d', [FieldName, J]);
         end;
 
-        if FUseZFields then
+        if (FieldType in [ftTime, ftDate, ftDateTime]) then
+          with TZFieldDef.Create(FieldDefs, FName, GetColumnType(I), Size, False, I) do begin
+            if not (ReadOnly or IsUniDirectional) then begin
+              {$IFNDEF OLDFPC}
+              Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
+              {$ENDIF}
+              if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
+            end else
+              Attributes := Attributes + [faReadonly];
+            Precision := GetPrecision(I);
+            DisplayName := FName;
+            if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
+               Attributes := Attributes + [faUnNamed];
+          end
+        else if FUseZFields then
           with TZFieldDef.Create(FieldDefs, FName, GetColumnType(I), Size, False, I) do begin
             if not (ReadOnly or IsUniDirectional) then begin
               {$IFNDEF OLDFPC}
@@ -3707,7 +3314,7 @@ begin
       else ResultSet := CreateResultSet('', -1);
       if not Assigned(ResultSet) then
         if not (doSmartOpen in FOptions)
-        then raise Exception.Create(SCanNotOpenResultSet)
+        then raise EZDatabaseError.Create(SCanNotOpenResultSet)
         else Exit;
     FCursorOpened := True;
     { Initializes field and index defs. }
@@ -3728,7 +3335,9 @@ begin
             Fields[i].DisplayWidth := MetaData.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
           {$IFDEF WITH_FTGUID}
           else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
-          {$ENDIF};
+          {$ENDIF}
+          (*else if Fields[i].DataType in [ftTime, ftDateTime] then
+            Fields[i].DisplayWidth := Fields[i].DisplayWidth + MetaData.GetScale(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})*);
           {$IFDEF WITH_TAUTOREFRESHFLAG}
           if MetaData.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
             Fields[i].AutoGenerateValue := arAutoInc;
@@ -5569,26 +5178,32 @@ var
   end;
 
 begin
-  if FUseZFields then
+  if ObjectView then
   begin
-    if ObjectView then
-    begin
-      for I := 0 to FieldDefs.Count - 1 do
-        with FieldDefs[I] do
-          if (DataType <> ftUnknown) and
-            not ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
-            CreateField(Self);
-    end else
-    begin
-      for I := 0 to FieldDefList.Count - 1 do
-        with TZFieldDef(FieldDefList[I]) do
+    for I := 0 to FieldDefs.Count - 1 do
+      with FieldDefs[I] do
+        if (DataType <> ftUnknown) and
+          not ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
+          CreateField(Self);
+  end else
+    for I := 0 to {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}.Count - 1 do
+      with FieldDefs[I] do
+        if (DataType in [ftDate,ftDateTime,ftTime]) and
+          not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
+            TZFieldDef(FieldDefs[I]).CreateField(Self)
+        else if FUseZFields then begin
+          with TZFieldDef(FieldDefList[I]) do
+            if (DataType <> ftUnknown) and not (DataType in ObjectFieldTypes) and
+              not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
+              CreateField(Self, nil, FieldDefList.Strings[I]);
+        end else with {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}[I] do
           if (DataType <> ftUnknown) and not (DataType in ObjectFieldTypes) and
             not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
-            CreateField(Self, nil, FieldDefList.Strings[I]);
-    end;
-    SetKeyFields;
-  end
-  else inherited CreateFields;
+            CreateField(Self);
+  {$IFNDEF FPC}
+  SetKeyFields;
+  {$ENDIF}
+  //else inherited CreateFields;
 end;
 
 {**
@@ -7301,11 +6916,24 @@ function TZFieldDef.CreateFieldComponent(Owner: TComponent;
 var
   FieldClassType: TFieldClass;
 begin
-  if Collection is TFieldDefs then
-    FieldClassType := ZSQLFieldClasses[FSQLType] else
-    FieldClassType := nil;
-  if FieldClassType = nil then DatabaseErrorFmt(SUnknownFieldType, [Name]);
-  Result := FieldClassType.Create(Owner);
+  if DataType = ftTime then begin
+    Result := TZTimeField.Create(Owner);
+    TZTimeField(Result).FFieldIndex := FieldNo;
+    TZTimeField(Result).fScale := Size;
+  end else if DataType = ftDate then begin
+    Result := TZDateField.Create(Owner);
+    TZDateField(Result).FFieldIndex := FieldNo;
+  end else if DataType = ftDateTime then begin
+    Result := TZDateTimeField.Create(Owner);
+    TZDateTimeField(Result).FFieldIndex := FieldNo;
+    TZDateTimeField(Result).fScale := Size;
+  end else begin
+    if Collection is TFieldDefs then
+      FieldClassType := ZSQLFieldClasses[FSQLType] else
+      FieldClassType := nil;
+    if FieldClassType = nil then DatabaseErrorFmt(SUnknownFieldType, [Name]);
+    Result := FieldClassType.Create(Owner);
+  end;
   try
     Result.Size := Size;
     if FieldName <> '' then
@@ -7761,6 +7389,391 @@ begin
     inherited Assign(Source);
 end;
 {$ENDIF !WITH_TDATASETFIELD}
+
+{ TZDateField }
+
+function TZDateField.GetAsDate: TZDate;
+var IsNull: boolean;
+begin
+  GetAsZDate(IsNull, Result);
+end;
+
+{$IFDEF WITH_TSQLTIMESTAMP_RECORD}
+function TZDateField.GetAsSQLTimeStamp: TSQLTimeStamp;
+var
+  D: TZDate;
+  IsNull: Boolean;
+begin
+  GetAsZDate(IsNull, D);
+  if not IsNull then begin
+    PInt64(@Result.Year)^ := PInt64(@D.Year)^;
+    PInt64(@Result.Hour)^ := 0;
+    Result.Fractions := 0;
+  end else begin
+    PInt64(@Result.Year)^ := 0;
+    PInt64(@Result.Minute)^ := 0;
+  end;
+end;
+{$ENDIF WITH_TSQLTIMESTAMP_RECORD}
+
+procedure TZDateField.GetAsZDate(out IsNull: Boolean; Var Result: TZDate);
+var RowBuffer: PZRowBuffer;
+begin
+  if DataSet = nil then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  with (DataSet as TZAbstractRODataset) do begin
+    if GetActiveBuffer(RowBuffer) then begin
+      FRowAccessor.RowBuffer := RowBuffer;
+      FRowAccessor.GetDate(FFieldIndex{DefineFieldIndex(FFieldsLookupTable, Self)}, IsNull, Result);
+    end else
+      PInt64(@Result.Year)^ := 0;
+  end;
+end;
+
+procedure TZDateField.GetText(var Text: string; DisplayText: Boolean);
+var
+  Frmt: string;
+  DT: TDateTime;
+  D: TZDate;
+  b, IsNull: Boolean;
+  Digits: Byte;
+  P: PChar;
+begin
+  GetAsZDate(IsNull, D);
+  if not IsNull then begin
+    B := DisplayText and (DisplayFormat <> '');
+    if B
+    then Frmt := DisplayFormat
+    else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
+    if Frmt <> FLastFormat[b] then begin
+      FLastFormat[b] := Frmt;
+      FSimpleFormat[b] := IsSimpleDateFormat(Frmt);
+    end;
+    if FSimpleFormat[b] then begin
+      P := @FBuff[0];
+      Digits := {$IFDEF UNICODE}DateToUni{$ELSE}DateToRaw{$ENDIF}(D.Year, D.Month,
+        D.Day, P, FLastFormat[b], False, D.IsNegative);
+      System.SetString(Text, P, Digits);
+    end else begin
+      if TryEncodeDate(D.Year, D.Month, D.Day, DT)
+      //let the compiler do the complex stuff i.e. century/weekdays/monthname and user defined additional tokens
+      then DateTimeToString(Text, Frmt, DT)
+      else begin
+        if DisplayText
+        then Text := '0000-00-00'
+        else Text := '';
+        Exit;
+      end;
+      if D.IsNegative then
+        Text := '-'+Text;
+    end;
+  end else
+    Text := '';
+end;
+
+procedure TZDateField.SetAsDate(const Value: TZDate);
+//var FieldIndex: Integer;
+begin
+  if DataSet = nil then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  if ReadOnly and (FieldKind <> fkLookup) and not (DataSet.State in
+    [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
+      DatabaseErrorFmt(SFieldReadOnly, [DisplayName]);
+  if not (DataSet.State in dsWriteModes) then
+    DatabaseError(SNotEditing, DataSet);
+  with (DataSet as TZAbstractRODataset) do begin
+    //FieldIndex := DefineFieldIndex(FFieldsLookupTable, Self);
+    FRowAccessor.SetDate(FFieldIndex, Value);
+  end;
+end;
+
+{ TZTimeField }
+
+class procedure TZTimeField.CheckTypeSize(Value: Integer);
+begin
+  if (Value > 9) or (Value < 0) then
+    DatabaseError(SInvalidFieldSize);
+end;
+
+procedure TZTimeField.GetAsZTime(Out IsNull: Boolean; var Result: TZTime);
+var RowBuffer: PZRowBuffer;
+begin
+  if DataSet = nil then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  with (DataSet as TZAbstractRODataset) do begin
+    if GetActiveBuffer(RowBuffer) then begin
+      FRowAccessor.RowBuffer := RowBuffer;
+      FRowAccessor.GetTime(FFieldIndex{DefineFieldIndex(FFieldsLookupTable, Self)}, IsNull, Result);
+    end else begin
+      PInt64(@Result.Second)^ := 0;
+      PNativeUInt(@Result.Hour)^ := 0;
+    end;
+  end;
+end;
+
+function TZTimeField.GetAsTime: TZTime;
+var IsNull: Boolean;
+begin
+  GetAsZTime(IsNull, Result);
+end;
+
+procedure TZTimeField.GetText(var Text: string; DisplayText: Boolean);
+var
+  Frmt: string;
+  DT: TDateTime;
+  T: TZTime;
+  IsNull: Boolean;
+  I,J: LengthInt;
+  Fraction: Cardinal;
+  B: Boolean;
+  P: PChar;
+  Millis: Word;
+begin
+  GetAsZTime(IsNull, T);
+  if not IsNull then begin
+    B := DisplayText and (DisplayFormat <> '');
+    if B
+    then Frmt := DisplayFormat
+    else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+    if Frmt <> FLastFormat[B] then begin
+      FLastFormat[B] := Frmt;
+      FSimpleFormat[b] := IsSimpleTimeFormat(Frmt);
+      if FShowSecFrac
+      then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
+      else FFractionFormat[b] := Frmt;
+    end;
+    if FSimpleFormat[b] then begin
+      P := @FBuff[0];
+      Fraction := t.Fractions;
+      if not FShowSecFrac then
+        Fraction := RoundNanoFractionTo(Fraction, FScale);
+      I := {$IFDEF UNICODE}TimeToUni{$ELSE}TimeToRaw{$ENDIF}(
+        T.Hour, T.Minute, T.Second, Fraction, P, FLastFormat[B], False, T.IsNegative);
+      System.SetString(Text, P, I);
+    end else begin
+      if FShowSecFrac
+      then Millis := 0
+      else Millis := RoundNanoFractionToMillis(T.Fractions);
+      if TryEncodeTime(T.Hour, T.Minute, T.Second, Millis, DT) then begin
+        //let the compiler do the complex stuff i.e. AM/PM and user defined additional tokens, week days etc.
+        DateTimeToString(Text, FFractionFormat[b], DT);
+        if  FShowSecFrac then begin
+          //if shortformat the position may be variable. no chance to cache that info
+          I := ZFastCode.Pos(MilliReplaceUnQuoted[FScale], Text);
+          if I > 0 then begin
+            P := Pointer(Text);
+            Inc(P, I-1);
+            Fraction := t.Fractions;
+            Fraction := RoundNanoFractionTo(Fraction, FScale);
+            Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
+            {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
+            if FScale > FFractionLen[B] then begin
+              J := I+FScale;
+              P := Pointer(Text);
+              Inc(P, j-2);
+              Millis := 0;
+              while (J>I) and (P^ = ('0')) do begin
+                Inc(Millis);
+                Dec(J);
+                Dec(P);
+              end;
+              if Millis > 0 then
+                Delete(Text, J, Millis);
+            end;
+          end;
+        end;
+      end else begin
+        if DisplayText
+        then Text := '00:00:00'
+        else Text := '';
+        Exit;
+      end;
+      if T.IsNegative then
+        Text := '-'+Text;
+    end;
+  end else
+    Text := '';
+end;
+
+procedure TZTimeField.SetAdjSecFracFmt(Value: Boolean);
+begin
+  FLastFormat[True] := '';
+  FLastFormat[False] := '';
+  FShowSecFrac := Value;
+end;
+
+procedure TZTimeField.SetAsTime(const Value: TZTime);
+//var FieldIndex: Integer;
+begin
+  if DataSet = nil then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  if ReadOnly and (FieldKind <> fkLookup) and not (DataSet.State in
+    [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
+      DatabaseErrorFmt(SFieldReadOnly, [DisplayName]);
+  if not (DataSet.State in dsWriteModes) then
+    DatabaseError(SNotEditing, DataSet);
+  with (DataSet as TZAbstractRODataset) do begin
+    //FieldIndex := DefineFieldIndex(FFieldsLookupTable, Self);
+    FRowAccessor.SetTime(FFieldIndex, Value);
+  end;
+end;
+
+{ TZDateTimeField }
+
+class procedure TZDateTimeField.CheckTypeSize(Value: Integer);
+begin
+  if (Value > 9) or (Value < 0) then
+    DatabaseError(SInvalidFieldSize);
+end;
+
+{$IFDEF WITH_TSQLTIMESTAMP_RECORD}
+function TZDateTimeField.GetAsSQLTimeStamp: TSQLTimeStamp;
+var
+  TS: TZTimeStamp;
+  IsNull: Boolean;
+begin
+  GetAsZTimeStamp(IsNull, TS);
+  if not IsNull
+  then Result := PSQLTimeStamp(@TS.Year)^
+  else begin
+    PInt64(@Result.Year)^ := 0;
+    PInt64(@Result.Minute)^ := 0;
+  end;
+end;
+{$ENDIF WITH_TSQLTIMESTAMP_RECORD}
+
+function TZDateTimeField.GetAsTimeStamp: TZTimeStamp;
+var IsNull: Boolean;
+begin
+  GetAsZTimeStamp(IsNull, Result);
+end;
+
+procedure TZDateTimeField.GetAsZTimeStamp(out IsNull: Boolean; Var Result: TZTimeStamp);
+var RowBuffer: PZRowBuffer;
+begin
+  if DataSet = nil then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  with (DataSet as TZAbstractRODataset) do begin
+    if GetActiveBuffer(RowBuffer) then begin
+      FRowAccessor.RowBuffer := RowBuffer;
+      FRowAccessor.GetTimeStamp(FFieldIndex{DefineFieldIndex(FFieldsLookupTable, Self)}, IsNull, Result);
+    end else begin
+      PInt64(@Result.Year)^ := 0;
+      PInt64(@Result.Minute)^ := 0;
+      PInt64(PAnsiChar(@Result.Fractions)+2)^ := 0;
+    end;
+  end;
+end;
+
+procedure TZDateTimeField.GetText(var Text: string; DisplayText: Boolean);
+var
+  Frmt: string;
+  DT, D: TDateTime;
+  TS: TZTimeStamp;
+  IsNull: Boolean;
+  I,J: LengthInt;
+  Fraction: Cardinal;
+  B: Boolean;
+  P: PChar;
+  Millis: Word;
+begin
+  GetAsZTimeStamp(IsNull, TS);
+  if not IsNull then begin
+    B := DisplayText and (DisplayFormat <> '');
+    if B
+    then Frmt := DisplayFormat
+    else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+    if Frmt <> FLastFormat[B] then begin
+      FLastFormat[B] := Frmt;
+      FSimpleFormat[b] := IsSimpleDateTimeFormat(Frmt);
+      if FShowSecFrac
+      then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
+      else FFractionFormat[b] := Frmt;
+    end;
+    if FSimpleFormat[b] then begin
+      P := @FBuff[0];
+      Fraction := ts.Fractions;
+      if not FShowSecFrac then
+        Fraction := RoundNanoFractionTo(Fraction, FScale);
+      I := {$IFDEF UNICODE}DateTimeToUni{$ELSE}DateTimeToRaw{$ENDIF}(
+        TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+        TS.Second, Fraction, P, FLastFormat[B], False, TS.IsNegative);
+      System.SetString(Text, P, I);
+    end else begin
+      B := False;
+      if TryEncodeDate(TS.Year, TS.Month, TS.Day, d) then begin
+        if FShowSecFrac
+        then Millis := 0
+        else Millis := RoundNanoFractionToMillis(TS.Fractions);
+        B := TryEncodeTime(TS.Hour, TS.Minute, TS.Second, Millis, DT);
+        if B then
+          if d < 0
+          then DT := D - DT
+          else DT := D + DT;
+      end;
+      if B then begin
+        //let the compiler do the complex stuff i.e. AM/PM and user defined additional tokens, week days etc.
+        DateTimeToString(Text, FFractionFormat[b], DT);
+        if FShowSecFrac then begin
+          //if shortformat the position may be variable. no chance to cache that info
+          I := ZFastCode.Pos(MilliReplaceUnQuoted[FScale], Text);
+          if I > 0 then begin
+            P := Pointer(Text);
+            Inc(P, I-1);
+            Fraction := ts.Fractions;
+            Fraction := RoundNanoFractionTo(Fraction, FScale);
+            Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
+            {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
+            if FScale > FFractionLen[B] then begin
+              J := I+FScale;
+              P := Pointer(Text);
+              Inc(P, j-2);
+              Millis := 0;
+              while (J>I) and (P^ = ('0')) do begin
+                Inc(Millis);
+                Dec(J);
+                Dec(P);
+              end;
+              if Millis > 0 then
+                Delete(Text, J, Millis);
+            end;
+          end;
+        end;
+      end else begin
+        if DisplayText
+        then Text := '0000-00-00 00:00:00'
+        else Text := '';
+        Exit;
+      end;
+      if TS.IsNegative then
+        Text := '-'+Text;
+    end;
+  end else
+    Text := '';
+end;
+
+procedure TZDateTimeField.SetAdjSecFracFmt(Value: Boolean);
+begin
+  FLastFormat[True] := '';
+  FLastFormat[False] := '';
+  FShowSecFrac := Value;
+end;
+
+procedure TZDateTimeField.SetAsTimeStamp(const Value: TZTimeStamp);
+//var FieldIndex: Integer;
+begin
+  if DataSet = nil then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  if ReadOnly and (FieldKind <> fkLookup) and not (DataSet.State in
+    [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
+      DatabaseErrorFmt(SFieldReadOnly, [DisplayName]);
+  if not (DataSet.State in dsWriteModes) then
+    DatabaseError(SNotEditing, DataSet);
+  with (DataSet as TZAbstractRODataset) do begin
+  //  FieldIndex := DefineFieldIndex(FFieldsLookupTable, Self);
+    FRowAccessor.SetTimeStamp(FFieldIndex, Value);
+  end;
+end;
 
 initialization
   D1M1Y1 := EncodeDate(1,1,1);

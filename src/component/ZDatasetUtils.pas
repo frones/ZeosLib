@@ -278,7 +278,47 @@ const DatasetTypeToProcColDbc: array[TParamType] of TZProcedureColumnType =
   (pctUnknown{ptUnknown}, pctIn{ptInput}, pctOut{ptOutPut},
     pctInOut{ptInputOutput}, pctReturn{ptResult});
 
-{** Common variables. }
+function IsSimpleDateTimeFormat(const Format: String): Boolean;
+function IsSimpleDateFormat(const Format: String): Boolean;
+function IsSimpleTimeFormat(const Format: String): Boolean;
+function ConvertAsFractionFormat(const Frmt: String; Scale: Integer;
+  ReplaceFractions: Boolean; out FractionLen: Integer): String;
+
+const
+  MilliReplaceQuoted: array[0..9] of String = (
+    '""',
+    '"'#1'"',
+    '"'#1#2'"',
+    '"'#1#2#3'"',
+    '"'#1#2#3#4'"',
+    '"'#1#2#3#4#5'"',
+    '"'#1#2#3#4#5#6'"',
+    '"'#1#2#3#4#5#6#7'"',
+    '"'#1#2#3#4#5#6#7#8'"',
+    '"'#1#2#3#4#5#6#7#8#9'"');
+  MilliReplaceUnQuoted: array[0..9] of String = (
+    '',
+    #1,
+    #1#2,
+    #1#2#3,
+    #1#2#3#4,
+    #1#2#3#4#5,
+    #1#2#3#4#5#6,
+    #1#2#3#4#5#6#7,
+    #1#2#3#4#5#6#7#8,
+    #1#2#3#4#5#6#7#8#9);
+  FractionAdjust: array[0..9] of String = (
+    '',
+    'f',
+    'ff',
+    'fff',
+    'ffff',
+    'fffff',
+    'ffffff',
+    'fffffff',
+    'ffffffff',
+    'fffffffff');
+  {** Common variables. }
 var
   CommonTokenizer: IZTokenizer;
 
@@ -1905,6 +1945,188 @@ begin
       else
         raise EZDatabaseError.Create(SUnKnownParamDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(Param.DataType)));
     end;
+  end;
+end;
+
+function ConvertAsFractionFormat(const Frmt: String; Scale: Integer;
+  ReplaceFractions: Boolean; out FractionLen: Integer): String;
+var P, PEnd, MSEnd, QuoteChar, MSStart, SPos, DotPos: PChar;
+  L: Integer;
+label MoveLast;
+begin
+  Result := '';
+  P := Pointer(Frmt);
+  PEnd := P +Length(Frmt);
+  MSStart:= nil;
+  MSEnd  := nil;
+  QuoteChar := nil;
+  SPos := nil;
+  DotPos := nil;
+  while P < PEnd do begin
+    if (P^ = #39) or (P^ = '"') then begin
+      if QuoteChar = nil then
+        QuoteChar := P
+      else if QuoteChar^ = P^ then
+        QuoteChar := nil;
+    end else if (QuoteChar = nil) then begin
+      case Ord(P^) or $20 of
+        Ord('f'),
+        Ord('z'): begin
+                    MSEnd := P;
+                    if MSStart = nil then
+                      MSStart := P;
+                  end;
+        Ord('.'): DotPos := P;
+        Ord('s'): Spos := P;
+      end;
+    end;
+    Inc(P);
+  end;
+  P := Pointer(Frmt);
+  if MSEnd = nil
+  then FractionLen := 0
+  else begin
+    Inc(MSEnd);
+    FractionLen := MSEnd - MSStart;
+  end;
+  L := Length(Frmt);
+  if ReplaceFractions then
+    Inc(L, 2);
+  if MSStart <> nil then begin
+    SetLength(Result, L+Scale-FractionLen);
+    DotPos := Pointer(Result);
+    L := (MSStart - P);
+    Move(P^, DotPos^, L * SizeOf(char));
+MoveLast:
+    Inc(DotPos, L);
+    L := Scale;
+    if ReplaceFractions then begin
+      Inc(L, 2);
+      P := Pointer(MilliReplaceQuoted[Scale]);
+    end else
+      P := Pointer(FractionAdjust[Scale]);
+    Move(P^, DotPos^, L * SizeOf(Char));
+    Inc(DotPos, L);
+    L := (PEnd - MSEnd);
+    if L > 0 then
+      Move(MSEnd^, DotPos^, L * SizeOf(Char));
+  end else begin
+    Result := Frmt;
+    if DotPos <> nil then begin
+      MSEnd := DotPos+1;
+      SetLength(Result, L+Scale);
+      DotPos := Pointer(Result);
+      L := (MSEnd - P);
+      Move(P^, DotPos^, L * SizeOf(char));
+      goto MoveLast;
+    end else if SPos <> nil then begin
+      MSEnd := SPos+1;
+      SetLength(Result, L+1+Scale);
+      DotPos := Pointer(Result);
+      L := (SPos - P);
+      Move(P^, DotPos^, L * SizeOf(char));
+      (DotPos+L+1)^ := '.';
+      Inc(L, 2);
+      goto MoveLast;
+    end;
+  end;
+end;
+
+Type
+  TFormatLiterals = (flYear, flMonth, flDay, flHour, flMinute, flSecond, flFraction, flTimeZone);
+function IsSimpleTimeFormat(const Format: String): Boolean;
+var P, PEnd: PChar;
+  Counters: array[flhour..flFraction] of Integer;
+  OtherCount: Integer;
+  FormatLiterals: TFormatLiterals;
+begin
+  FillChar(Counters, SizeOf(Counters), #0);
+  OtherCount := 0;
+  Result := False;
+  P := Pointer(Format);
+  PEnd := P + Length(Format);
+  while P < PEnd do begin
+    case Ord(P^) or $20 of
+      Ord('h'): Inc(Counters[flHour]);
+      Ord('n'),Ord('m'): Inc(Counters[flMinute]);
+      Ord('s'): Inc(Counters[flSecond]);
+      Ord('z'),Ord('f'): Inc(Counters[flFraction]);
+      Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '),Ord('t'),Ord('.'):;
+      else Inc(OtherCount);
+    end;
+    Inc(P);
+  end;
+  if (OtherCount = 0) and (Length(Format) <= ZSysUtils.cMaxTimeLen) then begin
+    for FormatLiterals := flHour to flSecond do
+      if Counters[FormatLiterals] > 2 then
+        Exit;
+    Result := True;
+  end;
+end;
+
+function IsSimpleDateFormat(const Format: String): Boolean;
+var P, PEnd: PChar;
+  Counters: array[flYear..flTimeZone] of Integer;
+  OtherCount: Integer;
+  FormatLiterals: TFormatLiterals;
+begin
+  FillChar(Counters, SizeOf(Counters), #0);
+  OtherCount := 0;
+  Result := False;
+  P := Pointer(Format);
+  PEnd := P + Length(Format);
+  while P < PEnd do begin
+    case Ord(P^) or $20 of
+      Ord('y'): Inc(Counters[flYear]);
+      Ord('m'): Inc(Counters[flMonth]);
+      Ord('d'): Inc(Counters[flDay]);
+      Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '),Ord('t'):;
+      else Inc(OtherCount);
+    end;
+    Inc(P);
+  end;
+  if (OtherCount = 0) and (Length(Format) <= ZSysUtils.cMaxTimeLen) then begin
+    if Counters[flYear] > 4 then
+      Exit;
+    for FormatLiterals := flMonth to flDay do
+      if Counters[FormatLiterals] > 2 then
+        Exit;
+    Result := True;
+  end;
+end;
+
+function IsSimpleDateTimeFormat(const Format: String): Boolean;
+var P, PEnd: PChar;
+  Counters: array[flYear..flFraction] of Integer;
+  OtherCount: Integer;
+  FormatLiterals: TFormatLiterals;
+begin
+  FillChar(Counters, SizeOf(Counters), #0);
+  OtherCount := 0;
+  Result := False;
+  P := Pointer(Format);
+  PEnd := P + Length(Format);
+  while P < PEnd do begin
+    case Ord(P^) or $20 of
+      Ord('y'): Inc(Counters[flYear]);
+      Ord('m'): Inc(Counters[flMonth]);
+      Ord('d'): Inc(Counters[flDay]);
+      Ord('h'): Inc(Counters[flHour]);
+      Ord('n'): Inc(Counters[flMinute]);
+      Ord('s'): Inc(Counters[flSecond]);
+      Ord('z'),Ord('f'): Inc(Counters[flFraction]);
+      Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '),Ord('t'),Ord('.'):;
+      else Inc(OtherCount);
+    end;
+    Inc(P);
+  end;
+  if (OtherCount = 0) and (Length(Format) <= ZSysUtils.cMaxTimeStampLen) then begin
+    if Counters[flYear] > 4 then
+      Exit;
+    for FormatLiterals := flMonth to flSecond do
+      if Counters[FormatLiterals] > 2 then
+        Exit;
+    Result := True;
   end;
 end;
 

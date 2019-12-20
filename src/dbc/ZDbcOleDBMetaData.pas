@@ -1983,10 +1983,8 @@ begin
   RS := OleDBOpenSchema(DBSCHEMA_COLUMNS,
     [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern),
     DecomposeObjectString(TableNamePattern), DecomposeObjectString(ColumnNamePattern)]);
-  if Assigned(RS) then
-  begin
-    with RS do
-    begin
+  if Assigned(RS) then begin
+    with RS do begin
       if not fTableColColumnMap.Initilized then begin
         fTableColColumnMap.ColIndices[CatalogNameIndex] := CatalogNameIndex;
         fTableColColumnMap.ColIndices[SchemaNameIndex] := SchemaNameIndex;
@@ -2008,8 +2006,7 @@ begin
         fTableColColumnMap.ColIndices[FlagColumn] := FindColumn('COLUMN_FLAGS');
         fTableColColumnMap.Initilized := True;
       end;
-      while Next do
-      begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
@@ -2021,9 +2018,14 @@ begin
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]), ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        if SQLType in [stCurrency, stBigDecimal]
-        then Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]))
-        else Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
+        if SQLType in [stCurrency, stBigDecimal] then begin
+          Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
+          Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
+        end else begin
+          if SQLType in [stTime, stTimeStamp] then
+            Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDateTimeSubIndex]));
+          Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
+        end;
         Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
         // does not exist Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
@@ -2031,7 +2033,6 @@ begin
         Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnRemarksIndex], Len), Len);
         Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), Len);
         Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDataTypeIndex]));
-        Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDateTimeSubIndex]));
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnCharOctetLengthIndex]));
         Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex]));
         Result.UpdateUnicodeString(TableColColumnIsNullableIndex, bYesNo[GetBoolean(fTableColColumnMap.ColIndices[TableColColumnIsNullableIndex])]);

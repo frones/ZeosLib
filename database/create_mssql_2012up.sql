@@ -85,11 +85,11 @@ go
 /* Table : date_values                                          */
 /*==============================================================*/
 create table date_values (
-d_id                 int                  not null,
-d_date               date             null,
-d_time               time(7)             null,
-d_datetime           smalldatetime             null,
-d_timestamp          datetime2           null,
+d_id                 int               not null,
+d_date               date              null,
+d_time               time(7)           null,
+d_datetime           datetime2(3)      null,
+d_timestamp          datetime2(7)      null,
 constraint PK_DATE_VALUES primary key  (d_id)
 )
 go

@@ -583,7 +583,7 @@ var
   pB, pC: Integer;
   Signed: Boolean;
   P: PAnsiChar;
-label SetLobSize, lByte, lWord, lLong, lLongLong;
+label SetLobSize, lByte, lWord, lLong, lLongLong, SetTimeScale, SetVarScale;
 begin
   TypeInfoSecond := '';
   Scale := 0;
@@ -674,19 +674,27 @@ lLong:
     ColumnSize := 22;
   end else if EndsWith(TypeName, RawByteString('char')) then begin //includes 'VARCHAR'
     FieldType := stString;
-    ColumnSize := RawToIntDef(TypeInfoSecond, 0);
+    goto SetVarScale;
   end else if EndsWith(TypeName, RawByteString('binary')) then begin //includes 'VARBINARY'
     FieldType := stBytes;
+SetVarScale:
     ColumnSize := RawToIntDef(TypeInfoSecond, 0);
+    if not StartsWith(TypeName, RawByteString('var')) then
+      Scale := ColumnSize; //tag fixed size
   end else if TypeName = 'date' then begin
     FieldType := stDate;
     ColumnSize := 10;
   end else if TypeName = 'time' then begin
     FieldType := stTime;
-    ColumnSize := 8;
+    ColumnSize := 10; //MySQL hour range is from -838 to 838 so we add two digits (one for sign and 1 to hour)
+    goto SetTimeScale;
   end else if (TypeName = 'timestamp') or (TypeName = 'datetime') then begin
     FieldType := stTimestamp;
     ColumnSize := 19;
+SetTimeScale:
+    Scale := RawToIntDef(TypeInfoSecond, 0);
+    if Scale > 0 then
+      ColumnSize := ColumnSize + 1{Dot}+Scale;
   end else if EndsWith(TypeName, RawByteString('blob')) then begin //includes 'TINYBLOB', 'MEDIUMBLOB', 'LONGBLOB'
     FieldType := stBinaryStream;
 SetLobSize:

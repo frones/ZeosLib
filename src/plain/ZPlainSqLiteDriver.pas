@@ -457,12 +457,12 @@ end;
 
 function TZSQLite3PlainDriver.GetProtocol: string;
 begin
-  Result := 'sqlite-3';
+  Result := 'sqlite';
 end;
 
 function TZSQLite3PlainDriver.GetDescription: string;
 begin
-  Result := 'Native Plain Driver for SQLite 3';
+  Result := 'Native Plain Driver for SQLite 3+';
 end;
 
 {$ENDIF ZEOS_DISABLE_SQLITE}

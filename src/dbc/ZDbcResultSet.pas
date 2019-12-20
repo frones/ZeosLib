@@ -63,8 +63,8 @@ uses
   Windows,
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBcd,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  ZDbcIntfs, ZClasses, ZSysUtils, ZCompatibility, ZVariant;
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
+  ZDbcIntfs, ZSysUtils, ZCompatibility, ZVariant;
 
 type
   {** Implements Abstract ResultSet. }

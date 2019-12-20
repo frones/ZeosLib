@@ -1384,15 +1384,35 @@ function Str2BCD(const Value: String{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const
 
 procedure Double2BCD(const Value: Double; var Result: TBCD);
 
+procedure GetPacketBCDOffSets({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
+  out PNibble, PLastNibble: PAnsiChar; out Precision, Scale: Word; out GetFirstBCDHalfByte: Boolean);
+
 Type TCurrRoundToScale = 0..4;
 
 {** EH:
    round a currency value half away from zero to it's exact scale digits
    @param Value the value to be rounded
-   @param Scale the exact scale digt we want to round valid is 0..4. even if 4 is a nop
+   @param Scale the exact scale digt we want to round valid is 0..4. even if 4 is a noop
    @return a rounded value
 }
 function RoundCurrTo(const Value: Currency; Scale: TCurrRoundToScale): Currency;
+
+Type TFractionRoundToScale = 0..9;
+
+{** EH:
+   round a fraction cardinal value half away from zero to it's exact scale digits
+   @param Value the value to be rounded
+   @param Scale the exact scale digt we want to round valid is 0..9. even if 9 is a noop
+   @return a rounded value
+}
+function RoundNanoFractionTo(const Value: Cardinal; Scale: TFractionRoundToScale): Cardinal;
+
+{** EH:
+   round a fraction cardinal value half away from zero
+   @param Value the value to be rounded
+   @return a rounded value with millisecond precision
+}
+function RoundNanoFractionToMillis(const Value: Cardinal): Word;
 
 var
   ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
@@ -8444,6 +8464,49 @@ begin
   {$ENDIF}
 end;
 
+procedure GetPacketBCDOffSets({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF}
+  Value: TBCD; out PNibble, PLastNibble: PAnsiChar;
+  out Precision, Scale: Word; out GetFirstBCDHalfByte: Boolean);
+var Digit: Word;
+  B: Boolean;
+begin
+  pNibble := @Value.Fraction[0];
+  Precision := Value.Precision;
+  B := Precision and 1 = 1;
+  Scale :=  Value.SignSpecialPlaces and 63;
+  pLastNibble := pNibble + (Precision-1) shr 1;
+  GetFirstBCDHalfByte := True;
+  { padd leading zeroes away }
+  while (Precision > Scale) do begin
+    if PByte(pNibble)^ = 0 then begin
+      Inc(PNibble);
+      Dec(Precision, 1+Ord(Precision > 1));
+      Dec(Scale, Ord(Scale>0)+Ord(Scale>1));
+      Continue;
+    end else if (PByte(pNibble)^ shr 4) = 0 then begin
+      GetFirstBCDHalfByte := False;
+      Dec(Precision);
+      Dec(Scale, Ord(Scale>0));
+    end;
+    Break;
+  end;
+  { padd trailing zeroes away }
+  while (pLastNibble >= pNibble ) and (Scale > 0) do begin
+    if B
+    then Digit := (PByte(pLastNibble)^ shr 4)
+    else begin
+      Digit := (PByte(pLastNibble)^ and $0F);
+      Dec(pLastNibble);
+    end;
+    if Digit = 0 then begin
+      Dec(Scale);
+      Dec(Precision);
+    end else
+      Break;
+    B := not B;
+  end;
+end;
+
 (*function GetStringReplaceAllIndices(Source, OldPattern: PAnsiChar; SourceLen, OldPatternLen: Integer): TIntegerDynArray; overload;
 var
   iPos, L: Integer;
@@ -8593,7 +8656,7 @@ begin
   pDN := pLN+1-((Scale+Ord(Scale > 0)+(Precision and 1)) shr 1); //pin middle nibble or after decimal sep
   while (pLN > pDN) and (PByte(pLN)^ = 0) do Dec(pLN);//skip trailing zeroes
   while (pCN < pDN) and (PByte(pCN)^ = 0) do Inc(pCN);//skip leading zeroes
-  if (pCN = pLN) and (PByte(pCN)^ = 0) then begin
+  if ((pCN = pLN) and (PByte(pCN)^ = 0)) or ((pCN > pLN) and (PByte(pLN)^ = 0)) then begin
 zero: Result := 1;
     Exit;
   end;
@@ -8666,7 +8729,7 @@ begin
   pDN := pLN+1-((Scale+Ord(Scale > 0)+(Precision and 1)) shr 1); //pin middle nibble or after decimal sep
   while (pLN > pDN) and (PByte(pLN)^ = 0) do Dec(pLN);//skip trailing zeroes
   while (pCN < pDN) and (PByte(pCN)^ = 0) do Inc(pCN);//skip leading zeroes
-  if (pCN = pLN) and (PByte(pCN)^ = 0) then begin
+  if ((pCN = pLN) and (PByte(pCN)^ = 0)) or ((pCN > pLN) and (PByte(pLN)^ = 0)) then begin
 zero: Result := 1;
     Exit;
   end;
@@ -8787,6 +8850,44 @@ begin
         d64 := d64 + CInt64Table[Scale];
   end else
     Result := Value
+end;
+
+const HalfFractModulos:     array [TFractionRoundToScale] of Cardinal = ( 444444445, 44444445,  4444445,  444445,  44445,  4445,  445, 45, 5,0);
+const FractionRoundSummant: array [TFractionRoundToScale] of Cardinal = (1000000000,100000000, 10000000, 1000000, 100000, 10000, 1000,100,10,1);
+
+{** EH:
+   round a fraction cardinal value half away from zero to it's exact scale digits
+   @param Value the value to be rounded
+   @param Scale the exact scale digt we want to round valid is 0..8. even if 9 is a noop
+   @return a rounded value
+}
+function RoundNanoFractionTo(const Value: Cardinal; Scale: TFractionRoundToScale): Cardinal;
+var Modulo: Cardinal;
+begin
+  if Scale = 0 then
+    Result := 0
+  else if (Scale < 9) and (Value > 0) then begin
+    Result := Value div FractionLength2NanoSecondMulTable[Scale];
+    Result := Result * FractionLength2NanoSecondMulTable[Scale];
+    Modulo := Value - Result;
+    if (Scale > 0) and (Modulo >= HalfFractModulos[Scale]) then
+      Result := Result + FractionRoundSummant[Scale];
+  end else Result := Value;
+end;
+
+{** EH:
+   round a fraction cardinal value half away from zero
+   @param Value the value to be rounded
+   @return a rounded value with millisecond precision
+}
+function RoundNanoFractionToMillis(const Value: Cardinal): Word;
+var F, Modulo: Cardinal;
+begin
+  Result := Value div NanoSecsPerMSec;
+  F :=  Result * NanoSecsPerMSec;
+  Modulo := Value - F;
+  if Modulo >= HalfFractModulos[3] then
+    Result := Result + 1;
 end;
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

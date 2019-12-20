@@ -1912,6 +1912,11 @@ begin
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
           NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
+          if NewSQLType = stUnknown then begin//EH: domain types are unknonw for us..
+            //pg does not return the underlaying OID grumble...
+            FPQParamOIDs[i] := INVALIDOID;
+            continue;
+          end;
           zOID := FPQParamOIDs[i];
           FPQParamOIDs[i] := pgOID;
           if NewSQLType in [stUnicodeString, stUnicodeStream]
@@ -1919,47 +1924,42 @@ begin
           else if (NewSQLType = stBigDecimal) and (BindList.SQLTypes[i] = stCurrency)
             then NewSQLType := stCurrency;
           if (NewSQLType <> BindList.SQLTypes[i]) and (FPQparamValues[I] <> nil) then
-          {if (pgOID <> FPQParamOIDs[i]) then begin
-            zOID := FPQParamOIDs[i];}
-            //bind bin again or switch to string format if we do not support the PG Types -> else Error
-            //if (FPQparamValues[I] <> nil) then
-              case BindList.SQLTypes[i] of
-                stBoolean:  SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Boolean(PByte(FPQparamValues[i])^));
-                stSmall:    SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2SmallInt(FPQparamValues[i]));
-                stInteger:  SetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Integer(FPQparamValues[i]));
-                stLongWord,
-                stLong:     SetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Int64(FPQparamValues[i]));
-                stCurrency: if zOID  = CASHOID
-                            then SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGCash2Currency(FPQparamValues[i]))
-                            else SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGNumeric2Currency(FPQparamValues[i]));
-                stFloat:    SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Single(FPQparamValues[i]));
-                stDouble:   SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
-                stBigDecimal:begin
-                              PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
-                              SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
-                            end;
-                stTime:     begin
-                              if Finteger_datetimes
-                              then PG2Time(PInt64(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions)
-                              else PG2Time(PDouble(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions);
-                              T.IsNegative := False;
-                              SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
-                            end;
-                stDate:     begin
-                              PG2Date(PInteger(FPQparamValues[i])^, D.Year, D.Month, D.Day);
-                              D.IsNegative := False;
-                              SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},D);
-                            end;
-                stTimeStamp:begin
-                              if Finteger_datetimes
-                              then PG2DateTime(PInt64(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
-                                  TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions)
-                              else PG2DateTime(PDouble(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
-                                TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions);
-                              SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},TS);
-                            end;
-              end;
-          //end;
+            case BindList.SQLTypes[i] of
+              stBoolean:  SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Boolean(PByte(FPQparamValues[i])^));
+              stSmall:    SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2SmallInt(FPQparamValues[i]));
+              stInteger:  SetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Integer(FPQparamValues[i]));
+              stLongWord,
+              stLong:     SetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Int64(FPQparamValues[i]));
+              stCurrency: if zOID  = CASHOID
+                          then SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGCash2Currency(FPQparamValues[i]))
+                          else SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGNumeric2Currency(FPQparamValues[i]));
+              stFloat:    SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Single(FPQparamValues[i]));
+              stDouble:   SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
+              stBigDecimal:begin
+                            PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
+                            SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
+                          end;
+              stTime:     begin
+                            if Finteger_datetimes
+                            then PG2Time(PInt64(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions)
+                            else PG2Time(PDouble(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions);
+                            T.IsNegative := False;
+                            SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+                          end;
+              stDate:     begin
+                            PG2Date(PInteger(FPQparamValues[i])^, D.Year, D.Month, D.Day);
+                            D.IsNegative := False;
+                            SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},D);
+                          end;
+              stTimeStamp:begin
+                            if Finteger_datetimes
+                            then PG2DateTime(PInt64(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                                TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions)
+                            else PG2DateTime(PDouble(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                              TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions);
+                            SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},TS);
+                          end;
+            end;
         end;
       finally
         FPlainDriver.PQclear(res);
@@ -2132,7 +2132,7 @@ begin
       stDate:       Date2PG(Value.Year, Value.Month, Value.Day, PInteger(FPQparamValues[InParamIdx])^);
       stTime:       PInt64(FPQparamValues[InParamIdx])^ := 0;
       else          begin
-                      ZSysUtils.TimeStampFromDate(Value, TS);
+                      ZSysUtils.TimeStampFromDate(Value, TS{%H-});
                       if Finteger_datetimes
                       then TimeStamp2PG(TS, PInt64(FPQparamValues[InParamIdx])^)
                       else TimeStamp2PG(TS, PDouble(FPQparamValues[InParamIdx])^);
@@ -2375,7 +2375,7 @@ begin
                     then Time2PG(Value.Hour, Value.Minute, Value.Second, Value.Fractions, PInt64(FPQparamValues[InParamIdx])^)
                     else Time2PG(Value.Hour, Value.Minute, Value.Second, Value.Fractions, PDouble(FPQparamValues[InParamIdx])^);
       else          begin
-                      TimeStampFromTime(Value, TS);
+                      TimeStampFromTime(Value, TS{%H-});
                       if Finteger_datetimes
                       then TimeStamp2PG(TS, PInt64(FPQparamValues[InParamIdx])^)
                       else TimeStamp2PG(TS, PDouble(FPQparamValues[InParamIdx])^);

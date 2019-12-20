@@ -1956,7 +1956,7 @@ begin
   if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
      (OraType <> BindList[Index].SQLType)
   then OraType := BindList[Index].SQLType
-  else OraType := stDate;
+  else OraType := stTimeStamp;
   if (BindList[Index].SQLType <> OraType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
     InitBuffer(OraType, Bind, Index, 1);
   case Bind.dty of

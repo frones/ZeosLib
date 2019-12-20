@@ -89,6 +89,7 @@ type
     procedure TestSelectThreeQueriesGetMoreResults;
     procedure TestBitFields;
     procedure TestPreparedStatementHighLoad;
+    procedure Test_time_fraction_values;
   end;
 
 
@@ -604,6 +605,48 @@ begin
     Info.Free;
     if Assigned(ResultSet) then
       ResultSet.Close;
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.Test_time_fraction_values;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  RSType: TZResultSetConcurrency;
+  MetaData: IZResultSetMetadata;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    for RSType := low(TZResultSetConcurrency) to high(TZResultSetConcurrency) do begin
+      Statement.SetResultSetConcurrency(RSType);
+      try
+        ResultSet := Statement.ExecuteQuery('SELECT * FROM time_fraction_values');
+        CheckNotNull(ResultSet);
+        MetaData := ResultSet.GetMetadata;
+        CheckEquals(0, Metadata.GetScale(FirstDbcIndex+1), 'Fraction Scale');
+        CheckEquals(0, Metadata.GetScale(FirstDbcIndex+2), 'Fraction Scale');
+        CheckEquals(1, Metadata.GetScale(FirstDbcIndex+3), 'Fraction Scale');
+        CheckEquals(2, Metadata.GetScale(FirstDbcIndex+4), 'Fraction Scale');
+        CheckEquals(3, Metadata.GetScale(FirstDbcIndex+5), 'Fraction Scale');
+        CheckEquals(4, Metadata.GetScale(FirstDbcIndex+6), 'Fraction Scale');
+        CheckEquals(5, Metadata.GetScale(FirstDbcIndex+7), 'Fraction Scale');
+        CheckEquals(6, Metadata.GetScale(FirstDbcIndex+8), 'Fraction Scale');
+        CheckEquals(0, Metadata.GetScale(FirstDbcIndex+9), 'Fraction Scale');
+        CheckEquals(0, Metadata.GetScale(FirstDbcIndex+10), 'Fraction Scale');
+        CheckEquals(1, Metadata.GetScale(FirstDbcIndex+11), 'Fraction Scale');
+        CheckEquals(2, Metadata.GetScale(FirstDbcIndex+12), 'Fraction Scale');
+        CheckEquals(3, Metadata.GetScale(FirstDbcIndex+13), 'Fraction Scale');
+        CheckEquals(4, Metadata.GetScale(FirstDbcIndex+14), 'Fraction Scale');
+        CheckEquals(5, Metadata.GetScale(FirstDbcIndex+15), 'Fraction Scale');
+        CheckEquals(6, Metadata.GetScale(FirstDbcIndex+16), 'Fraction Scale');
+      finally
+        if Assigned(ResultSet) then
+          ResultSet.Close;
+      end;
+    end;
+  finally
     Statement.Close;
   end;
 end;

@@ -285,7 +285,6 @@ const
 implementation
 
 uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
-  {$IF not defined(OLDFPC) and not defined(NO_UNIT_CONTNRS)}, ZClasses{$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 const
