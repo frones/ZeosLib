@@ -751,6 +751,7 @@ var
   FieldRef: TZFieldRef;
   TableRef: TZTableRef;
   Found: Boolean;
+  AName: String;
 begin
   { Initializes single columns with specified table. }
   FieldRef := SelectSchema.LinkFieldByIndexAndShortName(ColumnIndex,
@@ -766,14 +767,17 @@ begin
   I := 0;
   Found := False;
   while {(ColumnInfo.ColumnName = '') and }(I < SelectSchema.TableCount)
-    and not Found do
-  begin
+    and not Found do begin
     TableRef := SelectSchema.Tables[I];
-    If TableRef.Schema = '' Then Tableref.Schema := FMetadata.GetConnection.GetCatalog;
-    if Assigned(FieldRef) then
-      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(FieldRef.Field), TableRef, ColumnInfo)
-    else
-      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel), TableRef, ColumnInfo);
+    with FMetadata.GetDatabaseInfo do
+      if SupportsCatalogsInDataManipulation and (TableRef.Catalog = '') then
+        TableRef.Catalog := FMetadata.GetConnection.GetCatalog
+      else if SupportsSchemasInDataManipulation and (TableRef.Schema = '') then
+        TableRef.Schema := FMetadata.GetConnection.GetCatalog;
+    if Assigned(FieldRef)
+    then AName := IdentifierConvertor.ExtractQuote(FieldRef.Field)
+    else AName := IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel);
+    Found := ReadColumnByName(AName, TableRef, ColumnInfo);
     Inc(I);
   end;
 end;
@@ -796,7 +800,11 @@ begin
     Current := SelectSchema.Fields[I];
     if (Current.Field = '*') and (Current.TableRef <> nil) then begin
       TableRef := Current.TableRef;
-      If TableRef.Schema = '' Then Tableref.Schema := FMetadata.GetConnection.GetCatalog;
+      with FMetadata.GetDatabaseInfo do
+        if SupportsCatalogsInDataManipulation and (TableRef.Catalog = '') then
+          TableRef.Catalog := FMetadata.GetConnection.GetCatalog
+        else if SupportsSchemasInDataManipulation and (TableRef.Schema = '') then
+          TableRef.Schema := FMetadata.GetConnection.GetCatalog;
       ResultSet := Self.GetTableColumns(TableRef);
       if ResultSet <> nil then begin
         ResultSet.BeforeFirst;
