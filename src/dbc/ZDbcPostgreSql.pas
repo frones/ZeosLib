@@ -99,6 +99,7 @@ type
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
     function FindDomainBaseType(DomainOID: OID; out BaseTypeOID: OID): Boolean;
+    procedure FillUnknownDomainOIDs;
   end;
 
   PZPGDomain2BaseTypeMap = ^TZPGDomain2BaseTypeMap;
@@ -201,6 +202,7 @@ type
 
     procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
     function FindDomainBaseType(DomainOID: OID; out BaseTypeOID: OID): Boolean;
+    procedure FillUnknownDomainOIDs;
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: TZPostgreSQLPlainDriver;
     function GetPGconnAddress: PPGconn;
@@ -1312,6 +1314,33 @@ begin
   end else
     HandlePostgreSQLError(Self, GetPlainDriver, Fconn, LoggingCategory,
       SQL, QueryHandle);
+end;
+
+procedure TZPostgreSQLConnection.FillUnknownDomainOIDs;
+var Stmt: IZStatement;
+  I: Integer;
+  RS: IZResultSet;
+  SQLWriter: TZSQLStringWriter;
+  SQL: SQLString;
+begin
+  if FDomain2BaseTypMap.UnkownCount = 0 then
+    Exit;
+  SQLWriter := TZSQLStringWriter.Create(512);
+  SQL := 'select oid, typbasetype from pg_catalog.pg_type where oid in (';
+  for i := 0 to FDomain2BaseTypMap.Count -1 do
+    if not PZPGDomain2BaseTypeMap(FDomain2BaseTypMap.Items[I]).Known then begin
+      SQLWriter.AddOrd(PZPGDomain2BaseTypeMap(FDomain2BaseTypMap.Items[I]).DomainOID, SQL);
+      SQLWriter.AddChar(',', SQL);
+    end;
+  SQLWriter.ReplaceOrAddLastChar(',', ')', SQL);
+  SQLWriter.Finalize(SQL);
+  SQLWriter.Free;
+  Stmt := CreateStatement;
+  RS := CreateStatement.ExecuteQuery(SQL);
+  while RS.Next do
+    FDomain2BaseTypMap.AddIfNotExists(Rs.GetUInt(FirstDbcIndex), Rs.GetUInt(FirstDbcIndex+1));
+  RS.Close;
+  Stmt.Close;
 end;
 
 function TZPostgreSQLConnection.FindDomainBaseType(DomainOID: OID;
