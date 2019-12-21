@@ -1898,71 +1898,101 @@ procedure TZPostgreSQLPreparedStatementV3.PrepareInParameters;
 var
   res: TPGresult;
   I: Integer;
-  pgOID, zOID: OID;
+  pgOID, tmpOID: OID;
   NewSQLType: TZSQLType;
-  TS: TZTimeStamp;
-  D: TZDate absolute TS;
-  T: TZTime absolute TS;
+  AllOIDsKnown: Boolean;
+  boundOIDs: array of OID;
+  procedure RebindIfRequired(i: Integer; NewSQLType: TZSQLType; oldoid, newoid: OID);
+  var
+    TS: TZTimeStamp;
+    D: TZDate absolute TS;
+    T: TZTime absolute TS;
+  begin
+    if NewSQLType in [stUnicodeString, stUnicodeStream]
+    then NewSQLType := TZSQLType(Ord(NewSQLType) -1)
+    else if (NewSQLType = stBigDecimal) and (BindList.SQLTypes[i] = stCurrency)
+      then NewSQLType := stCurrency;
+    if (NewSQLType <> BindList.SQLTypes[i]) and (FPQparamValues[I] <> nil) or ((oldoid <> newoid) and (Ord(NewSQLType) <= Ord(stTimestamp))) then
+      case BindList.SQLTypes[i] of
+        stBoolean:  SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Boolean(PByte(FPQparamValues[i])^));
+        stSmall:    SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2SmallInt(FPQparamValues[i]));
+        stInteger:  SetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Integer(FPQparamValues[i]));
+        stLongWord,
+        stLong:     SetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Int64(FPQparamValues[i]));
+        stCurrency: if oldoid  = CASHOID
+                    then SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGCash2Currency(FPQparamValues[i]))
+                    else SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGNumeric2Currency(FPQparamValues[i]));
+        stFloat:    SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Single(FPQparamValues[i]));
+        stDouble:   SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
+        stBigDecimal:begin
+                      PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
+                      SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
+                    end;
+        stTime:     begin
+                      if Finteger_datetimes
+                      then PG2Time(PInt64(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions)
+                      else PG2Time(PDouble(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions);
+                      T.IsNegative := False;
+                      SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+                    end;
+        stDate:     begin
+                      PG2Date(PInteger(FPQparamValues[i])^, D.Year, D.Month, D.Day);
+                      D.IsNegative := False;
+                      SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},D);
+                    end;
+        stTimeStamp:begin
+                      if Finteger_datetimes
+                      then PG2DateTime(PInt64(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                          TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions)
+                      else PG2DateTime(PDouble(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                        TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions);
+                      SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},TS);
+                    end;
+      end;
+  end;
 begin
   if (fRawPlanName <> '') and not (Findeterminate_datatype) and (BindList.Capacity > 0) then begin
+    AllOIDsKnown := True;
     if Assigned(FPlainDriver.PQdescribePrepared) then begin
       res := FPlainDriver.PQdescribePrepared(FconnAddress^, Pointer(FRawPlanname));
+      boundOIDs := nil;
       try
         BindList.SetCount(FplainDriver.PQnparams(res)+FOutParamCount);
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
           NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
-          if NewSQLType = stUnknown then begin//EH: domain types are unknonw for us..
+          if NewSQLType = stUnknown then //EH: domain types are unknonw for us..
             //pg does not return the underlaying OID grumble...
-            FPQParamOIDs[i] := INVALIDOID;
-            continue;
-          end;
-          zOID := FPQParamOIDs[i];
-          FPQParamOIDs[i] := pgOID;
-          if NewSQLType in [stUnicodeString, stUnicodeStream]
-          then NewSQLType := TZSQLType(Ord(NewSQLType) -1)
-          else if (NewSQLType = stBigDecimal) and (BindList.SQLTypes[i] = stCurrency)
-            then NewSQLType := stCurrency;
-          if (NewSQLType <> BindList.SQLTypes[i]) and (FPQparamValues[I] <> nil) then
-            case BindList.SQLTypes[i] of
-              stBoolean:  SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Boolean(PByte(FPQparamValues[i])^));
-              stSmall:    SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2SmallInt(FPQparamValues[i]));
-              stInteger:  SetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Integer(FPQparamValues[i]));
-              stLongWord,
-              stLong:     SetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Int64(FPQparamValues[i]));
-              stCurrency: if zOID  = CASHOID
-                          then SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGCash2Currency(FPQparamValues[i]))
-                          else SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGNumeric2Currency(FPQparamValues[i]));
-              stFloat:    SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Single(FPQparamValues[i]));
-              stDouble:   SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
-              stBigDecimal:begin
-                            PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
-                            SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
-                          end;
-              stTime:     begin
-                            if Finteger_datetimes
-                            then PG2Time(PInt64(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions)
-                            else PG2Time(PDouble(FPQparamValues[i])^, T.Hour, T.Minute, T.Second, T.Fractions);
-                            T.IsNegative := False;
-                            SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
-                          end;
-              stDate:     begin
-                            PG2Date(PInteger(FPQparamValues[i])^, D.Year, D.Month, D.Day);
-                            D.IsNegative := False;
-                            SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},D);
-                          end;
-              stTimeStamp:begin
-                            if Finteger_datetimes
-                            then PG2DateTime(PInt64(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
-                                TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions)
-                            else PG2DateTime(PDouble(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
-                              TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions);
-                            SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},TS);
-                          end;
+            if FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID) then begin
+              pgOID := tmpOID;
+              NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, tmpOID, -1);
+            end else begin
+              SetLength(boundOIDs, BindList.Count);
+              boundOIDs[i] := FPQParamOIDs[i];
+              AllOIDsKnown := False;
+              FPQParamOIDs[i] := pgOID;
+              continue;
             end;
+          tmpOID := FPQParamOIDs[i];
+          FPQParamOIDs[i] := pgOID;
+          RebindIfRequired(i, NewSQLType, tmpOID, pgOID);
         end;
       finally
         FPlainDriver.PQclear(res);
+      end;
+      if not AllOIDsKnown then begin
+        FPostgreSQLConnection.FillUnknownDomainOIDs;
+        for i := 0 to BindList.Count-1 do begin
+          pgOID := FPQParamOIDs[i];
+          NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
+          if NewSQLType = stUnknown then begin//EH: domain types are unknonw for us..
+            //pg does not return the underlaying OID grumble...
+            Assert(FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID));
+            NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, tmpOID, -1);
+            FPQParamOIDs[i] := tmpOID;
+            RebindIfRequired(i, NewSQLType, boundOIDs[i], tmpOID);
+          end;
+        end;
       end;
     end else
       for i := 0 to BindList.Count-1 do

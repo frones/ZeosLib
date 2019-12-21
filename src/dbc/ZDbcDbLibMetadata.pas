@@ -1801,7 +1801,7 @@ var
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+'sp_columns '+
+  with GetStatement.ExecuteQuery('exec sys.sp_columns '+
       ComposeObjectString(TableNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+
       ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do
   begin
@@ -1939,7 +1939,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: stri
 begin
     Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
-    with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, Schema)+'sp_column_privileges '+
+    with GetStatement.ExecuteQuery('exec sys.sp_column_privileges '+
       ComposeObjectString(Table)+', '+ComposeObjectString(Schema)+', '+
       ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do
     begin
@@ -2904,7 +2904,7 @@ begin
   TempTable := RemoveQuotesFromIdentifier(TableNamePattern);
   TempColumn := RemoveQuotesFromIdentifier(ColumnNamePattern);
 
-  with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+
+  with GetStatement.ExecuteQuery('exec sys.' +
     'sp_jdbc_columns '+ComposeObjectString(TempTable)+', '+
     ComposeObjectString(TempSchema)+', '+ComposeObjectString(TempCatalog)+', '+
     ComposeObjectString(TempColumn)) do

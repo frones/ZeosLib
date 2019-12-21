@@ -657,8 +657,7 @@ begin
     Result := Metadata.GetColumns(TableRef.Catalog,
       TableRef.Schema, FResultSet.GetStatement.GetConnection.GetMetadata.AddEscapeCharToWildcards(TableRef.Table), '');
     FTableColumns.Put(TableKey, Result);
-  end
-  else
+  end else
     Result := FTableColumns.Get(TableKey) as IZResultSet;
 end;
 
@@ -688,6 +687,7 @@ function TZAbstractResultSetMetadata.ReadColumnByName(const FieldName: string;
   TableRef: TZTableRef; ColumnInfo: TZColumnInfo): Boolean;
 var
   TableColumns: IZResultSet;
+  Catalog, UpCatalog, Schema, UpSchema, UpField: String;
 begin
   Result := False;
   if (FieldName = '') then
@@ -696,19 +696,36 @@ begin
   { Checks for unexisted table. }
   if not Assigned(TableColumns) then
     Exit;
+  Catalog := TableRef.Catalog;
+  Schema  := TableRef.Schema;
+  with FMetadata.GetDatabaseInfo do
+    if SupportsCatalogsInDataManipulation and (TableRef.Catalog = '') then
+      Catalog := FMetadata.GetConnection.GetCatalog
+    else if SupportsSchemasInDataManipulation and (TableRef.Schema = '') and (TableRef.Catalog = '') then
+      Schema := FMetadata.GetConnection.GetCatalog;
 
-  { Locates a column row. }
+  { Locates a column row casesensitive. }
   TableColumns.BeforeFirst;
   while TableColumns.Next do
-    if TableColumns.GetString(ColumnNameIndex) = FieldName then
-      Break;
-  if TableColumns.IsAfterLast then
-  begin
+    if TableColumns.GetString(ColumnNameIndex) = FieldName then begin
+      if (Catalog = '') or (TableColumns.GetString(CatalogNameIndex) = Catalog) then
+        if (Schema = '') or (TableColumns.GetString(SchemaNameIndex) = Schema) then
+          Break;
+    end;
+  if TableColumns.IsAfterLast then begin
+    UpField := AnsiUpperCase(FieldName);
+    UpCatalog := AnsiUpperCase(Catalog);
+    UpSchema := AnsiUpperCase(Schema);
     { Locates a column row with case insensitivity. }
     TableColumns.BeforeFirst;
     while TableColumns.Next do
-      if AnsiUpperCase(TableColumns.GetString(ColumnNameIndex)) = AnsiUpperCase(FieldName) then
-        Break;
+      if AnsiUpperCase(TableColumns.GetString(ColumnNameIndex)) = UpField then begin
+        if (Catalog = '') or (TableColumns.GetString(CatalogNameIndex) = Catalog) or
+           (AnsiUpperCase(TableColumns.GetString(CatalogNameIndex)) = UpCatalog) then
+          if (Schema = '') or (TableColumns.GetString(SchemaNameIndex) = Schema) or
+             (AnsiUpperCase(TableColumns.GetString(SchemaNameIndex)) = UpSchema) then
+            Break;
+    end;
     if TableColumns.IsAfterLast then
       Exit;
   end;
@@ -751,6 +768,7 @@ var
   FieldRef: TZFieldRef;
   TableRef: TZTableRef;
   Found: Boolean;
+  AName: String;
 begin
   { Initializes single columns with specified table. }
   FieldRef := SelectSchema.LinkFieldByIndexAndShortName(ColumnIndex,
@@ -765,14 +783,12 @@ begin
   { Initializes single columns without specified table. }
   I := 0;
   Found := False;
-  while {(ColumnInfo.ColumnName = '') and }(I < SelectSchema.TableCount)
-    and not Found do
-  begin
+  while {(ColumnInfo.ColumnName = '') and }(I < SelectSchema.TableCount) and not Found do begin
     TableRef := SelectSchema.Tables[I];
-    if Assigned(FieldRef) then
-      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(FieldRef.Field), TableRef, ColumnInfo)
-    else
-      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel), TableRef, ColumnInfo);
+    if Assigned(FieldRef)
+    then AName := IdentifierConvertor.ExtractQuote(FieldRef.Field)
+    else AName := IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel);
+    Found := ReadColumnByName(AName, TableRef, ColumnInfo);
     Inc(I);
   end;
 end;
@@ -795,7 +811,7 @@ begin
     Current := SelectSchema.Fields[I];
     if (Current.Field = '*') and (Current.TableRef <> nil) then begin
       TableRef := Current.TableRef;
-      ResultSet := Self.GetTableColumns(TableRef);
+      ResultSet := GetTableColumns(TableRef);
       if ResultSet <> nil then begin
         ResultSet.BeforeFirst;
         while ResultSet.Next do begin
