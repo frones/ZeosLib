@@ -3401,6 +3401,10 @@ FillSizes:
         Result.UpdateInt(TableColColumnSizeIndex, ((AttTypMod - VARHDRSZ) shr 16 and $FFFF)); //precision
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, ((AttTypMod - VARHDRSZ) and $FFFF)); //scale
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10); //base? ten as default
+      end else if (TypeOID = CASHOID) then begin
+        Result.UpdateInt(TableColColumnSizeIndex, 22); //precision
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, 2); //scale
+        Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10); //base? ten as default
       end else if (PgType = 'bit') or (PgType = 'varbit') then begin
         Result.UpdateInt(TableColColumnSizeIndex, AttTypMod);
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 2);

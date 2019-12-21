@@ -637,7 +637,15 @@ begin
   Connection := Statement.GetConnection as IZPostgreSQLConnection;
 
   case TypeOid of
-    CASHOID: ColumnInfo.Currency := True; { money }
+    CASHOID: begin
+        ColumnInfo.Currency := True; { money }
+        ColumnInfo.Precision := 22;
+        ColumnInfo.Scale := 2;
+        ColumnInfo.ColumnType := stCurrency;
+        ColumnInfo.Signed := True;
+        ColumnInfo.Currency := True;
+        Exit;
+      end;
     NAMEOID: if (Connection.GetServerMajorVersion < 7) or
            ((Connection.GetServerMajorVersion = 7) and (Connection.GetServerMinorVersion < 3))
         then ColumnInfo.Precision := 32
