@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(DELPHI) and defined(MSWINDOWS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcConnection, ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZClasses;
+  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZClasses, ZSysUtils;
 
 type
 
@@ -97,6 +97,27 @@ type
     function GetUndefinedVarcharAsStringLength: Integer;
     function CheckFieldVisibility: Boolean;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
+    procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
+    function FindDomainBaseType(DomainOID: OID; out BaseTypeOID: OID): Boolean;
+  end;
+
+  PZPGDomain2BaseTypeMap = ^TZPGDomain2BaseTypeMap;
+  TZPGDomain2BaseTypeMap = record
+    DomainOID: OID; //the domain oid
+    BaseTypeOID: OID; //the native underlaing oid
+    Known: WordBool;
+  end;
+
+  TZOID2OIDMapList = class(TZSortedList)
+  private
+    fUnkownCount: Integer;
+    function SortCompare(Item1, Item2: Pointer): Integer;
+  public
+    procedure AddIfNotExists(DomainOID, BaseTypeOID: OID);
+    function GetOrAddBaseTypeOID(DomainOID: OID; out BaseTypeOID: OID): Boolean;
+    procedure Clear; override;
+  public
+    property UnkownCount: Integer read fUnkownCount;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -112,6 +133,7 @@ type
 //  Jan: Not sure wether we still need that. What was its intended use?
 //    FBeginRequired: Boolean;
     FTypeList, FSavePoints: TStrings;
+    FDomain2BaseTypMap: TZOID2OIDMapList;
     FOidAsBlob, Finteger_datetimes: Boolean;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
@@ -177,6 +199,8 @@ type
     function integer_datetimes: Boolean;
     function CheckFieldVisibility: Boolean;
 
+    procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
+    function FindDomainBaseType(DomainOID: OID; out BaseTypeOID: OID): Boolean;
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: TZPostgreSQLPlainDriver;
     function GetPGconnAddress: PPGconn;
@@ -213,7 +237,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses
-  ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement, ZDbcUtils,
+  ZFastCode, ZMessages, ZDbcPostgreSqlStatement, ZDbcUtils,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken, ZDbcProperties,
   ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcMetadata;
 
@@ -314,6 +338,7 @@ begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
   FPlainDriver := TZPostgreSQLPlainDriver(PlainDriver.GetInstance);
   FPreparedStatementTrashBin := nil;
+  FDomain2BaseTypMap := TZOID2OIDMapList.Create;
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
      Self.Port := 5432;
@@ -371,6 +396,7 @@ begin
   FreeAndNil(FPreparedStatementTrashBin);
   FreeAndNil(FProcedureTypesCache);
   FreeAndNil(FSavePoints);
+  FreeAndNil(FDomain2BaseTypMap);
 end;
 
 {**
@@ -403,6 +429,12 @@ begin
   finally
     FPlainDriver.PQfreeCancel(pcancel);
   end;
+end;
+
+procedure TZPostgreSQLConnection.AddDomain2BaseTypeIfNotExists(DomainOID,
+  BaseTypeOID: OID);
+begin
+  FDomain2BaseTypMap.AddIfNotExists(DomainOID, BaseTypeOID);
 end;
 
 {**
@@ -1282,6 +1314,12 @@ begin
       SQL, QueryHandle);
 end;
 
+function TZPostgreSQLConnection.FindDomainBaseType(DomainOID: OID;
+  out BaseTypeOID: OID): Boolean;
+begin
+  Result := FDomain2BaseTypMap.GetOrAddBaseTypeOID(DomainOID, BaseTypeOID);
+end;
+
 {**
   EgonHugeist:
   Returns the BinaryString in a Tokenizer-detectable kind
@@ -1464,6 +1502,57 @@ begin
     else SetLength(Result, EscapedLen+(Byte(Ord(Quoted)) shl 1));
   end else
     Result := ZDbcPostgreSqlUtils.PGEscapeString(FromChar, Len, ConSettings, Quoted);
+end;
+
+{ TZOID2OIDMapList }
+
+procedure TZOID2OIDMapList.AddIfNotExists(DomainOID, BaseTypeOID: OID);
+var FoundOID: OID;
+  I: Integer;
+begin
+  if not GetOrAddBaseTypeOID(DomainOID, FoundOID) then
+    for i := 0 to Count-1 do
+      if (PZPGDomain2BaseTypeMap(Items[i]).DomainOID = DomainOID) then begin
+        PZPGDomain2BaseTypeMap(Items[i]).BaseTypeOID := BaseTypeOID;
+        PZPGDomain2BaseTypeMap(Items[i]).Known := True;
+        Dec(fUnkownCount);
+      end;
+end;
+
+procedure TZOID2OIDMapList.Clear;
+var i: Integer;
+begin
+  for i := Count-1 downto 0 do
+    FreeMem(Items[i], SizeOf(TZPGDomain2BaseTypeMap));
+  inherited;
+  fUnkownCount := 0;
+end;
+
+function TZOID2OIDMapList.GetOrAddBaseTypeOID(DomainOID: OID; out BaseTypeOID: OID): Boolean;
+var i: Integer;
+  Val: PZPGDomain2BaseTypeMap;
+begin
+  Result := False;
+  BaseTypeOID := InvalidOID;
+  for i := 0 to Count-1 do
+    if (PZPGDomain2BaseTypeMap(Items[i]).DomainOID = DomainOID) and PZPGDomain2BaseTypeMap(Items[i]).Known then begin
+      Result := PZPGDomain2BaseTypeMap(Items[i]).Known;
+      BaseTypeOID := PZPGDomain2BaseTypeMap(Items[i]).BaseTypeOID;
+      Exit;
+    end;
+  GetMem(Val, SizeOf(TZPGDomain2BaseTypeMap));
+  Val.DomainOID := DomainOID;
+  Val.BaseTypeOID := InvalidOID;
+  Val.Known := False;
+  Add(Val);
+  Sort(SortCompare);
+  Inc(fUnkownCount);
+end;
+
+function TZOID2OIDMapList.SortCompare(Item1, Item2: Pointer): Integer;
+begin
+  Result := Ord(PZPGDomain2BaseTypeMap(Item1)^.DomainOID > PZPGDomain2BaseTypeMap(Item2)^.DomainOID)-
+            Ord(PZPGDomain2BaseTypeMap(Item1)^.DomainOID < PZPGDomain2BaseTypeMap(Item2)^.DomainOID);
 end;
 
 initialization
