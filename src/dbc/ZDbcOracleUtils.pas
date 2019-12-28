@@ -243,7 +243,7 @@ procedure OraWriteLob(const PlainDriver: TZOraclePlainDriver; const BlobData: Po
   @param num the pointer to a valid oracle number value
   @return the length of used bytes
 }
-function BCD2Nvu(const bcd: TBCD; num: POCINumber): SB2;
+function BCD2Nvu({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} bcd: TBCD; num: POCINumber): SB2;
 
 {** Autor: EgonHugeist (EH)
   converts a oracle number format into a <code>java.math.BigDecimal</code>;
@@ -781,7 +781,7 @@ end;
   @param num the pointer to a valid oracle number value
   @return the length of used bytes
 }
-function BCD2Nvu(const bcd: TBCD; num: POCINumber): sb2;
+function BCD2Nvu({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} bcd: TBCD; num: POCINumber): sb2;
 var
   pNibble, pLastNibble, pNum, pLastNum: PAnsiChar;
   NumDigit: Integer;
@@ -931,9 +931,8 @@ begin
     then bb := PByte(pNuDigits)^ - 1
     else bb := 101 - PByte(pNuDigits)^;
     bb := ZSysUtils.ZBase100Byte2BcdNibbleLookup[BB];
-    if (pFirstNuDigit = pNuDigits) and (bb shr 4 = 0) then begin //first digit decides if we pack left
-      if (Precision > Scale) then
-        Dec(Precision);
+    if (Precision > Scale) and (pFirstNuDigit = pNuDigits) and (bb shr 4 = 0) then begin //first digit decides if we pack left
+      Dec(Precision);
       PByte(PNibble)^ := (bb and $0f) shl 4;
       HalfNibbles := True;
       Inc(pNuDigits);
