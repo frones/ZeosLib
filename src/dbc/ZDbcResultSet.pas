@@ -934,19 +934,22 @@ begin
     BeforeClose;
     FClosed := True;
     RefCountAdded := False;
-    if (FStatement <> nil) then begin
-      if (RefCount = 1) then begin
-        _AddRef;
-        RefCountAdded := True;
+    try
+      if (FStatement <> nil) then begin
+        if (RefCount = 1) then begin
+          _AddRef;
+          RefCountAdded := True;
+        end;
+        FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIntfPtrOfSelf));
+        FStatement := nil;
       end;
-      FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIntfPtrOfSelf));
-      FStatement := nil;
-    end;
-    AfterClose;
-    if RefCountAdded then begin
-      if (RefCount = 1) then
-        DriverManager.AddGarbage(Self);
-      _Release;
+      AfterClose;
+    finally
+      if RefCountAdded then begin
+        if (RefCount = 1) then
+          DriverManager.AddGarbage(Self);
+        _Release;
+      end;
     end;
   end;
 end;
