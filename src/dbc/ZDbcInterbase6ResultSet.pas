@@ -357,10 +357,14 @@ begin
           SQL_BLOB      :
             Begin
               FBlobTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});  //localize interface to keep pointer alive
-              if FBlobTemp.IsClob then
-                Result := FBlobTemp.GetAnsiString
-              else
-                Result := FBlobTemp.GetString;
+              try
+                if FBlobTemp.IsClob then
+                  Result := FBlobTemp.GetAnsiString
+                else
+                  Result := FBlobTemp.GetString;
+              finally
+                FBlobTemp := nil;
+              end;
             End;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -1456,10 +1460,14 @@ begin
           SQL_BLOB      :
             Begin
               FBlobTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});  //localize interface to keep pointer alive
-              if FBlobTemp.IsClob then
-                Result := FBlobTemp.GetUTF8String
-              else
-                Result := FBlobTemp.GetString;
+              try
+                if FBlobTemp.IsClob then
+                  Result := FBlobTemp.GetUTF8String
+                else
+                  Result := FBlobTemp.GetString;
+              finally
+                FBlobTemp := nil;
+              end;
             End;
         else
           raise CreateIBConvertError(ColumnIndex, SQLCode)
@@ -1541,19 +1549,23 @@ begin
           SQL_BLOB      :
             Begin
               FBlobTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});  //localize interface to keep pointer alive
-              if FBlobTemp.IsClob then
-                {$IFDEF UNICODE}
-                Result := FBlobTemp.GetUnicodeString
-                {$ELSE}
-                Result := ConSettings^.ConvFuncs.ZRawToString(FBlobTemp.GetRawByteString,
-                  ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-                {$ENDIF}
-              else
-                {$IFDEF UNICODE}
-                Result := ASCII7ToUnicodeString(FBlobTemp.GetRawByteString);
-                {$ELSE}
-                Result := FBlobTemp.GetRawByteString;
-                {$ENDIF}
+              try
+                if FBlobTemp.IsClob then
+                  {$IFDEF UNICODE}
+                  Result := FBlobTemp.GetUnicodeString
+                  {$ELSE}
+                  Result := ConSettings^.ConvFuncs.ZRawToString(FBlobTemp.GetRawByteString,
+                    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+                  {$ENDIF}
+                else
+                  {$IFDEF UNICODE}
+                  Result := ASCII7ToUnicodeString(FBlobTemp.GetRawByteString);
+                  {$ELSE}
+                  Result := FBlobTemp.GetRawByteString;
+                  {$ENDIF}
+              finally
+                FBlobTemp := nil;
+              end;
             End;
         else raise CreateIBConvertError(ColumnIndex, SQLCode)
       end;
