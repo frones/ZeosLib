@@ -145,7 +145,7 @@ type
     function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
     {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString; virtual;
-    function GetBinaryString(ColumnIndex: Integer): RawByteString;
+    function GetBinaryString(ColumnIndex: Integer): RawByteString; virtual;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): Byte; virtual;
