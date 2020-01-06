@@ -3270,7 +3270,8 @@ var
   PGConnection: IZPostgreSQLConnection;
 label FillSizes;
 begin
-  CheckVisibility := (GetConnection as IZPostgreSQLConnection).CheckFieldVisibility; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
+  //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
+  CheckVisibility := (GetConnection as IZPostgreSQLConnection).CheckFieldVisibility;
   if TableOID = '' then begin
     CatalogCondition := ConstructNameCondition(Catalog,'dn.relname');
     SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
@@ -3283,7 +3284,8 @@ begin
   begin
     SQL := 'SELECT n.nspname,' {nspname_index}
       + 'c.relname,' {relname_index}
-      + 'case t.typtype when ''d'' then t.typname else a.attname end as attname,' {attname_index}
+      //+ 'case t.typtype when ''d'' then t.typname else a.attname end as attname,' {attname_index}
+      + 'a.attname,' {attname_index}
       + 'case t.typtype when ''d'' then t.typbasetype else t.oid end as atttypid,' {atttypid_index}
       + 'case t.typtype when ''d'' then t.typnotnull else a.attnotnull end as attnotnull,' {attnotnull_index}
       + 'case t.typtype when ''d'' then t.typtypmod else a.atttypmod end as atttypmod,' {atttypmod_index}
@@ -3343,10 +3345,8 @@ begin
   end;
   SQL := SQL+ ' ORDER BY nspname,relname,attnum';
   GetConnection.QueryInterface(IZPostgreSQLConnection,PGConnection);
-  with PGConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
+  with PGConnection.CreateStatement.ExecuteQuery(SQL) do begin
+    while Next do begin
       AttTypMod := GetInt(atttypmod_index);
 
       TypeOid := GetUInt(atttypid_index);
@@ -3367,8 +3367,7 @@ begin
       begin
         if AttTypMod <> -1 then begin
           Precision := AttTypMod - 4;
-FillSizes:
-          Result.UpdateInt(TableColColumnSizeIndex, Precision);
+FillSizes:Result.UpdateInt(TableColColumnSizeIndex, Precision);
           if SQLType = stString then begin
             Result.UpdateInt(TableColColumnBufLengthIndex, Precision * ConSettings^.ClientCodePage^.CharWidth +1);
             Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision * ConSettings^.ClientCodePage^.CharWidth);
