@@ -1407,6 +1407,8 @@ Type TFractionRoundToScale = 0..9;
 }
 function RoundNanoFractionTo(const Value: Cardinal; Scale: TFractionRoundToScale): Cardinal;
 
+function CharPos_CI(C: Char; const Str: string): NativeInt;
+
 {** EH:
    round a fraction cardinal value half away from zero
    @param Value the value to be rounded
@@ -8888,6 +8890,24 @@ begin
   Modulo := Value - F;
   if Modulo >= HalfFractModulos[3] then
     Result := Result + 1;
+end;
+
+function CharPos_CI(C: Char; const Str: string): NativeInt;
+var P, PStart, PEnd: PChar;
+  L: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+begin
+  Result := 0;
+  PStart := Pointer(Str);
+  P := PStart;
+  PEnd := P + Length(Str);
+  L := Ord(C) or $20; //lower
+  while P < PEnd do begin
+    if ({$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(P)^ or $20) = L then begin
+      Result := (P-PStart)+1;
+      Break;
+    end;
+    Inc(P);
+  end;
 end;
 
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

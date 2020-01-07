@@ -85,6 +85,7 @@ type
     procedure TestSF382;
     procedure TestSF383;
     procedure TestSF391;
+    procedure TestSF402;
  end;
 
 implementation
@@ -596,6 +597,55 @@ begin
     Query.Open;
     CheckEquals(0, Query.Fields[0].AsFloat, 'SUM(0.0) should return a zero BCD');
   finally
+    FreeAndNil(Query);
+  end;
+end;
+
+{ Using Zeos revision 6213 when you try to convert a field of type
+datetime to string you get only the time, but its not correct as well. }
+
+procedure TZTestCompMSSqlBugReport.TestSF402;
+var
+  Query: TZQuery;
+  dtE, dtA: TDateTime;
+  orgShortDateFormat, orgLongTimeFormat, S: String;
+  orgdSep, orgtSep: Char;
+begin
+  Connection.Connect;
+  Check(Connection.Connected, 'Failed to establish a connection');
+  if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  Query := CreateQuery;
+  orgdSep := FormatSettings.DateSeparator;
+  FormatSettings.DateSeparator := '-';
+  orgtSep := FormatSettings.TimeSeparator;
+  FormatSettings.TimeSeparator := '-';
+  orgShortDateFormat := FormatSettings.ShortDateFormat;
+  FormatSettings.ShortDateFormat := 'yyyy/mm/dd';
+  orgLongTimeFormat := FormatSettings.LongTimeFormat;
+  FormatSettings.LongTimeFormat := 'hh:nn:ss';
+  try
+    Query.Sql.Add('set dateformat mdy');
+    Query.Sql.Add('select cast(''2020-01-01 08:30:45'' as datetime)');
+    Query.Sql.Add('union');
+    Query.Sql.Add('select cast(''2020-01-01 00:00:00'' as datetime)');
+    Query.Open;
+    //Write(Query.Fields[0].AsString, #10);//08:01:45
+    dtE := EncodeDate(2020,01,01);
+    dtE := dtE+EncodeTime(8,30,45,0);
+    dtA := Query.Fields[0].AsDateTime;
+    CheckEqualsDate(dtE, dtA, [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Should be "2020-01-01 08:30:45" ');
+    CheckEquals(query.Fields[0].AsString, DateTimeToStr(dtE, FormatSettings), 'Should be "2020-01-01 08:30:45" ');
+    Query.Next;
+    CheckFalse(Query.Eof);
+    dtA := Query.Fields[0].AsDateTime;
+    DateTimeToString(S, '', dtA, FormatSettings);
+    CheckEquals(S, query.Fields[0].AsString, 'Should be "2020-01-01" ');
+  finally
+    FormatSettings.ShortDateFormat := orgShortDateFormat;
+    FormatSettings.LongTimeFormat := orgLongTimeFormat;
+    FormatSettings.DateSeparator := orgdSep;
+    FormatSettings.TimeSeparator := orgtSep;
     FreeAndNil(Query);
   end;
 end;

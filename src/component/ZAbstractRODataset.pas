@@ -825,7 +825,8 @@ type
 
   TZDateField = Class(TDateField)
   private
-    FLastFormat: array[Boolean] of String;
+    FLastFormat, FDateFormat: array[Boolean] of String;
+    FLastDateSep: Char;
     FSimpleFormat: array[Boolean] of Boolean;
     FBuff: array[0..cMaxDateLen] of Char;
     FFieldIndex: Integer;
@@ -838,7 +839,7 @@ type
     function GetAsSQLTimeStamp: TSQLTimeStamp; override;
     {$ENDIF}
   public
-    property ZDate: TZDate read GetAsDate write SetAsDate;
+    property AsDate: TZDate read GetAsDate write SetAsDate;
   End;
 
   TZDateTimeField = Class(TDateTimeField)
@@ -849,7 +850,7 @@ type
     FSimpleFormat: array[Boolean] of Boolean;
     FBuff: array[0..cMaxTimeStampLen] of Char;
     FFieldIndex, FScale: Integer;
-    FShowSecFrac: Boolean;
+    FAdjSecFracFmt: Boolean;
     procedure SetAdjSecFracFmt(Value: Boolean);
   protected
     class procedure CheckTypeSize(Value: Integer); override;
@@ -861,10 +862,10 @@ type
     procedure SetAsTimeStamp(const Value: TZTimeStamp);
     procedure GetText(var Text: string; DisplayText: Boolean); override;
   public
-    property ZTimeStamp: TZTimeStamp read GetAsTimeStamp write SetAsTimeStamp;
+    property AsTimeStamp: TZTimeStamp read GetAsTimeStamp write SetAsTimeStamp;
   published
     property FractionalSecondsScale: Integer read FScale;
-    property AlwaysShowSecondFractions: Boolean read FShowSecFrac write SetAdjSecFracFmt default True;
+    property AdjustSecondFractionsFormat: Boolean read FAdjSecFracFmt write SetAdjSecFracFmt default True;
   End;
 
   TZTimeField = Class(TTimeField)
@@ -873,9 +874,10 @@ type
     FFractionFormat: array[Boolean] of String;
     FFractionLen: array[Boolean] of Integer;
     FSimpleFormat: array[Boolean] of Boolean;
+    FLastTimeSep: Char;
     FBuff: array[0..cMaxTimeLen] of Char;
     FFieldIndex, fScale: Integer;
-    FShowSecFrac: Boolean;
+    FAdjSecFracFmt: Boolean;
     procedure SetAdjSecFracFmt(Value: Boolean);
   protected
     class procedure CheckTypeSize(Value: Integer); override;
@@ -884,10 +886,10 @@ type
     procedure SetAsTime(const Value: TZTime);
     procedure GetText(var Text: string; DisplayText: Boolean); override;
   public
-    property ZTime: TZTime read GetAsTime write SetAsTime;
+    property AsTime: TZTime read GetAsTime write SetAsTime;
   published
     property FractionalSecondsScale: Integer read fScale;
-    property AlwaysShowSecondFractions: Boolean read FShowSecFrac write SetAdjSecFracFmt default True;
+    property AdjustSecondFractionsFormat: Boolean read FAdjSecFracFmt write SetAdjSecFracFmt default True;
   End;
 
   TZStringField = Class(TZField)
@@ -6916,23 +6918,28 @@ function TZFieldDef.CreateFieldComponent(Owner: TComponent;
 var
   FieldClassType: TFieldClass;
 begin
-  if DataType = ftTime then begin
-    Result := TZTimeField.Create(Owner);
-    TZTimeField(Result).FFieldIndex := FieldNo;
-    TZTimeField(Result).fScale := Size;
-  end else if DataType = ftDate then begin
-    Result := TZDateField.Create(Owner);
-    TZDateField(Result).FFieldIndex := FieldNo;
-  end else if DataType = ftDateTime then begin
-    Result := TZDateTimeField.Create(Owner);
-    TZDateTimeField(Result).FFieldIndex := FieldNo;
-    TZDateTimeField(Result).fScale := Size;
-  end else begin
-    if Collection is TFieldDefs then
-      FieldClassType := ZSQLFieldClasses[FSQLType] else
-      FieldClassType := nil;
-    if FieldClassType = nil then DatabaseErrorFmt(SUnknownFieldType, [Name]);
-    Result := FieldClassType.Create(Owner);
+  case DataType of
+    ftTime: begin
+        Result := TZTimeField.Create(Owner);
+        TZTimeField(Result).FFieldIndex := FieldNo;
+        TZTimeField(Result).fScale := Size;
+      end;
+    ftDate: begin
+        Result := TZDateField.Create(Owner);
+        TZDateField(Result).FFieldIndex := FieldNo;
+      end;
+    ftDateTime: begin
+        Result := TZDateTimeField.Create(Owner);
+        TZDateTimeField(Result).FFieldIndex := FieldNo;
+        TZDateTimeField(Result).fScale := Size;
+      end;
+    else begin
+      if Collection is TFieldDefs then
+        FieldClassType := ZSQLFieldClasses[FSQLType] else
+        FieldClassType := nil;
+      if FieldClassType = nil then DatabaseErrorFmt(SUnknownFieldType, [Name]);
+      Result := FieldClassType.Create(Owner);
+    end;
   end;
   try
     Result.Size := Size;
@@ -7435,6 +7442,7 @@ var
   Frmt: string;
   DT: TDateTime;
   D: TZDate;
+  Delim, Sep: Char;
   b, IsNull: Boolean;
   Digits: Byte;
   P: PChar;
@@ -7442,22 +7450,30 @@ begin
   GetAsZDate(IsNull, D);
   if not IsNull then begin
     B := DisplayText and (DisplayFormat <> '');
-    if B
-    then Frmt := DisplayFormat
-    else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
-    if Frmt <> FLastFormat[b] then begin
-      FLastFormat[b] := Frmt;
+    if B then begin
+      Frmt := DisplayFormat;
+      Sep := #0;
+    end else begin
+      Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
+      Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
+    end;
+    if (Frmt <> FLastFormat[B]) or (not B and (FLastDateSep <> Sep)) then begin
+      FLastFormat[B] := Frmt;
+      FLastDateSep := Sep;
+      if not B and FindFirstDateFormatDelimiter(Frmt, Delim) and (Delim <> Sep) then
+        Frmt := ZSysUtils.ReplaceChar(Delim, Sep, Frmt);
+      FDateFormat[b] := Frmt;
       FSimpleFormat[b] := IsSimpleDateFormat(Frmt);
     end;
     if FSimpleFormat[b] then begin
       P := @FBuff[0];
       Digits := {$IFDEF UNICODE}DateToUni{$ELSE}DateToRaw{$ENDIF}(D.Year, D.Month,
-        D.Day, P, FLastFormat[b], False, D.IsNegative);
+        D.Day, P, FDateFormat[b], False, D.IsNegative);
       System.SetString(Text, P, Digits);
     end else begin
       if TryEncodeDate(D.Year, D.Month, D.Day, DT)
       //let the compiler do the complex stuff i.e. century/weekdays/monthname and user defined additional tokens
-      then DateTimeToString(Text, Frmt, DT)
+      then DateTimeToString(Text, FDateFormat[b], DT)
       else begin
         if DisplayText
         then Text := '0000-00-00'
@@ -7520,6 +7536,7 @@ end;
 procedure TZTimeField.GetText(var Text: string; DisplayText: Boolean);
 var
   Frmt: string;
+  Delim, Sep: Char;
   DT: TDateTime;
   T: TZTime;
   IsNull: Boolean;
@@ -7532,32 +7549,41 @@ begin
   GetAsZTime(IsNull, T);
   if not IsNull then begin
     B := DisplayText and (DisplayFormat <> '');
-    if B
-    then Frmt := DisplayFormat
-    else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
-    if Frmt <> FLastFormat[B] then begin
+    if B then begin
+      Frmt := DisplayFormat;
+      Sep := #0;
+    end else begin
+      Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+      Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
+    end;
+    if (Frmt <> FLastFormat[B]) or (not B and (Sep <> FLastTimeSep)) then begin
       FLastFormat[B] := Frmt;
+      if not B then begin
+        FLastTimeSep := Sep;
+        if FindFirstTimeFormatDelimiter(Frmt, Delim) and (Delim <> Sep) then
+          Frmt := ZSysUtils.ReplaceChar(Delim, Sep, Frmt);
+      end;
       FSimpleFormat[b] := IsSimpleTimeFormat(Frmt);
-      if FShowSecFrac
+      if FAdjSecFracFmt
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;
     if FSimpleFormat[b] then begin
       P := @FBuff[0];
       Fraction := t.Fractions;
-      if not FShowSecFrac then
+      if not FAdjSecFracFmt then
         Fraction := RoundNanoFractionTo(Fraction, FScale);
       I := {$IFDEF UNICODE}TimeToUni{$ELSE}TimeToRaw{$ENDIF}(
         T.Hour, T.Minute, T.Second, Fraction, P, FLastFormat[B], False, T.IsNegative);
       System.SetString(Text, P, I);
     end else begin
-      if FShowSecFrac
+      if FAdjSecFracFmt
       then Millis := 0
       else Millis := RoundNanoFractionToMillis(T.Fractions);
       if TryEncodeTime(T.Hour, T.Minute, T.Second, Millis, DT) then begin
         //let the compiler do the complex stuff i.e. AM/PM and user defined additional tokens, week days etc.
         DateTimeToString(Text, FFractionFormat[b], DT);
-        if  FShowSecFrac then begin
+        if  FAdjSecFracFmt then begin
           //if shortformat the position may be variable. no chance to cache that info
           I := ZFastCode.Pos(MilliReplaceUnQuoted[FScale], Text);
           if I > 0 then begin
@@ -7599,7 +7625,7 @@ procedure TZTimeField.SetAdjSecFracFmt(Value: Boolean);
 begin
   FLastFormat[True] := '';
   FLastFormat[False] := '';
-  FShowSecFrac := Value;
+  FAdjSecFracFmt := Value;
 end;
 
 procedure TZTimeField.SetAsTime(const Value: TZTime);
@@ -7669,6 +7695,7 @@ procedure TZDateTimeField.GetText(var Text: string; DisplayText: Boolean);
 var
   Frmt: string;
   DT, D: TDateTime;
+  Delim: Char;
   TS: TZTimeStamp;
   IsNull: Boolean;
   I,J: LengthInt;
@@ -7682,18 +7709,31 @@ begin
     B := DisplayText and (DisplayFormat <> '');
     if B
     then Frmt := DisplayFormat
-    else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+    else begin //improve the "C" token of FormatDateTime
+      if FindFirstDateFormatDelimiter({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat, Delim) and
+         (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator)
+      then Frmt := ZSysUtils.ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
+      else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
+      if (FAdjSecFracFmt and (FScale > 0) and (TS.Fractions > 0) ) or
+         (TS.Hour <> 0) or (TS.Minute <> 0) or (TS.Second <> 0) then begin
+        Frmt := Frmt + ' ';
+        if FindFirstTimeFormatDelimiter({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat, Delim) and
+           (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator)
+        then Frmt := Frmt + ZSysUtils.ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat)
+        else Frmt := Frmt + {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+      end;
+    end;
     if Frmt <> FLastFormat[B] then begin
       FLastFormat[B] := Frmt;
       FSimpleFormat[b] := IsSimpleDateTimeFormat(Frmt);
-      if FShowSecFrac
+      if FAdjSecFracFmt
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;
     if FSimpleFormat[b] then begin
       P := @FBuff[0];
       Fraction := ts.Fractions;
-      if not FShowSecFrac then
+      if not FAdjSecFracFmt then
         Fraction := RoundNanoFractionTo(Fraction, FScale);
       I := {$IFDEF UNICODE}DateTimeToUni{$ELSE}DateTimeToRaw{$ENDIF}(
         TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
@@ -7702,7 +7742,7 @@ begin
     end else begin
       B := False;
       if TryEncodeDate(TS.Year, TS.Month, TS.Day, d) then begin
-        if FShowSecFrac
+        if FAdjSecFracFmt
         then Millis := 0
         else Millis := RoundNanoFractionToMillis(TS.Fractions);
         B := TryEncodeTime(TS.Hour, TS.Minute, TS.Second, Millis, DT);
@@ -7714,7 +7754,7 @@ begin
       if B then begin
         //let the compiler do the complex stuff i.e. AM/PM and user defined additional tokens, week days etc.
         DateTimeToString(Text, FFractionFormat[b], DT);
-        if FShowSecFrac then begin
+        if FAdjSecFracFmt then begin
           //if shortformat the position may be variable. no chance to cache that info
           I := ZFastCode.Pos(MilliReplaceUnQuoted[FScale], Text);
           if I > 0 then begin
@@ -7756,7 +7796,7 @@ procedure TZDateTimeField.SetAdjSecFracFmt(Value: Boolean);
 begin
   FLastFormat[True] := '';
   FLastFormat[False] := '';
-  FShowSecFrac := Value;
+  FAdjSecFracFmt := Value;
 end;
 
 procedure TZDateTimeField.SetAsTimeStamp(const Value: TZTimeStamp);
