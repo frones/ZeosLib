@@ -327,7 +327,7 @@ var
 implementation
 
 uses
-  FmtBCD, Math,
+  FmtBCD,
   ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
   ZSysUtils, ZDbcResultSet;
 
@@ -508,6 +508,10 @@ begin
   end;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //BCD is always initialized
+{$ENDIF}
 {**
   Fetches columns from specified resultset.
   @param ResultSet a source resultset.
@@ -605,7 +609,12 @@ begin
       RowAccessor.SetNull(FieldIndex);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //BCD is always initialized
+{$ENDIF}
 {**
   Posts columns from specified resultset.
   @param ResultSet a source resultset.
@@ -735,6 +744,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Defines fields indices for the specified dataset.
@@ -1397,6 +1407,10 @@ begin
   end;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //BCD is always initialized
+{$ENDIF}
 {**
   Compare values from two key fields.
   @param Field1 the first field object.
@@ -1461,6 +1475,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Defins a indices and directions for sorted fields.
@@ -1553,19 +1568,12 @@ end;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
-type
-  THackZField = Class(TZField); //access protected property
 function CreateFieldsLookupTable(Fields: TFields): TPointerDynArray;
-var
-  I: Integer;
+var I: Integer;
 begin
   SetLength(Result, Fields.Count);
   for I := 0 to Fields.Count - 1 do
-  begin
     Result[I] := Fields[I];
-    if Fields[i] is TZField then
-      THackZField(Fields[i]).FieldIndex := I+1;
-  end;
 end;
 
 {**
@@ -2070,6 +2078,10 @@ begin
   end;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //Counters is always initialized
+{$ENDIF}
 Type
   TFormatLiterals = (flYear, flMonth, flDay, flHour, flMinute, flSecond, flFraction, flTimeZone);
 function IsSimpleTimeFormat(const Format: String): Boolean;
@@ -2101,7 +2113,12 @@ begin
     Result := True;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //Counters is always initialized
+{$ENDIF}
 function IsSimpleDateFormat(const Format: String): Boolean;
 var P, PEnd: PChar;
   Counters: array[flYear..flTimeZone] of Integer;
@@ -2132,7 +2149,12 @@ begin
     Result := True;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //Counters is always initialized
+{$ENDIF}
 function IsSimpleDateTimeFormat(const Format: String): Boolean;
 var P, PEnd: PChar;
   Counters: array[flYear..flFraction] of Integer;
@@ -2167,6 +2189,7 @@ begin
     Result := True;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 initialization
   CommonTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
