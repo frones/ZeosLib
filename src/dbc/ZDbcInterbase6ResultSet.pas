@@ -1847,6 +1847,7 @@ procedure TZInterbase6XSQLDAResultSet.ResetCursor;
 var StatusVector: TARRAY_ISC_STATUS;
 begin
   if not Closed then begin
+    FBlobTemp := nil; //flush possible uncached lob
     if (FStmtHandle <> 0) then begin
       if (FStmtType <> stExecProc) then begin
          if (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then
