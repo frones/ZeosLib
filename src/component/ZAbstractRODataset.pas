@@ -875,7 +875,7 @@ type
     function GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}; override;
     function GetAsLargeInt: Largeint; override;
     {$IFDEF WITH_FTLONGWORD}
-    function GetAsLongWord: LongWord; override;
+    function GetAsLongWord: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF}; override;
     {$ENDIF WITH_FTLONGWORD}
     function GetAsString: string; override;
     function GetDataSize: Integer; override;
@@ -885,7 +885,7 @@ type
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
     procedure SetAsLargeInt(Value: Largeint); override;
     {$IFDEF WITH_FTLONGWORD}
-    procedure SetAsLongWord(Value: LongWord); override;
+    procedure SetAsLongWord(Value: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF}); override;
     {$ENDIF WITH_FTLONGWORD}
     procedure SetAsString(const Value: String); override;
     procedure SetVarValue(const Value: Variant); override;
@@ -7264,7 +7264,7 @@ begin
 end;
 
 {$IFDEF WITH_FTLONGWORD}
-function TZCardinalField.GetAsLongWord: LongWord;
+function TZCardinalField.GetAsLongWord: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF};
 begin
   Result := GetAsCardinal;
 end;
@@ -7396,7 +7396,7 @@ begin
 end;
 
 {$IFDEF WITH_FTLONGWORD}
-procedure TZCardinalField.SetAsLongWord(Value: LongWord);
+procedure TZCardinalField.SetAsLongWord(Value: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF});
 begin
   SetAsCardinal(Value);
 end;
