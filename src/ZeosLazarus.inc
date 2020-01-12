@@ -92,6 +92,7 @@
       {$DEFINE FPC2_5UP} // Used in code
       {$DEFINE WITH_NEWTOBJECT}
       {$DEFINE WITH_IPROVIDER}
+      {$DEFINE HAVE_UNICODESTRING}
     {$IFEND}
     {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
        {$DEFINE WITH_INC_PBYTE_SUPPORT}  // Compiler supports incrementing PByte-Pointer
