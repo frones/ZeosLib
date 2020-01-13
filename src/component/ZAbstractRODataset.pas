@@ -659,7 +659,7 @@ type
     procedure Clear; override;
   published
     property InvalidDisplayText: String read FInvalidText write SetInvalidText;
-    property FractionalSecondScale: Integer read FScale;
+    property FractionalSecondsScale: Integer read FScale;
     property AdjustSecondFractionsFormat: Boolean read FAdjSecFracFmt write SetAdjSecFracFmt default True;
   End;
 
@@ -698,7 +698,7 @@ type
     procedure Clear; override;
   published
     property InvalidDisplayText: String read FInvalidText write SetInvalidText;
-    property FractionalSecondScale: Integer read fScale;
+    property FractionalSecondsScale: Integer read fScale;
     property AdjustSecondFractionsFormat: Boolean read FAdjSecFracFmt write SetAdjSecFracFmt default True;
   End;
 
