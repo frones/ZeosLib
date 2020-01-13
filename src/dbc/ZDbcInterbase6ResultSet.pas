@@ -1588,6 +1588,7 @@ var
   P: PAnsiChar;
   Len: NativeUInt;
   CP: Word;
+  SQLType, SqlSubType: ISC_Short;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1598,15 +1599,16 @@ begin
   else begin
     P := GetPAnsiChar(ColumnIndex, Len);
     {$R-}
-    case FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}].sqltype and not (1) of
+    SQLType := FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}].sqltype and not (1);
+    SqlSubType := FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}].sqlsubtype;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-      SQL_TEXT, SQL_VARYING: begin
-          if ConSettings^.ClientCodePage^.ID = CS_NONE
-          then CP := FCodePageArray[GetIbSqlSubType(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) and 255]
-          else CP := FClientCP;
-          Result := PRawToUnicode(P, Len, CP);
-        end;
-      else Result := Ascii7ToUnicodeString(P, Len);
+    if (SQLType = SQL_TEXT) or (SQLType = SQL_VARYING) or ((SQLType = SQL_BLOB) and (SqlSubType = 1)) then begin
+      if ConSettings^.ClientCodePage^.ID = CS_NONE
+      then CP := FCodePageArray[GetIbSqlSubType(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) and 255]
+      else CP := FClientCP;
+      Result := PRawToUnicode(P, Len, CP);
+    end else begin
+      Result := Ascii7ToUnicodeString(P, Len);
     end;
   end;
 end;
