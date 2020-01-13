@@ -608,22 +608,24 @@ procedure TZTestCompMSSqlBugReport.TestSF402;
 var
   Query: TZQuery;
   dtE, dtA: TDateTime;
-  orgShortDateFormat, orgLongTimeFormat, S: String;
-  orgdSep, orgtSep: Char;
+  S: String;
+//  orgShortDateFormat, orgLongTimeFormat: String;
+//  orgdSep, orgtSep: Char;
+  MyFormatSettings: TFormatSettings;
 begin
   Connection.Connect;
   Check(Connection.Connected, 'Failed to establish a connection');
   if Connection.DbcConnection.GetServerProvider <> spMSSQL then
     Exit;
   Query := CreateQuery;
-  orgdSep := FormatSettings.DateSeparator;
-  FormatSettings.DateSeparator := '-';
-  orgtSep := FormatSettings.TimeSeparator;
-  FormatSettings.TimeSeparator := '-';
-  orgShortDateFormat := FormatSettings.ShortDateFormat;
-  FormatSettings.ShortDateFormat := 'yyyy/mm/dd';
-  orgLongTimeFormat := FormatSettings.LongTimeFormat;
-  FormatSettings.LongTimeFormat := 'hh:nn:ss';
+//  orgdSep := FormatSettings.DateSeparator;
+  MyFormatSettings.DateSeparator := '-';
+//  orgtSep := FormatSettings.TimeSeparator;
+  MyFormatSettings.TimeSeparator := '-';
+//  orgShortDateFormat := FormatSettings.ShortDateFormat;
+  MyFormatSettings.ShortDateFormat := 'yyyy/mm/dd';
+//  orgLongTimeFormat := FormatSettings.LongTimeFormat;
+  MyFormatSettings.LongTimeFormat := 'hh:nn:ss';
   try
     Query.Sql.Add('set dateformat mdy');
     Query.Sql.Add('select cast(''2020-01-01 08:30:45'' as datetime)');
@@ -635,17 +637,17 @@ begin
     dtE := dtE+EncodeTime(8,30,45,0);
     dtA := Query.Fields[0].AsDateTime;
     CheckEqualsDate(dtE, dtA, [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Should be "2020-01-01 08:30:45" ');
-    CheckEquals(query.Fields[0].AsString, DateTimeToStr(dtE, FormatSettings), 'Should be "2020-01-01 08:30:45" ');
+    CheckEquals(query.Fields[0].AsString, DateTimeToStr(dtE, MyFormatSettings), 'Should be "2020-01-01 08:30:45" ');
     Query.Next;
     CheckFalse(Query.Eof);
     dtA := Query.Fields[0].AsDateTime;
-    DateTimeToString(S, '', dtA, FormatSettings);
+    DateTimeToString(S, '', dtA, MyFormatSettings);
     CheckEquals(S, query.Fields[0].AsString, 'Should be "2020-01-01" ');
   finally
-    FormatSettings.ShortDateFormat := orgShortDateFormat;
-    FormatSettings.LongTimeFormat := orgLongTimeFormat;
-    FormatSettings.DateSeparator := orgdSep;
-    FormatSettings.TimeSeparator := orgtSep;
+//    FormatSettings.ShortDateFormat := orgShortDateFormat;
+//    FormatSettings.LongTimeFormat := orgLongTimeFormat;
+//    FormatSettings.DateSeparator := orgdSep;
+//    FormatSettings.TimeSeparator := orgtSep;
     FreeAndNil(Query);
   end;
 end;
