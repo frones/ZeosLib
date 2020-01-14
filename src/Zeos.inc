@@ -320,7 +320,6 @@
                                       {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
                                       {$DEFINE HAVE_TFIELD_32BIT_ASINTEGER} //TField.AsInteger setter and getter use 32Bit integer
                                       {$DEFINE HAVE_TFIELD_32BIT_ASLONGWORD} //TField.AsLongWord setter and getter use 32Bit unsigned integer
-                                      {$DEFINE WITH_VIRTUAL_ASGUID} //TGUIDfield AsGUID has virtual setter and getter
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+
