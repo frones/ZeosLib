@@ -1116,6 +1116,7 @@ type
   TZRawStringField = class(TStringField)
   private
     FFieldIndex: Integer;
+    FBufferSize: NativeUint;
     FColumnCP: Word;
     FValidateBuffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}RawByteString{$ENDIF};
     FBound: Boolean;
@@ -1563,6 +1564,11 @@ end;
 
 function TZAbstractRODataset.WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer;
   Buffer: PWideChar): Boolean;
+{$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
+begin
+  PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
+end;
+{$ELSE}
 var
   P: PAnsiChar;
   L: NativeUInt;
@@ -1573,9 +1579,15 @@ begin
   else //instead of WStrLCopy
     PRaw2PUnicode(P, Buffer, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1, RowAccessor.ConSettings^.ClientCodePage^.CP);
 end;
+{$ENDIF}
 
 function TZAbstractRODataset.WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer;
   Buffer: PWideChar): Boolean;
+{$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
+begin
+  PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
+end;
+{$ELSE}
 var
   P: PWideChar;
   L: NativeUInt;
@@ -1587,6 +1599,7 @@ begin
   end;
   PWord(Buffer+L)^ := Ord(#0);
 end;
+{$ENDIF}
 
 {**
   Sets database connection object.
@@ -2618,6 +2631,10 @@ var
   D: TZDate absolute TS;
   UID: TGUID absolute TS;
   S: TTimeStamp absolute TS;
+  {$IFNDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
+  P: PWideChar absolute TS;
+  L: NativeUInt;
+  {$ENDIF}
 begin
   WasNull := False;
   if not Active then
@@ -2698,10 +2715,14 @@ begin
           RowAccessor.SetBytes(ColumnIndex, Pointer(Buffer), Field.Size);
         ftWideString: { Processes widestring fields. }
           //EH: Using the WideRec setter doesn't perform better. Don't know why but it seems like the IDE's are faster by setting the UnicodeStrings directly
-          {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
-          RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
-          {$ELSE}
+          {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+          {$ELSE}
+          begin
+            P := {$IFDEF WITH_TVALUEBUFFER}Pointer(Buffer){$ELSE}Buffer{$ENDIF};
+            L := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(P);
+            RowAccessor.SetPWideChar(ColumnIndex, P, L);
+          end;
           {$ENDIF}
         ftString: { Processes string fields. }
           FStringFieldSetter(ColumnIndex, PAnsichar(Buffer));
@@ -2862,14 +2883,14 @@ end;
 }
 procedure TZAbstractRODataset.InternalInitFieldDefs;
 var
-  I, J, Size: Integer;
+  I, {J,} Size: Integer;
   AutoInit: Boolean;
   FieldType: TFieldType;
   SQLType: TZSQLType;
   ResultSet: IZResultSet;
-  FieldName: string;
+  //FieldName: string;
   FName: string;
-  ConSettings: PZConSettings;
+  //ConSettings: PZConSettings;
   FieldDef: TFieldDef;
 begin
   FieldDefs.Clear;
@@ -2892,7 +2913,7 @@ begin
     { Reads metadata from resultset. }
 
     with FResultSetMetadata do begin
-    ConSettings := ResultSet.GetConSettings;
+    //ConSettings := ResultSet.GetConSettings;
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
         SQLType := GetColumnType(I);
@@ -2906,12 +2927,13 @@ begin
 
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           Size := GetPrecision(I);
+          (*EH 14.01.2020 commented. After having the TZRaw/Unicode-Fields we don't need that any more
           if (FieldType = ftString) then
             if (ConSettings^.CPType = cCP_UTF8)
             then Size := Size shl 2 //four bytes per char
             else Size := Size * ZOSCodePageMaxCharSize
           else if (FieldType = ftWideString) and (doAlignMaxRequiredWideStringFieldSize in Options) {and (ConSettings.ClientCodePage.CharWidth > 3)} then
-            Size := Size shl 1; //two bytes per char
+            Size := Size shl 1; //two bytes per char *)
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38
         else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
@@ -2919,17 +2941,19 @@ begin
         else
           Size := 0;
 
+        (* EH: commented because job done on DBC already. Obsolete logic?
         J := 0;
         FieldName := GetColumnLabel(I);
         FName := FieldName;
         while FieldDefs.IndexOf(FName) >= 0 do begin //add hide duplicate fieldnames
           Inc(J);
           FName := Format('%s_%d', [FieldName, J]);
-        end;
+        end;*)
+        FName := GetColumnLabel(I);
 
         if (SQLType in [stBoolean..stUnicodeString])
-        then FieldDef := TZFieldDef.Create(FieldDefs, FName, SQLType, Size, False, I{$IFDEF GENERIC_INDEX}+1{$ENDIF})
-        else FieldDef := TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+        then FieldDef := TZFieldDef.Create(FieldDefs, FName, SQLType, Size, False, I)
+        else FieldDef := TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I);
         with FieldDef do begin
           if not (ReadOnly or IsUniDirectional) then begin
             {$IFNDEF OLDFPC}
@@ -2942,7 +2966,7 @@ begin
           DisplayName := FName;
           if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
              Attributes := Attributes + [faUnNamed];
-          //EH: hmm do we miss that or was there a good reason? For me its not relevant
+          //EH: hmm do we miss that or was there a good reason? For me its not relevant..
           //if (SQLType in [stString, stUnicodeString]) and (GetScale(i) = GetPrecision(I)) then
             //Attributes := Attributes + [faFixed];
         end;
@@ -4944,8 +4968,8 @@ begin
   begin
     for I := 0 to FieldDefs.Count - 1 do
       with FieldDefs[I] do
-        if (DataType <> ftUnknown) and
-          not ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
+        if (DataType <> ftUnknown) and not
+          ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
           CreateField(Self);
   end else
     for I := 0 to {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}.Count - 1 do
@@ -8545,7 +8569,10 @@ begin
   if Binding then begin
     if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
       DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
-    FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if TZAbstractRODataset(DataSet).Connection.ControlsCodePage = cCP_UTF8
+    then FBufferSize := Size * 4
+    else FBufferSize := Size * ZOSCodePageMaxCharSize
   end;
   inherited Bind(Binding);
 end;
@@ -8684,7 +8711,7 @@ var P: PAnsiChar;
   L: NativeUInt;
   procedure DoValidate;
   begin
-    SetLength(FValidateBuffer, Math.Max(L, Size){$IFDEF WITH_TVALUEBUFFER}+1{$ENDIF});
+    SetLength(FValidateBuffer, Max(L, FBufferSize){$IFDEF WITH_TVALUEBUFFER}+1{$ENDIF});
     if L > 0 then
       Move(P^, Pointer(FValidateBuffer)^, L);
     P := Pointer(FValidateBuffer);
@@ -8707,7 +8734,7 @@ begin
     else L := ZFastCode.StrLen(P); //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
     if Assigned(OnValidate) {$IFNDEF NO_TDATASET_TRANSLATE}or Transliterate{$ENDIF} then
       DoValidate;
-    if L > NativeUInt(Size) then
+    if L > FBufferSize then
       DatabaseErrorFmt(SFieldOutOfRange, [DisplayName]);
     FRowAccessor.SetPAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
@@ -8824,7 +8851,7 @@ begin
   if Binding then begin
     if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
       DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
-    FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
   end;
   inherited Bind(Binding);
 end;
@@ -8983,12 +9010,27 @@ var L: NativeUInt;
     P: PWideChar;
   procedure DoValidate;
   begin
-    SetLength(FValidateBuffer, (Math.Max(L, Size)+1){$IFDEF WITH_TVALUEBUFFER}shl 1{$ENDIF});
+    {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
+    SetLength(FValidateBuffer, L);
+    {$ELSE}
+      {$IFDEF WITH_TVALUEBUFFER}
+      SetLength(FValidateBuffer, (Math.Max(L, Size)+1) shl 1);
+      {$ELSE}
+      SetLength(FValidateBuffer, Math.Max(L, Size));
+      {$ENDIF}
+    {$ENDIF}
     if L > 0 then
       Move(P^, Pointer(FValidateBuffer)^, (L+1) shl 1);
     P := Pointer(FValidateBuffer);
     PWord(P + L)^ := 0;
+    {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
+    Validate(@FValidateBuffer);
+    P := Pointer(FValidateBuffer);
+    if P = nil
+    then L := 0 else
+    {$ELSE}
     Validate({$IFDEF WITH_TVALUEBUFFER}FValidateBuffer{$ELSE}P{$ENDIF});
+    {$ENDIF}
     L := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(P);
   end;
 begin
@@ -9007,7 +9049,6 @@ begin
       DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
-
 
 procedure TUnicodeStringField.SetAsUTF8String(const Value: UTF8String);
 Var U: UnicodeString;
