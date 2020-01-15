@@ -8693,9 +8693,7 @@ begin
   if not FBound then
     DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
   with TZAbstractRODataset(DataSet) do begin
-    if not (State in dsWriteModes) then
-      DatabaseError(SNotEditing, DataSet);
-    if (Value = '') or (not IsMBCSCodePage(ZOSCodePage) and (RowAccessor.ConSettings.ClientCodePage.CP = ZOSCodePage))
+    if (Value = '') or ((FColumnCP = ZOSCodePage) and (ZOSCodePageMaxCharSize = 1) )
     then SetAsRawByteString(Value)
     else SetAsUni;
   end;
@@ -8827,14 +8825,26 @@ end;
 
 {$IFNDEF NO_UTF8STRING}
 procedure TZRawStringField.SetAsUTF8String(const Value: UTF8String);
-Var U: UnicodeString;
+var P: PAnsiChar;
+    L: NativeUInt;
+  procedure SetW;
+  Var U: UnicodeString;
+  begin
+    U := ZRawToUnicode(Value, zCP_UTF8);
+    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
+    SetAsWideString(U);
+    {$ELSE}
+    SetAsUnicodeString(U);
+    {$IFEND}
+  end;
 begin
-  U := ZRawToUnicode(Value, zCP_UTF8);
-  {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-  SetAsWideString(U);
-  {$ELSE}
-  SetAsUnicodeString(U);
-  {$IFEND}
+  if not FBound then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  P := Pointer(Value);
+  L := Length(Value);
+  if (Value = '') or ((FColumnCP = zCP_UTF8) and (CountOfUtf8Chars(P,L)<NativeUInt(Size)))
+  then SetAsRawByteString(Value)
+  else SetW; //no UStrClear here
 end;
 {$ENDIF NO_UTF8STRING}
 
@@ -8960,43 +8970,54 @@ var L: NativeUInt;
     {$ENDIF}
   end;
 {$ENDIF}
-label jUTF8, jACP, jPCMV;
+label jmpUTF8, jmpACP, jmpMove,jmpRange;
 begin
-  if not FBound then
-    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
   {$IFDEF UNICODE}
   SetAsWideString(Value);
   {$ELSE}
   //we convert all values to UTF16 for Size control except the value and encoding do fit into
+  if not FBound then
+    DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
   P := Pointer(Value);
   if P = nil
-  then SetW(zCP_WIN1252)
-  else with TZAbstractRODataset(DataSet) do begin
-    L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
-    if RowAccessor.ConSettings^.AutoEncode then
-      case ZDetectUTF8Encoding(P, L) of
-        etUSASCII:  if (L <= NativeUInt(Size)) and not Assigned(OnValidate) and FRowAccessor.IsRaw
-                    then goto jPCMV
-                    else SetW(zCP_WIN1252); //just byte2word shift
-        etUTF8:     goto jUTF8;
-        else if not ZCompatibleCodePages(RowAccessor.ConSettings^.CTRL_CP, zCP_UTF8)
-              then SetW(RowAccessor.ConSettings^.CTRL_CP)
-              else if ZOSCodePage = zCP_UTF8
-                then SetW(zCP_None)
-                else goto jACP;
-      end
-    else if RowAccessor.ConSettings^.CPType = cCP_UTF8 then
-jUTF8:if (FColumnCP = ZCP_UTF8) and FRowAccessor.IsRaw and (L <= NativeUInt(Size)) and not Assigned(OnValidate)
-      then goto jPCMV
-      else SetW(zCP_UTF8)
-    else
-jACP: if (FColumnCP = ZOSCodePage) and FRowAccessor.IsRaw and (L <= NativeUInt(Size)) and not Assigned(OnValidate) then begin
-jPCMV:Prepare4DataManipulation(Self);
-      FRowAccessor.SetPAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
-      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-        DataEvent(deFieldChange, NativeInt(Self));
-    end else
-      SetW(ZOSCodePage);
+  then L := 0
+  else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
+  with TZAbstractRODataset(DataSet) do begin
+    if (L = 0) then
+      if Assigned(OnValidate) or not FRowAccessor.IsRaw
+      then SetW(zCP_WIN1252)
+      else goto jmpMove
+    else begin
+      if RowAccessor.ConSettings^.AutoEncode then
+        case ZDetectUTF8Encoding(P, L) of
+          etUSASCII:  if (L <= NativeUInt(Size))
+                      then if not Assigned(OnValidate) and FRowAccessor.IsRaw
+                        then goto jmpMove
+                        else SetW(zCP_WIN1252)
+                      else goto jmpRange;
+          etUTF8:     goto jmpUTF8;
+          else if not ZCompatibleCodePages(RowAccessor.ConSettings^.CTRL_CP, zCP_UTF8)
+                then SetW(RowAccessor.ConSettings^.CTRL_CP)
+                else if ZOSCodePage = zCP_UTF8
+                  then SetW(zCP_None)
+                  else goto jmpACP;
+        end
+      else if RowAccessor.ConSettings^.CPType = cCP_UTF8 then
+jmpUTF8:if (FColumnCP = ZCP_UTF8) and FRowAccessor.IsRaw and not Assigned(OnValidate) then
+          if ((L <= NativeUInt(Size)) or (CountOfUtf8Chars(P,L)  <= NativeUInt(Size)))
+          then goto jmpMove else
+jmpRange:   DatabaseErrorFmt(SFieldOutOfRange, [DisplayName])
+          else SetW(zCP_UTF8)
+        else
+jmpACP: if (FColumnCP = ZOSCodePage) and FRowAccessor.IsRaw and not
+          Assigned(OnValidate) and (L <= NativeUInt(Size*ZOSCodePageMaxCharSize)) then begin
+jmpMove:  Prepare4DataManipulation(Self);
+          FRowAccessor.SetPAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
+          if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+            DataEvent(deFieldChange, NativeInt(Self));
+        end else
+          SetW(ZOSCodePage);
+    end;
   end;
   {$ENDIF}
 end;
