@@ -4138,12 +4138,12 @@ begin
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stBoolean: PWordBool(Data)^ := StrToBoolEx(Value, Value+Len, False);
     stByte, stShort, stWord, stSmall,
-    stInteger: SetInt(ColumnIndex, UnicodeToIntDef(Value, Value+Len, 0));
-    stLongWord: PCardinal(Data)^ := UnicodeToInt64Def(Value, Value+Len, 0);
+    stInteger: SetInt(ColumnIndex, UnicodeToInt64(Value, Value+Len));
+    stLongWord: PCardinal(Data)^ := UnicodeToInt64(Value, Value+Len);
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-    stULong: PUInt64(Data)^ := UnicodeToInt64Def(Value, Value+Len, 0);
+    stULong: PUInt64(Data)^ := UnicodeToUInt64(Value, Value+Len);
     {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    stLong: PInt64(Data)^ := UnicodeToInt64Def(Value, Value+Len, 0);
+    stLong: PInt64(Data)^ := UnicodeToInt64(Value, Value+Len);
     stFloat: SQLStrToFloatDef(Value, 0, PSingle(Data)^, Len);
     stDouble: SQLStrToFloatDef(Value, 0, PDouble(Data)^, Len);
     stCurrency: SQLStrToFloatDef(Value, 0, PCurrency(Data)^, Len);

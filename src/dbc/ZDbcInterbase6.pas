@@ -892,9 +892,9 @@ reconnect:
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
     and no convertions where done except the collumns using collations}
-  with GetMetadata.GetCollationAndCharSet('', '', '', '') do begin
-    Next;
-    DBCP := GetString(CollationAndCharSetNameIndex);
+  with CreateRegularStatement(nil).ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
+    'FROM RDB$DATABASE') do begin
+    if Next then DBCP := GetString(FirstDbcIndex);
     Close;
   end;
   if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":

@@ -326,8 +326,10 @@ function RawToInt(const Value: PAnsiChar): Integer; overload;
 function RawToInt64(const Value: RawByteString): Int64;
 function RawToUInt64(const Value: RawByteString): UInt64;
 function UnicodeToInt(const Value: UnicodeString): Integer;
-function UnicodeToInt64(const Value: UnicodeString): Int64;
-function UnicodeToUInt64(const Value: UnicodeString): UInt64;
+function UnicodeToInt64(Buf, PEnd: PWideChar): Int64; overload;
+function UnicodeToInt64(const Value: UnicodeString): Int64; overload;
+function UnicodeToUInt64(const Value: UnicodeString): UInt64; overload;
+function UnicodeToUInt64(Buf, PEnd: PWideChar): Int64; overload;
 
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; overload;
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
@@ -5007,6 +5009,21 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
+function UnicodeToInt64(Buf, PEnd: PWideChar): Int64;
+var P: PWideChar;
+  function CreateException: EConvertError;
+  var S: UnicodeString;
+  begin
+    System.SetString(S, Buf, P-Buf);
+    Result := EConvertError.CreateResFmt(@SInvalidInteger, [String(S)]);
+  end;
+begin
+  P := PEnd;
+  Result := ValUnicodeInt64(Buf, PEnd);
+  if P <> PEnd then
+    raise CreateException;
+end;
+
 function UnicodeToInt64Def(const S: PWideChar; const Default: Int64) : Int64;
 var
   E: Integer;
@@ -5033,6 +5050,21 @@ begin
   Result := ValUInt64_JOH_PAS_8_a_unicode(Pointer(Value), E{%H-});
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
+end;
+
+function UnicodeToUInt64(Buf, PEnd: PWideChar): Int64; overload;
+var P: PWideChar;
+  function CreateException: EConvertError;
+  var S: UnicodeString;
+  begin
+    System.SetString(S, Buf, P-Buf);
+    Result := EConvertError.CreateResFmt(@SInvalidInteger, [String(S)]);
+  end;
+begin
+  P := PEnd;
+  Result := ValUnicodeUInt64(Buf, PEnd);
+  if P <> PEnd then
+    raise CreateException;
 end;
 
 function UnicodeToUInt64Def(const S: UnicodeString; const Default: UInt64) : UInt64;

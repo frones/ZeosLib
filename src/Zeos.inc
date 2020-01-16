@@ -174,6 +174,7 @@
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
 
             {$IF CompilerVersion >= 20} //Delphi 2009+
+              {$DEFINE FIELD_ASWIDESTRING_IS_UNICODESTRING} //TField.AsWideString is type UnicodeString not WideString
               {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
               {$DEFINE HAVE_CS_TRYENTER} //TCriticalSection has method TryEnter
               {$UNDEF WITH_OVERLOAD_BUG}                  //2009+ has no problems with ambiguous overload (byte/word)
@@ -181,7 +182,7 @@
               {$UNDEF NO_INLINE_SIZE_CHECK}
               {$UNDEF BCC32_vtDateTime_ERROR}           //resolved by ide
               {$UNDEF USE_FAST_CHARPOS}                 // Since Unicode this function is useless
-
+              {$DEFINE HAVE_UNICODESTRING}
               {$DEFINE WITH_TBOOKMARK}                  // Have TBookmark
               {$DEFINE WITH_STSTRINGUNICODE}            // stString is unicodestring.
               {$DEFINE WITH_NEWTOBJECT}                 // allows new methods in TObject (D2009+/FPC 2.4.4)
@@ -249,7 +250,7 @@
                       {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
                       {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
                       {$DEFINE WITH_GENERIC_TLISTTFIELD}      //GetFieldList() uses the generic TList<TField>
-
+                      {$DEFINE WITH_GENERICS_TFIELD_ASBYTES}  //TField.AsBytes uses TArray<Byte>
                       {$IFDEF NEXTGEN}
                         {$UNDEF WITH_UNIT_WIDESTRINGS}
                         {$UNDEF WITH_ASANSISTRING}
@@ -317,6 +318,9 @@
                                       {$DEFINE WITH_IProviderSupportNG}   //TDataset now supports IProviderSupportNG
                                       {$DEFINE WITH_InternalGotoBookmark_TBookmark}
                                       {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
+                                      {$DEFINE HAVE_TFIELD_32BIT_ASINTEGER} //TField.AsInteger setter and getter use 32Bit integer
+                                      {$DEFINE HAVE_TFIELD_32BIT_ASLONGWORD} //TField.AsLongWord setter and getter use 32Bit unsigned integer
+                                      {$DEFINE WITH_VIRTUAL_ASGUID} //TGUIDfield AsGUID has virtual setter and getter
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+

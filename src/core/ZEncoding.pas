@@ -256,7 +256,10 @@ procedure MapByteToUTF16(Source: PByteArray; SourceBytes: LengthInt;
 {MBCS codepages }
 procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
-function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt; overload;
+function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): NativeUInt; overload;
+function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, DestWords: LengthInt): NativeUInt; overload;
+function UTF8AsUTF16Words(Source: PAnsichar; SourceBytes: LengthInt): NativeUInt;
+function CountOfUtf8Chars(Source: PAnsichar; SourceBytes: NativeUint): NativeUint;
 function PRawToPRawBuf(Source, Dest: PAnsiChar; SourceBytes, MaxDestBytes: LengthInt; SrcCP, DestCP: Word): LengthInt;
 
 procedure PRawToRawConvert(Source: PAnsiChar; SourceBytes: LengthInt; SrcCP, DestCP: Word; var Result: RawByteString);
@@ -1296,7 +1299,7 @@ const
   //UTF8_EXTRA_SURROGATE = 3;
   UTF8_FIRSTBYTE: packed array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
 
-function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): LengthInt;
+function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): NativeUInt;
 // faster than System.UTF8Decode()
 var c: cardinal;
     begd: pWideChar;
@@ -1362,7 +1365,118 @@ NoSource:
   PWord(dest)^ := Ord(#0); // always append a WideChar(0) to the end of the buffer
 end;
 
-function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, DestWords: LengthInt): LengthInt; overload;
+function UTF8AsUTF16Words(Source: PAnsichar; SourceBytes: LengthInt): NativeUInt;
+// faster than System.UTF8Decode()
+var c: cardinal;
+    endSource, endSourceBy4: PAnsiChar;
+    i,extra: integer;
+label Quit, By1, By4;
+begin
+  Result := 0;
+  if (Source = nil) or (SourceBytes = 0) then
+    Exit;
+  endSource := Source+SourceBytes;
+  endSourceBy4 := endSource-4;
+  if SourceBytes < 4 then
+    goto By1;
+  repeat
+    // first handle 7 bit ASCII chars, by quad (Sha optimization)
+By4:  c := PCardinal(Source)^;
+      if c and $80808080<>0 then
+        goto By1; // break on first non ASCII quad
+      inc(Source,4);
+      inc(Result,4);
+    until Source>EndSourceBy4;
+  if Source<endSource then
+    repeat
+By1:  c := byte(Source^);
+      inc(Source);
+      if c and $80=0 then begin
+        inc(Result);
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if Source<endSource then continue else break;
+      end;
+      extra := UTF8_EXTRABYTES[c];
+      if (extra=0) or (Source+extra>endSource) then break;
+      for i := 1 to extra do begin
+        if byte(Source^) and $c0<>$80 then
+          goto Quit; // invalid input content
+        c := c shl 6+byte(Source^);
+        inc(Source);
+      end;
+      with UTF8_EXTRA[extra] do begin
+        dec(c,offset);
+        if c<minimum then
+          break; // invalid input content
+      end;
+      if c<=$ffff then begin
+        inc(Result);
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if Source<endSource then continue else break;
+      end;
+      inc(Result,2);
+      if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+      if Source>=endSource then break;
+    until false;
+Quit:
+end;
+//(*
+function CountOfUtf8Chars(Source: PAnsichar; SourceBytes: NativeUint): NativeUint;
+// faster than System.UTF8Decode()
+var c: cardinal;
+    endSource, endSourceBy4: PAnsiChar;
+    i,extra: integer;
+label By1, By4;
+begin
+  Result := 0;
+  if (Source = nil) or (SourceBytes = 0) then
+    Exit;
+  endSource := Source+SourceBytes;
+  endSourceBy4 := endSource-4;
+  if SourceBytes < 4 then
+    goto By1;
+  repeat
+    // first handle 7 bit ASCII chars, by quad (Sha optimization)
+By4:  c := PCardinal(Source)^;
+      if c and $80808080<>0 then
+        goto By1; // break on first non ASCII quad
+      inc(Source,4);
+      inc(Result,4);
+    until Source>EndSourceBy4;
+  if Source<endSource then
+    repeat
+By1:  c := byte(Source^);
+      inc(Source);
+      if c and $80=0 then begin
+        inc(Result);
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if Source<endSource then continue else break;
+      end;
+      extra := UTF8_EXTRABYTES[c];
+      if (extra=0) or (Source+extra>endSource) then break;
+      for i := 1 to extra do begin
+        if byte(Source^) and $c0<>$80 then
+          Exit; // invalid input content
+        c := c shl 6+byte(Source^);
+        inc(Source);
+      end;
+      with UTF8_EXTRA[extra] do begin
+        dec(c,offset);
+        if c<minimum then
+          break; // invalid input content
+      end;
+      if c<=$ffff then begin
+        inc(Result);
+        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if Source<endSource then continue else break;
+      end;
+      inc(Result);
+      if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+      if Source>=endSource then break;
+    until false;
+end;
+
+function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, DestWords: LengthInt): NativeUInt;
 // faster than System.UTF8Decode()
 var c: cardinal;
     begd, endDest: pWideChar;
@@ -1617,6 +1731,10 @@ begin
         wlen := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, CP);
         ZSetString(nil, wlen, Result);
         {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Pointer(Result)^, wlen shl 1);
+      end else if CP = zCP_UTF8 then begin
+        wlen := UTF8AsUTF16Words(Source, sourceBytes); //return exactlen
+        ZSetString(nil, wlen, Result);
+        UTF8ToWideChar(Source, SourceBytes, Pointer(Result));
       end else begin //nope Buf to small
         ZSetString(nil, SourceBytes, Result);
         wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
