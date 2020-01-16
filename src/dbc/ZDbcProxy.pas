@@ -137,9 +137,9 @@ var
   {** The common driver manager object. }
   ProxyDriver: IZDriver;
 
-{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
+{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
 implementation
-{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
+{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
 
 uses
   ZSysUtils, ZFastCode,
