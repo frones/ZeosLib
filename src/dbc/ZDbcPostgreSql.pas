@@ -561,6 +561,11 @@ begin
   if Info.Values['sslkey'] <> '' then AddParamToResult('sslkey', Info.Values['sslkey']);
   if Info.Values['sslrootcert'] <> '' then AddParamToResult('sslrootcert', Info.Values['sslrootcert']);
   if Info.Values['sslcrl'] <> '' then AddParamToResult('sslcrl', Info.Values['sslcrl']);
+  { tcp keepalives by Luca Olivetti }
+  if Info.Values['keepalives'] <> '' then AddParamToResult('keepalives',Info.Values['keepalives']);
+  if Info.Values['keepalives_idle'] <> '' then AddParamToResult('keepalives_idle',Info.Values['keepalives_idle']);
+  if Info.Values['keepalives_interval'] <> '' then AddParamToResult('keepalives_interval',Info.Values['keepalives_interval']);
+  if Info.Values['keepalives_count'] <> '' then AddParamToResult('keepalives_count',Info.Values['keepalives_count']);
 
   { Sets a connection timeout. }
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
