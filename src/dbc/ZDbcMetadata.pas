@@ -2078,7 +2078,7 @@ begin
   FConnection := Pointer(Connection as IZConnection);
   FUrl := Url;
   FCachedResultSets := TZHashMap.Create;
-  FDatabaseInfo := CreateDatabaseInfo;
+  FDatabaseInfo := nil;
   FDatabase := Url.Database;
   FConSettings := IZConnection(FConnection).GetConSettings;
   FillWildcards;
@@ -2532,6 +2532,8 @@ end;
 }
 function TZAbstractDatabaseMetadata.GetDatabaseInfo: IZDatabaseInfo;
 begin
+  if not Assigned(FDatabaseInfo) then
+    FDatabaseInfo := CreateDatabaseInfo;
   Result := FDatabaseInfo;
 end;
 
