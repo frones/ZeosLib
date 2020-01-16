@@ -3267,6 +3267,7 @@ const
   adsrc_index       = FirstDbcIndex + 8;
   description_index = FirstDbcIndex + 9;
   cnspname_index    = FirstDbcIndex + 10;
+  cdomain_oid_Index = FirstDbcIndex + 11;
 var
   Len: NativeUInt;
   TypeOid: Cardinal;
@@ -3275,9 +3276,11 @@ var
   SQLType: TZSQLType;
   CheckVisibility: Boolean;
   ColumnNameCondition, TableNameCondition, SchemaCondition, CatalogCondition: string;
+  PGConnection: IZPostgreSQLConnection;
 label FillSizes;
 begin
-  CheckVisibility := (GetConnection as IZPostgreSQLConnection).CheckFieldVisibility; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
+  //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
+  CheckVisibility := (GetConnection as IZPostgreSQLConnection).CheckFieldVisibility;
   if TableOID = '' then begin
     CatalogCondition := ConstructNameCondition(Catalog,'dn.relname');
     SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
@@ -3290,18 +3293,21 @@ begin
   begin
     SQL := 'SELECT n.nspname,' {nspname_index}
       + 'c.relname,' {relname_index}
+      //+ 'case t.typtype when ''d'' then t.typname else a.attname end as attname,' {attname_index}
       + 'a.attname,' {attname_index}
-      + 'a.atttypid,' {atttypid_index}
-      + 'a.attnotnull,' {attnotnull_index}
-      + 'a.atttypmod,' {atttypmod_index}
-      + 'a.attlen,' {attlen_index}
+      + 'case t.typtype when ''d'' then t.typbasetype else t.oid end as atttypid,' {atttypid_index}
+      + 'case t.typtype when ''d'' then t.typnotnull else a.attnotnull end as attnotnull,' {attnotnull_index}
+      + 'case t.typtype when ''d'' then t.typtypmod else a.atttypmod end as atttypmod,' {atttypmod_index}
+      + 'case t.typtype when ''d'' then t.typlen else a.attlen end as attlen,' {attlen_index}
       + 'a.attnum,' {attnum_index}
       + 'pg_get_expr(def.adbin, def.adrelid) as adsrc,' {adsrc_index}
       + 'dsc.description, ' {description_index}
-      + 'dn.nspname as cnspname' {cnspname_index}
+      + 'dn.nspname as cnspname, ' {cnspname_index}
+      + 'case t.typtype when ''d'' then t.oid else null end as domain_oid'
       + ' FROM pg_catalog.pg_namespace n '
       + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
       + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
+      + ' JOIN pg_catalog.pg_type t ON (t.oid = a.atttypid)'
       + ' LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)'
       + ' LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid) '
       + ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname=''pg_class'') '
@@ -3332,7 +3338,8 @@ begin
       + 'NULL AS adsrc,' {adsrc_index}
       + 'NULL AS description, ' {description_index}
       + 'NULL::text AS cnspname' {cnspname_index}
-      + 'FROM pg_class c, pg_attribute a ';
+      + 'NULL::OID as domain_oid'
+      + 'FROM pg_class c, pg_attribute a';
     if TableOID <> '' then
       SQL := SQL + ' WHERE c.oid = '+TableOID
     else
@@ -3346,11 +3353,9 @@ begin
       SQL := SQL+ ' AND ' + ColumnNameCondition;
   end;
   SQL := SQL+ ' ORDER BY nspname,relname,attnum';
-
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
-  begin
-    while Next do
-    begin
+  GetConnection.QueryInterface(IZPostgreSQLConnection,PGConnection);
+  with PGConnection.CreateStatement.ExecuteQuery(SQL) do begin
+    while Next do begin
       AttTypMod := GetInt(atttypmod_index);
 
       TypeOid := GetUInt(atttypid_index);
@@ -3373,8 +3378,7 @@ begin
       begin
         if AttTypMod <> -1 then begin
           Precision := AttTypMod - 4;
-FillSizes:
-          Result.UpdateInt(TableColColumnSizeIndex, Precision);
+FillSizes:Result.UpdateInt(TableColColumnSizeIndex, Precision);
           if SQLType = stString then begin
             Result.UpdateInt(TableColColumnBufLengthIndex, Precision * ConSettings^.ClientCodePage^.CharWidth +1);
             Result.UpdateInt(TableColColumnCharOctetLengthIndex, Precision * ConSettings^.ClientCodePage^.CharWidth);
@@ -3407,9 +3411,11 @@ FillSizes:
         Result.UpdateInt(TableColColumnSizeIndex, ((AttTypMod - 4) div 65536)); //precision
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, ((AttTypMod -4) mod 65536)); //scale
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10); //base? ten as default
-      end
-      else if (PgType = 'bit') or (PgType = 'varbit') then
-      begin
+      end else if (TypeOID = CASHOID) then begin
+        Result.UpdateInt(TableColColumnSizeIndex, 22); //precision
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, 2); //scale
+        Result.UpdateInt(TableColColumnNumPrecRadixIndex, 10); //base? ten as default
+      end else if (PgType = 'bit') or (PgType = 'varbit') then begin
         Result.UpdateInt(TableColColumnSizeIndex, AttTypMod);
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 2);
       end
@@ -3439,7 +3445,8 @@ FillSizes:
       Result.UpdateBoolean(TableColColumnWritableIndex, True);
       Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
       Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
-
+      if not IsNull(cdomain_oid_Index) then
+        PGConnection.AddDomain2BaseTypeIfNotExists(GetUInt(cdomain_oid_Index), TypeOid);
       Result.InsertRow;
     end;
     Close;

@@ -106,6 +106,7 @@ type
     FBlobPrefetchSize: Integer;
     FStmtMode: ub4;
     FPlainDriver: IZOraclePlainDriver;
+    procedure InternalSetCatalog(const Catalog: RawByteString);
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -128,7 +129,7 @@ type
     procedure Open; override;
     procedure InternalClose; override;
 
-    procedure SetCatalog(const Catalog: string); override;
+    procedure SetCatalog(const Value: string); override;
     function GetCatalog: string; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -268,6 +269,11 @@ begin
   FBlobPrefetchSize := FChunkSize;
 end;
 
+procedure TZOracleConnection.InternalSetCatalog(const Catalog: RawByteString);
+begin
+  CreateRegularStatement(nil).ExecuteUpdate('ALTER SESSION SET CURRENT_SCHEMA = '+Catalog)
+end;
+
 function TZOracleConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
@@ -302,7 +308,6 @@ var
   Status: Integer;
   LogMessage: RawByteString;
   OCI_CLIENT_CHARSET_ID,  OCI_CLIENT_NCHARSET_ID: ub2;
-
   procedure CleanupOnFail;
   begin
     GetPlainDriver.HandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
@@ -397,6 +402,8 @@ begin
   StartTransactionSupport;
 
   inherited Open;
+  if FCatalog <> '' then
+    InternalSetCatalog(ConSettings.ConvFuncs.ZStringToRaw(FCatalog, Consettings.CTRL_CP, ConSettings.ClientCodePage.CP));
 end;
 
 {**
@@ -625,6 +632,12 @@ end;
 }
 function TZOracleConnection.GetCatalog: string;
 begin
+  if not Closed and (FCatalog = '') then
+    with CreateRegularStatement(nil).ExecuteQuery('SELECT SYS_CONTEXT (''USERENV'', ''CURRENT_SCHEMA'') FROM DUAL') do begin
+      if Next then
+        FCatalog := GetString(FirstDBCIndex);
+      Close;
+    end;
   Result := FCatalog;
 end;
 
@@ -632,9 +645,13 @@ end;
   Sets a new selected catalog name.
   @param Catalog a selected catalog name.
 }
-procedure TZOracleConnection.SetCatalog(const Catalog: string);
+procedure TZOracleConnection.SetCatalog(const Value: string);
 begin
-  FCatalog := Catalog;
+  if Value <> FCatalog then begin
+    FCatalog := Value;
+    if not Closed and (Value <> '') then
+      InternalSetCatalog(ConSettings.ConvFuncs.ZStringToRaw(Value, Consettings.CTRL_CP, ConSettings.ClientCodePage.CP));
+  end;
 end;
 
 {**
