@@ -1166,7 +1166,7 @@ type
     property Transliterate default False;  //obsolete imho
   end;
 
-  TUnicodeStringField = class(TWideStringField)
+  TZUnicodeStringField = class(TWideStringField)
   private
     FFieldIndex: Integer;
     FColumnCP: Word;
@@ -5814,8 +5814,8 @@ begin
         TZRawStringField(Result).FFieldIndex := Idx;
       end;
     ftWideString: begin
-        Result := TUnicodeStringField.Create(Owner);
-        TUnicodeStringField(Result).FFieldIndex := Idx;
+        Result := TZUnicodeStringField.Create(Owner);
+        TZUnicodeStringField(Result).FFieldIndex := Idx;
       end;
     else begin
 JmpDefField:
@@ -8853,9 +8853,9 @@ begin
   Writer.WriteInteger(FFieldIndex);
 end;
 
-{ TUnicodeStringField }
+{ TZUnicodeStringField }
 
-procedure TUnicodeStringField.Bind(Binding: Boolean);
+procedure TZUnicodeStringField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
   if Binding then begin
@@ -8866,7 +8866,7 @@ begin
   inherited Bind(Binding);
 end;
 
-procedure TUnicodeStringField.Clear;
+procedure TZUnicodeStringField.Clear;
 begin
   if not FBound then
     DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
@@ -8880,14 +8880,14 @@ begin
   end;
 end;
 
-procedure TUnicodeStringField.DefineProperties(Filer: TFiler);
+procedure TZUnicodeStringField.DefineProperties(Filer: TFiler);
 begin
   inherited Defineproperties(Filer);
   Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 {$IFNDEF NO_ANSISTRING}
-function TUnicodeStringField.GetAsAnsiString: AnsiString;
+function TZUnicodeStringField.GetAsAnsiString: AnsiString;
 var IsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -8896,7 +8896,7 @@ begin
 end;
 {$ENDIF NO_ANSISTRING}
 
-function TUnicodeStringField.GetAsString: String;
+function TZUnicodeStringField.GetAsString: String;
 var IsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -8905,9 +8905,9 @@ begin
 end;
 
 {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-function TUnicodeStringField.GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
+function TZUnicodeStringField.GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
 {$ELSE}
-function TUnicodeStringField.GetAsUnicodeString: UnicodeString;
+function TZUnicodeStringField.GetAsUnicodeString: UnicodeString;
 {$IFEND}
 var IsNull: Boolean;
 begin
@@ -8917,7 +8917,7 @@ begin
 end;
 
 
-function TUnicodeStringField.GetAsUTF8String: UTF8String;
+function TZUnicodeStringField.GetAsUTF8String: UTF8String;
 var IsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -8925,7 +8925,7 @@ begin
   else Result := '';
 end;
 
-function TUnicodeStringField.IsRowDataAvailable: Boolean;
+function TZUnicodeStringField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
@@ -8937,13 +8937,13 @@ begin
     end else Result := False;
 end;
 
-procedure TUnicodeStringField.ReadFieldIndex(Reader: TReader);
+procedure TZUnicodeStringField.ReadFieldIndex(Reader: TReader);
 begin
   FFieldIndex := Reader.ReadInteger;
 end;
 
 {$IFNDEF NO_ANSISTRING}
-procedure TUnicodeStringField.SetAsAnsiString(const Value: AnsiString);
+procedure TZUnicodeStringField.SetAsAnsiString(const Value: AnsiString);
 Var U: UnicodeString;
 begin
   U := ZRawToUnicode(Value, zOSCodePage);
@@ -8955,7 +8955,7 @@ begin
 end;
 {$ENDIF NO_ANSISTRING}
 
-procedure TUnicodeStringField.SetAsString(const Value: String);
+procedure TZUnicodeStringField.SetAsString(const Value: String);
 {$IFNDEF UNICODE}
 var L: NativeUInt;
     P: PAnsiChar;
@@ -9023,9 +9023,9 @@ jmpMove:  Prepare4DataManipulation(Self);
 end;
 
 {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-procedure TUnicodeStringField.SetAsWideString(const Value: {$IFNDEF HAVE_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
+procedure TZUnicodeStringField.SetAsWideString(const Value: {$IFNDEF HAVE_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
 {$ELSE}
-procedure TUnicodeStringField.SetAsUnicodeString(const Value: UnicodeString);
+procedure TZUnicodeStringField.SetAsUnicodeString(const Value: UnicodeString);
 {$IFEND}
 var L: NativeUInt;
     P: PWideChar;
@@ -9071,7 +9071,7 @@ begin
   end;
 end;
 
-procedure TUnicodeStringField.SetAsUTF8String(const Value: UTF8String);
+procedure TZUnicodeStringField.SetAsUTF8String(const Value: UTF8String);
 Var U: UnicodeString;
 begin
   U := ZRawToUnicode(Value, zCP_UTF8);
@@ -9082,7 +9082,7 @@ begin
   {$IFEND}
 end;
 
-procedure TUnicodeStringField.WriteFieldIndex(Writer: TWriter);
+procedure TZUnicodeStringField.WriteFieldIndex(Writer: TWriter);
 begin
   Writer.WriteInteger(FFieldIndex);
 end;
