@@ -200,7 +200,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZClasses;
+uses Math, ZMessages, ZDatasetUtils, ZDbcProperties;
 
 { TZAbstractDataset }
 
