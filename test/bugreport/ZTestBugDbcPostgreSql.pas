@@ -723,14 +723,27 @@ procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
 const
   id_index = FirstDbcIndex;
   fld_index = FirstDbcIndex+1;
-  Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430 {'Абракадабра'}; // Abrakadabra in Cyrillic letters
-  Str2: ZWideString = '\'#$041f#$043e#$0431#$0435#$0434#$0430'\' {'\Победа\'}; // victory / success in russian (according to leo.org)
+  {$IFDEF UNICODE} //D7 wrongly assignes the cyrill chars ):
+  Str1: UnicodeString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430 {'Абракадабра'}; // Abrakadabra in Cyrillic letters
+  Str2: UnicodeString = '\'#$041f#$043e#$0431#$0435#$0434#$0430'\' {'\Победа\'}; // victory / success in russian (according to leo.org)
+  {$ELSE}
+  Words1: array[0..10] of Word = ($0410,$0431,$0440,$0430,$043a,$0430,$0434,$0430,$0431,$0440,$0430);
+  Words2: array[0.. 7] of Word = (92,$041f,$043e,$0431,$0435,$0434,$0430,92);
+  {$ENDIF}
 var
+  {$IFNDEF UNICODE}
+  Str1: UnicodeString;
+  Str2: UnicodeString;
+  {$ENDIF}
   CP: Word;
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
   Connection.Open;
+  {$IFNDEF UNICODE}
+  System.SetString(Str1, PWideChar(@Words1[0]), 11);
+  System.SetString(Str2, PWideChar(@Words2[0]), 8);
+  {$ENDIF}
   Check(not Connection.IsClosed, 'Connected'); //for FPC which marks tests as failed if not executed
   if (Connection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
     not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
@@ -751,11 +764,11 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(id_index));
-    CheckEquals(Str1, ResultSet.GetString(fld_index), Connection.GetConSettings);
+    CheckEquals(Str1, ResultSet.{$IFDEF UNICODE}GetString{$ELSE}GetUnicodeString{$ENDIF}(fld_index));
     MoveToInsertRow;
     UpdateIntByName('id', 2);
 
-    UpdateStringByName('fld', GetDBTestString(Str2, Connection.GetConSettings));
+    UpdateUnicodeStringByName('fld', Str2);
     InsertRow;
     Close;
   end;
@@ -765,11 +778,11 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(id_index));
-    CheckEquals(Str1, ResultSet.GetString(fld_index), Connection.GetConSettings);
+    CheckEquals(Str1, ResultSet.{$IFDEF UNICODE}GetString{$ELSE}GetUnicodeString{$ENDIF}(fld_index));
 
     Check(Next);
     CheckEquals(2, ResultSet.GetInt(id_index));
-    CheckEquals(Str2, ResultSet.GetString(fld_index), Connection.GetConSettings);
+    CheckEquals(Str2, ResultSet.GetUnicodeString(fld_index));
     Close;
   end;
 
