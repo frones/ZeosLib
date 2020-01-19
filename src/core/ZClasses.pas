@@ -806,7 +806,7 @@ begin
     PByte(P)^ := Ord('-');
     Inc(P);
   end;
-  IntToRaw(Value, P, nil);
+  IntToRaw(Value, P, Digits);
 end;
 
 procedure TZRawSQLStringWriter.AddOrd64(const Value: UInt64; Digits: Byte;
