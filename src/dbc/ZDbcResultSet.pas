@@ -470,7 +470,7 @@ type
   end;
 
   {** Implements external or internal clob wrapper object. }
-  TZAbstractCLob = class(TZAbstractBlob)
+  TZAbstractCLob = class(TZAbstractBlob, IZCLob)
   protected
     FCurrentCodePage: Word;
     FConSettings: PZConSettings;
@@ -3924,7 +3924,8 @@ SetData:
       FBlobSize := Len +1;
       FCurrentCodePage := CodePage;
       GetMem(FBlobData, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-1);
+      if Buffer <> nil then
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-1);
       PByte((PAnsiChar(FBlobData)+Len))^ := Ord(#0); //set leading terminator
     end;
   end;

@@ -1099,10 +1099,7 @@ var
                           Connection.GetBinaryEscapeString(PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len, Tmp);
                           SQLWriter.AddText(Tmp, TmpSQL);
                         end;
-          zbtGUID:      begin
-                          GUIDToRaw(BindValue.Value, [guidWithBrackets, guidQuoted], Tmp);
-                          SQLWriter.AddText(Tmp, TmpSQL);
-                        end;
+          zbtGUID:      SQLWriter.AddGUID(PGUID(BindValue.Value)^, [guidWithBrackets, guidQuoted], TmpSQL);
           zbtBytes:     begin
                           Connection.GetBinaryEscapeString(BindValue.Value, Length(TBytes(BindValue.Value)), Tmp);
                           SQLWriter.AddText(Tmp, TmpSQL);
@@ -1375,7 +1372,7 @@ begin
           end;
           Add(Tmp, True);
           Tmp := '';
-        end {$IFNDEF UNICODE} else if ConSettings.AutoEncode then
+        end {$IFNDEF UNICODE} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
           case (Token.TokenType) of
             ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier: begin
@@ -1728,6 +1725,7 @@ var WriteTempBlob: IZPostgreSQLOidBlob;
   Lob_OID: OID;
   InParamIdx: Integer;
   RefCntLob: IZBlob;
+  Tmp: RawByteString;
 begin
   InParamIdx := Index;
   CheckParameterIndex(InParamIdx);
@@ -1753,13 +1751,20 @@ begin
       LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], SizeOf(OID));
       {$IFNDEF ENDIAN_BIG}Reverse4Bytes(FPQparamValues[Index]);{$ENDIF}
       WriteTempBlob := nil;
-    end else begin
+    end else if SQLType = stBinaryStream then begin
+      FPQparamFormats[InParamIdx] := ParamFormatBin;
       FPQparamValues[InParamIdx] := RefCntLob.GetBuffer;
       FPQparamLengths[InParamIdx] := RefCntLob.Length;
-      if SQLType = stBinaryStream
-      then FPQparamFormats[InParamIdx] := ParamFormatBin
-      else FPQparamFormats[InParamIdx] := ParamFormatStr;
-    end;
+    end else begin
+      Tmp := RefCntLob.GetRawByteString;
+      //pg ignores the Lengthes the use StrLen()@All
+      BindList.Put(InParamIdx, stAsciiStream, Tmp, FClientCP);
+      FPQparamFormats[InParamIdx] := ParamFormatStr;
+      if Tmp <> ''
+      then FPQparamValues[InParamIdx] := Pointer(Tmp)
+      else FPQparamValues[InParamIdx] := PEmptyAnsiString;
+      FPQparamLengths[InParamIdx] := RefCntLob.Length;
+    end
 end;
 
 procedure TZPostgreSQLPreparedStatementV3.BindRawStr(Index: Integer;
