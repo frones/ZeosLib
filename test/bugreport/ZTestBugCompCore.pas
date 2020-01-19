@@ -2265,10 +2265,10 @@ const
   Words: array[0..4] of Word = ($5317,$4EAC,$0020,$6771,$4EAC); // Beijing + Space + Tokyo
   {$ENDIF}
 
-  procedure InsertValue(const id: Integer; const value: WideString);
+  procedure InsertValue(const id: Integer; const value: UnicodeString);
   begin
     Query.ParamByName('id').AsInteger := id;
-    Query.ParamByName('string').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsValue{$ENDIF} := value;
+    Query.ParamByName('string').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := value;
     Query.ExecSQL;
   end;
 begin
@@ -2306,22 +2306,22 @@ begin
       Query.SQL.Text := 'select s_id, s_nvarchar from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006) order by s_id';
       Query.Open;
       CheckEquals(1001, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str1, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsValue{$ENDIF});
+      CheckEquals(Str1, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1002, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str2, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsValue{$ENDIF});
+      CheckEquals(Str2, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1003, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsValue{$ENDIF});
+      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1004, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsValue{$ENDIF});
+      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1005, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsValue{$ENDIF});
+      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1006, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str6, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsValue{$ENDIF});
+      CheckEquals(Str6, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Assert(CP <> 0);
       Assert(Consettings <> nil);
     finally
