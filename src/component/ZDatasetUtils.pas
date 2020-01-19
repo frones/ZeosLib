@@ -1885,7 +1885,10 @@ begin
       ftCurrency, ftBCD:
         Statement.SetCurrency(Index, Param.AsCurrency);
       ftString, ftFixedChar:
-        Statement.SetString(Index, Param.AsString);
+        {$IFNDEF UNICODE}
+        if (TVarData(Param.Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Param.Value).VType = varUString){$ENDIF}
+        then Statement.SetUnicodeString(Index, Param.Value)
+        else {$ENDIF}Statement.SetString(Index, Param.AsString);
       {$IFDEF WITH_FTWIDESTRING}
       ftWideString:
         Statement.SetUnicodeString(Index, Param.AsWideString);
