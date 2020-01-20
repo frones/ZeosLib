@@ -359,16 +359,6 @@ type
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
 
-//    // (technobot) should any of these be moved to TZProxyDatabaseInfo?:
-//    function GetPostgreSQLType(Oid: OID): string;
-//    function GetSQLTypeByOid(Oid: OID): TZSQLType;
-//    function GetSQLTypeByName(const TypeName: string): TZSQLType;
-//    function TableTypeSQLExpression(const TableType: string; UseSchemas: Boolean):
-//      string;
-//    procedure ParseACLArray(List: TStrings; const AclString: string);
-//    function GetPrivilegeName(Permission: char): string;
-//    // (technobot) end of questioned section
-
 //    function EscapeString(const S: string): string; override;
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;

@@ -305,6 +305,9 @@ uses
   ZMessages, ZEncoding, ZFastCode, ZDbcMetadata, ZClasses,
   TypInfo, Variants, xmldom, {$IFDEF WITH_OMNIXML}Xml.omnixmldom,{$ENDIF} System.Contnrs, EncdDecd;
 
+const
+  ValueAttr = 'value';
+
 function BoolToInt(Value: Boolean): Integer;
 begin
   if Value then Result := 1 else Result := 0;
@@ -337,7 +340,7 @@ begin
 
   xmldoc := TXMLDocument.Create(nil);
   // OmiXml preserves the Carriage Return in Strings -> This solves a problem
-  // where CRLF gets converted to LF wit MSXML(?)
+  // where CRLF gets converted to LF wit MSXML
   DomVendor := DOMVendors.Find('Omni XML');
   if Assigned(DomVendor) then
     xmldoc.DOMImplementation := DomVendor.DOMImplementation;
@@ -478,14 +481,14 @@ begin
   LastWasNull := IsNull(ColumnIndex);
 
   if not LastWasNull then begin
-    Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+    Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FStringBuffer := VarToStrDef(Val, '');
   end;
 
   if (FStringBuffer = '') or (LastWasNull) then begin
     Result := nil;
   end else begin
-    Result := @FStringBuffer[1];
+    Result := @FStringBuffer[Low(FStringBuffer)];
   end;
 end;
 
@@ -496,7 +499,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
 
   if not LastWasNull then begin
-    Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+    Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FAnsiBuffer := AnsiString(VarToStrDef(Val, ''));
   end;
 
@@ -505,7 +508,7 @@ begin
     Len := 0
   end else begin
     Len := Length(FAnsiBuffer);
-    Result := @FAnsiBuffer[1];
+    Result := @FAnsiBuffer[Low(FAnsiBuffer)];
   end;
 end;
 
@@ -523,7 +526,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
 
   if not LastWasNull then begin
-    Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+    Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FWideBuffer := VarToStrDef(Val, '');
   end;
 
@@ -532,7 +535,7 @@ begin
     Len := 0
   end else begin
     Len := Length(FWideBuffer);
-    Result := @FWideBuffer[1];
+    Result := @FWideBuffer[Low(FWideBuffer)];
   end;
 end;
 
@@ -553,7 +556,7 @@ begin
     exit;
   end;
 
-  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
   Result := Val;
 end;
 
@@ -568,7 +571,7 @@ begin
     exit;
   end;
 
-  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
   Result := AnsiString(Val);
 end;
 {$ENDIF}
@@ -584,7 +587,7 @@ begin
     exit;
   end;
 
-  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
   Result := UTF8Encode(Val);
 end;
 {$ENDIF}
@@ -599,7 +602,7 @@ begin
     exit;
   end;
 
-  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
   Result := UTF8Encode(Val);
 end;
 
@@ -613,7 +616,7 @@ begin
     exit;
   end;
 
-  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
   Result := RawByteString(Val);
 end;
 
@@ -627,7 +630,7 @@ begin
     exit;
   end;
 
-  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
   Result := Val;
 end;
 
@@ -649,7 +652,7 @@ begin
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
   if not LastWasNull then begin
-    Str := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes['value'];
+    Str := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     Result := StrToBool(Str);
   end else begin
     Result := false;
@@ -682,7 +685,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -734,7 +737,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -786,7 +789,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -838,7 +841,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -890,7 +893,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -943,7 +946,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -1010,7 +1013,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -1064,7 +1067,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -1116,7 +1119,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -1169,7 +1172,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
   case ColType of
     stBoolean:
@@ -1224,7 +1227,7 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes['value'];
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
   ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
   ColType := ColInfo.ColumnType;
   case ColType of
