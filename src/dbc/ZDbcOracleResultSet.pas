@@ -111,7 +111,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
@@ -876,6 +876,63 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet_A.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+var
+  SQLVarHolder: PZSQLVar;
+  P: PAnsiChar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
+  {$R-}
+  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    LastWasNull := True;
+    Result := nil;
+    Len := 0;
+  end else begin
+    P := SQLVarHolder^.valuep+(FCurrentRowBufIndex*SQLVarHolder^.value_sz);
+    LastWasNull := False;
+    case SQLVarHolder.dty of
+      { the supported character/raw binary types we use }
+      SQLT_VST: begin
+                  Result := @PPOCILong(P)^.data[0];
+                  Len := PPOCILong(P)^.Len;
+                end;
+      SQLT_VCS, SQLT_VBI: begin
+                  Result := @POCIVary(P).data[0];
+                  Len := POCIVary(P).Len;
+                end;
+      SQLT_LVC, SQLT_LVB: begin
+                  Result := @POCILong(P).data[0];
+                  Len := POCILong(P).Len;
+                end;
+      { the supported large object types types we use }
+      SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE, SQLT_CLOB: begin
+        FRawTemp := GetBlob(ColumnIndex).GetString;
+        Result := Pointer(FRawTemp);
+        Len := Length(FRawTemp);
+      end else begin
+        Result := PByte(P);
+        Len := SQLVarHolder.value_sz;
+      end;
+    end;
+  end;
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>int</code> in the Java programming language.
@@ -1282,46 +1339,6 @@ begin
       SQLT_DAT, SQLT_TIMESTAMP:
         Double2BCD(GetTimeStamp(ColumnIndex), Result);
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
-    end;
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte array</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleAbstractResultSet_A.GetBytes(ColumnIndex: Integer): TBytes;
-var
-  SQLVarHolder: PZSQLVar;
-  P: PAnsiChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBytes);
-{$ENDIF}
-  {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
-  if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    LastWasNull := True;
-    Result := nil
-  end else begin
-    P := SQLVarHolder^.valuep+(FCurrentRowBufIndex*SQLVarHolder^.value_sz);
-    LastWasNull := False;
-    case SQLVarHolder.dty of
-      { the supported character/raw binary types we use }
-      SQLT_VST: Result := BufferToBytes(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len);
-      SQLT_VCS, SQLT_VBI: Result := BufferToBytes(@POCIVary(P).data[0], POCIVary(P).Len);
-      SQLT_LVC, SQLT_LVB: Result := BufferToBytes(@POCILong(P).data[0], POCILong(P).Len);
-      { the supported large object types types we use }
-      SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE, SQLT_CLOB:
-        Result := GetBlob(ColumnIndex).GetBytes;
-      else
-        Result := BufferToBytes(P, SQLVarHolder.value_sz);
     end;
   end;
 end;

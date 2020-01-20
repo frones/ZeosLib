@@ -2623,7 +2623,7 @@ var
   D: TZDate absolute TS;
   S: TTimeStamp absolute TS;
   DT: TDateTime;
-  bLen: Word;
+  bLen: NativeUInt;
   P: Pointer;
   RowBuffer: PZRowBuffer;
 begin
@@ -2699,14 +2699,15 @@ begin
         {$ENDIF !WITH_FTTIMESTAMP_OFFSET}
         { Processes binary fields. }
         ftVarBytes: begin
-            P := RowAccessor.GetBytes(ColumnIndex, Result, PWord(Buffer)^);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move((PAnsiChar(P)+SizeOf(Word))^,
+            P := RowAccessor.GetBytes(ColumnIndex, Result, bLen);
+            PWord(Buffer)^ := bLen;
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^,
               Pointer(Buffer)^, Min(PWord(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex)));
           end;
         ftBytes: begin
             P := RowAccessor.GetBytes(ColumnIndex, Result, bLen);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, Min(bLen, RowAccessor.GetColumnDataSize(ColumnIndex)));
-            FillChar((PAnsiChar(Buffer)+bLen)^, RowAccessor.GetColumnDataSize(ColumnIndex)-blen, #0);
+            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, Min(Integer(bLen), RowAccessor.GetColumnDataSize(ColumnIndex)));
+            FillChar((PAnsiChar(Buffer)+bLen)^, RowAccessor.GetColumnDataSize(ColumnIndex)-Integer(blen), #0);
           end;
         { Processes blob fields. }
         ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF} :

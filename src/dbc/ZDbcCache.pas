@@ -210,7 +210,7 @@ type
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD; out IsNull: Boolean);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID; out IsNull: Boolean);
     function GetBytes(ColumnIndex: Integer; out IsNull: Boolean): TBytes; overload;
-    function GetBytes(ColumnIndex: Integer; out IsNull: Boolean; out Len: Word): Pointer; overload;
+    function GetBytes(ColumnIndex: Integer; out IsNull: Boolean; out Len: NativeUint): Pointer; overload;
     procedure GetDate(ColumnIndex: Integer; out IsNull: Boolean; Var Result: TZDate);
     procedure GetTime(ColumnIndex: Integer; out IsNull: Boolean; Var Result: TZTime);
     procedure GetTimestamp(ColumnIndex: Integer; out IsNull: Boolean; var Result: TZTimeStamp);
@@ -3076,20 +3076,19 @@ begin
     IsNull := True;
 end;
 
-
 {**
-  Gets the value of the designated column in the current row
+  Gets the address of value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>Pointer</code> reference.
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param IsNull if the value is SQL <code>NULL</code>, the
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
-  @param Len return the count of Bytes for the value
-  @return the column value
 }
 function TZRowAccessor.GetBytes(ColumnIndex: Integer; out IsNull: Boolean;
-  out Len: Word): Pointer;
+  out Len: NativeUint): Pointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -4401,9 +4400,7 @@ begin
   Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stDate: if SizeOf(TZDate) = SizeOf(Int64)
-            then PInt64(Data)^ := 0
-            else FillChar(Data^, SizeOf(TZDate), #0);
+    stDate: PInt64(Data)^ := 0;
     stTime: PZTime(Data)^ := Value;
     stTimestamp: TimeStampFromTime(Value, PZTimeStamp(Data)^);
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: if fRaw then begin

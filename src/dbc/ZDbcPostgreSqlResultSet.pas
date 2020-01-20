@@ -133,7 +133,7 @@ type
     procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     function GetBlob(ColumnIndex: Integer): IZBlob;
 
     function MoveAbsolute(Row: Integer): Boolean; override;
@@ -1211,6 +1211,89 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractPostgreSQLStringResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+var
+  pgBuff: PAnsiChar;
+  to_lenght: LongWord;
+  TempLob: IZBLob;
+  ResUUID: PGUID absolute Result;
+  SrcUUID: PGUID absolute pgBuff;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
+  if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
+    Result := PByte(FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex));
+    if ColumnOID = BYTEAOID {bytea} then begin
+      if FBinaryValues then
+        Len := FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex)
+      else if FIs_bytea_output_hex then begin
+        {skip trailing /x}
+        Len := (ZFastCode.StrLen(PAnsichar(Result))-2) shr 1;
+        SetLength(FRawTemp, Len);
+        if Len > 0 then begin
+          HexToBin(PAnsichar(Result)+2, Pointer(FRawTemp), Len);
+          Result := Pointer(FRawTemp);
+        end;
+      end else if Assigned(FPlainDriver.PQUnescapeBytea) then begin
+        pgBuff := FPlainDriver.PQUnescapeBytea(PAnsiChar(Result), @to_lenght);
+        ZSetString(pgBuff, to_lenght, FRawTemp);
+        FPlainDriver.PQFreemem(pgBuff);
+        Result := Pointer(FRawTemp);
+        Len := to_lenght;
+      end else begin
+        pgBuff := PAnsiChar(Result);
+        to_lenght := ZFastCode.StrLen(pgBuff);
+        SetLength(FRawTemp, to_lenght);
+        Result := Pointer(FRawTemp);
+        Len := DecodeCString(to_lenght, pgBuff, PAnsichar(Result));
+      end;
+    end else if ColumnOID = UUIDOID { uuid } then begin
+      SetLength(FRawTemp, SizeOf(TGUID)); //take care we've a unique dyn-array if so then this alloc happens once
+      pgBuff := PAnsiChar(Result);
+      Result := Pointer(FRawTemp);
+      Len := SizeOf(TGUID);
+      if FBinaryValues then begin
+        ResUUID.D1 := PG2Cardinal(@SrcUUID.D1);
+        ResUUID.D2 := PG2Word(@SrcUUID.D2);
+        ResUUID.D3 := PG2Word(@SrcUUID.D3);
+        PInt64(@ResUUID.D4)^ := PInt64(@SrcUUID.D4)^;
+      end else ValidGUIDToBinary(pgBuff, Pointer(Result));
+    end else if ColumnOID = OIDOID { oid } then begin
+      if FBinaryValues
+      then Len := PG2Cardinal(Result)
+      else Len := RawToIntDef(PAnsiChar(Result), 0);
+      TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
+        Len, FChunk_Size);
+      FRawTemp := TempLob.GetString;
+      Result := Pointer(FRawTemp);
+      Len := Length(FRawTemp);
+    end else begin
+      Result := nil;
+      Len := 0;
+    end;
+  end else begin
+    Result := nil;
+    Len := 0;
+  end;
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>int</code> in the Java programming language.
@@ -1629,71 +1712,6 @@ begin
       end
     else LastWasNull := not TryRawToBcd(P, StrLen(P), Result, '.');
   end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractPostgreSQLStringResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-var
-  Buffer, pgBuff: PAnsiChar;
-  Len: cardinal;
-  TempLob: IZBLob;
-  ResUUID: PGUID absolute Result;
-  SrcUUID: PGUID absolute Buffer;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBytes);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, RowNo - 1, ColumnIndex) <> 0;
-  if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
-    Buffer := FPlainDriver.PQgetvalue(Fres, RowNo - 1, ColumnIndex);
-    if ColumnOID = BYTEAOID {bytea} then begin
-      if FBinaryValues then
-        Result := BufferToBytes(Buffer, FPlainDriver.PQgetlength(Fres, RowNo - 1, ColumnIndex))
-      else if FIs_bytea_output_hex then begin
-        {skip trailing /x}
-        SetLength(Result, (ZFastCode.StrLen(Buffer)-2) shr 1);
-        if Assigned(Result) then
-          HexToBin(Buffer+2, Pointer(Result), Length(Result));
-      end else if Assigned(FPlainDriver.PQUnescapeBytea) then begin
-        pgBuff := FPlainDriver.PQUnescapeBytea(Buffer, @Len);
-        Result := BufferToBytes(pgBuff, Len);
-        FPlainDriver.PQFreemem(pgBuff);
-      end else begin
-        Len := ZFastCode.StrLen(Buffer);
-        SetLength(Result, Len);
-        SetLength(Result, DecodeCString(Len, Buffer, Pointer(Result)));
-      end;
-    end else if ColumnOID = UUIDOID { uuid } then begin
-      SetLength(Result, SizeOf(TGUID)); //take care we've a unique dyn-array if so then this alloc happens once
-      if FBinaryValues then begin
-        ResUUID.D1 := PG2Cardinal(@SrcUUID.D1);
-        ResUUID.D2 := PG2Word(@SrcUUID.D2);
-        ResUUID.D3 := PG2Word(@SrcUUID.D3);
-        PInt64(@ResUUID.D4)^ := PInt64(@SrcUUID.D4)^;
-      end else ValidGUIDToBinary(Buffer, Pointer(Result));
-    end else if ColumnOID = OIDOID { oid } then begin
-      if FBinaryValues
-      then Len := PG2Cardinal(Buffer)
-      else Len := RawToIntDef(Buffer, 0);
-      TempLob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FconnAddress^,
-        Len, FChunk_Size);
-      Result := TempLob.GetBytes
-    end else if FBinaryValues then
-
-    else Result := BufferToBytes(Buffer, ZFastCode.StrLen(Buffer))
-  end else Result := nil;
 end;
 
 {**

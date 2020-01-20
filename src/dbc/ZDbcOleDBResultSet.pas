@@ -121,7 +121,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
@@ -860,6 +860,40 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractOleDBResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+begin
+  Result := nil;
+  Len := 0;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FwType of
+      DBTYPE_GUID:
+        begin
+          SetLength(FRawTemp, SizeOf(TGUID));
+          Result := Pointer(FRawTemp);
+          Len := SizeOf(TGUID);
+          PGUID(Result)^ := PGUID(FData)^;
+        end;
+      DBTYPE_BYTES:
+        begin
+          Result := FData;
+          Len := FLength;
+        end;
+      else LastWasNull := True;
+    end;
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>int</code> in the Java programming language.
@@ -1295,34 +1329,6 @@ Fail:    raise CreateOleDbConvertError(ColumnIndex, fwType);
     end
   else
     FillChar(Result, SizeOf(TBCD), #0)
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractOleDBResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-begin
-  Result := nil;
-  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
-    case FwType of
-      DBTYPE_GUID:
-        begin
-          SetLength(Result, 16);
-          PGUID(Result)^ := PGUID(FData)^;
-        end;
-      DBTYPE_BYTES:
-        begin
-          Result := BufferToBytes(FData, FLength);
-        end;
-      else LastWasNull := True;
-    end;
 end;
 
 {**

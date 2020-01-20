@@ -177,8 +177,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
     function GetString(ColumnIndex: Integer): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
@@ -198,7 +198,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
@@ -245,7 +245,7 @@ type
     {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
+    procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
@@ -972,6 +972,26 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractCachedResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetBytes(ColumnIndex, LastWasNull, len);
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>uint</code> in the Java programming language.
@@ -1129,24 +1149,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractCachedResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  Result := FRowAccessor.GetBytes(ColumnIndex, LastWasNull);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>java.sql.Date</code> object in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1290,6 +1292,27 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetByte(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>byte</code> array value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the address of new column value
+  @param Len the length of the addressed value
+}
+procedure TZAbstractCachedResultSet.UpdateBytes(ColumnIndex: Integer;
+  Value: PByte; var Len: NativeUInt);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetBytes(ColumnIndex, Value, Len);
 end;
 
 {**
@@ -1667,26 +1690,6 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetUnicodeString(ColumnIndex, Value);
-end;
-
-{**
-  Updates the designated column with a <code>byte</code> array value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-}
-procedure TZAbstractCachedResultSet.UpdateBytes(ColumnIndex: Integer;
-  const Value: TBytes);
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckUpdatable;
-{$ENDIF}
-  PrepareRowForUpdates;
-  FRowAccessor.SetBytes(ColumnIndex, Value);
 end;
 
 {**

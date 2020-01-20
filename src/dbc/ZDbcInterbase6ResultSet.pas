@@ -124,7 +124,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
@@ -702,16 +702,16 @@ begin
 end;
 
 {**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
+  Returns the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>Blob</code> object
+  in the Java programming language.
 
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
+    the specified column
 }
-function TZInterbase6XSQLDAResultSet.GetBytes(ColumnIndex: Integer): TBytes;
+function TZInterbase6XSQLDAResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
 var
   XSQLVAR: PXSQLVAR;
 begin
@@ -723,15 +723,26 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
-    Result := nil
+    Result := nil;
+    Len := 0;
   end else begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
-      SQL_VARYING: Result := BufferToBytes(@PISC_VARYING(XSQLVAR.sqldata).str[0], PISC_VARYING(XSQLVAR.sqldata).strlen);
+      SQL_VARYING: begin
+          Result := @PISC_VARYING(XSQLVAR.sqldata).str[0];
+          Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
+        end;
       SQL_QUAD,
       SQL_BLOB,
-      SQL_ARRAY: Result := GetBlob(ColumnIndex).GetBytes;
-      else Result := BufferToBytes(XSQLVAR.sqldata, XSQLVAR.sqllen);
+      SQL_ARRAY: begin
+          FRawTemp := GetBlob(ColumnIndex).GetString;
+          Result := Pointer(FRawTemp);
+          Len := Length(FRawTemp);
+        end;
+      else begin
+        Result := PByte(XSQLVAR.sqldata);
+        Len := XSQLVAR.sqllen;
+      end;
     end;
   end;
 end;

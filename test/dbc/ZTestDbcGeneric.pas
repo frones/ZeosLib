@@ -1471,6 +1471,9 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
   Len, name: NativeUInt;
+  R: RawByteString;
+  U: UnicodeString;
+  P: Pointer;
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -1486,14 +1489,12 @@ begin
         CheckEquals(UTF8String(SNames[name]), ResultSet.GetUTF8String(p_name_Index));
         CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
         CheckEquals(ZWideString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
-        //some drivers are not null terminated such as ASA so the test can't pass with the deprecated getters
-        if ProtocolType <> protASA then
-          CheckEquals(PAnsiChar(AnsiString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index));
-        CheckEquals(PAnsiChar(RawByteString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-        {$IFNDEF UNICODE} if ProtocolType <> protASA then {$ENDIF}
-          CheckEquals(PChar(SNames[name]), ResultSet.GetPChar(p_name_Index));
-        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index)));
-        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index, Len)));
+        P := ResultSet.GetPAnsiChar(p_name_Index, Len);
+        ZSetString(PAnsiChar(P), Len, R);
+        CheckEquals(RawByteString(SNames[name]), R);
+        P := ResultSet.GetPWideChar(p_name_Index, Len);
+        System.SetString(U, PWideChar(P), Len);
+        CheckEquals(ZWideString(SNames[name]), U);
       end;
     finally
       ResultSet.Close;

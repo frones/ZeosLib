@@ -1124,9 +1124,10 @@ var I: Integer;
   var RS: IZResultSet;
     Stmt: IZStatement;
   begin
+    Result := False;
     Stmt := CreateRegularStatement(Info);
     RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
-    try
+    if RS <> nil then try
       if RS.Next then begin
         Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
         FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
