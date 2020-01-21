@@ -1826,7 +1826,7 @@ var
       stFloatArray[i] := RandomFloat(-5000, 5000);
       stDoubleArray[i] := RandomFloat(-5000, 5000);
       stBigDecimalArray[i] := DoubleToBCD(RandomFloat(-5000, 5000));
-      stStringArray[i] := RandomStr(Random(99)+1);
+      stStringArray[i] := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(RandomStr(Random(99)+1));
       stUnicodeStringArray[i] := RandomStr(Random(254+1));
       stBytesArray[i] := RandomBts(ArrayLen);
       stDateArray[i] := Trunc(Now);
