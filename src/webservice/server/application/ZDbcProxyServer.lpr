@@ -9,7 +9,7 @@ uses
   Classes, SysUtils, CustApp,
   { you can add units after this }
   //{fpc}lazutils,
-  {wst}server_listener, fpc_http_server, server_service_soap, zdbc,
+  {wst}server_listener, fpc_http_server, server_service_soap,
   {synapse}
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement;

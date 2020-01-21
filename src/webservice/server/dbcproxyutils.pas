@@ -1,8 +1,10 @@
 unit DbcProxyUtils;
 
 {$ifdef fpc}
-{$mode delphi}{$H+}
+{$H+}
 {$ifend}
+
+{$I ../../Zeos.inc}
 
 interface
 
@@ -23,7 +25,7 @@ function XMLEncode(Input: String): String;
 implementation
 
 uses
-  typinfo, dom, XMLRead, Base64;
+  typinfo, dom, XMLRead, Base64{$IFDEF ZEOS73UP}, FMTBCD{$ENDIF};
 
 var
   ProxyFormatSettings: TFormatSettings;
@@ -94,7 +96,9 @@ begin
     Line := '';
     addProperty('catalogname', MD.GetCatalogName(x));
     addProperty('codepage', IntToStr(MD.GetColumnCodePage(x)));  // is this needed? All data is unicode in the end?
+    {$IFNDEF ZEOS73UP}
     addProperty('displaysize', MD.GetColumnDisplaySize(x));
+    {$ENDIF}
     addProperty('label', MD.GetColumnLabel(x));
     addProperty('name', MD.GetColumnName(x));
     addProperty('type', MD.GetColumnType(x));
@@ -145,10 +149,20 @@ begin
   Result := '<field value="' + FloatToStr(RS.GetDouble(Idx), ProxyFormatSettings) + '" />';
 end;
 
+{$IFNDEF ZEOS73UP}
 function ConvertExtended(const RS: IZResultSet; Const Idx: Integer): String;
 begin
   Result := '<field value="' + FloatToStr(RS.GetBigDecimal(Idx), ProxyFormatSettings) + '" />';
 end;
+{$ELSE}
+function ConvertBcd(const RS: IZResultSet; Const Idx: Integer): String;
+var
+  BCD: TBCD;
+begin
+  RS.GetBigDecimal(Idx, BCD);
+  Result := BCDToStr(BCD);
+end;
+{$ENDIF}
 
 function ConvertString(const RS: IZResultSet; Const Idx: Integer): String;
 var
@@ -246,7 +260,11 @@ begin
         stULong, stLong: CF[Idx - 1] := ConvertInt64;
         stFloat: CF[Idx - 1] := ConvertSingle;
         stDouble, stCurrency: CF[Idx - 1] := ConvertDouble;
+        {$IFNDEF ZEOS73UP}
         stBigDecimal: CF[Idx - 1] := ConvertExtended;
+        {$ELSE}
+        stBigDecimal: CF[Idx - 1] := ConvertBcd;
+        {$ENDIF}
         stString, stUnicodeString: CF[Idx - 1] := ConvertString;
         stDate: CF[Idx - 1] := ConvertDate;
         stTime: CF[Idx - 1] := ConvertTime;
