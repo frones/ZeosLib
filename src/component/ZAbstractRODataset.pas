@@ -1774,16 +1774,26 @@ end;
 }
 procedure TZAbstractRODataset.SetConnection(Value: TZAbstractConnection);
 begin
-  if FConnection <> Value then
-  begin
+  if FConnection <> Value then begin
     if Active then
        Close;
     Unprepare;
     if FConnection <> nil then
       FConnection.UnregisterDataSet(Self);
     FConnection := Value;
-    if FConnection <> nil then
+    if FConnection <> nil then begin
       FConnection.RegisterDataSet(Self);
+      if FSQL.Count > 0 then begin
+      {EH: force rebuild all of the SQLStrings ->
+        in some case the generic tokenizer fails for several reasons like:
+        keyword detection, identifier detection, Field::=x(ParamEsacaping to ":=" ) vs. Field::BIGINT (pg-TypeCasting)
+        using persistent components where creation order means the datasets are
+        created before the connection+protocol is available the generic
+        tokenizer fails in all areas}
+        FSQL.BeginUpdate;
+        FSQL.EndUpdate;
+      end;
+    end;
   end;
 end;
 
