@@ -59,7 +59,6 @@ uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
 
-{$IFNDEF FPC}
 type
 
   {** Implements a bug report test case for DbLib components. }
@@ -67,24 +66,29 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
+    {$IFDEF MSWINDOWS} //see the teststring variable
     procedure Test_NChar_Values;
+    {$ENDIF}
+    procedure BlankTest;
   end;
-  {$ENDIF}
 
 implementation
 
 { ZTestCompDbLibBugReport }
+procedure ZTestCompDbLibBugReport.BlankTest;
+begin
+  Check(True);
+end;
 
-{$IFNDEF FPC}
 function ZTestCompDbLibBugReport.GetSupportedProtocols: string;
 begin
   Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
 end;
-
+{$IFDEF MSWINDOWS}
 procedure ZTestCompDbLibBugReport.Test_NChar_Values;
 var
   Query: TZQuery;
-  TStr, Str3, Str4, Str5: String;
+  TStr, Str3, Str4, Str5: ZWideString;
 begin
   TStr := Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+
           Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)+
@@ -94,7 +98,6 @@ begin
   Str4 := Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215);
   Str5 := Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223);
 
-
   Query := CreateQuery;
   try
     Query.SQL.Text := 'select n_id, s_nchar, s_nvarchar from national_char_values';
@@ -103,55 +106,28 @@ begin
     Query.Close;
     Query.SQL.Text := 'insert into national_char_values values(:n_id, :s_nchar, :s_nvarchar, :b_ntext, :s_char, :s_varchar, :b_text)';
     Query.ParamByName('n_id').AsInteger := 1;
-    {$IFDEF WITH_FTWIDESTRING}
-    Query.ParamByName('s_nchar').AsWideString := Str3;
-    Query.ParamByName('s_nvarchar').AsWideString := Str3;
-    Query.ParamByName('b_ntext').AsWideString := TStr+TStr+TStr;
-    Query.ParamByName('s_char').AsWideString := Str3;
-    Query.ParamByName('s_varchar').AsWideString := Str3;
-    Query.ParamByName('b_text').AsWideString := TStr+TStr+TStr;
-    {$ELSE}
-    Query.ParamByName('s_nchar').AsString := GetDBTestString(Str3, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(Str3, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('b_ntext').AsString := GetDBTestString(TStr+TStr+TStr, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_char').AsString := GetDBTestString(Str3, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_varchar').AsString := GetDBTestString(Str3, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('b_text').AsString := GetDBTestString(TStr+TStr+TStr, Query.Connection.DbcConnection.GetConSettings);
-    {$ENDIF}
+    Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str3;
+    Query.ParamByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str3;
+    Query.ParamByName('b_ntext').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := TStr+TStr+TStr;
+    Query.ParamByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str3;
+    Query.ParamByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str3;
+    Query.ParamByName('b_text').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := TStr+TStr+TStr;
     Query.ExecSQL;
     Query.ParamByName('n_id').AsInteger := 2;
-    {$IFDEF WITH_FTWIDESTRING}
-    Query.ParamByName('s_nchar').AsWideString := Str4;
-    Query.ParamByName('s_nvarchar').AsWideString := Str4;
-    Query.ParamByName('b_ntext').AsWideString := TStr+TStr+TStr;
-    Query.ParamByName('s_char').AsWideString := Str4;
-    Query.ParamByName('s_varchar').AsWideString := Str4;
-    Query.ParamByName('b_text').AsWideString := TStr+TStr+TStr;
-    {$ELSE}
-    Query.ParamByName('s_nchar').AsString := GetDBTestString(Str4, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(Str4, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('b_ntext').AsString := GetDBTestString(TStr+TStr+TStr, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_char').AsString := GetDBTestString(Str4, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_varchar').AsString := GetDBTestString(Str4, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('b_text').AsString := GetDBTestString(TStr+TStr+TStr, Query.Connection.DbcConnection.GetConSettings);
-    {$ENDIF}
+    Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str4;
+    Query.ParamByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str4;
+    Query.ParamByName('b_ntext').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := TStr+TStr+TStr;
+    Query.ParamByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str4;
+    Query.ParamByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str4;
+    Query.ParamByName('b_text').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := TStr+TStr+TStr;
     Query.ExecSQL;
     Query.ParamByName('n_id').AsInteger := 3;
-    {$IFDEF WITH_FTWIDESTRING}
-    Query.ParamByName('s_nchar').AsWideString := Str5;
-    Query.ParamByName('s_nvarchar').AsWideString := Str5;
-    Query.ParamByName('b_ntext').AsWideString := TStr+TStr+TStr;
-    Query.ParamByName('s_char').AsWideString := Str5;
-    Query.ParamByName('s_varchar').AsWideString := Str5;
-    Query.ParamByName('b_text').AsWideString := TStr+TStr+TStr;
-    {$ELSE}
-    Query.ParamByName('s_nchar').AsString := GetDBTestString(Str5, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(Str5, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('b_ntext').AsString := GetDBTestString(TStr+TStr+TStr, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_char').AsString := GetDBTestString(Str5, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_varchar').AsString := GetDBTestString(Str5, Query.Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('b_text').AsString := GetDBTestString(TStr+TStr+TStr, Query.Connection.DbcConnection.GetConSettings);
-    {$ENDIF}
+    Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str5;
+    Query.ParamByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str5;
+    Query.ParamByName('b_ntext').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := TStr+TStr+TStr;
+    Query.ParamByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str5;
+    Query.ParamByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str5;
+    Query.ParamByName('b_text').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := TStr+TStr+TStr;
     Query.ExecSQL;
     Query.SQL.Text := 'select n_id, s_nchar, s_nvarchar, s_char, s_varchar from national_char_values';
     Query.Open;
@@ -177,20 +153,20 @@ begin
     else
     {$ENDIF}
     begin
-      CheckEquals(Str3, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
-      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
-      CheckEquals(Str3, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
-      CheckEquals(Str3, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
+      CheckEquals(Str3, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nchar value');
+      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nvarchar value');
+      CheckEquals(Str3, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_char value');
+      CheckEquals(Str3, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_varchar value');
       Query.Next;
-      CheckEquals(Str4, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
-      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
-      CheckEquals(Str4, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
-      CheckEquals(Str4, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
+      CheckEquals(Str4, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nchar value');
+      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nvarchar value');
+      CheckEquals(Str4, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_char value');
+      CheckEquals(Str4, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_varchar value');
       Query.Next;
-      CheckEquals(Str5, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
-      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
-      CheckEquals(Str5, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
-      CheckEquals(Str5, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
+      CheckEquals(Str5, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nchar value');
+      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nvarchar value');
+      CheckEquals(Str5, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_char value');
+      CheckEquals(Str5, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_varchar value');
     end;
   finally
     Query.Properties.Values['ValidateUpdateCount'] := '-1';
@@ -199,10 +175,8 @@ begin
     Query.Free;
   end;
 end;
-{$ENDIF}
+{$ENDIF MSWINDOWS}
 
 initialization
-{$IFNDEF FPC}
   RegisterTest('bugreport',ZTestCompDbLibBugReport.Suite);
-{$ENDIF}
 end.
