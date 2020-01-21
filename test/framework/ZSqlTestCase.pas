@@ -695,9 +695,9 @@ function TZAbstractSQLTestCase.GetProvider: TZServerProvider;
 var
   Connection: IZConnection;
 begin
-  if FProvider <> spUnknown  then begin
-    Result := FProvider;
-  end else begin
+  if FProvider <> spUnknown
+  then Result := FProvider
+  else begin
     case GetProtocolType of
       protMySQL: FProvider := spMySQL;
       protPostgre: FProvider := spPostgreSQL;
@@ -706,13 +706,12 @@ begin
       protOracle: FProvider := spOracle;
       protASA: FProvider := spASA;
       protMSSQL, protOleDB, protADO, protFreeTDS, protODBC, protSybase: begin
-        Connection := CreateDbcConnection;
-        Connection.Open;
-        FProvider := Connection.GetServerProvider;
-      end;
-      else
-        FProvider := spUnknown;
+          Connection := CreateDbcConnection;
+          Connection.Open;
+          FProvider := Connection.GetServerProvider;
+        end;
     end;
+    Result := FProvider;
   end;
 end;
 
@@ -720,15 +719,13 @@ function TZAbstractSQLTestCase.GetTransport: TZTransport;
 begin
   if FTransport <> traUnknown then begin
     Result := FTransport;
-  end else begin
-    case GetProtocolType of
-      protUnknown: Result := traUnknown;
-      protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protFreeTDS, protMSSQL, protSybase: Result := traNative;
-      protOleDB: Result := traOLEDB;
-      protADO: Result := traADO;
-      protODBC: Result := traODBC;
-      protWebServiceProxy: Result := traWEBPROXY;
-    end;
+  end else case GetProtocolType of
+    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protFreeTDS, protMSSQL, protSybase: Result := traNative;
+    protOleDB: Result := traOLEDB;
+    protADO: Result := traADO;
+    protODBC: Result := traODBC;
+    protWebServiceProxy: Result := traWEBPROXY;
+    else Result := traUnknown;
   end;
 end;
 
