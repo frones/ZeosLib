@@ -93,6 +93,11 @@ contains
   ZDbcSqLiteStatement in '..\..\src\dbc\ZDbcSqLiteStatement.pas',
   ZDbcSqLiteUtils in '..\..\src\dbc\ZDbcSqLiteUtils.pas',
   ZDbcStatement in '..\..\src\dbc\ZDbcStatement.pas',
-  ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas';
+  ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
+  ZDbcProxy in '..\..\src\dbc\ZDbcProxy.pas',
+  ZDbcProxyMetadata in '..\..\src\dbc\ZDbcProxyMetadata.pas',
+  ZDbcProxyResultSet in '..\..\src\dbc\ZDbcProxyResultSet.pas',
+  ZDbcProxyStatement in '..\..\src\dbc\ZDbcProxyStatement.pas',
+  ZDbcProxyUtils in '..\..\src\dbc\ZDbcProxyUtils.pas';
 
 end.
