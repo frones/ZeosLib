@@ -1243,7 +1243,6 @@ procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
