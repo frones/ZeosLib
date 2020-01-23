@@ -838,15 +838,15 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.CreateResultSet(
   ServerCursor: Boolean): IZResultSet;
 var
-  NativeResultSet: TZAbstractPostgreSQLStringResultSet;
+  NativeResultSet: TZAbstractPostgreSQLResultSet;
   CachedResultSet: TZCachedResultSet;
   Resolver: TZPostgreSQLCachedResolver;
   Metadata: IZResultSetMetadata;
 begin
   if ServerCursor
-  then NativeResultSet := TZServerCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
+  then NativeResultSet := TZServerCursorPostgreSQLResultSet.Create(Self, Self.SQL, FconnAddress,
       @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength)
-  else NativeResultSet := TZClientCursorPostgreSQLStringResultSet.Create(Self, Self.SQL, FconnAddress,
+  else NativeResultSet := TZClientCursorPostgreSQLResultSet.Create(Self, Self.SQL, FconnAddress,
       @Fres, @FPQResultFormat, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
 
   NativeResultSet.SetConcurrency(rcReadOnly);

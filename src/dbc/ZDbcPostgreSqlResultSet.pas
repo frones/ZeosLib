@@ -89,7 +89,7 @@ type
   EZPGConvertError = class(EZSQLException);
 
   {** Implements PostgreSQL ResultSet. }
-  TZAbstractPostgreSQLStringResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
+  TZAbstractPostgreSQLResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
   private
     FconnAddress: PPGconn;
     Fres: TPGresult;
@@ -142,7 +142,7 @@ type
     {$ENDIF USE_SYNCOMMONS}
   end;
 
-  TZClientCursorPostgreSQLStringResultSet = Class(TZAbstractPostgreSQLStringResultSet)
+  TZClientCursorPostgreSQLResultSet = Class(TZAbstractPostgreSQLResultSet)
   protected
     procedure Open; override;
     function PGRowNo: Integer; override;
@@ -150,7 +150,7 @@ type
     function MoveAbsolute(Row: Integer): Boolean; override;
   End;
 
-  TZServerCursorPostgreSQLStringResultSet = Class(TZAbstractPostgreSQLStringResultSet)
+  TZServerCursorPostgreSQLResultSet = Class(TZAbstractPostgreSQLResultSet)
   protected
     procedure Open; override;
     function PGRowNo: Integer; override;
@@ -296,10 +296,10 @@ begin
   {$ENDIF}
 end;
 
-{ TZAbstractPostgreSQLStringResultSet }
+{ TZAbstractPostgreSQLResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
-procedure TZAbstractPostgreSQLStringResultSet.ColumnsToJSON(
+procedure TZAbstractPostgreSQLResultSet.ColumnsToJSON(
   JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
 var
   C, L: Cardinal;
@@ -575,7 +575,7 @@ end;
   @param SQL a SQL statement.
   @param Handle a PostgreSQL specific query handle.
 }
-constructor TZAbstractPostgreSQLStringResultSet.Create(const Statement: IZStatement;
+constructor TZAbstractPostgreSQLResultSet.Create(const Statement: IZStatement;
   const SQL: string; connAddress: PPGconn; resAddress: PPGresult;
   ResultFormat: PInteger; const CachedLob: Boolean;
   const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
@@ -603,14 +603,14 @@ begin
   Open;
 end;
 
-function TZAbstractPostgreSQLStringResultSet.CreatePGConvertError(
+function TZAbstractPostgreSQLResultSet.CreatePGConvertError(
   ColumnIndex: Integer; DataType: OID): EZPGConvertError;
 begin
   Result := EZPGConvertError.Create(Format(SErrorConvertionField,
         [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel, IntToStr(DataType)]));
 end;
 
-procedure TZAbstractPostgreSQLStringResultSet.ClearPGResult;
+procedure TZAbstractPostgreSQLResultSet.ClearPGResult;
 begin
   if Fres <> nil then
   begin
@@ -626,7 +626,7 @@ end;
   @param TypeOid a type oid.
   @return a SQL undepended type.
 }
-procedure TZAbstractPostgreSQLStringResultSet.DefinePostgreSQLToSQLType(
+procedure TZAbstractPostgreSQLResultSet.DefinePostgreSQLToSQLType(
   {$IFDEF AUTOREFCOUNT}var{$ENDIF}ColumnInfo: TZPGColumnInfo; TypeOid: Oid;
   TypeModifier: Integer);
 var
@@ -700,7 +700,7 @@ end;
 {**
   Opens this recordset.
 }
-procedure TZAbstractPostgreSQLStringResultSet.Open;
+procedure TZAbstractPostgreSQLResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZPGColumnInfo;
@@ -783,7 +783,7 @@ end;
   Resets cursor position of this recordset and
   reset the prepared handles.
 }
-procedure TZAbstractPostgreSQLStringResultSet.ResetCursor;
+procedure TZAbstractPostgreSQLResultSet.ResetCursor;
 begin
   if not Closed then begin
     ClearPGResult;
@@ -798,7 +798,7 @@ end;
   @return if the value is SQL <code>NULL</code>, the
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
-function TZAbstractPostgreSQLStringResultSet.IsNull(ColumnIndex: Integer): Boolean;
+function TZAbstractPostgreSQLResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -819,7 +819,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+function TZAbstractPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var L: LongWord;
   PEnd: PAnsiChar;
   BCD: TBCD;
@@ -994,7 +994,7 @@ JmpStr:           Len := ZFastCode.StrLen(Result);
   end;
 end;
 
-function TZAbstractPostgreSQLStringResultSet.GetPWideChar(ColumnIndex: Integer;
+function TZAbstractPostgreSQLResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var P: PAnsiChar;
   PEnd: PWideChar;
@@ -1169,7 +1169,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
+function TZAbstractPostgreSQLResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1221,7 +1221,7 @@ end;
   @return the adressed column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetBytes(ColumnIndex: Integer;
+function TZAbstractPostgreSQLResultSet.GetBytes(ColumnIndex: Integer;
   out Len: NativeUInt): PByte;
 var
   pgBuff: PAnsiChar;
@@ -1302,7 +1302,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetInt(ColumnIndex: Integer): Integer;
+function TZAbstractPostgreSQLResultSet.GetInt(ColumnIndex: Integer): Integer;
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1358,7 +1358,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetLong(ColumnIndex: Integer): Int64;
+function TZAbstractPostgreSQLResultSet.GetLong(ColumnIndex: Integer): Int64;
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1415,13 +1415,13 @@ end;
     value returned is <code>0</code>
 }
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-function TZAbstractPostgreSQLStringResultSet.GetUInt(
+function TZAbstractPostgreSQLResultSet.GetUInt(
   ColumnIndex: Integer): Cardinal;
 begin
   Result := GetLong(ColumnIndex);
 end;
 
-function TZAbstractPostgreSQLStringResultSet.GetULong(ColumnIndex: Integer): UInt64;
+function TZAbstractPostgreSQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1479,7 +1479,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetFloat(ColumnIndex: Integer): Single;
+function TZAbstractPostgreSQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1535,7 +1535,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>ZERO-UUID</code>
 }
-procedure TZAbstractPostgreSQLStringResultSet.GetGUID(ColumnIndex: Integer;
+procedure TZAbstractPostgreSQLResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
 var
   Buffer, pgBuff: PAnsiChar;
@@ -1619,7 +1619,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetDouble(ColumnIndex: Integer): Double;
+function TZAbstractPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1677,7 +1677,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-procedure TZAbstractPostgreSQLStringResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+procedure TZAbstractPostgreSQLResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var P: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1723,7 +1723,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractPostgreSQLStringResultSet.GetCurrency(
+function TZAbstractPostgreSQLResultSet.GetCurrency(
   ColumnIndex: Integer): Currency;
 var P: PAnsiChar;
 begin
@@ -1773,7 +1773,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-procedure TZAbstractPostgreSQLStringResultSet.GetDate(ColumnIndex: Integer;
+procedure TZAbstractPostgreSQLResultSet.GetDate(ColumnIndex: Integer;
   var Result: TZDate);
 var
   Len: NativeUInt;
@@ -1835,7 +1835,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-procedure TZAbstractPostgreSQLStringResultSet.GetTime(ColumnIndex: Integer;
+procedure TZAbstractPostgreSQLResultSet.GetTime(ColumnIndex: Integer;
   var Result: TZTime);
 var
   Len: NativeUInt;
@@ -1902,7 +1902,7 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-procedure TZAbstractPostgreSQLStringResultSet.GetTimestamp(ColumnIndex: Integer;
+procedure TZAbstractPostgreSQLResultSet.GetTimestamp(ColumnIndex: Integer;
   var Result: TZTimeStamp);
 var
   Len: NativeUInt;
@@ -1976,7 +1976,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZAbstractPostgreSQLStringResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZAbstractPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   P: PAnsiChar;
   Len: NativeUint;
@@ -2031,7 +2031,7 @@ begin
   end;
 end;
 
-function TZAbstractPostgreSQLStringResultSet.MoveAbsolute(Row: Integer): Boolean;
+function TZAbstractPostgreSQLResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -2283,7 +2283,7 @@ begin
   {$ENDIF}
 end;
 
-{ TZClientCursorPostgreSQLStringResultSet }
+{ TZClientCursorPostgreSQLResultSet }
 
 {**
   Moves the cursor to the given row number in
@@ -2312,7 +2312,7 @@ end;
   @return <code>true</code> if the cursor is on the result set;
     <code>false</code> otherwise
 }
-function TZClientCursorPostgreSQLStringResultSet.MoveAbsolute(
+function TZClientCursorPostgreSQLResultSet.MoveAbsolute(
   Row: Integer): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2359,7 +2359,7 @@ end;
 {**
   Opens this recordset.
 }
-procedure TZClientCursorPostgreSQLStringResultSet.Open;
+procedure TZClientCursorPostgreSQLResultSet.Open;
 begin
   if not Assigned(Fres) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -2368,12 +2368,12 @@ begin
   inherited open;
 end;
 
-function TZClientCursorPostgreSQLStringResultSet.PGRowNo: Integer;
+function TZClientCursorPostgreSQLResultSet.PGRowNo: Integer;
 begin
   Result := RowNo-1;
 end;
 
-{ TZServerCursorPostgreSQLStringResultSet }
+{ TZServerCursorPostgreSQLResultSet }
 
 {**
   Moves the cursor down one row from its current position.
@@ -2390,7 +2390,7 @@ end;
   @return <code>true</code> if the new current row is valid;
     <code>false</code> if there are no more rows
 }
-function TZServerCursorPostgreSQLStringResultSet.Next: Boolean;
+function TZServerCursorPostgreSQLResultSet.Next: Boolean;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -2408,7 +2408,7 @@ end;
 {**
   Opens this recordset.
 }
-procedure TZServerCursorPostgreSQLStringResultSet.Open;
+procedure TZServerCursorPostgreSQLResultSet.Open;
 begin
   if ResultSetType <> rtForwardOnly then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -2417,7 +2417,7 @@ begin
   inherited Open;
 end;
 
-function TZServerCursorPostgreSQLStringResultSet.PGRowNo: Integer;
+function TZServerCursorPostgreSQLResultSet.PGRowNo: Integer;
 begin
   Result := 0;
 end;

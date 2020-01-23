@@ -253,7 +253,7 @@ type
     procedure SetRawByteString(ColumnIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString); virtual;
     procedure SetBytes(ColumnIndex: Integer; const Value: TBytes); overload; virtual;
-    procedure SetBytes(ColumnIndex: Integer; Buf: Pointer; Len: Word); overload; virtual;
+    procedure SetBytes(ColumnIndex: Integer; Buf: Pointer; var Len: NativeUint); overload; virtual;
     procedure SetDate(ColumnIndex: Integer; const Value: TZDate); virtual;
     procedure SetTime(ColumnIndex: Integer; const Value: TZTime); virtual;
     procedure SetTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); virtual;
@@ -4129,6 +4129,7 @@ procedure TZRowAccessor.SetPWideChar(ColumnIndex: Integer;
 var
   Data: PPointer;
   TS: TZTimeStamp;
+  L2: NativeUInt;
 begin
   {$R-}
   FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
@@ -4156,7 +4157,8 @@ begin
       else PIZLob(Data)^.SetPWideChar(Value, Len);
     stBytes, stBinaryStream: begin
         fRawTemp := UnicodeStringToAscii7(Value, Len);
-        SetBytes(ColumnIndex, Pointer(fRawTemp), Length(fRawTemp));
+        L2 := Length(fRawTemp);
+        SetBytes(ColumnIndex, Pointer(fRawTemp), L2);
       end;
     stGUID:
       if (Value <> nil) and ((Len = 36) or (Len = 38))
@@ -4288,8 +4290,10 @@ end;
   @param x the new column value
 }
 procedure TZRowAccessor.SetBytes(ColumnIndex: Integer; const Value: TBytes);
+var L: NativeUint;
 begin
-  SetBytes(ColumnIndex, Pointer(Value), Length(Value));
+  L := Length(Value);
+  SetBytes(ColumnIndex, Pointer(Value), L);
 end;
 
 {**
@@ -4302,9 +4306,8 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBytes(ColumnIndex: Integer; Buf: Pointer; Len: Word);
+procedure TZRowAccessor.SetBytes(ColumnIndex: Integer; Buf: Pointer; var Len: NativeUint);
 var Data: PPointer;
-  L: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -4325,10 +4328,7 @@ begin
           PIZLob(Data)^ := TZAbstractBlob.CreateWithData(Buf, Len)
         else
           PIZLob(Data)^.SetBuffer(Buf, Len);
-    stString, stUnicodeString: begin
-        L := Len;
-        SetPAnsiChar(ColumnIndex, Buf, L);
-      end;
+    stString, stUnicodeString: SetPAnsiChar(ColumnIndex, Buf, Len);
     else
       raise EZSQLException.Create(SConvertionIsNotPossible);
   end;

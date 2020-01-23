@@ -1761,7 +1761,7 @@ begin
           DBTYPE_UI4                  : RowAccessor.SetUInt(I, PCardinal(FData^)^);
           DBTYPE_I8                   : RowAccessor.SetLong(I, PInt64(FData^)^);
           DBTYPE_UI8                  : RowAccessor.SetULong(I, PInt64(FData^)^);
-          DBTYPE_GUID                 : RowAccessor.SetBytes(I, FData^, 16);
+          DBTYPE_GUID                 : RowAccessor.SetGUID(I, PGUID(FData)^);
           DBTYPE_BYTES                : if DBBINDING.cbMaxLen = 0 then
                                           RowAccessor.SetBlob(I, TZOleDBBLOB.Create(FResultSet.FRowSet,
                                             FResultSet.FLobAccessors[DBBINDING.obLength],

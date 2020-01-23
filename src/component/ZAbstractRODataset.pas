@@ -2887,10 +2887,14 @@ begin
             RowAccessor.SetTimestamp(ColumnIndex, TS);
           end;
         {$ENDIF}
-        ftVarBytes: { Processes varbinary fields. }
-          RowAccessor.SetBytes(ColumnIndex, PAnsiChar(Buffer)+SizeOf(Word), PWord(Buffer)^);
-        ftBytes: { Processes binary array fields. }
-          RowAccessor.SetBytes(ColumnIndex, Pointer(Buffer), Field.Size);
+        ftVarBytes: { Processes varbinary fields. } begin
+            L := PWord(Buffer)^;
+            RowAccessor.SetBytes(ColumnIndex, PAnsiChar(Buffer)+SizeOf(Word), L);
+          end;
+        ftBytes: { Processes binary array fields. } begin
+            L := Field.Size;
+            RowAccessor.SetBytes(ColumnIndex, Pointer(Buffer), L);
+          end;
         ftWideString: { Processes widestring fields. }
           //EH: Using the WideRec setter doesn't perform better. Don't know why but it seems like the IDE's are faster by setting the UnicodeStrings directly
           {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
