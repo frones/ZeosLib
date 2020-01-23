@@ -8984,4 +8984,3 @@ initialization;
   BoolConstFiller; //build bool consts
 {$ENDIF}
 end.
-
