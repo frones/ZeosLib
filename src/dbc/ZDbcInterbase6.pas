@@ -794,6 +794,7 @@ var
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
   ConnectionString, CSNoneCP, DBCP: String;
+  ti: IZIBTransaction;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -876,8 +877,6 @@ reconnect:
   FRestartTransaction := not AutoCommit;
 
   FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
-  { Start a transaction }
-  GetActiveTransaction;
   if DBCP <> '' then
     Exit;
   inherited Open;
@@ -896,6 +895,12 @@ reconnect:
     'FROM RDB$DATABASE') do begin
     if Next then DBCP := GetString(FirstDbcIndex);
     Close;
+  end;
+  if not AutoCommit then begin
+    ti := GetActiveTransaction;
+    ti.CloseTransaction;
+    ReleaseTransaction(ti);
+    ti := nil;
   end;
   if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
     EH: the server makes !NO! charset conversion if CS_NONE.
@@ -1113,8 +1118,8 @@ begin
   if AutoCommit then begin
     AutoCommit := False;
     TransactionParameterPufferChanged;
-  end;
-  Result := GetActiveTransaction.StartTransaction
+  end else GetActiveTransaction.GetTrHandle;
+  Result := GetActiveTransaction.StartTransaction;
 end;
 
 function TZInterbase6Connection.StoredProcedureIsSelectable(
