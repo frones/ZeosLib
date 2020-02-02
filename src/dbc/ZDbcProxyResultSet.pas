@@ -59,12 +59,12 @@ interface
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,
+  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,{$IFDEF ZEOS73UP}FmtBCD, ZVariant, {$ENDIF}
   ZDbcResultSetMetadata, ZCompatibility, XmlDoc, XmlIntf;
 
 type
   {** Implements DBC Layer Proxy ResultSet. }
-  TZDbcProxyResultSet = class(TZAbstractResultSet)
+  TZDbcProxyResultSet = class(TZAbstractResultSet {$IFDEF ZEOS73UP}, IZResultSet{$ENDIF})
   private
     FXmlDocument: IXMLDocument;
     FCurrentRowNode: IXMLNode;
@@ -76,7 +76,9 @@ type
     FAnsiBuffer: AnsiString;
     FWideBuffer: ZWideString;
     FStringBuffer: String;
+    {$IFNDEF ZEOS73UP}
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
+    {$ENDIF}
     /// <summary>
     ///  Opens this recordset.
     /// </summary>
@@ -107,7 +109,7 @@ type
     ///  if the value is SQL NULL, the
     ///  value returned is true. false otherwise.
     /// </returns>
-    function IsNull(ColumnIndex: Integer): Boolean; override;
+    function IsNull(ColumnIndex: Integer): Boolean; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row
     ///  of this ResultSet object as
@@ -120,7 +122,7 @@ type
     ///  the column value; if the value is SQL NULL, the
     ///  value returned is null
     /// </returns>
-    function GetPChar(ColumnIndex: Integer): PChar; override;
+    function GetPChar(ColumnIndex: Integer): PChar; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
     ///  <c>ResultSet</c> object as a <c>PAnsiChar</c> in the Delphi
@@ -133,7 +135,7 @@ type
     ///  the column value. If the value is SQL <c>NULL</c>, the value returned is <c>nil</c>
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; {$IFNDEF ZEOS73UP} override; {$ELSE} overload;{$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
     ///  <c>ResultSet</c> object as a <c>PAnsiChar</c> in the Delphi
@@ -149,7 +151,7 @@ type
     ///  the column value. If the value is SQL <c>NULL</c>, the value returned is <c>nil</c>
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; {$IFNDEF ZEOS73UP} override; {$ELSE} overload;{$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
     ///  <c>ResultSet</c> object as a <c>PWideChar</c>.
@@ -161,7 +163,7 @@ type
     ///  the column value. If the value is SQL <c>NULL</c>, the value returned is <c>nil</c>
     ///  Also <c>LastWasNull</c> is set accordingly.
     /// </returns>
-    function GetPWideChar(ColumnIndex: Integer): PWidechar; override;
+    function GetPWideChar(ColumnIndex: Integer): PWidechar; {$IFNDEF ZEOS73UP} override; {$ELSE} overload;{$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
     ///  <c>ResultSet</c> object as a PWideChar.
@@ -176,7 +178,7 @@ type
     ///  the column value. If the value is SQL <c>NULL</c>, the value returned is <c>nil</c>.
     ///  Also <c>LastWasNull</c> is set accordingly.
     /// </returns>
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; override;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; {$IFNDEF ZEOS73UP} override; {$ELSE} overload;{$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
     ///  <c>ResultSet</c> object as a <c>String</c>.
@@ -188,7 +190,7 @@ type
     ///  the column value. If the value is SQL <c>null</c>, the value returned is <c>''</c>
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetString(ColumnIndex: Integer): String; override;
+    function GetString(ColumnIndex: Integer): String; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
@@ -202,7 +204,7 @@ type
     ///  the column value. If the value is SQL <c>null</c>, the value returned is <c>''</c>
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
     /// <summary>
@@ -217,7 +219,7 @@ type
     ///  the column value. If the value is SQL <c>null</c>, the value returned is <c>''</c>
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     {$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
@@ -231,7 +233,7 @@ type
     ///  The column value. If the value is SQL <c>NULL</c>, the value returned is <c>''</c>.
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this
     ///  <c>ResultSet</c> object as a <c>String</c> in the Delphi programming
@@ -244,7 +246,7 @@ type
     ///  The column value. If the value is SQL <c>NULL</c>, the value returned is <c>''</c>.
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetBinaryString(ColumnIndex: Integer): RawByteString; override;
+    function GetBinaryString(ColumnIndex: Integer): RawByteString; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     /// <summary>
     ///  Gets the value of the designated column in the current row of this <c>ResultSet</c> object as a <c>UnicodeString</c> in the Delphi programming language.
     /// </summary>
@@ -255,7 +257,7 @@ type
     ///  The column value. If the value is SQL <c>NULL</c>, the value returned is <c>''</c>.
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString; {$IFNDEF ZEOS73UP} override; {$ENDIF}
     /// <summary>
     /// Gets the value of the designated column in the current row of this
     /// <c>ResultSet</c> object as a <c>Boolean</c>.
@@ -267,19 +269,76 @@ type
     ///  The column value. If the value is SQL <c>NULL</c>, the value returned is <c>false</c>.
     ///  Also <c>LastWasNull</c> is set.
     /// </returns>
-    function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetInt(ColumnIndex: Integer): Integer; override;
-    function GetLong(ColumnIndex: Integer): Int64; override;
-    function GetULong(ColumnIndex: Integer): UInt64; override;
-    function GetFloat(ColumnIndex: Integer): Single; override;
-    function GetDouble(ColumnIndex: Integer): Double; override;
-    function GetCurrency(ColumnIndex: Integer): Currency; override;
+    function GetBoolean(ColumnIndex: Integer): Boolean; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    function GetInt(ColumnIndex: Integer): Integer; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    function GetLong(ColumnIndex: Integer): Int64; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    function GetULong(ColumnIndex: Integer): UInt64; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    function GetFloat(ColumnIndex: Integer): Single; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    function GetDouble(ColumnIndex: Integer): Double; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    function GetCurrency(ColumnIndex: Integer): Currency; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    {$IFNDEF ZEOS73UP}
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TBytes; override;
-    function GetDate(ColumnIndex: Integer): TDateTime; override;
-    function GetTime(ColumnIndex: Integer): TDateTime; override;
-    function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
-    function GetBlob(ColumnIndex: Integer): IZBlob; override;
+    {$ELSE}
+    function GetBigDecimal(ColumnIndex: Integer): TBCD; overload;
+    {$ENDIF}
+    function GetBytes(ColumnIndex: Integer): TBytes; {$IFNDEF ZEOS73UP}override{$ELSE}overload{$ENDIF};
+    function GetDate(ColumnIndex: Integer): TDateTime; {$IFNDEF ZEOS73UP}override{$ELSE}overload{$ENDIF};
+    function GetTime(ColumnIndex: Integer): TDateTime; {$IFNDEF ZEOS73UP}override{$ELSE}overload{$ENDIF};
+    function GetTimestamp(ColumnIndex: Integer): TDateTime; {$IFNDEF ZEOS73UP}override{$ELSE}overload{$ENDIF};
+    function GetBlob(ColumnIndex: Integer): IZBlob; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+
+    {$IFDEF ZEOS73UP}
+    function GetUInt(ColumnIndex: Integer): Cardinal;
+    procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD); overload;
+    procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
+    procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
+    procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); overload;
+    procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
+
+    // why do I even have to implement this? It will just end in raising exceptions.
+    // TZAbstractDbcResultSet could do this as well.
+    procedure UpdateNull(ColumnIndex: Integer);
+    procedure UpdateBoolean(ColumnIndex: Integer; Value: Boolean);
+    procedure UpdateByte(ColumnIndex: Integer; Value: Byte);
+    procedure UpdateShort(ColumnIndex: Integer; Value: ShortInt);
+    procedure UpdateWord(ColumnIndex: Integer; Value: Word);
+    procedure UpdateSmall(ColumnIndex: Integer; Value: SmallInt);
+    procedure UpdateUInt(ColumnIndex: Integer; Value: Cardinal);
+    procedure UpdateInt(ColumnIndex: Integer; Value: Integer);
+    procedure UpdateULong(ColumnIndex: Integer; const Value: UInt64);
+    procedure UpdateLong(ColumnIndex: Integer; const Value: Int64);
+    procedure UpdateFloat(ColumnIndex: Integer; Value: Single);
+    procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
+    procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+    procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
+    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
+    procedure UpdateString(ColumnIndex: Integer; const Value: String);
+    {$IFNDEF NO_ANSISTRING}
+    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
+    {$ENDIF}
+    procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); overload;
+    procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
+    procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
+    procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
+    procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
+    {$ENDIF}
 
     function MoveAbsolute(Row: Integer): Boolean; override;
     /// <summary>
@@ -303,7 +362,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math, NetEncoding,
   ZMessages, ZEncoding, ZFastCode, ZDbcMetadata, ZClasses,
-  TypInfo, Variants, xmldom, {$IFDEF WITH_OMNIXML}Xml.omnixmldom,{$ENDIF} System.Contnrs, EncdDecd;
+  TypInfo, Variants, xmldom, {$IFDEF WITH_OMNIXML}Xml.omnixmldom,{$ENDIF} EncdDecd;
 
 const
   ValueAttr = 'value';
@@ -412,7 +471,9 @@ begin
 
       // todo: kl‰ren, was hier vonwegen der oben auskommentierten Unicodegeschichten rein muﬂ...
       CatalogName := ColumnNode.Attributes['catalogname'];
+      {$IFNDEF ZEOS73UP}
       ColumnDisplaySize := StrToInt(ColumnNode.Attributes['displaysize']);
+      {$ENDIF}
       ColumnLabel := ColumnNode.Attributes['label'];
       ColumnName := ColumnNode.Attributes['name'];
       ColumnType := TZSQLType(GetEnumValue(TypeInfo(TZSQLType), ColumnNode.Attributes['type']));
@@ -469,10 +530,12 @@ begin
   Result := StrToBoolDef(VarToStrDef(ValueNode.Attributes['isnull'], 'False'), false);
 end;
 
+{$IFNDEF ZEOS73UP}
 function TZDbcProxyResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
   RaiseUnsupportedException;
 end;
+{$ENDIF}
 
 function TZDbcProxyResultSet.GetPChar(ColumnIndex: Integer): PChar;
 var
@@ -929,6 +992,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFNDEF ZEOS73UP}
 function TZDbcProxyResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
   ColType: TZSQLType;
@@ -971,7 +1035,44 @@ begin
       Result := 0;
   end;
 end;
+{$ELSE}
+function TZDbcProxyResultSet.GetBigDecimal(ColumnIndex: Integer): TBcd;
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
 
+  if LastWasNull then begin
+    Result := 0;
+    exit;
+  end;
+
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
+  case ColType of
+    stBoolean:
+      Result := BoolToInt(StrToBool(Val));
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger:
+      Result := StrToInt(Val);
+    stULong:
+      Result := StrToUInt64(Val);
+    stLong:
+      Result := StrToInt64(Val);
+    stFloat, stDouble, stCurrency, stBigDecimal:
+      Result := StrToBcd(Val, FFormatSettings);
+    stString, stUnicodeString, stAsciiStream, stUnicodeStream:
+      Result := StrToBcd(Val, FormatSettings);
+    else
+      Result := 0;
+  end;
+end;
+{$ENDIF}
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -1246,6 +1347,293 @@ begin
     end;
   end;
 end;
+
+{$IFDEF ZEOS73UP}
+procedure RaiseUnsupportedException;
+begin
+  raise EZSQLException.Create(SUnsupportedOperation);
+end;
+
+function TZDbcProxyResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+
+  if LastWasNull then begin
+    Result := 0;
+    exit;
+  end;
+
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
+  case ColType of
+    stBoolean:
+      Result := BoolToInt(StrToBool(Val));
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger:
+      Result := StrToUInt(Val);
+    stULong:
+      Result := StrToUInt(Val);
+    stLong:
+      Result := StrToInt(Val);
+    stFloat, stDouble, stCurrency, stBigDecimal:
+      Result := Trunc(StrToFloat(Val, FFormatSettings));
+    stString, stUnicodeString, stAsciiStream, stUnicodeStream:
+      Result := StrToUInt(Val);
+    stDate:
+      Result := Trunc(StrToDate(Val, FFormatSettings));
+    stTime:
+      Result := 0;
+    stTimestamp:
+      Result := Trunc(StrToDateTime(Val, FFormatSettings));
+    else
+      Result := 0;
+  end;
+end;
+
+procedure TZDbcProxyResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+begin
+  Result := GetBigDecimal(ColumnIndex)
+end;
+
+procedure TZDbcProxyResultSet.GetGUID(ColumnIndex: Integer; var Result: TGUID);
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+
+  if LastWasNull then begin
+    Result := StringToGUID('{00000000-0000-0000-0000-000000000000}');
+    exit;
+  end;
+
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
+
+  case ColType of
+    stGUID:
+      Result := StringToGUID(Val);
+    else
+      RaiseUnsupportedException;
+  end;
+end;
+
+function TZDbcProxyResultSet.GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte;
+begin
+  raise Exception.Create('GetBytes is not supported (yet)');
+end;
+
+procedure TZDbcProxyResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
+begin
+  DecodeDateTimeToDate(GetDate(ColumnIndex), Result);
+end;
+
+procedure TZDbcProxyResultSet.GetTime(ColumnIndex: Integer; Var Result: TZTime);
+begin
+  DecodeDateTimeToTime(GetDate(ColumnIndex), Result);
+end;
+
+procedure TZDbcProxyResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
+begin
+  DecodeDateTimeToTimeStamp(GetDate(ColumnIndex), Result);
+end;
+
+procedure TZDbcProxyResultSet.UpdateNull(ColumnIndex: Integer);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateBoolean(ColumnIndex: Integer; Value: Boolean);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateByte(ColumnIndex: Integer; Value: Byte);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateShort(ColumnIndex: Integer; Value: ShortInt);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateWord(ColumnIndex: Integer; Value: Word);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateSmall(ColumnIndex: Integer; Value: SmallInt);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateUInt(ColumnIndex: Integer; Value: Cardinal);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateInt(ColumnIndex: Integer; Value: Integer);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateULong(ColumnIndex: Integer; const Value: UInt64);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateLong(ColumnIndex: Integer; const Value: Int64);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateFloat(ColumnIndex: Integer; Value: Single);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateDouble(ColumnIndex: Integer; const Value: Double);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
+begin
+  RaiseUnsupportedException;
+end;
+
+{$IFNDEF NO_ANSISTRING}
+procedure TZDbcProxyResultSet.UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
+begin
+  RaiseUnsupportedException;
+end;
+{$ENDIF}
+
+{$IFNDEF NO_UTF8STRING}
+procedure TZDbcProxyResultSet.UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
+begin
+  RaiseUnsupportedException;
+end;
+{$ENDIF}
+
+procedure TZDbcProxyResultSet.UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateDate(ColumnIndex: Integer; const Value: TZDate);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateTime(ColumnIndex: Integer; const Value: TZTime);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
+begin
+  RaiseUnsupportedException;
+end;
+
+procedure TZDbcProxyResultSet.UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
+begin
+  RaiseUnsupportedException;
+end;
+{$ENDIF}
 
 function TZDbcProxyResultSet.GetUpdateCount: Integer;
 var
