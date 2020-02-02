@@ -48,6 +48,9 @@ contains
   ZPlainOracleConstants in '..\..\src\plain\ZPlainOracleConstants.pas',
   ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
   ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
-  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas';
+  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
+  ZPlainProxyDriver in '..\..\src\plain\ZPlainProxyDriver.pas',
+  ZPlainProxyDriverInternalProxy in '..\..\src\plain\ZPlainProxyDriverInternalProxy.pas',
+  ZPlainProxyDriverIntf in '..\..\src\plain\ZPlainProxyDriverIntf.pas';
 
 end.

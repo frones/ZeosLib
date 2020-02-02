@@ -57,6 +57,11 @@
 {.$DEFINE ZEOS_DISABLE_POOLED}
 {.$DEFINE ZEOS_DISABLE_OLEDB}
 {.$DEFINE ZEOS_DISABLE_ODBC}
+// Activate this driver only if you know what you are doing.
+// Currently it only was tested with Delphi XE 7 on Windows.
+{$DEFINE ZEOS_DISABLE_PROXY}
+// Use this only if you know what you are doing. The internal proxy doesn't work.
+{.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
 {.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
 {.$DEFINE WITH_ZSTRINGFIELDS}
