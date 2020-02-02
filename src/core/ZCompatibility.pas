@@ -171,7 +171,7 @@ type
 
   { TZSQLTimeStamp }
   PZTimeStamp = ^TZTimeStamp;
-  TZTimeStamp = packed record //keep it packet !!
+  TZTimeStamp = packed record //keep it packed !!
     Year: Word;
     Month: Word;
     Day: Word;
@@ -186,7 +186,7 @@ type
   TZTimeStampDynArray = array of TZTimeStamp;
 
   PZDate = ^TZDate;
-  TZDate = packed record //keep it packet !!
+  TZDate = packed record //keep it packed !!
     Year: Word;
     Month: Word;
     Day: Word;
@@ -195,7 +195,7 @@ type
   TZDateDynArray = array of TZDate;
 
   PZTime = ^TZTime;
-  TZTime = packed Record //keep it packet !!
+  TZTime = packed Record //keep it packed !!
     Hour: Word;
     Minute: Word;
     Second: Word;
