@@ -160,7 +160,7 @@ var
   BCD: TBCD;
 begin
   RS.GetBigDecimal(Idx, BCD);
-  Result := BCDToStr(BCD);
+  Result := BCDToStr(BCD, ProxyFormatSettings);
 end;
 {$ENDIF}
 
@@ -253,7 +253,7 @@ begin
   if not RS.IsAfterLast then begin
     MD := RS.GetMetadata;
     SetLength(CF, MD.GetColumnCount);
-    for Idx := 1 to MD.GetColumnCount do begin
+    for Idx := FirstDbcIndex to MD.GetColumnCount - 1 + FirstDbcIndex do begin
       case MD.GetColumnType(Idx) of
         stBoolean: CF[Idx - 1] := ConvertBool;
         stByte, stShort, stWord, stSmall, stLongWord, stInteger: CF[Idx - 1] := ConvertInt;
