@@ -3140,14 +3140,33 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetAsciiStream(ParameterIndex: Integer;
   const Value: TStream);
-var CLob: IZBlob; //use a local variable for the FPC
+var
+  CLob: IZBlob; //use a local variable for the FPC
+  MyMemoryStream: TMemoryStream;
+  CreatedMemoryStream: boolean;
 begin
-  if TMemoryStream(Value).Memory = nil
-  then CLob := TZAbstractClob.CreateWithData(PEmptyAnsiString, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings)
-  else if ConSettings^.AutoEncode
-    then CLob := TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, zCP_NONE, ConSettings)
-    else CLob := TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings);
-  SetBlob(ParameterIndex, stAsciiStream, Clob)
+  MyMemoryStream := nil;
+  CreatedMemoryStream := false;
+  try
+    if Value is TMemoryStream then begin
+      MyMemoryStream := Value as TMemoryStream;
+    end else begin
+      MyMemoryStream := TMemoryStream.Create;
+      CreatedMemoryStream := True;
+      MyMemoryStream.CopyFrom(Value, Value.Size);
+    end;
+
+    if MyMemoryStream.Memory = nil
+    then CLob := TZAbstractClob.CreateWithData(PEmptyAnsiString, MyMemoryStream.Size, ConSettings^.ClientCodePage^.CP, ConSettings)
+    else if ConSettings^.AutoEncode
+      then CLob := TZAbstractClob.CreateWithData(MyMemoryStream.Memory, MyMemoryStream.Size, zCP_NONE, ConSettings)
+      else CLob := TZAbstractClob.CreateWithData(MyMemoryStream.Memory, MyMemoryStream.Size, ConSettings^.ClientCodePage^.CP, ConSettings);
+    SetBlob(ParameterIndex, stAsciiStream, Clob)
+
+  finally
+    if CreatedMemoryStream then
+      FreeAndNil(MyMemoryStream);
+  end;
 end;
 
 procedure TZAbstractPreparedStatement.SetASQL(const Value: RawByteString);
