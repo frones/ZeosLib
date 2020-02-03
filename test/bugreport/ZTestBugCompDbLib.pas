@@ -76,7 +76,7 @@ implementation
 
 { ZTestCompDbLibBugReport }
 
-uses ZAbstractRODataset, SysUtils;
+uses ZAbstractRODataset, SysUtils, DB;
 
 procedure ZTestCompDbLibBugReport.BlankTest;
 begin
