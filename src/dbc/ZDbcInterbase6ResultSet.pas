@@ -1810,7 +1810,7 @@ begin
               else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
               Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
               if XSQLVAR.sqltype and not 1 = SQL_TEXT then
-                Scale := Precision;
+                Signed := True;
               if ColumnType = stString
               then CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
               else CharOctedLength := Precision shl 1;
@@ -1820,7 +1820,10 @@ begin
           else begin
             ColumnCodePage := zCP_NONE;
             case FieldSqlType of
-              stBytes: Precision := XSQLVAR.sqllen;
+                stBytes: begin
+                  Precision := XSQLVAR.sqllen;
+                  Signed := XSQLVAR.sqltype and not 1 = SQL_TEXT;
+                end;
               stShort, stSmall, stInteger, stLong: Signed := True;
               stCurrency, stBigDecimal: begin
                 Signed  := True;

@@ -1281,6 +1281,7 @@ begin
       else
         Nullable := ntNoNulls;
       Nullable := ntNullable;
+      Signed := ColumnType = stBytes; //asa has no varbinary has it?
 
       Scale := GetFieldScale(I);
       AutoIncrement := False;

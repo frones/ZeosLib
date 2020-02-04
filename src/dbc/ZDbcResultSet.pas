@@ -126,7 +126,7 @@ type
     procedure Close; virtual;
     procedure AfterClose; virtual;
     procedure ResetCursor; virtual;
-    function WasNull: Boolean; virtual;
+    function WasNull: Boolean; //virtual;
     function IsClosed: Boolean;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
 

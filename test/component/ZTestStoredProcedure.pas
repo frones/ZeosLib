@@ -738,7 +738,7 @@ begin
 
   CheckEquals('P25', StoredProc.Params[24].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[24].ParamType));
-  CheckEquals(ord(ftBytes), ord(StoredProc.Params[24].DataType));
+  CheckEquals(ord(ftVarBytes), ord(StoredProc.Params[24].DataType));
 
   CheckEquals('P26', StoredProc.Params[25].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[25].ParamType));
@@ -876,14 +876,13 @@ begin
 
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
   TempBytes :=StrToBytes(RawByteString('121415'));
-  SetLength(TempBytes, StoredProc.Fields[24].Size);
   CheckEquals(TempBytes,
     {$IFDEF TPARAM_HAS_ASBYTES}
     TBytes(StoredProc.Fields[24].AsBytes)
     {$ELSE}
     StrToBytes(StoredProc.Fields[24].AsString)
     {$ENDIF});
-  CheckEquals(ord(ftBytes), ord(StoredProc.Fields[24].DataType));
+  CheckEquals(ord(ftVarBytes), ord(StoredProc.Fields[24].DataType));
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);
   CheckEquals('a', StoredProc.Fields[25].AsString);

@@ -389,7 +389,8 @@ label AssignGeneric;
       ReadOnly := not (ColInfo.Updatable = 1);
       Writable := ColInfo.Updatable = 1;
       AutoIncrement := ColInfo.Identity;
-      Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stCurrency, stDouble, stBigDecimal];
+      Signed := (ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stCurrency, stDouble, stBigDecimal]) or
+        ((TDSType = tdsBinary) and not ColInfo.VarLength);
     end;
   end;
   function ValueToString(P: PAnsiChar): String;

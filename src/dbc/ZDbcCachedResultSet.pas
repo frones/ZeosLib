@@ -259,7 +259,7 @@ type
     procedure UpdateRow; override;
     procedure DeleteRow; override;
     procedure CancelRowUpdates; override;
-    procedure RefreshRow;override;// FOS+ 071106
+    procedure RefreshRow; override;// FOS+ 071106
 
 
     procedure MoveToInsertRow; override;
@@ -1983,10 +1983,10 @@ begin
 
   { Posts non-cached updates. }
   if not FCachedUpdates then
-  begin
     try
       PostUpdates;
-    except
+      TempRow := FRowAccessor.RowBuffer; //notify success
+    (*except
       on E: Exception do
       begin
         { Restore the previous state. }
@@ -1997,11 +1997,17 @@ begin
         FRowAccessor.RowBuffer := TempRow;
 
         { Reraises the exception. }
-        RaiseSQLException(E);
+        RaiseSQLException(E);*)
+    finally //EH no reraising of an Exception required -> keep original stack frame i.e. MadExcept
+      if TempRow <> FRowAccessor.RowBuffer then begin
+        { Restore the previous state. See AppendRow}
+        FRowAccessor.DisposeBuffer(FInitialRowsList[FInitialRowsList.Count - 1]);
+        FInitialRowsList.Delete(FInitialRowsList.Count - 1);
+        FRowAccessor.DisposeBuffer(FCurrentRowsList[FCurrentRowsList.Count - 1]);
+        FCurrentRowsList.Delete(FCurrentRowsList.Count - 1);
+        FRowAccessor.RowBuffer := TempRow;
       end;
     end;
-  end;
-
   FRowsList.Add(FRowAccessor.RowBuffer);
   LastRowNo := FRowsList.Count;
   MoveAbsolute(LastRowNo);
@@ -2034,10 +2040,10 @@ begin
 
   { Posts non-cached updates. }
   if not FCachedUpdates then
-  begin
-    try
-      PostUpdates;
-    except
+  {begin
+    try}
+      PostUpdates; //EH: restoring previous state should happen by RevertRecord!
+    (*except
       on E: Exception do
       begin
         { Restore the previous state. }
@@ -2053,7 +2059,7 @@ begin
         RaiseSQLException(E);
       end;
     end;
-  end;
+  end;*)
 end;
 
 {**
@@ -2062,38 +2068,35 @@ end;
   the cursor is on the insert row.
 }
 procedure TZAbstractCachedResultSet.DeleteRow;
+var Succeeded: Boolean;
 begin
   CheckUpdatable;
   if (RowNo < 1) or (RowNo > LastRowNo) or (FSelectedRow = nil) then
     raise EZSQLException.Create(SCanNotDeleteEmptyRow);
 
-  if FSelectedRow^.UpdateType = utInserted then
-    RevertRecord
-  else
-  begin
-    AppendRow(FRowsList[RowNo - 1]);
+  if FSelectedRow^.UpdateType = utInserted
+  then RevertRecord
+  else begin
+    AppendRow(FRowsList[RowNo - 1]); //copies the rows, add to FInitialRowsList and FInitialRowsList -> RevertRecord
 
     FSelectedRow^.UpdateType := utDeleted;
     if FSelectedRow = FUpdatedRow then
       FRowAccessor.CopyBuffer(FUpdatedRow, FRowsList[RowNo - 1]);
 
     { Posts non-cached updates. }
-    if not FCachedUpdates then
-    begin
+    if not FCachedUpdates then begin
+      Succeeded := False;
       try
         PostUpdates;
-      except
-        on E: Exception do
-        begin
+        Succeeded := True;
+      finally
+        if not Succeeded then begin
           { Restores the previous state. }
           FRowAccessor.DisposeBuffer(FRowsList[RowNo - 1]);
           FRowsList[RowNo - 1] := FInitialRowsList[FInitialRowsList.Count - 1];
           FSelectedRow := FRowsList[RowNo - 1];
           FInitialRowsList.Delete(FInitialRowsList.Count - 1);
           FCurrentRowsList.Delete(FCurrentRowsList.Count - 1);
-
-          { Rethrows the exception. }
-          RaiseSQLException(E);
         end;
       end;
     end;

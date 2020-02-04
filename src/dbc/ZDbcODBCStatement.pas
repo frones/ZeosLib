@@ -1949,7 +1949,7 @@ begin
         SQL_C_GUID:     if Length(Value) = 16
                         then PGUID(Bind.ParameterValuePtr)^ := PGUID(Value)^
                         else RaiseExceeded(Index);
-        else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+        else RaiseUnsupportedParamType(Index, Bind.ValueType, stBytes);
       end;
       PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
     end;

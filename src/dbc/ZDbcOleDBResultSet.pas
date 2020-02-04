@@ -1761,7 +1761,7 @@ begin
           DBTYPE_UI4                  : RowAccessor.SetUInt(I, PCardinal(FData^)^);
           DBTYPE_I8                   : RowAccessor.SetLong(I, PInt64(FData^)^);
           DBTYPE_UI8                  : RowAccessor.SetULong(I, PInt64(FData^)^);
-          DBTYPE_GUID                 : RowAccessor.SetGUID(I, PGUID(FData)^);
+          DBTYPE_GUID                 : RowAccessor.SetGUID(I, PGUID(FData^)^);
           DBTYPE_BYTES                : if DBBINDING.cbMaxLen = 0 then
                                           RowAccessor.SetBlob(I, TZOleDBBLOB.Create(FResultSet.FRowSet,
                                             FResultSet.FLobAccessors[DBBINDING.obLength],
@@ -2164,7 +2164,9 @@ begin
       else ColumnInfo.Precision := FieldSize;
       ColumnInfo.Currency := prgInfo.wType = DBTYPE_CY;
       ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
-      ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stCurrency, stBigDecimal];
+      if (ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString])
+      then ColumnInfo.Signed := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH) <> 0
+      else ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stCurrency, stBigDecimal];
       ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0);
       ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0);
       ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;

@@ -870,6 +870,12 @@ var
   lValidateUpdateCount : Boolean;
   TempKey              : IZAnyValue;
   SenderStatement      : IZStatement;
+  {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+  function CreateInvalidUpdateCountException: EZSQLException; //suppress _U/LStrArrClear
+  begin
+    Result := EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+  end;
+  {$ENDIF WITH_VALIDATE_UPDATE_COUNT}
 begin
   if (UpdateType = utDeleted) and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
@@ -940,7 +946,7 @@ begin
   lUpdateCount := Statement.ExecuteUpdatePrepared;
   {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
   if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
-    raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+    raise CreateInvalidUpdateCountException;
   {$ENDIF}
 end;
 

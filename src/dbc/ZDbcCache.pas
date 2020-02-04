@@ -99,8 +99,6 @@ type
   {** Implements a abstract column buffer accessor. }
   TZRowAccessor = class(TObject)
   private
-    FRawTemp: RawByteString;
-    FUniTemp: ZWideString;
     FRowSize: Integer;
     FColumnsSize: Integer;
     FColumnCount: Integer;
@@ -136,6 +134,8 @@ type
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
   public
     TinyBuffer: array[Byte] of Byte;
+    FRawTemp: RawByteString;
+    FUniTemp: ZWideString;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
 
