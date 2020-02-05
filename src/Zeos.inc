@@ -315,6 +315,7 @@
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
+                              {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead							  
                               {$IF CompilerVersion >= 29} //Delphi XE8+
                                 {$IF CompilerVersion >= 30} //Delphi Seattle+
                                   {$IF CompilerVersion >= 31} //Delphi Berlin+
@@ -322,7 +323,6 @@
                                       {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField has now a virtual GetAsGUID function 
                                       {$DEFINE WITH_IProviderSupportNG}   //TDataset now supports IProviderSupportNG
                                       {$DEFINE WITH_InternalGotoBookmark_TBookmark}
-                                      {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
                                       {$DEFINE HAVE_TFIELD_32BIT_ASINTEGER} //TField.AsInteger setter and getter use 32Bit integer
                                       {$DEFINE HAVE_TFIELD_32BIT_ASLONGWORD} //TField.AsLongWord setter and getter use 32Bit unsigned integer
                                       {$DEFINE WITH_VIRTUAL_ASGUID} //TGUIDfield AsGUID has virtual setter and getter
