@@ -2644,20 +2644,22 @@ var
 begin
   RowBuffer := nil;
   case State of
-    dsBrowse,dsblockread:
-      begin
+    dsBrowse,dsBlockRead:
         if not IsEmpty then begin
           RowBuffer := PZRowBuffer(ActiveBuffer);
           if RowBuffer.Index <> FResultSet.GetRow then
             FResultSet.MoveAbsolute(RowBuffer.Index);
         end;
+    dsEdit: RowBuffer := PZRowBuffer(ActiveBuffer);
+    dsInsert: begin
+        RowBuffer := PZRowBuffer(ActiveBuffer);
+        if RowBuffer.Index = -1 then
+          FResultSet.MoveToInsertRow
+        else if RowBuffer.Index <> FResultSet.GetRow then
+          FResultSet.MoveAbsolute(RowBuffer.Index);
       end;
-    dsEdit, dsInsert:
-      RowBuffer := PZRowBuffer(ActiveBuffer);
-    dsCalcFields:
-      RowBuffer := PZRowBuffer(CalcBuffer);
-    dsOldValue, dsNewValue, dsCurValue:
-      begin
+    dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
+    dsOldValue, dsNewValue, dsCurValue: begin
         RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
@@ -2672,8 +2674,8 @@ begin
           RowAccessor.RowBuffer := RowBuffer;
           RowAccessor.Clear;
           if (ResultSet.GetRow = RowNo) or ResultSet.MoveAbsolute(RowNo) then begin
-            if (State = dsOldValue) and (ResultSet.
-              QueryInterface(IZCachedResultSet, CachedResultSet) = 0) then
+            if (State = dsOldValue) and (ResultSet.QueryInterface(IZCachedResultSet,
+                    CachedResultSet) = S_OK) then
               CachedResultSet.MoveToInitialRow;
             //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
             RowBuffer.Index := RowNo;
