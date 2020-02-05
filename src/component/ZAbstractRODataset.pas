@@ -1144,6 +1144,7 @@ type
     function IsRowDataAvailable: Boolean;
     function CreateUnBoundError: EZDatabaseError;
     function CreateSizeError: EZDatabaseError;
+    procedure SetPWideChar(P: Pointer; Len: NativeUint);
   protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
@@ -1162,13 +1163,14 @@ type
     {$ENDIF NO_UTF8STRING}
     function GetAsRawByteString: RawByteString;
     procedure SetAsRawByteString(const Value: RawByteString);
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-    function GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    procedure SetAsWideString(const Value: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    {$ELSE}
+    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+    function GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    {$IFEND}
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     function GetAsUnicodeString: UnicodeString;
     procedure SetAsUnicodeString(const Value: UnicodeString);
-    {$IFEND}
+    {$ENDIF}
   protected
     procedure DefineProperties(Filer: TFiler); override;
     procedure ReadFieldIndex(Reader: TReader);
@@ -1176,11 +1178,11 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     procedure Clear; override;
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
+    {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
     {$ELSE}
     property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
-    {$IFEND}
+    {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
     {$ENDIF NO_UTF8STRING}
@@ -1201,6 +1203,7 @@ type
     function IsRowDataAvailable: Boolean;
     function CreateUnBoundError: EZDatabaseError;
     function CreateSizeError: EZDatabaseError;
+    procedure SetPWideChar(P: PWideChar; Len: NativeUint);
   protected
     function GetAsString: String; override;
     procedure SetAsString(const Value: String); override;
@@ -1213,13 +1216,14 @@ type
     function GetAsUTF8String: UTF8String;
     procedure SetAsUTF8String(const Value: UTF8String);
     {$ENDIF NO_UTF8STRING}
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-    function GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    procedure SetAsWideString(const Value: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    {$ELSE}
+    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+    function GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    {$IFEND}
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     function GetAsUnicodeString: UnicodeString;
     procedure SetAsUnicodeString(const Value: UnicodeString);
-    {$IFEND}
+    {$ENDIF}
   protected
     procedure Bind(Binding: Boolean); override;
     procedure DefineProperties(Filer: TFiler); override;
@@ -1227,12 +1231,10 @@ type
     procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-    property Value: UnicodeString read GetAsWideString write SetAsWideString;
-    property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
-    {$ELSE}
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+    property Value: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
     property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
-    {$IFEND}
+    {$ENDIF}
     {$IF not defined(NO_ANSISTRING) and not defined(WITH_ASANSISTRING)}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     {$IFEND}
@@ -1283,6 +1285,8 @@ type
     {$ENDIF}
   end;
 
+  { TZRawCLobField }
+
   TZRawCLobField = class(TMemoField)
   private
     FFieldIndex: Integer;
@@ -1290,18 +1294,20 @@ type
     FColumnCP: Word;
     function IsRowDataAvailable: Boolean;
     function CreateUnBoundError: EZDatabaseError;
+    procedure SetPWideChar(P: Pointer; Len: NativeUint);
   public
     function GetIsNull: Boolean; override;
     function GetAsString: String; override;
     procedure SetAsString(const Value: String); override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-    function GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    procedure SetAsWideString(const Value: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    {$ELSE}
+    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+    function GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    {$IFEND}
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     function GetAsUnicodeString: UnicodeString;
     procedure SetAsUnicodeString(const Value: UnicodeString);
-    {$IFEND}
+    {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
@@ -1312,17 +1318,19 @@ type
     {$ENDIF NO_UTF8STRING}
     function GetAsRawByteString: RawByteString;
     procedure SetAsRawByteString(const Value: RawByteString);
+    function GetAsVariant: Variant; override;
+    procedure SetVarValue(const Value: Variant); override;
   protected
     procedure Bind(Binding: Boolean); override;
     procedure DefineProperties(Filer: TFiler); override;
     procedure ReadFieldIndex(Reader: TReader);
     procedure WriteFieldIndex(Writer: TWriter);
   public
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
+    {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
     {$ELSE}
     property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
-    {$IFEND}
+    {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
     {$ENDIF NO_UTF8STRING}
@@ -1332,6 +1340,8 @@ type
     procedure Clear; override;
   end;
 
+  { TZUnicodeCLobField }
+
   TZUnicodeCLobField = class({$IFDEF WITH_WIDEMEMO}TWideMemoField{$ELSE}TZRawCLobField{$ENDIF})
   {$IFDEF WITH_WIDEMEMO}
   private
@@ -1340,18 +1350,20 @@ type
     FColumnCP: Word;
     function IsRowDataAvailable: Boolean;
     function CreateUnBoundError: EZDatabaseError;
+    procedure SetPWideChar(P: Pointer; Len: NativeUint);
   public
     function GetIsNull: Boolean; override;
     function GetAsString: String; override;
     procedure SetAsString(const Value: String); override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-    function GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    procedure SetAsWideString(const Value: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_WIDEMEMO}override;{$ENDIF}
-    {$ELSE}
+    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+    function GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
+    {$IFEND}
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     function GetAsUnicodeString: UnicodeString;
     procedure SetAsUnicodeString(const Value: UnicodeString);
-    {$IFEND}
+    {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
@@ -1368,11 +1380,11 @@ type
     procedure ReadFieldIndex(Reader: TReader);
     procedure WriteFieldIndex(Writer: TWriter);
   public
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
+    {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
     {$ELSE}
     property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
-    {$IFEND}
+    {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
     {$ENDIF NO_UTF8STRING}
@@ -1380,10 +1392,6 @@ type
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     {$IFEND}
     procedure Clear; override;
-  {$ELSE}
-  protected
-    function GetAsVariant: Variant; override;
-    procedure SetVarValue(const Value: Variant); override;
   {$ENDIF WITH_WIDEMEMO}
   end;
 
@@ -3578,7 +3586,7 @@ begin
     FCursorOpened := True;
     FResultSetMetadata := ResultSet.GetMetadata;
     { Initializes field and index defs. }
-    if (OldRS <> ResultSet) or FResultSetWalking {or (not FRefreshInProgress) {and (not FFieldDefsInitialized)} then  // commented out because this causes SF#286
+    if (OldRS <> ResultSet) or FResultSetWalking (*or (not FRefreshInProgress) {and (not FFieldDefsInitialized)*) then  // commented out because this causes SF#286
       InternalInitFieldDefs;
 
     {$IFDEF WITH_LIFECYCLES}
@@ -9287,16 +9295,23 @@ begin
   else Result := '';
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-function TZRawStringField.GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
-{$ELSE}
-function TZRawStringField.GetAsUnicodeString: UnicodeString;
-{$IFEND}
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+function TZRawStringField.GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
 begin
   if IsRowDataAvailable
   then Result := TZAbstractRODataset(DataSet).FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   else Result := '';
 end;
+{$IFEND}
+
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+function TZRawStringField.GetAsUnicodeString: UnicodeString;
+begin
+  if IsRowDataAvailable
+  then Result := TZAbstractRODataset(DataSet).FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+  else Result := '';
+end;
+{$ENDIF}
 
 {$IFNDEF NO_UTF8STRING}
 function TZRawStringField.GetAsUTF8String: UTF8String;
@@ -9350,11 +9365,11 @@ procedure TZRawStringField.SetAsAnsiString(const Value: AnsiString);
   var US: UnicodeString;
   begin
     US := ZRawToUnicode(Value, ZOSCodePage);
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-    SetAsWideString(US);
-    {$ELSE}
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     SetAsUnicodeString(US);
-    {$IFEND}
+    {$ELSE FIELD_ASWIDESTRING_IS_UNICODESTRING}
+    SetAsWideString(US);
+    {$ENDIF FIELD_ASWIDESTRING_IS_UNICODESTRING}
   end;
 begin
   if not FBound then
@@ -9428,16 +9443,12 @@ var L: LengthInt;
   var U: UnicodeString;
   begin
     U := PRawToUnicode(P, L, StrCP);
-    {$IFNDEF HAVE_UNICODESTRING}
-    SetAsWideString(U);
-    {$ELSE}
     SetAsUnicodeString(U);
-    {$ENDIF}
   end;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  SetAsWideString(Value);
+  SetPWideChar(Pointer(Value), Length(Value));
   {$ELSE}
   if not FBound then
     raise CreateUnBoundError;
@@ -9469,47 +9480,62 @@ begin
   {$ENDIF}
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-procedure TZRawStringField.SetAsWideString(const Value: {$IFNDEF HAVE_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
-{$ELSE}
-procedure TZRawStringField.SetAsUnicodeString(const Value: UnicodeString);
-{$IFEND}
-var L: LengthInt;
-    P: PWideChar;
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+procedure TZRawStringField.SetAsWideString(const Value: {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
 begin
-  if not FBound then
-    raise CreateUnBoundError;
-  P := Pointer(Value);
-  L := Length(P);
-  if L > Size then
-    raise CreateSizeError;
-  SetAsRawByteString(PUnicodeToRaw(P, L, FColumnCP));
+  SetPWideChar(Pointer(Value), Length(Value));
 end;
+{$IFEND}
+
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+procedure TZRawStringField.SetAsUnicodeString(const Value: UnicodeString);
+begin
+  SetPWideChar(Pointer(Value), Length(Value));
+end;
+{$ENDIF}
 
 {$IFNDEF NO_UTF8STRING}
 procedure TZRawStringField.SetAsUTF8String(const Value: UTF8String);
 var P: PAnsiChar;
     L: NativeUInt;
   procedure SetW;
-  Var U: UnicodeString;
+  Var US: UnicodeString;
   begin
-    U := ZRawToUnicode(Value, zCP_UTF8);
-    {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-    SetAsWideString(U);
-    {$ELSE}
-    SetAsUnicodeString(U);
-    {$IFEND}
+    US := ZRawToUnicode(Value, zCP_UTF8);
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+    SetAsUnicodeString(US);
+    {$ELSE FIELD_ASWIDESTRING_IS_UNICODESTRING}
+    SetAsWideString(US);
+    {$ENDIF FIELD_ASWIDESTRING_IS_UNICODESTRING}
   end;
 begin
   if not FBound then
     raise CreateUnBoundError;
   P := Pointer(Value);
   L := Length(Value);
-  if (Value = '') or ((FColumnCP = zCP_UTF8) and (CountOfUtf8Chars(P,L)<NativeUInt(Size)))
+  if (Value = '') or ((FColumnCP = zCP_UTF8) and (CountOfUtf8Chars(P,L)<=NativeUInt(Size)))
   then SetAsRawByteString(Value)
   else SetW; //no UStrClear here
 end;
 {$ENDIF NO_UTF8STRING}
+
+procedure TZRawStringField.SetPWideChar(P: Pointer; Len: NativeUint);
+begin
+  if not FBound then
+    raise CreateUnBoundError;
+  if Len > NativeUInt(Size) then
+    raise CreateSizeError;
+  if Transliterate or Assigned(OnValidate) then
+    SetAsRawByteString(PUnicodeToRaw(P, Len, FColumnCP))
+  else with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if P = nil then
+      P := PEmptyUnicodeString;
+    FResultSet.UpdatePWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, Len);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
+end;
 
 procedure TZRawStringField.WriteFieldIndex(Writer: TWriter);
 begin
@@ -9575,16 +9601,24 @@ begin
   else Result := '';
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-function TZUnicodeStringField.GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
-{$ELSE}
-function TZUnicodeStringField.GetAsUnicodeString: UnicodeString;
-{$IFEND}
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+function TZUnicodeStringField.GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
 begin
   if IsRowDataAvailable
   then Result := TZAbstractRODataset(DataSet).FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   else Result := '';
 end;
+{$IFEND}
+
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+function TZUnicodeStringField.GetAsUnicodeString: UnicodeString;
+begin
+  if IsRowDataAvailable
+  then Result := TZAbstractRODataset(DataSet).FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+  else Result := '';
+end;
+{$ENDIF}
+
 
 function TZUnicodeStringField.GetAsUTF8String: UTF8String;
 begin
@@ -9648,7 +9682,7 @@ var L: NativeUInt;
 label jmpUTF8, jmpACP, jmpMove,jmpRange;
 begin
   {$IFDEF UNICODE}
-  SetAsWideString(Value);
+  SetPWideChar(Pointer(Value), Length(Value));
   {$ELSE}
   //we convert all values to UTF16 for Size control except the value and encoding do fit into
   if not FBound then
@@ -9697,54 +9731,19 @@ jmpMove:  Prepare4DataManipulation(Self);
   {$ENDIF}
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-procedure TZUnicodeStringField.SetAsWideString(const Value: {$IFNDEF HAVE_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
-{$ELSE}
-procedure TZUnicodeStringField.SetAsUnicodeString(const Value: UnicodeString);
-{$IFEND}
-var L: NativeUInt;
-    P: PWideChar;
-  procedure DoValidate;
-  begin
-    {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
-    SetLength(FValidateBuffer, L);
-    {$ELSE}
-      {$IFDEF WITH_TVALUEBUFFER}
-      SetLength(FValidateBuffer, (Math.Max(L, Size)+1) shl 1);
-      {$ELSE}
-      SetLength(FValidateBuffer, Math.Max(L, Size));
-      {$ENDIF}
-    {$ENDIF}
-    if L > 0 then
-      Move(P^, Pointer(FValidateBuffer)^, (L+1) shl 1);
-    P := Pointer(FValidateBuffer);
-    PWord(P + L)^ := 0;
-    {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
-    Validate(@FValidateBuffer);
-    P := Pointer(FValidateBuffer);
-    if P = nil
-    then L := 0 else
-    {$ELSE}
-    Validate({$IFDEF WITH_TVALUEBUFFER}FValidateBuffer{$ELSE}P{$ENDIF});
-    {$ENDIF}
-    L := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(P);
-  end;
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+procedure TZUnicodeStringField.SetAsWideString(const Value: {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
 begin
-  if not FBound then
-    raise CreateUnBoundError;
-  P := Pointer(Value);
-  L := Length(P);
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    if Assigned(OnValidate) then
-      DoValidate;
-    if L > NativeUInt(Size) then
-      raise CreateSizeError;
-    FResultSet.UpdatePWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  SetPWideChar(Pointer(Value), Length(Value));
 end;
+{$IFEND}
+
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+procedure TZUnicodeStringField.SetAsUnicodeString(const Value: UnicodeString);
+begin
+  SetPWideChar(Pointer(Value), Length(Value));
+end;
+{$ENDIF}
 
 procedure TZUnicodeStringField.SetAsUTF8String(const Value: UTF8String);
 Var U: UnicodeString;
@@ -9755,6 +9754,49 @@ begin
   {$ELSE}
   SetAsUnicodeString(U);
   {$IFEND}
+end;
+
+procedure TZUnicodeStringField.SetPWideChar(P: PWideChar; Len: NativeUint);
+  procedure DoValidate;
+  begin
+    {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
+    SetLength(FValidateBuffer, Len);
+    {$ELSE}
+      {$IFDEF WITH_TVALUEBUFFER}
+      SetLength(FValidateBuffer, (Math.Max(Len, Size)+1) shl 1);
+      {$ELSE}
+      SetLength(FValidateBuffer, Math.Max(Len, Size));
+      {$ENDIF}
+    {$ENDIF}
+    if Len > 0 then
+      Move(P^, Pointer(FValidateBuffer)^, (Len+1) shl 1);
+    P := Pointer(FValidateBuffer);
+    PWord(P + Len)^ := 0;
+    {$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
+    Validate(@FValidateBuffer);
+    P := Pointer(FValidateBuffer);
+    if P = nil
+    then Len := 0 else
+    {$ELSE}
+    Validate({$IFDEF WITH_TVALUEBUFFER}FValidateBuffer{$ELSE}P{$ENDIF});
+    {$ENDIF}
+    Len := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(P);
+  end;
+begin
+  if not FBound then
+    raise CreateUnBoundError;
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if Assigned(OnValidate) then
+      DoValidate;
+    if P = nil then
+      P := PEmptyUnicodeString;
+    if Len > NativeUInt(Size) then
+      raise CreateSizeError;
+    FResultSet.UpdatePWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, Len);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
 end;
 
 procedure TZUnicodeStringField.WriteFieldIndex(Writer: TWriter);
@@ -9971,6 +10013,47 @@ begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
+procedure TZRawCLobField.SetPWideChar(P: Pointer; Len: NativeUint);
+var Clob: IZClob;
+    R: RawByteString;
+begin
+  if not FBound then
+    raise CreateUnBoundError;
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if (FColumnCP = zCP_UTF16) then begin
+       if P = nil then
+          P:= PEmptyUnicodeString;
+       CLob := TZAbstractCLob.CreateWithData(nil, 0, FRowAccessor.ConSettings);
+       Clob.SetPWideChar(P, Len); //notify updated
+    end else begin
+      R := PUnicodeToRaw(P,Len,FColumnCP);
+      Len := Length(R);
+      if Len = 0
+      then P := PEmptyUnicodeString
+      else P := Pointer(R);
+      CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+      CLob.SetPAnsiChar(P, FColumnCP, Len);
+    end;
+    FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
+end;
+
+procedure TZRawCLobField.SetVarValue(const Value: Variant);
+begin
+  if TVarData(Value).VType <= 1 //in [varEmpty, varNull]
+  then Clear
+  else if (TVarData(Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Value).VType = varUString){$ENDIF}
+    {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+    then SetAsUnicodeString(Value)
+    {$ELSE FIELD_ASWIDESTRING_IS_UNICODESTRING}
+    then SetAsWideString(Value)
+    {$ENDIF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+    else SetAsString(Value);
+end;
+
 procedure TZRawCLobField.DefineProperties(Filer: TFiler);
 begin
   inherited Defineproperties(Filer);
@@ -10075,11 +10158,8 @@ begin
   {$ENDIF}
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-function TZRawCLobField.GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
-{$ELSE}
-function TZRawCLobField.GetAsUnicodeString: UnicodeString;
-{$IFEND}
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+function TZRawCLobField.GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
 var Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
@@ -10102,6 +10182,33 @@ begin
     end
   else Result := '';
 end;
+{$IFEND}
+
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+function TZRawCLobField.GetAsUnicodeString: UnicodeString;
+var Clob: IZClob;
+    P: Pointer;
+    L: NativeUInt;
+    Lob: IZBlob;
+begin
+  if IsRowDataAvailable then
+    with TZAbstractRODataset(DataSet) do begin
+      Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
+        if (FColumnCP = zCP_UTF16) then begin
+          P := Clob.GetPWideChar;
+          L := Clob.Length;
+          System.SetString(Result, PWidechar(P), L);
+        end else begin
+          P := Clob.GetPAnsiChar(FColumnCP);
+          L := Clob.Length;
+          Result := PRawToUnicode(P, L, FColumnCP);
+        end
+      else Result := ''
+    end
+  else Result := '';
+end;
+{$ENDIF}
 
 {$IFNDEF NO_UTF8STRING}
 function TZRawCLobField.GetAsUTF8String: UTF8String;
@@ -10137,6 +10244,19 @@ jmp2Raw:  Result := PUnicodeToRaw(P, L, zCP_UTF8);
   else Result := '';
 end;
 {$ENDIF NO_UTF8STRING}
+
+function TZRawCLobField.GetAsVariant: Variant;
+begin
+  if IsRowDataAvailable
+  then with TZAbstractRODataset(DataSet) do begin
+    if (FColumnCP = FCTRL_CP)
+    then Result := FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    else Result := FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FResultSet.WasNull then
+      Result := null;
+  end else Result := null;
+end;
+
 
 function TZRawCLobField.GetIsNull: Boolean;
 begin
@@ -10247,11 +10367,7 @@ label jumpSetP;
   var U: UnicodeString;
   begin
     U := PRawToUnicode(P, L, StrCP);
-    {$IFNDEF HAVE_UNICODESTRING}
-    SetAsWideString(U);
-    {$ELSE}
-    SetAsUnicodeString(U);
-    {$ENDIF}
+    SetPWideChar(Pointer(U), Length(U));
   end;
 {$ENDIF}
 begin
@@ -10292,34 +10408,19 @@ jumpSetP: CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.
   {$ENDIF}
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-procedure TZRawCLobField.SetAsWideString(const Value: {$IFNDEF HAVE_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
-{$ELSE}
-procedure TZRawCLobField.SetAsUnicodeString(const Value: UnicodeString);
-{$IFEND}
-var Clob: IZClob;
-    P: PWideChar;
-    L: NativeUInt;
-    R: RawByteString;
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+procedure TZRawCLobField.SetAsWideString(const Value: {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
 begin
-  if not FBound then
-    raise CreateUnBoundError;
-  P := Pointer(Value);
-  L := Length(P);
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
-    if (FColumnCP = zCP_UTF16)
-    then CLob.SetPWideChar(P, L)
-    else begin
-      R := PUnicodeToRaw(P,L,FColumnCP);
-      CLob.SetRawByteString(R, FColumnCP);
-    end;
-    FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  SetPWideChar(Pointer(Value), Length(Value));
 end;
+{$IFEND}
+
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+procedure TZRawCLobField.SetAsUnicodeString(const Value: UnicodeString);
+begin
+  SetPWideChar(Pointer(Value), Length(Value));
+end;
+{$ENDIF}
 
 {$IFNDEF NO_UTF8STRING}
 procedure TZRawCLobField.SetAsUTF8String(const Value: UTF8String);
@@ -10390,6 +10491,34 @@ end;
 function TZUnicodeCLobField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
+end;
+
+procedure TZUnicodeCLobField.SetPWideChar(P: Pointer; Len: NativeUint);
+var Clob: IZClob;
+    R: RawByteString;
+begin
+  if not FBound then
+    raise CreateUnBoundError;
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if (FColumnCP = zCP_UTF16) then begin
+       if P = nil then
+          P:= PEmptyUnicodeString;
+       CLob := TZAbstractCLob.CreateWithData(nil, 0, FRowAccessor.ConSettings);
+       Clob.SetPWideChar(P, Len); //notify updated
+    end else begin
+      R := PUnicodeToRaw(P,Len,FColumnCP);
+      Len := Length(R);
+      if Len = 0
+      then P := PEmptyUnicodeString
+      else P := Pointer(R);
+      CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+      CLob.SetPAnsiChar(P, FColumnCP, Len); //notify updated
+    end;
+    FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
 end;
 
 procedure TZUnicodeCLobField.DefineProperties(Filer: TFiler);
@@ -10496,11 +10625,8 @@ begin
   {$ENDIF}
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-function TZUnicodeCLobField.GetAsWideString: {$IFDEF HAVE_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
-{$ELSE}
-function TZUnicodeCLobField.GetAsUnicodeString: UnicodeString;
-{$IFEND}
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+function TZUnicodeCLobField.GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
 var Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
@@ -10523,6 +10649,33 @@ begin
     end
   else Result := '';
 end;
+{$IFEND}
+
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+function TZUnicodeCLobField.GetAsUnicodeString: UnicodeString;
+var Clob: IZClob;
+    P: Pointer;
+    L: NativeUInt;
+    Lob: IZBlob;
+begin
+  if IsRowDataAvailable then
+    with TZAbstractRODataset(DataSet) do begin
+      Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
+        if (FColumnCP = zCP_UTF16) then begin
+          P := Clob.GetPWideChar;
+          L := Clob.Length;
+          System.SetString(Result, PWidechar(P), L);
+        end else begin
+          P := Clob.GetPAnsiChar(FColumnCP);
+          L := Clob.Length;
+          Result := PRawToUnicode(P, L, FColumnCP);
+        end
+      else Result := ''
+    end
+  else Result := '';
+end;
+{$ENDIF FIELD_ASWIDESTRING_IS_UNICODESTRING}
 
 {$IFNDEF NO_UTF8STRING}
 function TZUnicodeCLobField.GetAsUTF8String: UTF8String;
@@ -10575,6 +10728,13 @@ begin
   else Text := '';
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
+procedure TZUnicodeCLobField.SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF});
+begin
+  SetPWideChar(Pointer(Value), Length(Value));
+end;
+{$IFEND}
 
 function TZUnicodeCLobField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
@@ -10667,16 +10827,12 @@ label jumpSetP;
   var U: UnicodeString;
   begin
     U := PRawToUnicode(P, L, StrCP);
-    {$IFNDEF HAVE_UNICODESTRING}
-    SetAsWideString(U);
-    {$ELSE}
-    SetAsUnicodeString(U);
-    {$ENDIF}
+    SetPWideChar(Pointer(U), Length(U));
   end;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  SetAsWideString(Value);
+  SetPWideChar(Pointer(Value), Length(Value));
   {$ELSE}
   if not FBound then
     raise CreateUnBoundError;
@@ -10712,34 +10868,12 @@ jumpSetP: CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.
   {$ENDIF}
 end;
 
-{$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or not defined(HAVE_UNICODESTRING)}
-procedure TZUnicodeCLobField.SetAsWideString(const Value: {$IFNDEF HAVE_UNICODESTRING}WideString{$ELSE}UnicodeString{$ENDIF});
-{$ELSE}
+{$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
 procedure TZUnicodeCLobField.SetAsUnicodeString(const Value: UnicodeString);
-{$IFEND}
-var Clob: IZClob;
-    P: PWideChar;
-    L: NativeUInt;
-    R: RawByteString;
 begin
-  if not FBound then
-    raise CreateUnBoundError;
-  P := Pointer(Value);
-  L := Length(P);
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
-    if (FColumnCP = zCP_UTF16)
-    then CLob.SetPWideChar(P, L)
-    else begin
-      R := PUnicodeToRaw(P,L,FColumnCP);
-      CLob.SetRawByteString(R, FColumnCP);
-    end;
-    FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  SetPWideChar(Pointer(Value), Length(Value));
 end;
+{$ENDIF}
 
 {$IFNDEF NO_UTF8STRING}
 procedure TZUnicodeCLobField.SetAsUTF8String(const Value: UTF8String);
@@ -10778,21 +10912,6 @@ end;
 procedure TZUnicodeCLobField.WriteFieldIndex(Writer: TWriter);
 begin
   Writer.WriteInteger(FFieldIndex);
-end;
-{$ELSE !WITH_WIDEMEMO}
-
-function TZUnicodeCLobField.GetAsVariant: Variant;
-begin
-  Result := {$IFNDEF HAVE_UNICODESTRING}GetAsWideString{$ELSE}GetAsUnicodeString{$ENDIF};
-end;
-
-procedure TZUnicodeCLobField.SetVarValue(const Value: Variant);
-begin
-  if TVarData(Value).VType <= 1 //in [varEmpty, varNull]
-  then Clear
-  else if (TVarData(Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Value).VType = varUString){$ENDIF}
-    then SetAsWideString(Value)
-    else SetAsString(Value);
 end;
 {$ENDIF WITH_WIDEMEMO}
 

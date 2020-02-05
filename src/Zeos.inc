@@ -174,10 +174,10 @@
           {$DEFINE WITH_WIDEFIELDS}	                  //Wide-fields are supported (common define for ftWideString/ftWideMemo)
           {$DEFINE WITH_CLASS_VARS}                   //Class variables/methods are supported
           {$DEFINE WITH_UNIT_WIDESTRINGS}             //unit WideStrings introduced
+          {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
-
             {$IF CompilerVersion >= 20} //Delphi 2009+
               {$DEFINE FIELD_ASWIDESTRING_IS_UNICODESTRING} //TField.AsWideString is type UnicodeString not WideString
               {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
