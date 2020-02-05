@@ -974,7 +974,7 @@ end;
 }
 procedure TZAbstractResultSetMetadata.LoadColumns;
 var
-  I: Integer;
+  I, j: Integer;
   Driver: IZDriver;
   Tokenizer: IZTokenizer;
   StatementAnalyser: IZStatementAnalyser;
@@ -986,17 +986,15 @@ begin
   Tokenizer := Driver.GetTokenizer;
   StatementAnalyser := Driver.GetStatementAnalyser;
   SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer, SQL);
-  if Assigned(SelectSchema) then
-  begin
+  if Assigned(SelectSchema) then begin
     SelectSchema.LinkReferences(IdentifierConvertor);
     ReplaceStarColumns(SelectSchema);
     FillByIndices := SelectSchema.FieldCount = FResultSet.ColumnsInfo.Count;
-    for I := 0 to FResultSet.ColumnsInfo.Count - 1 do
-    begin
+    J := -1;
+    for I := 0 to FResultSet.ColumnsInfo.Count - 1 do begin
       if FillByIndices then
-        LoadColumn(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema)
-      else
-        LoadColumn(-1, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema);
+        J := I{$IFNDEF GENERIC_INDEX}+1{$ENDIF};
+      LoadColumn(J, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema);
     end;
   end;
   Loaded := True;

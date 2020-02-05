@@ -1597,8 +1597,7 @@ begin
   if ((NBASEDigitsCount = 0) and (NBASEDigit = NUMERIC_POS)) or      // zero
      ((NBASEDigit <> NUMERIC_POS) and (NBASEDigit <> NUMERIC_NEG)) then begin // NaN or NULL
 ZeroBCD:
-    Dst.Precision := 10;
-    Dst.SignSpecialPlaces := 2;
+    PCardinal(@Dst.Precision)^ := ZInitZeroBCD;
     Exit;
   end;
   if NBASEDigit = NUMERIC_NEG

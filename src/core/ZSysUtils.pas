@@ -1266,6 +1266,7 @@ function Trim(const Value: ZWideString): ZWideString; overload;
 {$IFDEF NO_RAW_HEXTOBIN}
 function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
 {$ENDIF}
+
 {**
    Creates a memory stream with copy of data in buffer.
    If buffer contains no data, creates an empty stream.

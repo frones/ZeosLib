@@ -105,7 +105,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
@@ -453,6 +453,38 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZASAAbstractResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  Result := nil;
+  Len := 0;
+  if not LastWasNull then  with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
+    case sqlType and $FFFE of
+      DT_BINARY: begin
+          Result := @PZASASQLSTRING(sqlData).data;
+          Len := PZASASQLSTRING(sqlData).length;
+        end;
+      else
+        FSqlData.CreateException(Format(SErrorConvertionField,
+          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+    end;
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>Cardinal</code> in Pascal.
@@ -790,35 +822,6 @@ begin
     else
       FSqlData.CreateException(Format(SErrorConvertionField,
         [ FSqlData.GetFieldName(columnIndex), ConvertASATypeToString(sqlType)]));
-    end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZASAAbstractResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBytes);
-{$ENDIF}
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := nil
-  else with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
-    case sqlType and $FFFE of
-      DT_BINARY:
-        Result := BufferToBytes(
-          @(PZASASQLSTRING(sqlData).data), PZASASQLSTRING(sqlData).length)
-      else
-        FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
     end;
 end;
 
@@ -1278,6 +1281,7 @@ begin
       else
         Nullable := ntNoNulls;
       Nullable := ntNullable;
+      Signed := ColumnType = stBytes; //asa has no varbinary has it?
 
       Scale := GetFieldScale(I);
       AutoIncrement := False;

@@ -126,7 +126,7 @@ type
     procedure Close; virtual;
     procedure AfterClose; virtual;
     procedure ResetCursor; virtual;
-    function WasNull: Boolean; virtual;
+    function WasNull: Boolean; //virtual;
     function IsClosed: Boolean;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
 
@@ -134,13 +134,11 @@ type
     // Methods for accessing results by column index
     //======================================================================
 
-    function GetPChar(ColumnIndex: Integer): PChar;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload;
-    function GetPWideChar(ColumnIndex: Integer): PWidechar; overload;
     function GetByte(ColumnIndex: Integer): Byte;
     function GetShort(ColumnIndex: Integer): ShortInt;
     function GetWord(ColumnIndex: Integer): Word;
     function GetSmall(ColumnIndex: Integer): SmallInt;
+    function GetBytes(ColumnIndex: Integer): TBytes;
     function GetAsciiStream(ColumnIndex: Integer): TStream; virtual;
     function GetUnicodeStream(ColumnIndex: Integer): TStream; virtual;
     function GetBinaryStream(ColumnIndex: Integer): TStream; virtual;
@@ -156,11 +154,8 @@ type
     //======================================================================
 
     function IsNullByName(const ColumnName: string): Boolean;
-    function GetPCharByName(const ColumnName: string): PChar;
-    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; overload;
-    function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; overload;
-    function GetPWideCharByName(const ColumnName: string): PWidechar; overload;
-    function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar; overload;
+    function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar;
+    function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar;
     function GetStringByName(const ColumnName: string): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
@@ -250,12 +245,11 @@ type
     function RowInserted: Boolean; virtual;
     function RowDeleted: Boolean; virtual;
 
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
-    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload;
-    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); overload;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); overload;
     procedure UpdateTimeStamp(ColumnIndex: Integer; const Value: TDateTime); overload;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); overload;
+
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
 
     //======================================================================
@@ -277,11 +271,8 @@ type
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency);
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: TBCD);
     procedure UpdateGUIDByName(const ColumnName: string; const Value: TGUID);
-    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload;
-    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; var Len: NativeUInt); overload;
-    procedure UpdatePCharByName(const ColumnName: string; const Value: PChar);
-    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar); overload;
-    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar; var Len: NativeUInt); overload;
+    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; var Len: NativeUInt);
+    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar; var Len: NativeUInt);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
     {$IFNDEF NO_ANSISTRING}
     procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);
@@ -360,7 +351,7 @@ type
     {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
+    procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
@@ -382,7 +373,7 @@ type
     {$ENDIF}
   end;
 
-  {** implents a optimal Converter function for Date, Time, DateTime conversion }
+  {** implements a optimal Converter function for Date, Time, DateTime conversion }
   TDateTimeConverter = function (Value, Format: PAnsiChar;
     Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
 
@@ -470,7 +461,7 @@ type
   end;
 
   {** Implements external or internal clob wrapper object. }
-  TZAbstractCLob = class(TZAbstractBlob)
+  TZAbstractCLob = class(TZAbstractBlob, IZCLob)
   protected
     FCurrentCodePage: Word;
     FConSettings: PZConSettings;
@@ -977,52 +968,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-
-function TZAbstractResultSet.GetPChar(ColumnIndex: Integer): PChar;
-var L: NativeUInt;
-begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).{$IFDEF UNICODE}GetPWideChar{$ELSE}GetPAnsiChar{$ENDIF}(ColumnIndex, L);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var L: NativeUInt;
-begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PWideChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetPWideChar(ColumnIndex: Integer): PWidechar;
-var L: NativeUInt;
-begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L)
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>byte</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1348,36 +1293,6 @@ end;
   a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PChar;
-var Len: NativeUInt;
-begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).{$IFDEF UNICODE}GetPWideChar{$ELSE}GetPAnsiChar{$ENDIF}(GetColumnIndex(ColumnName), Len);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string): PAnsiChar;
-var Len: NativeUInt;
-begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(GetColumnIndex(ColumnName), Len);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnName the SQL name of the column
   @param Len the length in bytes
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
@@ -1400,21 +1315,6 @@ end;
 }
 function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string;
   out Len: NativeUInt): PWideChar;
-begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(GetColumnIndex(ColumnName), Len);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PWideChar</code> in the Delphi programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string): PWideChar;
-var Len: NativeUInt;
 begin
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(GetColumnIndex(ColumnName), Len);
 end;
@@ -1680,6 +1580,28 @@ end;
 procedure TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
 begin
   IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(GetColumnIndex(ColumnName), Result);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetBytes(ColumnIndex: Integer): TBytes;
+var P: PByte;
+  L: NativeUInt;
+begin
+  P := IZResultSet(FWeakIntfPtrOfSelf).GetBytes(ColumnIndex, L);
+  if (P <> nil) and (L > 0) then begin
+    SetLength(Result, L);
+    Move(P^, Pointer(Result)^, L);
+  end else
+    Result := nil;
 end;
 
 {**
@@ -2410,62 +2332,6 @@ end;
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
 
 {**
-  Updates the designated column with a <code>PChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-}
-procedure TZAbstractResultSet.UpdatePChar(ColumnIndex: Integer;
-  Value: PChar);
-begin
-  {$IFDEF UNICODE}
-  UpdatePWideChar(ColumnIndex, Value);
-  {$ELSE}
-  UpdatePAnsiChar(ColumnIndex, Value);
-  {$ENDIF}
-end;
-
-{**
-  Updates the designated column with a <code>TZAnsiRec</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param value the new column value
-}
-procedure TZAbstractResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
-  Value: PAnsiChar);
-var Len: NativeUInt;
-begin
-  Len := StrLen(Value);
-  IZResultSet(FWeakIntfPtrOfSelf).UpdatePAnsiChar(ColumnIndex, Value, Len);
-end;
-
-{**
-  Updates the designated column with a <code>TZAnsiRec</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-}
-procedure TZAbstractResultSet.UpdatePWideChar(ColumnIndex: Integer;
-  Value: PWideChar);
-var Len: NativeUInt;
-begin
-  Len := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(Value);
-  IZResultSet(FWeakIntfPtrOfSelf).UpdatePWideChar(ColumnIndex, Value, Len);
-end;
-
-{**
   Updates the designated column with a variant value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -2498,7 +2364,7 @@ begin
     vtRawByteString: IZResultSet(FWeakIntfPtrOfSelf).UpdateRawByteString(ColumnIndex, Value.VRawByteString);
     vtBytes: begin
               Len := Length(Value.VRawByteString);
-              IZResultSet(FWeakIntfPtrOfSelf).UpdatePAnsiChar(ColumnIndex, Pointer(Value.VRawByteString), Len);
+              IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(ColumnIndex, Pointer(Value.VRawByteString), Len);
             end;
     vtDateTime: IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtDate: IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(ColumnIndex, Value.VDate);
@@ -2754,22 +2620,6 @@ end;
   <code>insertRow</code> methods are called to update the database.
 
   @param columnName the name of the column
-  @param x the new column value
-}
-procedure TZAbstractResultSet.UpdatePAnsiCharByName(const ColumnName: string;
-  Value: PAnsiChar);
-begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdatePAnsiChar(GetColumnIndex(ColumnName), Value);
-end;
-
-{**
-  Updates the designated column with a <code>PAnsiChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnName the name of the column
   @param Len the pointer to the length in bytes
   @param x the new column value
 }
@@ -2777,38 +2627,6 @@ procedure TZAbstractResultSet.UpdatePAnsiCharByName(const ColumnName: string;
   Value: PAnsiChar; var Len: NativeUInt);
 begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdatePAnsiChar(GetColumnIndex(ColumnName), Value, Len);
-end;
-
-{**
-  Updates the designated column with a <code>PChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnName the name of the column
-  @param x the new column value
-}
-procedure TZAbstractResultSet.UpdatePCharByName(const ColumnName: string;
-  const Value: PChar);
-begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdatePChar(GetColumnIndex(ColumnName), Value);
-end;
-
-{**
-  Updates the designated column with a <code>PWideChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnName the name of the column
-  @param x the new column value
-}
-procedure TZAbstractResultSet.UpdatePWideCharByName(const ColumnName: string;
-  Value: PWideChar);
-begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdatePWideChar(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2913,6 +2731,24 @@ begin
 end;
 
 {**
+  Updates the designated column with a <code>byte</code> array value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateBytes(ColumnIndex: Integer;
+  const Value: TBytes);
+var Len: NativeUint;
+begin
+  Len := Length(Value);
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(ColumnIndex, Pointer(Value), Len);
+end;
+
+{**
   Updates the designated column with a <code>boolean</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -2931,10 +2767,13 @@ end;
   @param columnName the name of the column
   @param x the new column value
 }
+
 procedure TZAbstractResultSet.UpdateBytesByName(const ColumnName: string;
   const Value: TBytes);
+var Len: NativeUint;
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(GetColumnIndex(ColumnName), Value);
+  Len := Length(Value);
+  IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(GetColumnIndex(ColumnName), Pointer(Value), Len);
 end;
 
 {**
@@ -3924,7 +3763,8 @@ SetData:
       FBlobSize := Len +1;
       FCurrentCodePage := CodePage;
       GetMem(FBlobData, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-1);
+      if Buffer <> nil then
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-1);
       PByte((PAnsiChar(FBlobData)+Len))^ := Ord(#0); //set leading terminator
     end;
   end;
@@ -4675,10 +4515,11 @@ end;
   <code>insertRow</code> methods are called to update the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
+  @param Value the address of new column value
+  @param Len the length of the addressed value
 }
 procedure TZAbstractReadOnlyResultSet.UpdateBytes(ColumnIndex: Integer;
-  const Value: TBytes);
+  Value: PByte; var Len: NativeUInt);
 begin
   RaiseReadOnlyException;
 end;
@@ -4797,6 +4638,16 @@ begin
   RaiseReadOnlyException;
 end;
 
+{**
+  Updates the designated column with a <code>signed longlong</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param value the new column value
+}
 procedure TZAbstractReadOnlyResultSet.UpdateLong(ColumnIndex: Integer;
   const Value: Int64);
 begin

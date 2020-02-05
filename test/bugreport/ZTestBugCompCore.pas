@@ -137,9 +137,7 @@ type
     procedure TestUnicodeBehavior;
     procedure TestNonAsciiChars;
     {$ENDIF}
-    {$IFDEF WITH_FTWIDESTRING}
     procedure TestUnicodeChars;
-    {$ENDIF}
   end;
 
 implementation
@@ -1231,15 +1229,15 @@ begin
   try
     Query.Open;
 
-    CheckEquals(False, Query.UpdatesPending);
+    CheckFalse(Query.UpdatesPending);
     Query.Edit;
     CheckEquals(False, Query.UpdatesPending);
     Query.FieldByName('p_id').AsInteger := 12345;
-    CheckEquals(True, Query.UpdatesPending);
+    Check(Query.UpdatesPending);
     Query.Post;
-    CheckEquals(True, Query.UpdatesPending);
+    Check(Query.UpdatesPending);
     Query.CancelUpdates;
-    CheckEquals(False, Query.UpdatesPending);
+    CheckFalse(Query.UpdatesPending);
 
     Query.Close;
   finally
@@ -2252,19 +2250,25 @@ begin
   end;
 end;
 {$ENDIF}
-{$IFDEF WITH_FTWIDESTRING}
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeChars;
 var
   Query: TZQuery;
   CP: Word;
   ConSettings: PZConSettings;
+  {$IFNDEF Unicode}
+  Str6: UnicodeString;
+  {$ENDIF}
 const
-  Str6: WideString = #$5317#$4EAC#$0020#$6771#$4EAC; // Beijing + Space + Tokyo
+  {$IFDEF Unicode}
+  Str6: UnicodeString = #$5317#$4EAC#$0020#$6771#$4EAC; // Beijing + Space + Tokyo
+  {$ELSE}
+  Words: array[0..4] of Word = ($5317,$4EAC,$0020,$6771,$4EAC); // Beijing + Space + Tokyo
+  {$ENDIF}
 
-  procedure InsertValue(const id: Integer; const value: WideString);
+  procedure InsertValue(const id: Integer; const value: UnicodeString);
   begin
     Query.ParamByName('id').AsInteger := id;
-    Query.ParamByName('string').AsWideString := value;
+    Query.ParamByName('string').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := value;
     Query.ExecSQL;
   end;
 begin
@@ -2273,6 +2277,9 @@ begin
   Check(Query.Connection.Connected);
   ConSettings := Connection.DbcConnection.GetConSettings;
 
+  {$IFNDEF Unicode}
+  System.SetString(Str6, PWideChar(@Words[0]), 5);
+  {$ENDIF}
   try
     {no unicode strings or utf8 allowed}
     if ((ConSettings.CPType = cGET_ACP)
@@ -2286,6 +2293,9 @@ begin
       {add some more if you run into same issue !!} then
       Exit;
     try
+      Query.Close;
+      Query.SQL.Text := 'delete from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006)';
+      Query.ExecSQL;
       Query.SQL.Text := 'insert into string_values (s_id, s_nvarchar) values (:id, :string)';
       InsertValue(1001, Str1);
       InsertValue(1002, Str2);
@@ -2296,22 +2306,22 @@ begin
       Query.SQL.Text := 'select s_id, s_nvarchar from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006) order by s_id';
       Query.Open;
       CheckEquals(1001, Query.FieldByName('s_id').AsInteger);
-      Check(Str1 = Query.FieldByName('s_nvarchar').AsWideString);
+      CheckEquals(Str1, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1002, Query.FieldByName('s_id').AsInteger);
-      Check(Str2 = Query.FieldByName('s_nvarchar').AsWideString);
+      CheckEquals(Str2, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1003, Query.FieldByName('s_id').AsInteger);
-      Check(Str3 = Query.FieldByName('s_nvarchar').AsWideString);
+      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1004, Query.FieldByName('s_id').AsInteger);
-      Check(Str4 = Query.FieldByName('s_nvarchar').AsWideString);
+      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1005, Query.FieldByName('s_id').AsInteger);
-      Check(Str5 = Query.FieldByName('s_nvarchar').AsWideString);
+      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1006, Query.FieldByName('s_id').AsInteger);
-      Check(Str6 = Query.FieldByName('s_nvarchar').AsWideString);
+      CheckEquals(Str6, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Assert(CP <> 0);
       Assert(Consettings <> nil);
     finally
@@ -2323,7 +2333,6 @@ begin
     FreeAndNil(Query);
   end;
 end;
-{$ENDIF}
 
 initialization
   RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);

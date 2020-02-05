@@ -121,7 +121,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
@@ -860,6 +860,40 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractOleDBResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+begin
+  Result := nil;
+  Len := 0;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FwType of
+      DBTYPE_GUID:
+        begin
+          SetLength(FRawTemp, SizeOf(TGUID));
+          Result := Pointer(FRawTemp);
+          Len := SizeOf(TGUID);
+          PGUID(Result)^ := PGUID(FData)^;
+        end;
+      DBTYPE_BYTES:
+        begin
+          Result := FData;
+          Len := FLength;
+        end;
+      else LastWasNull := True;
+    end;
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>int</code> in the Java programming language.
@@ -1300,34 +1334,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractOleDBResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-begin
-  Result := nil;
-  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
-    case FwType of
-      DBTYPE_GUID:
-        begin
-          SetLength(Result, 16);
-          PGUID(Result)^ := PGUID(FData)^;
-        end;
-      DBTYPE_BYTES:
-        begin
-          Result := BufferToBytes(FData, FLength);
-        end;
-      else LastWasNull := True;
-    end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>currency</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1755,7 +1761,7 @@ begin
           DBTYPE_UI4                  : RowAccessor.SetUInt(I, PCardinal(FData^)^);
           DBTYPE_I8                   : RowAccessor.SetLong(I, PInt64(FData^)^);
           DBTYPE_UI8                  : RowAccessor.SetULong(I, PInt64(FData^)^);
-          DBTYPE_GUID                 : RowAccessor.SetBytes(I, FData^, 16);
+          DBTYPE_GUID                 : RowAccessor.SetGUID(I, PGUID(FData^)^);
           DBTYPE_BYTES                : if DBBINDING.cbMaxLen = 0 then
                                           RowAccessor.SetBlob(I, TZOleDBBLOB.Create(FResultSet.FRowSet,
                                             FResultSet.FLobAccessors[DBBINDING.obLength],
@@ -2158,7 +2164,9 @@ begin
       else ColumnInfo.Precision := FieldSize;
       ColumnInfo.Currency := prgInfo.wType = DBTYPE_CY;
       ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
-      ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stCurrency, stBigDecimal];
+      if (ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString])
+      then ColumnInfo.Signed := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH) <> 0
+      else ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stCurrency, stBigDecimal];
       ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0);
       ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0);
       ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;

@@ -216,10 +216,9 @@ begin
     Result := Assigned(LastResultSet);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
-    on E: Exception do
-    begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
+    on E: EOleException do begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise EZSQLException.CreateWithCode(E.ErrorCode, E.Message);
     end;
   end
 end;
@@ -264,10 +263,9 @@ begin
     FOpenResultSet := Pointer(Result);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
-    on E: Exception do
-    begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
+    on E: EOleException do begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise EZSQLException.CreateWithCode(E.ErrorCode, E.Message);
     end;
   end
 end;
@@ -295,10 +293,9 @@ begin
     Result := LastUpdateCount;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
-    on E: Exception do
-    begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
+    on E: EOleException do begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise EZSQLException.CreateWithCode(E.ErrorCode, E.Message);
     end;
   end
 end;

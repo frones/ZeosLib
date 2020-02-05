@@ -120,7 +120,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
@@ -384,7 +384,7 @@ begin
     end else begin
       ColumnInfo.Precision := FieldSize;
     end;
-    ColumnInfo.Signed := ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adDouble, adSingle, adCurrency, adDecimal, adNumeric];
+    ColumnInfo.Signed := ColType in [adTinyInt, adSmallInt, adInteger, adBigInt, adDouble, adSingle, adCurrency, adDecimal, adNumeric, adBinary];
     ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0) and (F.Properties.Item['BASECOLUMNNAME'].Value <> null) and not ColumnInfo.AutoIncrement;
     ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0) or ColumnInfo.AutoIncrement;
     ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;
@@ -953,6 +953,39 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAdoResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+begin
+  LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
+  if LastWasNull then begin
+    Result := nil;
+    Len := 0;
+  end else with FField20 do
+    case FValueType of
+      VT_ARRAY or VT_UI1: begin
+            Result := TVarData(FColValue).VArray.Data;
+            Len := ActualSize;
+          end;
+      else if Type_ = adGUID then begin
+          SetLength(FRawTemp, SizeOf(TGUID));
+          Result := Pointer(FRawTemp);
+          Len := SizeOf(TGUID);
+          ValidGUIDToBinary(PWideChar(FValueAddr), Pointer(Result));
+        end else raise Self.CreateAdoConvertError(ColumnIndex, Type_);
+    end;
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>int</code> in the Java programming language.
@@ -1218,31 +1251,6 @@ begin
         if not ZSysUtils.TryUniToBcd(P, Len, Result, '.') then
           Result := NullBCD;
       end;
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-begin
-  LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
-  if LastWasNull then
-    Result := nil
-  else with FField20 do
-    case FValueType of
-      VT_ARRAY or VT_UI1: Result := BufferToBytes(TVarData(FColValue).VArray.Data, ActualSize);
-    else if Type_ = adGUID then begin
-        SetLength(Result, 16);
-        ValidGUIDToBinary(PWideChar(FValueAddr), Pointer(Result));
-      end else raise Self.CreateAdoConvertError(ColumnIndex, Type_);
   end;
 end;
 

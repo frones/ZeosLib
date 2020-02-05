@@ -133,7 +133,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
@@ -542,18 +542,27 @@ begin
   end;
 end;
 
-function TAbstractODBCResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-begin
-  if IsNull(ColumnIndex) then //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-    Result := nil
-  else if fColDataPtr = nil then //streamed data
-    Result := nil
-  else begin
-    Result := BufferToBytes(
-      fColDataPtr,
-      fStrLen_or_Ind shl Ord((TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in [stString, stUnicodeString]) and fIsUnicodeDriver));
-  end;
+{**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
 
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TAbstractODBCResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+begin
+  if IsNull(ColumnIndex) or (fColDataPtr = nil) then begin//Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
+    Result := nil;
+    Len := 0;
+  end else begin
+    Result := fColDataPtr;
+    Len := fStrLen_or_Ind shl Ord((TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in [stString, stUnicodeString]) and fIsUnicodeDriver);
+  end;
 end;
 
 function TAbstractODBCResultSet.GetCurrency(ColumnIndex: Integer): Currency;
@@ -1767,6 +1776,7 @@ begin
               end;
             SQL_BINARY: begin
                 Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
+                Signed := True;
                 FixedWidth := True;
               end;
             SQL_VARCHAR, SQL_WVARCHAR, SQL_VARBINARY:

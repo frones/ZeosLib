@@ -587,11 +587,6 @@ begin
       then RowAccessor := OldRowAccessor
       else RowAccessor := NewRowAccessor;
 
-      (*if StrToBoolEx(DefineStatementParameter(
-        ResultSet.GetStatement, DSProps_Defaults, 'true')) then
-        Statement.SetDefaultValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-          ResultSet.GetMetadata.GetDefaultValue(ColumnIndex));*)
-
       if RowAccessor.IsNull(ColumnIndex) then
         Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           Metadata.GetColumnType(ColumnIndex))
@@ -743,7 +738,7 @@ CheckColumnType:
             if RefreshRowAccessor.IsRaw
             then RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), Len)
             else RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), Len);
-          stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
+          stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I, Len), Len);
           stDate: begin
               RefreshResultSet.GetDate(I, D);
               RefreshRowAccessor.SetDate(RefreshColumnIndex, D);
@@ -818,6 +813,12 @@ var
         Break;
       end;
   end;
+  {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+  function CreateInvalidUpdateCountException: EZSQLException; //suppress _U/LStrArrClear
+  begin
+    Result := EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+  end;
+  {$ENDIF WITH_VALIDATE_UPDATE_COUNT}
 begin
   if (UpdateType = utDeleted)
     and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
@@ -878,7 +879,7 @@ begin
         lUpdateCount := Statement.ExecuteUpdatePrepared;
         {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
         if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
-          raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+          raise CreateInvalidUpdateCountException;
         {$ENDIF}
 
         case UpdateType of

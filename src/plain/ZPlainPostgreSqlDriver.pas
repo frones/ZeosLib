@@ -372,7 +372,7 @@ const
     LineEnding+'line: ', lineEnding+'funtion: '{$ENDIF}
   );
 
-type
+type {$Z+}
   TZPostgreSQLExecStatusType = (
     PGRES_EMPTY_QUERY,
     PGRES_COMMAND_OK,     { a query command that doesn't return
@@ -388,6 +388,7 @@ type
     PGRES_COPY_BOTH,      { Copy In/Out data transfer in progress }
     PGRES_SINGLE_TUPLE    { since 9.2 single tuple from larger resultset }
   );
+  {$Z-}
 
 { PGnotify represents the occurrence of a NOTIFY message.
   Ideally this would be an opaque typedef, but it's so simple that it's

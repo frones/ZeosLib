@@ -529,32 +529,32 @@ begin
     I := 4;
     RS.MoveToInsertRow;
     RS.UpdateInt(id_Index, I);
-    RS.UpdateCurrency(Curr18_4_Index, C);
+    {RS.UpdateCurrency(Curr18_4_Index, C);
     RS.UpdateCurrency(Curr15_2_Index, C/100);
     RS.UpdateCurrency(Curr10_4_Index, C/10);
     RS.UpdateCurrency(Curr4_4_Index, C/1000);
     if (ProtocolType <> protSQLite)  then begin
       RS.UpdateCurrency(BigD18_1_Index, C);
       RS.UpdateCurrency(BigD18_5_Index, C);
-      RS.UpdateCurrency(BigD12_10_Index, 0);
+      RS.UpdateCurrency(BigD12_10_Index, 0);}
       RS.UpdateCurrency(BigD18_18_Index, C/10000);
-    end;
+    //end;
     RS.InsertRow;
     RS.Close;
     RS := SelStmt.ExecuteQueryPrepared;
     Check(Rs.Next);
     Check(RS.Next);
     CheckEquals(i, RS.GetInt(id_Index));
-    CheckEquals(C, RS.GetCurrency(Curr18_4_Index));
+    {CheckEquals(C, RS.GetCurrency(Curr18_4_Index));
     CheckEquals(C/100, RS.GetCurrency(Curr15_2_Index));
     CheckEquals(C/10, RS.GetCurrency(Curr10_4_Index));
     CheckEquals(C/1000, RS.GetCurrency(Curr4_4_Index));
     if (ProtocolType <> protSQLite)  then begin
       CheckEquals(C, RS.GetCurrency(BigD18_1_Index));
       CheckEquals(C, RS.GetCurrency(BigD18_5_Index));
-      CheckEquals(0, RS.GetCurrency(BigD12_10_Index));
+      CheckEquals(0, RS.GetCurrency(BigD12_10_Index));}
       CheckEquals(C/10000, RS.GetCurrency(BigD18_18_Index));
-    end;
+    //end;
     RS.Close;
   finally
     RS.Close;
@@ -1023,8 +1023,25 @@ begin
     CheckEquals(12345.678, GetFloatByName('eq_cost'), 0.01);
     CheckEquals(EncodeDate(1989, 07, 07), GetDateByName('eq_date'));
     CheckEquals(EncodeDate(1998, 04, 24), GetDateByName('woff_date'));
-    DeleteRow;
-    Close;
+
+    try
+      with Connection.CreateStatement do begin
+        ExecuteUpdate('update equipment set eq_name=null,eq_type=null,eq_cost=null,eq_date=null,woff_date=null where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
+        Close;
+      end;
+      { test refresh the row}
+      ResultSet.RefreshRow;
+      CheckEquals(TEST_ROW_ID, GetIntByName('eq_id'));
+      CheckEquals(True, IsNullByName('eq_name'));
+      CheckEquals(True, IsNullByName('eq_type'));
+      CheckEquals(True, IsNullByName('eq_cost'));
+      CheckEquals(True, IsNullByName('eq_date'));
+      CheckEquals(True, IsNullByName('woff_date'));
+
+    finally
+      DeleteRow;
+      Close;
+    end;
   end;
 
   { Checks what record deleted }
@@ -1471,6 +1488,9 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
   Len, name: NativeUInt;
+  R: RawByteString;
+  U: UnicodeString;
+  P: Pointer;
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -1486,14 +1506,12 @@ begin
         CheckEquals(UTF8String(SNames[name]), ResultSet.GetUTF8String(p_name_Index));
         CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
         CheckEquals(ZWideString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
-        //some drivers are not null terminated such as ASA so the test can't pass with the deprecated getters
-        if ProtocolType <> protASA then
-          CheckEquals(PAnsiChar(AnsiString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index));
-        CheckEquals(PAnsiChar(RawByteString(SNames[name])), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
-        {$IFNDEF UNICODE} if ProtocolType <> protASA then {$ENDIF}
-          CheckEquals(PChar(SNames[name]), ResultSet.GetPChar(p_name_Index));
-        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index)));
-        CheckEquals(ZWideString(SNames[name]), ZWideString(ResultSet.GetPWideChar(p_name_Index, Len)));
+        P := ResultSet.GetPAnsiChar(p_name_Index, Len);
+        ZSetString(PAnsiChar(P), Len, R);
+        CheckEquals(RawByteString(SNames[name]), R);
+        P := ResultSet.GetPWideChar(p_name_Index, Len);
+        System.SetString(U, PWideChar(P), Len);
+        CheckEquals(ZWideString(SNames[name]), U);
       end;
     finally
       ResultSet.Close;
@@ -1825,7 +1843,7 @@ var
       stFloatArray[i] := RandomFloat(-5000, 5000);
       stDoubleArray[i] := RandomFloat(-5000, 5000);
       stBigDecimalArray[i] := DoubleToBCD(RandomFloat(-5000, 5000));
-      stStringArray[i] := RandomStr(Random(99)+1);
+      stStringArray[i] := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(RandomStr(Random(99)+1));
       stUnicodeStringArray[i] := RandomStr(Random(254+1));
       stBytesArray[i] := RandomBts(ArrayLen);
       stDateArray[i] := Trunc(Now);

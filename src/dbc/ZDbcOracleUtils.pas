@@ -867,6 +867,77 @@ Done: //job done -> finalize
   Result := pNum-PAnsiChar(Num);
   num^[0] := Result - 1;
 end;
+(* second incomplete version
+function BCD2Nvu({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} bcd: TBCD; num: POCINumber): sb2;
+var
+  pNibble, pLastNibble, pNum, pLastNum: PAnsiChar;
+  Precision, Scale: Word;
+  NumDigit, ExpOffset, X, Y: Integer;
+  Negative, GetFirstBCDHalfByte, ZeroScale, NotMultiplyBy10: Boolean;
+begin
+  //set offsets and test for zero:
+  VirtualPackBCD(bcd, pNibble, pLastNibble, Precision, Scale, GetFirstBCDHalfByte);
+  pNum := @num^[2]; //set offset after len and exponent bytes
+  //init the 22 byte result: we ignore the first two (len+exp) bytes -> set in all cases
+  {$IFDEF CPU64}
+  PInt64(pNum)^ := 0; PInt64(pNum+8)^ := 0; PInt64(pNum+14)^ := 0;
+  {$ELSE}
+  PCardinal(pNum)^    := 0; PCardinal(pNum+4)^  := 0; PCardinal(pNum+8)^ := 0;
+  PCardinal(pNum+12)^ := 0; PCardinal(pNum+16)^ := 0;
+  {$ENDIF}
+  if (Precision = 0) then begin //zero!
+    num[0] := 1;
+    num[1] := $80;
+    Result := 2;
+    Exit;
+  end;
+  ExpOffset := 1;
+  ZeroScale := Precision = Scale;
+  Negative := (bcd.SignSpecialPlaces and (1 shl 7)) <> 0; //no call to BCDNegative
+  pLastNum := pNum+(OCI_NUMBER_SIZE-2); //mark end of byte array
+  NotMultiplyBy10 := Precision and 1 = 1;
+  Y := Precision - Ord(NotMultiplyBy10);
+  for X := 0 to Y do begin
+    if GetFirstBCDHalfByte
+    then NumDigit := (PByte(pNibble)^ shr 4)
+    else begin
+      NumDigit := (PByte(pNibble)^ and $0f);
+      Inc(pNibble); //next nibble
+    end;
+    if ZeroScale and (NumDigit = 0)//skip !all! trailing zeroes
+    then Inc(ExpOffset, Ord(NotMultiplyBy10)) //remainder pack the oci number else reading them back is dead slow
+    else begin
+      ZeroScale := False;
+      if NotMultiplyBy10 then begin
+        if Negative
+        then NumDigit := 101 - PByte(pNum)^ + NumDigit
+        else NumDigit := PByte(pNum)^ + NumDigit + 1;
+        PByte(pNum)^ := Byte(NumDigit);
+        if X = y then
+          if (NumDigit = NVUBase100Adjust[Negative])
+          then PByte(pNum)^ := 0
+          else Inc(pNum, Ord(NumDigit <> 0));  //remainder for len calculation
+      end else
+        PByte(pNum)^ := NumDigit * 10;
+    end;
+    { now invert the getter/setter logic }
+    GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
+    NotMultiplyBy10 := not NotMultiplyBy10;
+  end;
+  NumDigit := Precision - Scale;
+  NumDigit := NumDigit + (NumDigit and 1);
+  num^[1] := (NumDigit shr 1)-(ExpOffset) + 65 + 128; //set the exponent
+  if Negative then begin
+    num^[1] := not num^[1]; //invert the bits
+    if pNum < PLastNum then begin
+      PByte(pNum)^ := 102; //as documented for whatever it is..
+      inc(pNum); //for len calculation
+    end;
+  end;
+  Result := pNum-PAnsiChar(Num);
+  num^[0] := Result - 1;
+end;*)
+
 
 {** Autor: EgonHugeist (EH) *}
 procedure Nvu2BCD(num: POCINumber; var bcd: TBCD);
@@ -1681,12 +1752,12 @@ begin
   if Status <> OCI_SUCCESS then
     CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Open Large Object', ConSettings);
 
+  if not BinaryLob then
+    BlobSize := BlobSize-1;
   { Checks for empty blob.}
   { This test doesn't use IsEmpty because that function does allow for zero length blobs}
   if (BlobSize > 0) then
   begin
-    if not BinaryLob then
-      BlobSize := BlobSize-1;
     if BlobSize > ChunkSize then
     begin
       OffSet := 0;

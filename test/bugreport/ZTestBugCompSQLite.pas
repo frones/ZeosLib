@@ -87,7 +87,7 @@ type
 implementation
 
 uses
-  Variants;
+  Variants, DB;
 
 { ZTestCompSQLiteBugReport }
 

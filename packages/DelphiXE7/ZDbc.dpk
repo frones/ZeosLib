@@ -35,106 +35,73 @@ requires
   rtl;
 
 contains
-{$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
-
-{$IFDEF ENABLE_ODBC}
-  ZDbcODBCCon in '..\..\src\dbc\ZDbcODBCCon.pas',
-  ZDbcODBCMetadata in '..\..\src\dbc\ZDbcODBCMetadata.pas',
-  ZDbcODBCResultSet in '..\..\src\dbc\ZDbcODBCResultSet.pas',
-  ZDbcODBCStatement in '..\..\src\dbc\ZDbcODBCStatement.pas',
-  ZDbcODBCUtils in '..\..\src\dbc\ZDbcODBCUtils.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_DBLIB}
-  ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
-  ZDbcDbLibMetadata in '..\..\src\dbc\ZDbcDbLibMetadata.pas',
-  ZDbcDbLibResultSet in '..\..\src\dbc\ZDbcDbLibResultSet.pas',
-  ZDbcDbLibStatement in '..\..\src\dbc\ZDbcDbLibStatement.pas',
-  ZDbcDbLibUtils in '..\..\src\dbc\ZDbcDbLibUtils.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_INTERBASE}
-  ZDbcInterbase6 in '..\..\src\dbc\ZDbcInterbase6.pas',
-  ZDbcInterbase6Metadata in '..\..\src\dbc\ZDbcInterbase6Metadata.pas',
-  ZDbcInterbase6ResultSet in '..\..\src\dbc\ZDbcInterbase6ResultSet.pas',
-  ZDbcInterbase6Statement in '..\..\src\dbc\ZDbcInterbase6Statement.pas',
-  ZDbcInterbase6Utils in '..\..\src\dbc\ZDbcInterbase6Utils.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_MYSQL}
-  ZDbcMySql in '..\..\src\dbc\ZDbcMySql.pas',
-  ZDbcMySqlMetadata in '..\..\src\dbc\ZDbcMySqlMetadata.pas',
-  ZDbcMySqlResultSet in '..\..\src\dbc\ZDbcMySqlResultSet.pas',
-  ZDbcMySqlStatement in '..\..\src\dbc\ZDbcMySqlStatement.pas',
-  ZDbcMySqlUtils in '..\..\src\dbc\ZDbcMySqlUtils.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_POSTGRESQL}
-  ZDbcPostgreSql in '..\..\src\dbc\ZDbcPostgreSql.pas',
-  ZDbcPostgreSqlMetadata in '..\..\src\dbc\ZDbcPostgreSqlMetadata.pas',
-  ZDbcPostgreSqlResultSet in '..\..\src\dbc\ZDbcPostgreSqlResultSet.pas',
-  ZDbcPostgreSqlStatement in '..\..\src\dbc\ZDbcPostgreSqlStatement.pas',
-  ZDbcPostgreSqlUtils in '..\..\src\dbc\ZDbcPostgreSqlUtils.pas',
-{$ENDIF}
-
-{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
-  ZDbcOleDBUtils in '..\..\src\dbc\ZDbcOleDBUtils.pas',
-{$IFEND}
-
-{$IFDEF ENABLE_OLEDB}
-  ZDbcOleDB in '..\..\src\dbc\ZDbcOleDB.pas',
-  ZDbcOleDBMetadata in '..\..\src\dbc\ZDbcOleDBMetadata.pas',
-  ZDbcOleDBResultSet in '..\..\src\dbc\ZDbcOleDBResultSet.pas',
-  ZDbcOleDBStatement in '..\..\src\dbc\ZDbcOleDBStatement.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_ADO}
   ZDbcAdo in '..\..\src\dbc\ZDbcAdo.pas',
   ZDbcAdoMetadata in '..\..\src\dbc\ZDbcAdoMetadata.pas',
   ZDbcAdoResultSet in '..\..\src\dbc\ZDbcAdoResultSet.pas',
   ZDbcAdoStatement in '..\..\src\dbc\ZDbcAdoStatement.pas',
   ZDbcAdoUtils in '..\..\src\dbc\ZDbcAdoUtils.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_ORACLE}
-  ZDbcOracle in '..\..\src\dbc\ZDbcOracle.pas',
-  ZDbcOracleUtils in '..\..\src\dbc\ZDbcOracleUtils.pas',
-  ZDbcOracleStatement in '..\..\src\dbc\ZDbcOracleStatement.pas',
-  ZDbcOracleResultSet in '..\..\src\dbc\ZDbcOracleResultSet.pas',
-  ZDbcOracleMetadata in '..\..\src\dbc\ZDbcOracleMetadata.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_SQLITE}
-  ZDbcSqLite in '..\..\src\dbc\ZDbcSqLite.pas',
-  ZDbcSqLiteUtils in '..\..\src\dbc\ZDbcSqLiteUtils.pas',
-  ZDbcSqLiteStatement in '..\..\src\dbc\ZDbcSqLiteStatement.pas',
-  ZDbcSqLiteResultSet in '..\..\src\dbc\ZDbcSqLiteResultSet.pas',
-  ZDbcSqLiteMetadata in '..\..\src\dbc\ZDbcSqLiteMetadata.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_ASA}
-  ZDbcASAUtils in '..\..\src\dbc\ZDbcASAUtils.pas',
+  ZDbcASA in '..\..\src\dbc\ZDbcASA.pas',
   ZDbcASAMetadata in '..\..\src\dbc\ZDbcASAMetadata.pas',
   ZDbcASAResultSet in '..\..\src\dbc\ZDbcASAResultSet.pas',
   ZDbcASAStatement in '..\..\src\dbc\ZDbcASAStatement.pas',
-  ZDbcASA in '..\..\src\dbc\ZDbcASA.pas',
-{$ENDIF}
-
-{$IFDEF ENABLE_POOLED}
-  ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
-{$ENDIF}
-
-  ZDbcProperties in '..\..\src\dbc\ZDbcProperties.pas',
-  ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
+  ZDbcASAUtils in '..\..\src\dbc\ZDbcASAUtils.pas',
+  ZDbcCache in '..\..\src\dbc\ZDbcCache.pas',
   ZDbcCachedResultSet in '..\..\src\dbc\ZDbcCachedResultSet.pas',
   ZDbcConnection in '..\..\src\dbc\ZDbcConnection.pas',
+  ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
+  ZDbcDbLibMetadata in '..\..\src\dbc\ZDbcDbLibMetadata.pas',
+  ZDbcDbLibResultSet in '..\..\src\dbc\ZDbcDbLibResultSet.pas',
+  ZDbcDbLibStatement in '..\..\src\dbc\ZDbcDbLibStatement.pas',
+  ZDbcDbLibUtils in '..\..\src\dbc\ZDbcDbLibUtils.pas',
   ZDbcGenericResolver in '..\..\src\dbc\ZDbcGenericResolver.pas',
+  ZDbcInterbase6 in '..\..\src\dbc\ZDbcInterbase6.pas',
+  ZDbcInterbase6Metadata in '..\..\src\dbc\ZDbcInterbase6Metadata.pas',
+  ZDbcInterbase6ResultSet in '..\..\src\dbc\ZDbcInterbase6ResultSet.pas',
+  ZDbcInterbase6Statement in '..\..\src\dbc\ZDbcInterbase6Statement.pas',
+  ZDbcInterbase6Utils in '..\..\src\dbc\ZDbcInterbase6Utils.pas',
   ZDbcIntfs in '..\..\src\dbc\ZDbcIntfs.pas',
+  ZDbcLogging in '..\..\src\dbc\ZDbcLogging.pas',
   ZDbcMetadata in '..\..\src\dbc\ZDbcMetadata.pas',
+  ZDbcMySql in '..\..\src\dbc\ZDbcMySql.pas',
+  ZDbcMySqlMetadata in '..\..\src\dbc\ZDbcMySqlMetadata.pas',
+  ZDbcMySqlResultSet in '..\..\src\dbc\ZDbcMySqlResultSet.pas',
+  ZDbcMySqlStatement in '..\..\src\dbc\ZDbcMySqlStatement.pas',
+  ZDbcMySqlUtils in '..\..\src\dbc\ZDbcMySqlUtils.pas',
+  ZDbcODBCCon in '..\..\src\dbc\ZDbcODBCCon.pas',
+  ZDbcODBCMetadata in '..\..\src\dbc\ZDbcODBCMetadata.pas',
+  ZDbcODBCResultSet in '..\..\src\dbc\ZDbcODBCResultSet.pas',
+  ZDbcODBCStatement in '..\..\src\dbc\ZDbcODBCStatement.pas',
+  ZDbcODBCUtils in '..\..\src\dbc\ZDbcODBCUtils.pas',
+  ZDbcOleDB in '..\..\src\dbc\ZDbcOleDB.pas',
+  ZDbcOleDBMetaData in '..\..\src\dbc\ZDbcOleDBMetaData.pas',
+  ZDbcOleDBResultSet in '..\..\src\dbc\ZDbcOleDBResultSet.pas',
+  ZDbcOleDBStatement in '..\..\src\dbc\ZDbcOleDBStatement.pas',
+  ZDbcOleDBUtils in '..\..\src\dbc\ZDbcOleDBUtils.pas',
+  ZDbcOracle in '..\..\src\dbc\ZDbcOracle.pas',
+  ZDbcOracleMetadata in '..\..\src\dbc\ZDbcOracleMetadata.pas',
+  ZDbcOracleResultSet in '..\..\src\dbc\ZDbcOracleResultSet.pas',
+  ZDbcOracleStatement in '..\..\src\dbc\ZDbcOracleStatement.pas',
+  ZDbcOracleUtils in '..\..\src\dbc\ZDbcOracleUtils.pas',
+  ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
+  ZDbcPostgreSql in '..\..\src\dbc\ZDbcPostgreSql.pas',
+  ZDbcPostgreSqlMetadata in '..\..\src\dbc\ZDbcPostgreSqlMetadata.pas',
+  ZDbcPostgreSqlResultSet in '..\..\src\dbc\ZDbcPostgreSqlResultSet.pas',
+  ZDbcPostgreSqlStatement in '..\..\src\dbc\ZDbcPostgreSqlStatement.pas',
+  ZDbcPostgreSqlUtils in '..\..\src\dbc\ZDbcPostgreSqlUtils.pas',
+  ZDbcProperties in '..\..\src\dbc\ZDbcProperties.pas',
   ZDbcResultSet in '..\..\src\dbc\ZDbcResultSet.pas',
   ZDbcResultSetMetadata in '..\..\src\dbc\ZDbcResultSetMetadata.pas',
+  ZDbcSqLite in '..\..\src\dbc\ZDbcSqLite.pas',
+  ZDbcSqLiteMetadata in '..\..\src\dbc\ZDbcSqLiteMetadata.pas',
+  ZDbcSqLiteResultSet in '..\..\src\dbc\ZDbcSqLiteResultSet.pas',
+  ZDbcSqLiteStatement in '..\..\src\dbc\ZDbcSqLiteStatement.pas',
+  ZDbcSqLiteUtils in '..\..\src\dbc\ZDbcSqLiteUtils.pas',
   ZDbcStatement in '..\..\src\dbc\ZDbcStatement.pas',
-  ZDbcCache in '..\..\src\dbc\ZDbcCache.pas',
-  ZDbcLogging in '..\..\src\dbc\ZDbcLogging.pas';
+  ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
+  ZDbcProxy in '..\..\src\dbc\ZDbcProxy.pas',
+  ZDbcProxyMetadata in '..\..\src\dbc\ZDbcProxyMetadata.pas',
+  ZDbcProxyResultSet in '..\..\src\dbc\ZDbcProxyResultSet.pas',
+  ZDbcProxyStatement in '..\..\src\dbc\ZDbcProxyStatement.pas',
+  ZDbcProxyUtils in '..\..\src\dbc\ZDbcProxyUtils.pas';
 
 end.

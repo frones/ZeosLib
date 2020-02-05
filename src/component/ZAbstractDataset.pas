@@ -118,6 +118,7 @@ type
 
     procedure InternalClose; override;
     procedure InternalEdit; override;
+    procedure InternalInsert; override;
     {$IFNDEF WITH_InternalAddRecord_TRecBuf}
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     {$ELSE}
@@ -200,7 +201,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZClasses;
+uses Math, ZMessages, ZDatasetUtils, ZDbcProperties;
 
 { TZAbstractDataset }
 
@@ -387,7 +388,23 @@ end;
   Performs an internal action before switch into edit mode.
 }
 procedure TZAbstractDataset.InternalEdit;
+var
+  RowNo: Integer;
+  RowBuffer: PZRowBuffer;
 begin
+  if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then begin
+    RowNo := Integer(CurrentRows[CurrentRow - 1]);
+    CachedResultSet.MoveAbsolute(RowNo);
+    RowAccessor.RowBuffer := RowBuffer;
+  end;
+end;
+
+{**
+  Performs an internal action before switch into insert mode.
+}
+procedure TZAbstractDataset.InternalInsert;
+begin
+  ResultSet.MoveToInsertRow;
 end;
 
 {**
@@ -401,13 +418,15 @@ begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
   begin
     RowNo := Integer(CurrentRows[CurrentRow - 1]);
-    CachedResultSet.MoveAbsolute(RowNo);
+    {CachedResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := RowBuffer;
-    PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
+    PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);}
     try
       CachedResultSet.UpdateRow;
-    except on E: EZSQLThrowable do
-      raise EZDatabaseError.CreateFromException(E);
+    except on E: Exception do
+      if E is EZSQLThrowable
+      then raise EZDatabaseError.CreateFromException(E as EZSQLThrowable)
+      else raise Exception.Create(E.Message);
     end;
 
     { Filters the row }
@@ -446,13 +465,15 @@ begin
 
   if CachedResultSet <> nil then
   begin
-    CachedResultSet.MoveToInsertRow;
+    //CachedResultSet.MoveToInsertRow;
     RowAccessor.RowBuffer := RowBuffer;
-    PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
+    //PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
     try
       CachedResultSet.InsertRow;
-    except on E: EZSQLThrowable do
-      raise EZDatabaseError.CreateFromException(E);
+    except on E: Exception do
+      if E is EZSQLThrowable
+      then raise EZDatabaseError.CreateFromException(E as EZSQLThrowable)
+      else raise Exception.Create(E.Message);
     end;
     RowNo := CachedResultSet.GetRow;
     FetchCount := FetchCount + 1;
@@ -577,8 +598,10 @@ begin
       CachedResultSet.MoveAbsolute(RowNo);
       try
         CachedResultSet.DeleteRow;
-      except on E: EZSQLThrowable do
-        raise EZDatabaseError.CreateFromException(E);
+      except on E: Exception do
+        if E is EZSQLThrowable
+        then raise EZDatabaseError.CreateFromException(E as EZSQLThrowable)
+        else raise Exception.Create(E.Message);
       end;
 
       { Filters the row }
@@ -602,15 +625,17 @@ var
   RowNo: Integer;
   RowBuffer: PZRowBuffer;
 begin
-  if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer)
-    and (CurrentRow > 0) and (State = dsEdit) then
-  begin
-    RowNo := Integer(CurrentRows[CurrentRow - 1]);
-    CachedResultSet.MoveAbsolute(RowNo);
-    RowAccessor.RowBuffer := RowBuffer;
-    FetchFromResultSet(CachedResultSet, FieldsLookupTable, Fields,
-         RowAccessor);
-  end;
+  if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
+    if (CurrentRow > 0) and (State = dsEdit) then
+    begin
+      RowNo := Integer(CurrentRows[CurrentRow - 1]);
+      CachedResultSet.MoveAbsolute(RowNo);
+      RowAccessor.RowBuffer := RowBuffer;
+      CachedResultSet.RevertRecord;
+      //FetchFromResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
+    end
+  else if (State = dsInsert) then
+    CachedResultSet.RevertRecord;
 end;
 
 {**
@@ -728,7 +753,7 @@ begin
           Resync([])
         else
         begin
-          FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
+          //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
           ostate:=State;
           SetTempState(dsInternalCalc);
           try

@@ -147,7 +147,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
@@ -1374,6 +1374,68 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractMySQLResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+var ColBind: PMYSQL_aligned_BIND;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stBytes);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  {$R-}
+  ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  Result := nil;
+  if fBindBufferAllocated then begin
+    LastWasNull := ColBind^.is_null =1;
+    if not LastWasNull then
+      //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
+      Case ColBind^.buffer_type_address^ of
+        FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        FIELD_TYPE_STRING,
+        FIELD_TYPE_ENUM, FIELD_TYPE_SET: begin
+            Result := Pointer(ColBind^.buffer);
+            Len := ColBind^.Length[0];
+          end;
+        FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
+          if ColBind^.Length[0] < SizeOf(FTinyBuffer) then begin
+            ColBind^.buffer_address^ := @FTinyBuffer[0];
+            ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
+            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
+            ColBind^.buffer_address^ := nil;
+            ColBind^.buffer_Length_address^ := 0;
+            Result := @FTinyBuffer[0];
+            Len := ColBind^.Length[0];
+          end else begin
+            FTempBlob := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+            Result := FTempBlob.GetBuffer;
+            Len := FTempBlob.Length;
+          end
+        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
+      End;
+  end else begin
+    {$R-}
+    Result := Pointer(PMYSQL_ROW(FRowHandle)[ColumnIndex]);
+    Len := FLengthArray^[ColumnIndex];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    LastWasNull := Result = nil;
+  end;
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>int</code> in the Java programming language.
@@ -2028,65 +2090,6 @@ begin
     Len := FLengthArray^[ColumnIndex];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := (Buffer = nil) or not TryRawToBCD(Buffer, Len, Result, '.');
-  end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractMySQLResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-var
-  Len: NativeUInt;
-  Buffer: PAnsiChar;
-  ColBind: PMYSQL_aligned_BIND;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBytes);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  {$R-}
-  ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  Result := nil;
-  if fBindBufferAllocated then begin
-    LastWasNull := ColBind^.is_null =1;
-    if not LastWasNull then
-      //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
-      Case ColBind^.buffer_type_address^ of
-        FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
-        FIELD_TYPE_STRING,
-        FIELD_TYPE_ENUM, FIELD_TYPE_SET:
-          Result := BufferToBytes(Pointer(ColBind^.buffer), ColBind^.Length[0] );
-        FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
-        FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
-          if ColBind^.Length[0] < SizeOf(FTinyBuffer) then begin
-            ColBind^.buffer_address^ := @FTinyBuffer[0];
-            ColBind^.buffer_Length_address^ := SizeOf(FTinyBuffer)-1;//mysql sets $0 on to of data and corrupts our mem
-            FPlainDriver.mysql_stmt_fetch_column(FMYSQL_STMT, ColBind^.mysql_bind, ColumnIndex, 0);
-            ColBind^.buffer_address^ := nil;
-            ColBind^.buffer_Length_address^ := 0;
-            Result := BufferToBytes(@FTinyBuffer[0], ColBind^.Length[0] );
-          end else
-            Result := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetBytes;
-        else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
-      End;
-  end else begin
-    {$R-}
-    Buffer := PMYSQL_ROW(FRowHandle)[ColumnIndex];
-    Len := FLengthArray^[ColumnIndex];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    LastWasNull := Buffer = nil;
-    if not LastWasNull then
-      Result := BufferToBytes(Buffer, Len);
   end;
 end;
 

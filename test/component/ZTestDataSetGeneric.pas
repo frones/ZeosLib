@@ -998,22 +998,24 @@ begin
     CheckEquals(0, FieldByName('p_redundant').AsInteger);
 
     Next;
+    CheckEquals(2, RecNo); // just a check for current RecNo = 2 / we are one EOF here
     Next; // just a check for current RecNo = 2 / we are one EOF here
-    CheckEquals(2, RecNo);
+    CheckEquals(True, Eof);
     {$IFNDEF WITH_FPC_BOF_BUG}
     CheckEquals(False, Bof);
     {$ENDIF}
-    CheckEquals(True, Eof);
-    CheckEquals(2, FieldByName('p_id').AsInteger);
-    CheckEquals(2, FieldByName('p_dep_id').AsInteger);
-    CheckEquals('Andy Karto', FieldByName('p_name').AsString);
-    CheckEquals(EncodeTime(8, 30, 0, 0),
-      Frac(Abs(FieldByName('p_begin_work').AsDateTime)), 0.0001);
-    CheckEquals(EncodeTime(17, 30, 0, 0),
-      Frac(Abs(FieldByName('p_end_work').AsDateTime)), 0.0001);
-    Check(FieldByName('p_picture').IsNull);
-    Check(FieldByName('p_resume').IsNull);
-    CheckEquals(0, FieldByName('p_redundant').AsInteger);
+    if not Query.IsUniDirectional then begin
+      CheckEquals(2, FieldByName('p_id').AsInteger);
+      CheckEquals(2, FieldByName('p_dep_id').AsInteger);
+      CheckEquals('Andy Karto', FieldByName('p_name').AsString);
+      CheckEquals(EncodeTime(8, 30, 0, 0),
+        Frac(Abs(FieldByName('p_begin_work').AsDateTime)), 0.0001);
+      CheckEquals(EncodeTime(17, 30, 0, 0),
+        Frac(Abs(FieldByName('p_end_work').AsDateTime)), 0.0001);
+      Check(FieldByName('p_picture').IsNull);
+      Check(FieldByName('p_resume').IsNull);
+      CheckEquals(0, FieldByName('p_redundant').AsInteger);
+    end;
     Close;
   end;
 

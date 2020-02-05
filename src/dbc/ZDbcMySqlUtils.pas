@@ -507,7 +507,8 @@ begin
     then Result.ColumnCodePage := ConSettings^.ClientCodePage^.CP
     else Result.ColumnCodePage := High(Word);
 
-    Result.Signed := (UNSIGNED_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^) = 0;
+    Result.Signed := (PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ <> FIELD_TYPE_VAR_STRING) and
+       ((UNSIGNED_FLAG and PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^) = 0);
     if Result.ColumnType in [stString, stUnicodeString] then begin
        Result.CharOctedLength := FieldLength;
        if FieldOffsets.charsetnr > 0

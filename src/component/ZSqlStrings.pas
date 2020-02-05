@@ -410,7 +410,7 @@ begin
 
             Continue;
           end else
-            SQLStringWriter.AddText(Token.P, 1, SQL);
+            SQLStringWriter.AddChar(FParamChar, SQL);
         end;
       end else
         SQLStringWriter.AddText(Token.P, Token.L, SQL);

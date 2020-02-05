@@ -688,8 +688,10 @@ begin
       Table := CurrentValue;
     { Skips a '.' in table part. }
     end else if ReadTable and (CurrentValue = '.') then begin
-      Catalog := Schema;
-      Schema := Table;
+      if not ((Schema <> '') and (Table = '')) then begin //hide issue master..sysobjects
+        Catalog := Schema;
+        Schema := Table;
+      end;
       Table := '';
     { Reads alias. }
     end else if not ReadTable and (CurrentType = ttWord) then

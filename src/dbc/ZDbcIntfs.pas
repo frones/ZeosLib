@@ -1368,9 +1368,7 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPChar(ColumnIndex: Integer): PChar; deprecated;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload; //deprecated;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
     function GetString(ColumnIndex: Integer): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
@@ -1380,8 +1378,7 @@ type
     {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString;
-    function GetPWideChar(ColumnIndex: Integer): PWideChar; overload; //deprecated;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
     function GetShort(ColumnIndex: Integer): ShortInt;
@@ -1396,7 +1393,8 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer): TBytes; overload;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     function GetDate(ColumnIndex: Integer): TDateTime; overload;
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
     function GetTime(ColumnIndex: Integer): TDateTime; overload;
@@ -1416,9 +1414,7 @@ type
     //======================================================================
 
     function IsNullByName(const ColumnName: string): Boolean;
-    function GetPCharByName(const ColumnName: string): PChar; deprecated;
-    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; overload; deprecated;
-    function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar;
     function GetStringByName(const ColumnName: string): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
@@ -1428,8 +1424,7 @@ type
     {$ENDIF}
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
     function GetUnicodeStringByName(const ColumnName: string): ZWideString;
-    function GetPWideCharByName(const ColumnName: string): PWideChar; overload;
-    function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar; overload;
+    function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
     function GetShortByName(const ColumnName: string): ShortInt;
@@ -1525,11 +1520,8 @@ type
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
     procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
-    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload;
-    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
-    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); overload;
-    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt); overload;
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
+    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
@@ -1539,7 +1531,8 @@ type
     {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); overload;
+    procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); overload;
@@ -1572,11 +1565,8 @@ type
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: TBCD);
     procedure UpdateGUIDByName(const ColumnName: string; const Value: TGUID);
-    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload; deprecated;
-    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; var Len: NativeUInt); overload;
-    procedure UpdatePCharByName(const ColumnName: string; const Value: PChar); deprecated;
-    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar); overload; deprecated;
-    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar; var Len: NativeUInt); overload;
+    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; var Len: NativeUInt);
+    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar; var Len: NativeUInt);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
     {$IFNDEF NO_ANSISTRING}
     procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);

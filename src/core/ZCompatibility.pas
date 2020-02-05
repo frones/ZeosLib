@@ -171,7 +171,7 @@ type
 
   { TZSQLTimeStamp }
   PZTimeStamp = ^TZTimeStamp;
-  TZTimeStamp = packed record //keep it packet !!
+  TZTimeStamp = packed record //keep it packed !!
     Year: Word;
     Month: Word;
     Day: Word;
@@ -186,7 +186,7 @@ type
   TZTimeStampDynArray = array of TZTimeStamp;
 
   PZDate = ^TZDate;
-  TZDate = packed record //keep it packet !!
+  TZDate = packed record //keep it packed !!
     Year: Word;
     Month: Word;
     Day: Word;
@@ -195,7 +195,7 @@ type
   TZDateDynArray = array of TZDate;
 
   PZTime = ^TZTime;
-  TZTime = packed Record //keep it packet !!
+  TZTime = packed Record //keep it packed !!
     Hour: Word;
     Minute: Word;
     Second: Word;
@@ -534,10 +534,12 @@ const
   PEmptyUnicodeString: PWideChar = '';
   PEmptyAnsiString: PAnsiChar = '';
   EmptyRaw = {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}nil{$ELSE}RawByteString(''){$ENDIF};
-  ZInitZeroBCD: Cardinal = {$IFNDEF ENDIAN_BIG}$0000001{$ELSE}$1000000{$ENDIF};
+  bInitZeroBCD: array[0..3] of Byte = ($01,$00,$00,$00); //endian save
+
 var
   ZOSCodePage: Word;
   ZOSCodePageMaxCharSize: Word;
+  ZInitZeroBCD: Cardinal absolute bInitZeroBCD;
 
 implementation
 

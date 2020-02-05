@@ -110,9 +110,10 @@ type
 
     FStatements : TZHashMap;
   protected
-    InsertStatement   : IZPreparedStatement;
-    UpdateStatement   : IZPreparedStatement;
-    DeleteStatement   : IZPreparedStatement;
+    InsertStatement: IZPreparedStatement;
+    UpdateStatement: IZPreparedStatement;
+    DeleteStatement: IZPreparedStatement;
+    RefreshResultSet: IZResultSet;
 
     procedure CopyResolveParameters({$IFDEF AUTOREFCOUNT}const {$ENDIF}FromList, ToList: TObjectList);
     function ComposeFullTableName(const Catalog, Schema, Table: SQLString;
@@ -151,7 +152,6 @@ type
     property CalcDefaults: Boolean read FCalcDefaults write FCalcDefaults;
     property WhereAll: Boolean read FWhereAll write FWhereAll;
     property UpdateAll: Boolean read FUpdateAll write FUpdateAll;
-
   public
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
@@ -176,7 +176,6 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
-
   end;
 
 implementation
@@ -264,6 +263,8 @@ begin
   FlustStmt(InsertStatement);
   FlustStmt(UpdateStatement);
   FlustStmt(DeleteStatement);
+  if RefreshResultSet <> nil then
+     RefreshResultSet.Close;
   inherited Destroy;
 end;
 
@@ -746,8 +747,8 @@ begin
       end;
       Fields.Free;
     end;
-    SQLWriter.Finalize(Result);
     {$IFEND}
+    SQLWriter.Finalize(Result);
   finally
     FreeAndNil(SQLWriter);
   end;
@@ -869,6 +870,12 @@ var
   lValidateUpdateCount : Boolean;
   TempKey              : IZAnyValue;
   SenderStatement      : IZStatement;
+  {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+  function CreateInvalidUpdateCountException: EZSQLException; //suppress _U/LStrArrClear
+  begin
+    Result := EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+  end;
+  {$ENDIF WITH_VALIDATE_UPDATE_COUNT}
 begin
   if (UpdateType = utDeleted) and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
@@ -939,15 +946,165 @@ begin
   lUpdateCount := Statement.ExecuteUpdatePrepared;
   {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
   if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
-    raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+    raise CreateInvalidUpdateCountException;
   {$ENDIF}
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract method - parameters not used intentionally
+{$IFDEF FPC} {$PUSH} //rolling eyes
+  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+{$ENDIF}
 procedure TZGenericCachedResolver.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
+var Stmt: IZPreparedStatement;
+    I, upd_idx: Integer;
+    Len: NativeUInt;
+    BCD: TBCD; //one val on stack 4 all
+    UID: TGUID absolute BCD;
+    TS: TZTimeStamp absolute BCD;
+    D: TZDate absolute BCD;
+    T: TZTime absolute BCD;
+    SQLType: TZSQLType;
+    i32: Integer absolute BCD;
+    c32: Cardinal absolute BCD;
+    i64: Int64 absolute BCD;
+    U64: UInt64 absolute BCD;
+    Dbl: Double absolute BCD;
+    P: Pointer absolute BCD;
+    C: Currency absolute BCD;
+    S: Single absolute BCD;
+    L: IZBlob absolute BCD;
+Label CheckColumnType;
+  procedure InitStmt(out Stmt: IZPreparedStatement);
+  var
+    I: Integer;
+    Current: TZResolverParameter;
+    SQL, Temp: SQLString;
+    SQLWriter: TZSQLStringWriter;
+    Columns: TObjectList;
+  begin
+    Stmt := nil;
+    SQLWriter := TZSQLStringWriter.Create(512+(MetaData.GetColumnCount shl 5));
+    Columns := TObjectList.Create(True);
+    try
+      DefineInsertColumns(Columns);
+      if Columns.Count = Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} then //no aggregates or casted columns
+        SQL := 'SELECT ';
+
+      for I := 0 to Columns.Count - 1 do begin
+        Current := TZResolverParameter(Columns[I]);
+        if I > 0 then
+          SQLWriter.AddChar(',', SQL);
+        Temp := IdentifierConvertor.Quote(Current.ColumnName);
+        SQLWriter.AddText(Temp, SQL);
+      end;
+      SQLWriter.AddText(' FROM ', SQL);
+      Temp := DefineTableName;
+      SQLWriter.AddText(Temp, SQL);
+
+      DefineWhereKeyColumns(Columns);
+      if WhereColumns.Count = 0 then Exit;
+      FormWhereClause(Columns, SQLWriter, RowAccessor, SQL);
+      SQLWriter.Finalize(SQL);
+      Stmt := CreateResolverStatement(SQL);
+    finally
+      FreeAndNil(SQLWriter);
+      FreeAndNil(Columns);
+    end;
+  end;
 begin
-  raise EZSQLException.Create(SRefreshRowOnlySupportedWithUpdateObject);
+  if (RefreshResultSet = nil) or (RefreshResultSet.GetStatement = nil)
+  then InitStmt(Stmt)
+  else RefreshResultSet.GetStatement.QueryInterface(IZPreparedStatement, Stmt);
+  if Stmt = nil then
+    raise EZSQLException.Create(SUpdateSQLNoResult)
+  else begin
+    FillStatement(Stmt, WhereColumns, RowAccessor, RowAccessor);
+    RefreshResultSet := Stmt.ExecuteQueryPrepared;
+    if (RefreshResultSet = nil) or not RefreshResultSet.Next then
+      raise EZSQLException.Create(SUpdateSQLNoResult);
+    for I := FirstDbcIndex to FInsertColumns.Count {$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
+      upd_idx := TZResolverParameter(FInsertColumns[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).FColumnIndex;
+      if RefreshResultSet.IsNull(upd_idx)
+      then RowAccessor.SetNull(upd_idx)
+      else begin
+        SQLType := RowAccessor.GetColumnType(upd_idx);
+        case SQLType of
+          stBoolean: RowAccessor.SetBoolean(upd_idx, RefreshResultSet.GetBoolean(I));
+          stByte, stWord, stLongWord: begin
+                c32 := RefreshResultSet.GetUInt(I);
+                RowAccessor.SetUInt(upd_idx, c32);
+              end;
+          stShort, stSmall, stInteger: begin
+                i32 := RefreshResultSet.GetInt(I);
+                RowAccessor.SetInt(upd_idx, i32);
+              end;
+          stULong: begin
+                u64 := RefreshResultSet.GetULong(I);
+                RowAccessor.SetULong(upd_idx, u64);
+              end;
+          stLong: begin
+                i64 := RefreshResultSet.GetLong(I);
+                RowAccessor.SetLong(upd_idx, i64);
+              end;
+          stFloat: begin
+                S := RefreshResultSet.GetFloat(I);
+                RowAccessor.SetFloat(upd_idx, S);
+              end;
+          stDouble: begin
+                Dbl := RefreshResultSet.GetDouble(I);
+                RowAccessor.SetDouble(upd_idx, Dbl);
+              end;
+          stCurrency: begin
+                C := RefreshResultSet.GetCurrency(I);
+                RowAccessor.SetCurrency(upd_idx, C);
+              end;
+          stBigDecimal: begin
+                RefreshResultSet.GetBigDecimal(I, BCD{%H-});
+                RowAccessor.SetBigDecimal(upd_idx, BCD);
+              end;
+          stGUID: begin
+                RefreshResultSet.GetGUID(I, UID);
+                RowAccessor.SetGUID(upd_idx, UID);
+              end;
+          stString, stUnicodeString:
+              if RowAccessor.IsRaw then begin
+                P := RefreshResultSet.GetPAnsiChar(I, Len);
+                RowAccessor.SetPAnsiChar(upd_idx, P, Len);
+              end else begin
+                P := RefreshResultSet.GetPWideChar(I, Len);
+                RowAccessor.SetPWideChar(upd_idx, P, Len);
+              end;
+          stBytes: begin
+                P := RefreshResultSet.GetBytes(I, Len);
+                RowAccessor.SetBytes(upd_idx, P, Len);
+              end;
+          stDate: begin
+              RefreshResultSet.GetDate(I, D);
+              RowAccessor.SetDate(upd_idx, D);
+            end;
+          stTime: begin
+              RefreshResultSet.GetTime(I, T);
+              RowAccessor.SetTime(upd_idx, T);
+            end;
+          stTimestamp: begin
+              RefreshResultSet.GetTimestamp(I, TS);
+              RowAccessor.SetTimestamp(upd_idx, TS);
+            end;
+          stAsciiStream, stUnicodeStream, stBinaryStream: begin
+              P := nil; //avoid gpf
+              L := RefreshResultSet.GetBlob(I);
+              RowAccessor.SetBlob(upd_idx, L);
+              L := nil;
+            end;
+        end;
+        if RefreshResultSet.WasNull then //if a convasion failed .. MySQL?
+          RowAccessor.SetNull(upd_idx);
+      end;
+    end;
+    RefreshResultSet.ResetCursor; //unlock handles
+  end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZGenericCachedResolver.SetResolverStatementParamters(
   const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
@@ -1054,7 +1211,7 @@ begin
                   P := ResultSet.GetPWideChar(I, Len);
                   RowAccessor.SetPWideChar(Current.ColumnIndex, P, Len);
                 end;
-              stBytes: RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
+              stBytes: RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I, Len), Len);
               stDate:         begin
                                 ResultSet.GetDate(I, D);
                                 RowAccessor.SetDate(Current.ColumnIndex, D);
@@ -1092,7 +1249,6 @@ procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 

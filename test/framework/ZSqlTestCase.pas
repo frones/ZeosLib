@@ -92,14 +92,16 @@ type
   // so one prefix means exactly one protocol type!
   TProtocolType = (protUnknown, protMySQL, protPostgre, protSQLite, protFirebird, protInterbase,
     protOracle, protASA, protFreeTDS, protMSSQL, protOleDB, protADO, protSybase,
-    protODBC);
+    protODBC, protWebServiceProxy);
+
+  TZTransport = (traUnknown, traNative, traADO, traODBC, traOLEDB, traWEBPROXY);
 
 const
   // Strictly in lower-case
   ProtocolPrefixes: array[TProtocolType] of string =
     ('unknown', 'mysql', 'postgresql', 'sqlite', 'firebird', 'interbase',
      'oracle', 'asa', 'freetds', 'mssql', 'oledb', 'ado', 'sybase',
-     'odbc');
+     'odbc', 'webserviceproxy');
 
 type
   {** Represents a SQL test database configuration. }
@@ -191,6 +193,9 @@ type
     FSkipSetup: boolean;
     FTraceList: TStrings;
 
+    FProvider: TZServerProvider;
+    FTransport: TZTransport;
+
     function GetLibLocation: string;
     function GetAlias: string;
     function GetConnectionName: string;
@@ -203,6 +208,8 @@ type
     function GetProperties: TStringDynArray;
     function GetProtocol : string;
     function GetProtocolType: TProtocolType;
+    function GetProvider: TZServerProvider;
+    function GetTransport: TZTransport;
     function GetRebuild: Boolean;
     function GetUserName: string;
     procedure SetCurrentConnectionConfig(AValue: TZConnectionConfig);
@@ -266,6 +273,8 @@ type
     property Alias: string read GetAlias;
     property Protocol: string read GetProtocol;
     property ProtocolType: TProtocolType read GetProtocolType;
+    property Provider: TZServerProvider read GetProvider;
+    property Transport: TZTransport read GetTransport;
     property HostName: string read GetHostName;
     property Port: Integer read GetPort;
     property Database: string read GetDatabase;
@@ -680,6 +689,44 @@ begin
     if StartsWith(Prot, ProtocolPrefixes[Result]) then
       Exit;
   Result := protUnknown;
+end;
+
+function TZAbstractSQLTestCase.GetProvider: TZServerProvider;
+var
+  Connection: IZConnection;
+begin
+  if FProvider <> spUnknown
+  then Result := FProvider
+  else begin
+    case GetProtocolType of
+      protMySQL: FProvider := spMySQL;
+      protPostgre: FProvider := spPostgreSQL;
+      protSQLite: FProvider :=spSQLite;
+      protFirebird, protInterbase: FProvider := spIB_FB;
+      protOracle: FProvider := spOracle;
+      protASA: FProvider := spASA;
+      protMSSQL, protOleDB, protADO, protFreeTDS, protODBC, protSybase: begin
+          Connection := CreateDbcConnection;
+          Connection.Open;
+          FProvider := Connection.GetServerProvider;
+        end;
+    end;
+    Result := FProvider;
+  end;
+end;
+
+function TZAbstractSQLTestCase.GetTransport: TZTransport;
+begin
+  if FTransport <> traUnknown then begin
+    Result := FTransport;
+  end else case GetProtocolType of
+    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protFreeTDS, protMSSQL, protSybase: Result := traNative;
+    protOleDB: Result := traOLEDB;
+    protADO: Result := traADO;
+    protODBC: Result := traODBC;
+    protWebServiceProxy: Result := traWEBPROXY;
+    else Result := traUnknown;
+  end;
 end;
 
 function TZAbstractSQLTestCase.GetRebuild: Boolean;

@@ -57,6 +57,11 @@
 {.$DEFINE ZEOS_DISABLE_POOLED}
 {.$DEFINE ZEOS_DISABLE_OLEDB}
 {.$DEFINE ZEOS_DISABLE_ODBC}
+// Activate this driver only if you know what you are doing.
+// Currently it only was tested with Delphi XE 7 on Windows.
+{$DEFINE ZEOS_DISABLE_PROXY}
+// Use this only if you know what you are doing. The internal proxy doesn't work.
+{.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
 {.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
 {.$DEFINE WITH_ZSTRINGFIELDS}
@@ -169,10 +174,10 @@
           {$DEFINE WITH_WIDEFIELDS}	                  //Wide-fields are supported (common define for ftWideString/ftWideMemo)
           {$DEFINE WITH_CLASS_VARS}                   //Class variables/methods are supported
           {$DEFINE WITH_UNIT_WIDESTRINGS}             //unit WideStrings introduced
+          {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
-
             {$IF CompilerVersion >= 20} //Delphi 2009+
               {$DEFINE FIELD_ASWIDESTRING_IS_UNICODESTRING} //TField.AsWideString is type UnicodeString not WideString
               {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings

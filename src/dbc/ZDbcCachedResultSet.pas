@@ -177,8 +177,8 @@ type
     //======================================================================
 
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
     function GetString(ColumnIndex: Integer): String;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
@@ -198,7 +198,7 @@ type
     function GetCurrency(ColumnIndex: Integer): Currency;
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
-    function GetBytes(ColumnIndex: Integer): TBytes;
+    function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
     procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
@@ -245,7 +245,7 @@ type
     {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
+    procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
@@ -259,7 +259,7 @@ type
     procedure UpdateRow; override;
     procedure DeleteRow; override;
     procedure CancelRowUpdates; override;
-    procedure RefreshRow;override;// FOS+ 071106
+    procedure RefreshRow; override;// FOS+ 071106
 
 
     procedure MoveToInsertRow; override;
@@ -972,6 +972,26 @@ begin
 end;
 
 {**
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractCachedResultSet.GetBytes(ColumnIndex: Integer;
+  out Len: NativeUInt): PByte;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetBytes(ColumnIndex, LastWasNull, len);
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   an <code>uint</code> in the Java programming language.
@@ -1129,24 +1149,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAbstractCachedResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckAvailable;
-{$ENDIF}
-  Result := FRowAccessor.GetBytes(ColumnIndex, LastWasNull);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>java.sql.Date</code> object in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1290,6 +1292,27 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetByte(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>byte</code> array value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the address of new column value
+  @param Len the length of the addressed value
+}
+procedure TZAbstractCachedResultSet.UpdateBytes(ColumnIndex: Integer;
+  Value: PByte; var Len: NativeUInt);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetBytes(ColumnIndex, Value, Len);
 end;
 
 {**
@@ -1670,26 +1693,6 @@ begin
 end;
 
 {**
-  Updates the designated column with a <code>byte</code> array value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-}
-procedure TZAbstractCachedResultSet.UpdateBytes(ColumnIndex: Integer;
-  const Value: TBytes);
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckUpdatable;
-{$ENDIF}
-  PrepareRowForUpdates;
-  FRowAccessor.SetBytes(ColumnIndex, Value);
-end;
-
-{**
   Updates the designated column with a <code>java.sql.Date</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -1980,10 +1983,10 @@ begin
 
   { Posts non-cached updates. }
   if not FCachedUpdates then
-  begin
     try
       PostUpdates;
-    except
+      TempRow := FRowAccessor.RowBuffer; //notify success
+    (*except
       on E: Exception do
       begin
         { Restore the previous state. }
@@ -1994,11 +1997,17 @@ begin
         FRowAccessor.RowBuffer := TempRow;
 
         { Reraises the exception. }
-        RaiseSQLException(E);
+        RaiseSQLException(E);*)
+    finally //EH no reraising of an Exception required -> keep original stack frame i.e. MadExcept
+      if TempRow <> FRowAccessor.RowBuffer then begin
+        { Restore the previous state. See AppendRow}
+        FRowAccessor.DisposeBuffer(FInitialRowsList[FInitialRowsList.Count - 1]);
+        FInitialRowsList.Delete(FInitialRowsList.Count - 1);
+        FRowAccessor.DisposeBuffer(FCurrentRowsList[FCurrentRowsList.Count - 1]);
+        FCurrentRowsList.Delete(FCurrentRowsList.Count - 1);
+        FRowAccessor.RowBuffer := TempRow;
       end;
     end;
-  end;
-
   FRowsList.Add(FRowAccessor.RowBuffer);
   LastRowNo := FRowsList.Count;
   MoveAbsolute(LastRowNo);
@@ -2031,10 +2040,10 @@ begin
 
   { Posts non-cached updates. }
   if not FCachedUpdates then
-  begin
-    try
-      PostUpdates;
-    except
+  {begin
+    try}
+      PostUpdates; //EH: restoring previous state should happen by RevertRecord!
+    (*except
       on E: Exception do
       begin
         { Restore the previous state. }
@@ -2050,7 +2059,7 @@ begin
         RaiseSQLException(E);
       end;
     end;
-  end;
+  end;*)
 end;
 
 {**
@@ -2059,38 +2068,35 @@ end;
   the cursor is on the insert row.
 }
 procedure TZAbstractCachedResultSet.DeleteRow;
+var Succeeded: Boolean;
 begin
   CheckUpdatable;
   if (RowNo < 1) or (RowNo > LastRowNo) or (FSelectedRow = nil) then
     raise EZSQLException.Create(SCanNotDeleteEmptyRow);
 
-  if FSelectedRow^.UpdateType = utInserted then
-    RevertRecord
-  else
-  begin
-    AppendRow(FRowsList[RowNo - 1]);
+  if FSelectedRow^.UpdateType = utInserted
+  then RevertRecord
+  else begin
+    AppendRow(FRowsList[RowNo - 1]); //copies the rows, add to FInitialRowsList and FInitialRowsList -> RevertRecord
 
     FSelectedRow^.UpdateType := utDeleted;
     if FSelectedRow = FUpdatedRow then
       FRowAccessor.CopyBuffer(FUpdatedRow, FRowsList[RowNo - 1]);
 
     { Posts non-cached updates. }
-    if not FCachedUpdates then
-    begin
+    if not FCachedUpdates then begin
+      Succeeded := False;
       try
         PostUpdates;
-      except
-        on E: Exception do
-        begin
+        Succeeded := True;
+      finally
+        if not Succeeded then begin
           { Restores the previous state. }
           FRowAccessor.DisposeBuffer(FRowsList[RowNo - 1]);
           FRowsList[RowNo - 1] := FInitialRowsList[FInitialRowsList.Count - 1];
           FSelectedRow := FRowsList[RowNo - 1];
           FInitialRowsList.Delete(FInitialRowsList.Count - 1);
           FCurrentRowsList.Delete(FCurrentRowsList.Count - 1);
-
-          { Rethrows the exception. }
-          RaiseSQLException(E);
         end;
       end;
     end;
