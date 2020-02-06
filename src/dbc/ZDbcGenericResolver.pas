@@ -973,7 +973,6 @@ var Stmt: IZPreparedStatement;
     C: Currency absolute BCD;
     S: Single absolute BCD;
     L: IZBlob absolute BCD;
-Label CheckColumnType;
   procedure InitStmt(out Stmt: IZPreparedStatement);
   var
     I: Integer;
@@ -1112,7 +1111,8 @@ begin
   Params.Assign(Statement.GetParameters);
 end;
 
-{**
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF}
+ {**
   Calculate default values for the fields.
   @param Sender a cached result set object.
   @param RowAccessor an accessor object to column values.
@@ -1241,14 +1241,17 @@ begin
     FreeAndNil(SQLParams);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
+ procedure TZGenericCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // abstract base class - parameters not used intentionally
 
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 

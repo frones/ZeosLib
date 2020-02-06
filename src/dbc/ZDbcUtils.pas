@@ -1031,6 +1031,7 @@ Done:
     FreeMem(pDigitCopy);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure DBNumMultiplyLookupFiller;
 const bL: array[Boolean] of TSQLDigit = (10, 100);
 var B: Boolean;
@@ -1092,6 +1093,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function DBNumeric2Curr_LE(Src: PDB_NUMERIC; NumericNegSign: Byte): Currency;
 var i64: Int64 absolute Result;
