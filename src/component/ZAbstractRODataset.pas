@@ -2627,7 +2627,7 @@ begin
     RowAccessor.RowBuffer := PZRowBuffer(Buffer);
     RowAccessor.RowBuffer^.Index := RowNo;
     //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-    FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
+    FRowAccessor.RowBuffer^.BookmarkFlag := Byte(bfCurrent);
     GetCalcFields(TGetCalcFieldsParamType(Buffer));
   end;
 
@@ -2657,7 +2657,7 @@ begin
     dsEdit: RowBuffer := PZRowBuffer(ActiveBuffer);
     dsInsert: begin
         RowBuffer := PZRowBuffer(ActiveBuffer);
-        if RowBuffer.Index = -1 then
+        if RowBuffer.BookmarkFlag = Byte(bfEOF) then
           FResultSet.MoveToInsertRow
         else if RowBuffer.Index <> FResultSet.GetRow then
           FResultSet.MoveAbsolute(RowBuffer.Index);
