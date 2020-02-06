@@ -62,7 +62,7 @@ uses
   Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
-  ZDbcCache, ZDbcCachedResultSet, ZDataSetUtils,
+  ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
