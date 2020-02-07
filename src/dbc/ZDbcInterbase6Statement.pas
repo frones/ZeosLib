@@ -255,38 +255,28 @@ end;
   execute the dml batch array
 }
 procedure TZAbstractInterbase6PreparedStatement.ExceuteBatch;
-var
-  AC: Boolean;
-  ArrayOffSet: Integer;
+var ArrayOffSet: Integer;
 begin
-  AC := Connection.GetAutoCommit;
-  if AC then
-    Connection.SetAutoCommit(False);
+  Connection.StartTransaction;
+  ArrayOffSet := 0;
+  FIBConnection.GetTrHandle; //restart transaction if required
   try
-    ArrayOffSet := 0;
-    FIBConnection.GetTrHandle; //restart transaction if required
-    try
-      if (FBatchStmts[True].Obj <> nil) and (BatchDMLArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
-        while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= BatchDMLArrayCount) do begin
-          BindSQLDAInParameters(BindList, FBatchStmts[True].Obj,
-            ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
-          FBatchStmts[True].Obj.ExecuteInternal;
-          Inc(ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
-        end;
-      if (FBatchStmts[False].Obj <> nil) and (ArrayOffSet < BatchDMLArrayCount) then begin
-        BindSQLDAInParameters(BindList, FBatchStmts[False].Obj,
-          ArrayOffSet, FBatchStmts[False].PreparedRowsOfArray);
-        FBatchStmts[False].Obj.ExecuteInternal;
+    if (FBatchStmts[True].Obj <> nil) and (BatchDMLArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
+      while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= BatchDMLArrayCount) do begin
+        BindSQLDAInParameters(BindList, FBatchStmts[True].Obj,
+          ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
+        FBatchStmts[True].Obj.ExecuteInternal;
+        Inc(ArrayOffSet, FBatchStmts[True].PreparedRowsOfArray);
       end;
-      if AC then
-        Connection.Commit;
-    except
-      if AC then
-        Connection.Rollback;
-      raise;
+    if (FBatchStmts[False].Obj <> nil) and (ArrayOffSet < BatchDMLArrayCount) then begin
+      BindSQLDAInParameters(BindList, FBatchStmts[False].Obj,
+        ArrayOffSet, FBatchStmts[False].PreparedRowsOfArray);
+      FBatchStmts[False].Obj.ExecuteInternal;
     end;
-  finally
-    Connection.SetAutoCommit(AC);
+    Connection.Commit;
+  except
+    Connection.Rollback;
+    raise;
   end;
   LastUpdateCount := BatchDMLArrayCount;
 end;
