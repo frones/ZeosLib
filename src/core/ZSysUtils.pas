@@ -8484,7 +8484,7 @@ begin
     if PByte(pNibble)^ = 0 then begin
       Inc(PNibble);
       Dec(Precision, 1+Ord(Precision > 1));
-      Dec(Scale, Ord(Scale>0)+Ord(Scale>1));
+      Dec(Scale, Byte(Ord(Scale>0)+Ord(Scale>1)));
       Continue;
     end else if (PByte(pNibble)^ shr 4) = 0 then begin
       GetFirstBCDHalfByte := False;

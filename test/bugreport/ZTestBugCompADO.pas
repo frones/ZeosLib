@@ -65,8 +65,8 @@ type
   ZTestCompADOBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
+    procedure TestTrailingSpaces; //EH y2020 commented out see: https://www.sqlservercentral.com/forums/topic/trailing-spaces-being-automatically-trimmed
   published
-    procedure TestTrailingSpaces;
     procedure TestNotNullValues;
     procedure TestADQA_All_types;
   end;

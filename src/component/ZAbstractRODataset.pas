@@ -62,7 +62,7 @@ uses
   Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
-  ZDbcCache, ZDbcCachedResultSet, ZDataSetUtils,
+  ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
@@ -195,6 +195,7 @@ type
 
     FSortType : TSortType; {bangfauzan addition}
     FHasOutParams: Boolean;
+    FLastRowFetched: Boolean;
     FSortedFields: string;
     FSortedFieldRefs: TObjectDynArray;
     FSortedFieldIndices: TIntegerDynArray;
@@ -2210,25 +2211,26 @@ end;
 }
 function TZAbstractRODataset.FetchRows(RowCount: Integer): Boolean;
 begin
-  Connection.ShowSQLHourGlass;
-  try
-    if RowCount = 0 then
-    begin
-      while FetchOneRow do;
-      Result := True;
-    end
-    else
-    begin
-      while (CurrentRows.Count < RowCount) do
-      begin
-        if not FetchOneRow then
-          Break;
+  if (CurrentRows.Count < RowCount) or (RowCount = 0) then
+    if FLastRowFetched
+    then Result := CurrentRows.Count >= RowCount
+    else begin
+      Connection.ShowSQLHourGlass;
+      try
+        if (RowCount = 0) then begin
+          while FetchOneRow do;
+          Result := True;
+        end else begin
+          while (CurrentRows.Count < RowCount) do
+            if not FetchOneRow then
+              Break;
+          Result := CurrentRows.Count >= RowCount;
+        end;
+      finally
+        Connection.HideSQLHourGlass;
       end;
-      Result := CurrentRows.Count >= RowCount;
-    end;
-  finally
-    Connection.HideSQLHourGlass;
-  end;
+    end
+  else Result := True;
 end;
 
 {**
@@ -2241,8 +2243,10 @@ begin
     repeat
       if (FetchCount = 0) or (ResultSet.GetRow = FetchCount) or
           ResultSet.MoveAbsolute(FetchCount)
-      then Result := ResultSet.Next
-      else Result := False;
+      then begin
+        Result := ResultSet.Next;
+        FLastRowFetched := not Result;
+      end else Result := False;
       if Result then begin
         Inc(FFetchCount);
         if FilterRow(ResultSet.GetRow) then
@@ -2623,7 +2627,7 @@ begin
     RowAccessor.RowBuffer := PZRowBuffer(Buffer);
     RowAccessor.RowBuffer^.Index := RowNo;
     //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
-    FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
+    FRowAccessor.RowBuffer^.BookmarkFlag := Byte(bfCurrent);
     GetCalcFields(TGetCalcFieldsParamType(Buffer));
   end;
 
@@ -2650,13 +2654,16 @@ begin
           if RowBuffer.Index <> FResultSet.GetRow then
             FResultSet.MoveAbsolute(RowBuffer.Index);
         end;
-    dsEdit: RowBuffer := PZRowBuffer(ActiveBuffer);
+    dsEdit: begin
+        RowBuffer := PZRowBuffer(ActiveBuffer);
+        if RowBuffer.Index <> FResultSet.GetRow then
+          FResultSet.MoveAbsolute(RowBuffer.Index);
+      end;
     dsInsert: begin
         RowBuffer := PZRowBuffer(ActiveBuffer);
-        if RowBuffer.Index = -1 then
-          FResultSet.MoveToInsertRow
-        else if RowBuffer.Index <> FResultSet.GetRow then
-          FResultSet.MoveAbsolute(RowBuffer.Index);
+        if (RowBuffer.BookmarkFlag in [Byte(bfEOF){append row},Byte(bfInserted)])
+        then FResultSet.MoveToInsertRow
+        else FResultSet.MoveAbsolute(RowBuffer.Index);
       end;
     dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
     dsOldValue, dsNewValue, dsCurValue: begin
@@ -2664,10 +2671,9 @@ begin
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
 
-        if State = dsOldValue then
-          RowBuffer := OldRowBuffer
-        else
-          RowBuffer := NewRowBuffer;
+        if State = dsOldValue
+        then RowBuffer := OldRowBuffer
+        else RowBuffer := NewRowBuffer;
 
         if RowBuffer.Index <> RowNo then
         begin
@@ -2680,8 +2686,7 @@ begin
             //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
             RowBuffer.Index := RowNo;
             ResultSet.MoveToCurrentRow;
-          end
-          else
+          end else
             RowBuffer := nil;
         end;
       end;
@@ -3569,6 +3574,7 @@ begin
   CurrentRow := 0;
   FetchCount := 0;
   CurrentRows.Clear;
+  FLastRowFetched := False;
 
   Connection.ShowSQLHourGlass;
   OldRS := FResultSet;
@@ -3675,6 +3681,7 @@ begin
     if not FResultSetWalking then
       ResultSet.ResetCursor;
   FCursorOpened := False;
+  FLastRowFetched := False;
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
@@ -3752,10 +3759,16 @@ end;
   @return the maximum records count.
 }
 function TZAbstractRODataset.GetRecordCount: Integer;
+var RC: Integer;
 begin
   CheckActive;
-  if not IsUniDirectional then
-    FetchRows(FFetchRow);     // the orginal code was FetchRows(0); modifyed by Patyi
+  if not IsUniDirectional and not FLastRowFetched then begin
+    RC := FFetchRow;
+    if (RC <> 0) and (CurrentRows.Count > FFetchRow) and (CurrentRow = CurrentRows.Count) and
+      ((CurrentRows.Count mod FFetchRow) = 0) then
+      RC := CurrentRows.Count + FFetchRow; //EH: load data chunked see https://sourceforge.net/p/zeoslib/tickets/399/
+    FetchRows(RC);     // the orginal code was FetchRows(0); modifyed by Patyi
+  end;
   Result := CurrentRows.Count;
 end;
 
@@ -3768,6 +3781,12 @@ begin
   if Active then
     UpdateCursorPos;
   Result := CurrentRow;
+  //EH: load data chunked see https://sourceforge.net/p/zeoslib/tickets/399/
+  if not IsUniDirectional and not FLastRowFetched and
+    (CurrentRow = CurrentRows.Count) and (FFetchRow > 0) then begin
+    FetchRows(CurrentRows.Count+FFetchRow);
+    Resync([rmCenter]); //notify we've widened the records
+  end;
 end;
 
 {**

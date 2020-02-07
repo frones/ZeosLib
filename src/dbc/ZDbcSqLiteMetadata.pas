@@ -347,7 +347,7 @@ end;
 }
 function TZSQLiteDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
-  Result := False;
+  Result := True;
 end;
 
 {**
