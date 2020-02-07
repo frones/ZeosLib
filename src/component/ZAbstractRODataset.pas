@@ -2654,13 +2654,16 @@ begin
           if RowBuffer.Index <> FResultSet.GetRow then
             FResultSet.MoveAbsolute(RowBuffer.Index);
         end;
-    dsEdit: RowBuffer := PZRowBuffer(ActiveBuffer);
+    dsEdit: begin
+        RowBuffer := PZRowBuffer(ActiveBuffer);
+        if RowBuffer.Index <> FResultSet.GetRow then
+          FResultSet.MoveAbsolute(RowBuffer.Index);
+      end;
     dsInsert: begin
         RowBuffer := PZRowBuffer(ActiveBuffer);
-        if RowBuffer.BookmarkFlag = Byte(bfEOF) then
-          FResultSet.MoveToInsertRow
-        else if RowBuffer.Index <> FResultSet.GetRow then
-          FResultSet.MoveAbsolute(RowBuffer.Index);
+        if (RowBuffer.BookmarkFlag in [Byte(bfEOF){append row},Byte(bfInserted)])
+        then FResultSet.MoveToInsertRow
+        else FResultSet.MoveAbsolute(RowBuffer.Index);
       end;
     dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
     dsOldValue, dsNewValue, dsCurValue: begin
@@ -2668,10 +2671,9 @@ begin
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
 
-        if State = dsOldValue then
-          RowBuffer := OldRowBuffer
-        else
-          RowBuffer := NewRowBuffer;
+        if State = dsOldValue
+        then RowBuffer := OldRowBuffer
+        else RowBuffer := NewRowBuffer;
 
         if RowBuffer.Index <> RowNo then
         begin
@@ -2684,8 +2686,7 @@ begin
             //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
             RowBuffer.Index := RowNo;
             ResultSet.MoveToCurrentRow;
-          end
-          else
+          end else
             RowBuffer := nil;
         end;
       end;
