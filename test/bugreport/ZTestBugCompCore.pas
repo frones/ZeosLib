@@ -1424,8 +1424,8 @@ begin
 }
     Query.Close;
   finally
-    UpdateSQL.Free;
     Query.Free;
+    UpdateSQL.Free;
   end;
 end;
 
