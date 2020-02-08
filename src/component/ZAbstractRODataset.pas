@@ -1377,8 +1377,8 @@ type
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF NO_ANSISTRING}
     {$IFNDEF NO_UTF8STRING}
-    function GetAsUTF8String: UTF8String;
-    procedure SetAsUTF8String(const Value: UTF8String);
+    function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF NO_UTF8STRING}
     function GetAsRawByteString: RawByteString;
     procedure SetAsRawByteString(const Value: RawByteString);

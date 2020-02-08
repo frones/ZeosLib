@@ -1806,6 +1806,7 @@ begin
         if (InvalidPos > 1) and (Ord((Value+InvalidPos-1)^) = Ord(' ')) then
           Exit;//fixed width str
         if Len > SizeOf(StatBuf)-1 then begin
+          DynBuf := nil;
           SetLength(DynBuf, Len+1);
           PBuf := Pointer(DynBuf);
         end else
@@ -1892,6 +1893,7 @@ begin
         if (InvalidPos > 1) and (Ord((Value+InvalidPos-1)^) = Ord(' ')) then
           Exit;//fixed width str
         if Len > SizeOf(StatBuf)-1 then begin
+          DynBuf := nil;
           SetLength(DynBuf, Len+1);
           PBuf := Pointer(DynBuf);
         end else
@@ -1927,6 +1929,7 @@ begin
         if (InvalidPos > 1) and (Ord((Value+InvalidPos-1)^) = Ord(' ')) then
           Exit;//fixed width str
         if Len > SizeOf(StatBuf)-1 then begin
+          DynBuf := nil;
           SetLength(DynBuf, Len+1);
           PBuf := Pointer(DynBuf);
         end else
@@ -2049,6 +2052,7 @@ begin
         else
           if (Len < InvalidPos) and ((Value+InvalidPos-1)^ = ' ') then Exit;//fixed width str
         if Len > SizeOf(StatBuf)-1 then begin
+          DynBuf := nil;
           SetLength(DynBuf, Len+1);
           PBuf := Pointer(DynBuf);
         end else
@@ -2148,6 +2152,7 @@ begin
           Exit;//fixed width str
         Result := Def;
         if Len > SizeOf(StatBuf)-1 then begin
+          DynBuf := nil;
           SetLength(DynBuf, Len+1);
           PBuf := Pointer(DynBuf);
         end else
@@ -2186,6 +2191,7 @@ begin
           Exit;//fixed width str
         Result := Def;
         if Len > SizeOf(StatBuf)-1 then begin
+          DynBuf := nil;
           SetLength(DynBuf, Len+1);
           PBuf := Pointer(DynBuf);
         end else
@@ -2210,6 +2216,7 @@ end;
 
 function BufferToBytes(Buffer: Pointer; Length: Integer): TBytes;
 begin
+  Result := nil;
   SetLength(Result, Length);
   {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Length);
 end;
@@ -2599,6 +2606,7 @@ begin
     for i := 1 to List.Count - 1 do
       Inc(Len, DelimLen + Length(List[i]));
   end;
+  {$IFDEF FPC}Result := '';{$ENDIF}
   SetLength(Result, Len);
   P := Pointer(Result);
   for i := 0 to List.Count - 1 do
@@ -6287,12 +6295,14 @@ end;
 }
 procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString);
 begin
+  Result := '';
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
 
 procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString);
 begin
+  Result := '';
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
