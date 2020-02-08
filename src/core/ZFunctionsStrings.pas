@@ -446,14 +446,14 @@ begin
   Value2 := Stack.GetParameter(1);
   VariantManager.Assign(Value1, Result);
   if IsUnicodeVar(Value1, VariantManager)
-  then Result.VUnicodeString := Copy(Value1.VUnicodeString, Length(Value1.VUnicodeString) + 1 - Value2.VInteger, Value2.VInteger)
+  then Result.VUnicodeString := Copy(Value1.VUnicodeString, Length(Value1.VUnicodeString) + 1 - LengthInt(Value2.VInteger), Value2.VInteger)
   {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   else begin
-    Result.VRawByteString := Copy(Value1.VRawByteString, Length(Value1.VRawByteString) - Value2.VInteger, Value2.VInteger+1);
+    Result.VRawByteString := Copy(Value1.VRawByteString, Length(Value1.VRawByteString) - LengthInt(Value2.VInteger), Value2.VInteger+1);
     Result.VRawByteString[High(Result.VRawByteString)] := 0;
   end;
   {$ELSE}
-  else Result.VRawByteString := Copy(Value1.VRawByteString, Length(Value1.VRawByteString) + 1 - Value2.VInteger, Value2.VInteger);
+  else Result.VRawByteString := Copy(Value1.VRawByteString, Length(Value1.VRawByteString) + 1 - LengthInt(Value2.VInteger), Value2.VInteger);
   {$ENDIF}
 end;
 

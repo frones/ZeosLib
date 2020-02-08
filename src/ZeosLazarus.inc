@@ -165,7 +165,8 @@
       {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
       
       {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
-      {$DEFINE WITH_ASUTF8STRING} // TFIeld.AsUtf8String is supported
+      {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings
+      {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
     {$IFEND}
   {$IFEND}
   // todo
