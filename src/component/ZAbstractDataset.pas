@@ -403,8 +403,17 @@ end;
   Performs an internal action before switch into insert mode.
 }
 procedure TZAbstractDataset.InternalInsert;
+{$IFDEF HAVE_INSERT_BOOKMARK_BUG}
+var RowBuffer: PZRowBuffer;
+{$ENDIF}
 begin
   ResultSet.MoveToInsertRow;
+  //EH: the FPC does not set bfInserted if we Insert the row
+  {$IFDEF HAVE_INSERT_BOOKMARK_BUG}
+  if GetActiveBuffer(RowBuffer) then
+     RowBuffer.BookmarkFlag := Byte(bfInserted)
+  {$ENDIF}
+  //on append the FPC initializes the bookmark correctly afterwards}
 end;
 
 {**

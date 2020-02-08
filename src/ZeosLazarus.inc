@@ -68,6 +68,7 @@
 {$IFDEF SYSTEMINLINE} //global FPC define
   {$DEFINE WITH_INLINE}           // compiler supports inline methodes
 {$ENDIF}
+{$DEFINE HAVE_INSERT_BOOKMARK_BUG} //FPC does set bfEOF on Append but on Insert a row the Bookmark-Flag is bfCurrent while it should be bfInsert min v3.1
 {$DEFINE WITH_UNIDIRECTIONALBUG} //still buggy with IsUnidirectional prop of TDataSet FPC still moves the recordBuffer-> visit TestReadOnlyQueryUniDirectional and TZAbstractRODataset.GetRecord
 {$IFNDEF MSWINDOWS}
  {$DEFINE USE_RAW2WIDE_PROCS} //FPC is really not optimal with code generation use MultibultToWidechar instead for known CP's
@@ -164,7 +165,8 @@
       {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
       
       {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
-      {$DEFINE WITH_ASUTF8STRING} // TFIeld.AsUtf8String is supported
+      {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings
+      {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
     {$IFEND}
   {$IFEND}
   // todo

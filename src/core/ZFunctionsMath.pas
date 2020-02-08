@@ -226,12 +226,14 @@ uses
   @param VariantManager a reference to variant processor object.
   @returns a function value.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} //VariantManager is not used
 function TZEFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
   Result := EncodeDouble(Exp(1));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZPIFunction }
 
@@ -241,12 +243,14 @@ end;
   @param VariantManager a reference to variant processor object.
   @returns a function value.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} //VariantManager is not used
 function TZPIFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
   Result := EncodeDouble(PI);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZRndFunction }
 
@@ -256,12 +260,14 @@ end;
   @param VariantManager a reference to variant processor object.
   @returns a function value.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} //VariantManager is not used
 function TZRndFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 0);
   Result := EncodeDouble(Random);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZAbsFunction }
 
@@ -271,6 +277,7 @@ end;
   @param VariantManager a reference to variant processor object.
   @returns a function value.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} //VariantManager is not used
 function TZAbsFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 var
@@ -292,6 +299,7 @@ begin
   end else
     Result := Value;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZExpFunction }
 

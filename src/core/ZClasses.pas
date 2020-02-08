@@ -588,7 +588,7 @@ begin
     pushSelf_self   := Instance;
     pushEax         := $50;
     jump_opcode     := $E9;
-    jump_target     := PAnsiChar(PAnsiChar(methodAddr)-PAnsiChar(@FProcedure))-SizeOf(TCallbackPatch);
+    jump_target     := {%H-}PAnsiChar(PAnsiChar(methodAddr)-PAnsiChar(@FProcedure))-SizeOf(TCallbackPatch);
   end;
 end;
 
@@ -1139,8 +1139,9 @@ end;
 
 procedure TZRawSQLStringWriter.AddOrd(Value: Pointer;
   var Result: RawByteString);
+var X: {$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF} absolute Value;
 begin
-  AddOrd({$IFDEF CPU64}UInt64{$ELSE}Cardinal{$ENDIF}(Value), Result);
+  AddOrd(X, Result);
 end;
 
 { TZUnicodeSQLStringWriter }

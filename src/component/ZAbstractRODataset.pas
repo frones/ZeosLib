@@ -1159,8 +1159,8 @@ type
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF NO_ANSISTRING}
     {$IFNDEF NO_UTF8STRING}
-    function GetAsUTF8String: UTF8String;
-    procedure SetAsUTF8String(const Value: UTF8String);
+    function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF NO_UTF8STRING}
     function GetAsRawByteString: RawByteString;
     procedure SetAsRawByteString(const Value: RawByteString);
@@ -1169,8 +1169,8 @@ type
     procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
     {$IFEND}
     {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
-    function GetAsUnicodeString: UnicodeString;
-    procedure SetAsUnicodeString(const Value: UnicodeString);
+    function GetAsUnicodeString: UnicodeString; {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
+    procedure SetAsUnicodeString(const Value: UnicodeString); {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     {$ENDIF}
   protected
     procedure DefineProperties(Filer: TFiler); override;
@@ -1179,11 +1179,14 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     procedure Clear; override;
-    {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
-    property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
-    {$ELSE}
-    property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
-    {$ENDIF}
+    {$IFNDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}
+      {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
+      property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
+      {$ELSE}
+      property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
+      {$ENDIF}
+    {$ENDIF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}
+
     {$IFNDEF NO_UTF8STRING}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
     {$ENDIF NO_UTF8STRING}
@@ -1214,16 +1217,16 @@ type
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF NO_ANSISTRING}
     {$IFNDEF NO_UTF8STRING}
-    function GetAsUTF8String: UTF8String;
-    procedure SetAsUTF8String(const Value: UTF8String);
+    function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF NO_UTF8STRING}
     {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
     function GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
     procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
     {$IFEND}
     {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
-    function GetAsUnicodeString: UnicodeString;
-    procedure SetAsUnicodeString(const Value: UnicodeString);
+    function GetAsUnicodeString: UnicodeString; {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
+    procedure SetAsUnicodeString(const Value: UnicodeString); {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     {$ENDIF}
   protected
     procedure Bind(Binding: Boolean); override;
@@ -1234,7 +1237,9 @@ type
     procedure Clear; override;
     {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property Value: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
-    property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
+      {$IFNDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}
+      property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
+      {$ENDIF}
     {$ENDIF}
     {$IF not defined(NO_ANSISTRING) and not defined(WITH_ASANSISTRING)}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
@@ -1306,16 +1311,16 @@ type
     procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
     {$IFEND}
     {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
-    function GetAsUnicodeString: UnicodeString;
-    procedure SetAsUnicodeString(const Value: UnicodeString);
+    function GetAsUnicodeString: UnicodeString; {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING} override;{$ENDIF}
+    procedure SetAsUnicodeString(const Value: UnicodeString); {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING} override;{$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF NO_ANSISTRING}
     {$IFNDEF NO_UTF8STRING}
-    function GetAsUTF8String: UTF8String;
-    procedure SetAsUTF8String(const Value: UTF8String);
+    function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF NO_UTF8STRING}
     function GetAsRawByteString: RawByteString;
     procedure SetAsRawByteString(const Value: RawByteString);
@@ -1330,7 +1335,9 @@ type
     {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
     {$ELSE}
-    property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
+      {$IFNDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}
+      property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
+      {$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
@@ -1362,16 +1369,16 @@ type
     procedure SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}override;{$ENDIF}
     {$IFEND}
     {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
-    function GetAsUnicodeString: UnicodeString;
-    procedure SetAsUnicodeString(const Value: UnicodeString);
+    function GetAsUnicodeString: UnicodeString; {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
+    procedure SetAsUnicodeString(const Value: UnicodeString); {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF NO_ANSISTRING}
     {$IFNDEF NO_UTF8STRING}
-    function GetAsUTF8String: UTF8String;
-    procedure SetAsUTF8String(const Value: UTF8String);
+    function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF NO_UTF8STRING}
     function GetAsRawByteString: RawByteString;
     procedure SetAsRawByteString(const Value: RawByteString);
@@ -1384,7 +1391,9 @@ type
     {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
     {$ELSE}
-    property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
+      {$IFNDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}
+      property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
+      {$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
@@ -2881,7 +2890,7 @@ jmpMovTime:       Result := Result or not TryEncodeTime(T.Hour, T.Minute, T.Seco
                   {$ENDIF WITH_FPC_FTTIME_BUG}
                     if Result
                     then PDateTime(Buffer)^ := 0
-                    else PDateTime(Buffer)^ := DT
+                    else PDateTime(Buffer)^ := DT{$IFDEF WITH_FPC_FTTIME_BUG};{$ENDIF}
                   {$IFNDEF WITH_FPC_FTTIME_BUG}
                   else if Result
                   then PInteger(Buffer)^ := 0
