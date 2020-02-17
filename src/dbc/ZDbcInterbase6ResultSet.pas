@@ -1805,10 +1805,13 @@ begin
               if (CP = ConSettings^.ClientCodePage^.ID)
               then ZCodePageInfo := ConSettings^.ClientCodePage
               else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info}
-              if ConSettings^.ClientCodePage^.ID = CS_NONE
-              then ColumnCodePage := ZCodePageInfo.CP
-              else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-              Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
+              if ConSettings^.ClientCodePage^.ID = CS_NONE then begin
+                ColumnCodePage := ZCodePageInfo.CP;
+                Precision := XSQLVAR.sqllen
+              end else begin
+                ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+                Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
+              end;
               if XSQLVAR.sqltype and not 1 = SQL_TEXT then
                 Signed := True;
               if ColumnType = stString
