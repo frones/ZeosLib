@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   Types, Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcInterbase6, ZPlainFirebirdDriver;
+  ZDbcInterbase6, ZPlainFirebirdDriver, ZEncoding;
 
 type
 
@@ -2547,8 +2547,9 @@ procedure TZInterbase6DatabaseMetadata.SetUTF8CodePageInfo;
 begin
   FMetaConSettings.AutoEncode := False;
   FMetaConSettings.ClientCodePage := GetConnection.GetIZPlainDriver.ValidateCharEncoding('UTF8');
-  FMetaConSettings.AutoEncode := true; //Get/Set-String related
+  FMetaConSettings.AutoEncode := False; //Get/Set-String related
   FConSettings := @FMetaConSettings;
+  SetConvertFunctions(FConSettings);
 end;
 
 {**
