@@ -56,6 +56,7 @@ interface
 {$I ZComponent.inc}
 
 uses
+  {$IFDEF WITH_DBCONSTS}DBConsts, {$ENDIF}
   Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}Db{$ENDIF},
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ELSE}ZClasses,{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
@@ -324,7 +325,7 @@ var
 implementation
 
 uses
-  FmtBCD,
+  FmtBCD, Variants,
   ZFastCode, ZMessages, ZGenericSqlToken, ZAbstractRODataset,
   ZSysUtils, ZDbcResultSet, ZEncoding;
 
@@ -1680,129 +1681,186 @@ end;
 }
 procedure SetStatementParam(Index: Integer;
   const Statement: IZPreparedStatement; Param: TParam);
+  function CreateUnknownTypeError: EZDatabaseError;
+  begin
+    Result := EZDatabaseError.Create(SUnKnownParamDataType + ' ('+
+      ZFastCode.IntToStr(Ord(Param.DataType))+')');
+      //GetEnumName(TypeInfo(TFieldType), Ord(Param.DataType))+')'); //using Typinfo results in collission with tFloatType ):
+  end;
+  {$IFDEF WITH_FTGUID}
+  function CreateGUIDSizeError(L: Integer): EZDatabaseError;
+  begin
+    Result := EZDatabaseError.Create(Format(SFieldSizeMismatch,
+      [Param.NativeStr+'(ftGUID)', 16, L]));
+  end;
+  {$ENDIF WITH_FTGUID}
 var
-  Stream: TStream;
   TempBytes: TBytes;
   BlobData: TBlobData;
-  {$IFDEF WITH_WIDEMEMO}P: Pointer;
+  Lob: IZBLob;
+  ConSettings: PZConSettings;
+  CP: Word;
+  P: Pointer;
   UniTemp: ZWideString;
+  {$IFNDEF UNICODE}
+  R: RawByteString;
   {$ENDIF}
 begin
   if Param.IsNull then
     Statement.SetNull(Index, ConvertDatasetToDbcType(Param.DataType))
-  else
-  begin
-    case Param.DataType of
-      ftBoolean:
-        Statement.SetBoolean(Index, Param.AsBoolean);
-      {$IFDEF WITH_FTBYTE}
-      ftByte:
-        Statement.SetByte(Index, Param.AsByte);
-      {$ENDIF}
-      {$IFDEF WITH_FTSHORTINT}
-      ftShortInt:
-        Statement.SetShort(Index, Param.AsShortInt);
-      {$ENDIF}
-      ftWord:
-        Statement.SetWord(Index, Param.AsWord);
-      ftSmallInt:
-        Statement.SetSmall(Index, Param.AsSmallInt);
-      ftInteger, ftAutoInc:
-        Statement.SetInt(Index, Param.AsInteger);
-      {$IFDEF WITH_FTSINGLE}
-      ftSingle:
-        Statement.SetFloat(Index, Param.AsSingle);
-      {$ENDIF}
-      ftFloat:
-        Statement.SetDouble(Index, Param.AsFloat);
-      ftFmtBCD:
-        Statement.SetBigDecimal(Index, Param.AsFMTBCD);
-      {$IFDEF WITH_FTEXTENDED}
-      ftExtended:
-        Statement.SetDouble(Index, Param.AsFloat);
-      {$ENDIF}
-      {$IFDEF WITH_FTLONGWORD}
-      ftLongWord:
-        Statement.SetInt(Index, Integer(Param.AsLongWord));
-      {$ENDIF}
-      ftLargeInt:
-        Statement.SetLong(Index, {$IFDEF WITH_PARAM_ASLARGEINT}Param.AsLargeInt{$ELSE}StrToInt64(Param.AsString){$ENDIF});
-      ftCurrency, ftBCD:
-        Statement.SetCurrency(Index, Param.AsCurrency);
-      ftString, ftFixedChar:
-        {$IFNDEF UNICODE}
-        if (TVarData(Param.Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Param.Value).VType = varUString){$ENDIF}
-        then Statement.SetUnicodeString(Index, Param.Value)
-        else {$ENDIF}Statement.SetString(Index, Param.AsString);
-      {$IFDEF WITH_FTWIDESTRING}
-      ftWideString:
-        Statement.SetUnicodeString(Index, Param.AsWideString);
-      {$ENDIF}
-      ftBytes, ftVarBytes:
-        begin
-          {$IFDEF TPARAM_HAS_ASBYTES}
-          Statement.SetBytes(Index, Param.AsBytes);
+  else case Param.DataType of
+    ftBoolean:
+      Statement.SetBoolean(Index, Param.AsBoolean);
+    {$IFDEF WITH_FTBYTE}
+    ftByte:
+      Statement.SetByte(Index, Param.AsByte);
+    {$ENDIF}
+    {$IFDEF WITH_FTSHORTINT}
+    ftShortInt:
+      Statement.SetShort(Index, Param.AsShortInt);
+    {$ENDIF}
+    ftWord:
+      Statement.SetWord(Index, Param.AsWord);
+    ftSmallInt:
+      Statement.SetSmall(Index, Param.AsSmallInt);
+    ftInteger, ftAutoInc:
+      Statement.SetInt(Index, Param.AsInteger);
+    {$IFDEF WITH_FTSINGLE}
+    ftSingle:
+      Statement.SetFloat(Index, Param.AsSingle);
+    {$ENDIF}
+    ftCurrency, ftFloat:
+      Statement.SetDouble(Index, Param.AsFloat);
+    ftFmtBCD:
+      Statement.SetBigDecimal(Index, Param.AsFMTBCD);
+    {$IFDEF WITH_FTEXTENDED}
+    ftExtended:
+      Statement.SetDouble(Index, Param.AsFloat);
+    {$ENDIF}
+    {$IFDEF WITH_FTLONGWORD}
+    ftLongWord:
+      Statement.SetInt(Index, Integer(Param.AsLongWord));
+    {$ENDIF}
+    ftLargeInt: case TvarData(Param.Value).VType of
+        {$IFDEF WITH_VARIANT_UINT64}
+          {$IFDEF FPC}
+          varqword: Statement.SetULong(Index, TVarData(Param.Value).vword64);
           {$ELSE}
-          Statement.SetBytes(Index, VarToBytes(Param.Value));
+          varUInt64: Statement.SetULong(Index, TVarData(Param.Value).VUInt64);
           {$ENDIF}
-        end;
-      {$IFDEF WITH_FTGUID}
-      // As of now (on Delphi 10.2) TParam has no support of ftGuid data type.
-      // GetData and GetDataSize will raise exception on unsupported data types.
-      // But user can assign data type manually and as long as he doesn't call
-      // these methods things will be fine.
-      // Here we presume the data is stored as TBytes.
-      ftGuid:
-        begin
-          {$IFDEF TPARAM_HAS_ASBYTES}
-          TempBytes := Param.AsBytes;
-          {$ELSE}
-          TempBytes := VarToBytes(Param.Value);
+        {$ENDIF}
+        varInt64:   Statement.SetLong(Index, TVarData(Param.Value).VInt64);
+        {$IFNDEF WITH_FTLONGWORD}
+        varLongWord: Statement.SetUInt(Index, TVarData(Param.Value).VLongWord);
+        {$ENDIF}
+        else Statement.SetLong(Index, {$IFDEF WITH_PARAM_ASLARGEINT}Param.AsLargeInt{$ELSE}StrToInt64(Param.AsString){$ENDIF});
+      end;
+    ftBCD:  Statement.SetCurrency(Index, Param.AsBCD);
+    ftString, ftFixedChar{$IFDEF WITH_FTWIDESTRING}, ftWideString{$ENDIF}:
+      {$IFNDEF UNICODE}
+      if (TVarData(Param.Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Param.Value).VType = varUString){$ENDIF}
+      then Statement.SetUnicodeString(Index, Param.Value)
+      else {$ENDIF}Statement.SetString(Index, Param.AsString);
+    ftBytes, ftVarBytes:
+        {$IFDEF TPARAM_HAS_ASBYTES}
+        Statement.SetBytes(Index, Param.AsBytes);
+        {$ELSE}
+        Statement.SetBytes(Index, VarToBytes(Param.Value));
+        {$ENDIF}
+    {$IFDEF WITH_FTGUID}
+    // As of now (on Delphi 10.2) TParam has no support of ftGuid data type.
+    // GetData and GetDataSize will raise exception on unsupported data types.
+    // But user can assign data type manually and as long as he doesn't call
+    // these methods things will be fine.
+    // Here we presume the data is stored as TBytes or as String.
+    ftGuid: if VarIsStr(Param.Value) then
+       Statement.SetGuid(Index, StringToGUID(PAram.AsString))
+      else begin
+        {$IFDEF TPARAM_HAS_ASBYTES}
+        TempBytes := Param.AsBytes;
+        {$ELSE}
+        TempBytes := VarToBytes(Param.Value);
+        {$ENDIF}
+        if Length(TempBytes) <> SizeOf(TGUID) then
+          raise CreateGUIDSizeError(Length(TempBytes));
+        Statement.SetGuid(Index, PGUID(TempBytes)^);
+      end;
+    {$ENDIF}
+    ftDate:
+      Statement.SetDate(Index, Param.AsDate);
+    ftTime:
+      Statement.SetTime(Index, Param.AsTime);
+    ftDateTime:
+      Statement.SetTimestamp(Index, Param.AsDateTime);
+    ftMemo, ftFmtMemo{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}: begin
+        ConSettings := Statement.GetConnection.GetConSettings;
+        case TvarData(Param.Value).VType of //it's worth it checking the type i.e. Encodings
+          {$IFDEF WITH_varUString}varUString,{$ENDIF}
+          {$IFDEF UNICODE}varString,{$ENDIF} //otherwise we get a conversion warning
+          varOleStr: begin
+              UniTemp := Param.{$IFDEF UNICODE}AsMemo{$ELSE}Value{$ENDIF};
+              P :=  Pointer(UniTemp);
+              if P = nil then
+                P := PEmptyUnicodeString;
+              Lob := TZAbstractClob.CreateWithData(PWideChar(P), Length(UniTemp), ConSettings);
+              Statement.SetBlob(Index, stUnicodeStream, Lob);
+            end;
+          {$IFNDEF UNICODE}
+          varString: begin
+              R := RawByteString(TVarData(Param.Value).VString);
+              P :=  Pointer(R);
+              if P <> nil
+              (*{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE} //FPC 2.7+
+              then CP := StringCodePage(R)
+              {$ELSE}*)
+              then if ConSettings.AutoEncode
+                then CP := zCP_NONE
+                else if (ConSettings.ClientCodePage.Encoding = ceUTF16)
+                  then CP := ConSettings.CTRL_CP
+                  else CP := ConSettings.ClientCodePage.CP
+              {.$ENDIF}
+              else begin
+                CP := ConSettings.ClientCodePage.CP;
+                P := PEmptyAnsiString;
+              end;
+              Lob := TZAbstractClob.CreateWithData(PAnsiChar(P), Length(R), CP, ConSettings);
+              Statement.SetBlob(Index, stAsciiStream, Lob);
+            end;
           {$ENDIF}
-          Statement.SetGuid(Index, PGUID(TempBytes)^);
+          else begin //LoadFromStream fills a varArray of Byte
+              if not (VarIsArray(Param.Value) and (VarArrayDimCount(Param.Value) = 1) and
+                 ((VarType(Param.Value) and VarTypeMask) = varByte)) then
+                raise Exception.Create(SInvalidVarByteArray);
+              BlobData := Param.AsBlob;
+              P := Pointer(BlobData);
+              if p = nil then
+                P := PEmptyUnicodeString;
+              {$IFDEF WITH_WIDEMEMO}
+              if Param.DataType = ftWideMemo then begin
+                 Lob := TZAbstractClob.CreateWithData(PWideChar(P), Length(BlobData) shr 1, ConSettings);
+                 Statement.SetBlob(Index, stUnicodeStream, Lob);
+              end else {$ENDIF}begin
+                {$IFNDEF UNICODE}
+                if ConSettings.AutoEncode
+                then CP := zCP_NONE
+                else CP := ConSettings.ClientCodePage.CP;
+                {$ELSE}
+                CP := zCP_NONE;
+                {$ENDIF}
+                Lob := TZAbstractClob.CreateWithData(PAnsiChar(P), Length(BlobData), CP, ConSettings);
+                Statement.SetBlob(Index, stAsciiStream, Lob);
+              end;
+            end;
         end;
-      {$ENDIF}
-      ftDate:
-        Statement.SetDate(Index, Param.AsDate);
-      ftTime:
-        Statement.SetTime(Index, Param.AsTime);
-      ftDateTime:
-        Statement.SetTimestamp(Index, Param.AsDateTime);
-      ftMemo:
-        begin
-          {EgonHugeist: On reading a Param as Memo the Stream reads Byte-wise
-            on Changing to stUnicodeString/Delphi12Up a String is from
-            Type wide/unicode so we have to give him back as
-            Stream!}
-            {$IFDEF UNICODE}
-            Stream := Param.AsStream;
-            {$ELSE}
-            Stream := TStringStream.Create(Param.AsMemo);
-            {$ENDIF}
-          try
-            Statement.SetAsciiStream(Index, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
-      {$IFDEF WITH_WIDEMEMO}
-      ftWideMemo:
-        begin
-          UniTemp := Param.AsWideString;
-          P :=  Pointer(UniTemp);
-          if P = nil then
-            P := PEmptyUnicodeString;
-          Statement.SetBlob(Index, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(P), Length(UniTemp), Statement.GetConnection.GetConSettings));
-        end;
-      {$ENDIF}
-      ftBlob, ftGraphic:
-        begin
-          BlobData := Param.AsBlob;
-          Statement.SetBlob(Index, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(BlobData), Length(BlobData)));
-        end;
-      else
-        raise EZDatabaseError.Create(SUnKnownParamDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(Param.DataType)));
-    end;
+      end;
+    ftBlob, ftGraphic:
+      begin
+        BlobData := Param.AsBlob;
+        Lob := TZAbstractBlob.CreateWithData(Pointer(BlobData), Length(BlobData));
+        Statement.SetBlob(Index, stBinaryStream, Lob);
+      end;
+    else
+      raise CreateUnknownTypeError;
   end;
 end;
 

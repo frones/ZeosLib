@@ -70,7 +70,6 @@ type
     FMetaResultSet: IZResultset;
     function GetStoredProcName: string;
     procedure SetStoredProcName(const Value: string);
-    //function GetParamType(const Value: TZProcedureColumnType): TParamType;
   protected
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
@@ -328,29 +327,6 @@ begin
     CallableStmt := nil;
   end;
 end;
-
-{**
-  Converts procedure column type to dataset param type.
-  @param Value a initial procedure column type.
-  @return a corresponding param type.
-}
-{function TZStoredProc.GetParamType(const Value: TZProcedureColumnType): TParamType;
-begin
-  case Value of
-    pctIn:
-      Result := ptInput;
-    pctInOut:
-      Result := ptInputOutput;
-    pctOut:
-      Result := ptOutput;
-    pctReturn:
-      Result := ptResult;
-    pctResultSet:
-      Result := ptResult;
-  else
-    Result := ptUnknown;
-  end;
-end;}
 
 {$IFDEF WITH_IPROVIDER}
 {**

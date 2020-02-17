@@ -5051,7 +5051,7 @@ var
     ColumnList := TObjectList.Create(True);
     try
       for i := low(FFieldsLookupTable) to high(FFieldsLookupTable) do begin
-        if FFieldsLookupTable[i].DataSource = dltResultSet
+        if FFieldsLookupTable[i].DataSource = dltAccessor
         then CP := FCTRL_CP
         else CP := FResultSetMetadata.GetColumnCodePage(FFieldsLookupTable[i].Index);
         ColumnList.Add(ConvertFieldToColumnInfo(TField(FFieldsLookupTable[i].Field), CP))
