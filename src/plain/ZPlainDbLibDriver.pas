@@ -83,6 +83,16 @@ type
     Integer; stdcall;
   {$ENDIF}
 
+  TZDBLibErrorList = Class({$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF})
+  public
+    procedure Clear; override;
+  End;
+
+  TZDBLibMessageList = Class({$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF})
+  public
+    procedure Clear; override;
+  End;
+
   {$IFDEF TEST_CALLBACK}
   TDBERRHANDLE_PROC = function(Proc: PDBPROCESS; Severity, DbErr, OsErr: Integer;
     DbErrStr, OsErrStr: PAnsiChar): Integer of Object;
@@ -104,8 +114,8 @@ type
   TZDBLIBPLainDriver = class(TZAbstractPlainDriver, IZPlainDriver)
   private
     {$IFDEF TEST_CALLBACK}
-    FSQLErrorHandlerList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
-    FSQLMessageHandlerList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FSQLErrorHandlerList: TZDBLibErrorList;
+    FSQLMessageHandlerList: TZDBLibMessageList;
     FCS: TCriticalSection;
     {$ENDIF TEST_CALLBACK}
     {$IFDEF MSWINDOWS}FClientVersion: String;{$ENDIF}
@@ -507,7 +517,7 @@ type
     procedure DeRegisterErrorHandler(Const Handler: TDbLibErrorHandler);
     procedure DeRegisterMessageHandler(Const Handler: TDbLibMessageHandler);
     {$ELSE}
-    procedure AssignErrorMessages(dbProc: PDBPROCESS; const DestErrors, DestMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF});
+    procedure AssignErrorMessages(dbProc: PDBPROCESS; DestErrors: TZDBLibErrorList; DestMessages: TZDBLibMessageList);
     {$ENDIF TEST_CALLBACK}
   public
     property DBLibraryVendorType: TDBLibraryVendorType read fDBLibraryVendorType;
@@ -602,8 +612,8 @@ var
   OldMsSQLErrorHandle: TDBERRHANDLE_PROC_cdecl = nil;
   OldMsSQLMessageHandle: TDBMSGHANDLE_PROC_cdecl = nil;
   ErrorCS: TCriticalSection;
-  SQLErrors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
-  SQLMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+  SQLErrors: TZDBLibErrorList;
+  SQLMessages: TZDBLibMessageList;
 
 procedure AddSybaseCodePages(PlainDriver: TZAbstractPlainDriver);
 begin
@@ -823,8 +833,8 @@ begin
   inherited;
   FLoader := TZNativeLibraryLoader.Create([]);
   {$IFDEF TEST_CALLBACK}
-  FSQLErrorHandlerList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  FSQLMessageHandlerList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FSQLErrorHandlerList := TZDBLibErrorList.Create;
+  FSQLMessageHandlerList := TZDBLibMessageList.Create;
   FCS := TCriticalSection.Create;
   {$ENDIF}
   FLoader.AddLocation('sybdb'+SharedSuffix);
@@ -847,18 +857,18 @@ end;
 
 {$ELSE TEST_CALLBACK}
 procedure TZDBLIBPLainDriver.AssignErrorMessages(dbProc: PDBPROCESS;
-  const DestErrors, DestMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF});
+  DestErrors: TZDBLibErrorList; DestMessages: TZDBLibMessageList);
 var I: Integer;
 begin
   ErrorCS.Enter;
   try
     for i := SQLErrors.Count -1 downto 0 do
-      if PDBLibError(SQLErrors[i]).dbProc = dbProc then begin
+      if (dbProc = nil) or (PDBLibError(SQLErrors[i]).dbProc = dbProc) then begin
         DestErrors.Add(SQLErrors[i]);
         SQLErrors.Delete(i);
       end;
     for i := SQLMessages.Count -1 downto 0 do
-      if PDBLibMessage(SQLMessages[i]).dbProc = dbProc then begin
+      if (dbProc = nil) or (PDBLibMessage(SQLMessages[i]).dbProc = dbProc) then begin
         DestMessages.Add(SQLMessages[i]);
         SQLMessages.Delete(i);
       end;
@@ -1369,7 +1379,7 @@ begin
     {$ELSE}
     if Assigned(FdbOpen)
     then Result := FdbOpen(Login, server)
-    else Result := FdbOpen_stdcall(Login, server);
+    else Result := FdbOpen_stdcall(Login, server)
     {$ENDIF}
 end;
 
@@ -1668,7 +1678,7 @@ begin
       lvtMS: begin
           dberrhandle(OldMsSQLErrorHandle);
           dbmsghandle(OldMsSQLMessageHandle);
-          fdbWinexit;
+          //fdbWinexit;
           fdbExit;
         end;
       {$ENDIF}
@@ -2043,7 +2053,7 @@ end;
 
 procedure TZDBLIBPLainDriver.LoadCodePages;
 begin
-  inherited;
+  //inherited;
   { add FreeTDS supported charactersets }
   AddCodePage('UTF-8', 1, ceUTF8, zCP_UTF8,  '', 4, True);
   AddCodePage('ISO-8859-1', 2, ceAnsi, zCP_L1_ISO_8859_1, '', 1, True);
@@ -2263,30 +2273,36 @@ begin
   AddSybaseCodePages(Self);
 end;
 
+{ TZDBLibErrorList }
+
+procedure TZDBLibErrorList.Clear;
+var I: Integer;
+begin
+  for i := Count -1 downto 0 do
+    Dispose(PDBLibError(Items[i]));
+  inherited;
+end;
+
+{ TZDBLibMessageList }
+
+procedure TZDBLibMessageList.Clear;
+var I: Integer;
+begin
+  for i := Count -1 downto 0 do
+    Dispose(PDBLibMessage(Items[i]));
+  inherited;
+end;
 
 initialization
-  SQLErrors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  SQLMessages := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  SQLErrors := TZDBLibErrorList.Create;
+  SQLMessages := TZDBLibMessageList.Create;
   ErrorCS := TCriticalSection.Create;
 finalization
   FreeAndnil(ErrorCS);
 //Free any record in the list if any
-  while SQLErrors.Count > 0 do
-  begin
-    Dispose(PDBLibError(SQLErrors.Items[0]));
-    SQLErrors.Delete(0);
-  end;
-  if SQLErrors <> nil then
-    FreeAndNil(SQLErrors);
-
+  FreeAndNil(SQLErrors);
 //Free any record in the list if any
-  while SQLMessages.Count > 0 do
-  begin
-    Dispose(PDBLibMessage(SQLMessages.Items[0]));
-    SQLMessages.Delete(0);
-  end;
-  if SQLMessages <> nil then
-    FreeAndNil(SQLMessages);
+  FreeAndNil(SQLMessages);
 
 {$ENDIF ZEOS_DISABLE_DBLIB}
 
