@@ -8932,6 +8932,15 @@ begin
     then FmtStr := DisplayFormat
     else FmtStr := EditFormat;
     if FmtStr = '' then begin
+      {$IFDEF FPC}
+      if Currency then begin
+        if DisplayText then
+          Text := BcdToStrF(bcd, ffCurrency, Precision, 2)
+        else
+          Text := BcdToStrF(bcd, ffFixed, Precision, 2);
+      end else
+        Text := BcdToStrF(bcd, ffGeneral, Precision, Size);
+      {$ELSE}
       if Currency then begin
         if DisplayText
         then Format := ffCurrency
@@ -8942,6 +8951,7 @@ begin
         Digits := 0;
       end;
       Text := BcdToStrF(Bcd, Format, Precision, Digits);
+      {$ENDIF}
     end else
       Text := FormatBcd(FmtStr, Bcd);
   end;
