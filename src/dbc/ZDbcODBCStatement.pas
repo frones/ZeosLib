@@ -441,7 +441,7 @@ begin
   if (GetResultSetConcurrency = rcUpdatable) or
      (GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResolver := TZGenericCachedResolver.Create(Self, NativeResultSet.GetMetaData);
+    CachedResolver := TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;

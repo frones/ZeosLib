@@ -641,7 +641,6 @@ begin
       CachedResultSet.MoveAbsolute(RowNo);
       RowAccessor.RowBuffer := RowBuffer;
       CachedResultSet.RevertRecord;
-      //FetchFromResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
     end
   else if (State = dsInsert) then
     CachedResultSet.RevertRecord;
@@ -762,7 +761,6 @@ begin
           Resync([])
         else
         begin
-          //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
           ostate:=State;
           SetTempState(dsInternalCalc);
           try

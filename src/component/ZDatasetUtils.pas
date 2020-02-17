@@ -61,7 +61,7 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
   ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer,
-  ZSelectSchema;
+  ZDbcResultSetMetadata, ZSelectSchema;
 
 type
   TZFieldDataSourceType = (dltAccessor, dltResultSet);
@@ -97,26 +97,12 @@ function ConvertDatasetToDbcType(Value: TFieldType): TZSQLType;
 function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word; DataFieldsOnly: Boolean): TObjectList;
 
 {**
-  Fetches columns from specified resultset.
-  @param ResultSet a source resultset.
-  @param FieldsLookupTable a lookup table to define original index.
-  @param Fields a collection of field definitions.
-  @param RowAccessor a destination row accessor.
+  Converts a field definitions into column information objects.
+  @param Field a field object.
+  @param NativeColumnCodePage the codepage used for the String/memo fields
+  @return a column information object.
 }
-procedure FetchFromResultSet(const ResultSet: IZResultSet;
-  const FieldsLookupTable: TZFieldsLookUpDynArray; Fields: TFields;
-  RowAccessor: TZRowAccessor);
-
-{**
-  Posts columns from specified resultset.
-  @param ResultSet a source resultset.
-  @param FieldsLookupTable a lookup table to define original index.
-  @param Fields a collection of field definitions.
-  @param RowAccessor a destination row accessor.
-}
-{procedure PostToResultSet(const ResultSet: IZResultSet;
-  const FieldsLookupTable: TZFieldsLookUpDynArray; Fields: TFields;
-  RowAccessor: TZRowAccessor);}
+function ConvertFieldToColumnInfo(Field: TField; NativeColumnCodePage: Word): TZColumnInfo;
 
 {**
   Defines fields indices for the specified dataset.
@@ -147,15 +133,15 @@ procedure RetrieveDataFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   const ResultSet: IZResultSet; const ResultValues: TZVariantDynArray);
 
 {**
-  Retrieves a set of specified field values.
-  @param FieldRefs an array with interested field object references.
+  Fill a set of specified field values.
   @param FieldIndices an array with interested field indices.
-  @param RowAccessor a row accessor object.
+  @param RowAccessor a row accessor object used for the lookup fields.
+  @param ResultSet the ResultSet containing the non calced fields date.
   @param ResultValues a container for result values.
-  @return an array with field values.
 }
-procedure RetrieveDataFieldsFromRowAccessor(const FieldIndices: TZFieldsLookUpDynArray;
-  RowAccessor: TZRowAccessor; const ResultSet: IZResultSet; const ResultValues: TZVariantDynArray);
+procedure FillDataFieldsFromSourceLookup(const FieldIndices: TZFieldsLookUpDynArray;
+  RowAccessor: TZRowAccessor; const ResultSet: IZResultSet;
+  var ResultValues: TZVariantDynArray);
 
 {**
   Copy a set of specified field values to variables.
@@ -238,7 +224,7 @@ procedure DefineSortedFields(DataSet: TDataset;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(Fields: TFields): TZFieldsLookUpDynArray;
+function CreateFieldsLookupTable(Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
 
 {**
   Defines an original field index in the dataset.
@@ -339,7 +325,7 @@ implementation
 
 uses
   FmtBCD,
-  ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
+  ZFastCode, ZMessages, ZGenericSqlToken, ZAbstractRODataset,
   ZSysUtils, ZDbcResultSet, ZEncoding;
 
 {**
@@ -531,262 +517,35 @@ begin
       ftBlob: if Current is TZBLobField then Continue;
     end;*)
 
-    ColumnInfo := TZColumnInfo.Create;
-
-    ColumnInfo.ColumnType := ConvertDatasetToDbcType(Current.DataType);
-    ColumnInfo.ColumnName := Current.FieldName;
-    ColumnInfo.Precision := Current.Size;
-    if Current.DataType in [ftBCD, ftFmtBCD] then
-      ColumnInfo.Scale := Current.DataSize
-    else if Current.DataType in [ftMemo, ftString, ftFixedChar] then
-      ColumnInfo.ColumnCodePage := ControlsCodePage
-    else if Current.DataType in [{$IFDEF WITH_FTWIDEMEMO}ftWideMemo, {$ENDIF}
-      ftWideString{$IFDEF WITH_FTFIXEDWIDECHAR}, ftFixedWideChar{$ENDIF}] then
-      ColumnInfo.ColumnCodePage := zCP_UTF16;
-    ColumnInfo.ColumnLabel := Current.DisplayName;
-    ColumnInfo.DefaultExpression := Current.DefaultExpression;
+    ColumnInfo := ConvertFieldToColumnInfo(Current, ControlsCodePage);
     Result.Add(ColumnInfo);
   end;
 end;
 
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //BCD is always initialized
-{$ENDIF}
 {**
-  Fetches columns from specified resultset.
-  @param ResultSet a source resultset.
-  @param FieldsLookupTable a lookup table to define original index.
-  @param Fields a collection of field definitions.
-  @param RowAccessor a destination row accessor.
+  Converts a field definitions into column information objects.
+  @param Field a field object.
+  @param NativeColumnCodePage the codepage used for the String/memo fields
+  @return a column information object.
 }
-procedure FetchFromResultSet(const ResultSet: IZResultSet;
-  const FieldsLookupTable: TZFieldsLookUpDynArray; Fields: TFields;
-  RowAccessor: TZRowAccessor);
-var
-  I, FieldIndex: Integer;
-  Current: TField;
-  ColumnIndex, ColumnCount: Integer;
-  Len: NativeUInt;
-  BCD: TBCD; //one val on stack 4 all
-  G: TGUID absolute BCD;
-  TS: TZTimeStamp absolute BCD;
-  D: TZDate absolute BCD;
-  T: TZTime absolute BCD;
+function ConvertFieldToColumnInfo(Field: TField; NativeColumnCodePage: Word): TZColumnInfo;
 begin
-  RowAccessor.RowBuffer.Index := ResultSet.GetRow;
-  ColumnCount := ResultSet.GetMetadata.GetColumnCount;
+  Result := TZColumnInfo.Create;
 
-  for I := 0 to Fields.Count - 1 do
-  begin
-    Current := Fields[I];
-    if not (Current.FieldKind in [fkData, fkInternalCalc]) then
-      Continue;
-
-    ColumnIndex := Current.FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
-    FieldIndex := DefineFieldIndex(FieldsLookupTable, Current);
-    if (ColumnIndex < FirstDbcIndex) or (ColumnIndex > ColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
-      Continue;
-
-    case Current.DataType of
-      ftBoolean:
-        RowAccessor.SetBoolean(FieldIndex, ResultSet.GetBoolean(ColumnIndex));
-      {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}ftWord{$IFDEF WITH_FTLONGWORD},ftLongWord{$ENDIF}:
-        RowAccessor.SetUInt(FieldIndex, ResultSet.GetUInt(ColumnIndex));
-      {$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}ftSmallInt,ftInteger, ftAutoInc:
-        RowAccessor.SetInt(FieldIndex, ResultSet.GetInt(ColumnIndex));
-      {$IFDEF WITH_FTSINGLE}
-      ftSingle:
-        RowAccessor.SetFloat(FieldIndex, ResultSet.GetFloat(ColumnIndex));
-      {$ENDIF}
-      ftCurrency, ftFloat:
-        RowAccessor.SetDouble(FieldIndex, ResultSet.GetDouble(ColumnIndex));
-      {$IFDEF WITH_FTEXTENDED}
-      ftExtended:
-        RowAccessor.SetDouble(FieldIndex, ResultSet.GetDouble(ColumnIndex));
-      {$ENDIF}
-      {$IFDEF WITH_FTGUID}
-      ftGUID: begin
-          ResultSet.GetGUID(ColumnIndex, G);
-          RowAccessor.SetGUID(FieldIndex, G);
-        end;
-      {$ENDIF}
-      ftFmtBCD: begin
-          ResultSet.GetBigDecimal(ColumnIndex, BCD);
-          RowAccessor.SetBigDecimal(FieldIndex, BCD);
-        end;
-      ftLargeInt:
-        RowAccessor.SetLong(FieldIndex, ResultSet.GetLong(ColumnIndex));
-      ftBCD:
-        RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
-      ftString, ftWideString:
-        if RowAccessor.IsRaw then
-          RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), Len)
-        else
-          RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
-      ftBytes, ftVarBytes:
-        RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
-      ftDate: begin
-          ResultSet.GetDate(ColumnIndex, D);
-          RowAccessor.SetDate(FieldIndex, D);
-        end;
-      ftTime: begin
-          ResultSet.GetTime(ColumnIndex, T);
-          RowAccessor.SetTime(FieldIndex, T);
-        end;
-      ftDateTime: begin
-          ResultSet.GetTimestamp(ColumnIndex, TS);
-          RowAccessor.SetTimestamp(FieldIndex, TS);
-        end;
-      ftMemo, ftBlob, ftGraphic {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
-        RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
-      {$IFDEF WITH_FTDATASETSUPPORT}
-      ftDataSet:
-        RowAccessor.SetDataSet(FieldIndex, ResultSet.GetDataSet(ColumnIndex));
-      {$ENDIF}
-    end;
-
-    if ResultSet.WasNull then
-      RowAccessor.SetNull(FieldIndex);
-  end;
+  Result.ColumnType := ConvertDatasetToDbcType(Field.DataType);
+  Result.ColumnName := Field.FieldName;
+  Result.Precision := Field.Size;
+  if Field.DataType in [ftBCD, ftFmtBCD] then
+    Result.Scale := Field.DataSize
+  else if Field.DataType in [ftMemo, ftString, ftFixedChar] then
+    Result.ColumnCodePage := NativeColumnCodePage
+  else if Field.DataType in [{$IFDEF WITH_FTWIDEMEMO}ftWideMemo, {$ENDIF}
+    ftWideString{$IFDEF WITH_FTFIXEDWIDECHAR}, ftFixedWideChar{$ENDIF}] then
+    Result.ColumnCodePage := zCP_UTF16;
+  Result.ColumnLabel := Field.DisplayName;
+  Result.DefaultExpression := Field.DefaultExpression;
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-(*
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //BCD is always initialized
-{$ENDIF}
-{**
-  Posts columns from specified resultset.
-  @param ResultSet a source resultset.
-  @param FieldsLookupTable a lookup table to define original index.
-  @param Fields a collection of field definitions.
-  @param RowAccessor a destination row accessor.
-}
-procedure PostToResultSet(const ResultSet: IZResultSet;
-  const FieldsLookupTable: TZFieldsLookUpDynArray; Fields: TFields;
-  RowAccessor: TZRowAccessor);
-var
-  I, FieldIndex: Integer;
-  Current: TField;
-  WasNull: Boolean;
-  ColumnIndex, ColumnCount: Integer;
-  Blob: IZBlob;
-  Len: NativeUInt;
-  BCD: TBCD; //one val on stack 4 all
-  G: TGUID absolute BCD;
-  TS: TZTimeStamp absolute BCD;
-  D: TZDate absolute BCD;
-  T: TZTime absolute BCD;
-begin
-  WasNull := False;
-  RowAccessor.RowBuffer.Index := ResultSet.GetRow;
-  ColumnCount := ResultSet.GetMetadata.GetColumnCount;
 
-  for I := 0 to Fields.Count - 1 do
-  begin
-    Current := Fields[I];
-    if Current.FieldKind <> fkData then
-      Continue;
-
-    ColumnIndex := Current.FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
-    FieldIndex := DefineFieldIndex(FieldsLookupTable, Current);
-    if (ColumnIndex < FirstDbcIndex) or (ColumnIndex > ColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
-      Continue;
-
-//    if (Current.Required = True) and (WasNull = True) then
-//      raise EZDatabaseError.Create(Format(SFieldCanNotBeNull, [Current.FieldName]));
-    case Current.DataType of
-      ftBoolean:
-        ResultSet.UpdateBoolean(ColumnIndex, RowAccessor.GetBoolean(FieldIndex, WasNull));
-      {$IFDEF WITH_FTBYTE}
-      ftByte:
-        ResultSet.UpdateByte(ColumnIndex, RowAccessor.GetByte(FieldIndex, WasNull));
-      {$ENDIF}
-      {$IFDEF WITH_FTSHORTINT}
-      ftShortInt:
-        ResultSet.UpdateShort(ColumnIndex, RowAccessor.GetShort(FieldIndex, WasNull));
-      {$ENDIF}
-      ftWord:
-        ResultSet.UpdateWord(ColumnIndex, RowAccessor.GetWord(FieldIndex, WasNull));
-      ftSmallInt:
-        ResultSet.UpdateSmall(ColumnIndex, RowAccessor.GetSmall(FieldIndex, WasNull));
-      {$IFDEF WITH_FTLONGWORD}
-      ftLongWord:
-        ResultSet.UpdateUInt(ColumnIndex, RowAccessor.GetUInt(FieldIndex, WasNull));
-      {$ENDIF}
-      ftInteger, ftAutoInc:
-        ResultSet.UpdateInt(ColumnIndex, RowAccessor.GetInt(FieldIndex, WasNull));
-      {$IFDEF WITH_FTSINGLE}
-      ftSingle:
-        ResultSet.UpdateFloat(ColumnIndex, RowAccessor.GetFloat(FieldIndex, WasNull));
-      {$ENDIF}
-      ftFloat:
-        ResultSet.UpdateDouble(ColumnIndex, RowAccessor.GetDouble(FieldIndex, WasNull));
-      {$IFDEF WITH_FTEXTENDED}
-      ftExtended:
-        ResultSet.UpdateDouble(ColumnIndex, RowAccessor.GetDouble(FieldIndex, WasNull));
-      {$ENDIF}
-      ftFmtBCD: begin
-          RowAccessor.GetBigDecimal(ColumnIndex, PBCD(@RowAccessor.TinyBuffer[0])^, WasNull);
-          ResultSet.UpdateBigDecimal(FieldIndex, PBCD(@RowAccessor.TinyBuffer[0])^);
-        end;
-      ftLargeInt:
-        ResultSet.UpdateLong(ColumnIndex, RowAccessor.GetLong(FieldIndex, WasNull));
-      ftCurrency, ftBCD:
-        ResultSet.UpdateCurrency(ColumnIndex,
-          RowAccessor.GetCurrency(FieldIndex, WasNull));
-      ftString, ftWidestring:
-        if RowAccessor.IsRaw then
-          ResultSet.UpdatePAnsiChar(ColumnIndex,
-            RowAccessor.GetPAnsiChar(FieldIndex, WasNull, Len), Len)
-        else
-          ResultSet.UpdatePWideChar(ColumnIndex,
-            RowAccessor.GetPWideChar(FieldIndex, WasNull, Len), Len);
-      {$IFDEF WITH_FTGUID}ftGuid: begin
-          RowAccessor.GetGUID(FieldIndex, G, WasNull);
-          ResultSet.UpdateGUID(ColumnIndex, G);
-        end;
-      {$ENDIF}
-      ftBytes, ftVarBytes:
-        ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
-      ftDate: begin
-          RowAccessor.GetDate(FieldIndex, WasNull, D);
-          ResultSet.UpdateDate(ColumnIndex, D);
-        end;
-      ftTime: begin
-          RowAccessor.GetTime(FieldIndex, WasNull, T);
-          ResultSet.UpdateTime(ColumnIndex, T);
-        end;
-      ftDateTime: begin
-          RowAccessor.GetTimestamp(FieldIndex, WasNull, TS);
-          ResultSet.UpdateTimestamp(ColumnIndex, TS);
-        end;
-      {$IFDEF WITH_WIDEMEMO}
-      ftWideMemo,
-      {$ENDIF}
-      ftMemo, ftBlob, ftGraphic:
-        begin
-          Blob := RowAccessor.GetBlob(FieldIndex, WasNull);
-          WasNull := (Blob = nil) or (Blob.IsEmpty); //need a check for IsEmpty too
-          ResultSet.UpdateLob(ColumnIndex, Blob);
-        end;
-      {$IFDEF WITH_FTDATASETSUPPORT}
-      ftDataSet: ;
-      {$ENDIF}
-    end;
-
-    if WasNull then
-    begin
-      // Performance thing :
-      // The default expression will only be set when necessary : if the value really IS null
-      Resultset.UpdateDefaultExpression(ColumnIndex, RowAccessor.GetColumnDefaultExpression(FieldIndex));
-      ResultSet.UpdateNull(ColumnIndex);
-    end;
-  end;
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-*)
 {**
   Defines fields indices for the specified dataset.
   @param DataSet a dataset object.
@@ -932,16 +691,15 @@ begin
 end;
 
 {**
-  Retrieves a set of specified field values.
-  @param FieldRefs an array with interested field object references.
+  Fill a set of specified field values.
   @param FieldIndices an array with interested field indices.
-  @param RowAccessor a row accessor object.
+  @param RowAccessor a row accessor object used for the lookup fields.
+  @param ResultSet the ResultSet containing the non calced fields date.
   @param ResultValues a container for result values.
-  @return an array with field values.
 }
-procedure RetrieveDataFieldsFromRowAccessor(
+procedure FillDataFieldsFromSourceLookup(
   const FieldIndices: TZFieldsLookUpDynArray; RowAccessor: TZRowAccessor;
-  const ResultSet: IZResultSet; const ResultValues: TZVariantDynArray);
+  const ResultSet: IZResultSet; var ResultValues: TZVariantDynArray);
 var
   I: Integer;
   ColumnIndex: Integer;
@@ -1637,18 +1395,22 @@ end;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(Fields: TFields): TZFieldsLookUpDynArray;
+function CreateFieldsLookupTable(Fields: TFields;
+  out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
 var I: Integer;
   r, a: Integer;
 begin
   r := FirstDbcIndex;
   a := FirstDbcIndex;
   SetLength(Result, Fields.Count);
+  IndexPairList := TZIndexPairList.Create;
+  IndexPairList.Capacity := Fields.Count;
   for I := 0 to Fields.Count - 1 do begin
     Result[i].Field := Fields[I];
     if Fields[I].FieldKind = fkData then begin
       Result[i].DataSource := dltResultSet;
       Result[i].Index := r;
+      IndexPairList.Add(r, i);
       Inc(R);
     end else begin
       Result[i].DataSource := dltAccessor;

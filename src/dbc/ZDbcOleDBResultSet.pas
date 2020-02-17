@@ -164,7 +164,7 @@ type
   end;
 
   {** Implements a cached resolver with MSSQL specific functionality. }
-  TZOleDBMSSQLCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
+  TZOleDBMSSQLCachedResolver = class (TZGenerateSQLCachedResolver, IZCachedResolver)
   private
     FAutoColumnIndex: Integer;
     FResultSet: IZResultSet;
@@ -174,7 +174,7 @@ type
     destructor Destroy; override;
 
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
   TZOleDBCLOB = class(TZAbstractClob)
@@ -1588,7 +1588,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZOleDBMSSQLCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
 

@@ -148,7 +148,7 @@ type
   end;
 
   {** Implements a cached resolver with SQLite specific functionality. }
-  TZSQLiteCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
+  TZSQLiteCachedResolver = class (TZGenerateSQLCachedResolver, IZCachedResolver)
   private
     FHandle: Psqlite;
     FPlainDriver: TZSQLitePlainDriver;
@@ -158,13 +158,13 @@ type
       const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
-    function FormCalculateStatement(Columns: TObjectList): string; override;
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
 
-    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
+      UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor;
+      const Resolver: IZCachedResolver); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
@@ -1390,7 +1390,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZSQLiteCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
 
@@ -1406,8 +1406,8 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZSQLiteCachedResolver.UpdateAutoIncrementFields(
-  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; const
+  OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
   inherited;
 
@@ -1417,36 +1417,6 @@ begin
     NewRowAccessor.SetLong(FAutoColumnIndex, FPlainDriver.sqlite3_last_insert_rowid(FHandle));
   end;
 end;
-
-// --> ms, 02/11/2005
-{**
-  Forms a where clause for SELECT statements to calculate default values.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
-function TZSQLiteCachedResolver.FormCalculateStatement(
-  Columns: TObjectList): string;
-var
-  I: Integer;
-  Current: TZResolverParameter;
-begin
-  Result := '';
-  if Columns.Count = 0 then
-     Exit;
-
-  for I := 0 to Columns.Count - 1 do
-  begin
-    Current := TZResolverParameter(Columns[I]);
-    if Result <> '' then
-      Result := Result + ',';
-    if Current.DefaultValue <> '' then
-      Result := Result + Current.DefaultValue
-    else
-      Result := Result + 'NULL';
-  end;
-  Result := 'SELECT ' + Result;
-end;
-// <-- ms
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 end.

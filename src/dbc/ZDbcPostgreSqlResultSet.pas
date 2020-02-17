@@ -200,7 +200,7 @@ type
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL. }
-  TZPostgreSQLCachedResolver = class(TZGenericCachedResolver)
+  TZPostgreSQLCachedResolver = class(TZGenerateSQLCachedResolver)
   protected
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
   end;
@@ -208,9 +208,8 @@ type
   {** Implements a specialized cached resolver for PostgreSQL version 7.4 and up. }
   TZPostgreSQLCachedResolverV74up = class(TZPostgreSQLCachedResolver)
   public
-    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+    procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
+      const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL version 8.0 and up. }
@@ -2501,26 +2500,25 @@ end;
 { TZPostgreSQLCachedResolverV74up }
 
 procedure TZPostgreSQLCachedResolverV74up.FormWhereClause(
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor;
+  const SQLWriter: TZSQLStringWriter; const OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
-  I: Integer;
-  Tmp: SQLString;
+  I, Idx: Integer;
+  Tmp, S: SQLString;
 begin
   if WhereColumns.Count > 0 then
     SQLWriter.AddText(' WHERE ', Result);
-  for I := 0 to WhereColumns.Count - 1 do
-    with TZResolverParameter(WhereColumns[I]) do begin
-      if I > 0 then
-        SQLWriter.AddText(' AND ', Result);
-      Tmp := IdentifierConvertor.Quote(ColumnName);
-      SQLWriter.AddText(Tmp, Result);
-      if (Metadata.IsNullable(ColumnIndex) = ntNullable)
-      then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
-      else SQLWriter.AddText('=?', Result);
-    end;
+  for I := 0 to WhereColumns.Count - 1 do begin
+    idx := PZIndexPair(WhereColumns[I]).ColumnIndex;
+    if I > 0 then
+      SQLWriter.AddText(' AND ', Result);
+    S := MetaData.GetColumnName(idx);
+    Tmp := IdentifierConvertor.Quote(S);
+    SQLWriter.AddText(Tmp, Result);
+    if (Metadata.IsNullable(idx) = ntNullable)
+    then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
+    else SQLWriter.AddText('=?', Result);
+  end;
 end;
 
 { TZPostgreSQLCachedResolverV8up }

@@ -61,9 +61,8 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  Types, FmtBCD,
-  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZOleDB, ZDbcOleDBUtils,
-  ZDbcStatement;
+  FmtBCD,
+  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZVariant, ZOleDB;
 
 type
   PDirectionTypes = ^TDirectionTypes;
@@ -163,9 +162,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants, Math,
-  ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils,
-  ZMessages, ZEncoding, ZFastCode, ZClasses;
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants,
+  ZSysUtils, ZDbcUtils, ZMessages, ZEncoding, ZFastCode;
 
 {**
   Converts an ADO native types into string related.

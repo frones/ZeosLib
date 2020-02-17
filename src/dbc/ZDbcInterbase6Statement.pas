@@ -1168,6 +1168,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetDate(Index: Integer;
   const Value: TZDate);
 var XSQLVAR: PXSQLVAR;
@@ -1202,6 +1203,7 @@ begin
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>double</code> value.
@@ -1503,6 +1505,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetPAnsiChar(Index: Word;
   Value: PAnsiChar; Len: LengthInt);
 var
@@ -1543,7 +1546,9 @@ Fail: raise EZIBConvertError.Create(SErrorConvertion);
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetPWideChar(Index: Word;
   Value: PWideChar; Len: LengthInt);
 var
@@ -1601,6 +1606,7 @@ Fail:   raise EZIBConvertError.Create(SErrorConvertion);
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>raw encoded string</code> value.
@@ -1742,6 +1748,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
 var XSQLVAR: PXSQLVAR;
@@ -1777,6 +1784,7 @@ begin
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
@@ -1786,6 +1794,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetTimestamp(
   Index: Integer; const Value: TZTimeStamp);
 var XSQLVAR: PXSQLVAR;
@@ -1822,6 +1831,7 @@ begin
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>usigned int</code> value.

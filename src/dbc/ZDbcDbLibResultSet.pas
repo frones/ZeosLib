@@ -180,14 +180,14 @@ type
   end;
 
   {** Implements a cached resolver with mssql and sybase specific functionality. }
-  TZDBLibCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
+  TZDBLibCachedResolver = class (TZGenerateSQLCachedResolver, IZCachedResolver)
   private
     FAutoColumnIndex: Integer;
   public
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
@@ -1103,7 +1103,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZDBLibCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
