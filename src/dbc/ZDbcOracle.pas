@@ -140,12 +140,12 @@ type
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
   public { txn support }
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
   public
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;
@@ -1034,13 +1034,6 @@ begin
 end;
 
 { TZOracleTransaction }
-
-const
-  TransactionModeLogMessage: array[TZOCITxnMode] of RawByteString = (
-    'SET TRANSACTION ISOLATION LEVEL DEFAULT',
-    'SET TRANSACTION ISOLATION LEVEL READONLY',
-    'SET TRANSACTION ISOLATION LEVEL READWRITE',
-    'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
 
 procedure TZOracleTransaction.BeforeDestruction;
 var Status: sword;

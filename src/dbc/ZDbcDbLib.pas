@@ -87,7 +87,8 @@ type
   end;
 
   {** Implements a generic DBLib Connection. }
-  TZDBLibConnection = class(TZAbstractDbcConnection, IZDBLibConnection, IZTransaction)
+  TZDBLibConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZDBLibConnection, IZTransaction)
   private
     FSQLErrors: TZDBLibErrorList;
     FSQLMessages: TZDBLibMessageList;
@@ -130,11 +131,11 @@ type
 
     function AbortOperation: Integer; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 

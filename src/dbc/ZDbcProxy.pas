@@ -87,7 +87,8 @@ type
 
   { TZProxyConnection }
 
-  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection, {$ELSE}TZAbstractDbcConnection, {$ENDIF}IZDbcProxyConnection)
+  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection, IZConnection
+    {$ELSE} TZAbstractDbcConnection, {$ENDIF}IZDbcProxyConnection)
   private
     FPlainDriver: IZProxyPlainDriver;
     FConnIntf: IZDbcProxy;
@@ -106,8 +107,8 @@ type
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
 
     procedure Open; override;
     procedure InternalClose; override;

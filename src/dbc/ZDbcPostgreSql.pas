@@ -125,8 +125,8 @@ type
 
   { TZPostgreSQLConnection }
 
-  TZPostgreSQLConnection = class(TZAbstractDbcConnection, IZPostgreSQLConnection,
-    IZTransaction)
+  TZPostgreSQLConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZPostgreSQLConnection, IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;
     FStandardConformingStrings: Boolean;
@@ -178,12 +178,12 @@ type
 
     function AbortOperation: Integer; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
     procedure PrepareTransaction(const transactionid: string);override;

@@ -82,7 +82,8 @@ type
   end;
 
   {** Implements ASA Database Connection. }
-  TZASAConnection = class(TZAbstractDbcConnection, IZASAConnection, IZTransaction)
+  TZASAConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZASAConnection, IZTransaction)
   private
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
@@ -106,11 +107,11 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 

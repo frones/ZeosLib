@@ -81,8 +81,8 @@ type
     function ODBCVersion: SQLUSMALLINT;
   End;
 
-  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZODBCConnection,
-    IZTransaction)
+  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZODBCConnection, IZTransaction)
   private
     fPlainDriver: TZODBC3PlainDriver;
     fHDBC: SQLHDBC;
@@ -118,11 +118,11 @@ type
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 

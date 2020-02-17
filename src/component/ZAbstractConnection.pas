@@ -895,7 +895,7 @@ begin
         ConstructURL(UserName, Password), FURL.Properties);
       try
         with FConnection do begin
-          RegisterOnConnectionLostErrorHandler(ConnectionLost);
+          SetOnConnectionLostErrorHandler(ConnectionLost);
           { assign main properties ... if a user did disconnect and clear the props the infos have been lost }
           SetAutoCommit(FAutoCommit);
           SetReadOnly(FReadOnly);
@@ -956,7 +956,7 @@ begin
 
     ShowSqlHourGlass;
     try
-      FConnection.RegisterOnConnectionLostErrorHandler(nil);
+      FConnection.SetOnConnectionLostErrorHandler(nil);
       CloseAllDataSets;
       // Modified by cipto 8/2/2007 10:11:02 AM
       CloseAllSequences;
