@@ -795,6 +795,7 @@ var
   NewDB: RawByteString;
   ConnectionString, CSNoneCP, DBCP: String;
   ti: IZIBTransaction;
+  Statement: IZStatement;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -891,15 +892,21 @@ reconnect:
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
     and no convertions where done except the collumns using collations}
-  with CreateRegularStatement(nil).ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
-    'FROM RDB$DATABASE') do begin
-    if Next then DBCP := GetString(FirstDbcIndex);
-    Close;
+  Statement := CreateRegularStatement(nil);
+  try
+    with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
+      'FROM RDB$DATABASE') do begin
+      if Next then DBCP := GetString(FirstDbcIndex);
+      Close;
+    end;
+  finally
+    Statement := nil;
   end;
-  if not AutoCommit then begin
-    ti := GetActiveTransaction;
+  ti := GetActiveTransaction;
+  try
     ti.CloseTransaction;
     ReleaseTransaction(ti);
+  finally
     ti := nil;
   end;
   if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
