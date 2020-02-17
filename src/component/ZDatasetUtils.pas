@@ -1150,7 +1150,7 @@ begin
         if L2 < L1 then
           Exit;
         P1 := Pointer(AValue1);
-        P2 := Pointer(AValue1);
+        P2 := Pointer(AValue2);
         Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(P2), PAnsiChar(P1), L1) = 0;
       end;
       {$ENDIF}
