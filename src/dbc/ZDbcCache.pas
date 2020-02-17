@@ -1377,15 +1377,15 @@ begin
     IndexPair := IndexPairList[i];
     ColumnIndex := IndexPair.ColumnIndex;
     ResultSetIndex := IndexPair.SrcOrDestIndex;
-    {$R-}
     SQLType := FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+    {$R-}
     P := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     Data := Pointer(PAnsiChar(P)+1);
     if ResultSet.IsNull(ResultSetIndex) then
       SetNull(ColumnIndex) //clear old value
     else begin
       PByte(P)^ := bIsNotNull;
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       case SQLType of
         stBoolean:  PWordBool(Data)^ := ResultSet.GetBoolean(ResultSetIndex);
         stByte:     PByte(Data)^ := ResultSet.GetByte(ResultSetIndex);
@@ -2465,9 +2465,13 @@ SetEmpty:           Len := 0;
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
 var P: {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF};
   Len: NativeUInt;
+  {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
+  RBS: RawByteString absolute Result;
+  {$IFEND}
 begin
   {$IFDEF UNICODE}
   P := GetPWideChar(ColumnIndex, IsNull, Len);
@@ -2475,22 +2479,37 @@ begin
   then Result := FUniTemp
   else System.SetString(Result, P, Len);
   {$ELSE}
-  {$R-}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString, stUnicodeString:
       if fRaw then begin
         P := GetPAnsiChar(ColumnIndex, IsNull, Len);
         if not ConSettings^.AutoEncode or (ConSettings^.CTRL_CP = FClientCP) or (Len=0) then
+          {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
+          //implicit give the FPC the correct string CP for conversions
+          ZSetString(P, Len, RBS, FClientCP)
+          {$ELSE}
           System.SetString(Result, P, Len)
+          {$IFEND}
         else begin
           fUniTemp := PRawToUnicode(P, Len, FClientCP);
+          {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
+          //implicit give the FPC the correct string CP for conversions
+          RBS := PUnicodeToRaw(Pointer(fUniTemp), Length(FUniTemp), ConSettings^.CTRL_CP)
+          {$ELSE}
           Result := PUnicodeToRaw(Pointer(fUniTemp), Length(FUniTemp), ConSettings^.CTRL_CP)
+          {$IFEND}
         end;
       end else begin
         PWideChar(P) := GetPWideChar(ColumnIndex, IsNull, Len);
-        if ConSettings^.AutoEncode
+        if ConSettings^.AutoEncode or (ConSettings^.ClientCodePage.Encoding = ceUTF16)
+        {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
+        //implicit give the FPC the correct string CP for conversions
+        then RBS := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
+        else RBS := PUnicodeToRaw(PWideChar(P), Len, FClientCP);
+        {$ELSE}
         then Result := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
         else Result := PUnicodeToRaw(PWideChar(P), Len, FClientCP);
+        {$IFEND}
       end;
     else begin
       P := GetPAnsiChar(ColumnIndex, IsNull, Len);
@@ -2499,6 +2518,7 @@ begin
   end;
   {$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -2561,6 +2581,7 @@ end;
     value returned is <code>null</code>
 }
 {$IFNDEF NO_UTF8STRING}
+{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
 var P: Pointer;
   L: NativeUInt;
@@ -2600,6 +2621,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 {$ENDIF}
 
 {**
@@ -2611,6 +2633,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
 var P: PAnsichar;
   L: NativeUInt;
@@ -2618,6 +2641,7 @@ begin
   P := GetPAnsiChar(ColumnIndex, IsNull, L);
   ZSetString(P, L, Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 
 {**
   Gets the value of the designated column in the current row
@@ -4842,7 +4866,7 @@ end;
 procedure TZRowAccessor.SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
 var
   Ptr: PPointer;
-  NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
+  NullPtr: PByte;
 begin
 {$R-}
 {$IFNDEF DISABLE_CHECKING}
