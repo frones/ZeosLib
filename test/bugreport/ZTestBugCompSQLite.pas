@@ -87,7 +87,7 @@ type
 implementation
 
 uses
-  Variants, DB;
+  Variants;
 
 { ZTestCompSQLiteBugReport }
 
@@ -166,6 +166,7 @@ var
   RowCounter: Integer;
   I: Integer;
   ConSettings: PZConSettings;
+  CP: Word;
   procedure InsertValues(TestString: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
@@ -178,22 +179,27 @@ var
     inc(RowCounter);
   end;
 
-  procedure CheckColumnValues(TestString: ZWideString);
-  var CP: Word;
+  procedure CheckColumnValues(const TestString: ZWideString);
   begin
-    if ConSettings.CPType = cGET_ACP {no unicode strings or utf8 allowed}
-    then CP := ZOSCodePage
-    else CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
-    //eh the russion dull text can no be mapped to other charsets then:
-    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
-      {add some more if you run into same issue !!} then begin
-      BlankCheck;
-    end else begin
-      CheckEquals(TestString, Query.FieldByName('s_char').AsString, ConSettings);
-      CheckEquals(TestString, Query.FieldByName('s_varchar').AsString, ConSettings);
-      CheckEquals(TestString, Query.FieldByName('s_nchar').AsString, ConSettings);
-      CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString, ConSettings);
-    end;
+    {$IFDEF UNICODE}
+    CheckEquals(TestString, Query.FieldByName('s_char').AsString, ConSettings);
+    CheckEquals(TestString, Query.FieldByName('s_varchar').AsString, ConSettings);
+    CheckEquals(TestString, Query.FieldByName('s_nchar').AsString, ConSettings);
+    CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString, ConSettings);
+    {$ELSE}
+    If ConSettings.CPType = cCP_UTF16
+    then CheckEquals(TestString, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_char')
+    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_char').AsString, 's_char');
+    If ConSettings.CPType = cCP_UTF16
+    then CheckEquals(TestString, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_varchar')
+    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_varchar').AsString, 's_varchar');
+    If ConSettings.CPType = cCP_UTF16
+    then CheckEquals(TestString, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nchar')
+    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_nchar').AsString, 's_nchar');
+    If ConSettings.CPType = cCP_UTF16
+    then CheckEquals(TestString, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nvarchar')
+    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_nvarchar').AsString, 's_nvarchar');
+    {$ENDIF}
   end;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
@@ -204,6 +210,15 @@ begin
   ConSettings := Connection.DbcConnection.GetConSettings;
   try
     RowCounter := 0;
+    if ConSettings.AutoEncode and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
+      Exit;
+    if ConSettings.AutoEncode
+    then CP := ConSettings.CTRL_CP
+    else CP := ConSettings.ClientCodePage.CP;
+    //eh the russion dull text can no be mapped to other charsets then:
+    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+      {add some more if you run into same issue !!} then
+      Exit;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
     InsertValues(str2);
