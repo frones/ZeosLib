@@ -2356,6 +2356,9 @@ function ZUnicodeToString(const Source: ZWideString; CP: Word): String;
 var
   ulen: Integer;
   Buf: Array[0..dsMaxRStringSize] of AnsiChar;
+  {$IFDEF WITH_RAWBYTESTRING}
+  var RBS: RawByteString absolute Result;
+  {$ENDIF}
 {$IFEND}
 begin
   {$IFDEF WITH_LCONVENCODING}
@@ -2373,9 +2376,17 @@ begin
       begin
         ULen := Min(Length(Source) shl (2*Ord(IsMBCSCodePage(cp))), High(Integer)-1);
         if Ulen < dsMaxRStringSize then
+          {$IFDEF WITH_RAWBYTESTRING}
+          ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Pointer(Source), Length(Source), @Buf[0], ulen, NIL, NIL), RBS , CP)
+          {$ELSE}
           ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Pointer(Source), Length(Source), @Buf[0], ulen, NIL, NIL), Result)
+          {$ENDIF}
         else begin
+          {$IFDEF WITH_RAWBYTESTRING}
+          ZSetString(nil, uLen, RBS, CP);
+          {$ELSE}
           ZSetString(nil, uLen, Result);
+          {$ENDIF}
           setlength(Result, WideCharToMultiByte(CP,0, Pointer(Source), Length(Source), Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
         end;
       end;
