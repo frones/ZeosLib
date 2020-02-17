@@ -494,8 +494,7 @@ function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt; inline;
 {$IFEND}
 
 var
-  {$IFDEF FPC}
-    {$PUSH}
+  {$IFDEF FPC} {$PUSH}
     {$WARN 3177 off : Some fields coming after "$1" were not initialized}
     {$WARN 3175 off : Some fields coming before "$1" were not initialized}
   {$ENDIF}
@@ -504,7 +503,7 @@ var
 
   ConSettingsDummy: TZConSettings =
     (AutoEncode: False;
-      CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
+      CPType: TZControlsCodePage(0);
       ClientCodePage: @ClientCodePageDummy;
       DisplayFormatSettings:
           (DateFormat: DefDateFormatYMD;
@@ -543,7 +542,7 @@ var
 
 implementation
 
-uses ZConnProperties {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
+uses ZConnProperties{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 function TZCodePagedObject.GetConSettings: PZConSettings;
 begin
@@ -551,64 +550,65 @@ begin
 end;
 
 procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
+var S: String;
 begin
-  if Assigned(Info) and Assigned(FConSettings) then
-  begin
-    {$IFDEF UNICODE}
-    ConSettings.CTRL_CP := DefaultSystemCodePage;
-    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP' then
-      ConSettings.CPType := cGET_ACP
-    else
-      ConSettings.CPType := cCP_UTF16;
-    ConSettings.AutoEncode := True;
+  if Assigned(Info) and Assigned(FConSettings) then begin
+    {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
+    S := Info.Values[ConnProps_AutoEncodeStrings];
+    S := Uppercase(S);
+    //EH: Using StrToBoolEx by adding ZSysUtils to the uses clause
+    //leads to inline Warnings with some Delphi's.
+    //As long this Object (my mistake) is part of core
+    //(Should be dbc same like IZClientVariantManagaer and TZURL)
+    //and is defined in ZCompatibility we do the boolean evaluation by hand
+    ConSettings.AutoEncode := (S <> '') and ((S = 'ON') or (S = 'TRUE') or (S = 'YES') or (StrToIntDef(S,0)<>0)); //compatibitity Option for existing Applications;
     {$ELSE}
-      {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
-      ConSettings.AutoEncode := Info.Values[ConnProps_AutoEncodeStrings] = 'True'; //compatibitity Option for existing Applications;
-      {$ELSE}
-      ConSettings.AutoEncode := False;
-      {$IFEND}
-    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP' then
-    begin
+    ConSettings.AutoEncode := False;
+    {$IFEND}
+    S := Info.Values[ConnProps_ControlsCP];
+    S := UpperCase(S);
+    {$IF defined(Delphi) and defined(UNICODE) and defined(MSWINDOWS)}
+    ConSettings.CTRL_CP := DefaultSystemCodePage;
+    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP'
+    then ConSettings.CPType := cGET_ACP
+    else ConSettings.CPType := cCP_UTF16;
+    {$ELSE}
+    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP' then begin
       ConSettings.CPType := cGET_ACP;
       ConSettings.CTRL_CP := ZOSCodePage;
-    end
-    else
-      if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8' then
-      begin
-        ConSettings.CPType := cCP_UTF8;
-        ConSettings.CTRL_CP := 65001;
-      end
-      else
-        if Info.Values[ConnProps_ControlsCP] = 'CP_UTF16' then
-        begin
-          {$IFDEF WITH_WIDEFIELDS}
-          ConSettings.CPType := cCP_UTF16;
-            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-            ConSettings.CTRL_CP := DefaultSystemCodePage;
-            {$ELSE}
-            ConSettings.CTRL_CP := ZOSCodePage;
-            {$ENDIF}
-          {$ELSE}
-          ConSettings.CPType := cCP_UTF8;
-          ConSettings.CTRL_CP := 65001;
-          {$ENDIF}
-          ConSettings.AutoEncode := True;
-        end
-        else // nothing was found set defaults
-        begin
-          {$IFDEF LCL}
-          ConSettings.CPType := cCP_UTF8;
-          ConSettings.CTRL_CP := 65001;
-          {$ELSE}
-          ConSettings.CPType := cGET_ACP;
-            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-            ConSettings.CTRL_CP := DefaultSystemCodePage;
-            {$ELSE}
-            ConSettings.CTRL_CP := ZOSCodePage;
-            {$ENDIF}
-          {$ENDIF}
-        end;
-    {$ENDIF}
+    end else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8' then begin
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := 65001;
+    end else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF16' then begin
+      {$IFDEF WITH_WIDEFIELDS}
+      ConSettings.CPType := cCP_UTF16;
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+        ConSettings.CTRL_CP := DefaultSystemCodePage;
+        {$ELSE}
+        ConSettings.CTRL_CP := ZOSCodePage;
+        {$ENDIF}
+      {$ELSE}
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := 65001;
+      {$ENDIF}
+    end else begin // nothing was found set defaults
+      {$IFDEF LCL}
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := 65001;
+      {$ELSE}
+        {$IFDEF UNICODE}
+        ConSettings.CPType := cCP_UTF16;
+        {$ELSE}
+        ConSettings.CPType := cGET_ACP;
+        {$ENDIF}
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+        ConSettings.CTRL_CP := DefaultSystemCodePage;
+        {$ELSE}
+        ConSettings.CTRL_CP := ZOSCodePage;
+        {$ENDIF}
+      {$ENDIF}
+    end;
+    {$IFEND}
   end;
 end;
 
@@ -645,28 +645,6 @@ begin
     Result := Result xor Cardinal(key[I]);
   end;
 end; { Hash }
-
-(*function Hash(const S: RawByteString): Cardinal; //perform the FPC used ELF Hash algorithm -> pretty slow(byte hashed) but tiny
-Var
-  thehash,g,I : LongWord;
-begin
-  thehash:=0;
-  For I:=1 to Length(S) do { 0 terminated }
-  begin
-    thehash:=thehash shl 4;
-    inc(theHash,Ord(S[i]));
-    g:=thehash and $f0000000;;
-    if g<>0 then
-    begin
-      thehash:=thehash xor (g shr 24);
-      thehash:=thehash xor g;
-    end;
-  end;
-  If theHash=0 then
-     Result := $ffffffff
-   else
-     Result :=TheHash;
-end;*)
 
 { ported from http://stofl.org/questions/3690608/simple-string-hashing-function}
 //perform a MurmurHash2 algorithm by Austin Appleby loads faster (4Byte aligned)

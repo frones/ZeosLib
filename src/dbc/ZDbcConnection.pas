@@ -982,11 +982,7 @@ end;
 }
 function TZAbstractDbcConnection.GetAutoEncodeStrings: Boolean;
 begin
-  {$IFDEF UNICODE}
-  Result := True;
-  {$ELSE}
   Result := ConSettings.AutoEncode;
-  {$ENDIF}
 end;
 
 procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
@@ -1003,9 +999,7 @@ end;
 
 procedure TZAbstractDbcConnection.SetAutoEncodeStrings(const Value: Boolean);
 begin
-  {$IFNDEF UNICODE}
   ConSettings.AutoEncode := Value;
-  {$ENDIF}
 end;
 
 {**
