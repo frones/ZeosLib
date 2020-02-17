@@ -815,7 +815,7 @@ begin
     else if TransactIsolationLevel <> GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation then
       InternalSetTIL(TransactIsolationLevel);
     FAutoCommitTIL := TIL[TransactIsolationLevel];
-    CheckCharEncoding('CP_UTF16');
+    CheckCharEncoding('CP_UTF16'); //do this by default!
     (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
     if (GetServerProvider = spMSSQL) then begin
       if (Info.Values[ConnProps_DateWriteFormat] = '') or (Info.Values[ConnProps_DateTimeWriteFormat] = '') then begin
@@ -832,12 +832,12 @@ begin
       with CreateStatement.ExecuteQuery(
         'SELECT DATABASEPROPERTYEX('+QuotedStr(fCatalog)+', ''Collation'') as DatabaseCollation, '+
         '  COLLATIONPROPERTY(CAST(DATABASEPROPERTYEX('+QuotedStr(fCatalog)+', ''Collation'') as NVARCHAR(255)), ''Codepage'') as Codepage') do begin
-        if Next then begin
+        if Next and not IsNull(FirstDbcIndex) then begin
           ConSettings.ClientCodePage := New(PZCodePage);
-          ConSettings.ClientCodePage.Name := GetString(FirstDbcIndex);
-          ConSettings.ClientCodePage.CP := GetInt(FirstDbcIndex + 1);
           ConSettings.ClientCodePage.Encoding := ceUTF16;//well a "mixed" encoding i have not prepared yet...
           ConSettings.ClientCodePage.IsStringFieldCPConsistent := False;
+          ConSettings.ClientCodePage.CP := GetInt(FirstDbcIndex + 1);
+          ConSettings.ClientCodePage.Name := GetString(FirstDbcIndex); //@least
           //see Appendix G DBCS/Unicode Mapping Tables
           case ConSettings.ClientCodePage.CP of
             932 {Japanese},
@@ -848,6 +848,7 @@ begin
           end;
           FDisposeCodePage := True;
         end;
+        Close;
       end;
     end;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
