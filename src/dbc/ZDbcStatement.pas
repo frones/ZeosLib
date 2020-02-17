@@ -693,7 +693,7 @@ begin
   inherited Create;
   Self.ConSettings := Connection.GetConSettings;
   FLastUpdateCount := -1;
-  FClientCP := Connection.GetConSettings.ClientCodePage.CP;
+  FClientCP := ConSettings.ClientCodePage.CP;
   FConnection := Connection;
   Connection.RegisterStatement(Self);
   FBatchQueries := TStringList.Create;

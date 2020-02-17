@@ -1410,7 +1410,9 @@ begin
         {$IFDEF UNICODE}
         Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, FClientCP);
         {$ELSE}
-        Tmp := Tokens.AsString(FirstComposePos, I);
+        if ConSettings.AutoEncode
+        then ParamWriter.Finalize(Tmp)
+        else Tmp := Tokens.AsString(FirstComposePos, I);
         {$ENDIF}
         Add(Tmp, False);
       end;

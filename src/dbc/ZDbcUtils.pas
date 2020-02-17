@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF}, TypInfo, FmtBcd,
-  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} TypInfo, FmtBcd,
+  ZCompatibility, ZDbcIntfs, ZClasses, ZTokenizer, ZVariant,
+  ZDbcResultSetMetadata;
 
 const SQL_MAX_NUMERIC_LEN = 16;
 type
@@ -1225,11 +1226,14 @@ function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBY
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
 var
   I, C, N, FirstComposePos: Integer;
+  CP: Word;
   NextIsNChar, ParamFound: Boolean;
   Tokens: TZTokenList;
+  Token: PZToken;
+  Tmp: RawByteString;
   {$IFNDEF UNICODE}
-  Tmp: String;
-  List: TStrings;
+  SectionWriter: TZRawSQLStringWriter;
+  Fraction: RawByteString;
   {$ENDIF}
 
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
@@ -1252,20 +1256,23 @@ begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
   if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode {$ENDIF}or Assigned(ComparePrefixTokens) then begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    CP := ConSettings^.ClientCodePage^.CP;
     {$IFNDEF UNICODE}
     if ConSettings^.AutoEncode
-    then List := TStringList.Create
-    else List := nil; //satisfy compiler
+    then SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5)
+    else SectionWriter := nil; //satisfy compiler
     {$ENDIF}
     try
       NextIsNChar := False;
       N := -1;
       FirstComposePos := 0;
       TokenMatchIndex := -1;
+      Tmp := '';
       for I := 0 to Tokens.Count -1 do begin
+        Token := Tokens[I];
         {check if we've a preparable statement. If ComparePrefixTokens = nil then
           comparing is not required or already done }
-        if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
+        if (Token.TokenType = ttWord) and Assigned(ComparePrefixTokens) then
           if N = -1 then begin
             for C := 0 to high(ComparePrefixTokens^) do
               if Tokens.IsEqual(I, ComparePrefixTokens^[C].MatchingGroup,  tcInsensitive) then begin
@@ -1287,39 +1294,51 @@ begin
       if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
         if (FirstComposePos < Tokens.Count-1) then
           {$IFDEF UNICODE}
-          Add(ZUnicodeToRaw(Tokens.AsString(FirstComposePos, I-1), ConSettings^.ClientCodePage^.CP));
+          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, CP);
           {$ELSE}
-          Add(Tokens.AsString(FirstComposePos, I-1));
+          if Consettings.AutoEncode
+          then SectionWriter.Finalize(Tmp)
+          else Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
+          Add(Tmp, False);
           {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-          Add(ZUnicodeToRaw(Tokens.AsString(I, I), ConSettings^.ClientCodePage^.CP));
+          Add(ZUnicodeToRaw(Tokens.AsString(I, I), ConSettings^.ClientCodePage^.CP), True);
           {$ELSE}
           Add('?', True);
           {$ENDIF}
+          Tmp := EmptyRaw;
           FirstComposePos := i +1;
         end else if ParamFound and (IsNCharIndex<> nil) and Tokens.IsEqual(I, Char('N')) and
             (Tokens.Count > i) and Tokens.IsEqual(i+1, Char('?')) then
           NextIsNChar := True
         {$IFNDEF UNICODE}
-        else if ConSettings.AutoEncode then
-          case (Tokens[i].TokenType) of
+        else if (FirstComposePos <= I) and ConSettings.AutoEncode then
+          case (Token.TokenType) of
             ttQuoted, ttComment,
-            ttWord, ttQuotedIdentifier: with Tokens[i]^ do begin
-              Tmp := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-              P := Pointer(tmp);
-              L := Length(tmp);
-              List.Add(Tmp); //keep alive
-            end;
+            ttWord, ttQuotedIdentifier: begin
+                Fraction := ConSettings^.ConvFuncs.ZStringToRaw(TokenAsString(Token^), ConSettings^.CTRL_CP, CP);
+                SectionWriter.AddText(Fraction, Tmp);
+              end;
+            else SectionWriter.AddText(Token.P, Token.L, tmp);
         end
         {$ENDIF};
       end;
-      if (FirstComposePos <= Tokens.Count-1) then
-        Add(ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(FirstComposePos, Tokens.Count -1), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+      I := Tokens.Count -1;
+      if (FirstComposePos <= Tokens.Count-1) then begin
+        {$IFDEF UNICODE}
+        Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, CP);
+        {$ELSE}
+        if ConSettings.AutoEncode
+        then SectionWriter.Finalize(Tmp)
+        else Tmp := Tokens.AsString(FirstComposePos, I);
+        {$ENDIF}
+        Add(Tmp, False);
+      end;
     finally
       Tokens.Free;
       {$IFNDEF UNICODE}
       if ConSettings^.AutoEncode then
-        List.Free;
+        SectionWriter.Free;
       {$ENDIF}
     end;
   end
@@ -1338,7 +1357,12 @@ function TokenizeSQLQueryUni(const SQL: {$IF defined(FPC) and defined(WITH_RAWBY
 var
   I, C, N: Integer;
   Tokens: TZTokenList;
+  Token: PZToken;
   Temp: ZWideString;
+  FirstComposePos: Integer;
+  {$IFNDEF UNICODE}
+  SectionWriter: TZUnicodeSQLStringWriter;
+  {$ENDIF}
   NextIsNChar, ParamFound: Boolean;
   procedure Add(const Value: ZWideString; Const Param: Boolean = False);
   begin
@@ -1348,29 +1372,33 @@ var
     IsParamIndex[High(IsParamIndex)] := Param;
     if IsNCharIndex <> nil then begin
       SetLength(IsNCharIndex^, Length(Result));
-      if Param and NextIsNChar then
-      begin
+      if Param and NextIsNChar then begin
         IsNCharIndex^[High(IsNCharIndex^)] := True;
         NextIsNChar := False;
-      end
-      else
+      end else
         IsNCharIndex^[High(IsNCharIndex^)] := False;
     end;
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode{$ENDIF} or Assigned(ComparePrefixTokens) then
-  begin
+  if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode{$ENDIF} or Assigned(ComparePrefixTokens) then begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    {$IFNDEF UNICODE}
+    if ConSettings.AutoEncode
+    then SectionWriter := TZUnicodeSQLStringWriter.Create(Length(SQL))
+    else SectionWriter := nil;
+    {$ENDIF}
     try
       Temp := '';
       NextIsNChar := False;
       N := -1;
       TokenMatchIndex := -1;
+      FirstComposePos := 0;
       for I := 0 to Tokens.Count -1 do begin
+        Token := Tokens[I];
         {check if we've a preparable statement. If ComparePrefixTokens = nil then
           comparing is not required or already done }
-        if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
+        if (Token.TokenType = ttWord) and Assigned(ComparePrefixTokens) then
           if N = -1 then begin
             for C := 0 to high(ComparePrefixTokens^) do
               if Tokens.IsEqual(I, ComparePrefixTokens^[C].MatchingGroup, tcInsensitive) then begin
@@ -1384,44 +1412,56 @@ begin
               ComparePrefixTokens := nil; //stop compare sequence
           end else begin //we already got a group
             for C := 0 to high(ComparePrefixTokens^[N].ChildMatches) do
-              if Tokens.IsEqual(I, ComparePrefixTokens^[N].ChildMatches[C], tcInsensitive) then
-              begin
+              if Tokens.IsEqual(I, ComparePrefixTokens^[N].ChildMatches[C], tcInsensitive) then begin
                 TokenMatchIndex := N;
                 Break;
               end;
             ComparePrefixTokens := nil; //stop compare sequence
           end;
-        if ParamFound and Tokens.IsEqual(I, Char('?')) then
-        begin
-          Add(Temp);
+        if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
+          {$IFDEF UNICODE}
+          Temp := Tokens.AsString(FirstComposePos, I-1);
+          {$ELSE}
+          if ConSettings.AutoEncode
+          then SectionWriter.Finalize(Temp)
+          else Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, ConSettings^.CTRL_CP);
+          {$ENDIF}
+          Add(Temp, False);
           Add('?', True);
           Temp := '';
-        end
-        else
-          if ParamFound and (IsNCharIndex <> nil) and Tokens.IsEqual(I, Char('N')) and
-            (Tokens.Count > i) and Tokens.IsEqual(I+1, Char('?')) then
-          begin
-            Add(Temp);
-            Add('N');
-            Temp := '';
-            NextIsNChar := True;
-          end
-          else
-            case (Tokens[i].TokenType) of
-              ttQuoted, ttComment,
-              ttWord, ttQuotedIdentifier, ttKeyword:
-                Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens.AsString(i), ConSettings^.CTRL_CP)
-              else
-                Temp := Temp + {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(Tokens.AsString(i));
-            end;
+          FirstComposePos := i +1;
+        end else if ParamFound and (IsNCharIndex <> nil) and Tokens.IsEqual(I, Char('N')) and
+          (Tokens.Count > i) and Tokens.IsEqual(I+1, Char('?')) then
+          NextIsNChar := True
+        {$IFNDEF UNICODE}
+        else if (FirstComposePos <= I) and ConSettings.AutoEncode then
+          case (Token.TokenType) of
+            ttQuoted, ttComment,
+            ttWord, ttQuotedIdentifier, ttKeyword:
+              SectionWriter.AddText(ConSettings^.ConvFuncs.ZStringToUnicode(Tokens.AsString(i), ConSettings^.CTRL_CP), Temp);
+            else SectionWriter.AddAscii7Text(Token.P, Token.L, Temp);
+          end;
+        {$ENDIF}
       end;
-      if (Temp <> '') then
-        Add(Temp);
+      I := Tokens.Count -1;
+      if (FirstComposePos <= Tokens.Count-1) then begin
+        {$IFDEF UNICODE}
+        Temp := Tokens.AsString(FirstComposePos, I);
+        {$ELSE}
+        if ConSettings.AutoEncode
+        then SectionWriter.Finalize(Temp)
+        else Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, ConSettings^.CTRL_CP);
+        {$ENDIF}
+        Add(Temp, False);
+      end;
     finally
       Tokens.Free;
+      {$IFNDEF UNICODE}
+      if ConSettings^.AutoEncode then
+        SectionWriter.Free;
+      {$ENDIF}
     end;
-  end
-  else
+  end else
     {$IFDEF UNICODE}
     Add(SQL);
     {$ELSE}
@@ -1578,7 +1618,7 @@ function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
 begin
   Result := ceDefault;
   {EgonHugeist:
-    Step one: Findout, wh at's comming in! To avoid User-Bugs as good as possible
+    Step one: Findout, what's comming in! To avoid User-Bugs as good as possible
       it is possible that a PAnsiChar OR a PWideChar was written into
       the Stream!!!  And these chars could be trunced with changing the
       Stream.Size.
@@ -1588,7 +1628,7 @@ begin
   if (Size mod 2 = 0) and ( ZFastCode.StrLen(Pointer(Bytes)) {%H-}< Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
     result := ceUTF16
   else
-    if ConSettings.AutoEncode then
+    //if ConSettings.AutoEncode then
       case ZDetectUTF8Encoding(Pointer(Bytes), Size) of
         etUSASCII: Result := ceDefault; //Exact!
         etAnsi:
@@ -1600,8 +1640,8 @@ begin
           Result := ceAnsi;
         etUTF8: Result := ceUTF8; //Exact!
       end
-    else
-      Result := ceDefault
+    //else
+      //Result := ceDefault
 end;
 
 {**
@@ -1739,6 +1779,7 @@ begin
             SetLength(US, Size shr 1);
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US)^, Size);
           end;
+        else ; //hide weird FPC warning
       end;
     end;
 
@@ -1790,6 +1831,7 @@ begin
                             SQLType := stUnicodeString;
                             VType := vtCharRec;
                           end;
+        else ;//hide weird FPC warning
       end;
     if P <> nil then
       case SQLType of
