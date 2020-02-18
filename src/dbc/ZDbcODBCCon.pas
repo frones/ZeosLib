@@ -81,8 +81,8 @@ type
     function ODBCVersion: SQLUSMALLINT;
   End;
 
-  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZODBCConnection,
-    IZTransaction)
+  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZODBCConnection, IZTransaction)
   private
     fPlainDriver: TZODBC3PlainDriver;
     fHDBC: SQLHDBC;
@@ -95,6 +95,7 @@ type
     fServerProvider: TZServerProvider;
     FSavePoints: TStrings;
     FRestartTransaction: Boolean;
+    procedure DetermineAttachmentCharset;
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
@@ -118,11 +119,11 @@ type
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 
@@ -310,6 +311,46 @@ begin
   ClearWarnings;
 end;
 
+procedure TZAbstractODBCConnection.DetermineAttachmentCharset;
+var
+  CodePageName: String;
+  IPos, BytesPerChar, CodePage: Integer;
+const CPEncodings: array[Boolean] of TZCharEncoding = (ceAnsi, ceUTF8);
+label fail;
+begin
+  if (Info.Values[ConnProps_Codepage] <> '') or (Info.Values[ConnProps_Charset] <> '') then begin
+    //set a custom codepage to notify zeos about conversion routines note: cp must be equal for all fields else use the W driver
+    //first place in a name
+    //second use ':' for the codepage
+    //third use '/' for the maximum amount of bytes / character equal to database defined charset
+    //example: codepage=latin1:1252/1
+    //example: characterset=utf8:65001/4
+    CodePageName := Info.Values[ConnProps_Codepage];
+    if CodePageName = '' then
+      CodePageName := Info.Values[ConnProps_Charset];
+    IPos := ZFastCode.Pos('/', CodePageName);
+    if IPos > 0 then
+      CodePageName[IPos] := #0 else
+      goto fail;
+    BytesPerChar := ZFastCode.{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PChar(@CodePageName[IPos+1]), 1);
+    IPos := ZFastCode.Pos(':', CodePageName);
+    if IPos > 0 then
+      CodePageName[IPos] := #0 else
+      goto fail;
+    CodePage := ZFastCode.{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PChar(@CodePageName[IPos+1]), ZOSCodePage);
+    CodePageName := Copy(CodePageName, 1, iPos-1);
+    if Supports(fPlainDriver, IODBC3UnicodePlainDriver) then
+      fPlainDriver.AddCodePage(CodePageName, 0, ceUTF16, CodePage, '', BytesPerChar)
+    else
+      fPlainDriver.AddCodePage(CodePageName, 0, CPEncodings[CodePage = 65001], CodePage, '', BytesPerChar);
+    CheckCharEncoding(CodePageName);
+  end else
+fail:
+    if Supports(fPlainDriver, IODBC3UnicodePlainDriver)
+    then CheckCharEncoding('CP_UTF16')
+    else CheckCharEncoding('CP_ACP');
+end;
+
 {**
   Returns the BinaryString in a Tokenizer-detectable kind
   If the Tokenizer don't need to pre-detect it Result = BinaryString
@@ -374,11 +415,6 @@ begin
 end;
 
 procedure TZAbstractODBCConnection.InternalCreate;
-const CPEncodings: array[Boolean] of TZCharEncoding = (ceAnsi, ceUTF8);
-var
-  CodePageName: String;
-  IPos, BytesPerChar, CodePage: Integer;
-label fail;
 begin
   FSavePoints := TStringList.Create;
   fPlainDriver := TZODBC3PlainDriver(GetIZPlainDriver.GetInstance);
@@ -399,39 +435,6 @@ begin
     CheckODBCError(fPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0), fHENV, SQL_HANDLE_ENV, 'SQL_ATTR_ODBC_VERSION', Self, Self);
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
   end;
-  if (Info.Values[ConnProps_Codepage] <> '') or (Info.Values[ConnProps_Charset] <> '') then begin
-    //set a custom codepage to notify zeos about conversion routines note: cp must be equal for all fields else use the W driver
-    //first place in a name
-    //second use ':' for the codepage
-    //third use '/' for the maximum amount of bytes / character equal to database defined charset
-    //example: codepage=latin1:1252/1
-    //example: characterset=utf8:65001/4
-    CodePageName := Info.Values[ConnProps_Codepage];
-    if CodePageName = '' then
-      CodePageName := Info.Values[ConnProps_Charset];
-    IPos := ZFastCode.Pos('/', CodePageName);
-    if IPos > 0 then
-      CodePageName[IPos] := #0 else
-      goto fail;
-    BytesPerChar := ZFastCode.{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PChar(@CodePageName[IPos+1]), 1);
-    IPos := ZFastCode.Pos(':', CodePageName);
-    if IPos > 0 then
-      CodePageName[IPos] := #0 else
-      goto fail;
-    CodePage := ZFastCode.{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PChar(@CodePageName[IPos+1]), ZOSCodePage);
-    CodePageName := Copy(CodePageName, 1, iPos-1);
-    if Supports(fPlainDriver, IODBC3UnicodePlainDriver) then
-      fPlainDriver.AddCodePage(CodePageName, 0, ceUTF16, CodePage, '', BytesPerChar)
-    else
-      fPlainDriver.AddCodePage(CodePageName, 0, CPEncodings[CodePage = 65001], CodePage, '', BytesPerChar);
-    CheckCharEncoding(CodePageName);
-  end
-  else
-fail:
-    if Supports(fPlainDriver, IODBC3UnicodePlainDriver) then
-      CheckCharEncoding('CP_UTF16')
-    else
-      CheckCharEncoding('CP_ACP');
 end;
 
 function TZAbstractODBCConnection.ODBCVersion: Word;
@@ -484,6 +487,7 @@ var
 begin
   if not Closed then
     Exit;
+  DetermineAttachmentCharset; //do this by default!
   CheckODBCError(fPLainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC),fHENV, SQL_HANDLE_ENV, '', Self, Self);
   if Info.Values[ConnProps_Timeout] <> '' then
   begin
@@ -542,6 +546,32 @@ begin
       fServerProvider := KnownDriverName2TypeMap[aLen].Provider;
       Break;
     end;
+  if fServerProvider = spMSSQL then begin
+    { find out which encoding the raw columns do have }
+    with CreateStatement.ExecuteQuery(
+      'SELECT DATABASEPROPERTYEX('+QuotedStr(GetCatalog)+', ''Collation'') as DatabaseCollation, '+
+      '  COLLATIONPROPERTY(CAST(DATABASEPROPERTYEX('+QuotedStr(GetCatalog)+', ''Collation'') as NVARCHAR(255)), ''Codepage'') as Codepage') do begin
+      if Next and not IsNull(FirstDbcIndex) then begin
+        ConSettings.ClientCodePage := New(PZCodePage);
+        if Supports(fPlainDriver, IODBC3UnicodePlainDriver)
+        then ConSettings.ClientCodePage.Encoding := ceUTF16//well a "mixed" encoding i have not prepared yet...
+        else ConSettings.ClientCodePage.Encoding := ceAnsi;
+        ConSettings.ClientCodePage.IsStringFieldCPConsistent := True;
+        ConSettings.ClientCodePage.CP := GetInt(FirstDbcIndex + 1);
+        ConSettings.ClientCodePage.Name := GetString(FirstDbcIndex); //@least
+        //see Appendix G DBCS/Unicode Mapping Tables
+        case ConSettings.ClientCodePage.CP of
+          932 {Japanese},
+          936 {Simplified Chinese},
+          949 {Korean},
+          950 {Traditional Chinese}: ConSettings.ClientCodePage.CharWidth := 2;
+          else ConSettings.ClientCodePage.CharWidth := 1;
+        end;
+        FDisposeCodePage := True;
+      end;
+      Close;
+    end;
+  end;
 end;
 
 {**

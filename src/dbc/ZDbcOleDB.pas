@@ -82,7 +82,8 @@ type
   end;
 
   {** Implements a generic OleDB Connection. }
-  TZOleDBConnection = class(TZAbstractDbcConnection, IZOleDBConnection)
+  TZOleDBConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZOleDBConnection)
   private
     FMalloc: IMalloc;
     FDBInitialize: IDBInitialize;
@@ -120,12 +121,11 @@ type
 
 
     procedure Open; override;
-
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
@@ -230,7 +230,6 @@ begin
   OleCheck(CoGetMalloc(1,fMalloc));
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
-  CheckCharEncoding('CP_UTF16');
   FSavePoints := TStringList.Create;
   Inherited SetAutoCommit(True);
   //Open;
@@ -289,15 +288,19 @@ var Cmd: ICommandText;
   begin
     DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(SQL, ConSettings.ClientCodePage^.CP));
   end;
+  procedure CheckError;
+  begin
+    OleDbCheck(Status, {$IFNDEF UNICODE}ZUnicodeToRaw(SQL, ConSettings.CTRL_CP){$ELSE}SQL{$ENDIF}, Self, nil);
+  end;
 begin
   Cmd := CreateCommand;
   FillChar(pParams, SizeOf(TDBParams), #0);
   Status := Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL));
   if Status <> S_OK then
-    OleDbCheck(Status, SQL, Self, nil);
+    CheckError;
   Status := Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil);
   if Status <> S_OK then
-    OleDbCheck(Status, SQL, Self, nil);
+    CheckError;
   if DriverManager.HasLoggingListener then
     DoLog;
 end;
@@ -812,15 +815,40 @@ begin
     else if TransactIsolationLevel <> GetMetadata.GetDatabaseInfo.GetDefaultTransactionIsolation then
       InternalSetTIL(TransactIsolationLevel);
     FAutoCommitTIL := TIL[TransactIsolationLevel];
+    CheckCharEncoding('CP_UTF16'); //do this by default!
     (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
-    if (GetServerProvider = spMSSQL) and ((Info.Values[ConnProps_DateWriteFormat] = '') or (Info.Values[ConnProps_DateTimeWriteFormat] = '')) then begin
-      if (Info.Values[ConnProps_DateWriteFormat] = '') then begin
-        ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';  //ISO format which always is accepted by SQLServer
-        ConSettings^.WriteFormatSettings.DateFormatLen := 8;
+    if (GetServerProvider = spMSSQL) then begin
+      if (Info.Values[ConnProps_DateWriteFormat] = '') or (Info.Values[ConnProps_DateTimeWriteFormat] = '') then begin
+        if (Info.Values[ConnProps_DateWriteFormat] = '') then begin
+          ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';  //ISO format which always is accepted by SQLServer
+          ConSettings^.WriteFormatSettings.DateFormatLen := 8;
+        end;
+        if (Info.Values[ConnProps_DateTimeWriteFormat] = '') then begin
+          ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS'; //ISO format which always is accepted by SQLServer
+          ConSettings^.WriteFormatSettings.DateTimeFormatLen := 19;
+        end;
       end;
-      if (Info.Values[ConnProps_DateTimeWriteFormat] = '') then begin
-        ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS'; //ISO format which always is accepted by SQLServer
-        ConSettings^.WriteFormatSettings.DateTimeFormatLen := 19;
+      { find out which encoding the raw columns do have }
+      with CreateStatement.ExecuteQuery(
+        'SELECT DATABASEPROPERTYEX('+QuotedStr(fCatalog)+', ''Collation'') as DatabaseCollation, '+
+        '  COLLATIONPROPERTY(CAST(DATABASEPROPERTYEX('+QuotedStr(fCatalog)+', ''Collation'') as NVARCHAR(255)), ''Codepage'') as Codepage') do begin
+        if Next and not IsNull(FirstDbcIndex) then begin
+          ConSettings.ClientCodePage := New(PZCodePage);
+          ConSettings.ClientCodePage.Encoding := ceUTF16;//well a "mixed" encoding i have not prepared yet...
+          ConSettings.ClientCodePage.IsStringFieldCPConsistent := False;
+          ConSettings.ClientCodePage.CP := GetInt(FirstDbcIndex + 1);
+          ConSettings.ClientCodePage.Name := GetString(FirstDbcIndex); //@least
+          //see Appendix G DBCS/Unicode Mapping Tables
+          case ConSettings.ClientCodePage.CP of
+            932 {Japanese},
+            936 {Simplified Chinese},
+            949 {Korean},
+            950 {Traditional Chinese}: ConSettings.ClientCodePage.CharWidth := 2;
+            else ConSettings.ClientCodePage.CharWidth := 1;
+          end;
+          FDisposeCodePage := True;
+        end;
+        Close;
       end;
     end;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,

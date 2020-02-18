@@ -137,12 +137,12 @@ type
 
     procedure DefineProperties(Filer: TFiler); override;
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
-      RowAccessor: TZRowAccessor);
+      const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor);
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor);
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
+      Const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);//FOS+ 07112006
@@ -682,7 +682,6 @@ end;
   @param RefreshResultSet a result set object.
   @param RefreshRowAccessor an accessor object to column values.
 }
-
 procedure TZUpdateSQL.Apply_RefreshResultSet(const Sender:IZCachedResultSet;
   const RefreshResultSet: IZResultSet; const RefreshRowAccessor: TZRowAccessor);
 var
@@ -768,14 +767,14 @@ CheckColumnType:
     end;
   end;
 end;
+
 {**
   Calculate default values for the fields.
   @param Sender a cached result set object.
   @param RowAccessor an accessor object to column values.
 }
-
 procedure TZUpdateSQL.CalculateDefaults(const Sender: IZCachedResultSet;
-  RowAccessor: TZRowAccessor);
+  const RowAccessor: TZRowAccessor);
 begin
  {BEGIN PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
  Sender.GetNativeResolver.CalculateDefaults(Sender, RowAccessor);
@@ -790,7 +789,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZUpdateSQL.PostUpdates(const Sender: IZCachedResultSet;
- UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+ UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   I: Integer;
   Statement: IZPreparedStatement;
@@ -993,7 +992,7 @@ end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 procedure TZUpdateSQL.UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor,
+  UpdateType: TZRowUpdateType; const OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  with Sender.GetNativeResolver do

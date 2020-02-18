@@ -232,8 +232,8 @@ begin
     Query.Insert;
     Query.FieldByName('b_id').AsInteger := row_id;
     Query.FieldByName('b_long').AsString := 'aaa';
-    Query.FieldByName('b_nclob').AsString := GetDBTestString(testString+testString, ConSettings);
-    Query.FieldByName('b_clob').AsString := GetDBTestString(testString+testString+testString, ConSettings);
+    Query.FieldByName('b_nclob').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString;
+    Query.FieldByName('b_clob').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString+testString;
     (Query.FieldByName('b_blob') as TBlobField).LoadFromStream(BinFileStream);
     Query.Post;
     Dir := GetBFILEDir;
@@ -252,7 +252,7 @@ begin
       then CP := ZOSCodePage
       else CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
       //eh the russion abrakadabra can no be mapped to other charsets then:
-      if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+      if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R) or (CP = zCP_UTF16))
         {add some more if you run into same issue !!} then begin
         BlankCheck;
       end else begin

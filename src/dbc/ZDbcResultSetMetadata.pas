@@ -832,8 +832,9 @@ procedure TZAbstractResultSetMetadata.SetAutoIncrementFromGetColumnsRS(
   {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
 begin
   { Zeos all time code.. Is this correct? if not use a override and fix it}
-  if not TableColumns.IsNull(TableColColumnAutoIncIndex) then
+  if not TableColumns.IsNull(TableColColumnAutoIncIndex) then begin
     ColumnInfo.AutoIncrement := TableColumns.GetBoolean(TableColColumnAutoIncIndex);
+  end;
 end;
 
 procedure TZAbstractResultSetMetadata.SetCaseSensitiveFromGetColumnsRS(

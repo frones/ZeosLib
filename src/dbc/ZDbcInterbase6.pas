@@ -148,8 +148,8 @@ type
   {** Implements Interbase6 Database Connection. }
 
   { TZInterbase6Connection }
-  TZInterbase6Connection = class(TZAbstractDbcConnection, IZInterbase6Connection,
-    IZTransactionManager)
+  TZInterbase6Connection = class(TZAbstractDbcConnection, IZConnection,
+    IZInterbase6Connection, IZTransactionManager)
   private
     FDialect: Word;
     FHandle: TISC_DB_HANDLE;
@@ -208,12 +208,12 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetAutoCommit(Value: Boolean); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;
@@ -795,6 +795,7 @@ var
   NewDB: RawByteString;
   ConnectionString, CSNoneCP, DBCP: String;
   ti: IZIBTransaction;
+  Statement: IZStatement;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -891,15 +892,21 @@ reconnect:
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
     and no convertions where done except the collumns using collations}
-  with CreateRegularStatement(nil).ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
-    'FROM RDB$DATABASE') do begin
-    if Next then DBCP := GetString(FirstDbcIndex);
-    Close;
+  Statement := CreateRegularStatement(nil);
+  try
+    with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
+      'FROM RDB$DATABASE') do begin
+      if Next then DBCP := GetString(FirstDbcIndex);
+      Close;
+    end;
+  finally
+    Statement := nil;
   end;
-  if not AutoCommit then begin
-    ti := GetActiveTransaction;
+  ti := GetActiveTransaction;
+  try
     ti.CloseTransaction;
     ReleaseTransaction(ti);
+  finally
     ti := nil;
   end;
   if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":

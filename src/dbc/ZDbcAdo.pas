@@ -83,7 +83,7 @@ type
   end;
 
   {** Implements a generic Ado Connection. }
-  TZAdoConnection = class(TZAbstractDbcConnection, IZAdoConnection, IZTransaction)
+  TZAdoConnection = class(TZAbstractDbcConnection, IZConnection, IZAdoConnection, IZTransaction)
   private
     fServerProvider: TZServerProvider;
     FSavePoints: TStrings;
@@ -105,11 +105,11 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer;  override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 

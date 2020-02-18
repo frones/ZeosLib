@@ -327,6 +327,7 @@ type
     procedure IncreaseCapacityTo(WideCharCapacity: Integer; var Result: UnicodeString);
     procedure AddText(Value: PWideChar; L: LengthInt; var Result: UnicodeString); overload;
     procedure AddText(const Value: UnicodeString; var Result: UnicodeString); overload;
+    procedure AddAscii7Text(Value: PAnsiChar; L: LengthInt; var Result: UnicodeString); overload;
     procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: UnicodeString); overload;
     procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: UnicodeString); overload;
     procedure AddChar(Value: WideChar;      var Result: UnicodeString);
@@ -1425,6 +1426,28 @@ begin
     Inc(P);
   end;
   IntToUnicode(Value, P, Digits);
+end;
+
+procedure TZUnicodeSQLStringWriter.AddAscii7Text(Value: PAnsiChar; L: LengthInt;
+  var Result: UnicodeString);
+var P: PWideChar;
+    I: LengthInt;
+begin
+  if (Value = nil) or (L = 0) then Exit;
+  if (FPos + L < FEnd) then begin
+    for I := 1 to L do begin
+      PWord(FPos)^ := PByte(Value)^;
+      Inc(FPos);
+      Inc(Value);
+    end;
+  end else begin
+    P := FlushBuff(Result, L);
+    for I := 1 to L do begin
+      PWord(P)^ := PByte(Value)^;
+      Inc(P);
+      Inc(Value);
+    end;
+  end;
 end;
 
 procedure TZUnicodeSQLStringWriter.AddText(Value: PWideChar; L: LengthInt;

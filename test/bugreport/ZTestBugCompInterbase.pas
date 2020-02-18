@@ -1306,11 +1306,16 @@ begin
   end;
 end;
 
+//bugreport of mrLion
 procedure ZTestCompInterbaseBugReportMBCs.Test_Param_LoadFromStream_StringStream_ftMemo;
 var
   Query: TZQuery;
   StrStream1: TMemoryStream;
   SL: TStringList;
+  {$IFDEF UNICODE}
+  R: RawByteString;
+  {$ENDIF}
+  ConSettings: PZConSettings;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
   Query := CreateQuery;
@@ -1321,7 +1326,8 @@ begin
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
-      //bugreport of mrLion
+      ConSettings := Connection.DbcConnection.GetConSettings;
+
 
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
@@ -1330,8 +1336,14 @@ begin
 
       ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
       SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
-
-      SL.SaveToStream(StrStream1);
+      {$IFDEF UNICODE}
+      if not ConSettings.AutoEncode then begin
+        R := ZUnicodeToRaw(Str2+LineEnding, ConSettings^.ClientCodePage.CP);
+        StrStream1.Write(Pointer(R)^, Length(R));
+        StrStream1.Position := 0;
+      end else
+      {$ENDIF}
+        SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
       try
@@ -1342,7 +1354,7 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(Str2+LineEnding, StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str2+LineEnding, StrStream1, ConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;

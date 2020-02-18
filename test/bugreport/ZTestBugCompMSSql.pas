@@ -90,7 +90,7 @@ type
 
 implementation
 
-uses SysUtils, Types, FmtBCD,
+uses SysUtils, Types, FmtBCD, DateUtils,
   ZTestConsts, ZSysUtils, ZTestCase, ZStoredProcedure, ZAbstractRODataset,
   ZSqlUpdate;
 
@@ -608,24 +608,22 @@ procedure TZTestCompMSSqlBugReport.TestSF402;
 var
   Query: TZQuery;
   dtE, dtA: TDateTime;
-  S: String;
-//  orgShortDateFormat, orgLongTimeFormat: String;
-//  orgdSep, orgtSep: Char;
-  MyFormatSettings: TFormatSettings;
+  orgShortDateFormat, orgLongTimeFormat, S: String;
+  orgdSep, orgtSep: Char;
 begin
   Connection.Connect;
   Check(Connection.Connected, 'Failed to establish a connection');
   if Connection.DbcConnection.GetServerProvider <> spMSSQL then
     Exit;
   Query := CreateQuery;
-//  orgdSep := FormatSettings.DateSeparator;
-  MyFormatSettings.DateSeparator := '-';
-//  orgtSep := FormatSettings.TimeSeparator;
-  MyFormatSettings.TimeSeparator := '-';
-//  orgShortDateFormat := FormatSettings.ShortDateFormat;
-  MyFormatSettings.ShortDateFormat := 'yyyy/mm/dd';
-//  orgLongTimeFormat := FormatSettings.LongTimeFormat;
-  MyFormatSettings.LongTimeFormat := 'hh:nn:ss';
+  orgdSep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator := '-';
+  orgtSep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := '-';
+  orgShortDateFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat := 'yyyy/mm/dd';
+  orgLongTimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := 'hh:nn:ss';
   try
     Query.Sql.Add('set dateformat mdy');
     Query.Sql.Add('select cast(''2020-01-01 08:30:45'' as datetime)');
@@ -637,17 +635,17 @@ begin
     dtE := dtE+EncodeTime(8,30,45,0);
     dtA := Query.Fields[0].AsDateTime;
     CheckEqualsDate(dtE, dtA, [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Should be "2020-01-01 08:30:45" ');
-    CheckEquals(query.Fields[0].AsString, DateTimeToStr(dtE, MyFormatSettings), 'Should be "2020-01-01 08:30:45" ');
+    CheckEquals(query.Fields[0].AsString, DateTimeToStr(dtE{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF}), 'Should be "2020-01-01 08:30:45" ');
     Query.Next;
     CheckFalse(Query.Eof);
     dtA := Query.Fields[0].AsDateTime;
-    DateTimeToString(S, '', dtA, MyFormatSettings);
+    DateTimeToString(S, '', dtA{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF});
     CheckEquals(S, query.Fields[0].AsString, 'Should be "2020-01-01" ');
   finally
-//    FormatSettings.ShortDateFormat := orgShortDateFormat;
-//    FormatSettings.LongTimeFormat := orgLongTimeFormat;
-//    FormatSettings.DateSeparator := orgdSep;
-//    FormatSettings.TimeSeparator := orgtSep;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat := orgShortDateFormat;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := orgLongTimeFormat;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator := orgdSep;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := orgtSep;
     FreeAndNil(Query);
   end;
 end;

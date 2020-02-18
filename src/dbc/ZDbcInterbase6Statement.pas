@@ -90,6 +90,7 @@ type
     FDB_CP_ID: Integer;
     procedure ExecuteInternal;
     procedure ExceuteBatch;
+    function SplittQuery(const SQL: SQLString): RawByteString;
   protected
     procedure CheckParameterIndex(var Value: Integer); override;
     procedure ReleaseConnection; override;
@@ -256,7 +257,22 @@ end;
 }
 procedure TZAbstractInterbase6PreparedStatement.ExceuteBatch;
 var ArrayOffSet: Integer;
+  procedure SplitQueryIntoPieces;
+  var CurrentCS_ID: Integer;
+  begin
+    CurrentCS_ID := FDB_CP_ID;
+    try
+      FDB_CP_ID := CS_NONE;
+      GetRawEncodedSQL(SQL);
+    finally
+      FDB_CP_ID := CurrentCS_ID;
+    end;
+  end;
 begin
+  //if not done already then split our query into pieces to build the
+  //exceute block query
+  if (FCachedQueryRaw = nil) then
+    SplitQueryIntoPieces;
   Connection.StartTransaction;
   ArrayOffSet := 0;
   FIBConnection.GetTrHandle; //restart transaction if required
@@ -314,6 +330,108 @@ begin
     if Assigned(FBatchStmts[b].Obj) then
       FBatchStmts[b].Obj.ReleaseImmediat(Sender, AError);
   inherited ReleaseImmediat(Sender, AError);
+end;
+
+function TZAbstractInterbase6PreparedStatement.SplittQuery(const SQL: SQLString): RawByteString;
+var
+  I, ParamCnt, FirstComposePos: Integer;
+  Tokens: TZTokenList;
+  Token: PZToken;
+  Tmp, Tmp2: RawByteString;
+  ResultWriter, SectionWriter: TZRawSQLStringWriter;
+  procedure Add(const Value: RawByteString; const Param: Boolean = False);
+  begin
+    SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
+    FCachedQueryRaw[High(FCachedQueryRaw)] := Value;
+    SetLength(FIsParamIndex, Length(FCachedQueryRaw));
+    IsParamIndex[High(FIsParamIndex)] := Param;
+    ResultWriter.AddText(Value, Result);
+  end;
+
+begin
+  ParamCnt := 0;
+  Result := '';
+  Tmp2 := '';
+  Tmp := '';
+  Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+  SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5);
+  ResultWriter := TZRawSQLStringWriter.Create(Length(SQL) shl 1);
+  try
+    FirstComposePos := 0;
+    FTokenMatchIndex := -1;
+    Token := nil;
+    for I := 0 to Tokens.Count -1 do begin
+      Token := Tokens[I];
+      if Tokens.IsEqual(I, Char('?')) then begin
+        if (FirstComposePos < I) then
+          {$IFDEF UNICODE}
+          SectionWriter.AddText(PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP), Tmp);
+          {$ELSE}
+          SectionWriter.AddText(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, Tmp);
+          {$ENDIF}
+        SectionWriter.Finalize(Tmp);
+        Add(Tmp, False);
+        Tmp := '';
+        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+        Add(ZUnicodeToRaw(Tokens.AsString(I, I), ConSettings^.ClientCodePage^.CP));
+        {$ELSE}
+        Add('?', True);
+        {$ENDIF}
+        Inc(ParamCnt);
+        FirstComposePos := i +1;
+      end
+      {$IFNDEF UNICODE}
+      else if ConSettings.AutoEncode or (FDB_CP_ID = CS_NONE) then
+        case (Tokens[i].TokenType) of
+          ttQuoted, ttComment,
+          ttWord: begin
+              if (FirstComposePos < I) then
+                SectionWriter.AddText(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, Tmp);
+              if (FDB_CP_ID = CS_NONE) and ( //all identifiers collate unicode_fss if CS_NONE
+                 (Token.TokenType = ttQuotedIdentifier) or
+                 ((Token.TokenType = ttWord) and (Token.L > 1) and (Token.P^ = '"')))
+              then Tmp2 := ZConvertStringToRawWithAutoEncode(Tokens.AsString(i), ConSettings^.CTRL_CP, zCP_UTF8)
+              else Tmp2 := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, FClientCP);
+              SectionWriter.AddText(Tmp2, Tmp);
+              Tmp2 := '';
+              FirstComposePos := I +1;
+            end;
+          else ;//satisfy FPC
+        end
+      {$ELSE}
+      else if (FDB_CP_ID = CS_NONE) and (//all identifiers collate unicode_fss if CS_NONE
+               (Token.TokenType = ttQuotedIdentifier) or
+               ((Token.TokenType = ttWord) and (Token.L > 1) and (Token.P^ = '"'))) then begin
+        if (FirstComposePos < I) then begin
+          Tmp2 := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP);
+          SectionWriter.AddText(Tmp2, Tmp);
+        end;
+        Tmp2 := PUnicodeToRaw(Token.P, Token.L, zCP_UTF8);
+        SectionWriter.AddText(Tmp2, Result);
+        Tmp2 := EmptyRaw;
+        FirstComposePos := I +1;
+      end;
+      {$ENDIF};
+    end;
+    if (FirstComposePos <= Tokens.Count-1) then begin
+      {$IFDEF UNICODE}
+      Tmp2 := PUnicodeToRaw(Tokens[FirstComposePos].P, (Token.P-Tokens[FirstComposePos].P)+ Token.L, FClientCP);
+      SectionWriter.AddText(Tmp2, Tmp);
+      Tmp2 := '';
+      {$ELSE}
+      SectionWriter.AddText(Tokens[FirstComposePos].P, (Token.P-Tokens[FirstComposePos].P)+ Token.L, Tmp);
+      {$ENDIF}
+    end;
+    SectionWriter.Finalize(Tmp);
+    if Tmp <> EmptyRaw then
+      Add(Tmp, False);
+    ResultWriter.Finalize(Result);
+  finally
+    Tokens.Free;
+    FreeAndNil(SectionWriter);
+    FreeAndNil(ResultWriter);
+  end;
+  SetBindCapacity(ParamCnt);
 end;
 
 {**
@@ -604,121 +722,10 @@ end;
 
 function TZAbstractInterbase6PreparedStatement.GetRawEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
-var
-  I, ParamCnt, FirstComposePos: Integer;
-  ParamFound: Boolean;
-  Tokens: TZTokenList;
-  {$IFNDEF UNICODE}
-  Tmp: String;
-  List: TStrings;
-  {$ELSE}
-  Tmp: RawByteString;
-  RemainderIdx: Integer;
-
-  procedure Concat(const Value: RawByteString);
-  begin
-    FCachedQueryRaw[RemainderIdx] := FCachedQueryRaw[RemainderIdx] + Value;
-    Result := Result + Value;
-  end;
-  {$ENDIF}
-
-  procedure Add(const Value: RawByteString; const Param: Boolean = False);
-  begin
-    SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
-    FCachedQueryRaw[High(FCachedQueryRaw)] := Value;
-    SetLength(FIsParamIndex, Length(FCachedQueryRaw));
-    IsParamIndex[High(IsParamIndex)] := Param;
-    Result := Result + Value;
-  end;
-
 begin
-  ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode {$ENDIF}or (FDB_CP_ID = CS_NONE) then begin
-    ParamCnt := 0;
-    Result := '';
-    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-    {$IFNDEF UNICODE}
-    if ConSettings^.AutoEncode
-    then List := TStringList.Create
-    else List := nil; //satisfy compiler
-    {$ENDIF}
-    try
-      FirstComposePos := 0;
-      FTokenMatchIndex := -1;
-      {$IFDEF UNICODE}RemainderIdx := -1;{$ENDIF}
-      for I := 0 to Tokens.Count -1 do begin
-        if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
-          if (FirstComposePos < Tokens.Count-1) then begin
-            {$IFDEF UNICODE}
-            Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP);
-            if RemainderIdx = -1
-            then Add(Tmp)
-            else begin
-              Concat(Tmp);
-              RemainderIdx := -1;
-            end;
-            {$ELSE}
-            Add(Tokens.AsString(FirstComposePos, I-1));
-            {$ENDIF}
-          end;
-          {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-          Add(ZUnicodeToRaw(Tokens.AsString(I, I), ConSettings^.ClientCodePage^.CP));
-          {$ELSE}
-          Add('?', True);
-          {$ENDIF}
-          Inc(ParamCnt);
-          FirstComposePos := i +1;
-        end
-        {$IFNDEF UNICODE}
-        else if ConSettings.AutoEncode then
-          case (Tokens[i].TokenType) of
-            ttQuoted, ttComment,
-            ttWord: with Tokens[i]^ do begin
-              if (FDB_CP_ID = CS_NONE) and ( //all identifiers collate unicode_fss if CS_NONE
-                 (Tokens[i].TokenType = ttQuotedIdentifier) or
-                 ((Tokens[i].TokenType = ttWord) and (Tokens[i].L > 1) and (Tokens[i].P^ = '"')))
-              then Tmp := ZConvertStringToRawWithAutoEncode(Tokens.AsString(i), ConSettings^.CTRL_CP, zCP_UTF8)
-              else Tmp := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, FClientCP);
-              Tokens[i].P := Pointer(tmp);
-              Tokens[i].L := Length(tmp);
-              List.Add(Tmp); //keep alive
-            end;
-        end
-        {$ELSE}
-        else if (FDB_CP_ID = CS_NONE) and (//all identifiers collate unicode_fss if CS_NONE
-                 (Tokens[i].TokenType = ttQuotedIdentifier) or
-                 ((Tokens[i].TokenType = ttWord) and (Tokens[i].L > 1) and (Tokens[i].P^ = '"'))) then begin
-          if (FirstComposePos < I) then begin
-            Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP);
-            if RemainderIdx = -1
-            then Add(Tmp)
-            else Concat(Tmp);
-          end;
-          RemainderIdx := High(FCachedQueryRaw);
-          Tmp := PUnicodeToRaw(Tokens[i].P, Tokens[i].L, zCP_UTF8);
-          Concat(Tmp);
-          FirstComposePos := I +1;
-        end;
-        {$ENDIF};
-      end;
-      if (FirstComposePos < Tokens.Count) then
-        {$IFDEF UNICODE}
-        if RemainderIdx <> -1 then begin
-          I := Tokens.Count -1;
-          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[i].P - Tokens[FirstComposePos].P)+Tokens[i].L, FClientCP);
-          Concat(Tmp);
-        end else {$ENDIF}
-        Add(ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(FirstComposePos, Tokens.Count -1), ConSettings^.CTRL_CP, FClientCP));
-    finally
-      Tokens.Free;
-      {$IFNDEF UNICODE}
-      if ConSettings^.AutoEncode then
-        List.Free;
-      {$ENDIF}
-    end;
-    SetBindCapacity(ParamCnt);
-  end else
-    Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  if (BatchDMLArrayCount > 0) or ConSettings^.AutoEncode or (FDB_CP_ID = CS_NONE)
+  then Result := SplittQuery(SQL)
+  else Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
 end;
 
 procedure TZInterbase6PreparedStatement.EncodePData(XSQLVAR: PXSQLVAR;
@@ -1168,6 +1175,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetDate(Index: Integer;
   const Value: TZDate);
 var XSQLVAR: PXSQLVAR;
@@ -1202,6 +1210,7 @@ begin
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>double</code> value.
@@ -1503,6 +1512,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetPAnsiChar(Index: Word;
   Value: PAnsiChar; Len: LengthInt);
 var
@@ -1543,7 +1553,9 @@ Fail: raise EZIBConvertError.Create(SErrorConvertion);
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetPWideChar(Index: Word;
   Value: PWideChar; Len: LengthInt);
 var
@@ -1601,6 +1613,7 @@ Fail:   raise EZIBConvertError.Create(SErrorConvertion);
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>raw encoded string</code> value.
@@ -1742,6 +1755,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
 var XSQLVAR: PXSQLVAR;
@@ -1777,6 +1791,7 @@ begin
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
@@ -1786,6 +1801,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZInterbase6PreparedStatement.SetTimestamp(
   Index: Integer; const Value: TZTimeStamp);
 var XSQLVAR: PXSQLVAR;
@@ -1822,6 +1838,7 @@ begin
   if (XSQLVAR.sqlind <> nil) then
      XSQLVAR.sqlind^ := ISC_NOTNULL;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>usigned int</code> value.

@@ -82,7 +82,8 @@ type
   end;
 
   {** Implements ASA Database Connection. }
-  TZASAConnection = class(TZAbstractDbcConnection, IZASAConnection, IZTransaction)
+  TZASAConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZASAConnection, IZTransaction)
   private
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
@@ -106,11 +107,11 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 
@@ -118,9 +119,7 @@ type
   end;
 
   {** Implements a specialized cached resolver for ASA. }
-  TZASACachedResolver = class(TZGenericCachedResolver)
-  public
-    function FormCalculateStatement(Columns: TObjectList): string; override;
+  TZASACachedResolver = class(TZGenerateSQLCachedResolver)
   end;
 
 var
@@ -133,8 +132,7 @@ implementation
 
 uses
   ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZSysUtils, ZDbcProperties, ZEncoding, ZCollections,
-  ZMessages
+  ZSybaseAnalyser, ZSysUtils, ZDbcProperties, ZEncoding, ZMessages
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZASADriver }
@@ -257,7 +255,11 @@ begin
 end;
 
 {**
-   Commit current transaction
+  Makes all changes made since the previous
+  commit/rollback permanent and releases any database locks
+  currently held by the Connection. This method should be
+  used only when auto-commit mode has been disabled.
+  @see #setAutoCommit
 }
 procedure TZASAConnection.Commit;
 var S: RawByteString;
@@ -657,36 +659,6 @@ begin
   FPlainDriver.dbpp_execute_imm(nil, Pointer(SQL), 0);
   CheckASAError(FPlainDriver, FHandle, LoggingCategory, ConSettings);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
-end;
-
-{ TZASACachedResolver }
-
-{**
-  Forms a where clause for SELECT statements to calculate default values.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
-function TZASACachedResolver.FormCalculateStatement(
-  Columns: TObjectList): string;
-var
-  I: Integer;
-  Current: TZResolverParameter;
-begin
-  Result := '';
-  if Columns.Count = 0 then
-     Exit;
-
-  for I := 0 to Columns.Count - 1 do
-  begin
-    Current := TZResolverParameter(Columns[I]);
-    if Result <> '' then
-      Result := Result + ',';
-    if Current.DefaultValue <> '' then
-      Result := Result + Current.DefaultValue
-    else
-      Result := Result + 'NULL';
-  end;
-  Result := 'SELECT ' + Result;
 end;
 
 initialization

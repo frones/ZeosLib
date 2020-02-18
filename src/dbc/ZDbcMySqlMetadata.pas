@@ -1333,7 +1333,7 @@ begin
           ConvertMySQLColumnInfoFromString(TypeName, ConSettings,
             TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals, fMySQL_FieldType_Bit_1_IsBoolean);
           if TypeName = 'enum'
-          then AddToBoolCache := AddToBoolCache or ((TypeInfoSecond = '''Y'''#0'''N''') or (TypeInfoSecond = '''N'''#0'''Y'''))
+          then AddToBoolCache := AddToBoolCache or ((TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y'''))
           else if TypeName = 'bit'
           then AddToBoolCache := AddToBoolCache or (TypeInfoSecond = '1');
 
@@ -1397,7 +1397,8 @@ begin
           begin
             // String values in the 'Default value' field are not escaped with apostrophes.
             // Guess this makes it impossible to specify a function call or similar via default values.
-            if (MySQLType in [stString, stUnicodeString, stBinaryStream, stAsciiStream]) then
+            if (MySQLType in [stString, stUnicodeString, stBinaryStream, stAsciiStream]) or
+               (not fMySQL_FieldType_Bit_1_IsBoolean and (MySQLType = stBoolean)) then
             begin
               // Since we changed date/time-related columntypes to be presented
               // as strings, we need to move the CURRENT_TIMESTAMP-check to here.

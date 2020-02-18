@@ -101,8 +101,7 @@ type
 
   { TZAbstractDbcConnection }
 
-  TZAbstractDbcConnection = class(TZCodePagedObject, IZConnection,
-    IImmediatelyReleasable)
+  TZAbstractDbcConnection = class(TZCodePagedObject, IImmediatelyReleasable)
   private
     FOnConnectionLostError: TOnConnectionLostError; //error handle which can be registered
     FDriver: IZDriver;
@@ -116,6 +115,7 @@ type
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
     fRegisteredStatements: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //weak reference to pending stmts
+    fWeakReferenceOfSelfInterface: Pointer;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -151,7 +151,7 @@ type
     procedure SetAutoEncodeStrings(const Value: Boolean);
     procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
 
-    procedure RegisterOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+    procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
     procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Value: IZStatement);
     procedure CloseRegisteredStatements;
@@ -182,6 +182,7 @@ type
       Info: TStrings); overload; deprecated;
     constructor Create(const ZUrl: TZURL); overload;
     destructor Destroy; override;
+    procedure AfterConstruction; override;
 
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
@@ -201,10 +202,6 @@ type
 
     procedure SetAutoCommit(Value: Boolean); virtual;
     function GetAutoCommit: Boolean; virtual;
-
-    procedure Commit; virtual;
-    procedure Rollback; virtual;
-    function StartTransaction: Integer; virtual; abstract;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
     procedure PrepareTransaction(const {%H-}transactionid: string);virtual;
@@ -838,7 +835,7 @@ begin
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
-procedure TZAbstractDbcConnection.RegisterOnConnectionLostErrorHandler(
+procedure TZAbstractDbcConnection.SetOnConnectionLostErrorHandler(
   Handler: TOnConnectionLostError);
 begin
   if Assigned(FOnConnectionLostError) then
@@ -931,6 +928,7 @@ begin
   Result := TZClientVariantManager.Create(ConSettings);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZAbstractDbcConnection.AbortOperation: Integer;
 begin
 //  Would this work...?
@@ -938,6 +936,7 @@ begin
 //   IZStatement(fRegisteredStatements[i]).Cancel;
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
@@ -950,6 +949,16 @@ end;
     default. This means it ignores the choosen Client-CharacterSet and sets a
     "more" Zeos-Compatible Client-CharacterSet if known.
 }
+procedure TZAbstractDbcConnection.AfterConstruction;
+var iCon: IZConnection;
+begin
+  if QueryInterface(IZConnection, ICon) = S_OK then begin
+    fWeakReferenceOfSelfInterface := Pointer(iCon);
+    iCon := nil;
+  end;
+  inherited AfterConstruction;
+end;
+
 procedure TZAbstractDbcConnection.CheckCharEncoding(const CharSet: String;
   const DoArrange: Boolean = False);
 begin
@@ -973,11 +982,7 @@ end;
 }
 function TZAbstractDbcConnection.GetAutoEncodeStrings: Boolean;
 begin
-  {$IFDEF UNICODE}
-  Result := True;
-  {$ELSE}
   Result := ConSettings.AutoEncode;
-  {$ENDIF}
 end;
 
 procedure TZAbstractDbcConnection.GetBinaryEscapeString(Buf: Pointer;
@@ -994,9 +999,7 @@ end;
 
 procedure TZAbstractDbcConnection.SetAutoEncodeStrings(const Value: Boolean);
 begin
-  {$IFNDEF UNICODE}
   ConSettings.AutoEncode := Value;
-  {$ENDIF}
 end;
 
 {**
@@ -1147,16 +1150,13 @@ begin
   if UsedInfo <> Info then UsedInfo.Free;
 end;
 
-{**
-  Creates a regular statement object.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZAbstractDbcConnection.CreateRegularStatement(
   Info: TStrings): IZStatement;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates a <code>PreparedStatement</code> object for sending
@@ -1226,11 +1226,13 @@ end;
   @param Info a statement parameters.
   @returns a created statement.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZAbstractDbcConnection.CreatePreparedStatement(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates a <code>CallableStatement</code> object for calling
@@ -1299,21 +1301,25 @@ end;
   @param Info a statement parameters.
   @returns a created statement.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZAbstractDbcConnection.CreateCallableStatement(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates an object to send/recieve notifications from SQL server.
   @param Event an event name.
   @returns a created notification object.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZAbstractDbcConnection.CreateNotification(const Event: string): IZNotification;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates a sequence generator object.
@@ -1325,7 +1331,7 @@ function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   if TZDefaultProviderSequenceClasses[GetServerProvider] <> nil then
-    Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(Self, Sequence, BlockSize)
+    Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(IZConnection(fWeakReferenceOfSelfInterface), Sequence, BlockSize)
   else
     Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1380,31 +1386,7 @@ begin
   Result := FAutoCommit;
 end;
 
-{**
-  Makes all changes made since the previous
-  commit/rollback permanent and releases any database locks
-  currently held by the Connection. This method should be
-  used only when auto-commit mode has been disabled.
-  @see #setAutoCommit
-}
-procedure TZAbstractDbcConnection.Commit;
-begin
-  Raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-
 procedure TZAbstractDbcConnection.CommitPrepared(const transactionid: string);
-begin
-  Raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-
-{**
-  Drops all changes made since the previous
-  commit/rollback and releases any database locks currently held
-  by this Connection. This method should be used only when auto-
-  commit has been disabled.
-  @see #setAutoCommit
-}
-procedure TZAbstractDbcConnection.Rollback;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1419,10 +1401,12 @@ end;
   the connection is resumed.
   @return 0 if succesfull or error code if any error occurs
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZAbstractDbcConnection.PingServer: Integer;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Escape a string so it's acceptable for the Connection's server.

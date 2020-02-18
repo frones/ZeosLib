@@ -465,14 +465,13 @@ var
   TempParam, Param: TParam;
 begin
   TempParam := TParam.Create(nil);
-
   try
     for I := Low(ParamNames) to High(ParamNames) do
     begin
       Param := Params.FindParam(ParamNames[I]);
       if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
         Continue;
-      SetStatementParam(I+1, Statement, Param);
+      SetStatementParam(I+FirstDbcIndex, Statement, Param);
     end;
   finally
     TempParam.Free;

@@ -580,7 +580,7 @@ const
    'multipoint','multilinestring','multipolygon','geometrycollection'
   );
 var
-  TempPos: Integer;
+  Len: Integer;
   pB, pC: Integer;
   Signed: Boolean;
   P: PAnsiChar;
@@ -605,18 +605,16 @@ begin
     if not MySQL_FieldType_Bit_1_IsBoolean and ((TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y''')) then
       FieldType := stBoolean
     else begin
-      TempPos := 1;
-      while true do begin
-        pC := PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond, TempPos);
-        if pC > 0 then begin
-          TypeInfoSecond[pc] := #0;
-          ColumnSize := Max(ColumnSize, ZFastCode.StrLen(@TypeInfoSecond[TempPos])-2);
-          //TypeInfoSecond[pc] := ',';
-          TempPos := pc+1;
-        end else begin
-          ColumnSize := Max(ColumnSize, ZFastCode.StrLen(@TypeInfoSecond[TempPos])-2);
+      P := Pointer(TypeInfoSecond);
+      Len := Length(TypeInfoSecond);
+      while PByte(P)^ <> 0 do begin
+        pc := PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}(','), P, Len, 1);
+        if pc = 0 then begin
+          ColumnSize := Max(ColumnSize, ZFastCode.StrLen(P)-2);
           Break;
-        end;
+        end else
+          ColumnSize := Max(ColumnSize, (pc-3));
+        Inc(P, pc);
       end;
     end
   end else if TypeName = 'set' then begin
@@ -658,8 +656,7 @@ lLong:
       pC := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), TypeInfoSecond);
       if pC > 0 then begin
         P := Pointer(TypeInfoSecond);
-        PByte(P+pC-1)^ := Ord(#0);
-        ColumnSize := RawToIntDef(P, 0);
+        ColumnSize := RawToIntDef(P, P+pC-1, 0);
         Scale := RawToIntDef(P+pC, 0);
       end;
       if Scale = 0 then

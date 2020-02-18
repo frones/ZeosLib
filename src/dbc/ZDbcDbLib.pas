@@ -87,10 +87,11 @@ type
   end;
 
   {** Implements a generic DBLib Connection. }
-  TZDBLibConnection = class(TZAbstractDbcConnection, IZDBLibConnection, IZTransaction)
+  TZDBLibConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZDBLibConnection, IZTransaction)
   private
-    FSQLErrors: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
-    FSQLMessages: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FSQLErrors: TZDBLibErrorList;
+    FSQLMessages: TZDBLibMessageList;
     FProvider: TDBLibProvider;
     FServerAnsiCodePage: Word;
     FPlainDriver: TZDBLIBPLainDriver;
@@ -130,11 +131,11 @@ type
 
     function AbortOperation: Integer; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     procedure Open; override;
 
@@ -243,8 +244,8 @@ end;
 procedure TZDBLibConnection.InternalCreate;
 begin
   FPlainDriver := TZDBLIBPLainDriver(PlainDriver.GetInstance);
-  FSQLErrors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  FSQLMessages := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FSQLErrors := TZDBLibErrorList.Create;
+  FSQLMessages := TZDBLibMessageList.Create;
   if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then begin
     FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
     FProvider := dpMsSQL;
@@ -254,7 +255,11 @@ begin
   end else
     FMetadata := nil;
   if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (Info.Values[ConnProps_CodePage] = '') then
+    {$IF defined(UNICODE) or defined(LCL)}
+    Info.Values[ConnProps_CodePage] := 'UTF-8';
+    {$ELSE}
     Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
+    {$IFEND}
   FSavePoints := TStringList.Create;
 end;
 
@@ -371,7 +376,6 @@ begin
         CheckCharEncoding(Info.Values[ConnProps_CodePage]);
       end;
     end;
-
     CheckDBLibError(lcConnect, LogMessage);
     RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage);
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
@@ -487,7 +491,8 @@ begin
   FreeAndNil(SQLWriter);
   if R <> '' then begin
     DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage, 0, R);
-    FPlainDriver.dbcancel(fHandle);
+    if fHandle <> nil then
+      FPlainDriver.dbcancel(fHandle);
     {$IFDEF UNICODE}
     raise EZSQLException.Create(ZRawToUnicode(R, ConSettings.ClientCodePage^.CP));
     {$ELSE}
@@ -977,9 +982,7 @@ end;
   Connection.
 }
 procedure TZDBLibConnection.InternalClose;
-var
-  LogMessage: RawByteString;
-  I: Integer;
+var LogMessage: RawByteString;
 begin
   if Closed or not Assigned(PlainDriver) then
     Exit;
@@ -991,16 +994,18 @@ begin
     //if not FPlainDriver.dbDead(FHandle) <> 0 then
       //InternalExecuteStatement('if @@trancount > 0 rollback');
   finally
-    FPlainDriver.dbclose(FHandle);
-    FHandle := nil;
+    if FHandle <> nil then begin
+      FPlainDriver.dbclose(FHandle);
+      FHandle := nil;
+    end;
     {$IFDEF TEST_CALLBACK}
     FDBLibErrorHandler := nil;
     FDBLibMessageHandler := nil;
     {$ENDIF TEST_CALLBACK}
-    for i := FSQLErrors.Count -1 downto 0 do
-      Dispose(PDBLibError(FSQLErrors[i]));
-    for i := FSQLMessages.Count -1 downto 0 do
-      Dispose(PDBLibMessage(FSQLErrors[i]));
+    if FSQLErrors <> nil then
+      FSQLErrors.Clear;
+    if FSQLErrors <> nil then
+      FSQLErrors.Clear;
     LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   end;

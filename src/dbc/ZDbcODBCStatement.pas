@@ -441,7 +441,7 @@ begin
   if (GetResultSetConcurrency = rcUpdatable) or
      (GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResolver := TZGenericCachedResolver.Create(Self, NativeResultSet.GetMetaData);
+    CachedResolver := TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
@@ -2455,7 +2455,7 @@ begin
       Bind := @fParamBindings[Index];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       if (Bind.ValueType = SQL_C_WCHAR) then begin
-        fUniTemp := ZRawToUnicode(Value, FClientCP);
+        fUniTemp := ConSettings.ConvFuncs.ZStringToUnicode(Value, ConSettings.CTRL_CP);
         SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fUniTemp);
       end else if (Bind.ValueType = SQL_C_CHAR) then begin
         fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
@@ -2469,7 +2469,9 @@ begin
       fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
       BindList.Put(Index, stString, Value, FClientCP);
     end;
-  end else BindRaw(Index, Value, FClientCP);
+  end else if FClientEncoding = ceUTF16
+    then BindRaw(Index, Value, ConSettings.CTRL_CP)
+    else BindRaw(Index, Value, FClientCP);
   {$ENDIF}
 end;
 

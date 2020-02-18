@@ -763,16 +763,16 @@ begin
   StoredProc.Params[7].AsFloat := SQLTime;
   StoredProc.Params[8].AsFloat := SQLTime;
   StoredProc.Params[9].AsInteger := 40000;
-  StoredProc.Params[10].AsString := GetDBTestString(Str1, ConSettings);
+  StoredProc.Params[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
   StoredProc.Params[11].AsDate := SQLTime;
   StoredProc.Params[12].AsTime := SQLTime;
   StoredProc.Params[13].AsSmallInt := 40;
   StoredProc.Params[14].AsDateTime := SQLTime;
   StoredProc.Params[15].AsDateTime := SQLTime;
-  StoredProc.Params[20].AsString := GetDBTestString(Str1, ConSettings);
-  StoredProc.Params[21].AsString := GetDBTestString(Str1, ConSettings);
-  StoredProc.Params[22].AsString := GetDBTestString(Str1, ConSettings);
-  StoredProc.Params[23].AsString := GetDBTestString(Str1, ConSettings);
+  StoredProc.Params[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
   StoredProc.Params[24].Value := StrToBytes(AnsiString('121415'));
   StoredProc.Params[25].AsString := 'a';
   StoredProc.Params[26].AsInteger := 50000;
@@ -823,7 +823,15 @@ begin
   CheckEquals(Ord(ftLargeInt), ord(StoredProc.Fields[9].DataType));
 
   CheckEquals('P11', StoredProc.Fields[10].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[10].AsString, ConSettings, 'P11 String');
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[10].AsString, 'P11 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P11 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[10].AsString, 'P11 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[10].AsString, 'P11 String');
+  {$ENDIF}
   CheckStringFieldType(StoredProc.Fields[10].DataType, ConSettings);
 
   CheckEquals('P12', StoredProc.Fields[11].DisplayName);
@@ -859,19 +867,51 @@ begin
   CheckEquals(ord(ftBlob), ord(StoredProc.Fields[19].DataType));
 
   CheckEquals('P21', StoredProc.Fields[20].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[20].AsString, ConSettings, 'P21 String');
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[20].AsString, 'P21 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P21 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[20].AsString, 'P21 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[20].AsString, 'P21 String');
+  {$ENDIF}
   CheckMemoFieldType(StoredProc.Fields[20].DataType, ConSettings);
 
   CheckEquals('P22', StoredProc.Fields[21].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[21].AsString, ConSettings, 'P22 String');
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[21].AsString, 'P22 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P22 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[21].AsString, 'P22 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[21].AsString, 'P22 String');
+  {$ENDIF}
   CheckMemoFieldType(StoredProc.Fields[21].DataType, ConSettings);
 
   CheckEquals('P23', StoredProc.Fields[22].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[22].AsString, ConSettings, 'P23 String');
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[22].AsString, 'P23 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P23 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[22].AsString, 'P23 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[22].AsString, 'P23 String');
+  {$ENDIF}
   CheckMemoFieldType(StoredProc.Fields[22].DataType, ConSettings);
 
   CheckEquals('P24', StoredProc.Fields[23].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[23].AsString, ConSettings, 'P24 String');
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[23].AsString, 'P24 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P24 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[23].AsString, 'P24 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[23].AsString, 'P24 String');
+  {$ENDIF}
   CheckMemoFieldType(StoredProc.Fields[23].DataType, ConSettings);
 
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);

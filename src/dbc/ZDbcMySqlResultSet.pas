@@ -178,7 +178,7 @@ type
   end;
 
   {** Implements a cached resolver with MySQL specific functionality. }
-  TZMySQLCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
+  TZMySQLCachedResolver = class (TZGenerateSQLCachedResolver, IZCachedResolver)
   private
     FPMYSQL: PPMySQL;
     FMYSQL_STMT: PPMYSQL_STMT;
@@ -189,15 +189,14 @@ type
       MYSQL_STMT: PPMYSQL_STMT; const Statement: IZStatement;
       const Metadata: IZResultSetMetadata);
 
-    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+    procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
+      const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; const {%H-}Resolver: IZCachedResolver); override;
+    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
@@ -2544,29 +2543,25 @@ end;
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
 }
-procedure TZMySQLCachedResolver.FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString);
+procedure TZMySQLCachedResolver.FormWhereClause(
+  const SQLWriter: TZSQLStringWriter;
+  const OldRowAccessor: TZRowAccessor; var Result: SQLString);
 var
-  I: Integer;
-  Current: TZResolverParameter;
-  Tmp: SQLString;
+  I, Idx: Integer;
+  Tmp, S: SQLString;
 begin
   if WhereColumns.Count > 0 then
     SQLWriter.AddText(' WHERE ', Result);
   for I := 0 to WhereColumns.Count - 1 do begin
-    Current := TZResolverParameter(WhereColumns[I]);
+    idx := PZIndexPair(WhereColumns[I]).ColumnIndex;
     if I > 0 then
       SQLWriter.AddText(' AND ', Result);
-    if (Metadata.IsNullable(Current.ColumnIndex) = ntNullable) then begin
-      Tmp := IdentifierConvertor.Quote(Current.ColumnName);
-      SQLWriter.AddText(Tmp, Result);
-      SQLWriter.AddText('<=>?', Result); //"null safe equals" operator
-    end else begin
-      Tmp := IdentifierConvertor.Quote(Current.ColumnName);
-      SQLWriter.AddText(Tmp, Result);
-      SQLWriter.AddText('=?', Result);
-    end;
+    S := MetaData.GetColumnName(idx);
+    Tmp := IdentifierConvertor.Quote(S);
+    SQLWriter.AddText(Tmp, Result);
+    if (Metadata.IsNullable(idx) = ntNullable)
+    then SQLWriter.AddText('<=>?', Result) //"null safe equals" operator
+    else SQLWriter.AddText('=?', Result);
   end;
 end;
 {**
@@ -2577,7 +2572,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZMySQLCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
   if (UpdateType = utInserted) then
@@ -2593,8 +2588,8 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
 procedure TZMySQLCachedResolver.UpdateAutoIncrementFields(
-  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; const
+  OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 var LastWasNull: Boolean;
 begin
   if ((FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and

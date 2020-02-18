@@ -66,7 +66,7 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZClasses,
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
 type
@@ -131,7 +131,7 @@ type
   end;
 
   {** Implements a cached resolver with Ado specific functionality. }
-  TZAdoCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
+  TZAdoCachedResolver = class (TZGenerateSQLCachedResolver, IZCachedResolver)
   private
     FHandle: ZPlainAdo.Command;
     FAutoColumnIndex: Integer;
@@ -140,7 +140,7 @@ type
       const Statement: IZStatement; const Metadata: IZResultSetMetadata);
 
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ADO}
@@ -1461,7 +1461,7 @@ end;
   @param NewRowAccessor an accessor object to new column values.
 }
 procedure TZAdoCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor, NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   Recordset: ZPlainAdo.Recordset;
   RA: OleVariant;

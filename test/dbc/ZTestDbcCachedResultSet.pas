@@ -109,13 +109,13 @@ type
   TZEmptyResolver = class(TInterfacedObject, IZCachedResolver)
   public
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
-      {%H-}RowAccessor: TZRowAccessor);
+      const {%H-}RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
-      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
+      {%H-}const  OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
       {%H-}UpdateType: TZRowUpdateType;
-      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
+      const {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
   end;
@@ -992,7 +992,7 @@ end;
   @param RowAccessor an accessor object to column values.
 }
 procedure TZEmptyResolver.CalculateDefaults(const Sender: IZCachedResultSet;
-  RowAccessor: TZRowAccessor);
+  const RowAccessor: TZRowAccessor);
 begin
 end;
 
@@ -1004,7 +1004,7 @@ end;
   @param NewRowAccessor a row accessor which contains new column values.
 }
 procedure TZEmptyResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor,
+  UpdateType: TZRowUpdateType; const OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
 //  Check(UpdateType <> utUnmodified);
@@ -1019,7 +1019,7 @@ end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 procedure TZEmptyResolver.UpdateAutoIncrementFields(
-  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; const OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
  //Should be implemented at Specific database Level Cached resolver

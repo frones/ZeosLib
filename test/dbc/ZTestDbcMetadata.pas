@@ -513,10 +513,15 @@ end;
 // We need this class because TZAbstractDbcConnection has abstract methods and
 // instances of this class can't be created
 type
-  TDummyDbcConnection = class(TZAbstractDbcConnection)
+
+  { TDummyDbcConnection }
+
+  TDummyDbcConnection = class(TZAbstractDbcConnection, IZConnection)
   public
     procedure InternalClose; override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
+    procedure Commit;
+    procedure Rollback;
   protected
     procedure InternalCreate; override;
   public
@@ -531,8 +536,19 @@ begin
   FMetadata := Metadata;
 end;
 
+procedure TDummyDbcConnection.Rollback;
+begin
+  //dummy
+end;
+
+procedure TDummyDbcConnection.Commit;
+begin
+  //dummy
+end;
+
 function TDummyDbcConnection.StartTransaction: Integer;
 begin
+  //dummy
   Result := 0;
 end;
 

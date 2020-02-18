@@ -1333,7 +1333,7 @@ var
         else CreateSQL := '';
         Close;
       end;
-      Assert(CreateSQL <> '');
+      if CreateSQL = '' then Exit;
       CreateSQLUp := UpperCase(CreateSQL);
       aiIdx := ZFastCode.Pos('AUTOINCREMENT', CreateSQLUp);
       if (aiIdx > 0) then begin

@@ -1280,13 +1280,13 @@ begin
     if State <> nil then
     begin
       Token := State.NextToken(Buffer, EOS, Self);
-      { Decode strings.
+      (*{ Decode strings.
       if (State is TZQuoteState) and (toDecodeStrings in Options) then begin
         Token.Value := (State as TZQuoteState).DecodeString(TokenAsString(Token), Token.P^);
         Token.P := Pointer(Token.Value);
         Token.L := Length(Token.Value);
       end;
-      { Skips comments if option set. }
+      { Skips comments if option set. }*)
       if (Token.TokenType = ttComment) and (toSkipComments in Options) then
         Goto EOL;
       { Skips whitespaces if option set. }

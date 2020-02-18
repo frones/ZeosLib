@@ -249,17 +249,14 @@ begin
     if Assigned(FUpdateObject) then
       FUpdateObject.RemoveFreeNotification(Self);
     FUpdateObject := Value;
-    if Assigned(FUpdateObject) then
+    if Assigned(FUpdateObject) then begin
       FUpdateObject.FreeNotification(Self);
-    if Assigned(FUpdateObject) then
       FUpdateObject.DataSet := Self;
-    if Active and (CachedResultSet <> nil) then
-    begin
-      if FUpdateObject <> nil then
-        CachedResultSet.SetResolver(FUpdateObject)
-      else
-        CachedResultSet.SetResolver(CachedResolver);
     end;
+    if Active and (CachedResultSet <> nil) then
+      if FUpdateObject <> nil
+      then CachedResultSet.SetResolver(FUpdateObject)
+      else CachedResultSet.SetResolver(CachedResolver);
   end;
 end;
 
@@ -641,7 +638,6 @@ begin
       CachedResultSet.MoveAbsolute(RowNo);
       RowAccessor.RowBuffer := RowBuffer;
       CachedResultSet.RevertRecord;
-      //FetchFromResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
     end
   else if (State = dsInsert) then
     CachedResultSet.RevertRecord;
@@ -762,7 +758,6 @@ begin
           Resync([])
         else
         begin
-          //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
           ostate:=State;
           SetTempState(dsInternalCalc);
           try

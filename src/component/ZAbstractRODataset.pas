@@ -141,6 +141,7 @@ type
 {$ENDIF}
     FCurrentRow: Integer;
     FRowAccessor, FFieldsAccessor: TZRowAccessor;
+    FResultSet2AccessorIndexList: TZIndexPairList;
     FClientCP, FCTRL_CP: Word;
     FOldRowBuffer: PZRowBuffer;
     FNewRowBuffer: PZRowBuffer;
@@ -2635,7 +2636,6 @@ begin
       ResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := PZRowBuffer(Buffer);
     RowAccessor.RowBuffer^.Index := RowNo;
-    //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
     FRowAccessor.RowBuffer^.BookmarkFlag := Byte(bfCurrent);
     GetCalcFields(TGetCalcFieldsParamType(Buffer));
   end;
@@ -2692,7 +2692,6 @@ begin
             if (State = dsOldValue) and (ResultSet.QueryInterface(IZCachedResultSet,
                     CachedResultSet) = S_OK) then
               CachedResultSet.MoveToInitialRow;
-            //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
             RowBuffer.Index := RowNo;
             ResultSet.MoveToCurrentRow;
           end else
@@ -3635,20 +3634,13 @@ begin
       ColumnList := ConvertFieldsToColumnInfo(Fields, FCTRL_CP, True);
       Cnt := ColumnList.Count;
       try
+        //the RowAccessor wideneds the fieldbuffers for calculated field
         FRowAccessor := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings)
       finally
         ColumnList.Free;
       end;
       if Cnt > 0
-      then FFieldsAccessor := FRowAccessor
-      else begin
-        ColumnList := ConvertFieldsToColumnInfo(Fields, FCTRL_CP, False);
-        try
-          FFieldsAccessor := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings)
-        finally
-          ColumnList.Free;
-        end;
-      end;
+      then FFieldsAccessor := FRowAccessor;
       if not IsUnidirectional then
       begin
         {$IFDEF WITH_AllocRecBuf_TRecBuf}
@@ -3662,7 +3654,7 @@ begin
 
       SetStringFieldSetterAndSetter;
 
-      FieldsLookupTable := CreateFieldsLookupTable(Fields);
+      FieldsLookupTable := CreateFieldsLookupTable(Fields, FResultSet2AccessorIndexList);
 
       InitFilterFields := False;
 
@@ -3711,13 +3703,8 @@ begin
 
     if FFieldsAccessor <> RowAccessor then
       FreeAndNil(FFieldsAccessor);
-    {$IFNDEF AUTOREFCOUNT}
-    if RowAccessor <> nil then
-      RowAccessor.Free;
-    {$ENDIF}
-    RowAccessor := nil;
-
-
+    FreeAndNil(FResultSet2AccessorIndexList);
+    FreeAndNil(FRowAccessor);
     { Destroy default fields }
     {$IFDEF WITH_LIFECYCLES}
     if ((FieldOptions.AutoCreateMode <> acExclusive) or not (lcPersistent in Fields.LifeCycles))
@@ -4697,9 +4684,8 @@ begin
 
         RowAccessor.RowBuffer := SearchRowBuffer;
         RowAccessor.RowBuffer^.Index := RowNo;
-        //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
         GetCalcFields(TGetCalcFieldsParamType(SearchRowBuffer));
-        RetrieveDataFieldsFromRowAccessor(FieldIndices, RowAccessor, FResultSet, RowValues);
+        FillDataFieldsFromSourceLookup(FieldIndices, RowAccessor, FResultSet, RowValues);
 
         if CompareDataFields(DecodedKeyValues, RowValues, VariantManager,
           PartialKey, CaseInsensitive) then begin
@@ -4779,7 +4765,7 @@ end;
 
 {**
   Lookups specified fields from the searched record.
-  @param KeyValues a list of field names to search record.
+  @param KeyFields a list of field names to search record.
   @param KeyValues an array of field values to search record.
   @param ResultFields a list of field names to return as a result.
   @return an array of requested field values.
@@ -4818,9 +4804,8 @@ begin
 
     RowAccessor.RowBuffer := SearchRowBuffer;
     RowAccessor.RowBuffer^.Index := RowNo;
-    //FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
     GetCalcFields(TGetCalcFieldsParamType(SearchRowBuffer));
-    RetrieveDataFieldsFromRowAccessor(FieldIndices, RowAccessor, FResultSet, ResultValues);
+    FillDataFieldsFromSourceLookup(FieldIndices, RowAccessor, FResultSet, ResultValues);
   finally
     {$IFNDEF WITH_FreeRecBuf_TRecBuf}
     FreeRecordBuffer(TRecordBuffer(SearchRowBuffer));   // TRecordBuffer can be both pbyte and pchar in FPC. Don't assume.
@@ -5057,7 +5042,25 @@ procedure TZAbstractRODataset.InternalSort;
 var
   I: Integer;
   RowNo: NativeInt;
-  SavedRowBuffer: PZRowBuffer;
+  SavedAccessor: TZRowAccessor;
+  function CreateAllFieldsAccessor: TZRowAccessor;
+  var ColumnList: TObjectList;
+      I: Integer;
+      CP: Word;
+  begin
+    ColumnList := TObjectList.Create(True);
+    try
+      for i := low(FFieldsLookupTable) to high(FFieldsLookupTable) do begin
+        if FFieldsLookupTable[i].DataSource = dltAccessor
+        then CP := FCTRL_CP
+        else CP := FResultSetMetadata.GetColumnCodePage(FFieldsLookupTable[i].Index);
+        ColumnList.Add(ConvertFieldToColumnInfo(TField(FFieldsLookupTable[i].Field), CP))
+      end;
+      Result := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings)
+    finally
+      ColumnList.Free;
+    end;
+  end;
 begin
   //if FIndexFieldNames = '' then exit; {bangfauzan addition}
   if (ResultSet <> nil) and not IsUniDirectional then begin
@@ -5085,7 +5088,8 @@ begin
         FCompareFuncs := ResultSet.GetCompareFuncs(FSortedFieldIndices, FSortedComparsionKinds);
         CurrentRows.Sort(LowLevelSort);
       end else begin
-        SavedRowBuffer := RowAccessor.RowBuffer;
+        SavedAccessor := FFieldsAccessor;
+        FFieldsAccessor := CreateAllFieldsAccessor;
         { Sorts using generic highlevel approach. }
         try
           { Allocates buffers for sorting. }
@@ -5094,10 +5098,8 @@ begin
           { Converts field objects into field indices. }
           SetLength(FSortedFieldIndices, Length(FSortedFieldRefs));
           for I := 0 to High(FSortedFieldRefs) do
-          begin
             FSortedFieldIndices[I] := DefineFieldIndex(FieldsLookupTable,
               TField(FSortedFieldRefs[I]));
-          end;
           { Performs sorting. }
           FCompareFuncs := FFieldsAccessor.GetCompareFuncs(FSortedFieldIndices, FSortedComparsionKinds);
           CurrentRows.Sort(HighLevelSort);
@@ -5105,7 +5107,8 @@ begin
           { Disposed buffers for sorting. }
           FFieldsAccessor.DisposeBuffer(FSortRowBuffer1);
           FFieldsAccessor.DisposeBuffer(FSortRowBuffer2);
-          FFieldsAccessor.RowBuffer := SavedRowBuffer;
+          FreeAndNil(FFieldsAccessor);
+          FFieldsAccessor := SavedAccessor;
         end;
       end;
     end;
@@ -5147,11 +5150,13 @@ var
 begin
   { Gets the first row. }
   RowNo := NativeInt(Item1);
-  ResultSet.MoveAbsolute(RowNo);
+  FResultSet.MoveAbsolute(RowNo);
   FFieldsAccessor.RowBuffer := FSortRowBuffer1;
   FFieldsAccessor.RowBuffer^.Index := RowNo;
-  FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, FFieldsAccessor);
+  { fill rowdata }
+  FFieldsAccessor.FillFromFromResultSet(FResultSet, FResultSet2AccessorIndexList);
   FFieldsAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
+  { fill data from CalcFields }
   GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer1));
 
   { Gets the second row. }
@@ -5159,8 +5164,10 @@ begin
   ResultSet.MoveAbsolute(RowNo);
   FFieldsAccessor.RowBuffer := FSortRowBuffer2;
   FFieldsAccessor.RowBuffer^.Index := RowNo;
-  FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, FFieldsAccessor);
+  { fill rowdata }
+  FFieldsAccessor.FillFromFromResultSet(FResultSet, FResultSet2AccessorIndexList);
   FFieldsAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
+  { fill data from CalcFields }
   GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer2));
 
   { Compare both records. }
@@ -8925,6 +8932,15 @@ begin
     then FmtStr := DisplayFormat
     else FmtStr := EditFormat;
     if FmtStr = '' then begin
+      {$IFDEF FPC}
+      if Currency then begin
+        if DisplayText then
+          Text := BcdToStrF(bcd, ffCurrency, Precision, 2)
+        else
+          Text := BcdToStrF(bcd, ffFixed, Precision, 2);
+      end else
+        Text := BcdToStrF(bcd, ffGeneral, Precision, Size);
+      {$ELSE}
       if Currency then begin
         if DisplayText
         then Format := ffCurrency
@@ -8935,6 +8951,7 @@ begin
         Digits := 0;
       end;
       Text := BcdToStrF(Bcd, Format, Precision, Digits);
+      {$ENDIF}
     end else
       Text := FormatBcd(FmtStr, Bcd);
   end;

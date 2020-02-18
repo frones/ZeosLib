@@ -197,6 +197,7 @@
               {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
               {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
               {$DEFINE TPARAM_HAS_ASBYTES}              // TParam.AsBytes is supported
+              {$DEFINE HAS_TPARAM_ASSTREAM}             // TParam.AsStream is supported
               {$DEFINE TFIELD_HAS_ASBYTES}              // TField.AsBytes is supported
               {$DEFINE WITH_RAWBYTESTRING}              // Have RawByteString CP $FFFFF
               {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}      // determine the AnsiString CP

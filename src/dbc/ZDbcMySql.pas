@@ -90,8 +90,8 @@ type
   end;
 
   {** Implements MySQL Database Connection. }
-  TZMySQLConnection = class(TZAbstractDbcConnection, IZMySQLConnection,
-    IZTransaction)
+  TZMySQLConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZMySQLConnection, IZTransaction)
   private
     FCatalog: string;
     FHandle: PMySQL;
@@ -111,11 +111,11 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetAutoCommit(Value: Boolean); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
     destructor Destroy; override;
     procedure SetReadOnly(Value: Boolean); override;
@@ -817,8 +817,11 @@ begin
 end;
 
 {**
-  Sets a new transact isolation level.
-  @param Level a new transact isolation level.
+  Drops all changes made since the previous
+  commit/rollback and releases any database locks currently held
+  by this Connection. This method should be used only when auto-
+  commit has been disabled.
+  @see #setAutoCommit
 }
 procedure TZMySQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);

@@ -90,8 +90,8 @@ type
   {** Implements SQLite Database Connection. }
 
   { TZSQLiteConnection }
-  TZSQLiteConnection = class(TZAbstractDbcConnection, IZSQLiteConnection,
-    IZTransaction)
+  TZSQLiteConnection = class(TZAbstractDbcConnection, IZConnection,
+    IZSQLiteConnection, IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;
     FCatalog: string;
@@ -119,11 +119,11 @@ type
 
     procedure Open; override;
 
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
 
 
     procedure SetCatalog(const Catalog: string); override;

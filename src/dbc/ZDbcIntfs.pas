@@ -226,6 +226,7 @@ type
   EZSQLConnectionLost = class(EZSQLException);
 
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
+  TOnConnect = procedure of Object;
 
 // Interfaces
 type
@@ -460,7 +461,8 @@ type
   /// </summary>
   IZConnection = interface(IZInterface)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
-    procedure RegisterOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+    procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+  //  procedure SetOnAfterOpen(Handler: TOnConnect);
     procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Statement: IZStatement);
 

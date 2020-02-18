@@ -2649,6 +2649,7 @@ end; {PatchMove}
 {$ENDIF PatchSystemMove}
 {$IFEND} //set in Zeos.inc
 
+{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(Value: Cardinal): RawByteString;
 var Digits: Byte;
 begin
@@ -2656,6 +2657,7 @@ begin
   ZSetString(nil, Digits, Result);
   IntToRaw(Value, Pointer(Result), Digits);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 
 {$IF defined(Delphi) and defined(WIN32)}
 function IntToRaw(Value: Integer): RawByteString;
@@ -3012,6 +3014,7 @@ asm
   pop    ebx
 end;
 {$ELSE}
+{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(Value: Integer): RawByteString;
 var C: Cardinal;
   Digits: Byte;
@@ -3025,7 +3028,9 @@ begin
     PByte(P)^ := Ord('-');
   IntToRaw(C, P+Ord(Negative), Digits);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 
+{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(Value: Int64): RawByteString;
 var U: UInt64;
   Digits: Byte;
@@ -3039,6 +3044,7 @@ begin
     PByte(P)^ := Ord('-');
   IntToRaw(U, P+Ord(Negative), Digits);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 {$IFEND}
 
 function IntToRaw(Value: Byte): RawByteString;
@@ -3194,6 +3200,7 @@ cardinal_range:
     PByte(Buf)^ := I32 or ord('0');
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(const Value: UInt64): RawByteString;
 var Digits: Byte;
 begin
@@ -3201,6 +3208,7 @@ begin
   ZSetString(nil, Digits, Result);
   IntToRaw(Value, Pointer(Result), Digits);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 
 procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
 var
@@ -3250,6 +3258,7 @@ end;
 {$IFDEF FPC}
   {$PUSH}
   {$WARN 5060 off : Function result variable does not seem to be initialized}
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}// ZSetString does the job even if NOT required
 {$ENDIF}
 function CurrToRaw(const Value: Currency): RawByteString;
 var buf: array[0..31] of AnsiChar;

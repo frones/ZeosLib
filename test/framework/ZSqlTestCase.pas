@@ -61,9 +61,9 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB,
-  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataset, ZURL,
-  ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
+  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB, Contnrs,
+  ZDataset, ZURL,
+  ZCompatibility, ZDbcIntfs, ZClasses, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
   { protocol lists }
@@ -249,7 +249,7 @@ type
     procedure CheckStringFieldType(Actual: TFieldType; ConSettings: PZConSettings);
     procedure CheckMemoFieldType(Actual: TFieldType; ConSettings: PZConSettings);
 
-    function GetDBTestString(const Value: ZWideString; ConSettings: PZConSettings; MaxLen: Integer = -1): String; overload;
+    function GetDBTestString(const Value: ZWideString; ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString; overload;
     function GetDBTestString(const Value: RawByteString; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String; overload;
     function GetDBTestStream(const Value: ZWideString; ConSettings: PZConSettings): TStream; overload;
   public
@@ -567,7 +567,7 @@ var
         ConnectionsList.Add(MyCurrent);
       end;
       if (CPType = 'CP_UTF16') then //autoencoding is allways true
-        SetCharacterSets(MyCurrent)
+        SetAutoEncodings(MyCurrent)
       else
         {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
         SetAutoEncodings(MyCurrent); //Allow Autoencoding only if supported!
@@ -1103,39 +1103,36 @@ end;
   {$WARNINGS OFF}
 {$ENDIF}
 function TZAbstractSQLTestCase.GetDBTestString(const Value: ZWideString;
-  ConSettings: PZConSettings; MaxLen: Integer = -1): String;
+  ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString;
+{$IFNDEF UNICODE}
+var CP: Word;
+{$ENDIF}
 begin
   {$IFNDEF UNICODE}
   if ConSettings.CPType = cCP_UTF16 then
-    if ConSettings.CTRL_CP = zCP_UTF8 then
-      Result := ZUnicodeToString(Value, zCP_UTF8)
-    else
-      Result := ZUnicodeToString(Value, ZOSCodePage)
-  else
-    case ConSettings.ClientCodePage.Encoding of
-      ceDefault: Result := ZUnicodeToRaw(Value, ZOSCodePage); //Souldn't be possible
-      ceAnsi:
-        if ConSettings.AutoEncode then //Revert the expected value to test
-          Result := ZUnicodeToString(Value, zCP_UTF8)
-        else  //Return the expected value to test
-          Result := ZUnicodeToString(Value, ZOSCodePage);
-      ceUTF8: //, ceUTF32
-        if ConSettings.AutoEncode then //Revert the expected value to test
-          Result := ZUnicodeToString(Value, ZOSCodePage)
-        else
-          Result := ZUnicodeToString(Value, zCP_UTF8);
-      ceUTF16:
-        if ConSettings.AutoEncode then //Revert the expected value to test
-          if ConSettings.CPType = cCP_UTF8 then
-            Result := ZUnicodeToString(Value, ZOSCodePage)
-          else
-            Result := ZUnicodeToString(Value, zCP_UTF8)
-        else
-          if ConSettings.CPType = cCP_UTF8 then
-            Result := ZUnicodeToString(Value, zCP_UTF8)
-          else
-            Result := ZUnicodeToString(Value, ZOSCodePage);
-    end;
+    if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
+      if ConSettings.CTRL_CP = zCP_UTF8
+      then CP := zCP_UTF8
+      else CP := ZOSCodePage
+    else CP := ConSettings.ClientCodePage.CP
+  else case ConSettings.ClientCodePage.Encoding of
+    ceAnsi:
+      if ConSettings.AutoEncode //Revert the expected value to test
+      then CP := zCP_UTF8
+      else CP := ConSettings.ClientCodePage.CP; //Return the expected value to test
+    ceUTF8: //, ceUTF32
+      if ConSettings.AutoEncode
+      then CP := ZOSCodePage //Revert the expected value to test
+      else CP := zCP_UTF8;
+    ceUTF16:
+      if ConSettings.AutoEncode //Revert the expected value to test
+      then if ConSettings.CPType = cCP_UTF8
+        then CP := ZOSCodePage
+        else CP := zCP_UTF8
+      else CP := ConSettings.CTRL_CP;
+    else CP := ZOSCodePage; //Souldn't be possible
+  end;
+  Result := ZUnicodeToString(Value, CP);
   {$ELSE}
   Result := Value;
   {$ENDIF}

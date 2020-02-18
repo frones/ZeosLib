@@ -307,7 +307,7 @@ begin
     if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
       if (Connection.GetServerProvider = spMSSQL) and (Self.GetResultSetConcurrency = rcUpdatable)
       then CachedResolver := TZOleDBMSSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData)
-      else CachedResolver := TZGenericCachedResolver.Create(Self, NativeResultSet.GetMetaData);
+      else CachedResolver := TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData);
       CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(ResultSetConcurrency);
       Result := CachedResultSet;
@@ -1262,7 +1262,7 @@ begin
       FDBBindingArray, FParamNamesArray);
     if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
       CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL,
-        TZGenericCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
+        TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
       CachedResultSet.SetConcurrency(ResultSetConcurrency);
       Result := CachedResultSet;
     end else

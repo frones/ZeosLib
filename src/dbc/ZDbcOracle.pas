@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF} ZClasses,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainOracleDriver, ZDbcLogging,
-  ZTokenizer, ZDbcGenericResolver, ZURL, ZGenericSqlAnalyser,
+  ZTokenizer, ZDbcGenericResolver, ZURL, ZGenericSqlAnalyser, ZDbcCache,
   ZPlainOracleConstants;
 
 type
@@ -102,7 +102,7 @@ type
   ///  implements an oracle OCI connection.
   /// </summary>
   {** Implements Oracle Database Connection. }
-  TZOracleConnection = class(TZAbstractDbcConnection, IZOracleConnection)
+  TZOracleConnection = class(TZAbstractDbcConnection, IZConnection, IZOracleConnection)
   private
     FCatalog: string;
     FHandle: POCIEnv;
@@ -140,12 +140,12 @@ type
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
   public { txn support }
-    procedure Commit; override;
-    procedure Rollback; override;
+    procedure Commit;
+    procedure Rollback;
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    function StartTransaction: Integer; override;
+    function StartTransaction: Integer;
   public
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;
@@ -171,9 +171,10 @@ type
   end;
 
   {** Implements a specialized cached resolver for Oracle. }
-  TZOracleCachedResolver = class(TZGenericCachedResolver)
+  TZOracleCachedResolver = class(TZGenerateSQLCachedResolver)
   public
-    function FormCalculateStatement(Columns: TObjectList): string; override;
+    function FormCalculateStatement(const RowAccessor: TZRowAccessor;
+      const ColumnsLookup: TZIndexPairList): string; override;
   end;
 
   /// <summary>
@@ -1013,11 +1014,11 @@ end;
   @param OldRowAccessor an accessor object to old column values.
 }
 function TZOracleCachedResolver.FormCalculateStatement(
-  Columns: TObjectList): string;
+  const RowAccessor: TZRowAccessor; const ColumnsLookup: TZIndexPairList): string;
 var
    iPos: Integer;
 begin
-  Result := inherited FormCalculateStatement(Columns);
+  Result := inherited FormCalculateStatement(RowAccessor, ColumnsLookup);
   if Result <> '' then
   begin
     iPos := ZFastCode.pos('FROM', uppercase(Result));
@@ -1033,13 +1034,6 @@ begin
 end;
 
 { TZOracleTransaction }
-
-const
-  TransactionModeLogMessage: array[TZOCITxnMode] of RawByteString = (
-    'SET TRANSACTION ISOLATION LEVEL DEFAULT',
-    'SET TRANSACTION ISOLATION LEVEL READONLY',
-    'SET TRANSACTION ISOLATION LEVEL READWRITE',
-    'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
 
 procedure TZOracleTransaction.BeforeDestruction;
 var Status: sword;

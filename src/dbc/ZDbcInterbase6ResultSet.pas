@@ -200,25 +200,25 @@ type
   End;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
-  TZInterbase6CachedResolver = class(TZGenericCachedResolver)
+  TZInterbase6CachedResolver = class(TZGenerateSQLCachedResolver)
   private
     FInsertReturningFields: TStrings;
   public
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
-    function FormCalculateStatement(Columns: TObjectList): string; override;
+    function FormCalculateStatement(const RowAccessor: TZRowAccessor;
+      const ColumnsLookup: TZIndexPairList): string; override;
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
   end;
 
   {** Implements a specialized cached resolver for Firebird version 2.0 and up. }
   TZCachedResolverFirebird2up = class(TZInterbase6CachedResolver)
   public
-    procedure FormWhereClause({$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
-      {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
+    procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
+      const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -1805,10 +1805,13 @@ begin
               if (CP = ConSettings^.ClientCodePage^.ID)
               then ZCodePageInfo := ConSettings^.ClientCodePage
               else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info}
-              if ConSettings^.ClientCodePage^.ID = CS_NONE
-              then ColumnCodePage := ZCodePageInfo.CP
-              else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-              Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
+              if ConSettings^.ClientCodePage^.ID = CS_NONE then begin
+                ColumnCodePage := ZCodePageInfo.CP;
+                Precision := XSQLVAR.sqllen
+              end else begin
+                ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+                Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
+              end;
               if XSQLVAR.sqltype and not 1 = SQL_TEXT then
                 Signed := True;
               if ColumnType = stString
@@ -2156,12 +2159,12 @@ end;
   @param OldRowAccessor an accessor object to old column values.
 }
 function TZInterbase6CachedResolver.FormCalculateStatement(
-  Columns: TObjectList): string;
+  const RowAccessor: TZRowAccessor; const ColumnsLookup: TZIndexPairList): string;
 // --> ms, 30/10/2005
 var
    iPos: Integer;
 begin
-  Result := inherited FormCalculateStatement(Columns);
+  Result := inherited FormCalculateStatement(RowAccessor, ColumnsLookup);
   if Result <> '' then begin
     iPos := ZFastCode.pos('FROM', uppercase(Result));
     if iPos > 0
@@ -2172,8 +2175,7 @@ begin
 end;
 
 procedure TZInterbase6CachedResolver.PostUpdates(const Sender: IZCachedResultSet;
-  UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor);
+  UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
 
@@ -2182,8 +2184,8 @@ begin
 end;
 
 procedure TZInterbase6CachedResolver.UpdateAutoIncrementFields(
-  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; OldRowAccessor,
-  NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
+  const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; const
+  OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 var
   I, ColumnIdx: Integer;
   RS: IZResultSet;
@@ -2208,26 +2210,25 @@ end;
 { TZCachedResolverFirebird2up }
 
 procedure TZCachedResolverFirebird2up.FormWhereClause(
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}Columns: TObjectList;
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter;
-  {$IFDEF AUTOREFCOUNT}const {$ENDIF}OldRowAccessor: TZRowAccessor;
+  const SQLWriter: TZSQLStringWriter; const OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
-  I: Integer;
-  Tmp: SQLString;
+  I, idx: Integer;
+  Tmp, S: SQLString;
 begin
   if WhereColumns.Count > 0 then
     SQLWriter.AddText(' WHERE ', Result);
-  for I := 0 to WhereColumns.Count - 1 do
-    with TZResolverParameter(WhereColumns[I]) do begin
-      if I > 0 then
-        SQLWriter.AddText(' AND ', Result);
-      Tmp := IdentifierConvertor.Quote(ColumnName);
-      SQLWriter.AddText(Tmp, Result);
-      if (Metadata.IsNullable(ColumnIndex) = ntNullable)
-      then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
-      else SQLWriter.AddText('=?', Result);
-    end;
+  for I := 0 to WhereColumns.Count - 1 do begin
+    idx := PZIndexPair(WhereColumns[I]).ColumnIndex;
+    if I > 0 then
+      SQLWriter.AddText(' AND ', Result);
+    S := MetaData.GetColumnName(idx);
+    Tmp := IdentifierConvertor.Quote(S);
+    SQLWriter.AddText(Tmp, Result);
+    if (Metadata.IsNullable(Idx) = ntNullable)
+    then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
+    else SQLWriter.AddText('=?', Result);
+  end;
 end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit

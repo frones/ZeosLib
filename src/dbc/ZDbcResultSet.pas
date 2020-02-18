@@ -3727,7 +3727,7 @@ begin
 end;
 
 procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
-var RawTemp: RawByteString;
+//var RawTemp: RawByteString;
 label SetData;
 begin
   InternalClear;
@@ -3735,13 +3735,13 @@ begin
   begin
     if CodePage = zCP_NONE then
     begin
-      if Len mod 2 = 0 then //could be UTF16
+      {if Len mod 2 = 0 then //could be UTF16
       begin
         RawTemp := GetValidatedAnsiStringFromBuffer(Buffer, Len, FConSettings);
         InternalSetRawByteString(RawTemp, FConSettings^.ClientCodePage^.CP);
       end
       else //can't be UCS2
-      begin
+      begin}
         case ZEncoding.ZDetectUTF8Encoding(Buffer, Len) of
           etUSASCII: CodePage := FConSettings^.ClientCodePage^.CP;
           etUTF8: CodePage := zCP_UTF8;
@@ -3755,7 +3755,7 @@ begin
               CodePage := FConSettings^.ClientCodePage^.CP;
         end;
         goto SetData;
-      end;
+      //end;
     end
     else
     begin
@@ -4367,7 +4367,7 @@ begin
     else System.SetString(Result, P, L)
   else Result := '';
   {$ELSE}
-  if ConSettings.AutoEncode then
+  if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
     if ConSettings.CPType = cCP_UTF8
     then Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8String(ColumnIndex)
     else Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiString(ColumnIndex)
