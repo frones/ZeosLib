@@ -2755,7 +2755,16 @@ var
   procedure MysqlTypeToZeos(TypeName: String; const MysqlPrecision, MySqlScale, MysqlCharLength: integer; out ZType, ZPrecision, ZScale: Integer);
   begin
     TypeName := LowerCase(TypeName);
-    if TypeName = 'tinyint' then begin
+    if TypeName = 'bit' then begin
+      if MysqlPrecision = 1 then begin
+        ZType := Ord(stBoolean);
+        ZPrecision := -1;
+      end else begin
+        ZType := Ord(stBytes);
+        ZPrecision := MysqlPrecision;
+      end;
+      ZScale := -1;
+    end else if TypeName = 'tinyint' then begin
       ZType := Ord(stShort);
       ZPrecision := -1;
       ZScale := -1;
@@ -2807,8 +2816,10 @@ var
         ZPrecision := MysqlPrecision;
         ZScale := MySqlScale;
       end;
-    end else if TypeName = 'varchar' then begin
-      ZType := Ord(stUnicodeString);
+    end else if EndsWith(TypeName, 'char') then begin
+      if FConSettings.CPType = cCP_UTF16
+      then ZType := Ord(stUnicodeString)
+      else ZType := Ord(stString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end else if TypeName = 'date' then begin
@@ -2831,39 +2842,17 @@ var
       ZType := Ord(stTimestamp);
       ZPrecision := -1;
       ZScale := -1;
-    end else if TypeName = 'tinyblob' then begin
+    end else if EndsWith(TypeName, 'blob') then begin
       ZType := Ord(stBinaryStream);
       ZPrecision := -1;
       ZScale := -1;
-    end else if TypeName = 'blob' then begin
-      ZType := Ord(stBinaryStream);
+    end else if EndsWith(TypeName, 'text') then begin
+      if FConSettings.CPType = cCP_UTF16
+      then ZType := Ord(stUnicodeStream)
+      else ZType := Ord(stAsciiStream);
       ZPrecision := -1;
       ZScale := -1;
-    end else if TypeName = 'mediumblob' then begin
-      ZType := Ord(stBinaryStream);
-      ZPrecision := -1;
-      ZScale := -1;
-    end else if TypeName = 'longblob' then begin
-      ZType := Ord(stBinaryStream);
-      ZPrecision := -1;
-      ZScale := -1;
-    end else if TypeName = 'tinytext' then begin
-      ZType := Ord(stUnicodeStream);
-      ZPrecision := -1;
-      ZScale := -1;
-    end else if TypeName = 'text' then begin
-      ZType := Ord(stUnicodeStream);
-      ZPrecision := -1;
-      ZScale := -1;
-    end else if TypeName = 'mediumtext' then begin
-      ZType := Ord(stUnicodeStream);
-      ZPrecision := -1;
-      ZScale := -1;
-    end else if TypeName = 'longtext' then begin
-      ZType := Ord(stUnicodeStream);
-      ZPrecision := -1;
-      ZScale := -1;
-    end else if TypeName = 'varbinary' then begin
+    end else if EndsWith(TypeName, 'binary') then begin
       ZType := Ord(stBytes);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
