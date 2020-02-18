@@ -1698,7 +1698,7 @@ var
   SQLType: TZSQLType;
   L: NativeUInt;
   P: PAnsiChar;
-label GUID_Size, Str_Size;
+label Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -2554,7 +2554,7 @@ procedure TZInterbase6DatabaseMetadata.SetUTF8CodePageInfo;
 begin
   FMetaConSettings := FConSettings^;
   FMetaConSettings.ClientCodePage := GetConnection.GetIZPlainDriver.ValidateCharEncoding('UTF8');
-  FMetaConSettings.AutoEncode := true; //Get/Set-String related
+  FMetaConSettings.AutoEncode := False; //Get/Set-String related
   FConSettings := @FMetaConSettings;
   {$IFDEF WITH_LCONVENCODING}
   SetConvertFunctions(FConSettings^.CTRL_CP, FConSettings^.ClientCodePage.CP,

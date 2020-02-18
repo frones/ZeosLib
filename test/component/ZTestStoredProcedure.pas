@@ -240,7 +240,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -248,13 +248,10 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
-  S := StoredProc.ParamByName('P4').AsString +
-    ' ' + StoredProc.ParamByName('P5').AsString;
   StoredProc.Open;
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -593,7 +590,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[0].AsInteger:= i;
     StoredProc.Params[1].AsInteger:= P2;
@@ -601,8 +598,7 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;
@@ -628,16 +624,19 @@ var
   SQLTime: TDateTime;
   TempBytes: TBytes;
   CP: Word;
+  ConSettings: PZConSettings;
 begin
   Connection.Connect;
-  CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+  Check(Connection.Connected);
+  ConSettings := connection.DbcConnection.GetConSettings;
+  CP := ConSettings.ClientCodePage.CP;
   //eh the russion abrakadabra can no be mapped to other charsets then:
-  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
-    {add some more if you run into same issue !!} then begin
-    BlankCheck;
+  if (ConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+    not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
     Exit;
-  end;
-
+  if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
+    {add some more if you run into same issue !!} then
+    Exit;
   StoredProc.StoredProcName := 'TEST_All_TYPES';
   CheckEquals(28, StoredProc.Params.Count);
 
@@ -683,7 +682,7 @@ begin
 
   CheckEquals('P11', StoredProc.Params[10].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[10].ParamType));
-  CheckStringFieldType(StoredProc.Params[10].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[10].DataType, ConSettings);
 
   CheckEquals('P12', StoredProc.Params[11].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[11].ParamType));
@@ -723,19 +722,19 @@ begin
 
   CheckEquals('P21', StoredProc.Params[20].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[20].ParamType));
-  CheckMemoFieldType(StoredProc.Params[20].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[20].DataType, ConSettings);
 
   CheckEquals('P22', StoredProc.Params[21].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[21].ParamType));
-  CheckMemoFieldType(StoredProc.Params[21].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[21].DataType, ConSettings);
 
   CheckEquals('P23', StoredProc.Params[22].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[22].ParamType));
-  CheckMemoFieldType(StoredProc.Params[22].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[22].DataType, ConSettings);
 
   CheckEquals('P24', StoredProc.Params[23].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[23].ParamType));
-  CheckMemoFieldType(StoredProc.Params[23].DataType, Connection.DbcConnection.GetConSettings);
+  CheckMemoFieldType(StoredProc.Params[23].DataType, ConSettings);
 
   CheckEquals('P25', StoredProc.Params[24].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[24].ParamType));
@@ -743,7 +742,7 @@ begin
 
   CheckEquals('P26', StoredProc.Params[25].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[25].ParamType));
-  CheckStringFieldType(StoredProc.Params[25].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[25].DataType, ConSettings);
 
   CheckEquals('P27', StoredProc.Params[26].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[26].ParamType));
@@ -759,21 +758,21 @@ begin
   StoredProc.Params[3].AsInteger := 1000;
   StoredProc.Params[4].AsInteger := 2000;
   StoredProc.Params[5].AsInteger := 30000;
-  SQLTime := now;
+  SQLTime := SysUtils.EncodeTime(11,57,12,0)+EncodeDate(2017, 7, 13);
   StoredProc.Params[6].AsFloat := SQLTime;
   StoredProc.Params[7].AsFloat := SQLTime;
   StoredProc.Params[8].AsFloat := SQLTime;
   StoredProc.Params[9].AsInteger := 40000;
-  StoredProc.Params[10].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+  StoredProc.Params[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
   StoredProc.Params[11].AsDate := SQLTime;
   StoredProc.Params[12].AsTime := SQLTime;
   StoredProc.Params[13].AsSmallInt := 40;
   StoredProc.Params[14].AsDateTime := SQLTime;
   StoredProc.Params[15].AsDateTime := SQLTime;
-  StoredProc.Params[20].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-  StoredProc.Params[21].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-  StoredProc.Params[22].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-  StoredProc.Params[23].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+  StoredProc.Params[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
   StoredProc.Params[24].Value := StrToBytes(AnsiString('121415'));
   StoredProc.Params[25].AsString := 'a';
   StoredProc.Params[26].AsInteger := 50000;
@@ -824,8 +823,16 @@ begin
   CheckEquals(ord(ftFloat), ord(StoredProc.Fields[9].DataType));
 
   CheckEquals('P11', StoredProc.Fields[10].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[10].AsString, Connection.DbcConnection.GetConSettings);
-  CheckStringFieldType(StoredProc.Fields[10].DataType, Connection.DbcConnection.GetConSettings);
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[10].AsString, 'P11 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P11 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[10].AsString, 'P11 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[10].AsString, 'P11 String');
+  {$ENDIF}
+  CheckStringFieldType(StoredProc.Fields[10].DataType, ConSettings);
 
   CheckEquals('P12', StoredProc.Fields[11].DisplayName);
   CheckEquals(Int(SQLTime), StoredProc.Fields[11].AsDateTime);
@@ -864,20 +871,52 @@ begin
   CheckEquals(ord(ftBlob), ord(StoredProc.Fields[19].DataType));
 
   CheckEquals('P21', StoredProc.Fields[20].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[20].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[20].DataType, Connection.DbcConnection.GetConSettings);
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[20].AsString, 'P21 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P21 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[20].AsString, 'P21 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[20].AsString, 'P21 String');
+  {$ENDIF}
+  CheckMemoFieldType(StoredProc.Fields[20].DataType, ConSettings);
 
   CheckEquals('P22', StoredProc.Fields[21].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[21].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[21].DataType, Connection.DbcConnection.GetConSettings);
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[21].AsString, 'P22 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P22 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[21].AsString, 'P22 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[21].AsString, 'P22 String');
+  {$ENDIF}
+  CheckMemoFieldType(StoredProc.Fields[21].DataType, ConSettings);
 
   CheckEquals('P23', StoredProc.Fields[22].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[22].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[22].DataType, Connection.DbcConnection.GetConSettings);
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[22].AsString, 'P23 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P23 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[22].AsString, 'P23 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[22].AsString, 'P23 String');
+  {$ENDIF}
+  CheckMemoFieldType(StoredProc.Fields[22].DataType, ConSettings);
 
   CheckEquals('P24', StoredProc.Fields[23].DisplayName);
-  CheckEquals(Str1, StoredProc.Fields[23].AsString, Connection.DbcConnection.GetConSettings);
-  CheckMemoFieldType(StoredProc.Fields[23].DataType, Connection.DbcConnection.GetConSettings);
+  {$IFDEF UNICODE}
+  CheckEquals(Str1, StoredProc.Fields[23].AsString, 'P24 String');
+  {$ELSE}
+  If ConSettings.CPType = cCP_UTF16 then
+    CheckEquals(Str1, StoredProc.Fields[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P24 String')
+  else if ConSettings.AutoEncode
+    then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[23].AsString, 'P24 String')
+    else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[23].AsString, 'P24 String');
+  {$ENDIF}
+  CheckMemoFieldType(StoredProc.Fields[23].DataType, ConSettings);
 
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
   TempBytes :=StrToBytes(RawByteString('121415'));
@@ -892,7 +931,7 @@ begin
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);
   CheckEquals('a', StoredProc.Fields[25].AsString);
-  CheckStringFieldType(StoredProc.Fields[25].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Fields[25].DataType, ConSettings);
 
   CheckEquals('P27', StoredProc.Fields[26].DisplayName);
   CheckEquals(50000, StoredProc.Fields[26].AsInteger);
@@ -1169,7 +1208,7 @@ begin
   StoredProc.Prepare;
   S := 'a';
   P2 := 100;
-  for i:= 1 to 100 do
+  for i:= 1 to 9 do
   begin
     StoredProc.Params[1].AsInteger:= i;
     StoredProc.Params[2].AsInteger:= P2;
@@ -1177,8 +1216,7 @@ begin
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('@p5').AsString);
     CheckEquals(I*10+P2, StoredProc.ParamByName('@p4').AsInteger);
-    if Length(S) = 10 then s := 'a'
-    else S := S+'a';
+    S := S+'a';
     P2 := 100 - I;
   end;
   StoredProc.Unprepare;

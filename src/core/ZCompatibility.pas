@@ -556,64 +556,65 @@ begin
 end;
 
 procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
+var S: String;
 begin
-  if Assigned(Info) and Assigned(FConSettings) then
-  begin
-    {$IFDEF UNICODE}
-    ConSettings.CTRL_CP := DefaultSystemCodePage;
-    if Info.values['controls_cp'] = 'GET_ACP' then
-      ConSettings.CPType := cGET_ACP
-    else
-      ConSettings.CPType := cCP_UTF16;
-    ConSettings.AutoEncode := True;
+  if Assigned(Info) and Assigned(FConSettings) then begin
+    {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
+    S := Info.Values['AutoEncodeStrings'];
+    S := Uppercase(S);
+    //EH: Using StrToBoolEx by adding ZSysUtils to the uses clause
+    //leads to inline Warnings with some Delphi's.
+    //As long this Object (my mistake) is part of core
+    //(Should be dbc same like IZClientVariantManagaer and TZURL)
+    //and is defined in ZCompatibility we do the boolean evaluation by hand
+    ConSettings.AutoEncode := (S <> '') and ((S = 'ON') or (S = 'TRUE') or (S = 'YES') or (StrToIntDef(S,0)<>0)); //compatibitity Option for existing Applications;
     {$ELSE}
-      {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
-      ConSettings.AutoEncode := Info.Values['AutoEncodeStrings'] = 'ON'; //compatibitity Option for existing Applications;
-      {$ELSE}
-      ConSettings.AutoEncode := False;
-      {$IFEND}
-    if Info.values['controls_cp'] = 'GET_ACP' then
-    begin
+    ConSettings.AutoEncode := False;
+    {$IFEND}
+    S := Info.Values['controls_cp'];
+    S := UpperCase(S);
+    {$IF defined(Delphi) and defined(UNICODE) and defined(MSWINDOWS)}
+    ConSettings.CTRL_CP := DefaultSystemCodePage;
+    if Info.Values['controls_cp'] = 'GET_ACP'
+    then ConSettings.CPType := cGET_ACP
+    else ConSettings.CPType := cCP_UTF16;
+    {$ELSE}
+    if Info.Values['controls_cp'] = 'GET_ACP' then begin
       ConSettings.CPType := cGET_ACP;
       ConSettings.CTRL_CP := ZOSCodePage;
-    end
-    else
-      if Info.values['controls_cp'] = 'CP_UTF8' then
-      begin
-        ConSettings.CPType := cCP_UTF8;
-        ConSettings.CTRL_CP := 65001;
-      end
-      else
-        if Info.values['controls_cp'] = 'CP_UTF16' then
-        begin
-          {$IFDEF WITH_WIDEFIELDS}
-          ConSettings.CPType := cCP_UTF16;
-            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-            ConSettings.CTRL_CP := DefaultSystemCodePage;
-            {$ELSE}
-            ConSettings.CTRL_CP := ZOSCodePage;
-            {$ENDIF}
-          {$ELSE}
-          ConSettings.CPType := cCP_UTF8;
-          ConSettings.CTRL_CP := 65001;
-          {$ENDIF}
-          ConSettings.AutoEncode := True;
-        end
-        else // nothing was found set defaults
-        begin
-          {$IFDEF LCL}
-          ConSettings.CPType := cCP_UTF8;
-          ConSettings.CTRL_CP := 65001;
-          {$ELSE}
-          ConSettings.CPType := cGET_ACP;
-            {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-            ConSettings.CTRL_CP := DefaultSystemCodePage;
-            {$ELSE}
-            ConSettings.CTRL_CP := ZOSCodePage;
-            {$ENDIF}
-          {$ENDIF}
-        end;
-    {$ENDIF}
+    end else if Info.Values['controls_cp'] = 'CP_UTF8' then begin
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := 65001;
+    end else if Info.Values['controls_cp'] = 'CP_UTF16' then begin
+      {$IFDEF WITH_WIDEFIELDS}
+      ConSettings.CPType := cCP_UTF16;
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+        ConSettings.CTRL_CP := DefaultSystemCodePage;
+        {$ELSE}
+        ConSettings.CTRL_CP := ZOSCodePage;
+        {$ENDIF}
+      {$ELSE}
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := 65001;
+      {$ENDIF}
+    end else begin // nothing was found set defaults
+      {$IFDEF LCL}
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := 65001;
+      {$ELSE}
+        {$IFDEF UNICODE}
+        ConSettings.CPType := cCP_UTF16;
+        {$ELSE}
+        ConSettings.CPType := cGET_ACP;
+        {$ENDIF}
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+        ConSettings.CTRL_CP := DefaultSystemCodePage;
+        {$ELSE}
+        ConSettings.CTRL_CP := ZOSCodePage;
+        {$ENDIF}
+      {$ENDIF}
+    end;
+    {$IFEND}
   end;
 end;
 

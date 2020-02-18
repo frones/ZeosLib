@@ -535,7 +535,7 @@ begin
   StrStream := TMemoryStream.Create;
   case ConSettings.CPType of
     cGET_ACP, cCP_UTF8:
-      if ConSettings.AutoEncode then
+      if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
         SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings.CTRL_CP))
       else
         SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings^.ClientCodePage^.CP));

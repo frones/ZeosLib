@@ -1744,9 +1744,11 @@ begin
                 //see: http://sourceforge.net/p/zeoslib/tickets/97/
               ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
               ColumnCodePage := ZCodePageInfo^.CP;
-              Precision := DataLen div ZCodePageInfo^.CharWidth;
+              if ConSettings^.ClientCodePage^.ID <> CS_NONE 
+              then Precision := DataLen div ZCodePageInfo^.CharWidth
+              else Precision := DataLen;
               if ColumnType = stString then begin
-                CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth;
+                  CharOctedLength := DataLen;
                 ColumnDisplaySize := Precision;
               end else begin
                 CharOctedLength := Precision shl 1;

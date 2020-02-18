@@ -59,6 +59,8 @@
 // Activate this driver only if you know what you are doing.
 // Currently it only was tested with Delphi XE 7 on Windows.
 {$DEFINE ZEOS_DISABLE_PROXY}
+// Use this only if you know what you are doing. The internal proxy doesn't work.
+{.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
 {.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
 {.$DEFINE WITH_ZSTRINGFIELDS}
@@ -190,6 +192,7 @@
               {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
               {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
               {$DEFINE TPARAM_HAS_ASBYTES}              // TParam.AsBytes is supported
+              {$DEFINE HAS_TPARAM_ASSTREAM}             // TParam.AsStream is supported
               {$DEFINE TFIELD_HAS_ASBYTES}              // TField.AsBytes is supported
               {$DEFINE WITH_RAWBYTESTRING}              // Have RawByteString CP $FFFFF
               {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}      // determine the AnsiString CP
@@ -307,6 +310,7 @@
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
+                              {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead							  
                               {$IF CompilerVersion >= 29} //Delphi XE8+
                                 {$IF CompilerVersion >= 30} //Delphi Seattle+
                                   {$IF CompilerVersion >= 31} //Delphi Berlin+
@@ -314,7 +318,6 @@
                                       {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField has now a virtual GetAsGUID function 
                                       {$DEFINE WITH_IProviderSupportNG}   //TDataset now supports IProviderSupportNG
                                       {$DEFINE WITH_InternalGotoBookmark_TBookmark}
-                                      {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+

@@ -238,6 +238,7 @@ type
 
     FSortType : TSortType; {bangfauzan addition}
 
+    FLastRowFetched: Boolean;
     FSortedFields: string;
     FSortedFieldRefs: TObjectDynArray;
     FSortedFieldIndices: TIntegerDynArray;
@@ -2211,16 +2212,26 @@ end;
 }
 procedure TZAbstractRODataset.SetConnection(Value: TZAbstractConnection);
 begin
-  if FConnection <> Value then
-  begin
+  if FConnection <> Value then begin
     if Active then
        Close;
     Unprepare;
     if FConnection <> nil then
       FConnection.UnregisterDataSet(Self);
     FConnection := Value;
-    if FConnection <> nil then
+    if FConnection <> nil then begin
       FConnection.RegisterDataSet(Self);
+      if FSQL.Count > 0 then begin
+      {EH: force rebuild all of the SQLStrings ->
+        in some case the generic tokenizer fails for several reasons like:
+        keyword detection, identifier detection, Field::=x(ParamEsacaping to ":=" ) vs. Field::BIGINT (pg-TypeCasting)
+        using persistent components where creation order means the datasets are
+        created before the connection+protocol is available the generic
+        tokenizer fails in all areas}
+        FSQL.BeginUpdate;
+        FSQL.EndUpdate;
+      end;
+    end;
   end;
 end;
 
@@ -2562,25 +2573,26 @@ end;
 }
 function TZAbstractRODataset.FetchRows(RowCount: Integer): Boolean;
 begin
-  Connection.ShowSQLHourGlass;
-  try
-    if RowCount = 0 then
-    begin
-      while FetchOneRow do;
-      Result := True;
-    end
-    else
-    begin
-      while (CurrentRows.Count < RowCount) do
-      begin
-        if not FetchOneRow then
-          Break;
+  if (CurrentRows.Count < RowCount) or (RowCount = 0) then
+    if FLastRowFetched
+    then Result := CurrentRows.Count >= RowCount
+    else begin
+      Connection.ShowSQLHourGlass;
+      try
+        if (RowCount = 0) then begin
+          while FetchOneRow do;
+          Result := True;
+        end else begin
+          while (CurrentRows.Count < RowCount) do
+            if not FetchOneRow then
+              Break;
+          Result := CurrentRows.Count >= RowCount;
+        end;
+      finally
+        Connection.HideSQLHourGlass;
       end;
-      Result := CurrentRows.Count >= RowCount;
-    end;
-  finally
-    Connection.HideSQLHourGlass;
-  end;
+    end
+  else Result := True;
 end;
 
 {**
@@ -2591,13 +2603,13 @@ function TZAbstractRODataset.FetchOneRow: Boolean;
 begin
   if Assigned(ResultSet) then
     repeat
-      if (FetchCount = 0) or (ResultSet.GetRow = FetchCount)
-        or ResultSet.MoveAbsolute(FetchCount) then
-        Result := ResultSet.Next
-      else
-        Result := False;
-      if Result then
-      begin
+      if (FetchCount = 0) or (ResultSet.GetRow = FetchCount) or
+          ResultSet.MoveAbsolute(FetchCount)
+      then begin
+        Result := ResultSet.Next;
+        FLastRowFetched := not Result;
+      end else Result := False;
+      if Result then begin
         Inc(FFetchCount);
         if FilterRow(ResultSet.GetRow) then
           CurrentRows.Add({%H-}Pointer(ResultSet.GetRow))
@@ -3479,7 +3491,7 @@ begin
   CurrentRow := 0;
   FetchCount := 0;
   CurrentRows.Clear;
-  FNativeFormatOverloadCalled := False;
+  FLastRowFetched := False;
 
   Connection.ShowSQLHourGlass;
   try
@@ -3570,6 +3582,7 @@ begin
     if not FDoNotCloseResultSet then
       ResultSet.ResetCursor;
   ResultSet := nil;
+  FLastRowFetched := False;
 
   if not FRefreshInProgress then begin
     if (FOldRowBuffer <> nil) then
@@ -3643,10 +3656,16 @@ end;
   @return the maximum records count.
 }
 function TZAbstractRODataset.GetRecordCount: LongInt;
+var RC: Integer;
 begin
   CheckActive;
-  if not IsUniDirectional then
-    FetchRows(FFetchRow);     // the orginal code was FetchRows(0); modifyed by Patyi
+  if not IsUniDirectional and not FLastRowFetched then begin
+    RC := FFetchRow;
+    if (RC <> 0) and (CurrentRows.Count > FFetchRow) and (CurrentRow = CurrentRows.Count) and
+      ((CurrentRows.Count mod FFetchRow) = 0) then
+      RC := CurrentRows.Count + FFetchRow; //EH: load data chunked see https://sourceforge.net/p/zeoslib/tickets/399/
+    FetchRows(RC);     // the orginal code was FetchRows(0); modifyed by Patyi
+  end;
   Result := CurrentRows.Count;
 end;
 
@@ -3659,6 +3678,12 @@ begin
   if Active then
     UpdateCursorPos;
   Result := CurrentRow;
+  //EH: load data chunked see https://sourceforge.net/p/zeoslib/tickets/399/
+  if not IsUniDirectional and not FLastRowFetched and
+    (CurrentRow = CurrentRows.Count) and (FFetchRow > 0) then begin
+    FetchRows(CurrentRows.Count+FFetchRow);
+    Resync([rmCenter]); //notify we've widened the records
+  end;
 end;
 
 {**

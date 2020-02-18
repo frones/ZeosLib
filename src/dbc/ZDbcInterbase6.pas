@@ -706,6 +706,8 @@ var
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
   ConnectionString, CSNoneCP, DBCP: String;
+  ti: IZIBTransaction;
+  Statement: IZStatement;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -787,8 +789,6 @@ reconnect:
 
   FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
   { Start transaction }
-  if not FHardCommit then
-    StartTransaction;
   if DBCP <> '' then
     Exit;
   inherited Open;
@@ -803,10 +803,22 @@ reconnect:
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
     and no convertions where done except the collumns using collations}
-  with CreateRegularStatement(nil).ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
-    'FROM RDB$DATABASE') do begin
-    if Next then DBCP := GetString(FirstDbcIndex);
-    Close;
+  Statement := CreateRegularStatement(nil);
+  try
+    with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
+      'FROM RDB$DATABASE') do begin
+      if Next then DBCP := GetString(FirstDbcIndex);
+      Close;
+    end;
+  finally
+    Statement := nil;
+  end;
+  ti := GetActiveTransaction;
+  try
+    ti.CloseTransaction;
+    FTransactionManager.RemoveTransactionFromList(TI);
+  finally
+    ti := nil;
   end;
   if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
     EH: the server makes !NO! charset conversion if CS_NONE.
