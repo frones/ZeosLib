@@ -288,7 +288,7 @@ implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages,
-  ZConnProperties, ZDbcProperties, Math
+  ZDbcProperties, Math
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES},System.Types{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 

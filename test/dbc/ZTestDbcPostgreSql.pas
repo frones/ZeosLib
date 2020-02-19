@@ -58,7 +58,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZSqlTestCase,
-  ZURL, ZCompatibility, ZDbcProperties;
+  ZCompatibility, ZDbcProperties;
 
 type
 

@@ -58,7 +58,8 @@ interface
 {$I ZCore.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
-  ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
+  ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility,
+  ZDbcUtils;
 
 type
   {$UNDEF WITH_UNICODEFROMLOCALECHARS}

@@ -862,6 +862,7 @@ begin
       zbtRawString, zbtUTF8String {$IFNDEF NEXTGEN}, zbtAnsiString{$ENDIF}:
         FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),
           Ord(ConvertSqlTypeToTDSType(Bind.SQLType)), -1, Length(RawByteString(Bind.Value)), Bind.Value);
+      {$IFDEF FPC}else ;{$ENDIF}
     end;
   end;
 end;
@@ -1052,6 +1053,7 @@ begin
           stGUID: RS.UpdateBytes(N, BufferToBytes(BindValue.Value, SizeOf(TGUID)));
           stBytes: RS.UpdateBytes(N, TBytes(BindValue.Value));
           stAsciiStream, stUnicodeStream, stBinaryStream: RS.UpdateLob(N, IZBlob(BindValue.Value));
+          {$IFDEF FPC}else ;{$ENDIF} //weird FPC warning
         end;
         Inc(N);
       end;
@@ -1061,10 +1063,12 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.Execute(const SQL: RawByteString): Boolean;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZDBLIBPreparedRPCStatement.ExecutePrepared: Boolean;
 begin
@@ -1076,16 +1080,20 @@ begin
   Result := (FResults.Count > 0) and Supports(FResults[0], IZResultSet, FLastResultSet);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.Execute(const SQL: ZWideString): Boolean;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteQuery(
   const SQL: RawByteString): IZResultSet;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZDBLIBPreparedRPCStatement.ExecuteQueryPrepared: IZResultSet;
 begin
@@ -1095,23 +1103,29 @@ begin
   FLastResultSet := nil;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteQuery(
   const SQL: ZWideString): IZResultSet;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteUpdate(
   const SQL: ZWideString): Integer;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteUpdate(
   const SQL: RawByteString): Integer;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZDBLIBPreparedRPCStatement.ExecuteUpdatePrepared: Integer;
 begin

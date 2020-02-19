@@ -155,7 +155,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
 uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils, ZEncoding,
-  ZMessages, ZFastCode, ZConnProperties, ZDbcProperties, ZCollections;
+  ZMessages, ZFastCode, ZDbcProperties, ZCollections;
 
 { TZOleDBDriver }
 
@@ -257,9 +257,9 @@ begin
     rgDBPROPSET_DBPROPSET_SESSION.dwPropertyID := DBPROP_SESS_AUTOCOMMITISOLEVELS;
     rgDBPROPSET_DBPROPSET_SESSION.dwOptions    := DBPROPOPTIONS_REQUIRED;
     rgDBPROPSET_DBPROPSET_SESSION.colid        := DB_NULLID;
-    rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[TransactIsolationLevel];
+    rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[Level];
     CheckError(SessionProperties.SetProperties(1, @prgPropertySets), lcOther, EmptyRaw);
-    FAutoCommitTIL := TIL[TransactIsolationLevel];
+    FAutoCommitTIL := TIL[Level];
   end;
 end;
 

@@ -62,8 +62,8 @@ uses
   Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
-  ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}
+  ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils, ZClasses
+  {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
 type
@@ -8920,8 +8920,8 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZFMTBCDField.GetText(var Text: string; DisplayText: Boolean);
-var Format: TFloatFormat;
-    Digits: Integer;
+var {$IFNDEF FPC}Format: TFloatFormat;
+    Digits: Integer;{$ENDIF}
     FmtStr: string;
     Bcd: TBcd;
 begin

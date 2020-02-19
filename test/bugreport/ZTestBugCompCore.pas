@@ -1437,8 +1437,7 @@ procedure ZTestCompCoreBugReport.Test985629;
 var
   Query: TZQuery;
 begin
-  // Float values are not guaranteed to be exact for mysql real prepared statements
-  if SkipForReason([srClosedBug,srMysqlRealPreparedConnection]) then Exit;
+  if SkipForReason([srClosedBug]) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select c_cost from cargo order by c_id';
@@ -1461,8 +1460,7 @@ procedure ZTestCompCoreBugReport.TestFloatPrecision;
 var
   Query: TZQuery;
 begin
-  // Float values are not guaranteed to be exact for mysql real prepared statements
-  if SkipForReason([srClosedBug,srMysqlRealPreparedConnection]) then Exit;
+  if SkipForReason([srClosedBug]) then Exit;
 
   Query := CreateQuery;
   try

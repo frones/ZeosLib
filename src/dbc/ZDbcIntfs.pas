@@ -61,10 +61,10 @@ uses
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS}
   {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}DB, {$ENDIF}
-  FmtBcd, Types, Classes, SysUtils,
+  FmtBcd, Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
-  ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
-  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
+  ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema, ZSysUtils,
+  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
 
 const
   { generic constant for first column/parameter index }
@@ -113,6 +113,93 @@ type
 
   {** Reqquested operation is not (yet) supported by Zeos }
   EZUnsupportedException = class(EZSQLException);
+
+  {** hold some connection parameters }
+  PZConSettings = ^TZConSettings;
+  TZConSettings = record
+    AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
+    CPType: TZControlsCodePage; //the CP-Settings type the controls do expect
+    CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
+    ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
+    ClientCodePage: PZCodePage; //The codepage informations of the current characterset
+    DisplayFormatSettings: TZFormatSettings;
+    ReadFormatSettings: TZFormatSettings;
+    WriteFormatSettings: TZFormatSettings;
+    DataBaseSettings: Pointer;
+    Protocol, Database, User: RawByteString;
+  end;
+
+  {** a base class for most dbc-layer objects }
+  TZCodePagedObject = Class(TInterfacedObject)
+  private
+    FConSettings: PZConSettings;
+  protected
+    procedure SetConSettingsFromInfo(Info: TStrings);
+    property ConSettings: PZConSettings read FConSettings write FConSettings;
+  public
+    function GetConSettings: PZConSettings;
+  end;
+
+type
+  // List of URL properties that could operate with URL-escaped strings
+  TZURLStringList = Class(TStringList)
+  protected
+    function GetURLText: String;
+    procedure SetURLText(const Value: string);
+  public
+    property URLText: String read GetURLText write SetURLText;
+  end;
+
+  TZURL = class
+  private
+    FPrefix: string;
+    FProtocol: string;
+    FHostName: string;
+    FPort: Integer;
+    FDatabase: string;
+    FUserName: string;
+    FPassword: string;
+    FLibLocation: String;
+    FProperties: TZURLStringList;
+    FOnPropertiesChange: TNotifyEvent;
+    procedure SetPrefix(const Value: string);
+    procedure SetProtocol(const Value: string);
+    procedure SetHostName(const Value: string);
+    procedure SetConnPort(const Value: Integer);
+    function GetDatabase: string;
+    procedure SetDatabase(const Value: string);
+    function GetUserName: string;
+    procedure SetUserName(const Value: string);
+    function GetPassword: string;
+    procedure SetPassword(const Value: string);
+    function GetLibLocation: String;
+    procedure SetLibLocation(const Value: String);
+    function GetURL: string;
+    procedure SetURL(const Value: string);
+    procedure DoOnPropertiesChange(Sender: TObject);
+    procedure AddValues(Values: TStrings);
+  public
+    constructor Create; overload;
+    constructor Create(const AURL: String); overload;
+    constructor Create(const AURL: String; Info: TStrings); overload;
+    constructor Create(const AURL: TZURL); overload;
+    constructor Create(Const AURL, AHostName: string; const APort: Integer;
+      const ADatabase, AUser, APassword: string; Info: TStrings); overload;
+
+    destructor Destroy; override;
+    property Prefix: string read FPrefix write SetPrefix;
+    property Protocol: string read FProtocol write SetProtocol;
+    property HostName: string read FHostName write SetHostName;
+    property Port: Integer read FPort write SetConnPort;
+    property Database: string read GetDatabase write SetDatabase;
+    property UserName: string read GetUserName write SetUserName;
+    property Password: string read GetPassword write SetPassword;
+    property LibLocation: string read GetLibLocation write SetLibLocation;
+    property Properties: TZURLStringList read FProperties;
+    property URL: string read GetURL write SetURL;
+
+    property OnPropertiesChange: TNotifyEvent read FOnPropertiesChange write FOnPropertiesChange;
+  end;
 
   // Data types
 type
@@ -455,6 +542,12 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     function GetConSettings: PZConSettings;
   end;
+
+  {** Implements a variant manager with connection related convertion rules. }
+  IZClientVariantManager = Interface(IZVariantManager)
+    ['{73A1A2C7-7C38-4620-B7FE-2426BF839BE5}']
+    function UseWComparsions: Boolean;
+  End;
 
   /// <summary>
   ///   Database Connection interface.
@@ -1780,10 +1873,9 @@ var
   /// </summary>
   DriverManager: IZDriverManager;
   GlobalCriticalSection: TCriticalSection;
-
 implementation
 
-uses ZMessages, ZConnProperties;
+uses ZMessages, ZEncoding, ZDbcProperties, ZFastCode;
 
 type
 
@@ -2192,6 +2284,382 @@ destructor EZSQLThrowable.Destroy;
 begin
   FreeAndNil(FSpecificData);
   inherited;
+end;
+
+{ TZCodePagedObject }
+
+function TZCodePagedObject.GetConSettings: PZConSettings;
+begin
+  Result := FConSettings;
+end;
+
+procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
+var S: String;
+begin
+  if Assigned(Info) and Assigned(FConSettings) then begin
+    {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
+    S := Info.Values[ConnProps_AutoEncodeStrings];
+    ConSettings.AutoEncode := StrToBoolEx(S); //compatibitity Option for existing Applications;
+    {$ELSE}
+    ConSettings.AutoEncode := False;
+    {$IFEND}
+    S := Info.Values[ConnProps_ControlsCP];
+    S := UpperCase(S);
+    {$IF defined(Delphi) and defined(UNICODE) and defined(MSWINDOWS)}
+    ConSettings.CTRL_CP := DefaultSystemCodePage;
+    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP'
+    then ConSettings.CPType := cGET_ACP
+    else ConSettings.CPType := cCP_UTF16;
+    {$ELSE}
+    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP' then begin
+      ConSettings.CPType := cGET_ACP;
+      ConSettings.CTRL_CP := ZOSCodePage;
+    end else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8' then begin
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := zCP_UTF8;
+    end else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF16' then begin
+      {$IFDEF WITH_WIDEFIELDS}
+      ConSettings.CPType := cCP_UTF16;
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+        ConSettings.CTRL_CP := DefaultSystemCodePage;
+        {$ELSE}
+        ConSettings.CTRL_CP := ZOSCodePage;
+        {$ENDIF}
+      {$ELSE}
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := zCP_UTF8;
+      {$ENDIF}
+    end else begin // nothing was found set defaults
+      {$IFDEF LCL}
+      ConSettings.CPType := cCP_UTF8;
+      ConSettings.CTRL_CP := zCP_UTF8;
+      {$ELSE}
+        {$IFDEF UNICODE}
+        ConSettings.CPType := cCP_UTF16;
+        {$ELSE}
+        ConSettings.CPType := cGET_ACP;
+        {$ENDIF}
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+        ConSettings.CTRL_CP := DefaultSystemCodePage;
+        {$ELSE}
+        ConSettings.CTRL_CP := ZOSCodePage;
+        {$ENDIF}
+      {$ENDIF}
+    end;
+    {$IFEND}
+  end;
+end;
+
+// escape the ';' char to #9 and LineEnding to ';'
+function Escape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result := ReplaceChar(';', #9, S);
+  Result := StringReplace(Result, LineEnding, ';', [rfReplaceAll]);
+end;
+
+// unescape the ';' to LineEnding and #9 char to ';'
+function UnEscape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result := StringReplace(S, ';', LineEnding, [rfReplaceAll]);
+  Result := ReplaceChar(#9, ';', Result);
+end;
+
+{TZURLStringList}
+
+function TZURLStringList.GetURLText: String;
+var P: PChar absolute Result;
+begin
+  Result := Escape(Text);
+  if (P+Length(Result)-1)^ = ';' then
+    SetLength(Result, Length(Result)-1);
+end;
+
+procedure TZURLStringList.SetURLText(const Value: string);
+begin
+  Text := UnEscape(Value);
+end;
+
+{ TZURL }
+
+constructor TZURL.Create;
+begin
+  inherited;
+
+  FPrefix := 'zdbc';
+  FProperties := TZURLStringList.Create;
+  FProperties.CaseSensitive := False;
+  FProperties.NameValueSeparator := '=';
+  FProperties.OnChange := DoOnPropertiesChange;
+end;
+
+constructor TZURL.Create(const AURL: String);
+begin
+  Create;
+  Self.URL := AURL;
+end;
+
+// Values from Info overwrite those from URL
+constructor TZURL.Create(const AURL: String; Info: TStrings);
+begin
+  Create(AURL);
+  if Assigned(Info) then
+    AddValues(Info);
+end;
+
+constructor TZURL.Create(const AURL: TZURL);
+begin
+  Create(AURL.URL);
+end;
+
+// Values from parameters overwrite those from URL and values from Info overwrite both
+// TODO: this method is odd... properties of URL, except protocol, get overridden
+// with parameters. Likely AProtocol should go here instead of AURL
+constructor TZURL.Create(Const AURL, AHostName: string; const APort: Integer;
+  const ADatabase, AUser, APassword: string; Info: TStrings);
+begin
+  Create(AURL);
+  Self.HostName := AHostName;
+  Self.Port := APort;
+  Self.Database := ADataBase;
+  Self.UserName := AUser;
+  Self.Password := APassword;
+  if Assigned(Info) then
+    AddValues(Info);
+end;
+
+destructor TZURL.Destroy;
+begin
+  FProperties.Free;
+
+  inherited;
+end;
+
+procedure TZURL.SetPrefix(const Value: string);
+begin
+  FPrefix := Value;
+end;
+
+procedure TZURL.SetProtocol(const Value: string);
+begin
+  FProtocol := Value;
+end;
+
+procedure TZURL.SetHostName(const Value: string);
+begin
+  FHostName := Escape(Value);
+end;
+
+procedure TZURL.SetConnPort(const Value: Integer);
+begin
+  FPort := Value;
+end;
+
+function TZURL.GetDatabase: string;
+begin
+  Result := UnEscape(FDatabase);
+end;
+
+procedure TZURL.SetDatabase(const Value: string);
+begin
+  FDatabase := Escape(Value);
+end;
+
+function TZURL.GetUserName: string;
+begin
+  Result := UnEscape(FUserName);
+end;
+
+procedure TZURL.SetUserName(const Value: string);
+begin
+  FUserName := Escape(Value);
+end;
+
+function TZURL.GetPassword: string;
+begin
+  Result := UnEscape(FPassword);
+end;
+
+procedure TZURL.SetPassword(const Value: string);
+begin
+  FPassword := Escape(Value);
+end;
+
+function TZURL.GetLibLocation: String;
+begin
+  Result := UnEscape(FLibLocation);
+end;
+
+procedure TZURL.SetLibLocation(const Value: String);
+begin
+  FLibLocation := Escape(Value);
+end;
+
+function TZURL.GetURL: string;
+var
+  Params: string;
+begin
+  // Prefix, Protocol and always set the doubleslash to avoid unix '/' path issues if host is empty
+  Result := Prefix + ':' + Protocol + ':' + '//';
+
+  // HostName/Port
+  if HostName <> '' then
+  begin
+    Result := Result + HostName;
+    if Port <> 0 then
+      Result := Result + ':' + ZFastCode.IntToStr(Port);
+  end;
+
+  // Database
+  if Database <> '' then
+    Result := Result + '/' + FDatabase;
+
+  // Join the params
+
+  Params := '';
+
+  if FUserName <> '' then
+    AppendSepString(Params, 'username=' + FUserName, ';');
+  if FPassword <> '' then
+    AppendSepString(Params, 'password=' + FPassword, ';');
+  if Properties.Count > 0 then
+    AppendSepString(Params, Properties.URLText, ';'); //Adds the escaped string
+  if FLibLocation <> '' then
+    AppendSepString(Params, 'LibLocation='+ FLibLocation, ';');
+
+  // Construct the final string
+
+  if Params <> '' then
+    Result := Result + '?' + Params;
+end;
+
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+{$ENDIF}
+procedure TZURL.SetURL(const Value: string);
+var
+  APrefix: string;
+  AProtocol: string;
+  AHostName: string;
+  APort: string;
+  ADatabase: string;
+  AProperties: string;
+  AValue: string;
+  I: Integer;
+begin
+  APrefix := '';
+  AProtocol := '';
+  AHostName := '';
+  APort := '';
+  ADatabase := '';
+  AProperties := '';
+
+  // Strip out the parameters
+  BreakString(Value, '?', AValue, AProperties);
+
+  // APrefix
+  I := ZFastCode.Pos(':', AValue);
+  if I = 0 then
+    raise Exception.Create('TZURL.SetURL - The prefix is missing');
+  BreakString(AValue, ':', APrefix, AValue);
+
+  // AProtocol
+  I := ZFastCode.Pos(':', AValue);
+  if I = 0 then
+    raise Exception.Create('TZURL.SetURL - The protocol is missing');
+  BreakString(AValue, ':', AProtocol, AValue);
+
+  if StartsWith(AValue, '//') then
+  begin
+    Delete(AValue, 1, Length('//'));
+    // Strip "hostname[:port]" out of "/database"
+    BreakString(AValue, '/', AValue, ADatabase);
+    // AHostName, APort
+    BreakString(AValue, ':', AHostName, APort);
+  end
+  else
+  begin
+    // Likely a database delimited by / so remove the /
+    if StartsWith(AValue, '/') then
+      Delete(AValue, 1, Length('/'));
+    // ADatabase
+    ADatabase := AValue;
+  end;
+
+  FPrefix := APrefix;
+  FProtocol := AProtocol;
+  FHostName := AHostName;
+  FPort := StrToIntDef(APort, 0);
+  FDatabase := ADatabase;
+
+  // Clear fields that MUST be assigned from properties even if empty.
+  // LibLocation should remain uncleared
+  FUserName := '';
+  FPassword := '';
+  FProperties.URLText := AProperties; // will launch DoOnPropertiesChange
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZURL.DoOnPropertiesChange(Sender: TObject);
+
+  // Return a value named ValueName from FProperties and delete the item
+  function ExtractValueFromProperties(const ValueName: string): string;
+  var I: Integer;
+  begin
+    Result := '';
+    I := FProperties.IndexOfName(ValueName);
+    if I = -1 then Exit;
+    Result := FProperties.ValueFromIndex[I];
+    FProperties.Delete(I);
+  end;
+
+var
+  S: string;
+begin
+  FProperties.OnChange := nil; // prevent re-entering
+
+  S := ExtractValueFromProperties(ConnProps_UID);
+  if S <> '' then
+    UserName := S;
+
+  S := ExtractValueFromProperties(ConnProps_Username);
+  if S <> '' then
+    UserName := S;
+
+  S := ExtractValueFromProperties(ConnProps_PWD);
+  if S <> '' then
+    Password := S;
+
+  S := ExtractValueFromProperties(ConnProps_Password);
+  if S <> '' then
+    Password := S;
+
+  S := ExtractValueFromProperties(ConnProps_LibLocation);
+  if S <> '' then
+    LibLocation := S;
+
+  FProperties.OnChange := DoOnPropertiesChange;
+
+  if Assigned(FOnPropertiesChange) then
+    FOnPropertiesChange(Sender);
+end;
+
+procedure TZURL.AddValues(Values: TStrings);
+var
+  I: Integer;
+  Param, Value: String;
+begin
+  FProperties.BeginUpdate; // prevent calling OnChange on every iteration
+  for I := 0 to Values.Count -1 do
+  begin
+    BreakString(Values[I], '=', Param, Value);
+    if Value <> '' then
+      FProperties.Values[Param] := Value
+    else
+      if FProperties.IndexOf(Values[I]) = -1 then //add unique params only!
+        FProperties.Add(Values[I]);
+  end;
+  FProperties.EndUpdate;
 end;
 
 initialization

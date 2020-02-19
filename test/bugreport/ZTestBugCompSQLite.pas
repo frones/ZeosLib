@@ -84,10 +84,11 @@ type
   published
     procedure Mantis248_TestNonASCIICharSelect;
   end;
+
 implementation
 
 uses
-  Variants;
+  Variants, DB;
 
 { ZTestCompSQLiteBugReport }
 

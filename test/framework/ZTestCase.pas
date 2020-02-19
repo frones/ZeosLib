@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   Classes, {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, SysUtils, StrUtils,
-  ZCompatibility;
+  ZCompatibility, ZDbcIntfs;
 
 type
   {$IFDEF FPC}
@@ -72,10 +72,7 @@ type
 
   TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
   TDateParts = set of TDatePart;
-  ZSkipReason = (srClosedBug,srNonZeos,srNoPerformance
-                 //database dependent
-                 ,srMysqlRealPreparedConnection
-                );
+  ZSkipReason = (srClosedBug,srNonZeos,srNoPerformance);
   ZSkipReasons = set of ZSkipReason;
 
   {** Implements an abstract class for all test cases. }
@@ -150,6 +147,8 @@ type
     procedure CheckNotEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string = '');
     procedure CheckEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
+    procedure CheckEquals(Expected: UnicodeString; Actual: WideString;
+      const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: UInt64;
@@ -192,6 +191,39 @@ type
 
 function AddToMsg(const Msg, Add: string): string;
 
+var
+  {$IFDEF FPC} {$PUSH}
+    {$WARN 3177 off : Some fields coming after "$1" were not initialized}
+    {$WARN 3175 off : Some fields coming before "$1" were not initialized}
+  {$ENDIF}
+  ConSettingsDummy: TZConSettings =
+    (AutoEncode: False;
+      CPType: TZControlsCodePage(0);
+      ClientCodePage: @CodePageDummy;
+      DisplayFormatSettings:
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+      ReadFormatSettings:
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+      WriteFormatSettings:
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+    );
+  {$IFDEF FPC} {$POP} {$ENDIF}
+
 implementation
 
 uses
@@ -206,7 +238,7 @@ uses
 {$IFDEF WITH_INLINE}
   ZFastCode,
 {$ENDIF}
-  ZSysUtils, ZTestConfig, ZEncoding;
+  ZSysUtils, ZTestConfig, ZEncoding, ZDbcUtils;
 
 const
   SStringLengthsDiffer = 'string lengths differ';
@@ -620,6 +652,16 @@ begin
   {$ENDIF}
 end;
 
+procedure TZAbstractTestCase.CheckEquals(Expected: UnicodeString; Actual: WideString;
+  const Msg: string);
+begin
+  {$IFDEF FPC2_6DOWN}
+  AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
+  {$ELSE}
+  AssertTrue(ComparisonMsg(Msg, Expected, Actual), Expected = Actual, CallerAddr);
+  {$ENDIF}
+end;
+
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
   const Msg: string);
 begin
@@ -838,5 +880,11 @@ begin
 {$ENDIF}
 end;
 
+initialization
+  case ConSettingsDummy.CPType of
+    cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZOSCodePage;
+    cCP_UTF8: ConSettingsDummy.CTRL_CP := zCP_UTF8;
+  end;
+  SetConvertFunctions(@ConSettingsDummy);
 end.
 

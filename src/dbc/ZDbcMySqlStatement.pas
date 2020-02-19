@@ -850,7 +850,7 @@ begin
           FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
           FPlainDriver.mysql_free_result(FQueryHandle);
         end;
-      end else if Status > 0 then begin
+      end else if (Status > 0) then begin
         CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
         Break;
       end;
@@ -867,7 +867,7 @@ begin
             checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
             ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
               ConSettings^.ClientCodePage^.CP), Self);
-      end else if Status > 0 then begin
+      end else if (Status > 0) then begin
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
             ConSettings^.ClientCodePage^.CP), Self);

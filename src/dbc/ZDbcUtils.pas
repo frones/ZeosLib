@@ -57,7 +57,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} TypInfo, FmtBcd,
-  ZCompatibility, ZDbcIntfs, ZClasses, ZTokenizer, ZVariant,
+  ZCompatibility, ZDbcIntfs, ZClasses, ZTokenizer, ZVariant, ZSysUtils,
   ZDbcResultSetMetadata;
 
 const SQL_MAX_NUMERIC_LEN = 16;
@@ -246,6 +246,13 @@ function GetValidatedAnsiString(const Ansi: RawByteString;
   ConSettings: PZConSettings; const FromDB: Boolean): RawByteString; overload;
 
 {**
+  Set the string-types conversion funtion in relation to the Connection-Settings.
+  The Results should be as optimal as possible to speed up the behavior
+  @param ConSettings a Pointer to the ConnectionSetting
+}
+procedure SetConvertFunctions(ConSettings: PZConSettings);
+
+{**
   GetValidatedUnicodeStream the incoming Stream for his given Memory and
   returns a valid Unicode/Widestring Stream
   @param Buffer the pointer to the Data
@@ -327,7 +334,7 @@ const
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math;
+uses ZMessages, ZEncoding, ZFastCode, ZGenericSqlToken, Math;
   //{$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
@@ -2748,8 +2755,57 @@ DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
-
 {$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+
+procedure SetConvertFunctions(ConSettings: PZConSettings);
+begin
+  FillChar(ConSettings^.ConvFuncs, SizeOf(ConSettings^.ConvFuncs), #0);
+
+  //Let's start with the AnsiTo/From types..
+  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then begin
+    //last but not least the String to/from converters
+    //string represents the DataSet/IZResultSet Strings
+
+    {$IFDEF UNICODE}
+    Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRaw;
+    Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+
+    ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+    Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
+    {$ELSE}
+    {String To/From Raw}
+    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then begin
+      Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
+      if ConSettings^.AutoEncode
+      then Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode
+      else Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+    end else if ConSettings^.AutoEncode then begin
+      Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+      Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+    end else begin
+      Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+      Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
+    end;
+
+    {String To/From Unicode}
+    if ConSettings^.CTRL_CP = zCP_UTF8
+    then Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString_CPUTF8
+    else Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+
+    if ConSettings^.AutoEncode
+    then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode
+    else if ConSettings^.CTRL_CP = zCP_UTF8
+      then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertString_CPUTF8ToUnicode
+      else Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
+    {$ENDIF}
+  end else begin //autoencode strings is allways true
+    Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+    Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+    ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+    Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
+  end;
+end;
+
 initialization
   DBNumMultiplyLookupFiller;
 {$IFEND}

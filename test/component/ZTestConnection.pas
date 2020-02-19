@@ -77,7 +77,7 @@ type
 
 implementation
 
-uses Classes, ZDbcIntfs, ZConnProperties;
+uses Classes, ZDbcIntfs, ZDbcProperties;
 
 { TZTestExecSQLCase }
 

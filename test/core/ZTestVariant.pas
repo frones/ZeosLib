@@ -62,7 +62,7 @@ uses
   {$If defined(MSWINDOWS) and not defined(FPC)}
   Windows,
   {$IFEND}
-  ZTestCase, SysUtils, Classes, ZVariant, ZCompatibility;
+  ZTestCase, SysUtils, Classes, ZVariant, ZCompatibility, ZDbcUtils, ZDbcIntfs;
 
 type
 
@@ -182,7 +182,7 @@ var
 
 implementation
 
-uses ZEncoding;
+uses ZEncoding, ZDbcConnection;
 
 //type
 //  CyrillicString = type Ansistring(1251);

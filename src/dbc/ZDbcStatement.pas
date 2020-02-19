@@ -670,7 +670,7 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding, ZDbcProperties, ZDbcMetadata,
+  ZEncoding, ZDbcProperties, ZDbcMetadata, ZDbcConnection,
   Math
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND};
 

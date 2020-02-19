@@ -416,39 +416,6 @@ type
     ZPUnicodeToString: TPUnicodeToString;
   end;
 
-  TZFormatSettings = Record
-    DateFormat: String;
-    DateFormatLen: Byte;
-    TimeFormat: String;
-    TimeFormatLen: Byte;
-    DateTimeFormat: String;
-    DateTimeFormatLen: Byte;
-  End;
-
-  PZConSettings = ^TZConSettings;
-  TZConSettings = record
-    AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
-    CPType: TZControlsCodePage; //the CP-Settings type the controls do expect
-    CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
-    ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
-    ClientCodePage: PZCodePage; //The codepage informations of the current characterset
-    DisplayFormatSettings: TZFormatSettings;
-    ReadFormatSettings: TZFormatSettings;
-    WriteFormatSettings: TZFormatSettings;
-    DataBaseSettings: Pointer;
-    Protocol, Database, User: RawByteString;
-  end;
-
-  TZCodePagedObject = Class(TInterfacedObject)
-  private
-    FConSettings: PZConSettings;
-  protected
-    procedure SetConSettingsFromInfo(Info: TStrings);
-    property ConSettings: PZConSettings read FConSettings write FConSettings;
-  public
-    function GetConSettings: PZConSettings;
-  end;
-
 {$IFNDEF WITH_CHARINSET}
 function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
@@ -493,47 +460,13 @@ function ReturnAddress: Pointer;
 function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt; inline;
 {$IFEND}
 
-var
-  {$IFDEF FPC} {$PUSH}
-    {$WARN 3177 off : Some fields coming after "$1" were not initialized}
-    {$WARN 3175 off : Some fields coming before "$1" were not initialized}
-  {$ENDIF}
-  ClientCodePageDummy: TZCodepage =
-    (CharWidth: 1; Encoding: ceAnsi; CP: $ffff);
-
-  ConSettingsDummy: TZConSettings =
-    (AutoEncode: False;
-      CPType: TZControlsCodePage(0);
-      ClientCodePage: @ClientCodePageDummy;
-      DisplayFormatSettings:
-          (DateFormat: DefDateFormatYMD;
-          DateFormatLen: Length(DefDateFormatYMD);
-          TimeFormat: DefTimeFormatMsecs;
-          TimeFormatLen: Length(DefTimeFormatMsecs);
-          DateTimeFormat: DefDateTimeFormatMsecsDMY;
-          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
-      ReadFormatSettings:
-          (DateFormat: DefDateFormatYMD;
-          DateFormatLen: Length(DefDateFormatYMD);
-          TimeFormat: DefTimeFormatMsecs;
-          TimeFormatLen: Length(DefTimeFormatMsecs);
-          DateTimeFormat: DefDateTimeFormatMsecsDMY;
-          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
-      WriteFormatSettings:
-          (DateFormat: DefDateFormatYMD;
-          DateFormatLen: Length(DefDateFormatYMD);
-          TimeFormat: DefTimeFormatMsecs;
-          TimeFormatLen: Length(DefTimeFormatMsecs);
-          DateTimeFormat: DefDateTimeFormatMsecsDMY;
-          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
-    );
-  {$IFDEF FPC} {$POP} {$ENDIF}
-
 const
   PEmptyUnicodeString: PWideChar = '';
   PEmptyAnsiString: PAnsiChar = '';
   EmptyRaw = {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}nil{$ELSE}RawByteString(''){$ENDIF};
   bInitZeroBCD: array[0..3] of Byte = ($01,$00,$00,$00); //endian save
+  CodePageDummy: TZCodepage =
+    (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi; CP: $ffff; ZAlias: ''; IsStringFieldCPConsistent: False);
 
 var
   ZOSCodePage: Word;
@@ -542,75 +475,9 @@ var
 
 implementation
 
-uses ZConnProperties{$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
-
-function TZCodePagedObject.GetConSettings: PZConSettings;
-begin
-  Result := FConSettings;
-end;
-
-procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
-var S: String;
-begin
-  if Assigned(Info) and Assigned(FConSettings) then begin
-    {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
-    S := Info.Values[ConnProps_AutoEncodeStrings];
-    S := Uppercase(S);
-    //EH: Using StrToBoolEx by adding ZSysUtils to the uses clause
-    //leads to inline Warnings with some Delphi's.
-    //As long this Object (my mistake) is part of core
-    //(Should be dbc same like IZClientVariantManagaer and TZURL)
-    //and is defined in ZCompatibility we do the boolean evaluation by hand
-    ConSettings.AutoEncode := (S <> '') and ((S = 'ON') or (S = 'TRUE') or (S = 'YES') or (StrToIntDef(S,0)<>0)); //compatibitity Option for existing Applications;
-    {$ELSE}
-    ConSettings.AutoEncode := False;
-    {$IFEND}
-    S := Info.Values[ConnProps_ControlsCP];
-    S := UpperCase(S);
-    {$IF defined(Delphi) and defined(UNICODE) and defined(MSWINDOWS)}
-    ConSettings.CTRL_CP := DefaultSystemCodePage;
-    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP'
-    then ConSettings.CPType := cGET_ACP
-    else ConSettings.CPType := cCP_UTF16;
-    {$ELSE}
-    if Info.Values[ConnProps_ControlsCP] = 'GET_ACP' then begin
-      ConSettings.CPType := cGET_ACP;
-      ConSettings.CTRL_CP := ZOSCodePage;
-    end else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8' then begin
-      ConSettings.CPType := cCP_UTF8;
-      ConSettings.CTRL_CP := 65001;
-    end else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF16' then begin
-      {$IFDEF WITH_WIDEFIELDS}
-      ConSettings.CPType := cCP_UTF16;
-        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-        ConSettings.CTRL_CP := DefaultSystemCodePage;
-        {$ELSE}
-        ConSettings.CTRL_CP := ZOSCodePage;
-        {$ENDIF}
-      {$ELSE}
-      ConSettings.CPType := cCP_UTF8;
-      ConSettings.CTRL_CP := 65001;
-      {$ENDIF}
-    end else begin // nothing was found set defaults
-      {$IFDEF LCL}
-      ConSettings.CPType := cCP_UTF8;
-      ConSettings.CTRL_CP := 65001;
-      {$ELSE}
-        {$IFDEF UNICODE}
-        ConSettings.CPType := cCP_UTF16;
-        {$ELSE}
-        ConSettings.CPType := cGET_ACP;
-        {$ENDIF}
-        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-        ConSettings.CTRL_CP := DefaultSystemCodePage;
-        {$ELSE}
-        ConSettings.CTRL_CP := ZOSCodePage;
-        {$ENDIF}
-      {$ENDIF}
-    end;
-    {$IFEND}
-  end;
-end;
+{$IFDEF FAST_MOVE}
+uses ZFastCode;
+{$ENDIF}
 
 {$IFDEF UNIX}
   {$IFDEF FPC}
@@ -975,9 +842,4 @@ function ReturnAddress: Pointer;
 {$ENDIF}
 {$ENDIF ZReturnAddress}
 
-initialization
-  case ConSettingsDummy.CPType of
-    cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZOSCodePage;
-    cCP_UTF8: ConSettingsDummy.CTRL_CP := 65001;
-  end;
 end.

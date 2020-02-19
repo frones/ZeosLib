@@ -286,7 +286,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
-  ZFastCode, ZSelectSchema, Math;
+  ZFastCode, ZSelectSchema, Math, ZDbcUtils;
 
 const
   DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');

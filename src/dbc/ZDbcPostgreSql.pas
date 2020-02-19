@@ -241,7 +241,7 @@ implementation
 uses
   ZFastCode, ZMessages, ZDbcPostgreSqlStatement, ZDbcUtils,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken, ZDbcProperties,
-  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcMetadata;
+  ZPostgreSqlAnalyser, ZEncoding, ZDbcMetadata;
 
 const
   FON = String('ON');

@@ -55,7 +55,7 @@ interface
 {$I ZDbc.inc}
 uses
   Types, Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcConnection, ZUrl
+  ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcConnection
   {$IFDEF ENABLE_ASA}        , ZDbcASAMetadata {$ENDIF}
   {$IFDEF ENABLE_DBLIB}      , ZDbcDbLibMetadata {$ENDIF}
   {$IFDEF ENABLE_INTERBASE}  , ZDbcInterbase6Metadata {$ENDIF}

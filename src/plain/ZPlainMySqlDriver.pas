@@ -259,13 +259,22 @@ type
     function GetDescription: string; override;
   end;
 
+const
+  { Parameters specific to a single DBC }
+  // Type: STR
+  // Refer to MySql manual for details
+  MySQLProp_Datadir = '--datadir';
+  // Type: STR
+  // Path to library
+  MySQLProp_Library = 'Library';
+
 {$ENDIF ZEOS_DISABLE_MYSQL}
 
 implementation
 
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 
-uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode, ZConnProperties
+uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZMySQLPlainBaseDriver }
@@ -472,8 +481,8 @@ begin
                        Length(SERVER_ARGUMENTS_KEY_PREFIX))) then
         TmpList.Add(Options.ValueFromIndex[i]);
     //Check if DataDir is specified, if not, then add it to the Arguments List
-    if TmpList.Values[ConnProps_Datadir] = '' then
-       TmpList.Values[ConnProps_Datadir] := EMBEDDED_DEFAULT_DATA_DIR;
+    if TmpList.Values[MySQLProp_Datadir] = '' then
+       TmpList.Values[MySQLProp_Datadir] := EMBEDDED_DEFAULT_DATA_DIR;
 
     SetLength(ServerArgs, TmpList.Count);
     SetLength(ServerArgsRaw, TmpList.Count);
@@ -582,7 +591,7 @@ procedure TZMySQLPlainDriver.SetDriverOptions(Options: TStrings);
 var
   PreferedLibrary: String;
 begin
-  PreferedLibrary := Options.Values[ConnProps_Library];
+  PreferedLibrary := Options.Values[MySQLProp_Library];
   if PreferedLibrary <> '' then
     Loader.AddLocation(PreferedLibrary);
   if Assigned(mysql_library_init) and Assigned(mysql_library_end) then

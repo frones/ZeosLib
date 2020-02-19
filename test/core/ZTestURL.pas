@@ -60,7 +60,7 @@ interface
 uses
   Classes,
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZTestCase, ZURL;
+  ZTestCase, ZDbcIntfs;
 
 type
 
@@ -93,7 +93,7 @@ type
 
 implementation
 
-uses ZCompatibility, ZConnProperties;
+uses ZCompatibility, ZDbcProperties;
 
 procedure TZURLTest.TestAssignToUrl;
 var

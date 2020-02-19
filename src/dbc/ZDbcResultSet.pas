@@ -556,8 +556,6 @@ type
 {$IFDEF USE_SYNCOMMONS}
 const
   JSONBool: array[Boolean] of ShortString = ('false', 'true');
-  ZeroTimeMagic = Int64(3472339291344613424); //00:00:00
-  ZeroYearMagic = Cardinal(808464432); //0000
 {$ENDIF USE_SYNCOMMONS}
 
 implementation
@@ -3793,7 +3791,7 @@ begin
   if Stream = nil then
     FBlobSize := -1
   else
-    if (CodePage = zCP_UTF16) or (CodePage = zCP_UTF16BE) then
+    if (CodePage = zCP_UTF16) then
       InternalSetPWidechar(TMemoryStream(Stream).Memory, Stream.Size shr 1)
     else
       InternalSetPAnsiChar(TMemoryStream(Stream).Memory, CodePage, Stream.Size);
@@ -3839,8 +3837,7 @@ begin
   if FBlobSize < 1 then
     Result := 0
   else
-    if ( FCurrentCodePage = zCP_UTF16 ) or
-       ( FCurrentCodePage = zCP_UTF16BE ) then
+    if ( FCurrentCodePage = zCP_UTF16 ) then
       Result := FBlobSize -2
     else
       Result := FBlobSize -1;
@@ -3866,8 +3863,7 @@ begin
       ZSetString(FBlobData, FBlobSize-1, Result)
     else
     begin
-      if ( FCurrentCodePage = zCP_UTF16 ) or
-         ( FCurrentCodePage = zCP_UTF16BE ) then
+      if ( FCurrentCodePage = zCP_UTF16 ) then
         Result := PUnicodeToRaw(FBlobData, (FBlobSize shr 1) -1, FConSettings^.ClientCodePage^.CP)
       else
       begin
@@ -3895,8 +3891,7 @@ begin
        System.SetString(Result, PAnsiChar(FBlobData), FBlobSize -1)
     else
     begin
-      if ( FCurrentCodePage = zCP_UTF16 ) or
-         ( FCurrentCodePage = zCP_UTF16BE ) then
+      if ( FCurrentCodePage = zCP_UTF16 ) then
         System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize shr 1) -1)
       else
         UniTemp := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage); //localize possible COM based WideString to prevent overflow
@@ -3929,8 +3924,7 @@ begin
     if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8) then
       ZSetString(PAnsiChar(FBlobData), FBlobSize -1, Result)
     else begin
-      if ( FCurrentCodePage = zCP_UTF16 ) or
-         ( FCurrentCodePage = zCP_UTF16BE ) then
+      if ( FCurrentCodePage = zCP_UTF16 ) then
       begin
         System.SetString(Uni, PWidechar(FBlobData), (FBlobSize shr 1) -1);
         {$IFDEF WITH_RAWBYTESTRING}
@@ -3963,8 +3957,7 @@ function TZAbstractCLob.GetUnicodeString: ZWideString;
 begin
   Result := '';
   if FBlobSize > 0 then
-    if (FCurrentCodePage = zCP_UTF16) or
-       (FCurrentCodePage = zCP_UTF16BE) then
+    if (FCurrentCodePage = zCP_UTF16) then
     begin
       SetLength(Result, (FBlobSize shr 1) -1);
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, PWideChar(Result)^, FBlobSize - 2);
@@ -4013,7 +4006,7 @@ begin
     InternalClear
   else
   begin
-    if (CodePage = zCP_UTF16) or (CodePage = zCP_UTF16BE) then
+    if (CodePage = zCP_UTF16) then
       SetPWideChar(TMemoryStream(Value).Memory, Value.Size shr 1)
     else
       SetPAnsiChar(TMemoryStream(Value).Memory, CodePage, Value.Size)
@@ -4103,8 +4096,7 @@ begin
       Result := FBlobData
     else
     begin
-      if (FCurrentCodePage = zCP_UTF16) or
-         (FCurrentCodePage = zCP_UTF16BE) then
+      if (FCurrentCodePage = zCP_UTF16) then
         TempRaw := PUnicodeToRaw(FBlobData, (FBlobSize shr 1) -1, CodePage)
       else
       begin
@@ -4128,8 +4120,7 @@ begin
   if FBlobData = nil then
     Result := nil
   else
-    if (FCurrentCodePage = zCP_UTF16) or
-       (FCurrentCodePage = zCP_UTF16BE) then
+    if (FCurrentCodePage = zCP_UTF16) then
       Result := PWideChar(FBlobData)
     else
     begin
@@ -4164,8 +4155,7 @@ end;
 }
 function TZAbstractCLob.Clone(Empty: Boolean = False): IZBLob;
 begin
-  if (FCurrentCodePage = zCP_UTF16) or
-     (FCurrentCodePage = zCP_UTF16BE) then
+  if (FCurrentCodePage = zCP_UTF16) then
     if Empty or not Assigned(FBlobData) or (FBlobSize <= 1) then
       Result := TZAbstractCLob.CreateWithData(nil, 0, FConSettings)
     else

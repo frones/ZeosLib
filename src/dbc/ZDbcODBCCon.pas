@@ -176,7 +176,7 @@ implementation
 uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
-  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZConnProperties, ZDbcProperties,
+  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZDbcProperties,
   ZMessages, ZCollections {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZODBCDriver }

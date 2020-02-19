@@ -154,7 +154,7 @@ implementation
 uses
   ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo,
-  ZEncoding, ZConnProperties, ZDbcProperties, ZCollections,
+  ZEncoding, ZDbcProperties, ZCollections, ZDbcUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF};
 
 { TZMySQLDriver }
@@ -348,7 +348,7 @@ begin
     if (sMy_client_Char_Set <> '') {mysql 4down doesn't have this function } and
      (sMy_client_Char_Set <> FClientCodePage) then begin
       ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
-      ZEncoding.SetConvertFunctions(ConSettings);
+      SetConvertFunctions(ConSettings);
     end;
   end;
   try
@@ -550,7 +550,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       Close;
     end;
     ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(FClientCodePage);
-    ZEncoding.SetConvertFunctions(ConSettings);
+    SetConvertFunctions(ConSettings);
   end;
 end;
 

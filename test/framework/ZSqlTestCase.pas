@@ -62,26 +62,22 @@ uses
   Types,
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB, Contnrs,
-  ZDataset, ZURL,
+  ZDataset,
   ZCompatibility, ZDbcIntfs, ZClasses, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
   { protocol lists }
-  pl_mysql_client_server = 'mysql,mysql-4.1,mysql-5,MariaDB-5';
-  pl_mysql_embedded = 'mysqld-4.1,mysqld-5,mysqld';
-  pl_all_mysql = pl_mysql_client_server + ','+ pl_mysql_embedded;
-  pl_all_postgresql = 'postgresql,postgresql-7,postgresql-8,postgresql-9';
-  pl_all_sqlite = 'sqlite,sqlite-3';
-  pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebird-3.0,firebird,interbase';
-  pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5,firebirdd-3.0,firebird,interbase';
-  pl_all_interbase = pl_interbase_client_server + ',' + pl_interbase_embedded;
-  pl_all_oracle = 'oracle,oracle-9i';
+  pl_all_mysql = 'mysql,mariadb';
+  pl_all_postgresql = 'postgresql';
+  pl_all_sqlite = 'sqlite';
+  pl_all_interbase = 'firebird,interbase';
+  pl_all_oracle = 'oracle';
 
   // Protocols needing prefererealprepared option for real prepared statements
   pl_realpreparable = pl_all_mysql;
 
 type
-  TZConfigUse = (cuMainConnection, cuNonAscii, cuRealPrepared, cuAutoEncoded);
+  TZConfigUse = (cuMainConnection, cuNonAscii, cuAutoEncoded);
   TZConfigUses = set of TZConfigUse;
 
   TDataSetTypesDynArray = array of TFieldType;
@@ -131,7 +127,6 @@ type
     FExtended_cGet_UTF16: Boolean;
     FExtended_Codepages: Boolean;
     FExtended_AutoEncoding: Boolean;
-    FSkip_RealPrepared: Boolean;
     FSkip_Performance: Boolean;
     FTestMode: Byte;
     FPerformanceDataSetTypes: TDataSetTypesDynArray;
@@ -173,7 +168,6 @@ type
     property Include_cGet_UTF16: Boolean read FExtended_cGet_UTF16;
     property Include_Codepages: Boolean read FExtended_Codepages;
     property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
-    property Skip_RealPrepared: Boolean read FSkip_RealPrepared;
     property ConfigUses: TZConfigUses read FConfigUses write SetConfigUses;
     property TestMode: Byte read FTestMode write FTestMode;
     property PerformanceDataSetTypes: TDataSetTypesDynArray read FPerformanceDataSetTypes write FPerformanceDataSetTypes;
@@ -229,10 +223,8 @@ type
     function IsProtocolValid(Config: TZConnectionConfig): Boolean; virtual;
     function IsConfigUseValid(Config: TZConnectionConfig): Boolean; virtual;
     function IsNonASCIITest: Boolean; virtual;
-    function IsRealPreparableTest: Boolean; virtual;
     function IsAutoEncodableTest: Boolean; virtual;
     function GetSupportedProtocols: string; virtual;
-    function SkipForReason(Reasons: ZSkipReasons): Boolean; override;
 
     { Random values generators. }
     function RandomStr(Length: Integer): string;
@@ -297,9 +289,13 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function IsRealPreparableTest: Boolean; override;
 
     property Connection: IZConnection read FConnection write FConnection;
+  public
+    procedure CheckEquals(Expected, Actual: TZSQLType;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: TZSQLType;
+      const Msg: string = ''); overload;
   end;
 
   {** Implements a bug test case which runs all active protocols. }
@@ -312,13 +308,17 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function IsRealPreparableTest: Boolean; override;
     function IsAutoEncodableTest: Boolean; override;
     function CreateQuery: TZQuery;
     function CreateReadOnlyQuery: TZReadOnlyQuery;
     function CreateTable: TZTable;
 
     property Connection: TZConnection read FConnection write FConnection;
+  public
+    procedure CheckEquals(Expected, Actual: TFieldType;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: TFieldType;
+      const Msg: string = ''); overload;
   end;
 
   {** Implements a bug test case which runs all active protocols with MB-Chars }
@@ -351,7 +351,8 @@ implementation
 
 uses
   Math, {$IFDEF ENABLE_POOLED}ZDbcPooled,{$ENDIF}
-  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset, ZDbcProperties;
+  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset, ZDbcProperties,
+  TypInfo;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var
@@ -440,8 +441,6 @@ begin
     EXTENDED_CODEPAGES_KEY, FALSE_VALUE));
   FExtended_AutoEncoding := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     EXTENDED_AUTOENCODING_KEY, FALSE_VALUE));
-  FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
-    SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
   FSkip_Performance := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     SKIP_PERFORMANCE_KEY, TRUE_VALUE));
   FTestMode := 0;
@@ -500,8 +499,6 @@ begin
   FProperties := SplitStringToArray(TestConfig.ReadProperty(FName,
     DATABASE_PROPERTIES_KEY, ''), ',;');
   FConfigUses := [cuMainConnection];
-  FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(FName,
-    SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
 end;
 
 destructor TZConnectionConfig.Destroy;
@@ -514,10 +511,8 @@ end;
   Creates the additional connection configurations for extended tests
 }
 procedure TZConnectionConfig.CreateExtendedConfigurations(ConnectionsList: TObjectList);
-var
-  TempConfig: TZConnectionConfig;
   {$IFDEF ZEOS_TEST_ONLY}
-  MaxTestMode, TestMode: Byte;
+var  MaxTestMode, TestMode: Byte;
   {$ENDIF}
 
   procedure SetCharacterSets(const Current: TZConnectionConfig);
@@ -625,18 +620,6 @@ begin
   begin
     create_charsets_encodings(self);
   end;
-
-  if Not Skip_RealPrepared then
-    if ProtocolInProtocols(self.Protocol,pl_realpreparable) then
-    begin
-      //writeln('create preferprepared');
-      TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
-      SetProperty(TempConfig, 'preferprepared', 'True');
-      ConnectionsList.Add(TempConfig);
-      TempConfig.ConfigUses:=[cuRealPrepared];
-      if ExtendedTest then
-        create_charsets_encodings(TempConfig);
-    end;
 
   {$IFDEF ZEOS_TEST_ONLY}
   // Test Modes
@@ -855,11 +838,6 @@ begin
     Selection := True;
     Objection := Objection or Not(isNonASciiTest) //Non Ascii connections are only valid for NonAscii tests
   end;
-  If (cuRealPrepared in Config.ConfigUses) then
-  begin
-    Selection := True;
-    Objection := Objection or Not(isRealPreparableTest) //PreferRealPrepared connections are only usefull for specific tests
-  end;
   If (cuAutoEncoded in Config.ConfigUses) then
   begin
     Selection := True;
@@ -879,11 +857,6 @@ begin
   Result := False;
 end;
 
-function TZAbstractSQLTestCase.IsRealPreparableTest: Boolean;
-begin
-  Result := False;
-end;
-
 function TZAbstractSQLTestCase.IsAutoEncodableTest: Boolean;
 begin
   result := False;
@@ -892,14 +865,6 @@ end;
 function TZAbstractSQLTestCase.GetSupportedProtocols: string;
 begin
   result := '';
-end;
-
-function TZAbstractSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
-begin
-  Result:=inherited SkipForReason(Reasons) or
-          ((srMysqlRealPreparedConnection in Reasons) and
-           (ProtocolInProtocols(Protocol,pl_all_mysql)) and
-           (PropPos(Properties,'preferprepared')>-1));
 end;
 
 {**
@@ -1542,6 +1507,15 @@ end;
 
 { TZAbstractDbcSQLTestCase}
 
+procedure TZAbstractDbcSQLTestCase.CheckNotEquals(Expected, Actual: TZSQLType;
+  const Msg: string);
+var E, A: String;
+begin
+  E := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  inherited CheckNotEquals(E, A, Msg);
+end;
+
 procedure TZAbstractDbcSQLTestCase.SetUp;
 begin
   FConnection := CreateDbcConnection;
@@ -1556,9 +1530,13 @@ begin
   end;
 end;
 
-function TZAbstractDbcSQLTestCase.IsRealPreparableTest: Boolean;
+procedure TZAbstractDbcSQLTestCase.CheckEquals(Expected, Actual: TZSQLType;
+  const Msg: string = '');
+var E, A: String;
 begin
-  Result:= True;
+  E := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  inherited CheckEquals(E, A, Msg);
 end;
 
 { TZAbstractCompSQLTestCase }
@@ -1577,14 +1555,27 @@ begin
   end;
 end;
 
-function TZAbstractCompSQLTestCase.IsRealPreparableTest: Boolean;
-begin
-  Result:= True;
-end;
-
 function TZAbstractCompSQLTestCase.IsAutoEncodableTest: Boolean;
 begin
   Result:=True;
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckNotEquals(Expected, Actual: TFieldType;
+  const Msg: string);
+var E, A: String;
+begin
+  E := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  inherited CheckNotEquals(E, A, Msg);
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckEquals(Expected, Actual: TFieldType;
+  const Msg: string);
+var E, A: String;
+begin
+  E := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  inherited CheckEquals(E, A, Msg);
 end;
 
 function TZAbstractCompSQLTestCase.CreateQuery: TZQuery;

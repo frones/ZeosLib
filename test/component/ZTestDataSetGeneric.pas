@@ -75,7 +75,6 @@ type
   protected
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
-    function IsRealPreparableTest: Boolean; override;
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
@@ -1363,11 +1362,6 @@ begin
     end;
     //*)
   end;
-end;
-
-function TZGenericTestDataSet.IsRealPreparableTest: Boolean;
-begin
-  Result:= true;
 end;
 
 {**
@@ -2708,7 +2702,6 @@ begin
   end;
 end;
 
-{ TZInterbaseTestGUIDS }
 procedure TZGenericTestDataSet.TestEmptyMemoAfterFullMemo;
 var
   Query: TZQuery;
@@ -2776,6 +2769,7 @@ const
 var
   GuidVal: TGUID;
 
+{ TZInterbaseTestGUIDS }
 function TZInterbaseTestGUIDS.GetSupportedProtocols: string;
 begin
   Result := pl_all_interbase;

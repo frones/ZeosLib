@@ -160,7 +160,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses
-  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZConnProperties, ZDbcProperties,
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZDbcProperties,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode, ZCollections,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser;

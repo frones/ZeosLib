@@ -63,7 +63,7 @@ uses
   {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken, ZVariant,
-  ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZDbcLogging;
+  ZGenericSqlAnalyser, ZPlainDriver, ZCollections, ZDbcLogging;
 
 type
 
@@ -364,6 +364,24 @@ type
 
   TZAbstractSequenceClass = class of TZAbstractSequence;
 
+  {** Implements a variant manager with connection related convertion rules. }
+  TZClientVariantManager = class (TZSoftVariantManager, IZVariantManager, IZClientVariantManager)
+  protected
+    FConSettings: PZConSettings;
+    FClientCP, FCtrlsCP: Word;
+    FUseWComparsions: Boolean;
+    procedure ProcessString(const Value: TZVariant; out Result: TZVariant); override;
+    procedure ProcessUnicodeString(const Value: TZVariant; out Result: TZVariant); override;
+    procedure ProcessRawByteString(const Value: TZVariant; out Result: TZVariant); override;
+    {$IFNDEF NO_ANSISTRING}procedure ProcessAnsiString(const Value: TZVariant; out Result: TZVariant); override; {$ENDIF NO_ANSISTRING}
+    {$IFNDEF NO_UTF8STRING}procedure ProcessUTF8String(const Value: TZVariant; out Result: TZVariant); override; {$ENDIF NO_UTF8STRING}
+    procedure ProcessCharRec(const Value: TZVariant; out Result: TZVariant); override;
+  public
+    constructor Create(const ConSettings: PZConSettings{; FormatSettings: TZFormatSettings});
+    function UseWComparsions: Boolean;
+    function GetAsDateTime(const Value: TZVariant): TDateTime; reintroduce;
+  end;
+
 type
   TZSavePointQueryType = (spqtSavePoint, spqtCommit, spqtRollback);
 
@@ -415,7 +433,7 @@ const
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
-  ZDbcMetadata, ZDbcUtils, ZEncoding, ZConnProperties, StrUtils,
+  ZDbcMetadata, ZDbcUtils, ZEncoding, StrUtils,
   ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
   {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
@@ -894,7 +912,7 @@ begin
   SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
     ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
   {$ENDIF}
-  ZEncoding.SetConvertFunctions(ConSettings);
+  SetConvertFunctions(ConSettings);
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
@@ -968,7 +986,7 @@ begin
   SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
     ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
   {$ENDIF}
-  ZEncoding.SetConvertFunctions(ConSettings);
+  SetConvertFunctions(ConSettings);
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
@@ -1995,6 +2013,346 @@ end;
 function TZPostgreSQLSequence.GetNextValueSQL: string;
 begin
   Result := 'SELECT NEXTVAL('''+FName+''')';
+end;
+
+{ TZClientVariantManager }
+
+{**
+  Constructs this object and assigns the main properties.
+  @param ClientCodePage the current ClientCodePage.
+}
+constructor TZClientVariantManager.Create(const ConSettings: PZConSettings{;
+  FormatSettings: TZFormatSettings});
+begin
+  inherited Create; //Set all standard converters functions
+  FConSettings := ConSettings;
+  FFormatSettings := FConSettings.ReadFormatSettings;
+  FClientCP := Consettings.ClientCodePage.CP;
+  FCtrlsCP := Consettings.CTRL_CP;
+  FUseWComparsions := (FClientCP <> ZOSCodePage) or
+    (FClientCP = zCP_UTF8) or
+    Consettings.ClientCodePage.IsStringFieldCPConsistent or
+    (Consettings.ClientCodePage.Encoding = ceUTF16);
+end;
+
+function TZClientVariantManager.GetAsDateTime(
+  const Value: TZVariant): TDateTime;
+var P: Pointer;
+  L: LengthInt;
+label DateTimeFromRaw, DateTimeFromUnicode, Fail;
+begin
+  case Value.VType of
+    {$IFNDEF UNICODE}vtString,{$ENDIF}
+    {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
+    {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    vtRawByteString: begin
+        P := Pointer(Value.VRawByteString);
+        L := Length(Value.VRawByteString);
+DateTimeFromRaw:
+        if not ZSysUtils.TryPCharToDateTime(PAnsiChar(P), L, FConSettings^.ReadFormatSettings, Result{%H-}) then
+          goto Fail;
+      end;
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString:
+      begin
+        P := Pointer(Value.VUnicodeString);
+        L := Length(Value.VUnicodeString);
+DateTimeFromUnicode:
+        if not ZSysUtils.TryPCharToDateTime(PWideChar(P), L, FConSettings^.ReadFormatSettings, Result) then
+          goto Fail;
+      end;
+    vtCharRec: begin
+        P := Value.VCharRec.P;
+        L := Value.VCharRec.Len;
+        if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16)
+        then goto DateTimeFromUnicode
+        else goto DateTimeFromRaw;
+      end;
+    else
+Fail: Result := inherited GetAsDateTime(Value);
+  end;
+end;
+
+{$IFNDEF NO_ANSISTRING}
+procedure TZClientVariantManager.ProcessAnsiString(const Value: TZVariant;
+  out Result: TZVariant);
+var ResTmp: RawByteString;
+begin
+  Result.VType := vtAnsiString;
+  case Value.VType of
+    {$IFNDEF UNICODE}
+    vtString: if FConSettings.AutoEncode
+              then ResTmp := ZConvertStringToAnsiWithAutoEncode(Value.VRawByteString, FCtrlsCP)
+              else ResTmp := Value.VRawByteString;
+    {$ENDIF}
+    vtAnsiString: ResTmp := Value.VRawByteString;
+    vtUTF8String: if ZOSCodePage = zCP_UTF8
+                  then ResTmp := Value.VRawByteString
+                  else RawCPConvert(Value.VRawByteString, ResTmp, zCP_UTF8, ZOSCodePage);
+    vtRawByteString: if ZOSCodePage = FClientCP
+                     then ResTmp := Value.VRawByteString
+                     else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, ZOSCodePage);
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString:
+      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, ZOSCodePage);
+    vtCharRec:
+      if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
+      else if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
+        ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, ZOSCodePage{$ENDIF})
+      else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, ZOSCodePage);
+    vtDateTime: ResTmp := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
+    else ConvertFixedTypesToRaw(Value, ResTmp{$IFDEF WITH_RAWBYTESTRING}, ZOSCodePage{$ENDIF});
+  end;
+  Result.VRawByteString := ResTmp;
+end;
+{$ENDIF NO_ANSISTRING}
+
+procedure TZClientVariantManager.ProcessCharRec(const Value: TZVariant;
+  out Result: TZVariant);
+label SetRaw;
+begin
+  Result.VType := vtCharRec;
+  case Value.VType of
+    vtNull:
+      begin
+        Result.VCharRec.Len := 0;
+        Result.VCharRec.CP := High(Word);
+        Result.VCharRec.P := nil;
+      end;
+    {$IFNDEF UNICODE}
+    vtString: begin
+        Result.VCharRec.CP := FCtrlsCP;
+        goto SetRaw;
+      end;
+    {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
+    vtAnsiString: begin
+        Result.VCharRec.CP := ZOSCodePage;
+        goto SetRaw;
+      end;
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    vtUTF8String: begin
+        Result.VCharRec.CP := zCP_UTF8;
+        goto SetRaw;
+      end;
+    {$ENDIF}
+    vtRawByteString: begin
+        Result.VCharRec.CP := fClientCP;
+SetRaw: if Pointer(Result.VRawByteString) = nil then begin
+          Result.VCharRec.Len := 0;
+          Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
+        end else begin
+          Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
+          Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
+        end;
+      end;
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString:
+      begin
+        Result.VUnicodeString := Value.VUnicodeString;
+        Result.VCharRec.CP := zCP_UTF16;
+        Result.VCharRec.Len := Length(Result.VUnicodeString);
+        if Result.VCharRec.Len = 0 then
+          Result.VCharRec.P := PEmptyUnicodeString //avoid nil result
+        else
+          Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL conversion to PWideChar
+      end;
+    vtCharRec:
+      Result.VCharRec := Value.VCharRec;
+    else if (Ord(FConSettings^.ClientCodePage^.Encoding) < Ord(ceUTF16)) then begin
+          Result.VRawByteString := Convert(Value, vtRawByteString).VRawByteString;
+          Result.VCharRec.CP := FClientCP;
+          if Pointer(Result.VRawByteString) = nil then begin
+            Result.VCharRec.Len := 0;
+            Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
+          end else begin
+            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
+            Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
+          end;
+        end else begin
+          Result.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
+          Result.VCharRec.CP := zCP_UTF16;
+          Result.VCharRec.Len := Length(Result.VUnicodeString);
+          if Result.VCharRec.Len = 0
+          then Result.VCharRec.P := PEmptyUnicodeString //avoid nil result
+          else Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL conversion to PAnsiChar
+        end;
+
+  end;
+end;
+
+procedure TZClientVariantManager.ProcessRawByteString(const Value: TZVariant;
+  out Result: TZVariant);
+var ResTmp: RawByteString;
+begin
+  Result.VType := vtRawByteString;
+  case Value.VType of
+    {$IFNDEF UNICODE}
+    vtString: if FConSettings.AutoEncode
+              then ResTmp := ZConvertStringToRawWithAutoEncode(Value.VRawByteString, FCtrlsCP, FClientCP)
+              else ResTmp := Value.VRawByteString;
+    {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
+    vtAnsiString: if FClientCP = ZOSCodePage
+                  then ResTmp := Value.VRawByteString
+                  else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, FClientCP);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    vtUTF8String: if FClientCP = zCP_UTF8
+                  then ResTmp := Value.VRawByteString
+                  else RawCPConvert(Value.VRawByteString, ResTmp, zCP_UTF8, FClientCP);
+    {$ENDIF}
+    vtRawByteString: ResTmp := Value.VRawByteString;
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString:
+      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, zCP_UTF8);
+    vtCharRec:
+      if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, FClientCP)
+      else if ZCompatibleCodePages(FClientCP, Value.VCharRec.CP) then
+        ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, FClientCP{$ENDIF})
+      else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, FClientCP);
+    vtDateTime: ResTmp := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
+    else ConvertFixedTypesToRaw(Value, ResTmp{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF});
+  end;
+  Result.VRawByteString := ResTmp;
+end;
+
+procedure TZClientVariantManager.ProcessString(const Value: TZVariant;
+  out Result: TZVariant);
+var ResTmp: {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
+begin
+  Result.VType := vtString;
+  case Value.VType of
+    {$IFNDEF UNICODE}
+    vtString: Result.VRawByteString := Value.VRawByteString;
+    {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
+    vtAnsiString: {$IFDEF UNICODE}
+                  ResTmp := ZRawToUnicode(Value.VRawByteString, ZOSCodePage);
+                  {$ELSE}
+                  if FConSettings^.CTRL_CP = ZOSCodePage
+                  then ResTmp := Value.VRawByteString
+                  else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, FCtrlsCP);
+                  {$ENDIF}
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    vtUTF8String: {$IFDEF UNICODE}
+                  ResTmp := ZRawToUnicode(Value.VRawByteString, zCP_UTF8);
+                  {$ELSE}
+                  if FCtrlsCP = zCP_UTF8
+                  then ResTmp := Value.VRawByteString
+                  else RawCPConvert(Value.VRawByteString, ResTmp, zCP_UTF8, FCtrlsCP);
+                  {$ENDIF}
+    {$ENDIF}
+    vtRawByteString: {$IFDEF UNICODE}
+                  ResTmp := ZRawToUnicode(Value.VRawByteString, FClientCP);
+                  {$ELSE}
+                  if (FCtrlsCP = FClientCP) or (not FConSettings.AutoEncode)
+                  then ResTmp := Value.VRawByteString
+                  else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, FCtrlsCP);
+                  {$ENDIF}
+   {$IFDEF UNICODE}vtString,{$ENDIF}
+   vtUnicodeString:
+      {$IFDEF UNICODE}
+      ResTmp := Value.VUnicodeString;
+      {$ELSE}
+      //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
+      //this hint means a cast instead of convert. The user should better use WideString constants!
+      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, FCtrlsCP);
+      {$ENDIF}
+    vtCharRec: if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+        {$IFDEF UNICODE}
+        SetString(ResTmp, PChar(Value.VCharRec.P), Value.VCharRec.Len)
+        {$ELSE}
+        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
+        {$ENDIF}
+      else
+        {$IFNDEF UNICODE}
+        if ZCompatibleCodePages(FCtrlsCP, Value.VCharRec.CP)
+        then ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp)
+        else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, FCtrlsCP);
+        {$ELSE}
+        ResTmp := PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP);
+        {$ENDIF}
+    vtDateTime:
+      ResTmp := ZSysUtils.{$IFDEF UNICODE}DateTimeToUnicodeSQLTimeStamp{$ELSE}DateTimeToRawSQLTimeStamp{$ENDIF}(Value.VDateTime, FFormatSettings, False);
+    else {$IFDEF UNICODE}ConvertFixedTypesToUnicode{$ELSE}ConvertFixedTypesToRaw{$ENDIF}(Value, ResTmp{$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}, FCtrlsCP{$IFEND});
+  end;
+  Result.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF} := ResTmp;
+end;
+
+procedure TZClientVariantManager.ProcessUnicodeString(const Value: TZVariant;
+  out Result: TZVariant);
+var ResTmp: UnicodeString;
+begin
+  Result.VType := vtUnicodeString;
+  case Value.VType of
+    {$IFNDEF UNICODE}
+    vtString: if FConSettings.AutoEncode
+              then ResTmp := ZConvertStringToUnicodeWithAutoEncode(Value.VRawByteString, FCtrlsCP)
+              else ResTmp := ZRawToUnicode(Value.VRawByteString, FCtrlsCP);
+    {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
+    vtAnsiString: ResTmp := ZRawToUnicode(Value.VRawByteString, ZOSCodePage);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    vtUTF8String: ResTmp := ZRawToUnicode(Value.VRawByteString, zCP_UTF8);
+    {$ENDIF}
+    vtRawByteString: ResTmp := ZRawToUnicode(Value.VRawByteString, FClientCP);
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString: ResTmp := Value.VUnicodeString;
+    vtDateTime:      ResTmp := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
+    vtCharRec: if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16)
+        then SetString(ResTmp, PWideChar(Value.VCharRec.P), Value.VCharRec.Len)
+        else ResTmp := PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP);
+    else ConvertFixedTypesToUnicode(Value, ResTmp);
+  end;
+  Result.VUnicodeString := ResTmp;
+end;
+
+{$IFNDEF NO_UTF8STRING}
+procedure TZClientVariantManager.ProcessUTF8String(const Value: TZVariant;
+  out Result: TZVariant);
+var ResTmp: RawByteString;
+begin
+  Result.VType := vtUTF8String;
+  case Value.VType of
+    {$IFNDEF UNICODE}
+    vtString: if FConSettings.AutoEncode
+              then ResTmp := ZConvertStringToUTF8WithAutoEncode(Value.VRawByteString, FCtrlsCP)
+              else ResTmp := Value.VRawByteString;
+    {$ENDIF}
+    {$IFNDEF NO_ANSISTRING}
+    vtAnsiString: if ZOSCodePage = zCP_UTF8
+                  then ResTmp := Value.VRawByteString
+                  else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, zCP_UTF8);
+    {$ENDIF}
+    vtUTF8String: ResTmp := Value.VRawByteString;
+    vtRawByteString: if ZOSCodePage = FClientCP
+                     then ResTmp := Value.VRawByteString
+                     else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, ZOSCodePage);
+    {$IFDEF UNICODE}vtString,{$ENDIF}
+    vtUnicodeString:
+      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, zCP_UTF8);
+    vtCharRec:
+      if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, zCP_UTF8)
+      else if ZCompatibleCodePages(zCP_UTF8, Value.VCharRec.CP) then
+        ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF})
+      else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, zCP_UTF8);
+    vtDateTime: ResTmp := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
+    else ConvertFixedTypesToRaw(Value, ResTmp{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF});
+  end;
+  Result.VRawByteString := ResTmp;
+end;
+{$ENDIF NO_UTF8STRING}
+
+function TZClientVariantManager.UseWComparsions: Boolean;
+begin
+  Result := FUseWComparsions;
 end;
 
 end.

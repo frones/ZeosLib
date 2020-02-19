@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainLoader, ZCompatibility, Types;
+uses ZClasses, ZPlainLoader, ZCompatibility, Types, ZEncoding;
 
 type
   TZAbstractPlainDriver = class;
@@ -66,9 +66,6 @@ type
     function GetProtocol: string;
     function GetDescription: string;
     function GetInstance: TZAbstractPlainDriver;
-    {EgonHugeist:
-      Why this here? -> No one else then Plaindriver knows which Characterset
-      is supported. Here i've made a intervention in dependency of used Compiler.}
     function GetSupportedClientCodePages(const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean;
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
@@ -76,7 +73,7 @@ type
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
     procedure AddCodePage(const Name: String; const ID:  Integer;
-      Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
+      Encoding: TZCharEncoding = ceAnsi; const CP: Word = zCP_NONE;
       const ZAlias: String = ''; CharWidth: Integer = 1;
       const ConsistentCP: Boolean = True);
   end;
@@ -107,12 +104,12 @@ type
 
     property Loader: TZNativeLibraryLoader read FLoader;
     procedure AddCodePage(const Name: String; const ID:  Integer;
-      Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
+      Encoding: TZCharEncoding = ceAnsi; const CP: Word = zCP_NONE;
       const ZAlias: String = ''; CharWidth: Integer = 1;
       const ConsistentCP: Boolean = True);
     procedure ResetCodePage(const OldID: Integer; const Name: String;
       const ID:  Integer; {may be an ordinal value of predefined Types...}
-      Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
+      Encoding: TZCharEncoding = ceAnsi; const CP: Word = zCP_NONE;
       const ZAlias: String = ''; CharWidth: Integer = 1;
       const ConsistentCP: Boolean = True);
   end;
@@ -120,8 +117,11 @@ type
 
 implementation
 
-uses SysUtils, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+uses SysUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
+const
+  ClientCodePageDummy: TZCodepage =
+    (CharWidth: 1; Encoding: ceAnsi; CP: zCP_NONE);
 
 {TZAbstractPlainDriver}
 
@@ -129,6 +129,7 @@ function TZAbstractPlainDriver.GetUnicodeCodePageName: String;
 begin
   Result := '';
 end;
+
 
 {**
    Checks if the given ClientCharacterSet and returns the PZCodePage
@@ -144,26 +145,27 @@ function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetName: Stri
     const ClientCharacterSet: String): PZCodePage;
   var
     I: Integer;
+    S: String;
   begin
     {now check for PlainDriver-Informations...}
-    {$IFDEF FPC} //if the user didn't set it
-    if ClientCharacterSet = '' then
-    begin
+    {$IF defined(LCL) or defined(UNICODE) or not defined(MSWINDOWS)} //if the user didn't set it
+    if ClientCharacterSet = '' then begin
+      S := UpperCase(GetUnicodeCodePageName);
       for i := Low(FCodePages) to high(FCodePages) do
-        if UpperCase(FCodePages[i].Name) = UpperCase(GetUnicodeCodePageName) then
+        if UpperCase(FCodePages[i].Name) = S then
         begin
           Result := @FCodePages[i];
           Exit;
         end;
-    end
-    else
-    {$ENDIF}
-    for i := Low(FCodePages) to high(FCodePages) do
-      if UpperCase(FCodePages[i].Name) = UpperCase(ClientCharacterSet) then
-      begin
-        Result := @FCodePages[i];
-        Exit;
-      end;
+    end else
+    {$IFEND} begin
+      S := UpperCase(ClientCharacterSet);
+      for i := Low(FCodePages) to high(FCodePages) do
+        if UpperCase(FCodePages[i].Name) = S then begin
+          Result := @FCodePages[i];
+          Exit;
+        end;
+    end;
     Result := @ClientCodePageDummy;
   end;
 begin
@@ -204,7 +206,7 @@ end;
 
 procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = $ffff; const ZAlias: String = '';
+      const CP: Word = zCP_NONE; const ZAlias: String = '';
       CharWidth: Integer = 1; const ConsistentCP: Boolean = True);
 begin
   SetLength(FCodePages, Length(FCodePages)+1);
@@ -216,13 +218,13 @@ begin
   FCodePages[High(FCodePages)].ZAlias := ZAlias;
   FCodePages[High(FCodePages)].IsStringFieldCPConsistent := ConsistentCP;
 
-  if CP = $ffff then
+  if CP = zCP_NONE then
     FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
 end;
 
 procedure TZAbstractPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = $ffff;
+      const CP: Word = zCP_NONE;
       const ZAlias: String = ''; CharWidth: Integer = 1;
       const ConsistentCP: Boolean = True);
 var
@@ -239,7 +241,7 @@ begin
       FCodePages[I].CharWidth := CharWidth;
       FCodePages[I].IsStringFieldCPConsistent := ConsistentCP;
 
-      if CP = $ffff then
+      if CP = zCP_NONE then
         FCodePages[I].ZAlias := GetUnicodeCodePageName;
       Break;
     end;

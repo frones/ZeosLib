@@ -63,8 +63,7 @@ uses
   Windows,
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBcd,
-  {$IF defined(OLDFPC) or defined(NO_UNIT_CONTNRS)}ZClasses,{$IFEND} ZDbcIntfs,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBcd, ZClasses, ZDbcIntfs,
   ZDbcResultSet, ZDbcResultSetMetadata, ZVariant, ZCompatibility, ZSysUtils;
 
 type

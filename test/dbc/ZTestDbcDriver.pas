@@ -57,8 +57,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
-  ZUrl, ZPlainDriver, ZDbcConnection;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+  ZDbcIntfs, ZSqlTestCase, ZPlainDriver, ZDbcConnection;
 
 type
   TZFooPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
