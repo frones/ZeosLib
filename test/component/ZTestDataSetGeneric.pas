@@ -2567,7 +2567,12 @@ begin
 end;
 
 procedure TZGenericTestDataSet.TestVeryLargeBlobs;
-const teststring: ZWideString = '123456????';
+{$IFDEF MSWINDOWS}
+const teststring: ZWideString = '123456'+Chr(192)+Chr(193)+Chr(194)+Chr(195);
+{$ELSE}
+const teststring: ZWideString = '123456\##/';
+{$ENDIF}
+
 var
   Query: TZQuery;
   BinStreamE,BinStreamA,TextStream: TMemoryStream;
@@ -2575,6 +2580,7 @@ var
   TextLob, BinLob: String;
   W: ZWideString;
   TempConnection: TZConnection;
+  ConSettings: PZConSettings;
 
   function WideDupeString(const AText: ZWideString; ACount: Integer): ZWideString;
   var i,l : integer;
@@ -2614,6 +2620,10 @@ begin
       Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
     end;
+    if not Query.Connection.Connected then
+      Query.Connection.Connect;
+
+    ConSettings := Query.Connection.DbcConnection.GetConSettings;
     with Query do
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
@@ -2645,9 +2655,11 @@ begin
       TextStream := TMemoryStream.Create;
       W := WideDupeString(teststring,6000);
       {$IFNDEF UNICODE}
-      s:= GetDBTestString(W, Connection.DbcConnection.GetConSettings);
+      s:= GetDBTestString(W, ConSettings);
       {$ELSE}
-      S := ZUnicodeToRaw(W, Connection.DbcConnection.GetConSettings.CTRL_CP);
+      if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16)
+      then S := ZUnicodeToRaw(W, ConSettings.CTRL_CP)
+      else S := ZUnicodeToRaw(W, ConSettings.ClientCodePage.CP);
       {$ENDIF}
 
       TextStream.Write(s[1],length(s));

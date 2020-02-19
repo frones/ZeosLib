@@ -2891,7 +2891,9 @@ var
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end else if TypeName = 'set' then begin
-      ZType := Ord(stUnicodeString);
+      if FConSettings.CPType = cCP_UTF16
+      then ZType := Ord(stUnicodeString)
+      else ZType := Ord(stString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end;
