@@ -256,10 +256,7 @@ begin
         stAsciiStream: Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, IZBlob(BindVal.Value).GetBuffer, IZBlob(BindVal.Value).Length, nil);
         stBinaryStream,
         stUnicodeStream:Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, I +1, IZBlob(BindVal.Value).GetBuffer, IZBlob(BindVal.Value).Length, nil);
-        else begin
-          ErrorCode := SQLITE_ERROR; //satisfy comiler
-          RaiseUnsupportedParameterTypeException(BindVal^.SQLType);
-        end;
+        else raise CreateUnsupportedParameterTypeException(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindVal^.SQLType);
       end;
       if ErrorCode <> SQLITE_OK then
         CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);

@@ -120,7 +120,7 @@ type
     fDEFERPREPARE, //if set the stmt will be prepared immediatelly and we'll try to decribe params
     fBindImmediat: Boolean; //the param describe did fail! we'll try to bind the params with describe emulation
     fCurrentIterations: NativeUInt;
-    procedure RaiseUnsupportedParamType(Index: Integer; SQLCType: SQLSMALLINT; SQLType: TZSQLType);
+    function CreateUnsupportedParamType(Index: Integer; SQLCType: SQLSMALLINT; SQLType: TZSQLType): EZSQLException;
     procedure RaiseExceeded(Index: Integer);
     procedure SetPWideChar(Index: Integer; Value: PWideChar; WLen: LengthInt);
     procedure SetPAnsiChar(Index: Integer; Value: PAnsiChar; BLen: LengthInt);
@@ -816,7 +816,7 @@ begin
                       SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fABuffer[SizeOf(Pointer)]));
                       Exit;
                     end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, SQLType);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, SQLType);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
@@ -1330,7 +1330,7 @@ begin
                       SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fABuffer[SizeOf(Pointer)]));
                       Exit;
                     end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, SQLType);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, SQLType);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
@@ -1583,25 +1583,23 @@ begin
       SQL_C_NUMERIC: Curr2ODBCNumeric(Value, Bind.ParameterValuePtr);
       SQL_C_WCHAR:  begin
           case SQLType of
-            stFloat, stDouble, stCurrency,
-            stBigDecimal: SetPWideChar(Index, @fWBuffer[0], FloatToSQLUnicode(Value, @fWBuffer[0]));
             stTime: SetPWideChar(Index, @fWBuffer[0], ZSysUtils.DateTimeToUnicodeSQLTime(Value, @fWBuffer[0], ConSettings^.WriteFormatSettings, False));
             stDate: SetPWideChar(Index, @fWBuffer[0], ZSysUtils.DateTimeToUnicodeSQLDate(Value, @fWBuffer[0], ConSettings^.WriteFormatSettings, False));
             stTimeStamp: SetPWideChar(Index, @fWBuffer[0], ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value, @fWBuffer[0], ConSettings^.WriteFormatSettings, False));
+            else SetPWideChar(Index, @fWBuffer[0], FloatToSQLUnicode(Value, @fWBuffer[0]))
           end;
           Exit;
         end;
       SQL_C_CHAR:   begin
           case SQLType of
-            stFloat, stDouble, stCurrency,
-            stBigDecimal: SetPAnsiChar(Index, @fABuffer[0], FloatToSQLRaw(Value, @fABuffer[0]));
             stTime: SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.DateTimeToRawSQLTime(Value, @fABuffer[0], ConSettings^.WriteFormatSettings, False));
             stDate: SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.DateTimeToRawSQLDate(Value, @fABuffer[0], ConSettings^.WriteFormatSettings, False));
             stTimeStamp: SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.DateTimeToRawSQLTimeStamp(Value, @fABuffer[0], ConSettings^.WriteFormatSettings, False));
+            else SetPAnsiChar(Index, @fABuffer[0], FloatToSQLRaw(Value, @fABuffer[0]))
           end;
           Exit;
         end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, SQlType);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, SQlType);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else {$IFNDEF CPU64}
@@ -1704,10 +1702,10 @@ begin
     'Stmt: '+GetSQL);
 end;
 
-procedure TZAbstractODBCPreparedStatement.RaiseUnsupportedParamType(Index: Integer;
-  SQLCType: SQLSMALLINT; SQLType: TZSQLType);
+function TZAbstractODBCPreparedStatement.CreateUnsupportedParamType(Index: Integer;
+  SQLCType: SQLSMALLINT; SQLType: TZSQLType): EZSQLException;
 begin
-  raise EZSQLException.Create('Index: '+ZFastCode.IntToStr(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF})+
+  Result := EZSQLException.Create('Index: '+ZFastCode.IntToStr(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF})+
     ', ODBC-C-Type: '+ZFastCode.IntToStr(SQLCType)+', SQLType: '+GetEnumName(TypeInfo(TZSQLType), Ord(SQLType))+
     LineEnding+SUnsupportedParameterType+LineEnding+ 'Stmt: '+GetSQL);
 end;
@@ -1818,7 +1816,7 @@ begin
       SQL_C_NUMERIC:  ZDbcUtils.BCD2SQLNumeric(Value, PDB_NUMERIC(Bind.ParameterValuePtr));
       SQL_C_WCHAR:    SetPWideChar(Index, @fWBuffer[0], ZSysUtils.BcdToUni(Value, @fWBuffer[0], '.'));
       SQL_C_CHAR:     SetPAnsiChar(Index, @fABuffer[0], ZSysUtils.BcdToRaw(Value, @fABuffer[0], '.'));
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stBigDecimal);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, stBigDecimal);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
@@ -1949,7 +1947,7 @@ begin
         SQL_C_GUID:     if Length(Value) = 16
                         then PGUID(Bind.ParameterValuePtr)^ := PGUID(Value)^
                         else RaiseExceeded(Index);
-        else RaiseUnsupportedParamType(Index, Bind.ValueType, stBytes);
+        else raise CreateUnsupportedParamType(Index, Bind.ValueType, stBytes);
       end;
       PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
     end;
@@ -2015,7 +2013,7 @@ begin
                         CurrToRaw(Value, @fABuffer[SizeOf(Pointer)], @fABuffer[0]);
                         SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^ - PAnsiChar(@fABuffer[SizeOf(Pointer)]));
                       end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, stCurrency);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
@@ -2165,7 +2163,7 @@ begin
                         PSQLLEN(Bind.StrLen_or_IndPtr)^ := 36*2;
                         GUIDToBuffer(@Value.D1, PWideChar(Bind.ParameterValuePtr), []);
                       end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stCurrency);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, stCurrency);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
@@ -2233,7 +2231,7 @@ begin
                       SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fABuffer[SizeOf(Pointer)]));
                       Exit;
                     end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stULong);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, stULong);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else
@@ -2320,7 +2318,7 @@ begin
                       PByte(PAnsiChar(Bind.ParameterValuePtr)+Blen)^ := 0;
                       Exit;
                     end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else begin
@@ -2384,7 +2382,7 @@ begin
                       PByte(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := Ord(#0);
                       Exit;
                     end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else begin
@@ -2723,7 +2721,7 @@ begin
                       SetPAnsiChar(Index, @fABuffer[SizeOf(Pointer)], PPAnsiChar(@fABuffer[0])^-PAnsiChar(@fWBuffer[SizeOf(Pointer)]));
                       Exit;
                     end;
-      else RaiseUnsupportedParamType(Index, Bind.ValueType, stLong);
+      else raise CreateUnsupportedParamType(Index, Bind.ValueType, stLong);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
   end else

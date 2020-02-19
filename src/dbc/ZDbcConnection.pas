@@ -2021,8 +2021,7 @@ end;
   Constructs this object and assigns the main properties.
   @param ClientCodePage the current ClientCodePage.
 }
-constructor TZClientVariantManager.Create(const ConSettings: PZConSettings{;
-  FormatSettings: TZFormatSettings});
+constructor TZClientVariantManager.Create(const ConSettings: PZConSettings);
 begin
   inherited Create; //Set all standard converters functions
   FConSettings := ConSettings;
