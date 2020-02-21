@@ -171,7 +171,7 @@ type
 
   { TZSQLTimeStamp }
   PZTimeStamp = ^TZTimeStamp;
-  TZTimeStamp = packed record //keep it packed !!
+  TZTimeStamp = packed record //keep it packed !! // Why? This makes accessing elements slower.
     Year: Word;
     Month: Word;
     Day: Word;
