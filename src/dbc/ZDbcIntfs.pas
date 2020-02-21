@@ -255,7 +255,7 @@ type
   TZProcedureResultType = (prtUnknown, prtNoResult, prtReturnsResult);
 
   /// <summary>
-  ///  Defines a column type for the procedures.
+  ///  Defines a column type for the procedures. Allowed values are pctUnknown, pctIn, pctInOut, pctOut, pctReturn and pctResultSet.
   /// </summary>
   TZProcedureColumnType = (pctUnknown, pctIn, pctInOut, pctOut, pctReturn,
     pctResultSet);
