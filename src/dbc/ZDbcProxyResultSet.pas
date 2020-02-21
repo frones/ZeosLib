@@ -554,7 +554,7 @@ begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FWideBuffer := VarToStrDef(Val, '');
     if Len = 0
-    then Result := PEmptyAnsiString
+    then Result := PEmptyUnicodeString
     else Result := Pointer(FWideBuffer);
   end else begin
     Result := nil;
