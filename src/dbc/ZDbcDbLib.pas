@@ -178,12 +178,6 @@ begin
   inherited Create;
   AddSupportedProtocol(AddPlainDriverToCache(TMSSQLDBLibPLainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TSybaseDBLibPLainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS42MsSQLPlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS42SybasePlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS50PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS70PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS71PlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFreeTDS72PlainDriver.Create));
 end;
 
 {**
