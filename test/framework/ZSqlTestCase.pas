@@ -1282,7 +1282,7 @@ begin
   for I := 0 to ConnectionConfigs.Count - 1 do
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
        IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) and
-       SupportsConfig(ConnectionConfigs[I] as TZConnectionConfig)  then
+       SupportsConfig(ConnectionConfigs[I] as TZConnectionConfig) then
     begin
       ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
     //writeln('Using : '+Current.Name);
@@ -1301,7 +1301,8 @@ var
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
-       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
+       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) and
+       SupportsConfig(ConnectionConfigs[I] as TZConnectionConfig) then
     begin
       ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
       //writeln('Using : '+ConnectionName);
