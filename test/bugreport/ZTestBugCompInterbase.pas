@@ -71,6 +71,7 @@ type
   ZTestCompInterbaseBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure Test750912;
     procedure Test789879D;
@@ -119,7 +120,12 @@ uses
 
 function ZTestCompInterbaseBugReport.GetSupportedProtocols: string;
 begin
-  Result := pl_all_interbase;
+  Result := pl_all{_interbase};
+end;
+
+function ZTestCompInterbaseBugReport.SupportsConfig(Config: TZConnectionConfig): Boolean;
+begin
+  Result := Config.Provider = spIB_FB;
 end;
 
 {**
