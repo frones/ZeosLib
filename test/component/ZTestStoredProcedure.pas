@@ -73,7 +73,8 @@ type
   {** Implements a test case for class TZStoredProc. }
   TZTestInterbaseStoredProcedure = class(TZTestStoredProcedure)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestStoredProc;
     procedure Test_abtest;
@@ -182,9 +183,14 @@ end;
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
 }
-function TZTestInterbaseStoredProcedure.GetSupportedProtocols: string;
+//function TZTestInterbaseStoredProcedure.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZTestInterbaseStoredProcedure.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 {**

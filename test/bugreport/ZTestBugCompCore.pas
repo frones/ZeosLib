@@ -2325,7 +2325,7 @@ begin
       ) and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP)) then
       Exit;
     CP := ConSettings.ClientCodePage.CP;
-    if not ((CP = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP))
+    if not ((CP = zCP_UTF8) or (CP = zCP_UTF16) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP))
       {add some more if you run into same issue !!} then
       Exit;
     { firebird CS_NONE just support 1Byte/Char if CP is not native like russion single byte the test just would raise exception we are aware about -> skip}

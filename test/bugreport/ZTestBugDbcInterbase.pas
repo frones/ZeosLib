@@ -64,7 +64,8 @@ type
   {** Implements a DBC bug report test case for Interbase. }
   TZTestDbcInterbaseBugReport = class(TZAbstractDbcSQLTestCase)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure Test789879D;
     procedure Test841559;
@@ -86,9 +87,14 @@ uses ZTestCase, ZTestConsts, ZDbcMetadata, ZFastCode;
 
 { TZTestDbcInterbaseBugReport }
 
-function TZTestDbcInterbaseBugReport.GetSupportedProtocols: string;
+//function TZTestDbcInterbaseBugReport.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZTestDbcInterbaseBugReport.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 procedure TZTestDbcInterbaseBugReport.Test789879D;

@@ -264,7 +264,7 @@ type
     function GetDBTestStream(const Value: ZWideString; ConSettings: PZConSettings): TStream; overload;
     /// <summary>
     ///   Determines wether the current test can be run on the provided connection
-    ///   configuration. Test cases using this method should return pl_all in
+    ///   configuration. Test cases using this method should return an empty string in
     ///   GetSupportedProtocols.
     /// </summary>
     function SupportsConfig(Config: TZConnectionConfig): Boolean; virtual;

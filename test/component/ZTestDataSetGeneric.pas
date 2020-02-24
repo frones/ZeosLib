@@ -145,7 +145,8 @@ type
     procedure Test_SP_ParamBytesSetVal;
     procedure Test_SP_Type_Name;
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestGUIDs;
   end;
@@ -2782,9 +2783,14 @@ var
   GuidVal: TGUID;
 
 { TZInterbaseTestGUIDS }
-function TZInterbaseTestGUIDS.GetSupportedProtocols: string;
+//function TZInterbaseTestGUIDS.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZInterbaseTestGUIDS.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 procedure TZInterbaseTestGUIDS.SetDefaults;

@@ -64,7 +64,8 @@ type
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcInterbaseCase = class(TZAbstractDbcSQLTestCase)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -195,9 +196,14 @@ end;
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
 }
-function TZTestDbcInterbaseCase.GetSupportedProtocols: string;
+//function TZTestDbcInterbaseCase.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZTestDbcInterbaseCase.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 procedure TZTestDbcInterbaseCase.TestConnection;

@@ -73,8 +73,8 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function GetSupportedProtocols: string; override;
-
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestMetadataGetCatalogs;
     procedure TestMetadataGetSchemas;
@@ -407,9 +407,14 @@ begin
 end;
 
 
-function TZInterbaseTestDbcMetadata.GetSupportedProtocols: string;
+//function TZInterbaseTestDbcMetadata.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZInterbaseTestDbcMetadata.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 initialization

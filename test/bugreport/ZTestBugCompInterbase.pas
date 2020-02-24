@@ -70,7 +70,7 @@ type
   {** Implements a bug report test case for Interbase components. }
   ZTestCompInterbaseBugReport = class(TZAbstractCompSQLTestCase)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
     function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure Test750912;
@@ -102,7 +102,8 @@ type
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure Test_Param_LoadFromStream_StringStream_ftBlob;
     procedure Test_Param_LoadFromStream_StringStream_ftMemo;
@@ -118,10 +119,10 @@ uses
 
 { ZTestCompInterbaseBugReport }
 
-function ZTestCompInterbaseBugReport.GetSupportedProtocols: string;
-begin
-  Result := pl_all{_interbase};
-end;
+//function ZTestCompInterbaseBugReport.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase};
+//end;
 
 function ZTestCompInterbaseBugReport.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
@@ -1247,9 +1248,14 @@ end;
 
 { ZTestCompInterbaseBugReportMBCs }
 
-function ZTestCompInterbaseBugReportMBCs.GetSupportedProtocols: string;
+//function ZTestCompInterbaseBugReportMBCs.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function ZTestCompInterbaseBugReportMBCs.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 const
