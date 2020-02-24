@@ -72,6 +72,11 @@ const
   pl_all_sqlite = 'sqlite';
   pl_all_interbase = 'firebird,interbase';
   pl_all_oracle = 'oracle';
+  pl_all_dblib = 'mssql,sybase';
+  pl_all_asa = 'asa';
+  pl_all_transports = 'ado,odbc_a,odbc_w,oledb,webserviceproxy';
+  pl_all = pl_all_mysql + ',' + pl_all_postgresql + ',' + pl_all_sqlite + ','
+         + pl_all_interbase + ',' + pl_all_oracle + ',' + pl_all_dblib + ',' + pl_all_asa;
 
   // Protocols needing prefererealprepared option for real prepared statements
   pl_realpreparable = pl_all_mysql;
@@ -134,7 +139,14 @@ type
     FPerformanceFieldSizes: TIntegerDynArray;
     FPerformanceFieldNames: TStringDynArray;
     FPerformanceFieldPropertiesDetermined: Boolean;
+    FProvider: TZServerProvider;
+    FTransport: TZTransport;
     procedure SetConfigUses(AValue: TZConfigUses);
+    function GetConnectionUrl(const Param: String): TZURL;
+    function CreateDbcConnection: IZConnection;
+    function GetProtocolType: TProtocolType;
+    function GetProvider: TZServerProvider;
+    function GetTransport: TZTransport;
   public
     constructor Create; overload;
     constructor Create(TemplateConfig: TZConnectionConfig; Suffix: String); overload;
@@ -175,12 +187,18 @@ type
     property PerformanceFieldSizes: TIntegerDynArray read FPerformanceFieldSizes write FPerformanceFieldSizes;
     property PerformanceFieldNames: TStringDynArray read FPerformanceFieldNames write FPerformanceFieldNames;
     property PerformanceFieldPropertiesDetermined: Boolean read FPerformanceFieldPropertiesDetermined write FPerformanceFieldPropertiesDetermined;
+    property Provider: TZServerProvider read GetProvider;
+    property Transport: TZTransport read GetTransport;
   end;
 
   {** Implements an abstract class for all SQL test cases. }
 
   { TZAbstractSQLTestCase }
 
+  /// <summary>
+  ///   Base class for all Zeos (SQL) Test cases. All tests should be derived
+  ///   from this class.
+  /// </summary>
   TZAbstractSQLTestCase = class(TZAbstractTestCase, IZLoggingListener)
   private
     FCurrentConnectionConfig : TZConnectionConfig;
@@ -244,6 +262,12 @@ type
     function GetDBTestString(const Value: ZWideString; ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString; overload;
     function GetDBTestString(const Value: RawByteString; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String; overload;
     function GetDBTestStream(const Value: ZWideString; ConSettings: PZConSettings): TStream; overload;
+    /// <summary>
+    ///   Determines wether the current test can be run on the provided connection
+    ///   configuration. Test cases using this method should return pl_all in
+    ///   GetSupportedProtocols.
+    /// </summary>
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; virtual;
   public
     destructor Destroy; override;
 
@@ -424,6 +448,87 @@ procedure TZConnectionConfig.SetConfigUses(AValue: TZConfigUses);
 begin
   if FConfigUses=AValue then Exit;
   FConfigUses:=AValue;
+end;
+
+function TZConnectionConfig.GetConnectionUrl(const Param: String): TZURL;
+var
+  I: Integer;
+begin
+  Result := TZURL.Create;
+  Result.Protocol := Protocol;
+  Result.HostName := HostName;
+  Result.Port := Port;
+  Result.Database := Database;
+  Result.UserName := UserName;
+  Result.Password := Password;
+  Result.LibLocation := LibLocation;
+
+  for I := 0 to High(Properties) do
+    Result.Properties.Add(Properties[I]);
+  Result.Properties.Add(Param);
+end;
+
+function TZConnectionConfig.CreateDbcConnection: IZConnection;
+var
+  TempURL: TZURL;
+begin
+  TempURL := GetConnectionUrl('');
+  try
+    Result := DriverManager.GetConnection(TempURL.URL);
+    {$IFDEF ZEOS_TEST_ONLY}
+    Result.SetTestMode(ConnectionConfig.TestMode);
+    {$ENDIF}
+  finally
+    TempURL.Free;
+  end;
+end;
+
+function TZConnectionConfig.GetProtocolType: TProtocolType;
+var Prot: string;
+begin
+  Prot := LowerCase(Protocol);
+  for Result := Low(TProtocolType) to High(TProtocolType) do
+    if StartsWith(Prot, ProtocolPrefixes[Result]) then
+      Exit;
+  Result := protUnknown;
+end;
+
+function TZConnectionConfig.GetProvider: TZServerProvider;
+var
+  Connection: IZConnection;
+begin
+  if FProvider <> spUnknown
+  then Result := FProvider
+  else begin
+    case GetProtocolType of
+      protMySQL: FProvider := spMySQL;
+      protPostgre: FProvider := spPostgreSQL;
+      protSQLite: FProvider :=spSQLite;
+      protFirebird, protInterbase: FProvider := spIB_FB;
+      protOracle: FProvider := spOracle;
+      protASA: FProvider := spASA;
+      protMSSQL, protOleDB, protADO, protFreeTDS, protODBC, protSybase: begin
+          Connection := CreateDbcConnection;
+          Connection.Open;
+          FProvider := Connection.GetServerProvider;
+        end;
+    end;
+    Result := FProvider;
+  end;
+end;
+
+function TZConnectionConfig.GetTransport: TZTransport;
+begin
+  if FTransport <> traUnknown then begin
+    Result := FTransport;
+  end else case GetProtocolType of
+    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protFreeTDS, protMSSQL, protSybase: Result := traNative;
+    protOleDB: Result := traOLEDB;
+    protADO: Result := traADO;
+    protODBC: Result := traODBC;
+    protWebServiceProxy: Result := traWEBPROXY;
+    else Result := traUnknown;
+  end;
 end;
 
 constructor TZConnectionConfig.Create;
@@ -1158,6 +1263,12 @@ begin
   end;
 end;
 
+function TZAbstractSQLTestCase.SupportsConfig(Config: TZConnectionConfig): Boolean;
+begin
+  Result := true;
+end;
+
+
 {$IFNDEF FPC}
 {**
    Function configure test paramters and start test case
@@ -1170,7 +1281,8 @@ var
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
-       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
+       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) and
+       SupportsConfig(ConnectionConfigs[I] as TZConnectionConfig)  then
     begin
       ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
     //writeln('Using : '+Current.Name);
@@ -1203,18 +1315,8 @@ end;
   @return a created database ZDBC connection object.
 }
 function TZAbstractSQLTestCase.CreateDbcConnection: IZConnection;
-var
-  TempURL: TZURL;
 begin
-  TempURL := GetConnectionUrl('');
-  try
-    Result := DriverManager.GetConnection(TempURL.URL);
-    {$IFDEF ZEOS_TEST_ONLY}
-    Result.SetTestMode(ConnectionConfig.TestMode);
-    {$ENDIF}
-  finally
-    TempURL.Free;
-  end;
+  Result := FCurrentConnectionConfig.CreateDbcConnection;
 end;
 
 {**
@@ -1335,21 +1437,8 @@ end;
   @return a built connection URL object.
 }
 function TZAbstractSQLTestCase.GetConnectionUrl(const Param: String): TZURL;
-var
-  I: Integer;
 begin
-  Result := TZURL.Create;
-  Result.Protocol := Protocol;
-  Result.HostName := HostName;
-  Result.Port := Port;
-  Result.Database := Database;
-  Result.UserName := UserName;
-  Result.Password := Password;
-  Result.LibLocation := LibLocation;
-
-  for I := 0 to High(Properties) do
-    Result.Properties.Add(Properties[I]);
-  Result.Properties.Add(Param);
+  Result := FCurrentConnectionConfig.GetConnectionUrl(Param);
 end;
 
 type
