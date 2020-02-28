@@ -12,7 +12,8 @@ uses
   {wst}server_listener, fpc_http_server, server_service_soap,
   {synapse}
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
-  DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement;
+  DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
+  ZDbcInterbase6;
 
 type
 
@@ -25,9 +26,15 @@ type
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
     procedure WriteHelp; virtual;
+    procedure WriteProtocols;
   end;
 
 { TZDbcProxyServer }
+
+procedure TZDbcProxyServer.WriteProtocols;
+begin
+
+end;
 
 procedure TZDbcProxyServer.DoRun;
 var

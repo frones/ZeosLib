@@ -553,6 +553,7 @@ begin
   if not LastWasNull then begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FWideBuffer := VarToStrDef(Val, '');
+    Len := Length(FWideBuffer);
     if Len = 0
     then Result := PEmptyUnicodeString
     else Result := Pointer(FWideBuffer);
@@ -1275,7 +1276,6 @@ var
   ColType: TZSQLType;
   Idx: Integer;
   Val: String;
-  AnsiVal: AnsiString;
   Bytes: TBytes;
   ColInfo: TZColumnInfo;
 begin
@@ -1404,12 +1404,12 @@ end;
 
 procedure TZDbcProxyResultSet.GetTime(ColumnIndex: Integer; Var Result: TZTime);
 begin
-  DecodeDateTimeToTime(GetDate(ColumnIndex), Result);
+  DecodeDateTimeToTime(GetTime(ColumnIndex), Result);
 end;
 
 procedure TZDbcProxyResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 begin
-  DecodeDateTimeToTimeStamp(GetDate(ColumnIndex), Result);
+  DecodeDateTimeToTimeStamp(GetTimestamp(ColumnIndex), Result);
 end;
 {$ENDIF}
 

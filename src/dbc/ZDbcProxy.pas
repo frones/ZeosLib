@@ -87,8 +87,8 @@ type
 
   { TZProxyConnection }
 
-  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection, IZConnection
-    {$ELSE} TZAbstractDbcConnection, {$ENDIF}IZDbcProxyConnection)
+  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection,
+    {$ELSE} TZAbstractDbcConnection, {$ENDIF} IZConnection, IZDbcProxyConnection)
   private
     FPlainDriver: IZProxyPlainDriver;
     FConnIntf: IZDbcProxy;
@@ -265,6 +265,8 @@ var
 begin
   if not Closed then
     Exit;
+
+  FStartTransactionUsed := false;
 
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
