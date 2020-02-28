@@ -491,7 +491,7 @@ var RS: IZResultSet;
               (RS.GetType = rtForwardOnly) and (ProtocolType = protFirebird)) then
       CheckEquals(Ord(SQLType), Ord(RS.GetMetadata.GetColumnType(ColumnIndex)), Protocol+': SQLType mismatch, for column "'+S+'"');
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
-    CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Value: '+Value);
+    CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD));
   end;
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;
@@ -686,7 +686,10 @@ begin
       SetBinaryStream(Insert_p_picture_Index, BinStream);
 
       StrStream := TMemoryStream.Create;
-      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+      if ConnectionConfig.Transport = traWEBPROXY then
+        StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+      else
+        StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
       SetAsciiStream(Insert_p_resume_Index, StrStream);
       if ProtocolType = protPostgre then //PQExecParams can't convert str to smallint
         SetNull(Insert_p_redundant_Index, stSmall)
@@ -1056,7 +1059,10 @@ begin
 
   Sql := 'SELECT * FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   StrStream := TMemoryStream.Create;
-  StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+  if ConnectionConfig.Transport = traWEBPROXY then
+    StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+  else
+    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
   BinStream := TMemoryStream.Create;
   BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
   StrStream1 := nil;
