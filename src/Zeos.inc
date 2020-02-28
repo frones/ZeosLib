@@ -316,6 +316,7 @@
                           {$ENDIF}  
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
+                              {$DEFINE WITH_OMNIXML}
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
                               {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead							  
                               {$IF CompilerVersion >= 29} //Delphi XE8+
