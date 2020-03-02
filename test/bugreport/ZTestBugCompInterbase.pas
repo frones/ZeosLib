@@ -482,7 +482,10 @@ begin
   try
     { load data to the stream }
     BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
-    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+    if ConnectionConfig.Transport = traWEBPROXY then
+      StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+    else
+      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     {$IFDEF WITH_WIDEMEMO}
     if ( ConSettings.CPType = cCP_UTF16 ) then begin
       StrStream.Position := 0;

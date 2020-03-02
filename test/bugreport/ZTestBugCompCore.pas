@@ -881,7 +881,7 @@ begin
   Query.SQL.Text := 'select p_id, p_name, p_resume from people'
     + ' where p_id < 4 order by p_id';
 
-  if ProtocolType in [protInterbase, protFirebird, protOracle] then
+  if ConnectionConfig.Provider in [spIB_FB, spOracle] then
   begin
     try
       Query.Open;
