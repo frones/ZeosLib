@@ -430,11 +430,12 @@ begin
       Result := stDouble;
     {$IFDEF WITH_FTEXTENDED}
     ftExtended:
-      Result := stBigDecimal;
+      Result := stDouble;
     {$ENDIF}
     ftLargeInt:
       Result := stLong;
-    ftCurrency: Result := stDouble;
+    ftCurrency:
+      Result := stBigDecimal;
     ftBCD:
       Result := stCurrency;
     ftFmtBCD:
