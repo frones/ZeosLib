@@ -6613,7 +6613,7 @@ end;
 procedure TZAbstractPreparedStatement2.RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
   ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0; Scale: LengthInt = 0);
 begin
-  SetInParam(ParameterIndex, SQLType, EncodeNull);
+  SetInParam(ParameterIndex + FirstDbcIndex, SQLType, EncodeNull);
 end;
 
 function TZAbstractPreparedStatement2.IsNull(Index: Integer): Boolean;
