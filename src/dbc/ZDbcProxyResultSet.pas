@@ -76,6 +76,7 @@ type
     FAnsiBuffer: AnsiString;
     FWideBuffer: ZWideString;
     FStringBuffer: String;
+    FBytesBuffer: TBytes;
     {$IFNDEF ZEOS73UP}
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     {$ENDIF}
@@ -348,7 +349,7 @@ var
   Stream: TStream;
   ConSettings: PZConSettings;
   Metadata: IZDatabaseMetadata;
-  x: String;
+  x: Char;//String;
   xmldoc: TXMLDocument;
 
   DomVendor: TDOMVendor;
@@ -370,8 +371,8 @@ begin
   Stream := TMemoryStream.Create;
   try
     x := #$FEFF;
-    Stream.Write(x[1], 2);
-    Stream.Write(ResultStr[1], Length(ResultStr) * 2);
+    Stream.Write(x{[1]}, 2);
+    Stream.Write(ResultStr[Low(String)], Length(ResultStr) * 2);
     Stream.Position := 0;
     FXmlDocument.LoadFromStream(Stream);
   finally
@@ -1047,16 +1048,42 @@ end;
     value returned is <code>null</code>
 }
 function TZDbcProxyResultSet.GetBytes(ColumnIndex: Integer): TBytes;
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+  ColInfo: TZColumnInfo;
 begin
+  {$IFNDEF DISABLE_CHECKING}
+    CheckColumnConvertion(ColumnIndex, stInteger);
+  {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
 
-//  if LastWasNull then begin
-//    Result := 0;
-//    exit;
-//  end;
+  if LastWasNull then begin
+    Result := nil;
+    exit;
+  end;
 
-  // todo: Implement GetBytes
-  raise Exception.Create('GetBytes is not supported (yet)');
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
+  ColType := ColInfo.ColumnType;
+  case ColType of
+    stBinaryStream, stBytes: begin
+      Result := DecodeBase64(AnsiString(Val));
+    end;
+    stAsciiStream, stUnicodeStream: begin
+      if Val <> '' then begin
+         SetLength(Result, Length(Val) * 2);
+         Move(Val[Low(String)], Result[0], Length(Val) * 2);
+       end else begin
+         Setlength(Result, 0);
+       end;
+    end;
+    else begin
+      raise Exception.Create('GetBytes is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
+    end;
+  end;
 end;
 
 function TZDbcProxyResultSet.GetCurrency(
@@ -1394,7 +1421,9 @@ end;
 
 function TZDbcProxyResultSet.GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte;
 begin
-  raise Exception.Create('GetBytes is not supported (yet)');
+  FBytesBuffer := GetBytes(ColumnIndex);
+  Len := Length(FBytesBuffer);
+  Result := @(FBytesBuffer[0]);
 end;
 
 procedure TZDbcProxyResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);

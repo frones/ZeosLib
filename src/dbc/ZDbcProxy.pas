@@ -384,7 +384,7 @@ end;
 // Todo: Integrate changes for nested transactions support.
 function TZDbcProxyConnection.StartTransaction: Integer;
 begin
-  if FStartTransactionUsed then
+  if FStartTransactionUsed or not GetAutoCommit then
     raise EZSQLException.Create('The proxy driver does not support nested transactions.');
   FStartTransactionUsed := True;
   SetAutoCommit(False);
