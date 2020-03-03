@@ -64,7 +64,7 @@ uses
 {$IFEND}
   ZDbcInterbase6, ZDbcInterbase6Utils, ZConnection, ZDbcIntfs, ZFastCode,
   ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants
-  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
+  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils, ZClasses{$ENDIF};
 
 type
 
@@ -120,7 +120,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses
-  SyncObjs, ZClasses{$IFDEF UNICODE}, ZCompatibility{$ENDIF}
+  SyncObjs{$IFNDEF TLIST_IS_DEPRECATED}, ZClasses{$ENDIF}{$IFDEF UNICODE}, ZCompatibility{$ENDIF}
   {$IFDEF UNICODE}, ZEncoding{$ENDIF};
 
 const

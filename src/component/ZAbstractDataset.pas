@@ -60,7 +60,7 @@ uses
   SysUtils,  Classes, {$IFDEF MSEgui}mdb, mclasses{$ELSE}DB{$ENDIF},
   ZSqlUpdate, ZDbcIntfs, ZVariant, ZDbcCache, ZDbcCachedResultSet,
   ZAbstractRODataset, ZCompatibility, ZSequence
-  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
+  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils, ZClasses{$ENDIF};
 
 type
   {$IFDEF oldFPC} // added in 2006, probably pre 2.2.4
