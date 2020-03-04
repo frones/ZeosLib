@@ -124,6 +124,8 @@ type
     procedure TestSF286_getSmaller;
     procedure TestSF301;
     procedure TestSF238;
+    procedure TestSF418_SortedFields;
+    procedure TestSF418_IndexFieldNames;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1853,6 +1855,84 @@ begin
     Query.SQL.Text := 'delete from people where p_id > '+IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
     Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF418_SortedFields;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Connection.Connect;
+  try
+    Connection.ExecuteDirect('delete from number_values where n_id in (1001, 1002, 1003, 1003, 1004, 1005)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1001, 0.0)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1002, 1.3376)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1003, 0.8246)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1004, 0.8459)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1005, 0.5684)');
+
+    Query := TZReadOnlyQuery.Create(nil);
+    try
+      Query.Connection := Connection;
+      Query.SQL.Text := 'select n_id, n_float from number_values where n_id in (1001, 1002, 1003, 1004, 1005) order by n_id';
+      Query.Open;
+      Query.SortedFields := 'n_float';
+
+      Query.First;
+      CheckEquals(1001, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1005, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1003, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1004, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1002, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+    finally
+      FreeAndNil(Query);
+    end;
+  finally
+    Connection.Disconnect;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF418_IndexFieldNames;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Connection.Connect;
+  try
+    Connection.ExecuteDirect('delete from number_values where n_id in (1001, 1002, 1003, 1003, 1004, 1005)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1001, 0.0)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1002, 1.3376)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1003, 0.8246)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1004, 0.8459)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_float) values (1005, 0.5684)');
+
+    Query := TZReadOnlyQuery.Create(nil);
+    try
+      Query.Connection := Connection;
+      Query.SQL.Text := 'select n_id, n_float from number_values where n_id in (1001, 1002, 1003, 1004, 1005) order by n_id';
+      Query.Open;
+      Query.IndexFieldNames := 'n_float';
+
+      Query.First;
+      CheckEquals(1001, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1005, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1003, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1004, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1002, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+    finally
+      FreeAndNil(Query);
+    end;
+  finally
+    Connection.Disconnect;
   end;
 end;
 
