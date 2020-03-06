@@ -98,6 +98,7 @@ type
     procedure TestExecutBlockReturning_WithParamCheck;
     procedure TestProcAbtest_WithParamCheck;
     procedure TestProcAbtest_WithoutParamCheck;
+    procedure TestSF418;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1246,6 +1247,64 @@ begin
       Query.Close;
       Query.Free;
     end;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestSF418;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Query := TZReadOnlyQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'select * from Ticket418 order by id desc';
+    Query.Open;
+    Query.SortedFields := 'num';
+
+    Query.First;
+    CheckEquals(21, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(1, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(2, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(3, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(4, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(5, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(6, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(7, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(8, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(9, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(10, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(11, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(12, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(13, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(14, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(15, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(16, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(17, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(18, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(19, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(20, Query.FieldByName('id').AsInteger);
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
