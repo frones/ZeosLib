@@ -39,4 +39,4 @@ drop domain tinteger;
 drop domain tfloat;
 drop domain tstring;
 drop domain DOM_GUID;
-drop generator GEN_ID;
+drop generator "GEN_ID";
