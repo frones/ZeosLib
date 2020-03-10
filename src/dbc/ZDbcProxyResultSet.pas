@@ -73,7 +73,7 @@ type
     FRowsNode: IXMLNode;
     FFormatSettings: TFormatSettings;
   protected
-    FAnsiBuffer: AnsiString;
+    FAnsiBuffer: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
     FWideBuffer: ZWideString;
     FStringBuffer: String;
     FBytesBuffer: TBytes;
@@ -98,7 +98,7 @@ type
     /// <param name="ResultStr">
     ///  A string containing the XML exncoded result set.
     /// </param>
-    constructor Create(const Connection: IZConnection; const SQL: string; const ResultStr: WideString);
+    constructor Create(const Connection: IZConnection; const SQL: string; const ResultStr: String);
     /// <summary>
     ///  Indicates if the value of the designated column in the current row
     ///  of this ResultSet object is Null.
@@ -344,7 +344,7 @@ end;
 
 { TZDbcProxyResultSet }
 
-constructor TZDbcProxyResultSet.Create(const Connection: IZConnection; const SQL: string; const ResultStr: WideString);
+constructor TZDbcProxyResultSet.Create(const Connection: IZConnection; const SQL: string; const ResultStr: String);
 var
   Stream: TStream;
   ConSettings: PZConSettings;
@@ -534,7 +534,11 @@ begin
 
   if not LastWasNull then begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
+    {$IFDEF NO_ANSISTRING}
+    FAnsiBuffer := UTF8Encode(VarToStrDef(Val, ''));
+    {$ELSE}
     FAnsiBuffer := AnsiString(VarToStrDef(Val, ''));
+    {$ENDIF}
     Len := Length(FAnsiBuffer);
     if Len = 0
     then Result := PEmptyAnsiString
@@ -615,7 +619,7 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(Val);
+  Result := UTF8Encode(VarToStrDef(Val, ''));
 end;
 {$ENDIF}
 
@@ -630,7 +634,7 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(Val);
+  Result := UTF8Encode(VarToStrDef(Val, ''));
 end;
 
 function TZDbcProxyResultSet.GetBinaryString(ColumnIndex: Integer): RawByteString;
@@ -1070,7 +1074,7 @@ begin
   ColType := ColInfo.ColumnType;
   case ColType of
     stBinaryStream, stBytes: begin
-      Result := DecodeBase64(AnsiString(Val));
+      Result := DecodeBase64(Val);
     end;
     stAsciiStream, stUnicodeStream: begin
       if Val <> '' then begin
@@ -1322,7 +1326,7 @@ begin
   ColType := ColInfo.ColumnType;
   case ColType of
     stBinaryStream: begin
-      Bytes := DecodeBase64(AnsiString(Val));
+      Bytes := DecodeBase64(Val);
       Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
     end;
     stAsciiStream, stUnicodeStream: begin
