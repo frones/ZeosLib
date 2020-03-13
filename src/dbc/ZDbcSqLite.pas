@@ -409,6 +409,9 @@ end;
 
 function TZSQLiteConnection.enable_load_extension(OnOff: Integer): Integer;
 begin
+  if not Assigned(FPlainDriver.sqlite3_enable_load_extension) then
+    raise EZSQLException.Create(SUnsupportedOperation);
+
   Result := FPlainDriver.sqlite3_enable_load_extension(FHandle, OnOff);
 end;
 
