@@ -553,7 +553,7 @@ implementation
 
 {$IFNDEF ZEOS_DISABLE_SQLITE}
 
-uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, ZClasses, ZMessages;
 
 { TZSQLiteBaseDriver }
 
@@ -922,6 +922,9 @@ end;
 function TZSQLiteBaseDriver.enable_load_extension(db: Psqlite;
   OnOff: Integer): Integer;
 begin
+  if not Assigned(sqlite3_enable_load_extension) then
+    raise EZSQLException.Create(SUnsupportedOperation);
+
   Result := sqlite3_enable_load_extension(db, OnOff);
 end;
 
