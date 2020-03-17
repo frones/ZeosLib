@@ -177,3 +177,9 @@ create table Ticket376b (
   id varchar(15) not null primary key, 
   "value" BLOB SUB_TYPE TEXT
 );
+
+create table Ticket418 (
+  id integer not null,
+  num DECIMAL(18,8),
+  constraint pk_ticket418 primary key (id)
+);
