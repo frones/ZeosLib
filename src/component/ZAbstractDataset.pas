@@ -60,7 +60,7 @@ uses
   SysUtils,  Classes, {$IFDEF MSEgui}mdb, mclasses{$ELSE}DB{$ENDIF},
   ZSqlUpdate, ZDbcIntfs, ZVariant, ZDbcCache, ZDbcCachedResultSet,
   ZAbstractRODataset, ZCompatibility, ZSequence
-  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils, ZClasses{$ENDIF};
+  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
 
 type
   {$IFDEF oldFPC} // added in 2006, probably pre 2.2.4
@@ -243,20 +243,38 @@ end;
   @param Value a new UpdateSQL object.
 }
 procedure TZAbstractDataset.SetUpdateObject(Value: TZUpdateSQL);
+var TempResolver: IZCachedResolver; //need a temporay interface to compare the resolvers
 begin
   if FUpdateObject <> Value then
   begin
-    if Assigned(FUpdateObject) then
+    TempResolver := nil; //init
+    if Assigned(FUpdateObject) then begin
       FUpdateObject.RemoveFreeNotification(Self);
+      { get a local interface ptr of old update object for comparesion below }
+      FUpdateObject.GetInterface(IZCachedResolver, TempResolver);
+    end;
     FUpdateObject := Value;
     if Assigned(FUpdateObject) then begin
       FUpdateObject.FreeNotification(Self);
       FUpdateObject.DataSet := Self;
     end;
     if Active and (CachedResultSet <> nil) then
-      if FUpdateObject <> nil
-      then CachedResultSet.SetResolver(FUpdateObject)
-      else CachedResultSet.SetResolver(CachedResolver);
+      if FUpdateObject <> nil then begin
+        { get a local interface of the component }
+        FUpdateObject.GetInterface(IZCachedResolver, TempResolver);
+        CachedResultSet.SetResolver(TempResolver)
+      end else begin
+        {EH: now test if the old FUpdateObject intf equals with current cached resolver }
+        if CachedResolver = TempResolver then begin
+          { do not use this interface any more. Use the native resolver of
+            the cached RS instead. Otherwise on freeing (self) the compiler
+            attaches dead memory later on (this is hidded with FastMM in our tests f.e.)
+            -> Component interfaces are not refcounted by default}
+          CachedResolver := CachedResultSet.GetNativeResolver;
+          FCachedResolver := CachedResolver;
+        end;
+        CachedResultSet.SetResolver(CachedResolver);
+      end;
   end;
 end;
 
@@ -386,11 +404,11 @@ end;
 }
 procedure TZAbstractDataset.InternalEdit;
 var
-  RowNo: Integer;
+  RowNo: NativeInt;
   RowBuffer: PZRowBuffer;
 begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then begin
-    RowNo := Integer(CurrentRows[CurrentRow - 1]);
+    RowNo := {%H-}NativeInt (CurrentRows[CurrentRow - 1]);
     CachedResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := RowBuffer;
   end;
@@ -418,12 +436,12 @@ end;
 }
 procedure TZAbstractDataset.InternalUpdate;
 var
-  RowNo: Integer;
+  RowNo: NativeInt;
   RowBuffer: PZRowBuffer;
 begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
   begin
-    RowNo := Integer(CurrentRows[CurrentRow - 1]);
+    RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
     {CachedResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := RowBuffer;
     PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);}
@@ -456,7 +474,7 @@ procedure TZAbstractDataset.InternalAddRecord(Buffer: Pointer; Append: Boolean);
 procedure TZAbstractDataset.InternalAddRecord(Buffer: TRecBuf; Append: Boolean);
 {$ENDIF}
 var
-  RowNo: Integer;
+  RowNo: NativeInt;
   RowBuffer: PZRowBuffer;
 begin
 {$IFNDEF WITH_InternalAddRecord_TRecBuf}
@@ -489,13 +507,13 @@ begin
     begin
       if Append then
       begin
-        CurrentRows.Add(Pointer(RowNo));
+        CurrentRows.Add({%H-}Pointer(RowNo));
         CurrentRow := CurrentRows.Count;
       end
       else
       begin
         CurrentRow := Max(CurrentRow, 1);
-        CurrentRows.Insert(CurrentRow - 1, Pointer(RowNo));
+        CurrentRows.Insert(CurrentRow - 1, {%H-}Pointer(RowNo));
       end;
     end;
   end;
@@ -593,14 +611,14 @@ end;
 }
 procedure TZAbstractDataset.InternalDelete;
 var
-  RowNo: Integer;
+  RowNo: NativeInt;
   RowBuffer: PZRowBuffer;
 begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
   begin
     Connection.ShowSqlHourGlass;
     try
-      RowNo := Integer(CurrentRows[CurrentRow - 1]);
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       CachedResultSet.MoveAbsolute(RowNo);
       try
         CachedResultSet.DeleteRow;
@@ -628,13 +646,13 @@ end;
 }
 procedure TZAbstractDataset.InternalCancel;
 var
-  RowNo: Integer;
+  RowNo: NativeInt;
   RowBuffer: PZRowBuffer;
 begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
     if (CurrentRow > 0) and (State = dsEdit) then
     begin
-      RowNo := Integer(CurrentRows[CurrentRow - 1]);
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       CachedResultSet.MoveAbsolute(RowNo);
       RowAccessor.RowBuffer := RowBuffer;
       CachedResultSet.RevertRecord;
