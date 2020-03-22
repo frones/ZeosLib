@@ -91,12 +91,13 @@ type
   {** Implements PostgreSQL ResultSet. }
   TZAbstractPostgreSQLResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
   private
+    FFirstRow: Boolean;
     FconnAddress: PPGconn;
     Fres: TPGresult;
     FresAddress: PPGresult;
     FPlainDriver: TZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
-    FIs_bytea_output_hex: Boolean;
+    FSingleRowMode, FIs_bytea_output_hex: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
     FClientCP: Word;
@@ -137,6 +138,7 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob;
 
     function MoveAbsolute(Row: Integer): Boolean; override;
+    function Next: Boolean; override;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
     {$ENDIF USE_SYNCOMMONS}
@@ -146,19 +148,12 @@ type
   protected
     procedure Open; override;
     function PGRowNo: Integer; override;
-  public
-    function MoveAbsolute(Row: Integer): Boolean; override;
   End;
 
   TZServerCursorPostgreSQLResultSet = Class(TZAbstractPostgreSQLResultSet)
-  private
-    FFirstRow: Boolean;
   protected
     procedure Open; override;
     function PGRowNo: Integer; override;
-  public
-    function Next: Boolean; override;
-    procedure ResetCursor; override;
   End;
 
   {** Represents an interface, specific for PostgreSQL blobs. }
@@ -445,15 +440,15 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.Add('"');
                               if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID)
                               then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
-                              else JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
                             end;
             stAsciiStream,
             stUnicodeStream:if (ColumnOID = JSONOID) or (ColumnOID = JSONBOID) then
-                              JSONWriter.AddNoJSONEscape(P, SynCommons.StrLen(P))
+                              JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
                             else begin
                               JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
                             end;
             //stArray, stDataSet,
@@ -544,15 +539,15 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.Add('"');
                               if (ColumnOID = CHAROID) or (ColumnOID = BPCHAROID)
                               then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
-                              else JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
                             end;
             stAsciiStream,
             stUnicodeStream:if (ColumnOID = JSONOID) or (ColumnOID = JSONBOID) then
-                              JSONWriter.AddNoJSONEscape(P, SynCommons.StrLen(P))
+                              JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
                             else begin
                               JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscape(P, SynCommons.StrLen(P));
+                              JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
                             end;
             //stArray, stDataSet,
@@ -711,6 +706,7 @@ var
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
+  FFirstRow := True;
 
   { Fills the column info. }
   ColumnsInfo.Clear;
@@ -788,7 +784,11 @@ end;
 procedure TZAbstractPostgreSQLResultSet.ResetCursor;
 begin
   if not Closed then begin
-    ClearPGResult;
+    if FSingleRowMode and not IsAfterLast then begin
+      while next do ;
+    end else
+      ClearPGResult;
+    FFirstRow := True;
     inherited ResetCursor;
   end;
 end;
@@ -2061,47 +2061,128 @@ begin
   end;
 end;
 
+{**
+  Moves the cursor to the given row number in
+  this <code>ResultSet</code> object.
+
+  <p>If the row number is positive, the cursor moves to
+  the given row number with respect to the
+  beginning of the result set.  The first row is row 1, the second
+  is row 2, and so on.
+
+  <p>If the given row number is negative, the cursor moves to
+  an absolute row position with respect to
+  the end of the result set.  For example, calling the method
+  <code>absolute(-1)</code> positions the
+  cursor on the last row; calling the method <code>absolute(-2)</code>
+  moves the cursor to the next-to-last row, and so on.
+
+  <p>An attempt to position the cursor beyond the first/last row in
+  the result set leaves the cursor before the first row or after
+  the last row.
+
+  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
+  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
+  is the same as calling <code>last()</code>.
+
+  @return <code>true</code> if the cursor is on the result set;
+    <code>false</code> otherwise
+}
 function TZAbstractPostgreSQLResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-{$ENDIF}
-  if (Fres = nil) and (not Closed) and (RowNo=0)then
-  begin
-    Fres :=  FresAddress^;
-    LastRowNo := FPlainDriver.PQntuples(Fres);
+  if FFirstRow then begin
+    Fres := FresAddress^; //first row is obtained already
+    FFirstRow := False;
+    if not FSingleRowMode then
+      LastRowNo := FPlainDriver.PQntuples(Fres);
   end;
   { Checks for maximum row. }
   Result := False;
-  if (MaxRows > 0) and (Row > MaxRows) then
-  begin
+  if Closed then Exit;
+
+  if (MaxRows > 0) and (Row > MaxRows) then begin
     if (ResultSetType = rtForwardOnly) then
-      ClearPGResult;
+      ResetCursor;
     Exit;
   end;
 
   { Processes negative rows. }
-  if Row < 0 then
-  begin
+  if Row < 0 then begin
     Row := LastRowNo - Row + 1;
     if Row < 0 then
        Row := 0;
   end;
 
-  if (ResultSetType <> rtForwardOnly) or (Row >= RowNo) then
-  begin
-    if (Row >= 0) and (Row <= LastRowNo + 1) then
-    begin
+  if not FSingleRowMode or (Row = RowNo) then begin
+    if (Row >= 0) and (Row <= LastRowNo + 1) then begin
       RowNo := Row;
       Result := (Row >= 1) and (Row <= LastRowNo);
-    end
-    else
+    end else
       Result := False;
-    if not Result and (ResultSetType = rtForwardOnly) then
+    if not Result and FSingleRowMode then
       ClearPGResult;
   end
   else
     RaiseForwardOnlyException;
+end;
+
+{**
+  Moves the cursor down one row from its current position.
+  A <code>ResultSet</code> cursor is initially positioned
+  before the first row; the first call to the method
+  <code>next</code> makes the first row the current row; the
+  second call makes the second row the current row, and so on.
+
+  <P>If an input stream is open for the current row, a call
+  to the method <code>next</code> will
+  implicitly close it. A <code>ResultSet</code> object's
+  warning chain is cleared when a new row is read.
+
+  @return <code>true</code> if the new current row is valid;
+    <code>false</code> if there are no more rows
+}
+function TZAbstractPostgreSQLResultSet.Next: Boolean;
+var Status: TZPostgreSQLExecStatusType;
+label jmpRes;
+  procedure CheckError;
+  begin
+    HandlePostgreSQLError(Self, FplainDriver, FconnAddress^, lcExecPrepStmt, 'PQgetResult', nil);
+  end;
+begin
+  Result := False;
+  if Closed or ((MaxRows > 0) and (RowNo >= MaxRows)) or (RowNo > LastRowNo) then //previously set by stmt or Next
+    Exit;
+  if FFirstRow then begin
+    Fres := FresAddress^; //first row is obtained already
+    FFirstRow := False;
+    if FSingleRowMode
+    then goto jmpRes
+    else LastRowNo := FPlainDriver.PQntuples(Fres);
+  end;
+  if FSingleRowMode then begin
+    if Fres <> nil then begin
+      FplainDriver.PQclear(Fres);
+      Fres := FPlainDriver.PQgetResult(FconnAddress^);
+      FresAddress^ := Fres;
+jmpRes:
+      Status := FPlainDriver.PQresultStatus(Fres)
+    end else Exit;
+    if (Status = PGRES_SINGLE_TUPLE) then begin
+      RowNo := RowNo + 1;
+      LastRowNo := RowNo;
+      Result := True;
+    end else if Status = PGRES_TUPLES_OK then begin //end of stream
+      LastRowNo := RowNo;
+      RowNo := RowNo +1;
+      FplainDriver.PQclear(Fres);
+      Fres := nil;
+      FresAddress^ := nil;
+    end else
+      CheckError;
+  end else begin
+    RowNo := RowNo + 1;
+    Result := (RowNo <= LastRowNo);
+  end;
 end;
 
 { TZPostgreSQLOidBlob }
@@ -2316,85 +2397,13 @@ end;
 { TZClientCursorPostgreSQLResultSet }
 
 {**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
-function TZClientCursorPostgreSQLResultSet.MoveAbsolute(
-  Row: Integer): Boolean;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-{$ENDIF}
-  if (Fres = nil) and (not Closed) and (RowNo=0)then
-  begin
-    Fres := FresAddress^;
-    LastRowNo := FPlainDriver.PQntuples(Fres);
-  end;
-  { Checks for maximum row. }
-  Result := False;
-  if (MaxRows > 0) and (Row > MaxRows) then
-  begin
-    if (ResultSetType = rtForwardOnly) then
-      ClearPGResult;
-    Exit;
-  end;
-
-  { Processes negative rows. }
-  if Row < 0 then
-  begin
-    Row := LastRowNo - Row + 1;
-    if Row < 0 then
-       Row := 0;
-  end;
-
-  if (ResultSetType <> rtForwardOnly) or (Row >= RowNo) then
-  begin
-    if (Row >= 0) and (Row <= LastRowNo + 1) then
-    begin
-      RowNo := Row;
-      Result := (Row >= 1) and (Row <= LastRowNo);
-    end
-    else
-      Result := False;
-    if not Result and (ResultSetType = rtForwardOnly) then
-      ClearPGResult;
-  end
-  else
-    RaiseForwardOnlyException;
-end;
-
-{**
   Opens this recordset.
 }
 procedure TZClientCursorPostgreSQLResultSet.Open;
 begin
   if not Assigned(Fres) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-
-  LastRowNo := FPlainDriver.PQntuples(Fres);
+  FSingleRowMode := False;
   inherited open;
 end;
 
@@ -2406,80 +2415,18 @@ end;
 { TZServerCursorPostgreSQLResultSet }
 
 {**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
-
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
-function TZServerCursorPostgreSQLResultSet.Next: Boolean;
-var Status: TZPostgreSQLExecStatusType;
-label Clr;
-  procedure CheckError;
-  begin
-    HandlePostgreSQLError(Self, FplainDriver, FconnAddress^, lcExecPrepStmt, 'PQgetResult', nil);
-  end;
-begin
-  Result := False;
-  if Closed then exit;
-  if FFirstRow then begin
-    Fres := FresAddress^; //first row is obtained already
-    FFirstRow := False;
-  end else begin
-    if ((MaxRows > 0) and (RowNo >= MaxRows)) or (RowNo > LastRowNo) then //previously set by stmt or Next
-      Exit;
-Clr:FplainDriver.PQclear(Fres);
-    Fres := FPlainDriver.PQgetResult(FconnAddress^);
-    FresAddress^ := Fres;
-  end;
-  if Fres <> nil
-  then Status := FPlainDriver.PQresultStatus(Fres)
-  else Exit;
-  if Status = PGRES_SINGLE_TUPLE then begin
-    RowNo := RowNo + 1;
-    if LastRowNo < RowNo then
-      LastRowNo := RowNo;
-    Result := True;
-  end else if Status = PGRES_TUPLES_OK then begin //end of stream
-    if RowNo <= LastRowNo then
-      RowNo := LastRowNo + 1;
-    goto Clr;
-  end else
-    CheckError;
-end;
-
-{**
   Opens this recordset.
 }
 procedure TZServerCursorPostgreSQLResultSet.Open;
 begin
-  FFirstRow := True;
   SetType(rtForwardOnly);
-  FFirstRow := True;
+  FSingleRowMode := True;
   inherited Open;
 end;
 
 function TZServerCursorPostgreSQLResultSet.PGRowNo: Integer;
 begin
   Result := 0;
-end;
-
-procedure TZServerCursorPostgreSQLResultSet.ResetCursor;
-begin
-  if not Closed then begin
-    if not IsAfterLast then
-      while Next do;
-    inherited ResetCursor;
-    FFirstRow := True; //as documented all rowns need to be fetched
-  end;
 end;
 
 { TZPostgreSQLCachedResolver }
