@@ -544,7 +544,7 @@ function CompareSingle_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PSingle(V1)^ > PSingle(V2)^)-Ord(PSingle(V1)^ < PSingle(V2)^);
+    Result := Ord(CompareValue(PSingle(V1)^, PSingle(V2)^));
 end;
 
 function CompareSingle_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -552,30 +552,16 @@ begin
   Result := -CompareSingle_Asc(Null1, Null2, V1, V2);
 end;
 
-function CompareSingle_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PSingle(V1)^ <> PSingle(V2)^);
-end;
-
 function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(PDouble(V1)^ > PDouble(V2)^)-Ord(PDouble(V1)^ < PDouble(V2)^);
+    Result := Ord(CompareValue(PDouble(V1)^, PDouble(V2)^));
 end;
 
 function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareDouble_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PDouble(V1)^ <> PDouble(V2)^);
 end;
 
 function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -607,13 +593,6 @@ end;
 function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareBigDecimal_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZBCDCompare(PBCD(V1)^, PBCD(V2)^);
 end;
 
 function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -1940,17 +1919,13 @@ begin
         ckEquals:     Result := CompareUInt64_Equals;
       end;
     stFloat:
-      case CompareKind of
-        ckAscending:  Result := CompareSingle_Asc;
-        ckDescending: Result := CompareSingle_Desc;
-        ckEquals:     Result := CompareSingle_Equals;
-      end;
+      if CompareKind = ckDescending
+      then Result := CompareSingle_Desc
+      else Result := CompareSingle_Asc;
     stDouble:
-      case CompareKind of
-        ckAscending:  Result := CompareDouble_Asc;
-        ckDescending: Result := CompareDouble_Desc;
-        ckEquals:     Result := CompareDouble_Equals;
-      end;
+      if CompareKind = ckDescending
+      then Result := CompareDouble_Desc
+      else Result := CompareDouble_Asc;
     stCurrency:
       case CompareKind of
         ckAscending:  Result := CompareCurrency_Asc;
@@ -1958,11 +1933,9 @@ begin
         ckEquals:     Result := CompareCurrency_Equals;
       end;
     stBigDecimal:
-      case CompareKind of
-        ckAscending:  Result := CompareBigDecimal_Asc;
-        ckDescending: Result := CompareBigDecimal_Desc;
-        ckEquals:     Result := CompareBigDecimal_Equals;
-      end;
+      if CompareKind = ckDescending
+      then Result := CompareBigDecimal_Desc
+      else Result := CompareBigDecimal_Asc;
     stDate: case CompareKind of
               ckAscending:  Result := CompareZDate_Asc;
               ckDescending: Result := CompareZDate_Desc;
