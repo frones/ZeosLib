@@ -227,7 +227,8 @@ implementation
 
 uses FmtBCD,
   ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset, ZAbstractDataset,
-  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZCollections;
+  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZCollections,
+  ZEncoding;
 
 { TZUpdateSQL }
 
@@ -734,9 +735,9 @@ CheckColumnType:
               RefreshRowAccessor.SetGUID(RefreshColumnIndex, UID);
             end;
           stString, stUnicodeString:
-            if RefreshRowAccessor.IsRaw
-            then RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), Len)
-            else RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), Len);
+            if RefreshRowAccessor.GetColumnCodePage(RefreshColumnIndex) = zCP_UTF16
+            then RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), Len)
+            else RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), Len);
           stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I, Len), Len);
           stDate: begin
               RefreshResultSet.GetDate(I, D);

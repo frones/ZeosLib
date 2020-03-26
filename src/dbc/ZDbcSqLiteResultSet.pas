@@ -61,14 +61,14 @@ uses
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
-    System.Types, System.Contnrs
+    System.Types, System.Contnrs,
   {$ELSE}
-    {$IFNDEF NO_UNIT_CONTNRS} Contnrs{$ELSE}ZClasses{$ENDIF}
-  {$ENDIF},
+    {$IFNDEF NO_UNIT_CONTNRS} Contnrs,{$ENDIF}
+  {$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZSelectSchema;
+  ZSelectSchema, ZClasses;
 
 type
   {** Implements SQLite ResultSet Metadata. }
@@ -139,7 +139,7 @@ type
     procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     function Next: Boolean; reintroduce;
     {$IFDEF USE_SYNCOMMONS}
@@ -167,14 +167,66 @@ type
       const Resolver: IZCachedResolver); override;
   end;
 
+  { TZSQLiteCachedResultSet }
+
+  TZSQLiteCachedResultSet = Class(TZCachedResultSet)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  end;
+
+  { TZSQLiteRowAccessor }
+
+  TZSQLiteRowAccessor = class(TZRowAccessor)
+  public
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  end;
+
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
   ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode, ZDbcUtils,
-  ZVariant, ZDbcMetadata {$IFNDEF NO_UNIT_CONTNRS},ZClasses{$ENDIF}
+  ZVariant, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+
+{ TZSQLiteCachedResultSet }
+
+class function TZSQLiteCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZSQLiteRowAccessor;
+end;
+
+{ TZSQLiteRowAccessor }
+
+constructor TZSQLiteRowAccessor.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
+begin
+  {EH: usually this code is NOT nessecary if we would handle the types as the
+  providers are able to. But in current state we just copy all the incompatibilities
+  from the DataSets into dbc... grumble.}
+  TempColumns := TObjectList.Create(True);
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams 4 sqlite
+      Current.Precision := -1;
+    end;
+    if Current.ColumnType = stUnicodeString then
+      Current.ColumnType := stString; // no national chars in sqlite
+    if Current.ColumnType = stString then
+      Current.ColumnCodePage := zCP_UTF8;
+    if Current.ColumnType = stBytes then
+      Current.ColumnCodePage := zCP_Binary;
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
+  TempColumns.Free;
+end;
 
 {**
   Clears specified column information.
@@ -494,12 +546,12 @@ var
       Result := ''
     else
       {$IFDEF UNICODE}
-      Result := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
+      Result := PRawToUnicode(P, ZFastCode.StrLen(P), zCP_UTF8);
       {$ELSE}
-      if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+      if (not ConSettings^.AutoEncode) or (ConSettings^.CTRL_CP = zCP_UTF8) then
         Result := BufferToStr(P, ZFastCode.StrLen(P))
       else
-        Result := ZUnicodeToString(PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+        Result := ZUnicodeToString(PRawToUnicode(P, ZFastCode.StrLen(P), zCP_UTF8), ConSettings^.CTRL_CP);
       {$ENDIF}
   end;
 begin
@@ -526,25 +578,21 @@ begin
         CatalogName := ColAttributeToStr(FPlainDriver.sqlite3_column_database_name(Fsqlite3_stmt, i));
       ReadOnly := TableName <> '';
       P := FPlainDriver.sqlite3_column_decltype(Fsqlite3_stmt, i);
-      if P = nil then
+      if P = nil then begin
         tmp := NativeSQLite3Types[FUndefinedVarcharAsStringLength = 0][FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, i)]
-      else
+      end else begin
         ZSetString(P, ZFastCode.StrLen(P), tmp);
+      end;
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
-        FieldPrecision, FieldDecimals, ConSettings.CPType);
+        FieldPrecision, FieldDecimals);
 
-      if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
+      if ColumnType in [stString, stUnicodeString] then begin
         ColumnCodePage := zCP_UTF8;
         if ColumnType = stString then begin
           CharOctedLength := FieldPrecision shl 2;
           Precision := FieldPrecision;
-        end else if ColumnType = stUnicodeString then begin
-          CharOctedLength := FieldPrecision shl 1;
-          Precision := FieldPrecision;
         end;
-      end else
-        ColumnCodePage := zCP_NONE;
-
+      end;
       AutoIncrement := False;
       Precision := FieldPrecision;
       Scale := FieldDecimals;
@@ -1256,10 +1304,12 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZSQLiteResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZSQLiteResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   ColType: Integer;
   Buffer: PAnsiChar;
+  L: NativeUInt;
 begin
   Result := nil;
 {$IFNDEF DISABLE_CHECKING}
@@ -1268,17 +1318,26 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
   ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if not LastWasNull then
-    if ColType = SQLITE_BLOB then
-      Result := TZAbstractBlob.CreateWithData(FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt,ColumnIndex),
-        FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex))
-    else begin
-      Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
-      Result := TZAbstractClob.CreateWithData( Buffer,
-        ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
+    case ColType of
+      SQLITE_BLOB: begin
+          Buffer := FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt,ColumnIndex);
+          L := FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, ColumnIndex);
+          Result := TZLocalMemBLob.CreateWithData(Buffer, L);
+        end;
+      SQLITE3_TEXT: begin
+        Buffer := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, ColumnIndex);
+        L := ZFastCode.StrLen(Buffer);
+        Result := TZLocalMemCLob.CreateWithData(Buffer, L, zCP_UTF8, ConSettings);
+      end;
+      SQLITE_NULL: ;
+      else raise CreateCanNotAccessBlobRecordException(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+        TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType);
     end;
 end;
 

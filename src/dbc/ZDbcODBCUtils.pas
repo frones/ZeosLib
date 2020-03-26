@@ -368,21 +368,26 @@ Dbl:                    Result := stDouble;
                         ODBCCType := SQL_C_DOUBLE;
                       end;
     SQL_CHAR,
-    SQL_VARCHAR,
-    SQL_WCHAR,
-    SQL_WVARCHAR:     begin
-                        if ConSettings^.CPType = cCP_UTF16
-                        then Result := stUnicodeString
+    SQL_VARCHAR:      begin
+                        if Precision = 0
+                        then Result := stAsciiStream
                         else Result := stString;
-                        if Precision = 0 then
-                          Result := TZSQLType(Ord(Result)+3);
                         ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
                       end;
-    SQL_LONGVARCHAR,
-    SQL_WLONGVARCHAR: begin
-                        if ConSettings^.CPType = cCP_UTF16
+
+    SQL_WCHAR,
+    SQL_WVARCHAR:     begin
+                        if Precision = 0
                         then Result := stUnicodeStream
-                        else Result := stAsciiStream;
+                        else Result := stUnicodeString;
+                        ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
+                      end;
+    SQL_LONGVARCHAR:  begin
+                        Result := stAsciiStream;
+                        ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
+                      end;
+    SQL_WLONGVARCHAR: begin
+                        Result := stUnicodeStream;
                         ODBCCType := ODBC_Str_C_Type[ConSettings.ClientCodePage^.Encoding = ceUTF16];
                       end;
     SQL_SS_TIMESTAMPOFFSET: begin

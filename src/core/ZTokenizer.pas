@@ -1225,6 +1225,7 @@ var
   List: TZTokenList;
   I: Integer;
 begin
+  {$IFDEF FPC} Result := nil;{$ENDIF}
   FBuffer := Buffer;
   List := Self.TokenizeBufferToList(FBuffer, Options);
   try
@@ -1342,6 +1343,7 @@ var
   List: TZTokenList;
 begin
   List := TokenizeStreamToList(Stream, Options);
+  {$IFDEF FPC} Result := nil;{$ENDIF}
   try
     SetLength(Result, List.Count);
     for I := 0  to List.Count - 1 do
@@ -1462,6 +1464,7 @@ begin
   {$R-}
   for i := iStart to iEnd do
     Inc(P, FTokens^[I].L);
+  {$IFDEF FPC} Result := '';{$ENDIF}
   SetLength(Result, P-PChar(nil));
   P := Pointer(Result);
   for i := iStart to iEnd do begin
@@ -1739,6 +1742,7 @@ begin
   {$R-}
   for i := 0 to FCount - 1 do
     Inc(P, FTokens^[I].L);
+  {$IFDEF FPC} Result := '';{$ENDIF}
   SetLength(Result, P-PChar(Nil));
   P := Pointer(Result);
   for i := 0 to FCount - 1 do begin

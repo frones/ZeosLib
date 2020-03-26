@@ -62,7 +62,7 @@ uses
   Contnrs, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcCache, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZSysUtils,
   ZDbcIntfs, SysUtils, Classes, ZDbcResultSetMetadata,
-  ZCompatibility, ZTestCase, FmtBCD;
+  ZCompatibility, ZTestCase, FmtBCD, ZClasses;
 
 type
 
@@ -91,6 +91,7 @@ type
     FUnicodeStreamData: WideString;
     FBinaryStreamData: Pointer;
     FConSettings: TZConSettings;
+    FOpenLobStreams: TZSortedList;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -224,13 +225,13 @@ begin
     Add(GetColumnsInfo(stFloatIndex, stFloat, ntNullable, False, True));
     Add(GetColumnsInfo(stDoubleIndex, stDouble, ntNullable, False, True));
     Add(GetColumnsInfo(stBigDecimalIndex, stBigDecimal, ntNullable, False, True));
-    Add(GetColumnsInfo(stStringIndex, stString, ntNullable, False, True));
+    TZColumnInfo(Result[Add(GetColumnsInfo(stStringIndex, stString, ntNullable, False, True))]).ColumnCodePage := FConSettings.CTRL_CP;
     Add(GetColumnsInfo(stBytesIndex, stBytes, ntNullable, False, True));
     Add(GetColumnsInfo(stDateIndex, stDate, ntNullable, False, True));
     Add(GetColumnsInfo(stTimeIndex, stTime, ntNullable, False, True));
     Add(GetColumnsInfo(stTimestampIndex, stTimestamp, ntNullable, False, True));
-    Add(GetColumnsInfo(stAsciiStreamIndex, stAsciiStream, ntNullable, False, True));
-    Add(GetColumnsInfo(stUnicodeStreamIndex, stUnicodeStream, ntNullable, False, True));
+    TZColumnInfo(Result[Add(GetColumnsInfo(stAsciiStreamIndex, stAsciiStream, ntNullable, False, True))]).ColumnCodePage := FConSettings.CTRL_CP;
+    TZColumnInfo(Result[Add(GetColumnsInfo(stUnicodeStreamIndex, stUnicodeStream, ntNullable, False, True))]).ColumnCodePage := 1200;
     Add(GetColumnsInfo(stBinaryStreamIndex, stBinaryStream, ntNullable, False, True));
   end;
 end;
@@ -245,7 +246,7 @@ var
 begin
   ColumnsInfo := GetColumnsInfoCollection;
   try
-    Result := TZRowAccessor.Create(ColumnsInfo, @FConSettings);  //dummy cp: Stringfield cp is inconsistent
+    Result := TZRowAccessor.Create(ColumnsInfo, @FConSettings, FOpenLobStreams, False);  //dummy cp: Stringfield cp is inconsistent
     Result.Alloc;
   finally
     ColumnsInfo.Free;
@@ -257,6 +258,7 @@ end;
 }
 procedure TZTestRowAccessorCase.SetUp;
 begin
+  FOpenLobStreams := TZSortedList.Create;
   DecodeDateTimeToDate(SysUtils.Date, FDate);
   DecodeDateTimeToTime(SysUtils.Time, FTime);
   DecodeDateTimeToTimeStamp(SysUtils.Now, FTimeStamp);
@@ -315,6 +317,7 @@ begin
   FUnicodeStream.Free;
   FBinaryStream.Free;
   FreeMem(FBinaryStreamData);
+  FOpenLobStreams.Free;
 end;
 
 {**
@@ -759,7 +762,7 @@ var
 begin
   Collection := GetColumnsInfoCollection;
   try
-    RowAccessor := TZRowAccessor.Create(Collection, @ConSettingsDummy); //dummy cp: Stringfield cp is inconsistent
+    RowAccessor := TZRowAccessor.Create(Collection, @ConSettingsDummy, FOpenLobStreams, False); //dummy cp: Stringfield cp is inconsistent
     try
       RowAccessor.Dispose;
     finally

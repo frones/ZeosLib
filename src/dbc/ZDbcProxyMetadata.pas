@@ -1707,7 +1707,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
@@ -1774,7 +1774,7 @@ function TZProxyDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -1815,7 +1815,7 @@ function TZProxyDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   // todo: Implement the types list
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetTables(Catalog, SchemaPattern, TableNamePattern, '');
@@ -1837,7 +1837,7 @@ end;
 }
 function TZProxyDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetSchemas;
 
@@ -1858,7 +1858,7 @@ end;
 }
 function TZProxyDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetCatalogs;
 
@@ -1881,7 +1881,7 @@ end;
 }
 function TZProxyDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetTableTypes;
 
@@ -1943,7 +1943,7 @@ function TZProxyDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1981,7 +1981,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
@@ -2023,7 +2023,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
@@ -2102,7 +2102,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetPrimaryKeys(Catalog, Schema, Table);
 
@@ -2179,7 +2179,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetImportedKeys(Catalog, Schema, Table);
 
@@ -2256,7 +2256,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetExportedKeys(Catalog, Schema, Table);
 
@@ -2342,7 +2342,7 @@ function TZProxyDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog:
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable);
 
@@ -2480,7 +2480,7 @@ function TZProxyDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
@@ -2490,7 +2490,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetSequences(const Catalog, SchemaPattern,
   SequenceNamePattern: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetSequences(Catalog, SchemaPattern, SequenceNamePattern);
 
@@ -2500,7 +2500,7 @@ end;
 function TZProxyDatabaseMetadata.UncachedGetTriggers(const Catalog: string; const SchemaPattern: string;
   const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetTriggers(Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern);
 
@@ -2513,7 +2513,7 @@ end;
 }
 function TZProxyDatabaseMetadata.UncachedGetCharacterSets: IZResultSet;
 var
-  Res: ZWideString;
+  Res: WideString;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetCharacterSets;
 

@@ -147,8 +147,8 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
   end;
-  //just an alias for compatibility - if this is for compatibility, the name needs to be TZGenericCachedResolver
-  TZGenericCachedResolver = TZGenerateSQLCachedResolver;
+  //just an alias for compatibility
+  TZGenericSQLCachedResolver = TZGenerateSQLCachedResolver;
   (*
   TZUserDefinedSQLCachedResolver = class(TInterfacedObject, IZCachedResolver)
   private

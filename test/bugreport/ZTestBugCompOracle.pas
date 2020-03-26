@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZDbcIntfs, ZSqlTestCase,
+  ZDataset, ZDataSetUtils, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
     {$IFDEF WITH_VCL_PREFIX}
     Vcl.DBCtrls,
@@ -224,8 +224,8 @@ begin
     ConSettings := Connection.DbcConnection.GetConSettings;
     CheckEquals(6, Query.Fields.Count);
     CheckEquals('', Query.Fields[2].AsString);
-    CheckMemoFieldType(Query.Fields[2].DataType, ConSettings);
-    CheckMemoFieldType(Query.Fields[3].DataType, ConSettings);
+    CheckMemoFieldType(Query.Fields[2].DataType, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[3].DataType, Connection.ControlsCodePage);
     Query.Next;
     CheckEquals('Test string', Query.Fields[2].AsString); //read ORA NCLOB
     Query.Next;
@@ -248,16 +248,31 @@ begin
       CheckEquals(6, Query.Fields.Count);
       CheckEquals('aaa', Query.FieldByName('b_long').AsString, 'value of b_long field');
 
-      if ConSettings.CPType = cGET_ACP {no unicode strings or utf8 allowed}
+      if Connection.ControlsCodePage = cGET_ACP {no unicode strings or utf8 allowed}
       then CP := ZOSCodePage
-      else CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+      else CP := Consettings.ClientCodePage.CP;
       //eh the russion abrakadabra can no be mapped to other charsets then:
       if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R) or (CP = zCP_UTF16))
         {add some more if you run into same issue !!} then begin
         BlankCheck;
       end else begin
-        CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, ConSettings, 'value of b_nclob field');
-        CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, ConSettings, 'value of b_clob field');
+        {$IFDEF UNICODE}
+        CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
+        CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, 'value of b_clob field');
+        {$ELSE}
+          {$IFDEF WITH_FTWIDESTRING}
+          if Connection.ControlsCodePage = cCP_UTF16 then begin
+            CheckEquals(teststring+teststring, ZWideString(Query.FieldByName('b_nclob').AsWideString), 'value of b_nclob field');
+            CheckEquals(teststring+teststring+teststring, ZWideString(Query.FieldByName('b_clob').AsWideString), 'value of b_clob field');
+          end else {$ENDIF}
+           if Connection.ControlsCodePage = cCP_UTF8 then begin
+            CheckEquals(UTF8Encode(teststring+teststring), Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
+            CheckEquals(UTF8Encode(teststring+teststring+teststring), Query.FieldByName('b_clob').AsString, 'value of b_clob field');
+          end else begin
+            CheckEquals(ZUnicodeToString(teststring+teststring, CP), Query.FieldByName('b_nclob').AsString,'value of b_nclob field');
+            CheckEquals(ZUnicodeToString(teststring+teststring+teststring, CP), Query.FieldByName('b_clob').AsString,'value of b_clob field');
+          end;
+        {$ENDIF}
       end;
 
       (Query.FieldByName('b_blob') as TBlobField).SaveToStream(BinaryStream);

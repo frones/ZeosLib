@@ -194,6 +194,7 @@ const
   INT2ARRAYOID	= 1005;
   INT4ARRAYOID	= 1007;
   TEXTARRAYOID	= 1009;
+  INT8ARRAYOID  = 1016;
   OIDARRAYOID	  = 1028;
   FLOAT4ARRAYOID 	= 1021;
   ACLITEMOID		= 1033;
@@ -782,11 +783,14 @@ type
     lo_read         : function(conn: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
     lo_write        : function(conn: TPGconn; fd: Integer; buf: PAnsiChar; len: NativeUInt): Integer; cdecl;
     lo_lseek        : function(conn: TPGconn; fd, offset, whence: Integer): Integer; cdecl;
+    lo_lseek64      : function(conn: TPGconn; fd: integer; offset: Int64; whence: Integer): Int64; cdecl;
     lo_creat        : function(conn: TPGconn; mode: Integer): Oid; cdecl;
     lo_tell         : function(conn: TPGconn; fd: Integer): Integer; cdecl;
     lo_unlink       : function(conn: TPGconn; lobjId: Oid): Integer; cdecl;
     lo_import       : function(conn: TPGconn; filename: PAnsiChar): Oid; cdecl;
     lo_export       : function(conn: TPGconn; lobjId: Oid; filename: PAnsiChar): Integer; cdecl;
+    lo_truncate     : function(conn: TPGconn; fd: Integer; len: NativeInt): Integer; cdecl;
+    lo_truncate64   : function(conn: TPGconn; fd: Integer; len: Int64): Integer; cdecl;
   end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
@@ -962,11 +966,15 @@ begin
     @lo_read        := GetAddress('lo_read');
     @lo_write       := GetAddress('lo_write');
     @lo_lseek       := GetAddress('lo_lseek');
+    @lo_lseek64     := GetAddress('lo_lseek64');
     @lo_creat       := GetAddress('lo_creat');
     @lo_tell        := GetAddress('lo_tell');
     @lo_unlink      := GetAddress('lo_unlink');
     @lo_import      := GetAddress('lo_import');
     @lo_export      := GetAddress('lo_export');
+    @lo_truncate    := GetAddress('lo_truncate');
+    @lo_truncate64  := GetAddress('lo_truncate64');
+
     @PQescapeStringConn  := GetAddress('PQescapeStringConn'); //since 7.3
     @PQescapeByteaConn   := GetAddress('PQescapeByteaConn'); // postgresql since 7.3
     @PQFreemem           := GetAddress('PQfreemem'); // since postgresql 7.4

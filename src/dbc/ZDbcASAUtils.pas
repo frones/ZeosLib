@@ -60,7 +60,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging, ZCompatibility, ZDbcASA,
-  ZDbcStatement, ZVariant, ZPlainASAConstants;
+  ZVariant, ZPlainASAConstants;
 
 const
   StdVars = 20;
@@ -188,7 +188,7 @@ type
   @param FieldHandle a handler to field description structure.
   @return a SQL undepended type.
 }
-function ConvertASATypeToSQLType(const SQLType: SmallInt; const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertASATypeToSQLType(const SQLType: SmallInt): TZSQLType;
 
 {**
   Converts a ASA native type into String.
@@ -197,8 +197,7 @@ function ConvertASATypeToSQLType(const SQLType: SmallInt; const CtrlsCPType: TZC
 }
 function ConvertASATypeToString( SQLType: SmallInt): String;
 
-function ConvertASAJDBCToSqlType(const FieldType: SmallInt;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertASAJDBCToSqlType(const FieldType: SmallInt): TZSQLType;
 {**
   Checks for possible sql errors.
   @param PlainDriver a MySQL plain driver.
@@ -248,7 +247,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZFastCode, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcUtils, ZClasses;
+  ZFastCode, ZMessages, ZEncoding, ZDbcUtils;
 
 { TZASASQLDA }
 
@@ -376,34 +375,25 @@ begin
                         end;
         DT_STRING,
         DT_FIXCHAR,
-        DT_VARCHAR,
-        DT_LONGVARCHAR: if FSQLDA.sqlVar[i].sqlLen < MinBLOBSize then
-                          FSQLDA.sqlVar[i].sqlType := DT_VARCHAR +
-                            ( FSQLDA.sqlVar[i].sqlType and $0001)
-                        else
-                        begin
+        DT_VARCHAR:     FSQLDA.sqlVar[i].sqlType := DT_VARCHAR +
+                            ( FSQLDA.sqlVar[i].sqlType and $0001);
+        DT_LONGVARCHAR: begin
                           FSQLDA.sqlVar[i].sqlType := DT_LONGVARCHAR +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := 0;
                         end;
-        DT_BINARY,
-        DT_LONGBINARY:  if FSQLDA.sqlVar[i].sqlLen < MinBLOBSize then
-                          FSQLDA.sqlVar[i].sqlType := DT_BINARY +
-                            ( FSQLDA.sqlVar[i].sqlType and $0001)
-                        else
-                        begin
+        DT_BINARY:      FSQLDA.sqlVar[i].sqlType := DT_BINARY +
+                            ( FSQLDA.sqlVar[i].sqlType and $0001);
+        DT_LONGBINARY:  begin
                           FSQLDA.sqlVar[i].sqlType := DT_LONGBINARY +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := 0;
                         end;
         DT_NSTRING,
         DT_NFIXCHAR,
-        DT_NVARCHAR,
-        DT_LONGNVARCHAR: if FSQLDA.sqlVar[i].sqlLen < MinBLOBSize then
-                          FSQLDA.sqlVar[i].sqlType := DT_NVARCHAR +
-                            ( FSQLDA.sqlVar[i].sqlType and $0001)
-                        else
-                        begin
+        DT_NVARCHAR:    FSQLDA.sqlVar[i].sqlType := DT_NVARCHAR +
+                            ( FSQLDA.sqlVar[i].sqlType and $0001);
+        DT_LONGNVARCHAR:begin
                           FSQLDA.sqlVar[i].sqlType := DT_LONGNVARCHAR +
                             ( FSQLDA.sqlVar[i].sqlType and $0001);
                           FSQLDA.sqlVar[i].sqlLen := 0;
@@ -491,7 +481,7 @@ begin
   Result := PRawToUnicode(@FSQLDA.sqlvar[Index].sqlname.data[0],
     FSQLDA.sqlvar[Index].sqlname.length-1, FConSettings^.ClientCodePage^.CP);
   {$ELSE}
-    if (not FConSettings^.AutoEncode) or ZCompatibleCodePages(FConSettings^.ClientCodePage^.CP, FConSettings^.CTRL_CP) then
+    if (not FConSettings^.AutoEncode) or (FConSettings^.ClientCodePage^.CP = FConSettings^.CTRL_CP) then
       SetString(Result, PAnsiChar(@FSQLDA.sqlvar[Index].sqlname.data[0]), FSQLDA.sqlvar[Index].sqlname.length-1)
     else
       Result := ZUnicodeToString(PRawToUnicode(@FSQLDA.sqlvar[Index].sqlname.data[0],
@@ -531,7 +521,7 @@ begin
   if FSQLDA.sqlvar[Index].sqlType and $FFFE <> DT_DECIMAL then
     Result := FSQLDA.sqlvar[Index].sqlLen
   else
-    Result := (FSQLDA.sqlvar[Index].sqlLen and $FF) shr 1 + 1; //shr 1 = div 2 but faster
+    Result := (FSQLDA.sqlvar[Index].sqlLen and $FF);//EH commented no idea for what shr 1 + 1; //shr 1 = div 2 but faster
 end;
 
 {**
@@ -557,11 +547,9 @@ function TZASASQLDA.GetFieldSqlType(const Index: Word): TZSQLType;
 begin
   CheckIndex(Index);
   if FSQLDA.sqlvar[Index].sqlType and $FFFE <> DT_TIMESTAMP_STRUCT then
-    Result := ConvertASATypeToSQLType(FSQLDA.sqlvar[Index].sqlType,
-      FConSettings.CPType)
+    Result := ConvertASATypeToSQLType(FSQLDA.sqlvar[Index].sqlType)
   else
-    Result := ConvertASATypeToSQLType(PSmallInt(PAnsiChar(FSQLDA.sqlvar[Index].sqlData)+SizeOf(TZASASQLDateTime))^,
-      FConSettings.CPType)
+    Result := ConvertASATypeToSQLType(PSmallInt(PAnsiChar(FSQLDA.sqlvar[Index].sqlData)+SizeOf(TZASASQLDateTime))^)
 end;
 
 {**
@@ -1085,17 +1073,18 @@ begin
     if (sqlind^ < 0) then
        Exit;
 
-    if sqlType and $FFFE = DT_LONGVARCHAR then
-    begin
-      GetMem(Buffer, PZASABlobStruct( sqlData).untrunc_len);
-      SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
-      ReadBlob(Index, Buffer, PZASABlobStruct( sqlData).untrunc_len);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Str)^, PZASABlobStruct( sqlData).untrunc_len);
-      FreeMem(buffer);
-    end
-    else
-      CreateException( Format( SErrorConvertionField,
-        [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
+    case sqlType and $FFFE of
+      DT_LONGBINARY, DT_LONGVARCHAR, DT_LONGNVARCHAR:
+      begin
+        GetMem(Buffer, PZASABlobStruct( sqlData).untrunc_len);
+        SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
+        ReadBlob(Index, Buffer, PZASABlobStruct( sqlData).untrunc_len);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Str)^, PZASABlobStruct( sqlData).untrunc_len);
+        FreeMem(buffer);
+      end else
+        CreateException( Format( SErrorConvertionField,
+          [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
+    end;
   end;
 end;
 
@@ -1104,8 +1093,7 @@ end;
   @param SQLType Field of TASASQLVar structure.
   @return a SQL undepended type.
 }
-function ConvertASATypeToSQLType(const SQLType: SmallInt;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertASATypeToSQLType(const SQLType: SmallInt): TZSQLType;
 begin
   case SQLType and $FFFE of
     DT_NOTYPE:
@@ -1122,16 +1110,12 @@ begin
       Result := stDouble;
     DT_DATE:
       Result := stDate;
-    DT_VARIABLE, DT_STRING, DT_FIXCHAR, DT_VARCHAR, DT_NSTRING, DT_NFIXCHAR, DT_NVARCHAR:
-      if (CtrlsCPType = cCP_UTF16) then
-        Result := stUnicodeString
-      else
-        Result := stString;
-    DT_LONGVARCHAR, DT_LONGNVARCHAR:
-      if (CtrlsCPType = cCP_UTF16) then
-        Result := stUnicodeStream
-      else
-        Result := stAsciiStream;
+    DT_VARIABLE, DT_STRING, DT_FIXCHAR, DT_VARCHAR:
+      Result := stString;
+    DT_NSTRING, DT_NFIXCHAR, DT_NVARCHAR:
+                      Result := stUnicodeString; //just tag it
+    DT_LONGNVARCHAR:  Result := stUnicodeStream; //just tag it
+    DT_LONGVARCHAR:   Result := stAsciiStream;
     DT_TIME:
       Result := stTime;
     DT_TIMESTAMP:
@@ -1229,15 +1213,11 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertASAJDBCToSqlType(const FieldType: SmallInt;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertASAJDBCToSqlType(const FieldType: SmallInt): TZSQLType;
 begin
   case FieldType of
     1, 12, -8, -9:
-      if (CtrlsCPType = cCP_UTF16) then
-        Result := stUnicodeString
-      else
-        Result := stString;
+      Result := stString;
     -7: Result := stBoolean;
     -6: Result := stByte;
     5: Result := stSmall;
@@ -1246,11 +1226,8 @@ begin
     6, 7, 8: Result := stDouble;
     2, 3: Result := stDouble;  //BCD Feld
     11, 93: Result := stTimestamp;
-    -1, -10:
-      if (CtrlsCPType = cCP_UTF16) then
-        Result := stUnicodeStream
-      else
-        Result := stAsciiStream;
+    -1: Result := stAsciiStream;
+    -10: Result := stAsciiStream;//stUnicodeStream;
     -4, -11, 1111: Result := stBinaryStream;
     -3, -2: Result := stBytes;
     92: Result := stTime;

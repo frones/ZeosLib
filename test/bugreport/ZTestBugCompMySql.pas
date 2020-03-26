@@ -59,7 +59,8 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZDbcIntfs,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZDataSetUtils,
   ZSqlTestCase, ZCompatibility, ZTestConsts, ZSqlUpdate, ZSqlProcessor,
   ZAbstractRODataset;
 
@@ -719,7 +720,7 @@ begin
     Query.SQL.Text := 'select * from table000001';
     Query.Open;
     CheckEquals(2, Query.Fields.Count);
-    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.ControlsCodePage = cCP_UTF16 ) then
     {$IFDEF WITH_WIDEMEMO}
       CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
     else
@@ -786,7 +787,7 @@ begin
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
     //Client_Character_set sets column-type!!!!
     {$IFDEF WITH_WIDEMEMO}
-    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.ControlsCodePage= cCP_UTF16 ) then
       CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[1].DataType))
     else
     {$ENDIF}
@@ -799,7 +800,7 @@ begin
     try
       Temp := 'xyz';
       {$IFDEF WITH_WIDEMEMO}
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         Stream.Write(PWideChar(WideString(Temp))^, Length(Temp)*2)
       else
       {$ENDIF}
@@ -1032,8 +1033,7 @@ begin
     Query.Open;
 
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
-    //EgonHugeist: Highest Priority Client_Character_set!!!!
-    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.ControlsCodePage = cCP_UTF16 ) then
     begin
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType));
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[2].DataType));
@@ -1159,7 +1159,7 @@ begin
         + ' FROM table894367a as a, table894367b as b, table894367c as c';
       Query.Open;
 
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
       else
         CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -1173,7 +1173,7 @@ begin
       CheckEquals(Ord(ftBlob), Ord(Query.Fields[4].DataType));
       CheckEquals(Ord(ftInteger), Ord(Query.Fields[5].DataType));
       CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
       else
         CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
@@ -1185,7 +1185,7 @@ begin
         + ' FROM table894367a as a, table894367b as b, table894367c as c';
       Query.Open;
 
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
       else
         CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -1199,7 +1199,7 @@ begin
       CheckEquals(Ord(ftFloat), Ord(Query.Fields[4].DataType));
       CheckEquals(Ord(ftBlob), Ord(Query.Fields[5].DataType));
       CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
       else
         CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
@@ -1254,7 +1254,7 @@ begin
     Query.Open;
 
     //Client_Character_set sets column-type!!!!
-    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16) then
+    if (Connection.ControlsCodePage = cCP_UTF16) then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -1523,7 +1523,7 @@ begin
 
     Query.Open;
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[0].DataType));
-    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
@@ -1636,7 +1636,7 @@ begin
     Query.SQL.Text := 'SELECT * FROM `mysql`.`user`';
 
     Query.Open;
-    Self.CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+    Self.CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
     Query.Close;
   finally
     Query.Free;
@@ -1695,13 +1695,7 @@ begin
 
     Query.Open;
     CheckEquals(1, Query.RecordCount);
-    //Client_Character_set sets column-type!!!!
-    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
-    {$IFDEF WITH_WIDEMEMO}
-      CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
-    else
-    {$ENDIF}
-      CheckEquals(Ord(ftMemo), Ord(Query.Fields[0].DataType));
+    CheckMemoFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
     CheckEquals('', Query.Fields[0].AsString);
     CheckEquals(False, Query.Fields[0].IsNull);
 

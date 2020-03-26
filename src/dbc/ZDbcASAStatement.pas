@@ -125,7 +125,8 @@ type
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
     procedure SetBigDecimal(Index: Integer; const Value: TBCD);
-    procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce;
+    procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
+    procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
     procedure SetGuid(Index: Integer; const Value: TGUID); reintroduce;
     procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
@@ -188,7 +189,7 @@ begin
     DescribeCursor(FASAConnection, FSQLData, CursorName, ASQL);
     NativeResultSet := TZASANativeResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, CachedLob);
     if ResultSetConcurrency = rcUpdatable then begin
-      CachedResultSet := {TZASACachedResultSet}TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
+      CachedResultSet := TZASACachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
       CachedResultSet.SetResolver(TZASACachedResolver.Create(Self, NativeResultSet.GetMetadata));
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
       Result := CachedResultSet;
@@ -442,15 +443,14 @@ procedure TZASAPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
   const Value: IZBlob);
 var ASAType: SmallInt;
   P: Pointer;
-  L: LengthInt;
+  L: NativeUint;
   SQLVAR: PZASASQLVAR;
 begin
   inherited BindLob(Index, SQLType, Value); //else FPC raises tons of memleaks
   if (Value = nil) or Value.IsEmpty then
     SetNull(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType)
   else begin
-    P := IZBlob(BindList[Index].Value).GetBuffer;
-    L := IZBlob(BindList[Index].Value).Length;
+    P := IZBlob(BindList[Index].Value).GetBuffer(FRawTemp, L);
     if SQLType = stBinaryStream
     then ASAType := DT_LONGBINARY
     else ASAType := DT_LONGVARCHAR;
@@ -471,14 +471,27 @@ end;
 procedure TZASAPreparedStatement.BindRawStr(Index: Integer; Buf: PAnsiChar;
   Len: LengthInt);
 var SQLVAR: PZASASQLVAR;
+  sqlType: SmallInt;
 begin
   CheckParameterIndex(Index);
   SQLVAR := @FInParamSQLDA.sqlvar[Index];
-  if (SQLVAR.sqlData = nil) or (SQLVAR.sqlType <> DT_VARCHAR or 1) or (SQLVAR.SQLlen < Len+SizeOf(TZASASQLSTRING)) then
-    InitBind(SQLVAR, DT_VARCHAR or 1, Len);
-  SQLVAR.sqlind^ := 0; //not NULL
-  Move(Buf^, PZASASQLSTRING(SQLVAR.sqlData).data[0], Len);
-  PZASASQLSTRING(SQLVAR.sqlData).length := Len;
+  if (Len + SizeOf(TZASASQLSTRING) > High(SmallInt)) then begin
+    if fClientCP = zCP_UTF8
+    then sqlType := DT_LONGNVARCHAR or 1
+    else sqlType := DT_LONGVARCHAR or 1;
+    InitBind(SQLVAR, sqlType, Len);
+    Move(Buf^, PZASABlobStruct(SQLVAR.sqlData).arr[0], Len);
+  end else begin
+    if fClientCP = zCP_UTF8
+    then sqlType := DT_NVARCHAR or 1
+    else sqlType := DT_VARCHAR or 1;
+    if (SQLVAR.sqlData = nil) or (SQLVAR.sqlType <> sqlType) or (SQLVAR.SQLlen < Len+SizeOf(TZASASQLSTRING)) then
+      InitBind(SQLVAR, sqlType or 1, Len);
+    SQLVAR.sqlind^ := 0; //not NULL
+    Move(Buf^, PZASASQLSTRING(SQLVAR.sqlData).data[0], Len);
+    PZASASQLSTRING(SQLVAR.sqlData).length := Len;
+  end;
+
 end;
 
 procedure TZASAPreparedStatement.BindTimeStampStruct(Index: Integer;
@@ -564,6 +577,52 @@ begin
   PByte(SQLVAR.sqlData)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZASAPreparedStatement.SetBytes(ParameterIndex: Integer; Value: PByte;
+  Len: NativeUInt);
+var SQLVAR: PZASASQLVAR;
+begin
+  if (Len = 0) or (Value = nil) then
+    SetNull(ParameterIndex, stBytes)
+  else begin
+    {$IFNDEF GENERIC_INDEX}
+    ParameterIndex := ParameterIndex -1;
+    {$ENDIF}
+    CheckParameterIndex(ParameterIndex);
+    SQLVAR := @FInParamSQLDA.sqlvar[ParameterIndex];
+    if (Len + SizeOf(TZASASQLSTRING) > Cardinal(High(SmallInt))) then begin
+      if (SQLVAR.sqlData = nil) or (SQLVAR.sqlType <> DT_LONGBINARY or 1) then
+      InitBind(SQLVAR, DT_LONGBINARY or 1, Len);
+      Move(Value^, PZASABlobStruct(SQLVAR.sqlData).arr[0], Len);
+    end else begin
+      if (SQLVAR.sqlData = nil) or (SQLVAR.sqlType <> DT_BINARY or 1) or (SQLVAR.SQLlen < NativeInt(Len)+SizeOf(TZASASQLSTRING)) then
+        InitBind(SQLVAR, DT_BINARY or 1, Len);
+      SQLVAR.sqlind^ := 0; //not NULL
+      Move(Value^, PZASASQLSTRING(SQLVAR.sqlData).data[0], Len);
+      PZASASQLSTRING(SQLVAR.sqlData).length := Len;
+    end;
+  end;
+end;
+
+{**
+  Sets the designated parameter to a Java array of bytes.  The driver converts
+  this to an SQL <code>VARBINARY</code> or <code>LONGVARBINARY</code>
+  (depending on the argument's size relative to the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZASAPreparedStatement.SetBytes(Index: Integer;
   const Value: TBytes);
 var SQLVAR: PZASASQLVAR;
@@ -592,6 +651,7 @@ begin
   SetRawByteString(Index, CurrToRaw(Value));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZASAPreparedStatement.SetDate(Index: Integer;
   const Value: TZDate);
 var TS: TZASASQLDateTime;
@@ -604,6 +664,7 @@ begin
     TS.Year := -TS.Year;
   BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_DATE, TS);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZASAPreparedStatement.SetDouble(Index: Integer;
   const Value: Double);
@@ -769,6 +830,7 @@ begin
   PSmallInt(SQLVAR.sqlData)^ := Value;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZASAPreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
 var TS: TZASASQLDateTime;
@@ -780,7 +842,9 @@ begin
   TS.MicroSecond := Value.Fractions div 1000;
   BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_TIME, TS);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZASAPreparedStatement.SetTimestamp(Index: Integer;
   const Value: TZTimeStamp);
 var TS: TZASASQLDateTime;
@@ -797,6 +861,7 @@ begin
   TS.MicroSecond := Value.Fractions div 1000;
   BindTimeStampStruct(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, DT_TIME, TS);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZASAPreparedStatement.SetUInt(Index: Integer;
   Value: Cardinal);

@@ -171,8 +171,6 @@ begin
   { load data to the stream }
   BinStream := TMemoryStream.Create;
   StrStream := TMemoryStream.Create;
-  BinStream1 := nil;
-  StrStream1 := nil;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -201,14 +199,20 @@ begin
     begin
       CheckEquals(True, Next);
       StrStream1 := GetAsciiStream(B_TEXT_Index);
+      try
+        CheckEquals(StrStream, StrStream1, '512 bytes string stream');
+      finally
+        FreeAndNil(StrStream1);
+      end;
       BinStream1 := GetBinaryStream(B_IMAGE_Index);
+      try
+        CheckEquals(BinStream, BinStream1, '512 bytes binary stream');
+      finally
+        FreeAndNil(BinStream1);
+      end;
       Close;
     end;
-    CheckEquals(BinStream, BinStream1, '512 bytes binary stream');
-    CheckEquals(StrStream, StrStream1, '512 bytes string stream');
 
-    BinStream1.Free;
-    StrStream1.Free;
     BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     BinStream.Size := 1024;
     if ConnectionConfig.Transport = traWEBPROXY then
@@ -232,17 +236,23 @@ begin
     begin
       CheckEquals(True, Next);
       StrStream1 := GetAsciiStream(B_TEXT_Index);
+      try
+        CheckEquals(StrStream, StrStream1, '1024 bytes string stream');
+      finally
+        FreeAndNil(StrStream1);
+      end;
       BinStream1 := GetBinaryStream(B_IMAGE_Index);
+      try
+        CheckEquals(BinStream, BinStream1, '1024 bytes binary stream');
+      finally
+        FreeAndNil(BinStream1);
+      end;
       Close;
     end;
-    CheckEquals(BinStream, BinStream1, '1024 bytes binary stream');
-    CheckEquals(StrStream, StrStream1, '1024 bytes string stream');
     Statement.Close;
   finally
     FreeAndNil(BinStream);
     FreeAndNil(StrStream);
-    FreeAndNil(BinStream1);
-    FreeAndNil(StrStream1);
   end;
 end;
 
@@ -355,18 +365,9 @@ begin
   begin
     CheckEquals(4, GetColumnCount);
     //Client_Character_set sets column-type!!!!
-    if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
-    begin
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_relation_name)));
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_index_name)));
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_field_name)));
-    end
-    else
-    begin
-      CheckEquals(ord(stString), ord(GetColumnType(rdb_relation_name)));
-      CheckEquals(ord(stString), ord(GetColumnType(rdb_index_name)));
-      CheckEquals(ord(stString), ord(GetColumnType(rdb_field_name)));
-    end;
+    CheckEquals(ord(stString), ord(GetColumnType(rdb_relation_name)));
+    CheckEquals(ord(stString), ord(GetColumnType(rdb_index_name)));
+    CheckEquals(ord(stString), ord(GetColumnType(rdb_field_name)));
     CheckEquals(ord(stSmall), ord(GetColumnType(rdb_field_position)));
   end;
 

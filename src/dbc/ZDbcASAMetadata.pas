@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Types, Classes, SysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZDbcASA, ZURL;
+  ZDbcConnection, ZDbcASA;
 
 type
 
@@ -1430,7 +1430,7 @@ begin
         Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
       end;
       Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'))));
       Result.UpdatePAnsiChar(ProcColTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('PRECISION'));
       Result.UpdateInt(ProcColLengthIndex, GetIntByName('LENGTH'));
@@ -1859,7 +1859,7 @@ begin
       Result.UpdateSmall(TableColVerScopeIndex, GetSmallByName('SCOPE'));
       Result.UpdatePAnsiChar(TableColVerColNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
       Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'))));
       Result.UpdatePAnsiChar(TableColVerTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('COLUMN_SIZE'));
       Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('BUFFER_LENGTH'));
@@ -2280,7 +2280,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'))));
       Result.UpdateInt(TypeInfoPecisionIndex, GetIntByName('PRECISION'));
       Result.UpdatePAnsiChar(TypeInfoLiteralPrefixIndex, GetPAnsiCharByName('LITERAL_PREFIX', Len), Len);
       Result.UpdatePAnsiChar(TypeInfoLiteralSuffixIndex, GetPAnsiCharByName('LITERAL_SUFFIX', Len), Len);
@@ -2454,7 +2454,7 @@ begin
       Result.UpdatePAnsiChar(UDTColTypeNameIndex, GetPAnsiCharByName('TYPE_NAME', Len), Len);
       Result.UpdatePAnsiChar(UDTColClassNameIndex, GetPAnsiCharByName('JAVA_CLASS', Len), Len);
       Result.UpdateSmall(UDTColDataTypeIndex, Ord(ConvertASAJDBCToSqlType(
-        GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
+        GetSmallByName('DATA_TYPE'))));
       Result.UpdatePAnsiChar(UDTColRemarksIndex, GetPAnsiCharByName('REMARKS', Len), Len);
       Result.InsertRow;
     end;

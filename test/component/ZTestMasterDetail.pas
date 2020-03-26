@@ -403,13 +403,13 @@ begin
   try
     MasterQuery.Open;
 
-    CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.DbcConnection.GetConSettings);
-    CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.DbcConnection.GetConSettings);
+    CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.ControlsCodePage);
+    CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.ControlsCodePage);
       //ASA curiousity: if NCHAR and VARCHAR fields set to UTF8-CodePage we get the LONG_Char types as fieldTypes for !some! fields
     if (ProtocolType = protASA) and (Connection.DbcConnection.GetConSettings.ClientCodePage^.CP = 65001) then
-      CheckMemoFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings)
+      CheckMemoFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.ControlsCodePage)
     else
-      CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
+      CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.ControlsCodePage);
 
     DetailQuery.SQL.Text := 'SELECT * FROM people';
     DetailQuery.MasterSource := MasterDataSource;

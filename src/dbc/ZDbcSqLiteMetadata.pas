@@ -1384,7 +1384,7 @@ var
         Result.UpdatePAnsiChar(ColumnNameIndex, P, Len);
         TypeTmp := GetRawByteString(type_index);
         SQLType := ConvertSQLiteTypeToSQLType(TypeTmp, UndefinedVarcharAsStringLength,
-          Precision, Decimals, ConSettings.CPType);
+          Precision, Decimals);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
 
         Len := Length(TypeTmp);

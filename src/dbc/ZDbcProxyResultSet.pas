@@ -73,10 +73,9 @@ type
     FRowsNode: IXMLNode;
     FFormatSettings: TFormatSettings;
   protected
-    FAnsiBuffer: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
+    FAnsiBuffer: AnsiString;
     FWideBuffer: ZWideString;
     FStringBuffer: String;
-    FBytesBuffer: TBytes;
     {$IFNDEF ZEOS73UP}
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     {$ENDIF}
@@ -98,7 +97,7 @@ type
     /// <param name="ResultStr">
     ///  A string containing the XML exncoded result set.
     /// </param>
-    constructor Create(const Connection: IZConnection; const SQL: string; const ResultStr: String);
+    constructor Create(const Connection: IZConnection; const SQL: string; const ResultStr: WideString);
     /// <summary>
     ///  Indicates if the value of the designated column in the current row
     ///  of this ResultSet object is Null.
@@ -344,12 +343,12 @@ end;
 
 { TZDbcProxyResultSet }
 
-constructor TZDbcProxyResultSet.Create(const Connection: IZConnection; const SQL: string; const ResultStr: String);
+constructor TZDbcProxyResultSet.Create(const Connection: IZConnection; const SQL: string; const ResultStr: WideString);
 var
   Stream: TStream;
   ConSettings: PZConSettings;
   Metadata: IZDatabaseMetadata;
-  x: Char;//String;
+  x: String;
   xmldoc: TXMLDocument;
 
   DomVendor: TDOMVendor;
@@ -371,8 +370,8 @@ begin
   Stream := TMemoryStream.Create;
   try
     x := #$FEFF;
-    Stream.Write(x{[1]}, 2);
-    Stream.Write(ResultStr[Low(String)], Length(ResultStr) * 2);
+    Stream.Write(x[1], 2);
+    Stream.Write(ResultStr[1], Length(ResultStr) * 2);
     Stream.Position := 0;
     FXmlDocument.LoadFromStream(Stream);
   finally
@@ -534,11 +533,7 @@ begin
 
   if not LastWasNull then begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-    {$IFDEF NO_ANSISTRING}
-    FAnsiBuffer := UTF8Encode(VarToStrDef(Val, ''));
-    {$ELSE}
     FAnsiBuffer := AnsiString(VarToStrDef(Val, ''));
-    {$ENDIF}
     Len := Length(FAnsiBuffer);
     if Len = 0
     then Result := PEmptyAnsiString
@@ -558,9 +553,8 @@ begin
   if not LastWasNull then begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FWideBuffer := VarToStrDef(Val, '');
-    Len := Length(FWideBuffer);
     if Len = 0
-    then Result := PEmptyUnicodeString
+    then Result := PEmptyAnsiString
     else Result := Pointer(FWideBuffer);
   end else begin
     Result := nil;
@@ -619,7 +613,7 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(VarToStrDef(Val, ''));
+  Result := UTF8Encode(Val);
 end;
 {$ENDIF}
 
@@ -634,7 +628,7 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(VarToStrDef(Val, ''));
+  Result := UTF8Encode(Val);
 end;
 
 function TZDbcProxyResultSet.GetBinaryString(ColumnIndex: Integer): RawByteString;
@@ -1052,42 +1046,16 @@ end;
     value returned is <code>null</code>
 }
 function TZDbcProxyResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-var
-  ColType: TZSQLType;
-  Idx: Integer;
-  Val: String;
-  ColInfo: TZColumnInfo;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-    CheckColumnConvertion(ColumnIndex, stInteger);
-  {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
 
-  if LastWasNull then begin
-    Result := nil;
-    exit;
-  end;
+//  if LastWasNull then begin
+//    Result := 0;
+//    exit;
+//  end;
 
-  Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
-  ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
-  ColType := ColInfo.ColumnType;
-  case ColType of
-    stBinaryStream, stBytes: begin
-      Result := DecodeBase64(Val);
-    end;
-    stAsciiStream, stUnicodeStream: begin
-      if Val <> '' then begin
-         SetLength(Result, Length(Val) * 2);
-         Move(Val[Low(String)], Result[0], Length(Val) * 2);
-       end else begin
-         Setlength(Result, 0);
-       end;
-    end;
-    else begin
-      raise Exception.Create('GetBytes is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
-    end;
-  end;
+  // todo: Implement GetBytes
+  raise Exception.Create('GetBytes is not supported (yet)');
 end;
 
 function TZDbcProxyResultSet.GetCurrency(
@@ -1307,6 +1275,7 @@ var
   ColType: TZSQLType;
   Idx: Integer;
   Val: String;
+  AnsiVal: AnsiString;
   Bytes: TBytes;
   ColInfo: TZColumnInfo;
 begin
@@ -1326,7 +1295,7 @@ begin
   ColType := ColInfo.ColumnType;
   case ColType of
     stBinaryStream: begin
-      Bytes := DecodeBase64(Val);
+      Bytes := DecodeBase64(AnsiString(Val));
       Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
     end;
     stAsciiStream, stUnicodeStream: begin
@@ -1425,9 +1394,7 @@ end;
 
 function TZDbcProxyResultSet.GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte;
 begin
-  FBytesBuffer := GetBytes(ColumnIndex);
-  Len := Length(FBytesBuffer);
-  Result := @(FBytesBuffer[0]);
+  raise Exception.Create('GetBytes is not supported (yet)');
 end;
 
 procedure TZDbcProxyResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
@@ -1437,12 +1404,12 @@ end;
 
 procedure TZDbcProxyResultSet.GetTime(ColumnIndex: Integer; Var Result: TZTime);
 begin
-  DecodeDateTimeToTime(GetTime(ColumnIndex), Result);
+  DecodeDateTimeToTime(GetDate(ColumnIndex), Result);
 end;
 
 procedure TZDbcProxyResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 begin
-  DecodeDateTimeToTimeStamp(GetTimestamp(ColumnIndex), Result);
+  DecodeDateTimeToTimeStamp(GetDate(ColumnIndex), Result);
 end;
 {$ENDIF}
 

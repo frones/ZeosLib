@@ -130,7 +130,7 @@ type
 implementation
 
 uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
-  ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver,
+  ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils,
   {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}
   {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF};
 
@@ -461,7 +461,7 @@ var CP: Word;
 {$ENDIF}
 begin
   Connection.Connect;
-  if connection.DbcConnection.GetConSettings.CPType = cGET_ACP {no unicode strings or utf8 allowed}
+  if connection.ControlsCodePage = cGET_ACP {no unicode strings or utf8 allowed}
   then CP := ZOSCodePage
   else CP := connection.DbcConnection.GetConSettings.ClientCodePage.CP;
   //eh the russion abrakadabra can no be mapped to other charsets then:
@@ -669,7 +669,7 @@ begin
       + ' WHERE d65.f1=t65.f1';
     Query.Open;
 
-    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if (Connection.ControlsCodePage = cCP_UTF16 ) then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -683,7 +683,7 @@ begin
       + ' WHERE test894367a.f1=test894367b.f1';
     Query.Open;
 
-    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if (Connection.ControlsCodePage = cCP_UTF16 ) then
       CheckEquals(ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -897,7 +897,7 @@ var
     try
       Query.SQL.Text := 'select * from Mantis229';
       Query.Open;
-      CheckMemoFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+      CheckMemoFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
       CheckEquals('Mantis229', Query.Fields[0].AsString);
     finally
       Query.Free;
@@ -912,7 +912,7 @@ var
     try
       Query.SQL.Text := 'select * from Mantis229';
       Query.Open;
-      CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+      CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
       CheckEquals('Mantis229', Query.Fields[0].AsString);
     finally
       Query.Free;
@@ -1023,7 +1023,7 @@ begin
       'LEFT JOIN Ticket51_B ON Ticket51_B."t1_id" = Ticket51_A."ID" '+
       'WHERE Ticket51_A."order_id" = 2';
     Query.Open;
-    CheckMemoFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
+    CheckMemoFieldType(Query.Fields[2].DataType, Connection.ControlsCodePage);
     CheckEquals('MyName', Query.Fields[2].AsString);
   finally
     Query.Free;
@@ -1044,8 +1044,8 @@ begin
   Query := CreateQuery;
   Query.SQL.Text := 'select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings';
   Query.Open;
-  CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
-  CheckStringFieldType(Query.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
+  CheckStringFieldType(Query.Fields[1].DataType, Connection.ControlsCodePage);
   Query.Close;
   Query.Free;
 end;
@@ -1058,7 +1058,7 @@ end;
 procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
 const
   QuoteString1 = '\'', 1 --''';
-  QuoteString2: ZWideString = #$0422#$0435#$0441#$0442#$0401#$0419'\000'; // Test in Russian + a couple of random Cyrillic letters
+  QuoteString2: {$IFNDEF UNICIDE}WideString{$ELSE}UnicodeString{$ENDIF} = #$0422#$0435#$0441#$0442#$0401#$0419'\000'; // Test in Russian + a couple of random Cyrillic letters
 var  CP: Word;
   ConSettings: PZConSettings;
 begin
@@ -1076,7 +1076,7 @@ begin
   Query.Close;
 
   ConSettings := connection.DbcConnection.GetConSettings;
-  if (ConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+  if (Connection.ControlsCodePage = cGET_ACP) and {no unicode strings or utf8 allowed}
     not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
     Exit;
   CP := ConSettings.ClientCodePage.CP;
@@ -1093,7 +1093,7 @@ begin
   {$IFDEF UNICODE}
   CheckEquals(QuoteString2, Query.Fields[0].AsString);
   {$ELSE}
-  If ConSettings.CPType = cCP_UTF16 then
+  If Connection.ControlsCodePage = cCP_UTF16 then
     CheckEquals(QuoteString2, Query.Fields[0].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF})
   else if ConSettings.AutoEncode
     then CheckEquals(ZUnicodeToRaw(QuoteString2, ConSettings.CTRL_CP), Query.Fields[0].AsString)
@@ -1301,9 +1301,9 @@ begin
       else begin
         Query.ExecSQL;
         Connection.ExecuteDirect('drop function pc_chartoint(chartoconvert character varying)');
-        Connection.ExecuteDirect('delete from blob_values where b_id = 261');
       end;
     finally
+      Connection.ExecuteDirect('delete from blob_values where b_id = 261');
       FreeAndNil(Query);
       Connection.Disconnect;
     end;

@@ -1272,21 +1272,15 @@ end;
 function TZInterbase6DatabaseMetadata.ConstructNameCondition(const Pattern: string;
   const Column: string): string;
 begin
-  if HasNoWildcards(Pattern) then begin
-    Result := Inherited ConstructnameCondition(Pattern,Column)
-  end else begin
-    if not (GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsTrim then begin
-      //Old FireBird do NOT support 'trim'
-      //-> raise exception to find bugs in Software...
-      if Pattern = '%'
-      then Result := ''
-      else raise EZSQLException.Create('Wildcard searches are not suported with Interbase and Firebird 1.5 and 1.0. Use IZDatabaseMetadata.AddEscapeCharToWildcards to escape wildcards in table names.')
-    end else begin
-      // add trim because otherwise the like condition will not find the table columns
-      // because they are padded with spaces in Firebird
-      Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
-    end;
-  end;
+  if HasNoWildcards(Pattern)
+  then Result := Inherited ConstructnameCondition(Pattern,Column)
+  else if not (GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsTrim
+  //Old FireBird do NOT support 'trim'
+  //-> raise exception to find bugs in Software...
+  then raise EZSQLException.Create('Wildcard searches are not suported with Firebird 1.5 and 1.0. Use IZDatabaseMetadata.AddEscapeCharToWildcards to escape wildcards in table names.')
+  // add trim because otherwise the like condition will not find the table columns
+  // because they are padded with spaces in Firebird
+  else Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
@@ -1360,7 +1354,7 @@ begin
     'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
     + ' RDB$PROCEDURE_NAME AS PROCEDURE_NAME, NULL AS PROCEDURE_OVERLOAD,'
     + ' NULL AS RESERVED1, NULL AS RESERVED2, RDB$DESCRIPTION AS REMARKS,'
-    + ' case when RDB$PROCEDURE_OUTPUTS IS NULL then %d else %d end AS PROCEDURE_TYPE'
+    + ' IIF(RDB$PROCEDURE_OUTPUTS IS NULL, %d, %d) AS PROCEDURE_TYPE'
     + ' FROM RDB$PROCEDURES'
     + ' WHERE 1=1' + AppendCondition(LProcedureNamePattern),
     [Ord(prtNoResult), Ord(prtReturnsResult)]);
@@ -1497,7 +1491,7 @@ begin
       end;
 
       SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, GetInt(FIELD_SCALE_Index),
-        GetInt(FIELD_PRECISION_Index), ConSettings.CPType);
+        GetInt(FIELD_PRECISION_Index));
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(ProcColDataTypeIndex, Ord(SQLType)); //DATA_TYPE
@@ -1752,8 +1746,7 @@ begin
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L);    //TABLE_NAME
       Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
 
-      SQLType := ConvertInterbase6ToSqlType(BLRSubType, SubTypeName, FieldScale,
-        Precision, ConSettings.CPType);
+      SQLType := ConvertInterbase6ToSqlType(BLRSubType, SubTypeName, FieldScale, Precision);
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
@@ -2405,7 +2398,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME_Index, Len), Len);
       Result.UpdateInt(TypeInfoDataTypeIndex, Ord(ConvertInterbase6ToSqlType(
-        GetInt(RDB_TYPE_Index), 0, 10, 4, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
+        GetInt(RDB_TYPE_Index), 0, 10, 4))); //added a scale > 4 since type_info doesn't deal with user defined scale
       Result.UpdateInt(TypeInfoPecisionIndex, 9);
       Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNoNulls));
       Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, false);

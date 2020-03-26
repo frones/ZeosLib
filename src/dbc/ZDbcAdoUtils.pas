@@ -86,7 +86,7 @@ const ZProcedureColumnType2AdoType: array[TZProcedureColumnType] of  TOleEnum =
     //finally the object types
     0,0//stArray, stDataSet not supported yet
     );
- ZSQLTypeToAdoType: array[TZSQLType] of DataTypeEnum = (adEmpty,//stUnknown,
+ ZSQLTypeToAdoType: array[TZSQLType] of TDataTypeEnum = (adEmpty,//stUnknown,
     adBoolean, adUnsignedTinyInt, adTinyInt, adUnsignedSmallInt, adSmallInt,
     adUnsignedInt, adInteger, adUnsignedBigInt, adBigInt,
     adSingle, adDouble, adCurrency, adDecimal,
@@ -109,8 +109,7 @@ function ConvertAdoToTypeName(FieldType: SmallInt): string;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(const FieldType, Precision, Scale: SmallInt;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertAdoToSqlType(const FieldType, Precision, Scale: SmallInt): TZSQLType;
 
 {**
   Converts a Zeos type into ADO types.
@@ -223,13 +222,12 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(const FieldType, Precision, Scale: SmallInt;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertAdoToSqlType(const FieldType, Precision, Scale: SmallInt): TZSQLType;
 begin
   //http://msdn.microsoft.com/en-us/library/windows/desktop/ms675318%28v=vs.85%29.aspx
   case FieldType of
-    adChar, adVarChar,
-    adWChar, adVarWChar, adBSTR: Result := stString;
+    adChar, adVarChar: Result := stString;
+    adWChar, adVarWChar, adBSTR: Result := stUnicodeString;
     adBoolean: Result := stBoolean;
     adTinyInt: Result := stShort;
     adUnsignedTinyInt: Result := stByte;
@@ -251,7 +249,7 @@ begin
     adDate : Result := stDate;
     adDBTimeStamp, adFileTime: Result := stTimestamp;
     adLongVarChar: Result := stAsciiStream;
-    adLongVarWChar: Result := stAsciiStream;
+    adLongVarWChar: Result := stUnicodeStream;
     adBinary, adVarBinary: Result := stBytes;
     adLongVarBinary: Result := stBinaryStream;
     adGUID: Result := stGUID;
@@ -261,11 +259,6 @@ begin
   else
     {adIDispatch, adIUnknown: reserved, nut used tpyes}Result := stUnknown
   end;
-  if CtrlsCPType = cCP_UTF16 then
-    case Result of
-      stString: Result := stUnicodeString;
-      stAsciiStream: Result := stUnicodeStream;
-    end;
 end;
 
 {**

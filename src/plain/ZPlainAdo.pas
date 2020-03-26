@@ -225,7 +225,7 @@ const
 
 // Constants for enum DataTypeEnum
 type
-  DataTypeEnum = TOleEnum;
+  TDataTypeEnum = TOleEnum;
 const
   adEmpty = $00000000;
   adTinyInt = $00000010;
@@ -935,12 +935,12 @@ type
     function Get_Value: OleVariant; safecall;
     procedure Set_Value(pval: OleVariant); safecall;
     function Get_Name: WideString; safecall;
-    function Get_Type_: DataTypeEnum; safecall;
+    function Get_Type_: TDataTypeEnum; safecall;
     function Get_Attributes: Integer; safecall;
     procedure Set_Attributes(plAttributes: Integer); safecall;
     property Value: OleVariant read Get_Value write Set_Value;
     property Name: WideString read Get_Name;
-    property Type_: DataTypeEnum read Get_Type_;
+    property Type_: TDataTypeEnum read Get_Type_;
     property Attributes: Integer read Get_Attributes;
   end;
 
@@ -996,7 +996,7 @@ type
     function Get_Prepared: WordBool; safecall;
     procedure Set_Prepared(pfPrepared: WordBool); safecall;
     function Execute(out RecordsAffected: OleVariant; const Parameters: OleVariant; Options: Integer): Recordset15; safecall;
-    function CreateParameter(const Name: WideString; Type_: DataTypeEnum; 
+    function CreateParameter(const Name: WideString; Type_: TDataTypeEnum;
                              Direction: ParameterDirectionEnum; Size: ADO_LONGPTR; Value: OleVariant): _Parameter; safecall;
     function Get_Parameters: Parameters; safecall;
     procedure Set_CommandType(plCmdType: CommandTypeEnum); safecall;
@@ -1233,7 +1233,7 @@ type
 // *********************************************************************//
   Fields20 = interface(Fields15)
     ['{0000054D-0000-0010-8000-00AA006D2EA4}']
-    procedure _Append(const Name: WideString; Type_: DataTypeEnum; DefinedSize: ADO_LONGPTR; 
+    procedure _Append(const Name: WideString; Type_: TDataTypeEnum; DefinedSize: ADO_LONGPTR;
                       Attrib: FieldAttributeEnum); safecall;
     procedure Delete(Index: OleVariant); safecall;
   end;
@@ -1245,7 +1245,7 @@ type
 // *********************************************************************//
   Fields = interface(Fields20)
     ['{00000564-0000-0010-8000-00AA006D2EA4}']
-    procedure Append(const Name: WideString; Type_: DataTypeEnum; DefinedSize: ADO_LONGPTR; 
+    procedure Append(const Name: WideString; Type_: TDataTypeEnum; DefinedSize: ADO_LONGPTR;
                      Attrib: FieldAttributeEnum; FieldValue: OleVariant); safecall;
     procedure Update; safecall;
     procedure Resync(ResyncValues: ResyncEnum); safecall;
@@ -1263,7 +1263,7 @@ type
     function Get_Attributes: Integer; safecall;
     function Get_DefinedSize: ADO_LONGPTR; safecall;
     function Get_Name: WideString; safecall;
-    function Get_Type_: DataTypeEnum; safecall;
+    function Get_Type_: TDataTypeEnum; safecall;
     function Get_Value: OleVariant; safecall;
     procedure Set_Value(pvar: OleVariant); safecall;
     function Get_Precision: Byte; safecall;
@@ -1276,14 +1276,14 @@ type
     procedure _Set_DataFormat(const ppiDF: IUnknown); safecall;
     procedure Set_Precision(pbPrecision: Byte); safecall;
     procedure Set_NumericScale(pbNumericScale: Byte); safecall;
-    procedure Set_Type_(pDataType: DataTypeEnum); safecall;
+    procedure Set_Type_(pDataType: TDataTypeEnum); safecall;
     procedure Set_DefinedSize(pl: ADO_LONGPTR); safecall;
     procedure Set_Attributes(pl: Integer); safecall;
     property ActualSize: ADO_LONGPTR read Get_ActualSize;
     property Attributes: Integer read Get_Attributes write Set_Attributes;
     property DefinedSize: ADO_LONGPTR read Get_DefinedSize write Set_DefinedSize;
     property Name: WideString read Get_Name;
-    property Type_: DataTypeEnum read Get_Type_ write Set_Type_;
+    property Type_: TDataTypeEnum read Get_Type_ write Set_Type_;
     property Value: OleVariant read Get_Value write Set_Value;
     property Precision: Byte read Get_Precision write Set_Precision;
     property NumericScale: Byte read Get_NumericScale write Set_NumericScale;
@@ -1314,8 +1314,8 @@ type
     procedure Set_Name(const pbstr: WideString); safecall;
     function Get_Value: OleVariant; safecall;
     procedure Set_Value(pvar: OleVariant); safecall;
-    function Get_Type_: DataTypeEnum; safecall;
-    procedure Set_Type_(psDataType: DataTypeEnum); safecall;
+    function Get_Type_: TDataTypeEnum; safecall;
+    procedure Set_Type_(psDataType: TDataTypeEnum); safecall;
     procedure Set_Direction(plParmDirection: ParameterDirectionEnum); safecall;
     function Get_Direction: ParameterDirectionEnum; safecall;
     procedure Set_Precision(pbPrecision: Byte); safecall;
@@ -1329,7 +1329,7 @@ type
     procedure Set_Attributes(plParmAttribs: Integer); safecall;
     property Name: WideString read Get_Name write Set_Name;
     property Value: OleVariant read Get_Value write Set_Value;
-    property Type_: DataTypeEnum read Get_Type_ write Set_Type_;
+    property Type_: TDataTypeEnum read Get_Type_ write Set_Type_;
     property Direction: ParameterDirectionEnum read Get_Direction write Set_Direction;
     property Precision: Byte read Get_Precision write Set_Precision;
     property NumericScale: Byte read Get_NumericScale write Set_NumericScale;
@@ -1604,7 +1604,7 @@ type
     function Get_Attributes: Integer; safecall;
     function Get_DefinedSize: ADO_LONGPTR; safecall;
     function Get_Name: WideString; safecall;
-    function Get_Type_: DataTypeEnum; safecall;
+    function Get_Type_: TDataTypeEnum; safecall;
     function Get_Value: OleVariant; safecall;
     procedure Set_Value(pvar: OleVariant); safecall;
     function Get_Precision: Byte; safecall;
@@ -1617,7 +1617,7 @@ type
     property Attributes: Integer read Get_Attributes;
     property DefinedSize: ADO_LONGPTR read Get_DefinedSize;
     property Name: WideString read Get_Name;
-    property Type_: DataTypeEnum read Get_Type_;
+    property Type_: TDataTypeEnum read Get_Type_;
     property Value: OleVariant read Get_Value write Set_Value;
     property Precision: Byte read Get_Precision;
     property NumericScale: Byte read Get_NumericScale;

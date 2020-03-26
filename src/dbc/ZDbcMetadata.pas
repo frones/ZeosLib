@@ -2262,8 +2262,7 @@ destructor TZAbstractDatabaseMetadata.Destroy;
 begin
   FIC := nil;
   FUrl := nil;
-  if Assigned(FCachedResultSets) then
-    FCachedResultSets.Clear;
+  FCachedResultSets.Clear;
   FCachedResultSets := nil;
   FDatabaseInfo := nil;
 

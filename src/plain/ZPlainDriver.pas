@@ -66,8 +66,7 @@ type
     function GetProtocol: string;
     function GetDescription: string;
     function GetInstance: TZAbstractPlainDriver;
-    function GetSupportedClientCodePages(const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean;
-      CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
+    function GetClientCodePages: TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     procedure Initialize(const Location: String = '');
@@ -96,8 +95,7 @@ type
     function GetProtocol: string; virtual; abstract;
     function GetDescription: string; virtual; abstract;
     function GetInstance: TZAbstractPlainDriver;
-    function GetSupportedClientCodePages(const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean;
-      CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
+    function GetClientCodePages: TStringDynArray;
     procedure Initialize(const Location: String = ''); virtual;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
@@ -121,7 +119,7 @@ uses SysUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 const
   ClientCodePageDummy: TZCodepage =
-    (CharWidth: 1; Encoding: ceAnsi; CP: zCP_NONE);
+    (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi; CP: zCP_NONE; ZAlias: ''; IsStringFieldCPConsistent: False);
 
 {TZAbstractPlainDriver}
 
@@ -247,76 +245,13 @@ begin
     end;
 end;
 
-function TZAbstractPlainDriver.GetSupportedClientCodePages(
-  const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} IgnoreUnsupported: Boolean;
-  CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
+function TZAbstractPlainDriver.GetClientCodePages: TStringDynArray;
 var
   I: Integer;
-
-  procedure AddCurrent;
-  begin
-    SetLength(Result, Length(Result)+1);
-    Result[High(Result)] := FCodePages[i].Name;
-  end;
-
 begin
-  SetLength(Result, 0);
+  SetLength(Result, Length(FCodePages));
   for i := low(FCodePages) to high(FCodePages) do
-    if IgnoreUnsupported then
-      AddCurrent
-    else
-      case CtrlsCPType of
-        cGET_ACP:
-          {$IFDEF UNICODE}
-          AddCurrent; //result are ?valid? but does that makes sence for all if not CP_UTF8?
-          {$ELSE}
-          if ( FCodePages[i].CP = ZOSCodePage ) then
-            AddCurrent
-          else
-            if AutoEncode then
-              {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) }
-              AddCurrent //result are ?valid? but does that makes sence for all if not CP_UTF8?
-              {$ELSE}
-                {$IFDEF WITH_LCONVENCODING} //Lazarus only
-                if ( IsLConvEncodingCodePage(FCodePages[i].CP) ) or
-                   ( FCodePages[i].Encoding = ceUTF8 ) then
-                  AddCurrent //allways valid because result is allways UTF8 which lazarus expects
-                {$ENDIF}
-              {$IFEND}
-            else Continue;
-          {$ENDIF}
-        {$IFNDEF UNICODE}
-        cCP_UTF8:
-          if ( FCodePages[i].Encoding = ceUTF8 ) then
-            AddCurrent
-          else
-            if AutoEncode then
-              {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) }
-              AddCurrent //All charsets can be converted to UTF8 if a valid WideString-Manager does exists
-              {$ELSE}
-                {$IFDEF WITH_LCONVENCODING} //Lazarus only
-                if ( IsLConvEncodingCodePage(FCodePages[i].CP) ) then
-                  AddCurrent
-                {$ENDIF}
-              {$IFEND}
-            else Continue;
-        {$ENDIF}
-        else
-          {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(UNICODE)}
-          AddCurrent; //all remaining charset can be converted to wide if a valid WideString-Manager does exists
-          {$ELSE}
-            {$IFDEF WITH_LCONVENCODING} //Lazarus only
-            if ( IsLConvEncodingCodePage(FCodePages[i].CP) ) or //Lazarus can convert to UTF8 then we convert to wide (double En/Decoding!)
-               ( FCodePages[i].Encoding = ceUTF8 ) or //decode the strings to wide
-               ( FCodePages[i].CP = ZOSCodePage ) then //to allow a valid cast
-              AddCurrent; //all these charset can be converted to wide
-            {$ELSE}
-            if ( FCodePages[i].CP = ZOSCodePage ) or //to allow a valid cast
-               ( FCodePages[i].Encoding = ceUTF8 ) then //decode the strings to wide
-              AddCurrent;
-            {$ENDIF}
-          {$IFEND}
-      end;
+    Result[i] := FCodePages[i].Name;
 end;
 
 constructor TZAbstractPlainDriver.Create;

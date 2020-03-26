@@ -95,6 +95,9 @@ type
   PWord                 = ^Word; // M.A.
   {$ENDIF}
 {$ENDIF}
+  {$IF not declared(PLongBool)}
+  PLongBool = ^LongBool;
+  {$IFEND}
 
   UInt                  = LongWord;
   PUInt                 = ^UInt;
@@ -383,9 +386,6 @@ type
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
   TPRawToString = function (Src: PAnsiChar; Len: LengthInt; const RawCP, StringCP: Word): String;
   TPUnicodeToString = function (Src: PWideChar; CodePoints: NativeUInt; const StringCP: Word): String;
-
-  {** Defines the Target Ansi codepages for the Controls }
-  TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
 
   TZCharEncoding = (
     ceDefault,  //Internal switch for the two Functions below do not use it as a CodePage-declaration!
@@ -808,6 +808,7 @@ begin
   for I := Low(Vals) to High(Vals) do
     if Pointer(Vals[i]) <> nil then
       Inc(L, Length(Vals[i]){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+  {$IFDEF FPC}Result := '';{$ENDIF}
   SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
   P := Pointer(Result);
   AnsiChar((P+L)^) := AnsiChar(#0);

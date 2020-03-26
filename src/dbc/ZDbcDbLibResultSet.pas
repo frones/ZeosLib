@@ -172,7 +172,8 @@ type
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer;
+      LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;
     {$ENDIF}
@@ -379,7 +380,7 @@ label AssignGeneric;
         Scale := 0;
         Precision := ColInfo.MaxLength;
       end;
-      ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale, ConSettings.CPType);
+      ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale);
       if ColumnType = stUnknown
       then NeedsLoading := true;
       if (TDSType = tdsNumeric) and (Scale = 0) and (Precision = 19)
@@ -447,7 +448,7 @@ AssignGeneric:  {this is the old way we did determine the ColumnInformations}
       TDSType := TTDSType(FPlainDriver.dbColtype(FHandle, I));
       Precision := FPlainDriver.dbCollen(FHandle, I);
       Scale := 0;
-      ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale, ConSettings.CPType);
+      ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale);
       if ColumnInfo.ColumnType = stUnknown
       then NeedsLoading := true;
       Currency := TDSType in [tdsMoney, tdsMoney4, tdsMoneyN];
@@ -1011,10 +1012,10 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZDBLibResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZDBLibResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   DL: Integer;
-  Len: NativeUInt;
   Data: Pointer;
 begin
   with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
@@ -1023,35 +1024,33 @@ begin
     LastWasNull := Data = nil;
 
     Result := nil;
+
+    if LobStreamMode <> lsmRead then
+      raise CreateReadOnlyException;
     if Data <> nil then
       case ColumnType of
-        stBytes, stBinaryStream:
-          Result := TZAbstractBlob.CreateWithData(Data, DL);
+        stBytes, stBinaryStream, stGUID:
+          Result := TZLocalMemBLob.CreateWithData(Data, DL);
         stAsciiStream, stUnicodeStream: begin
             if (DL = 1) and (PByte(Data)^ = Ord(' ')) then DL := 0; //improve empty lobs, where len = 1 but string should be ''
-            Result := TZAbstractClob.CreateWithData(Data, DL,
+            Result := TZLocalMemCLob.CreateWithData(Data, DL,
               FDBLibConnection.GetServerAnsiCodePage, ConSettings);
           end;
         stString, stUnicodeString: if ColumnCodePage = zCP_NONE then
             case ZDetectUTF8Encoding(Data, DL) of
               etUTF8: begin
                   ColumnCodePage := zCP_UTF8;
-                  Result := TZAbstractClob.CreateWithData(Data, DL, zCP_UTF8, ConSettings);
+                  Result := TZLocalMemCLob.CreateWithData(Data, DL, zCP_UTF8, ConSettings);
                 end;
               etAnsi: begin
                   ColumnCodePage := FClientCP;
-                  Result := TZAbstractClob.CreateWithData(Data, DL, FClientCP, ConSettings);
+                  Result := TZLocalMemCLob.CreateWithData(Data, DL, FClientCP, ConSettings);
                 end;
               else //ASCII7
-                Result := TZAbstractClob.CreateWithData(Data, DL, zCP_us_ascii, ConSettings);
+                Result := TZLocalMemCLob.CreateWithData(Data, DL, FClientCP, ConSettings);
             end
-          else Result := TZAbstractClob.CreateWithData(Data, DL,
-              TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, ConSettings);
-        else begin
-          Data := GetPAnsiChar(ColumnIndex, Len);
-          Result := TZAbstractClob.CreateWithData(Data,
-            Len, FClientCP, ConSettings);
-        end;
+          else Result := TZLocalMemCLob.CreateWithData(Data, DL, ColumnCodePage, ConSettings);
+        else raise CreateCanNotAccessBlobRecordException(ColumnIndex, ColumnType);
       end;
   end;
 end;

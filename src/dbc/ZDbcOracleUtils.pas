@@ -204,11 +204,11 @@ procedure FreeOracleSQLVars(const PlainDriver: TZOraclePlainDriver;
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(const TypeName: string;
-  Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
+  Precision, Scale: Integer): TZSQLType;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
-  out DescriptorType: sb4; Precision, Scale: sb2; ConSettings: PZConSettings;
-  IO: OCITypeParamMode): TZSQLType;
+  out DescriptorType: sb4; Precision, ScaleOrCharSetForm: sb2;
+  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
 
   {**
   Checks for possible SQL errors.
@@ -1127,7 +1127,7 @@ end;
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(const TypeName: string;
-  Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
+  Precision, Scale: Integer): TZSQLType;
 var TypeNameUp: string;
 begin
   TypeNameUp := UpperCase(TypeName);
@@ -1149,7 +1149,7 @@ begin
   else if TypeNameUp = 'CLOB' then
     Result := stAsciiStream
   else if TypeNameUp = 'NCLOB' then
-    Result := stAsciiStream
+    Result := stUnicodeStream
   else if TypeNameUp = 'LONG' then
     Result := stAsciiStream
   else if (TypeNameUp = 'ROWID') or (TypeNameUp = 'UROWID') then
@@ -1177,16 +1177,11 @@ begin
     Result := stTimestamp
   else
     Result := stUnknown;
-  if ( CtrlsCPType = cCP_UTF16 ) then
-    case result of
-      stString: Result := stUnicodeString;
-      stAsciiStream: if not (TypeNameUp = 'LONG') then Result := stUnicodeStream; //fix: hhttp://zeoslib.sourceforge.net/viewtopic.php?t=3530
-    end;
 end;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
-  out DescriptorType: sb4; Precision, Scale: sb2; ConSettings: PZConSettings;
-  IO: OCITypeParamMode): TZSQLType;
+  out DescriptorType: sb4; Precision, ScaleOrCharSetForm: sb2;
+  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
 label VCS;
 begin
   //some notes before digging in:
@@ -1218,13 +1213,13 @@ begin
   DescriptorType := NO_DTYPE; //init
   case DataType of
     SQLT_NUM { NUMBER }, SQLT_PDN, SQLT_VNU { VARNUM recommended by Oracle!}:
-        if (Scale = -127) and (Precision > 0) then begin
+        if (ScaleOrCharSetForm = -127) and (Precision > 0) then begin
           //see: https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci06des.htm
           //Table 6-14 OCI_ATTR_PRECISION/OCI_ATTR_SCALE
           Result := stDouble;
           DataType := SQLT_BDOUBLE;
           DataSize := SizeOf(Double);
-        end else if (Scale = 0) and (Precision > 0) and (Precision < 19) then
+        end else if (ScaleOrCharSetForm = 0) and (Precision > 0) and (Precision < 19) then
           //No digits found, but possible signed or not/overrun of converions? No way to find this out -> just use a "save" type
           case Precision of
             1..2: begin // 0/-99..(-)99
@@ -1251,7 +1246,7 @@ begin
         else begin
           DataType := SQLT_VNU; //see orl.h we can't use any other type using oci
           DataSize := SizeOf(TOCINumber);
-          if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+          if (ScaleOrCharSetForm >= 0) and (ScaleOrCharSetForm <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[ScaleOrCharSetForm])
           then Result := stCurrency
           else Result := stBigDecimal;
         end;
@@ -1341,17 +1336,25 @@ VCS:            DataType := SQLT_VCS;
           DataSize := SizeOf(POCIString);
       end;
     SQLT_LNG: { LONG /char[n] } begin
-        Result := stAsciiStream;
-        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
+        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then begin
            DataSize := 128 * 1024;
+           Result := stAsciiStream;
+        end else
+          Result := stString;
         DataSize := DataSize + SizeOf(Integer);
         DataType := SQLT_LVC; { EH: http://zeoslib.sourceforge.net/viewtopic.php?t=3530 }
         Exit; //is this correct?
       end;
     SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin
-        Result := stString;//stAsciiStream;
         if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
-          DataSize := Max_OCI_String_Size*ConSettings^.ClientCodePage^.CharWidth;
+          DataSize := Max_OCI_String_Size;
+        if ScaleOrCharSetForm = SQLCS_NCHAR then begin
+          DataSize := Max_OCI_String_Size shl 1;
+          Result := stUnicodeString;//stAsciiStream;
+        end else begin
+          DataSize := Max_OCI_String_Size *ConSettings^.ClientCodePage^.CharWidth;
+          Result := stString;//stAsciiStream;
+        end;
         DataSize := DataSize + SizeOf(Integer);
       end;
     SQLT_LBI, { LONG RAW / unsigned char[n] }
@@ -1374,7 +1377,9 @@ VCS:            DataType := SQLT_VCS;
       end;
     SQLT_REF: { REF / OCIRef } ;
     SQLT_CLOB: { Character LOB descriptor / OCIClobLocator }begin
-        Result := stAsciiStream;
+        if ScaleOrCharSetForm = SQLCS_NCHAR
+        then Result := stUnicodeStream
+        else Result := stAsciiStream;
         DescriptorType := OCI_DTYPE_LOB;
         if DataSize > 0 then
           DataSize := SizeOf(POCILobLocator);
@@ -1442,10 +1447,6 @@ VCS:            DataType := SQLT_VCS;
       end
     //ELSE raise Exception.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
   end;
-  if (ConSettings^.CPType = cCP_UTF16) and (Result in [stString, stAsciiStream]) then
-    if Result = stString
-    then Result := stUnicodeString
-    else Result := stUnicodeStream;
 end;
 
 {**

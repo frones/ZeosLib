@@ -125,6 +125,7 @@ type
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     procedure DeregisterStatement(const Value: IZStatement);
     procedure RegisterStatement(const Value: IZStatement);
     procedure CheckCharEncoding(const CharSet: String;
@@ -656,6 +657,12 @@ end;
 procedure TZDbcPooledConnection.RegisterStatement(const Value: IZStatement);
 begin
   GetConnection.RegisterStatement(Value);
+end;
+
+procedure TZDbcPooledConnection.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  GetConnection.ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZDbcPooledConnection.Rollback;

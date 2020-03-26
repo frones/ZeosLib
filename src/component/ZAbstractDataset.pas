@@ -60,7 +60,7 @@ uses
   SysUtils,  Classes, {$IFDEF MSEgui}mdb, mclasses{$ELSE}DB{$ENDIF},
   ZSqlUpdate, ZDbcIntfs, ZVariant, ZDbcCache, ZDbcCachedResultSet,
   ZAbstractRODataset, ZCompatibility, ZSequence
-  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
+  {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils, ZClasses{$ENDIF};
 
 type
   {$IFDEF oldFPC} // added in 2006, probably pre 2.2.4
@@ -119,6 +119,7 @@ type
     procedure InternalClose; override;
     procedure InternalEdit; override;
     procedure InternalInsert; override;
+    procedure InternalUnPrepare; override;
     {$IFNDEF WITH_InternalAddRecord_TRecBuf}
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     {$ELSE}
@@ -391,10 +392,10 @@ begin
   inherited InternalClose;
 
   if not ResultSetWalking then begin
-    if Assigned(CachedResultSet) then begin
+    {if Assigned(CachedResultSet) then begin
       CachedResultSet.Close;
       CachedResultSet := nil;
-    end;
+    end;}
     CachedResolver := nil;
   end;
 end;
@@ -434,6 +435,16 @@ end;
 {**
   Performs an internal record updates.
 }
+procedure TZAbstractDataset.InternalUnPrepare;
+begin
+  if Assigned(CachedResultSet) then begin
+    CachedResultSet.Close;
+    CachedResultSet := nil;
+  end;
+  inherited InternalUnPrepare;
+
+end;
+
 procedure TZAbstractDataset.InternalUpdate;
 var
   RowNo: NativeInt;

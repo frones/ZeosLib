@@ -186,6 +186,8 @@ var
   OldParams: TParams;
   Catalog, Schema, ObjectName: string;
   ColumnType: TZProcedureColumnType;
+  SQLType: TZSQLType;
+  Precision: Integer;
 begin
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin
@@ -208,7 +210,12 @@ begin
           Params.Clear;
           while FMetaResultSet.Next do begin
             ColumnType := TZProcedureColumnType(FMetaResultSet.GetInt(ProcColColumnTypeIndex));
-              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetInt(ProcColDataTypeIndex))),
+            SQLType := TZSqlType(FMetaResultSet.GetInt(ProcColDataTypeIndex));
+            if Ord(SQLType) >= Ord(stString)
+            then Precision := FMetaResultSet.GetInt(ProcColLengthIndex)
+            else Precision := FMetaResultSet.GetInt(ProcColPrecisionIndex);
+            Params.CreateParam(ConvertDbcToDatasetType(SQLType,
+              Connection.ControlsCodePage, Precision),
                 FMetaResultSet.GetString(ProcColColumnNameIndex),
                 ProcColDbcToDatasetType[ColumnType]);
           end;

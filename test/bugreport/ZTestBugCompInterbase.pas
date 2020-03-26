@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZDbcIntfs, ZSqlTestCase, ZCompatibility
+  ZDataset, ZDataSetUtils, ZDbcIntfs, ZSqlTestCase, ZCompatibility
   {$IFNDEF LINUX}
     {$IFDEF WITH_VCL_PREFIX}
     , Vcl.DBCtrls
@@ -465,7 +465,6 @@ var
   {$IFDEF WITH_WIDEMEMO}
   WS: ZWideString;
   {$ENDIF}
-  ConSettings: PZConSettings;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
@@ -477,9 +476,6 @@ begin
 
   BinStream := TMemoryStream.Create;
   StrStream := TMemoryStream.Create;
-  BinStream1 := TMemoryStream.Create;
-  StrStream1 := TMemoryStream.Create;
-  ConSettings := Connection.DbcConnection.GetConSettings;
   try
     { load data to the stream }
     BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
@@ -488,7 +484,7 @@ begin
     else
       StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     {$IFDEF WITH_WIDEMEMO}
-    if ( ConSettings.CPType = cCP_UTF16 ) then begin
+    if ( Connection.ControlsCodePage = cCP_UTF16 ) then begin
       StrStream.Position := 0;
       WS := PRawToUnicode(StrStream.Memory, StrStream.Size, zCP_us_ascii);
       StrStream.Write(Pointer(WS)^, Length(WS)*2);
@@ -512,16 +508,24 @@ begin
 
     { check that data updated }
     Query.Open;
-    (Query.FieldByName('B_TEXT') as TBlobField).SaveToStream(StrStream1);
-    (Query.FieldByName('B_IMAGE') as TBlobField).SaveToStream(BinStream1);
-    CheckEquals(StrStream, StrStream1);
-    CheckEquals(BinStream, BinStream1);
+    StrStream1 := TMemoryStream.Create;
+    try
+      (Query.FieldByName('B_TEXT') as TBlobField).SaveToStream(StrStream1);
+      CheckEquals(StrStream, StrStream1);
+    finally
+      FreeAndNil(StrStream1);
+    end;
+    BinStream1 := TMemoryStream.Create;
+    try
+      (Query.FieldByName('B_IMAGE') as TBlobField).SaveToStream(BinStream1);
+      CheckEquals(BinStream, BinStream1);
+    finally
+      FreeAndNil(BinStream1);
+    end;
     Query.Close;
   finally
     BinStream.Free;
     StrStream.Free;
-    BinStream1.Free;
-    StrStream1.Free;
     Query.Free;
   end;
 end;
@@ -603,7 +607,7 @@ begin
     'order by rc.rdb$relation_name';
     Query.Open;
     //Client_Character_set sets column-type!!!!
-    if (Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16) then
+    if (Connection.ControlsCodePage = cCP_UTF16) then
     begin
       CheckEquals(ord(ftWideString), ord(Query.Fields[0].DataType));
       CheckEquals(ord(ftWideString), ord(Query.Fields[1].DataType));
@@ -1360,7 +1364,7 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(str2+LineEnding, StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftBlob)');
+        CheckEquals(str2+LineEnding, StrStream1, FieldByName('P_RESUME').DataType, Connection.DbcConnection.GetConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftBlob)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -1428,7 +1432,7 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(Str2+LineEnding, StrStream1, ConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str2+LineEnding, StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -1474,9 +1478,9 @@ procedure ZTestCompInterbaseBugReportMBCs.Test_Mantis214;
 const
   RowID = 214;
   { three cases }
-  S1 = RawByteString('Müller äöüÄÖÜß'); // gives malformed expression error on ExecSQL
-  S2 = RawByteString('000 Петър 000'); // can be stored but cyrillic letters cannot be read back
-  S3 = RawByteString('abc'); // can be written and reread
+  S1: ZWideString = #$004D#$00FC#$006C#$006C#$0065#$0072#$0020#$00E4#$00F6#$00FC#$00C4#$00D6#$00DC#$00DF; //european dull
+  S2: ZWideString = #$0030#$0030#$0030#$0020#$041F#$0435#$0442#$044A#$0440#$0020#$0030#$0030#$0030;   //cyryl dull
+  S3: ZWideString = #$0061#$0062#$0063; // ASCII7 can be written and reread
 var
   iqry: TZQuery;
   ConSettings: PZConSettings;
@@ -1486,7 +1490,7 @@ var
     {$IFDEF UNICODE}
     iqry.ParamByName('s1').AsString := WS;
     {$ELSE}
-    iqry.ParamByName('s1').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := WS;
+    iqry.ParamByName('s1').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := WS;
     {$ENDIF}
     iqry.ExecSQL;
   end;
@@ -1500,13 +1504,13 @@ begin
     ConSettings := Connection.DbcConnection.GetConSettings;
     if ConSettings^.ClientCodePage^.Encoding = ceUTF8 then
     begin
-      if ( ConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
-        AddRecord(RowID, {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S1));
-        AddRecord(RowID+1,{$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S2));
-        AddRecord(RowID+2,{$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S3));
+        AddRecord(RowID, S1);
+        AddRecord(RowID+1,S2);
+        AddRecord(RowID+2,S3);
 
         iqry.SQL.Text := 'select s_varchar from string_values where s_id > 213 and s_id < 217';
         iqry.open;
@@ -1514,17 +1518,17 @@ begin
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         {$IFDEF WITH_FTWIDESTRING}
           {$IFDEF UNICODE}
-          CheckEquals(UTF8ToString(S1), iqry.Fields[0].AsString);
+          CheckEquals(S1, iqry.Fields[0].AsString);
           iqry.Next;
-          CheckEquals(UTF8ToString(S2), iqry.Fields[0].AsString);
+          CheckEquals(S2, iqry.Fields[0].AsString);
           iqry.Next;
-          CheckEquals(UTF8ToString(S3), iqry.Fields[0].AsString);
+          CheckEquals(S3, iqry.Fields[0].AsString);
           {$ELSE}
-          CheckEquals(UTF8Decode(S1), iqry.Fields[0].AsWideString);
+          CheckEquals(S1, iqry.Fields[0].AsWideString);
           iqry.Next;
-          CheckEquals(UTF8Decode(S2), iqry.Fields[0].AsWideString);
+          CheckEquals(S2, iqry.Fields[0].AsWideString);
           iqry.Next;
-          CheckEquals(UTF8Decode(S3), iqry.Fields[0].AsWideString);
+          CheckEquals(S3, iqry.Fields[0].AsWideString);
           {$ENDIF}
         {$ENDIF}
       end
@@ -1533,13 +1537,13 @@ begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
         iqry.ParamByName('i1').AsInteger:= RowID;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, ConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, ConSettings);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+1;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, ConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, ConSettings);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+2;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, ConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, ConSettings);
         iqry.ExecSQL;
         iqry.Unprepare;
 
@@ -1549,15 +1553,17 @@ begin
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         { note GetDBTestString might have dataloss if AutoEncode is set and the os-code does not support cyrylic or Latin1 chars ...
           so we'll skip the check because we'll never be able to get a match in such cases }
-        if ((ZOSCodePage = zCP_WIN1252) or (ZOSCodePage = zCP_UTF8)) or (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
+        if ((ZOSCodePage = zCP_WIN1252) or (ZOSCodePage = zCP_UTF8)) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) or
+            (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
            if (ConSettings.CTRL_CP = zCP_WIN1252) or (ConSettings.CTRL_CP = zCP_UTF8) then
-              CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S1), iqry.Fields[0].AsString, ConSettings);
+              CheckEquals(S1, iqry.Fields[0].AsString{$IFNDEF UNICODE}, ConSettings, Connection.ControlsCodePage{$ENDIF UNICODE});
         iqry.Next;
-        if ((ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zCP_UTF8)) or (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
+        if ((ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zCP_UTF8)) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) or
+            (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
            if (ConSettings.CTRL_CP = zCP_WIN1251) or (ConSettings.CTRL_CP = zCP_UTF8) then
-              CheckEquals({$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(S2), iqry.Fields[0].AsString, ConSettings);
+              CheckEquals(S2, iqry.Fields[0].AsString{$IFNDEF UNICODE}, ConSettings, Connection.ControlsCodePage{$ENDIF UNICODE});
         iqry.Next;
-        CheckEquals(S3, iqry.Fields[0].AsString);
+        CheckEquals(S3, String(iqry.Fields[0].AsString));
       end;
     end;
   finally

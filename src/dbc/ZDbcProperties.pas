@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 
-uses ZDbcIntfs{$IFDEF ENABLE_MYSQL},ZPlainMySQLDriver{$ENDIF};
+uses ZDbcIntfs{$IFDEF ENABLE_MYSQL},ZPlainMySqlDriver{$ENDIF};
 
 //EH @ Fr0sT and aehimself
 //just a proposal which is not related to the docs you guys are planning

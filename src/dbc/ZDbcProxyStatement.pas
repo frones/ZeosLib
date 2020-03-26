@@ -71,7 +71,7 @@ type
     ['{16818F5D-9A5B-4402-A71A-40839E414D2D}']
   end;
 
-  TZDbcProxyPreparedStatement = class({$IFNDEF ZEOS73UP}TZAbstractPreparedStatement{$ELSE}TZAbstractPreparedStatement2{$ENDIF},
+  TZDbcProxyPreparedStatement = class(TZAbstractPreparedStatement,
     IZProxyPreparedStatement)
   private
   protected
@@ -134,16 +134,8 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcProxy, ZDbcProxyResultSet, ZDbcProxyUtils,
   ZEncoding, ZTokenizer, ZClasses,
-  {$IFDEF ZEOS73UP}FMTBCD, {$ENDIF}
-  // Resolvers that did not move between Zeos versions:
-  ZDbcASA,ZDbcDbLibResultSet, ZDbcOracle,
-  {$IFNDEF ZEOS73UP}
-  // Zeos 7.2 resolvers
-  ZDbcInterbase6, ZdbcPostgreSqlStatement,
-  {$ELSE}
-  // Zeos 7.3 resolvers
-  ZDbcInterbase6Resultset, ZDbcPostgresqlResultSet,
-  {$ENDIF}
+  // For the resolvers:
+  ZDbcInterbase6, ZDbcASA,ZDbcDbLibResultSet, ZDbcOracle, ZdbcPostgreSqlStatement,
   TypInfo, Variants, NetEncoding
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -204,17 +196,10 @@ begin
   Result := FloatToStr(Value, ProxyFormatSettings);
 end;
 
-{$IFDEF ZEOS73UP}
-function BcdParamToStr(const Value: TBCD): String;
-begin
-  Result := BCDToStr(Value, ProxyFormatSettings);
-end;
-{$ELSE}
 function ExtendedParamToStr(const Value: Extended): String;
 begin
-  Result := FloatToStr(Value, ProxyFormatSettings);
+  Result := FloatToStr(Value);
 end;
-{$ENDIF}
 
 function StrParamToStr(const Value: String): String;
 begin
@@ -243,7 +228,6 @@ var
   Line: String;
   x: Integer;
   TempBlob: IZBlob;
-  TempBCD: TBCd;
 begin
   if InParamCount = 0 then
     exit;
@@ -263,20 +247,9 @@ begin
           stULong, stLong:
             Line := ClientVarManager.GetAsString(InParamValues[x]);
           stFloat, stDouble, stCurrency:
-            {$IFDEF ZEOS73UP}
-            Line := DoubleParamToStr(ClientVarManager.GetAsDouble(InParamValues[x]));
-            {$ELSE}
             Line := DoubleParamToStr(ClientVarManager.GetAsFloat(InParamValues[x]));
-            {$ENDIF}
           stBigDecimal:
-            {$IFDEF ZEOS73UP}
-            begin
-              ClientVarManager.GetAsBigDecimal(InParamValues[x], TempBCD);
-              Line := BcdParamToStr(TempBCD);
-            end;
-            {$ELSE}
             Line := ExtendedParamToStr(ClientVarManager.GetAsFloat(InParamValues[x]));
-            {$ENDIF}
           stString, stUnicodeString:
             Line := StrParamToStr(ClientVarManager.GetAsString(InParamValues[x]));
           stDate:

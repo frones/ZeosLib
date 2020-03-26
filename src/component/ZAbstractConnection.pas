@@ -93,7 +93,7 @@ uses
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   {$IFDEF TLIST_IS_DEPRECATED}ZClasses,{$ENDIF}
-  ZDbcIntfs, ZCompatibility;
+  ZDbcIntfs, ZCompatibility, ZDatasetUtils;
 
 
 type

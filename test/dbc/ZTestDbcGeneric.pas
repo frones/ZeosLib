@@ -529,32 +529,32 @@ begin
     I := 4;
     RS.MoveToInsertRow;
     RS.UpdateInt(id_Index, I);
-    {RS.UpdateCurrency(Curr18_4_Index, C);
+    RS.UpdateCurrency(Curr18_4_Index, C);
     RS.UpdateCurrency(Curr15_2_Index, C/100);
     RS.UpdateCurrency(Curr10_4_Index, C/10);
     RS.UpdateCurrency(Curr4_4_Index, C/1000);
     if (ProtocolType <> protSQLite)  then begin
       RS.UpdateCurrency(BigD18_1_Index, C);
       RS.UpdateCurrency(BigD18_5_Index, C);
-      RS.UpdateCurrency(BigD12_10_Index, 0);}
+      RS.UpdateCurrency(BigD12_10_Index, 0);
       RS.UpdateCurrency(BigD18_18_Index, C/10000);
-    //end;
+    end;
     RS.InsertRow;
     RS.Close;
     RS := SelStmt.ExecuteQueryPrepared;
     Check(Rs.Next);
     Check(RS.Next);
     CheckEquals(i, RS.GetInt(id_Index));
-    {CheckEquals(C, RS.GetCurrency(Curr18_4_Index));
+    CheckEquals(C, RS.GetCurrency(Curr18_4_Index));
     CheckEquals(C/100, RS.GetCurrency(Curr15_2_Index));
     CheckEquals(C/10, RS.GetCurrency(Curr10_4_Index));
     CheckEquals(C/1000, RS.GetCurrency(Curr4_4_Index));
     if (ProtocolType <> protSQLite)  then begin
       CheckEquals(C, RS.GetCurrency(BigD18_1_Index));
       CheckEquals(C, RS.GetCurrency(BigD18_5_Index));
-      CheckEquals(0, RS.GetCurrency(BigD12_10_Index));}
+      CheckEquals(0, RS.GetCurrency(BigD12_10_Index));
       CheckEquals(C/10000, RS.GetCurrency(BigD18_18_Index));
-    //end;
+    end;
     RS.Close;
   finally
     RS.Close;
@@ -721,15 +721,21 @@ begin
 
       { Compares aciistream }
       StrStream1 := GetAsciiStreamByName('p_resume');
-      CheckEquals(StrStream, StrStream1, 'Ascii Stream');
-      StrStream.Free;
-      StrStream1.Free;
+      try
+        CheckEquals(StrStream, StrStream1, 'Ascii Stream');
+      finally
+        StrStream.Free;
+        StrStream1.Free;
+      end;
 
       { Compares BinaryStream }
       BinStream1 := GetBinaryStreamByName('p_picture');
-      CheckEquals(BinStream, BinStream1, 'Binary Stream');
-      BinStream.Free;
-      BinStream1.Free;
+      try
+        CheckEquals(BinStream, BinStream1, 'Binary Stream');
+      finally
+        BinStream.Free;
+        BinStream1.Free;
+      end;
       Close;
     end;
     ResultSet := nil;
@@ -1144,17 +1150,23 @@ begin
       CheckEquals(EncodeTime(12, 11, 20, 0), GetTimeByName('p_begin_work'), 0.0001);
       CheckEquals(EncodeTime(22, 36, 55, 0), GetTimeByName('p_end_work'), 0.0001);
       BinStream1 := GetBinaryStreamByName('p_picture');
+      try
+        CheckEquals(BinStream, BinStream1);
+      finally
+        FreeAndNil(BinStream1);
+      end;
       StrStream1 := GetAsciiStreamByName('p_resume');
-      CheckEquals(BinStream, BinStream1);
-      CheckEquals(StrStream, StrStream1);
+      try
+        CheckEquals(StrStream, StrStream1);
+      finally
+        FreeAndNil(StrStream1);
+      end;
       CheckEquals(1, GetIntByName('p_redundant'));
       DeleteRow;
     end;
   finally
     FreeAndNil(BinStream);
-    FreeAndNil(BinStream1);
     FreeAndNil(StrStream);
-    FreeAndNil(StrStream1);
   end;
 
 

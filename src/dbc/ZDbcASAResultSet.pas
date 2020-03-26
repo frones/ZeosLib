@@ -60,12 +60,16 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs,{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
+  System.Types, System.Contnrs
+  {$ELSE}
+    {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} Types
+  {$ENDIF},
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility,
+  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility, ZDbcCache,
   ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASAConstants,
-  ZPLainASADriver;
+  ZDbcCachedResultSet, ZPLainASADriver, ZClasses;
 
 type
 
@@ -109,9 +113,9 @@ type
     procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     property SQLData: IZASASQLDA read FSQLData;
     {$IFDEF USE_SYNCOMMONS}
@@ -135,66 +139,78 @@ type
     function Previous: Boolean; override;
     function Next: Boolean; override;
   end;
-  (*
-  TZASACachedResultSet = Class(TZASANativeResultSet)
-  private
-    FInsert: Boolean;
-    FUpdate: Boolean;
-    FDelete: Boolean;
-    FUpdateSqlData: IZASASQLDA;
-    procedure PrepareUpdateSQLData;
+
+  TZASACachedResultSet = Class(TZCachedResultSet)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  End;
+
+  { TZASARowAccessor }
+
+  TZASARowAccessor = class(TZRowAccessor)
   public
-    constructor Create(const Statement: IZStatement; const SQL: string;
-      var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
-      CachedBlob: boolean);
-
-    procedure BeforeClose; override;
-
-    function RowUpdated: Boolean; override;
-    function RowInserted: Boolean; override;
-    function RowDeleted: Boolean; override;
-
-    procedure UpdateNull(ColumnIndex: Integer);
-    procedure UpdateBoolean(ColumnIndex: Integer; const Value: Boolean);
-    procedure UpdateByte(ColumnIndex: Integer; const Value: Byte);
-    procedure UpdateShort(ColumnIndex: Integer; const Value: ShortInt);
-    procedure UpdateWord(ColumnIndex: Integer; const Value: Word);
-    procedure UpdateSmall(ColumnIndex: Integer; const Value: SmallInt);
-    procedure UpdateUInt(ColumnIndex: Integer; const Value: LongWord);
-    procedure UpdateInt(ColumnIndex: Integer; const Value: Integer);
-    procedure UpdateULong(ColumnIndex: Integer; const Value: UInt64);
-    procedure UpdateLong(ColumnIndex: Integer; const Value: Int64);
-    procedure UpdateFloat(ColumnIndex: Integer; const Value: Single);
-    procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
-    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
-    procedure UpdateString(ColumnIndex: Integer; const Value: String);
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
-    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
-    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
-    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
-    procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
-    procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
-    procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
-
-    procedure InsertRow; override;
-    procedure UpdateRow; override;
-    procedure DeleteRow; override;
-    procedure RefreshRow; override;
-    procedure CancelRowUpdates; override;
-    procedure MoveToInsertRow; override;
-    procedure MoveToCurrentRow; override;
-
-    function MoveAbsolute(Row: Integer): Boolean; override;
-    function MoveRelative(Rows: Integer): Boolean; override;
-  End; *)
-
-  {** Implements external clob wrapper object for ASA. }
-  TZASAClob = class(TZAbstractClob)
-  public
-    constructor Create(const SqlData: IZASASQLDA; const ColID: Integer;
-      Const ConSettings: PZConSettings);
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+    procedure FetchLongData(AsStreamedType: TZSQLType; const ResultSet: IZResultSet;
+      ColumnIndex: Integer; Data: PPZVarLenData); override;
   end;
+
+  TZASALob = class;
+
+  TZASAStream = class(TZImmediatelyReleasableLobStream)
+  private
+    FASASQLDA: PASASQLDA;
+    FPlainDriver: TZASAPlainDriver;
+    FOwnerLob: TZASALob;
+    FAllocated_Arr_len: LongInt;
+    FPosition: LongInt;
+    Fsqlca: PZASASQLCA;
+    FCursorName: PAnsiChar;
+    FColumnNumber: Word;
+    FsqlInd: SmallInt;
+    FConSettings: PZConSettings;
+  protected
+    function GetSize: Int64; override;
+  public
+    function Read(var Buffer; Count: Longint): Longint; overload; override;
+    function Write(const Buffer; Count: Longint): Longint; overload; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; overload; override;
+  public
+    constructor Create(const OwnerLob: TZASALob);
+    destructor Destroy; override;
+  end;
+
+  TZASALob = Class(TZAbstractStreamedLob, IZLob, IZBlob, IImmediatelyReleasable)
+  private
+    FConnection: IZASAConnection;
+    FASASQLDA: PASASQLDA;
+    FCursorName: RawByteString;
+    FColumnIndex: Integer;
+    FReleased: Boolean;
+    FCurrentRowAddr: PInteger;
+    FLobRowNo: Integer;
+    FPlainDriver: TZASAPlainDriver;
+  protected
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
+  public //IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    function GetConSettings: PZConSettings;
+  public
+    constructor Create(const Connection: IZASAConnection; ASASQLDA: PASASQLDA;
+      const CursorName: RawByteString; ColumnIndex: Integer;
+      LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
+      const OpenLobStreams: TZSortedList; CurrentRowAddr: PInteger);
+  public
+    function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+    procedure Clear; override;
+    function IsEmpty: Boolean; override;
+  public
+    function Length: Integer; override;
+  End;
+
+  TZASABLob = class(TZASALob);
+
+  TZASACLob = class(TZASALob, IZClob);
 
 {$ENDIF ZEOS_DISABLE_ASA}
 implementation
@@ -204,7 +220,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
- Math, ZFastCode, ZDbcLogging, ZEncoding, ZClasses, ZDbcUtils;
+ Math, ZFastCode, ZDbcLogging, ZEncoding, ZDbcUtils;
 
 { TZASAResultSet }
 
@@ -214,7 +230,28 @@ procedure TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
 var L: NativeUInt;
     P: Pointer;
     C, H, I: SmallInt;
-    Blob: IZBlob;
+    procedure AddClob(ColumnCodePage: Word);
+    var Clob: IZCLob;
+    begin
+      JSONWriter.Add('"');
+      Clob := TZASAClob.Create(FASAConnection, FSQLDA, FCursorName,
+        C, lsmRead, ColumnCodePage, FOpenLobStreams, @FRowNo);
+      P := Clob.GetPAnsiChar(zCP_UTF8, FRawTemp, L);
+      JSONWriter.AddJSONEscape(P, L);
+      JSONWriter.Add('"');
+      Clob := nil;
+    end;
+    procedure AddBlob;
+    var Blob: IZBLob;
+    begin
+      JSONWriter.Add('"');
+      Blob := TZASABlob.Create(FASAConnection, FSQLDA, FCursorName,
+        C, lsmRead, zCP_Binary, FOpenLobStreams, @FRowNo);
+      P := Blob.GetBuffer(FRawTemp, L);
+      JSONWriter.WrBase64(P, L, True);
+      JSONWriter.Add('"');
+      Blob := nil;
+    end;
 begin
   //init
   if JSONWriter.Expand then
@@ -227,7 +264,7 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     {$R-}
-    with FSQLDA.sqlvar[C] do
+    with FSQLDA.sqlvar[C], TZColumnInfo(ColumnsInfo[C]) do
       if (sqlind <> nil) and (sqlind^ < 0) then
         if JSONWriter.Expand then begin
           if not (jcsSkipNulls in JSONComposeOptions) then begin
@@ -248,10 +285,13 @@ begin
           DT_DOUBLE           : JSONWriter.AddDouble(PDouble(sqldata)^);
           //DT_DATE bound to TIMESTAMP_STRUCT
           DT_STRING,
+          DT_NSTRING,
           DT_FIXCHAR,
-          DT_VARCHAR          : begin
+          DT_NFIXCHAR,
+          DT_VARCHAR,
+          DT_NVARCHAR         : begin
                                   JSONWriter.Add('"');
-                                  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+                                  if ColumnCodePage = zCP_UTF8 then
                                     JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
                                   else begin
                                     FUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP);
@@ -259,13 +299,8 @@ begin
                                   end;
                                   JSONWriter.Add('"');
                                 end;
-          DT_LONGVARCHAR      : begin
-                                  JSONWriter.Add('"');
-                                  blob := TZASAClob.Create(FsqlData, C, ConSettings);
-                                  P := blob.GetPAnsiChar(zCP_UTF8);
-                                  JSONWriter.AddJSONEscape(P, blob.Length);
-                                  JSONWriter.Add('"');
-                                end;
+          DT_LONGNVARCHAR,
+          DT_LONGVARCHAR      : AddClob(ColumnCodePage);
           DT_TIME,
           DT_TIMESTAMP,
           DT_TIMESTAMP_STRUCT : begin
@@ -294,15 +329,7 @@ begin
                                   else JSONWriter.Add('"');
                                 end;
           DT_BINARY           : JSONWriter.WrBase64(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, True);
-          DT_LONGBINARY       : begin
-                                  P := nil;
-                                  try
-                                    FSqlData.ReadBlobToMem(C, P, L{%H-});
-                                    JSONWriter.WrBase64(P, L, True);
-                                  finally
-                                    FreeMem(P);
-                                  end;
-                                end;
+          DT_LONGBINARY       : AddBlob;
           //DT_VARIABLE: ?
           DT_TINYINT          : JSONWriter.Add(PByte(sqldata)^);
           DT_BIGINT           : JSONWriter.Add(PInt64(sqldata)^);
@@ -310,25 +337,6 @@ begin
           DT_UNSSMALLINT      : JSONWriter.AddU(PWord(sqldata)^);
           DT_UNSBIGINT        : JSONWriter.AddQ(PUInt64(sqldata)^);
           DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(sqldata)^ <> 0]);
-          DT_NSTRING,
-          DT_NFIXCHAR,
-          DT_NVARCHAR         : begin
-                                  JSONWriter.Add('"');
-                                  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
-                                    JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
-                                  else begin
-                                    FUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP);
-                                    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
-                                  end;
-                                  JSONWriter.Add('"');
-                                end;
-          DT_LONGNVARCHAR     : begin
-                                JSONWriter.Add('"');
-                                blob := TZASAClob.Create(FsqlData, C, ConSettings);
-                                P := blob.GetPAnsiChar(zCP_UTF8);
-                                JSONWriter.AddJSONEscape(P, blob.Length);
-                                JSONWriter.Add('"');
-                              end;
           else
             FSqlData.CreateException(Format(SErrorConvertionField,
               [ FSqlData.GetFieldName(C), ConvertASATypeToString(sqlType)]));
@@ -440,7 +448,9 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^ <> 0;
         DT_FLOAT       : Result := PSingle(sqldata)^ <> 0;
         DT_DOUBLE      : Result := PDouble(sqldata)^ <> 0;
+        DT_NVARCHAR,
         DT_VARCHAR     :Result := StrToBoolEx(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PAnsiChar(@PZASASQLSTRING(sqlData).data[0])+PZASASQLSTRING(sqlData).length, True);
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
@@ -448,7 +458,7 @@ begin
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -478,9 +488,14 @@ begin
           Result := @PZASASQLSTRING(sqlData).data;
           Len := PZASASQLSTRING(sqlData).length;
         end;
+      DT_LONGBINARY: begin
+          Len := PZASABlobStruct( sqlData).untrunc_len;
+          FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
+          Result := Pointer(FRawTemp);
+        end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
     end;
 end;
 
@@ -513,11 +528,13 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
+        DT_NVARCHAR,
         DT_VARCHAR:
            begin
              ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING(sqlData).length, FRawTemp{%H-});
              Result := RawToInt64(FRawTemp);
            end;
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
@@ -525,7 +542,7 @@ begin
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -558,11 +575,13 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
+        DT_NVARCHAR,
         DT_VARCHAR:
            begin
              ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING(sqlData).length, FRawTemp{%H-});
              Result := RawToInt(FRawTemp);
            end;
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
@@ -570,7 +589,7 @@ begin
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -604,11 +623,13 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
+        DT_NVARCHAR,
         DT_VARCHAR:
            begin
              ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING(sqlData).length, FRawTemp{%H-});
              Result := RawToUInt64(FRawTemp);
            end;
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
@@ -616,7 +637,7 @@ begin
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -650,11 +671,13 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
+        DT_NVARCHAR,
         DT_VARCHAR:
            begin
              ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING(sqlData).length, FRawTemp{%H-});
              Result := RawToInt64(FRawTemp);
            end;
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
@@ -662,7 +685,7 @@ begin
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -696,6 +719,8 @@ begin
         DT_FLOAT       : Result := PSingle(sqldata)^;
         DT_DOUBLE      : Result := PDouble(sqldata)^;
         DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING(sqlData).length);
+        DT_NVARCHAR,
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
@@ -703,7 +728,7 @@ begin
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(columnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -728,6 +753,7 @@ begin
     FillChar(Result, SizeOf(TGUID), #0)
   else with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
     case sqlType and $FFFE of
+      DT_NVARCHAR,
       DT_VARCHAR    : if (PZASASQLSTRING(sqlData).length = 36) or (PZASASQLSTRING(sqlData).length = 38)
                       then ValidGUIDToBinary(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), @Result.D1)
                       else goto Fail;
@@ -737,7 +763,7 @@ begin
     else begin
 fail:  FillChar(Result, SizeOf(TGUID), #0);
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
     end;
   end;
@@ -772,7 +798,9 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := PSingle(sqldata)^;
         DT_DOUBLE      : Result := PDouble(sqldata)^;
+        DT_NVARCHAR,
         DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING(sqlData).length);
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR :
           begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
@@ -780,7 +808,7 @@ begin
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(columnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -814,14 +842,16 @@ begin
       DT_UNSBIGINT   : ScaledOrdinal2BCD(PUInt64(sqldata)^, 0, Result, False);
       DT_FLOAT       : Double2BCD(PSingle(sqldata)^, Result);
       DT_DOUBLE      : Double2BCD(PDouble(sqldata)^, Result);
+      DT_NVARCHAR,
       DT_VARCHAR     : TryRawToBCD(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING(sqlData).length, Result, '.');
+      DT_LONGNVARCHAR,
       DT_LONGVARCHAR : begin
           FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
           TryRawToBCD(FRawTemp, Result, '.');
         end;
     else
       FSqlData.CreateException(Format(SErrorConvertionField,
-        [ FSqlData.GetFieldName(columnIndex), ConvertASATypeToString(sqlType)]));
+        [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
     end;
 end;
 
@@ -845,14 +875,16 @@ begin
         DT_UNSBIGINT   : Result := PUInt64(sqldata)^;
         DT_FLOAT       : Result := PSingle(sqldata)^;
         DT_DOUBLE      : Result := PDouble(sqldata)^;
+        DT_NVARCHAR,
         DT_VARCHAR     : SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, Result, PZASASQLSTRING(sqlData).length);
+        DT_LONGNVARCHAR,
         DT_LONGVARCHAR : begin
             FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
             SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, length(FRawTemp));
           end;
       else
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(columnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -877,6 +909,7 @@ begin
   if not LastWasNull then
     with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
       case sqlType and $FFFE of
+        DT_NVARCHAR,
         DT_VARCHAR:
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
@@ -891,7 +924,7 @@ begin
           end;
     else
       FSqlData.CreateException(Format(SErrorConvertionField,
-        [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+        [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
   end;
 end;
 
@@ -916,6 +949,7 @@ begin
   if not LastWasNull then
     with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
       case sqlType and $FFFE of
+        DT_NVARCHAR,
         DT_VARCHAR:
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
@@ -928,10 +962,11 @@ begin
             Result.Minute := PZASASQLDateTime(sqlData)^.Minute;
             Result.Second := PZASASQLDateTime(sqlData)^.Second;
             Result.Fractions := PZASASQLDateTime(sqlData).MicroSecond * 1000;
+            Result.IsNegative := False;
           end;
         else
           FSqlData.CreateException(Format(SErrorConvertionField,
-            [FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+            [FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -957,6 +992,7 @@ begin
   if not LastWasNull then
     with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
       case sqlType and $FFFE of
+        DT_NVARCHAR,
         DT_VARCHAR:
           begin
             P := @PZASASQLSTRING(sqlData).data[0];
@@ -976,7 +1012,7 @@ begin
           end;
         else
           FSqlData.CreateException(Format(SErrorConvertionField,
-            [FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+            [FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
 
@@ -1047,12 +1083,15 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
       DT_VARCHAR,
+      DT_NVARCHAR,
       DT_BINARY     : begin
                         Result := @PZASASQLSTRING(sqlData).data[0];
                         Len := PZASASQLSTRING(sqlData).length;
                       end;
       DT_LONGBINARY,
+      DT_LONGNVARCHAR,
       DT_LONGVARCHAR: begin
+                        Len := PZASABlobStruct( sqlData).untrunc_len;
                         FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
                         Len := Length(FRawTemp);
                         if Len = 0
@@ -1081,7 +1120,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
         Result := nil;
         Len := 0;
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
     end;
   end;
@@ -1098,7 +1137,7 @@ begin
   Result := nil;
   Len := 0;
   if not LastWasNull then
-  with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
+  with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}], TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
     case sqlType and $FFFE of
       DT_TINYINT    : begin
                         IntToUnicode(Cardinal(PByte(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
@@ -1144,9 +1183,10 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                         Len := FloatToSQLUnicode(PDouble(sqldata)^, @FTinyBuffer[0]);
                         Result := @FTinyBuffer[0];
                       end;
+      DT_NVARCHAR,
       DT_VARCHAR    : begin
                         fUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0],
-                          PZASASQLSTRING(sqlData).length, ConSettings.ClientCodePage.CP);
+                          PZASASQLSTRING(sqlData).length, ColumnCodePage);
                         goto set_from_uni;
                       end;
       DT_BINARY     : begin
@@ -1154,9 +1194,10 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                           PZASASQLSTRING(sqlData).length);
                         goto set_from_uni;
                       end;
+      DT_LONGNVARCHAR,
       DT_LONGVARCHAR: begin
                         FSqlData.ReadBlobToString(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
-                        FUniTemp := ZRawtoUnicode(FRawTemp, ConSettings.ClientCodePage.CP);
+                        FUniTemp := ZRawtoUnicode(FRawTemp, ColumnCodePage);
 set_from_uni:           Len := Length(FUniTemp);
                         if Len = 0
                         then Result := PEmptyUnicodeString
@@ -1184,7 +1225,7 @@ set_from_uni:           Len := Length(FUniTemp);
         Result := nil;
         Len := 0;
         FSqlData.CreateException(Format(SErrorConvertionField,
-          [ FSqlData.GetFieldName(ColumnIndex), ConvertASATypeToString(sqlType)]));
+          [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
     end;
 end;
@@ -1198,7 +1239,8 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZASAAbstractResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZASAAbstractResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   TempBytes: TBytes;
   Buffer: Pointer;
@@ -1206,35 +1248,28 @@ var
 begin
   CheckBlobColumn(ColumnIndex);
 
+  Result := nil;
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := nil
-  else case GetMetadata.GetColumnType(ColumnIndex) of
-    stAsciiStream, stUnicodeStream:
-      Result := TZASAClob.Create(FsqlData, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, ConSettings);
-    stBinaryStream:
-      begin
-        Buffer := nil; //satisfy FPC compiler
-        FSqlData.ReadBlobToMem(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Buffer, Len{%H-});
-        {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-        Result := TZAbstractBlob.Create;
-        Result.SetBlobData(Buffer, Len); //no Move!
-        {$ELSE}
-        Result := TZAbstractBlob.CreateWithData(Buffer, Len);
-        FreeMem(Buffer); //hmpf we need to move the memory
-        {$ENDIF}
-      end;
-    stBytes:
-      begin
-        TempBytes := GetBytes(ColumnIndex);
-        Result := TZAbstractBlob.CreateWithData(Pointer(TempBytes), Length(TempBytes));
-      end;
-    else begin
-        Buffer := GetPAnsiChar(ColumnIndex, Len);
-        Result := TZAbstractClob.CreateWithData(PAnsiChar(Buffer), Len,
-          ConSettings^.ClientCodePage^.CP, ConSettings);
-      end;
-  end;
+  if not LastWasNull then with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    case ColumnType of
+      stAsciiStream, stUnicodeStream:
+        Result := TZASAClob.Create(FASAConnection, FSQLDA, FCursorName,
+          ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, LobStreamMode, ColumnCodePage, FOpenLobStreams, @FRowNo);
+      stBinaryStream:
+        Result := TZASABlob.Create(FASAConnection, FSQLDA, FCursorName,
+          ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, LobStreamMode, ColumnCodePage, FOpenLobStreams, @FRowNo);
+      stGUID, stBytes: begin
+          TempBytes := GetBytes(ColumnIndex);
+          Result := TZLocalMemBLob.CreateWithData(Pointer(TempBytes), Length(TempBytes));
+        end;
+      stString, stUnicodeString: begin
+          Buffer := GetPAnsiChar(ColumnIndex, Len);
+          Result := TZLocalMemCLob.CreateWithData(PAnsiChar(Buffer), Len, ColumnCodePage, ConSettings);
+        end;
+      else raise CreateCanNotAccessBlobRecordException(ColumnIndex, ColumnType)
+    end;
 end;
 
 {**
@@ -1257,35 +1292,42 @@ begin
       FieldSqlType := GetFieldSqlType(I);
       ColumnLabel := GetFieldName(I);
       ColumnType := FieldSqlType;
-
-      if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
+      if FieldSqlType in [stUnicodeString, stUnicodeStream] then begin
+        ColumnCodePage := zCP_UTF8;
+        if ColumnType = stUnicodeString then begin//ASA calcutates the n column different
+          CharOctedLength := GetFieldLength(I);
+          Precision := CharOctedLength shr 2; //default UTF8 has 3 bytes only whereas n-cols have 4 bytes
+          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_FIXCHAR;
+        end;
+      end else if FieldSqlType in [stString, stAsciiStream] then begin
         ColumnCodePage := ConSettings^.ClientCodePage^.CP;
         if ColumnType = stString then begin
           CharOctedLength := GetFieldLength(I);
           Precision := CharOctedLength div ConSettings^.ClientCodePage^.CharWidth;
-        end else if FieldSQLType = stUnicodeString then begin
-          Precision := GetFieldLength(I) div ConSettings^.ClientCodePage^.CharWidth;
-          CharOctedLength := Precision shl 1;
+          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_NFIXCHAR;
         end;
       end else if FieldSqlType = stBytes then begin
         Precision := GetFieldLength(I);
         CharOctedLength := Precision;
-      end;
-
-        ColumnCodePage := High(Word);
-
+        //asa has no varbinary has it?
+      end else if FieldSqlType = stBigDecimal then begin
+        Precision := GetFieldLength(I);
+        Scale := GetFieldScale(I);
+        if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then
+          ColumnType := stCurrency;
+        Signed := True;
+      end else if FieldSqlType in [stTime, stTimeStamp] then begin
+        Precision := GetFieldLength(I);
+        Scale := GetFieldScale(I);
+      end else
+        Signed := ColumnType in [stShort, stSmall, stInteger, stLong, stCurrency, stBigDecimal];
       ReadOnly := False;
 
-      if IsNullable(I) then
-        Nullable := ntNullable
-      else
-        Nullable := ntNoNulls;
+      if IsNullable(I)
+      then Nullable := ntNullable
+      else Nullable := ntNoNulls;
       Nullable := ntNullable;
-      Signed := ColumnType = stBytes; //asa has no varbinary has it?
-
-      Scale := GetFieldScale(I);
       AutoIncrement := False;
-      //Signed := False;
       CaseSensitive := False;
     end;
     ColumnsInfo.Add(ColumnInfo);
@@ -1506,292 +1548,239 @@ begin
   Result := MoveRelative(1);
 end;
 
-(*
 { TZASACachedResultSet }
 
-constructor TZASACachedResultSet.Create(const Statement: IZStatement; const SQL: string;
-  var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
-  CachedBlob: boolean);
+class function TZASACachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
 begin
-  inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);
-  FInsert := False;
-  FUpdate := False;
-  FDelete := False;
+  Result := TZASARowAccessor;
 end;
 
-procedure TZASACachedResultSet.PrepareUpdateSQLData;
+{ TZASARowAccessor }
+
+constructor TZASARowAccessor.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
+  CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
 begin
-  FUpdate := not FInsert;
-  if not Assigned(FUpdateSQLData) then
-  begin
-    FUpdateSQLData := TZASASQLDA.Create(FPlainDriver,
-      FASAConnection.GetDBHandle, Pointer(FCursorName), ConSettings, FSQLData.GetFieldCount);
-    FSQLDA := FUpdateSQLData.GetData;
-    FSQLDA^.sqld := FSQLDA^.sqln;
-  end
+  TempColumns := TObjectList.Create(True);
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-1); // no national chars in 4 asa
+   { eh: we can stream the data with asa, but we need always to fetch the
+     current row and we have no descriptor so we cache the data }
+   if Current.ColumnType in [stAsciiStream, stBinaryStream] then
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3);
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
+  TempColumns.Free;
+end;
+
+procedure TZASARowAccessor.FetchLongData(AsStreamedType: TZSQLType;
+  const ResultSet: IZResultSet; ColumnIndex: Integer; Data: PPZVarLenData);
+const
+  MaxBufSize = $F000;
+var Lob: IZBlob;
+  Stream: TStream;
+  Len, BufSize, ReadBytes: Cardinal;
+  buf: PAnsiChar;
+begin
+  if Data^ <> nil then
+    FreeMem(Data^);
+  Lob := ResultSet.GetBlob(ColumnIndex);
+  Stream := Lob.GetStream;
+  try
+    Len := Stream.Size;
+    if Len = 0 then Exit;
+    if Len > MaxBufSize
+    then BufSize := MaxBufSize
+    else BufSize := Len;
+    GetMem(Data^, SizeOf(Cardinal)+Len+Byte(AsStreamedType=stAsciiStream));
+    Data^.Len := Len;
+    buf := @Data^.Data;
+    while Len <> 0 do begin
+      ReadBytes := Stream.Read(Buf^, BufSize);
+      Dec(Len, ReadBytes);
+      Inc(Buf, readBytes);
+      if Len < BufSize then
+        BufSize := Len;
+    end;
+    PByte(Buf)^ := 0;
+  finally
+    Stream.Free;
+    Lob := nil;
+  end;
+end;
+
+{ TZASAStream }
+
+constructor TZASAStream.Create(const OwnerLob: TZASALob);
+begin
+  inherited Create(OwnerLob, OwnerLob.FConnection, OwnerLob.FOpenLobStreams);
+  FOwnerLob := OwnerLob;
+  FPlainDriver := OwnerLob.FConnection.GetPlainDriver;
+  FASASQLDA := FPlainDriver.alloc_sqlda(1);
+  FASASQLDA.sqld := FASASQLDA.sqln;
+  Fsqlca := OwnerLob.FConnection.GetDBHandle;
+  FCursorName := Pointer(OwnerLob.FCursorName);
+  FConSettings := OwnerLob.FConnection.GetConSettings;
+  if FCursorName = nil then
+    FCursorName := PEmptyAnsiString;
+  FColumnNumber := OwnerLob.FColumnIndex + 1;
+  with FASASQLDA.sqlVar[0] do begin
+    sqlType := OwnerLob.FASASQLDA.sqlVar[OwnerLob.FColumnIndex].sqlType;
+    sqllen := SizeOf( TZASABlobStruct)-1;
+    sqlInd := @FsqlInd;
+    sqlData := nil;
+    sqlname.length := 0;
+    sqlname.data[0] := AnsiChar(#0);
+  end;
+end;
+
+destructor TZASAStream.Destroy;
+begin
+  if FASASQLDA <> nil then begin
+    if FASASQLDA.sqlVar[0].sqlData <> nil then
+      FreeMem(FASASQLDA.sqlVar[0].sqlData);
+    FPlainDriver.free_sqlda(FASASQLDA);
+    FASASQLDA := nil;
+  end;
+  inherited Destroy;
+end;
+
+function TZASAStream.GetSize: Int64;
+begin
+  if FReleased
+  then Result := 0
+  else Result := PZASABlobStruct(FOwnerLob.FASASQLDA.sqlVar[FOwnerLob.FColumnIndex].sqlData).untrunc_len;
+end;
+
+function TZASAStream.Read(var Buffer; Count: Longint): Longint;
+var ASASQLVAR: PZASASQLVAR;
+begin
+  if FReleased or (Count = 0)
+  then Result := 0
+  else begin
+    if FOwnerLob.FLobStreamMode = lsmWrite then
+      raise CreateWriteOnlyException;
+    ASASQLVAR := @FASASQLDA.sqlVar[0];
+    if Count > FAllocated_Arr_len then begin
+      ReallocMem(ASASQLVAR.sqlData, SizeOf(TZASABlobStruct)+Count);
+      PZASABlobStruct(ASASQLVAR.sqlData).stored_len := 0;
+      PZASABlobStruct(ASASQLVAR.sqlData).untrunc_len := 0;
+      PZASABlobStruct(ASASQLVAR.sqlData).arr[0] := AnsiChar(#0);
+      FAllocated_Arr_len := Count;
+    end;
+    PZASABlobStruct(ASASQLVAR.sqlData).array_len := Count;
+    FPlainDriver.dbpp_get_data(Fsqlca, FCursorName, FColumnNumber, FPosition, FASASQLDA, 0);
+    CheckASAError( FPlainDriver, Fsqlca, lcOther, FConSettings);
+    Result := PZASABlobStruct(ASASQLVAR.sqlData)^.stored_len;
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(
+      PZASABlobStruct(ASASQLVAR.sqlData)^.arr[0], Buffer, Result);
+    FPosition := FPosition+Result;
+  end;
+end;
+
+function TZASAStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
+begin
+  if Origin = soEnd then
+    Result := PZASABlobStruct(FOwnerLob.FASASQLDA.sqlVar[FOwnerLob.FColumnIndex].sqlData).untrunc_len - OffSet
+  else if Origin = soCurrent then
+    Result := FPosition + OffSet
   else
-    if FUpdateSQLData.GetFieldCount <> Self.FSqlData.GetFieldCount then
-      FUpdateSQLData.AllocateSQLDA(FSQLData.GetFieldCount);
+    Result := OffSet;
+  if Result <> FPosition then
+    FPosition := Result;
 end;
 
-procedure TZASACachedResultSet.BeforeClose;
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
+function TZASAStream.Write(const Buffer; Count: Longint): Longint;
 begin
-  FUpdateSQLData := nil;
-  inherited BeforeClose;
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{ TZASALob }
+
+procedure TZASALob.Clear;
+begin
+  raise CreateReadOnlyException;
 end;
 
-function TZASACachedResultSet.RowUpdated: Boolean;
+function TZASALob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 begin
-  Result := FUpdate;
+  Result := nil;
 end;
 
-function TZASACachedResultSet.RowInserted: Boolean;
+constructor TZASALob.Create(const Connection: IZASAConnection;
+  ASASQLDA: PASASQLDA; const CursorName: RawByteString; ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
+  const OpenLobStreams: TZSortedList; CurrentRowAddr: PInteger);
 begin
-  Result := FInsert;
+  inherited Create(ColumnCodePage, OpenLobStreams);
+  FConnection := Connection;
+  FASASQLDA := ASASQLDA;
+  FCursorName := CursorName;
+  FColumnIndex := ColumnIndex;
+  FLobStreamMode := LobStreamMode;
+  FCurrentRowAddr := CurrentRowAddr;
+  FLobRowNo := CurrentRowAddr^;
+  FPlainDriver := Connection.GetPlainDriver;
+  FConSettings := Connection.GetConSettings;
 end;
 
-function TZASACachedResultSet.RowDeleted: Boolean;
+function TZASALob.CreateLobStream(CodePage: Word;
+  LobStreamMode: TZLobStreamMode): TStream;
 begin
-  Result := FDelete;
-end;
-
-procedure TZASACachedResultSet.UpdateNull(ColumnIndex: Integer);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateNull(ColumnIndex, True);
-end;
-
-procedure TZASACachedResultSet.UpdateBoolean(ColumnIndex: Integer; const Value: Boolean);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateBoolean(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateByte(ColumnIndex: Integer; const Value: Byte);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateByte(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateShort(ColumnIndex: Integer; const Value: ShortInt);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateSmall(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateWord(ColumnIndex: Integer; const Value: Word);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateWord(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateSmall(ColumnIndex: Integer; const Value: SmallInt);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateSmall(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateUInt(ColumnIndex: Integer; const Value: LongWord);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateUInt(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateInt(ColumnIndex: Integer; const Value: Integer);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateInt(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateULong(ColumnIndex: Integer; const Value: UInt64);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateULong(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateLong(ColumnIndex: Integer; const Value: Int64);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateLong(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateFloat(ColumnIndex: Integer; const Value: Single);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateFloat(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateDouble(ColumnIndex: Integer; const Value: Double);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateDouble(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateBigDecimal(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
-begin
-  PrepareUpdateSQLData;
-  FRawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  FUpdateSqlData.UpdatePRaw(ColumnIndex, Pointer(FRawTemp), Length(FRawTemp));
-end;
-
-procedure TZASACachedResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-begin
-  PrepareUpdateSQLData;
-  FRawTemp := ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
-  FUpdateSqlData.UpdatePRaw(ColumnIndex, Pointer(FRawTemp), Length(FRawTemp));
-end;
-
-procedure TZASACachedResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateBytes(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateDate(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateTime(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateTimestamp(ColumnIndex, Value);
-end;
-
-procedure TZASACachedResultSet.UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob(ColumnIndex, Value, stAsciiStream);
-end;
-
-procedure TZASACachedResultSet.UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob(ColumnIndex, Value, stUnicodeStream);
-end;
-
-procedure TZASACachedResultSet.UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.WriteBlob(ColumnIndex, Value, stBinaryStream);
-end;
-
-procedure TZASACachedResultSet.InsertRow;
-begin
-  if Assigned(FUpdateSQLData) and FInsert then
-  begin
-    FPlainDriver.dbpp_put_into(FASAConnection.GetDBHandle,
-      PAnsiChar(FCursorName), FUpdateSQLData.GetData, FSQLData.GetData);
-    ZDbcASAUtils.CheckASAError(FPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, ConSettings, 'Insert row');
-
-    FInsert := false;
-    Self.FSQLDA :=  FSqlData.GetData;
+  if FReleased
+  then Result := nil
+  else begin
+    if FCurrentRowAddr^ <> FLobRowNo then begin
+      FPlainDriver.dbpp_fetch(FConnection.GetDBHandle,
+        Pointer(FCursorName), CUR_ABSOLUTE, FLobRowNo, FASASQLDA, BlockSize, CUR_FORREGULAR);
+      ZDbcASAUtils.CheckASAError(FPlainDriver,
+        FConnection.GetDBHandle, lcOther, FConSettings);
+    end;
+    Result := TZASAStream.Create(Self);
+    if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
+      Result := TZCodePageConversionStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
   end;
 end;
 
-procedure TZASACachedResultSet.UpdateRow;
+function TZASALob.GetConSettings: PZConSettings;
 begin
-  if Assigned(FUpdateSQLData) and FUpdate then
-  begin
-    FPlainDriver.dbpp_update(FASAConnection.GetDBHandle,
-      PAnsiChar(FCursorName), FUpdateSQLData.GetData);
-    ZDbcASAUtils.CheckASAError(FPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, ConSettings, 'Update row:' + IntToRaw(RowNo));
-
-    FUpdate := false;
-    FUpdateSQLData.FreeSQLDA;
-    FSQLDA := FSqlData.GetData;
-  end;
+  if FConnection = nil
+  then Result := nil
+  else Result := FConnection.GetConSettings;
 end;
 
-procedure TZASACachedResultSet.DeleteRow;
+function TZASALob.IsEmpty: Boolean;
 begin
-  FPlainDriver.dbpp_delete(FASAConnection.GetDBHandle,
-    Pointer(FCursorName), nil, nil);
-  ZDbcASAUtils.CheckASAError(FPlainDriver,
-    FASAConnection.GetDBHandle, lcOther, ConSettings, 'Delete row:' + IntToRaw(RowNo));
-
-  FDelete := True;
-  LastRowNo := LastRowNo - FASAConnection.GetDBHandle.sqlerrd[2];
+  Result := False;
 end;
 
-procedure TZASACachedResultSet.RefreshRow;
+function TZASALob.Length: Integer;
 begin
-  MoveRelative(0);
+  if (FASASQLDA = nil) or (FASASQLDA.sqlVar[FColumnIndex].sqlData = nil)
+  then Result := -1
+  else Result := PZASABlobStruct(FASASQLDA.sqlVar[FColumnIndex].sqlData).untrunc_len;
 end;
 
-procedure TZASACachedResultSet.CancelRowUpdates;
+procedure TZASALob.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
+var Imm: IImmediatelyReleasable;
 begin
-  FUpdate := false;
-  if Assigned(FUpdateSQLData) then
-  begin
-    FUpdateSQLData.FreeSQLDA;
-    FSQLDA := FSqlData.GetData;
-  end;
+  if (FConnection <> nil) and (FConnection.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
+     (Sender <> imm) then
+    Imm.ReleaseImmediat(Sender, AError);
+  FASASQLDA := nil;
+  FConnection := nil;
+  FReleased := true;
 end;
 
-procedure TZASACachedResultSet.MoveToInsertRow;
-begin
-  FInsert := true;
-end;
-
-procedure TZASACachedResultSet.MoveToCurrentRow;
-begin
-  FInsert := false;
-  if Assigned(FUpdateSQLData) then
-    FUpdateSQLData.FreeSQLDA;
-end;
-
-function TZASACachedResultSet.MoveAbsolute(Row: Integer): Boolean;
-begin
-  Result := inherited MoveAbsolute(Row);
-  if Result then
-  begin
-    FDelete := False;
-    FInsert := False;
-    FUpdate := False;
-  end;
-end;
-
-function TZASACachedResultSet.MoveRelative(Rows: Integer): Boolean;
-begin
-  Result := inherited MoveRelative(Rows);
-  if Result then
-  begin
-    FDelete := False;
-    FInsert := False;
-    FUpdate := False;
-  end;
-end;
-*)
-{ TZASAClob }
-constructor TZASAClob.Create(const SqlData: IZASASQLDA; const ColID: Integer;
-  Const ConSettings: PZConSettings);
-var
-  Buffer: Pointer;
-  Len: NativeUInt;
-begin
-  inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
-  SQLData.ReadBlobToMem(ColId, Buffer{%H-}, Len{%H-}, False);
-  (PAnsiChar(Buffer)+Len)^ := #0; //add leading terminator
-  FBlobData := Buffer;
-  FBlobSize := Len+1;
-end;
-
+initialization
 {$ENDIF ZEOS_DISABLE_ASA}
 end.

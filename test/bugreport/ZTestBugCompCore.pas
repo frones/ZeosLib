@@ -56,7 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility, ZSqlUpdate, ZSqlProcessor, ZSqlMetadata, ZClasses;
 
 type
@@ -148,7 +149,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZEncoding;
+  SysUtils, ZDatasetUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZEncoding;
 
 { ZTestCompCoreBugReport }
 
@@ -2225,11 +2226,11 @@ begin
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
 
-        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, ConSettings, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
+        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
         {$IFDEF UNICODE}
         CheckEquals(Str3, FieldByName('P_NAME').AsString, 'Field(P_NAME) as String');
         {$ELSE}
-        if ConSettings.CPType = cCP_UTF16 then
+        if Connection.ControlsCodePage = cCP_UTF16 then
           CheckEquals(Str3, FieldByName('P_NAME').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'Field(P_NAME) as WideString '+Protocol)
         else begin
           if (ConSettings.AutoEncode) or (ConSettings^.ClientCodePage.Encoding = ceUTF16) then
@@ -2271,7 +2272,7 @@ var
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-    if ConSettings.CPType = cCP_UTF16 then begin
+    if Query.Connection.ControlsCodePage = cCP_UTF16 then begin
       Query.ParamByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_char;
       Query.ParamByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_varchar;
       Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nchar;
@@ -2398,9 +2399,9 @@ begin
   {$ENDIF}
   try
     {no unicode strings or utf8 allowed}
-    if ((ConSettings.CPType = cGET_ACP)
+    if ((Connection.ControlsCodePage = cGET_ACP)
 {$IF defined(MSWINDOWS) and not (defined(LCL) and defined(WITH_DEFAULTSYSTEMCODEPAGE))} //LCL is hacking the default-systemcodepage so they can pass this test pass nice (utf8 to Widcharmove)
-          or (ConSettings.CPType = cCP_UTF8)
+          or (Connection.ControlsCodePage = cCP_UTF8)
 {$IFEND}
       ) and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP)) then
       Exit;

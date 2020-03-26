@@ -81,9 +81,7 @@ type
     destructor Destroy; override;
 
     function GetSupportedProtocols: TStringDynArray;
-    function GetSupportedClientCodePages(const Url: TZURL;
-      Const {$IFNDEF UNICODE}AutoEncode, {$ENDIF} SupportedsOnly: Boolean;
-      CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
+    function GetClientCodePages(const Url: TZURL): TStringDynArray;
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
     function Connect(const {%H-}Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
@@ -156,12 +154,6 @@ type
     procedure DeregisterStatement(const Value: IZStatement);
     procedure CloseRegisteredStatements;
 
-    function CreateRegularStatement({%H-}Info: TStrings): IZStatement;
-      virtual;
-    function CreatePreparedStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
-      IZPreparedStatement; virtual;
-    function CreateCallableStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
-      IZCallableStatement; virtual;
     property Driver: IZDriver read FDriver write FDriver;
     property PlainDriver: IZPlainDriver read FIZPlainDriver write FIZPlainDriver;
     property HostName: string read GetHostName write SetHostName;
@@ -187,12 +179,6 @@ type
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
-
-    function CreateStatementWithParams(Info: TStrings): IZStatement;
-    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
-      IZPreparedStatement;
-    function PrepareCallWithParams(const SQL: string; Info: TStrings):
-      IZCallableStatement;
 
     function CreateNotification(const {%H-}Event: string): IZNotification; virtual;
     function CreateSequence(const {%H-}Sequence: string; {%H-}BlockSize: Integer):
@@ -491,16 +477,13 @@ end;
   Get names of the supported CharacterSets.
   For example: ASCII, UTF8...
 }
-function TZAbstractDriver.GetSupportedClientCodePages(const Url: TZURL;
-  Const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} SupportedsOnly: Boolean;
-  CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
+function TZAbstractDriver.GetClientCodePages(const Url: TZURL): TStringDynArray;
 var
   Plain: IZPlainDriver;
 begin
   Plain := GetPlainDriverFromCache(Url.Protocol, '');
   if Assigned(Plain) then
-  Result := Plain.GetSupportedClientCodePages({$IFNDEF UNICODE}AutoEncode,{$ENDIF}
-    not SupportedsOnly, CtrlsCPType);
+  Result := Plain.GetClientCodePages;
 end;
 
 {**
@@ -1136,45 +1119,8 @@ end;
 }
 function TZAbstractDbcConnection.CreateStatement: IZStatement;
 begin
-  Result := CreateStatementWithParams(nil);
+  Result := IZConnection(fWeakReferenceOfSelfInterface).CreateStatementWithParams(nil);
 end;
-
-{**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
-
-  @param Info a statement parameters.
-  @return a new Statement object
-}
-function TZAbstractDbcConnection.CreateStatementWithParams(Info: TStrings):
-  IZStatement;
-var UsedInfo: TStrings;
-begin
-  UsedInfo := Info;
-  If StrToBoolEx(GetInfo.Values[DSProps_PreferPrepared]) then
-    If UsedInfo = nil then
-    begin
-      UsedInfo := TStringList.Create;
-      UsedInfo.Values[DSProps_PreferPrepared] := 'true';
-    end;
-  Result := CreateRegularStatement(Info);
-  if UsedInfo <> Info then UsedInfo.Free;
-end;
-
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
-function TZAbstractDbcConnection.CreateRegularStatement(
-  Info: TStrings): IZStatement;
-begin
-  Raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates a <code>PreparedStatement</code> object for sending
@@ -1205,52 +1151,13 @@ end;
 }
 function TZAbstractDbcConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
 begin
-  Result := CreatePreparedStatement(SQL, nil);
-end;
-
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  @param SQL a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @param Info a statement parameters.
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
-function TZAbstractDbcConnection.PrepareStatementWithParams(const SQL: string;
-  Info: TStrings): IZPreparedStatement;
-var UsedInfo: TStrings;
-begin
-  UsedInfo := Info;
-  If StrToBoolEx(GetInfo.Values[DSProps_PreferPrepared]) then
-    If UsedInfo = nil then
-    begin
-      UsedInfo := TStringList.Create;
-      UsedInfo.Values[DSProps_PreferPrepared] := 'true';
-    end;
-  Result := CreatePreparedStatement(SQL, UsedInfo);
-  if UsedInfo <> Info then UsedInfo.Free;
+  Result := IZConnection(fWeakReferenceOfSelfInterface).PrepareStatementWithParams(SQL, nil);
 end;
 
 procedure TZAbstractDbcConnection.PrepareTransaction(const transactionid: string);
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
-
-{**
-  Creates a prepared statement object.
-  @param SQL a SQL query string.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
-function TZAbstractDbcConnection.CreatePreparedStatement(const SQL: string;
-  Info: TStrings): IZPreparedStatement;
-begin
-  Raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates a <code>CallableStatement</code> object for calling
@@ -1281,51 +1188,8 @@ end;
 function TZAbstractDbcConnection.PrepareCall(
   const SQL: string): IZCallableStatement;
 begin
-  Result := CreateCallableStatement(SQL, nil);
+  Result := IZConnection(fWeakReferenceOfSelfInterface).PrepareCallWithParams(SQL, nil);
 end;
-
-{**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures.
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
-
-  @param SQL a SQL statement that may contain one or more '?'
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
-  @param Info a statement parameters.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
-}
-function TZAbstractDbcConnection.PrepareCallWithParams(const SQL: string;
-  Info: TStrings): IZCallableStatement;
-var UsedInfo: TStrings;
-begin
-  UsedInfo := Info;
-  If StrToBoolEx(GetInfo.Values[DSProps_PreferPrepared]) then
-    If UsedInfo = nil then
-    begin
-      UsedInfo := TStringList.Create;
-      UsedInfo.Values[DSProps_PreferPrepared] := 'true';
-    end;
-  Result := CreateCallableStatement(SQL, UsedInfo);
-  if UsedInfo <> Info then UsedInfo.Free;
-end;
-
-{**
-  Creates a callable statement object.
-  @param SQL a SQL query string.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
-function TZAbstractDbcConnection.CreateCallableStatement(const SQL: string;
-  Info: TStrings): IZCallableStatement;
-begin
-  Raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates an object to send/recieve notifications from SQL server.
@@ -2063,7 +1927,7 @@ DateTimeFromUnicode:
     vtCharRec: begin
         P := Value.VCharRec.P;
         L := Value.VCharRec.Len;
-        if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16)
+        if (Value.VCharRec.CP = zCP_UTF16)
         then goto DateTimeFromUnicode
         else goto DateTimeFromRaw;
       end;
@@ -2095,9 +1959,9 @@ begin
     vtUnicodeString:
       ResTmp := ZUnicodeToRaw(Value.VUnicodeString, ZOSCodePage);
     vtCharRec:
-      if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+      if (Value.VCharRec.CP = zCP_UTF16) then
         ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
-      else if ZCompatibleCodePages(ZOSCodePage, Value.VCharRec.CP) then
+      else if (ZOSCodePage = Value.VCharRec.CP) then
         ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, ZOSCodePage{$ENDIF})
       else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, ZOSCodePage);
     vtDateTime: ResTmp := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
@@ -2208,9 +2072,9 @@ begin
     vtUnicodeString:
       ResTmp := ZUnicodeToRaw(Value.VUnicodeString, zCP_UTF8);
     vtCharRec:
-      if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+      if (Value.VCharRec.CP = zCP_UTF16) then
         ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, FClientCP)
-      else if ZCompatibleCodePages(FClientCP, Value.VCharRec.CP) then
+      else if (FClientCP = Value.VCharRec.CP) then
         ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, FClientCP{$ENDIF})
       else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, FClientCP);
     vtDateTime: ResTmp := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
@@ -2262,7 +2126,7 @@ begin
       //this hint means a cast instead of convert. The user should better use WideString constants!
       ResTmp := ZUnicodeToRaw(Value.VUnicodeString, FCtrlsCP);
       {$ENDIF}
-    vtCharRec: if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+    vtCharRec: if (Value.VCharRec.CP = zCP_UTF16) then
         {$IFDEF UNICODE}
         SetString(ResTmp, PChar(Value.VCharRec.P), Value.VCharRec.Len)
         {$ELSE}
@@ -2270,7 +2134,7 @@ begin
         {$ENDIF}
       else
         {$IFNDEF UNICODE}
-        if ZCompatibleCodePages(FCtrlsCP, Value.VCharRec.CP)
+        if (FCtrlsCP = Value.VCharRec.CP)
         then ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp)
         else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, FCtrlsCP);
         {$ELSE}
@@ -2304,7 +2168,7 @@ begin
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: ResTmp := Value.VUnicodeString;
     vtDateTime:      ResTmp := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
-    vtCharRec: if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16)
+    vtCharRec: if (Value.VCharRec.CP = zCP_UTF16)
         then SetString(ResTmp, PWideChar(Value.VCharRec.P), Value.VCharRec.Len)
         else ResTmp := PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP);
     else ConvertFixedTypesToUnicode(Value, ResTmp);
@@ -2337,9 +2201,9 @@ begin
     vtUnicodeString:
       ResTmp := ZUnicodeToRaw(Value.VUnicodeString, zCP_UTF8);
     vtCharRec:
-      if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+      if (Value.VCharRec.CP = zCP_UTF16) then
         ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, zCP_UTF8)
-      else if ZCompatibleCodePages(zCP_UTF8, Value.VCharRec.CP) then
+      else if (zCP_UTF8 = Value.VCharRec.CP) then
         ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF})
       else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, zCP_UTF8);
     vtDateTime: ResTmp := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
