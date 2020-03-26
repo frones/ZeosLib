@@ -2762,18 +2762,15 @@ var
   TxtValue: String;
   ValueIsNull: Boolean;
 begin
-  if ProtocolType = protOracle then
-  begin
-    BlankCheck;
-    Exit;   //not resolveable with ora -> empty is always null except use the or func
-  end;
   Query := CreateQuery;
   try
     try
       Query.Connection.Connect;
       Query.Connection.StartTransaction;
       try
-        Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';
+        if ProtocolType = protOracle
+        then Query.SQL.Text := 'insert into blob_values (b_id, b_clob) values (:id, :text)'
+        else Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';
         Query.ParamByName('id').DataType := ftInteger;
         Query.ParamByName('text').DataType := ftMemo;
 
@@ -2791,8 +2788,13 @@ begin
       Query.SQL.Text := 'select * from blob_values where b_id = 2001';
       Query.Open;
       try
-        TxtValue := Query.FieldByName('b_text').AsString;
-        ValueIsNull := Query.FieldByName('b_text').IsNull;
+        if ProtocolType = protOracle then begin
+          TxtValue := Query.FieldByName('b_clob').AsString;
+          ValueIsNull := Query.FieldByName('b_clob').IsNull;
+        end else begin
+          TxtValue := Query.FieldByName('b_text').AsString;
+          ValueIsNull := Query.FieldByName('b_text').IsNull;
+        end;
       finally
         Query.Close;
       end;
