@@ -710,7 +710,7 @@ end;
 procedure TZRawSQLStringWriter.AddOrd(Value: Cardinal; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -719,7 +719,7 @@ var Digits: Byte;
   C: Cardinal;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, C, Negative);
+  Digits := GetOrdinalDigits(Value, C, Negative);
   AddOrd32(C, Digits, Negative, Result);
 end;
 
@@ -992,7 +992,7 @@ end;
 procedure TZRawSQLStringWriter.AddOrd(const Value: UInt64; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd64(Value, Digits, False, Result);
 end;
 
@@ -1001,14 +1001,14 @@ var Digits: Byte;
   U: UInt64;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, U, Negative);
+  Digits := GetOrdinalDigits(Value, U, Negative);
   AddOrd64(U, Digits, Negative, Result);
 end;
 
 procedure TZRawSQLStringWriter.AddOrd(Value: Byte; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -1016,14 +1016,14 @@ procedure TZRawSQLStringWriter.AddOrd(Value: ShortInt; var Result: RawByteString
 var B, Digits: Byte;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, B, Negative);
+  Digits := GetOrdinalDigits(Value, B, Negative);
   AddOrd32(B, Digits, Negative, Result);
 end;
 
 procedure TZRawSQLStringWriter.AddOrd(Value: Word; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -1032,7 +1032,7 @@ var Digits: Byte;
   W: Word;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, W, Negative);
+  Digits := GetOrdinalDigits(Value, W, Negative);
   AddOrd32(W, Digits, Negative, Result);
 end;
 
@@ -1370,7 +1370,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: ShortInt;
 var B, Digits: Byte;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, B, Negative);
+  Digits := GetOrdinalDigits(Value, B, Negative);
   AddOrd32(B, Digits, Negative, Result);
 end;
 
@@ -1378,7 +1378,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: Byte;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -1386,7 +1386,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: Word;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -1396,7 +1396,7 @@ var Digits: Byte;
   U: UInt64;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, U, Negative);
+  Digits := GetOrdinalDigits(Value, U, Negative);
   AddOrd64(U, Digits, Negative, Result);
 end;
 
@@ -1404,7 +1404,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(const Value: UInt64;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd64(Value, Digits, False, Result);
 end;
 
@@ -1414,7 +1414,7 @@ var Digits: Byte;
   C: Cardinal;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, C, Negative);
+  Digits := GetOrdinalDigits(Value, C, Negative);
   AddOrd32(C, Digits, Negative, Result);
 end;
 
@@ -1424,7 +1424,7 @@ var Digits: Byte;
   W: Word;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, W, Negative);
+  Digits := GetOrdinalDigits(Value, W, Negative);
   AddOrd32(W, Digits, Negative, Result);
 end;
 
@@ -1432,7 +1432,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: Cardinal;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
