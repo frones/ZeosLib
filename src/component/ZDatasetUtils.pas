@@ -1203,7 +1203,7 @@ begin
             end;
         stBigDecimal: begin
                         ResultSet.GetBigDecimal(ColumnIndex, BCD);
-                        Result := BCDCompare(KeyValues[I].VBigDecimal, BCD) = 0;
+                        Result := ZBCDCompare(KeyValues[I].VBigDecimal, BCD) = 0;
                       end;
         stDate,
         stTime,
@@ -1310,7 +1310,7 @@ begin
       ftFmtBCD: begin
           ResultSet.GetBigDecimal(ColumnIndex, BCD2);
           BCD1 := Field2.AsBCD;
-          Result := BCDCompare(BCD1, BCD2) = 0;
+          Result := ZBCDCompare(BCD1, BCD2) = 0;
         end;
       ftBCD: Result := ResultSet.GetCurrency(ColumnIndex) = TBCDField(Field2).AsCurrency;
       ftCurrency: Result := (ResultSet.GetDouble(ColumnIndex) - Field2.AsFloat) < FLOAT_COMPARE_PRECISION;

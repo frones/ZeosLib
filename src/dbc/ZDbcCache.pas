@@ -601,7 +601,7 @@ function CompareBigDecimal_Asc(const Null1, Null2: Boolean; const V1, V2): Integ
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := BCDCompare(PBCD(V1)^, PBCD(V2)^);
+    Result := ZBCDCompare(PBCD(V1)^, PBCD(V2)^);
 end;
 
 function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -613,7 +613,7 @@ function CompareBigDecimal_Equals(const Null1, Null2: Boolean; const V1, V2): In
 begin
   Result := NullsEqualMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := BCDCompare(PBCD(V1)^, PBCD(V2)^);
+    Result := ZBCDCompare(PBCD(V1)^, PBCD(V2)^);
 end;
 
 function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;

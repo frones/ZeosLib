@@ -745,7 +745,7 @@ begin
     vtCurrency: Result := CompareCurr(Value1.VCurrency, GetAsCurrency(Value2));
     vtBigDecimal: begin
                     GetAsBigDecimal(Value2, ABCD);
-                    Result := BCDCompare(Value1.VBigDecimal, ABCD);
+                    Result := ZBCDCompare(PBCD(@Value1.VBigDecimal.Precision)^, ABCD);
                   end;
     vtGUID:      begin
                    GetAsGUID(Value2, AGUID);

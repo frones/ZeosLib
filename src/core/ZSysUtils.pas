@@ -1327,6 +1327,21 @@ procedure Double2BCD(const Value: Double; var Result: TBCD);
 function GetPacketBCDOffSets({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
   out PNibble, PLastNibble: PAnsiChar; out Precision, Scale: Word; out GetFirstBCDHalfByte: Boolean): Boolean;
 
+{** EH:
+   pack the bcd to top of data, remove useless trailing or leading zeros
+   @param Value the value to be packet
+}
+procedure ZPackBCDToLeft(var Value: TBCD; var PNibble, PLastNibble: PAnsiChar;
+  Precision, Scale: Word; GetFirstBCDHalfByte: Boolean);
+
+{** EH:
+   compare two bcd's
+   @param Value1 the first value to be compared return a packet bcd if not packet
+   @param Value2 the second value to be compared return a packet bcd if not packet
+   @return 0 if equal or -1 if value1 is smaller than value2 or 1 if value1 is smaller than value2
+}
+function ZBCDCompare(var Value1, Value2: TBCD): Integer;
+
 Type TCurrRoundToScale = 0..4;
 
 {** EH:
@@ -8062,6 +8077,90 @@ begin
     end else
       Break;
     B := not B;
+  end;
+end;
+
+procedure ZPackBCDToLeft(var Value: TBCD; var PNibble, PLastNibble: PAnsiChar;
+  Precision, Scale: Word; GetFirstBCDHalfByte: Boolean);
+var PFirstNibble: PAnsiChar;
+begin
+  PFirstNibble := @Value.Fraction[0];
+  if (PFirstNibble < PNibble) or not GetFirstBCDHalfByte then begin
+    if GetFirstBCDHalfByte then begin
+      while PNibble <= PLastNibble do begin
+        PFirstNibble^ := PNibble^;
+        Inc(PNibble);
+        Inc(PFirstNibble);
+      end;
+    end else begin
+      while PNibble < PLastNibble do begin
+        PByte(PFirstNibble)^ := Byte((PByte(PNibble)^ and $0F) shl 4) or Byte(PByte(PNibble+1)^ shr 4);
+        Inc(PNibble);
+        Inc(PFirstNibble);
+      end;
+      PByte(PFirstNibble)^ := (PByte(PNibble)^ and $0F) shl 4
+    end;
+  end;
+  PNibble := @Value.Fraction;
+  PLastNibble := PNibble + (Precision shr 1);
+  Value.Precision := Precision;
+  GetFirstBCDHalfByte := Value.SignSpecialPlaces and (1 shl 7) <> 0;
+  Value.SignSpecialPlaces := Scale or SignSpecialPlacesArr[GetFirstBCDHalfByte];
+end;
+
+{** EH:
+   compare two bcd's
+   @param Value1 the first value to be compared return a packet bcd if not packet
+   @param Value2 the second value to be compared return a packet bcd if not packet
+   @return 0 if equal or -1 if value1 is smaller than value2 or 1 if value1 is smaller than value2
+}
+function ZBCDCompare(var Value1, Value2: TBCD): Integer;
+var PNibble1, PNibble2, PLastNibble1, PLastNibble2, PNibble, PLastNibble: PAnsiChar;
+    Prec1, Prec2, Scale1, Scale2: Word;
+    GetFB1, GetFB2: Boolean;
+    s1, s2: Integer;
+begin
+  Result := Ord(Value1.SignSpecialPlaces and (1 shl 7) <> 0) - Ord(Value2.SignSpecialPlaces and (1 shl 7) <> 0);
+  if Result = 0 then begin
+    if GetPacketBCDOffSets(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
+      ZPackBCDToLeft(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
+    if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
+      ZPackBCDToLeft(Value2, pNibble2, pNibble2, Prec2, Scale2, GetFB2);
+    {determine digits before fractions start: }
+    s1 := Integer(Prec1)-Scale1+Ord(Prec1=Scale1);
+    s2 := Integer(Prec2)-Scale2+Ord(Prec2=Scale2);
+    Result := Ord(s1 > s2) - Ord(s1 < s2);
+    if Result = 0 then begin //both have same amount of digits before a comma(if there is one)
+      if Prec1 <= Prec2 then begin
+        PNibble := PNibble1;
+        PLastNibble := PLastNibble1;
+      end else begin
+        PNibble := PNibble2;
+        PLastNibble := PLastNibble2;
+      end;
+      while PNibble <= PLastNibble do begin
+        s1 := ZBcdNibble2Base100ByteLookup[PByte(PNibble1)^];
+        s2 := ZBcdNibble2Base100ByteLookup[PByte(PNibble2)^];
+        Result := Ord(s1 > s2) - Ord(s1 < s2);
+        if (Result <> 0) and ((Prec1 > 1) or ((Prec1 = Prec2) and (Scale1 = Scale2))) then
+          Exit
+        else begin
+          if (Prec1 = Scale1) then
+            s1 := (PByte(PNibble1)^ shr 4);
+          if (Prec2 = Scale2) then
+            s1 := (PByte(PNibble2)^ shr 4);
+          Result := Ord(s1 > s2) - Ord(s1 < s2);
+          if Result <> 0 then
+            Exit;
+        end;
+        Inc(PNibble);
+        Inc(pNibble1);
+        Inc(pNibble2);
+      end;
+      {both of them have equal digits for the smalles comparable range
+       so finally compare which one has more digits total }
+      Result := Ord(Prec1 > Prec2) - Ord(Prec1 < Prec2);
+    end;
   end;
 end;
 
