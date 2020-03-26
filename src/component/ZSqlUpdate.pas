@@ -803,14 +803,18 @@ var
   lUpdateCount : Integer;
 
   function SomethingChanged: Boolean;
-  var I: Integer;
+  var I, J: Integer;
   begin
     Result := False;
+    J := 0;
     for I := 0 to DataSet.Fields.Count -1 do
-      if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
-         NewRowAccessor.RowBuffer, I+FirstDbcIndex, NewRowAccessor.GetCompareFunc(I+FirstDbcIndex, ckEquals))  <> 0 then begin
-        Result := True;
-        Break;
+      if DataSet.Fields[0].FieldKind = fkData then begin
+        if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
+           NewRowAccessor.RowBuffer, I+FirstDbcIndex, NewRowAccessor.GetCompareFunc(J+FirstDbcIndex, ckEquals))  <> 0 then begin
+          Result := True;
+          Break;
+        end;
+        Inc(J);
       end;
   end;
   {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
