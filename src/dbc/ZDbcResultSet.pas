@@ -688,8 +688,7 @@ function CreateRawCLobFromBlob(Value: IZBlob; ConSettings: PZConSettings; const 
 implementation
 
 uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
-  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, Math;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameters not used intentionally
 function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for complex types we can't sort quickly like arrays, dataset ...
@@ -742,7 +741,7 @@ begin
   if Null1 and Null2 then Result := 0
   else if Null1 then Result := -1
   else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VDouble > TZVariant(V2).VDouble)-Ord(TZVariant(V1).VDouble < TZVariant(V2).VDouble);
+  else Result := Ord(CompareValue(TZVariant(V1).VDouble, TZVariant(V2).VDouble));
 end;
 
 function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;

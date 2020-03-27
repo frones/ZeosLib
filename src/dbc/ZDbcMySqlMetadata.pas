@@ -60,7 +60,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZURL, ZDbcConnection, ZPlainMySqlConstants;
+  ZDbcConnection, ZPlainMySqlConstants;
 
 type
 

@@ -1904,7 +1904,7 @@ begin
 end;
 
 {**
-  Updates the designated column with a character stream value.
+  Updates the designated column with a UTF16 character stream value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
   update the underlying database; instead the <code>updateRow</code> or
@@ -2042,12 +2042,10 @@ function TZAbstractCachedResultSet.RowInserted: Boolean;
 var
   CurrentRow: PZRowBuffer;
 begin
-  if (RowNo >= 1) and (RowNo <= LastRowNo) then
-  begin
+  if (RowNo >= 1) and (RowNo <= LastRowNo) then begin
     CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
     Result := CurrentRow^.UpdateType = utInserted;
-  end
-  else
+  end else
     Result := False;
 end;
 

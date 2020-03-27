@@ -665,6 +665,11 @@ end;
 { TZOleDBPreparedStatement }
 
 //const OleDbNotNullTable: array[Boolean] of DBSTATUS = (DBSTATUS_S_ISNULL, DBSTATUS_S_OK);
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}
+{$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.BindBatchDMLArrays;
 var
   ZData, Data, P: Pointer;
@@ -1160,6 +1165,7 @@ W_Len:                if PLen^ > MaxL then
   end;
   {$IF defined (RangeCheckEnabled)}{$R+}{$IFEND}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure TZOleDBPreparedStatement.BindInParameters;
 begin
@@ -1179,6 +1185,10 @@ begin
     end;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.BindRaw(Index: Integer;
   const Value: RawByteString; CP: Word);
 var L: Cardinal;
@@ -1208,6 +1218,7 @@ begin
     else InitVaryBind(Index, (L+1) shl 1, DBTYPE_WSTR);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure TZOleDBPreparedStatement.CalcParamSetsAndBufferSize;
 var
@@ -2163,6 +2174,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetDate(Index: Integer;
   const Value: TZDate);
 var Bind: PDBBINDING;
@@ -2227,6 +2239,7 @@ DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
     BindList.Put(Index, Value);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>double</code> value.
@@ -2323,6 +2336,11 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 5057 off : Local variable "Len" does not seem to be initialized}
+{$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.AddParamLogValue(ParamIndex: Integer;
   SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
 var Bind: PDBBINDING;
@@ -2394,6 +2412,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOleDBPreparedStatement.SetInt(Index, Value: Integer);
 begin
@@ -2479,6 +2498,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param sqlType the SQL type code defined in <code>java.sql.Types</code>
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.SetNull(Index: Integer; SQLType: TZSQLType);
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -2500,6 +2520,7 @@ begin
     else InitLongBind(Index, SQLType2OleDBTypeEnum[SQLType])
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOleDBPreparedStatement.SetOleCommandProperties;
 var
@@ -2573,6 +2594,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetPAnsiChar(Index: Word; Value: PAnsiChar;
   Len: Cardinal);
 var Bind: PDBBINDING;
@@ -2680,6 +2702,7 @@ Fail:    raise CreateOleDBConvertErrror(Index, Bind.wType, stString);
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOleDBPreparedStatement.SetParamCount(NewParamCount: Integer);
 var OldParamCount: Integer;
@@ -2692,6 +2715,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZOleDBPreparedStatement.SetPWideChar(Index: Word; Value: PWideChar;
   Len: Cardinal);
 var Bind: PDBBINDING;
@@ -2812,6 +2836,7 @@ Fail:     raise CreateOleDBConvertErrror(Index, Bind.wType, stUnicodeString);
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>raw encoded string</code> value.
@@ -2887,6 +2912,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
 var Bind: PDBBINDING;
@@ -2957,6 +2983,7 @@ TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
     BindList.Put(Index, Value);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
@@ -2966,6 +2993,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetTimestamp(Index: Integer;
   const Value: TZTimeStamp);
 var Bind: PDBBINDING;
@@ -3047,6 +3075,7 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
     BindList.Put(Index, Value);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>usigned 32bit int</code> value.

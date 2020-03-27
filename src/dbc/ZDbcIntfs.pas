@@ -1274,6 +1274,7 @@ type
     ///  that produced this <c>Statement</c> object.
     /// </summary>
     /// <returns>
+    /// <see cref="IZConnection"></see>
     ///  the connection that produced this statement
     /// </returns>
     function GetConnection: IZConnection;
@@ -1437,7 +1438,7 @@ type
   end;
 
   /// <summary>
-  ///   EH: sort helper procs.
+  ///   Defines a compare method
   /// </summary>
   TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
   TCompareFuncs = Array of TCompareFunc;
@@ -1584,7 +1585,53 @@ type
     function First: Boolean;
     function Last: Boolean;
     function GetRow: NativeInt;
+
+    /// <summary>
+    ///  Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object.
+    ///  If the row number is positive, the cursor moves to
+    ///  the given row number with respect to the
+    ///  beginning of the result set.  The first row is row 1, the second
+    ///  is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to
+    ///  the end of the result set.  For example, calling the method
+    ///  <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on.
+    ///  An attempt to position the cursor beyond the first/last row in
+    ///  the result set leaves the cursor before the first row or after
+    ///  the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.
+    /// </summary>
+    /// <param name="Row"><see cref="System.Integer"/>
+    /// </param>
+    /// <returns>
+    /// <see cref="System.Boolean"/>
+    /// <c>true</c> if the cursor is on the result set;<c>false</c> otherwise
+    /// </returns>
     function MoveAbsolute(Row: Integer): Boolean;
+    /// <summary>
+    ///  Moves the cursor a relative number of rows, either positive or negative.
+    ///  Attempting to move beyond the first/last row in the
+    ///  result set positions the cursor before/after the
+    ///  the first/last row. Calling <c>relative(0)</c> is valid, but does
+    ///  not change the cursor position.
+    ///  Note: Calling the method <c>relative(1)</c>
+    ///  is different from calling the method <c>next()</c>
+    ///  because is makes sense to call <c>next()</c> when there
+    ///  is no current row,
+    ///  for example, when the cursor is positioned before the first row
+    ///  or after the last row of the result set.
+    /// </summary>
+    /// <param name="Row"><see cref="System.Integer"/>
+    /// </param>
+    /// <returns>
+    /// <see cref="System.Boolean"/>
+    /// <c>true</c> if the cursor is on a row;<c>false</c> otherwise
+    /// </returns>
     function MoveRelative(Rows: Integer): Boolean;
     function Previous: Boolean;
 

@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 
-uses ZDbcIntfs{$IFDEF ENABLE_MYSQL},ZPlainMySqlDriver{$ENDIF};
+uses ZDbcIntfs;
 
 //EH @ Fr0sT and aehimself
 //just a proposal which is not related to the docs you guys are planning
@@ -342,10 +342,10 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
   ConnProps_MySQL_FieldType_Bit_1_IsBoolean = 'MySQL_FieldType_Bit_1_IsBoolean';
   // Type: STR
   // Refer to MySql manual for details
-  ConnProps_Datadir = MySQLProp_Datadir;
+  ConnProps_Datadir = '--datadir';
   // Type: STR
   // Path to library
-  ConnProps_Library = MySQLProp_Library;
+  ConnProps_Library = 'Library';
 
   { In addition, any server parameter prefixed by value of
     ZPlainMySqlConstants.SERVER_ARGUMENTS_KEY_PREFIX constant and all members from

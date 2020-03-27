@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver, ZPlainDriver,
-  ZURL, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants,
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants,
   ZClasses;
 type
 
@@ -67,6 +67,9 @@ type
 
   { TZMySQLDriver }
   TZMySQLDriver = class(TZAbstractDriver)
+  private
+    FServerArgs: array of PAnsiChar;
+    FServerArgsRaw: array of RawByteString;
   protected
     function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; override;
   public
@@ -241,17 +244,55 @@ end;
 }
 function TZMySQLDriver.GetPlainDriver(const Url: TZURL;
   const InitDriver: Boolean = True): IZPlainDriver;
+var I: Integer;
+  PlainDriver: TZMySQLPLainDriver;
+  TmpList: TStrings;
+  ErrorNo: Integer;
 begin
+  //if libLocation is not in cache the driver will return a clone
+  if URL.Properties.Values[ConnProps_Library] <> '' then
+    URL.LibLocation := URL.Properties.Values[ConnProps_Library];
+
   // added by tohenk, 2009-10-11
   // before PlainDriver is initialized, we can perform pre-library loading
   // requirement check here, e.g. Embedded server argument params
-  Result := inherited GetPlainDriver(URL, False);
-  if Assigned(Result) then
-  begin
-    if Url.Properties.Count >0  then
-      (Result as IZMySQLPlainDriver).SetDriverOptions(Url.Properties);
-    // end added by tohenk, 2009-10-11
-    if InitDriver then Result.Initialize(Url.LibLocation);
+  Result := inherited GetPlainDriver(URL, True);
+  if Assigned(Result) then begin
+    PlainDriver := TZMySQLPLainDriver(Result.GetInstance);
+    if (Assigned(PlainDriver.mysql_server_init) or Assigned(PlainDriver.mysql_library_init)) and
+      not PlainDriver.IsInitialized and InitDriver and (Url.Properties.Count >0) then begin
+      GlobalCriticalSection.Enter;
+      TmpList := TStringList.Create;
+      try
+        if Url.Properties.Values[ConnProps_Datadir] = ''
+        then TmpList.Add(EMBEDDED_DEFAULT_DATA_DIR)
+        else Url.Properties.Values[ConnProps_Datadir];
+        for i := 0 to Url.Properties.Count -1 do
+          if StartsWith(SERVER_ARGUMENTS_KEY_PREFIX, Url.Properties[i]) and
+            (Length(Url.Properties[i])>Length(SERVER_ARGUMENTS_KEY_PREFIX)+1) then
+            TmpList.Add(Url.Properties.ValueFromIndex[i]);
+        SetLength(FServerArgs, TmpList.Count);
+        SetLength(FServerArgsRaw, TmpList.Count);
+        for i := 0 to TmpList.Count - 1 do begin
+          {$IFDEF UNICODE}
+          FServerArgsRaw[i] := ZUnicodeToRaw(TmpList[i], ZOSCodePage);
+          {$ELSE}
+          FServerArgsRaw[i] := TmpList[i];
+          {$ENDIF}
+          FServerArgs[i] :=  Pointer(FServerArgsRaw[i]);
+        end;
+        I := TmpList.Count;
+        if Assigned(PlainDriver.mysql_library_init)
+        then ErrorNo := PlainDriver.mysql_library_init(i, Pointer(FServerArgs), @SERVER_GROUPS) //<<<-- Isn't threadsafe
+        else ErrorNo := PlainDriver.mysql_server_init(I, Pointer(FServerArgs), @SERVER_GROUPS); //<<<-- Isn't threadsafe
+        if ErrorNo <> 0 then
+          raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
+        PlainDriver.IsInitialized := True;
+      finally
+        FreeAndNil(TmpList);
+        GlobalCriticalSection.Leave;
+      end;
+    end;
   end
   else
     raise Exception.Create('Can''t receive Plaindriver!');
@@ -335,7 +376,7 @@ begin
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
   GlobalCriticalSection.Enter;
   try
-    FHandle := FPlainDriver.Init(FHandle); //is not threadsave!
+    FHandle := FPlainDriver.mysql_init(FHandle); //is not threadsave!
   finally
     GlobalCriticalSection.Leave;
   end;

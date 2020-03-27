@@ -59,8 +59,8 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
-  ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer, ZClasses,
-  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZDbcOleDBUtils,
+  ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
+  ZGenericSqlAnalyser, ZCompatibility, ZDbcOleDBUtils,
   ZOleDB, ZPlainOleDBDriver, ZOleDBToken;
 
 type
@@ -154,7 +154,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
 uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils, ZEncoding,
-  ZMessages, ZFastCode, ZDbcProperties, ZCollections;
+  ZMessages, ZFastCode, ZDbcProperties;
 
 { TZOleDBDriver }
 
@@ -278,6 +278,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "pParams" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBConnection.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
 var Cmd: ICommandText;
@@ -303,6 +304,7 @@ begin
   if DriverManager.HasLoggingListener then
     DoLog;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets this connection's auto-commit mode.

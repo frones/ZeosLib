@@ -60,7 +60,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging,
-  ZCompatibility, ZDbcResultSetMetadata, ZVariant, ZDbcMySql;
+  ZCompatibility, ZDbcResultSetMetadata, ZVariant;
 
 const
   MAXBUF = 65535;
@@ -218,7 +218,7 @@ implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   Math, TypInfo,
-  ZMessages, ZDbcUtils, ZFastCode, ZEncoding, ZClasses;
+  ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
 
 threadvar
   SilentMySQLError: Integer;
@@ -240,6 +240,7 @@ end;
   @param FieldFlags a field flags.
   @return a SQL undepended type.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
   FieldOffsets: PMYSQL_FIELDOFFSETS; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 var PrecOrLen: ULong;
@@ -349,6 +350,7 @@ begin
       raise Exception.Create('Unknown MySQL data type!');
    end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   MYSQL: PMYSQL; MYSQL_STMT: PMYSQL_STMT; LogCategory: TZLoggingCategory;
@@ -447,6 +449,7 @@ end;
   @param FieldHandle the handle of the fetched field
   @returns a new TZColumnInfo
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_Field;
   FieldOffsets: PMYSQL_FIELDOFFSETS; ConSettings: PZConSettings;
   MySQL_FieldType_Bit_1_IsBoolean:boolean): TZColumnInfo;
@@ -570,6 +573,7 @@ begin
   else
     Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
   ConSettings: PZConSettings; out TypeInfoSecond: RawByteString;
@@ -820,6 +824,7 @@ begin
     Result := MYSQL323_server_status_offset
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
   OldCount, NewCount: Integer; Iterations: ULong);
@@ -873,6 +878,8 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
+
 
 procedure ReAllocMySQLColumnBuffer(OldRSCount, NewRSCount: Integer;
   var ColumnsBindingArray: PMYSQL_ColumnsBindingArray; BindOffset: PMYSQL_BINDOFFSETS);
@@ -894,6 +901,7 @@ begin
 end;
 
 initialization
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
   with MARIADB_BIND1027_Offset do begin
     buffer_type   := NativeUint(@(PMARIADB_BIND1027(nil).buffer_type));
     buffer_length := NativeUint(@(PMARIADB_BIND1027(nil).buffer_length));
@@ -1015,6 +1023,7 @@ initialization
     decimals        := NativeUInt(@(PMYSQL_FIELD32(nil).decimals));
     max_length      := NativeUInt(@(PMYSQL_FIELD32(nil).max_length));
   end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.
