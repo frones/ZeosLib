@@ -3356,8 +3356,8 @@ begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stBytes: Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PCardinal(PPointer(Data)^)^ );
       stBinaryStream, stAsciiStream, stUnicodeStream:
-        if (Data^ <> nil) and not PIZlob(Data^)^.IsEmpty
-          then Result := PIZlob(Data^)^.GetBytes
+        if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty
+          then Result := PIZLob(Data)^.GetBytes
           else Result := nil;
       stString: if Data^ <> nil
           then Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PCardinal(PPointer(Data)^)^ )
