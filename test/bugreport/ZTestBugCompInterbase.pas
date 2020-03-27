@@ -1268,6 +1268,8 @@ begin
     Query.First;
     CheckEquals(21, Query.FieldByName('id').AsInteger);
     Query.Next;
+    CheckEquals(25, Query.FieldByName('id').AsInteger);
+    Query.Next;
     CheckEquals(1, Query.FieldByName('id').AsInteger);
     Query.Next;
     CheckEquals(2, Query.FieldByName('id').AsInteger);
@@ -1307,6 +1309,12 @@ begin
     CheckEquals(19, Query.FieldByName('id').AsInteger);
     Query.Next;
     CheckEquals(20, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(22, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(24, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(23, Query.FieldByName('id').AsInteger);
   finally
     FreeAndNil(Query);
   end;

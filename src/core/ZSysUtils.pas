@@ -8127,6 +8127,54 @@ begin
     if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
       ZPackBCDToLeft(Value2, pNibble2, pNibble2, Prec2, Scale2, GetFB2);
     {determine digits before fractions start: }
+    s1 := Integer(Prec1)-Scale1;
+    s2 := Integer(Prec2)-Scale2;
+    Result := Ord(s1 > s2) - Ord(s1 < s2);
+    GetFB1 := Result = 0;
+    s1 := S1 + Ord(Prec1=Scale1);
+    s2 := s2 + Ord(Prec2=Scale2);
+    GetFB2 := S1 = s2;
+    if (Result = 0) or GetFB2 then begin //both have same amount of digits before a comma(if there is one)
+      if Prec1 <= Prec2 then begin
+        PNibble := PNibble1;
+        PLastNibble := PLastNibble1;
+      end else begin
+        PNibble := PNibble2;
+        PLastNibble := PLastNibble2;
+      end;
+      while PNibble <= PLastNibble do begin
+        if GetFB1 = GetFB2 then begin
+          s1 := ZBcdNibble2Base100ByteLookup[PByte(PNibble1)^];
+          s2 := ZBcdNibble2Base100ByteLookup[PByte(PNibble2)^];
+        end else begin
+          if (Prec1 = Scale1) then begin
+            s1 := (PByte(PNibble1)^ shr 4);
+            s2 := ZBcdNibble2Base100ByteLookup[PByte(PNibble2)^];
+          end;
+          if (Prec2 = Scale2) then begin
+            s1 := ZBcdNibble2Base100ByteLookup[PByte(PNibble1)^];
+            s2 := (PByte(PNibble2)^ shr 4);
+          end;
+        end;
+        Result := Ord(s1 > s2) - Ord(s1 < s2);
+        if Result <> 0 then
+          Exit;
+        Inc(PNibble);
+        Inc(pNibble1);
+        Inc(pNibble2);
+      end;
+      {both of them have equal digits for the smalles comparable range
+       so finally compare which one has more digits total }
+      Result := Ord(Prec1 > Prec2) - Ord(Prec1 < Prec2);
+    end;
+  end;//*)
+  (*Result := Ord(Value1.SignSpecialPlaces and (1 shl 7) <> 0) - Ord(Value2.SignSpecialPlaces and (1 shl 7) <> 0);
+  if Result = 0 then begin
+    if GetPacketBCDOffSets(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
+      ZPackBCDToLeft(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
+    if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
+      ZPackBCDToLeft(Value2, pNibble2, pNibble2, Prec2, Scale2, GetFB2);
+    {determine digits before fractions start: }
     s1 := Integer(Prec1)-Scale1+Ord(Prec1=Scale1);
     s2 := Integer(Prec2)-Scale2+Ord(Prec2=Scale2);
     Result := Ord(s1 > s2) - Ord(s1 < s2);
@@ -8148,7 +8196,7 @@ begin
           if (Prec1 = Scale1) then
             s1 := (PByte(PNibble1)^ shr 4);
           if (Prec2 = Scale2) then
-            s1 := (PByte(PNibble2)^ shr 4);
+            s2 := (PByte(PNibble2)^ shr 4);
           Result := Ord(s1 > s2) - Ord(s1 < s2);
           if Result <> 0 then
             Exit;
@@ -8161,7 +8209,7 @@ begin
        so finally compare which one has more digits total }
       Result := Ord(Prec1 > Prec2) - Ord(Prec1 < Prec2);
     end;
-  end;
+  end; *)
 end;
 
 (*function GetStringReplaceAllIndices(Source, OldPattern: PAnsiChar; SourceLen, OldPatternLen: Integer): TIntegerDynArray; overload;
@@ -8631,9 +8679,37 @@ begin
     ZBcdNibble2DwoDigitLookupLW[N] := ZFastCode.TwoDigitLookupLW[I];
   end;
 end;
+(*
+procedure Test;
+var BCD: TBCD;
+  PNibble1, PNibble2, PLastNibble1, PLastNibble2, PNibble, PLastNibble: PAnsiChar;
+    Prec1, Prec2, Scale1, Scale2: Word;
+    sPrec1: SmallInt absolute Prec1;
+    sPrec2: SmallInt absolute Prec2;
+    GetFB1, GetFB2: Boolean;
+    s1, s2: Integer;
+    Str1, Str2: String;
+label jmpFraction;
+begin
+  BCD := StrToBCD('0000001,8');
+  Move(BCD.Fraction, BCD.Fraction[2], SizeOf(BCD.Fraction)-2);
+  PWord(@BCD.Fraction[0])^ := 0;
+  BCD.Precision := BCD.Precision + 4;
+  if GetPacketBCDOffSets(BCD, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
+    ZPackBCDToLeft(BCD, pNibble1, pLastNibble1, Prec1, Scale1, True);
+  Str1 := BCDToStr(BCD);
+  Assert(Str1 = '1,8');
+  BCD := StrToBCD('0000001,87');
+  NormalizeBcd(BCD, BCD, 6,2);
+  if GetPacketBCDOffSets(BCD, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
+    ZPackBCDToLeft(BCD, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
+  Str1 := BCDToStr(BCD);
+  Assert(Str1 = '1,87');
+end; *)
 
 initialization;
   BcdNibbleLookupFiller;
+  //Test;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolConstFiller; //build bool consts
