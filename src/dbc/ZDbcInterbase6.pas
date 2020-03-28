@@ -192,7 +192,6 @@ type
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
     function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
-    procedure CreateNewDatabase(const SQL: RawByteString);
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     function GetActiveTransaction: IZIBTransaction;
     function GetPlainDriver: TZInterbasePlainDriver;
@@ -1209,32 +1208,6 @@ begin
     TransactionParameterPufferChanged;
     TransactIsolationLevel := Level;
     //restart automatically happens on GetTrHandle
-  end;
-end;
-
-{**
-  Creates new database
-  @param SQL a sql strinf for creation database
-}
-procedure TZInterbase6Connection.CreateNewDatabase(const SQL: RawByteString);
-var
-  TrHandle: TISC_TR_HANDLE;
-begin
-  TrHandle := 0;
-  if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
-      Length(SQL), Pointer(sql), FDialect, nil) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, SQL);
-  if FClientCodePage <> '' then begin
-    ExecuteImmediat('SET NAMES '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage), lcExecute);
-    if TrHandle <> 0 then
-      if FPlainDriver.isc_commit_transaction(@FStatusVector, @TrHandle) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, SQL);
-  end else begin
-    //disconnect from the newly created database because the connection character set is NONE,
-    //which usually nobody wants
-    if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, SQL);
-    TrHandle := 0;
   end;
 end;
 
