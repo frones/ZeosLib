@@ -778,7 +778,6 @@ const sCS_NONE = 'NONE';
 var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
-  NewDB: RawByteString;
   ConnectionString, CSNoneCP, DBCP, CreateDB: String;
   ti: IZIBTransaction;
   Statement: IZStatement;
@@ -839,6 +838,11 @@ begin
         DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
           'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"');
     end else begin
+      {$IFDEF UNICODE}
+      DPB := ZUnicodeToRaw(CreateDB, zOSCodePage);
+      {$ELSE}
+      DPB := CreateDB;
+      {$ENDIF}
       CreateDB := UpperCase(CreateDB);
       I := PosEx('CHARACTER', CreateDB);
       if I > 0 then begin
@@ -854,31 +858,23 @@ begin
           Inc(PEnd);
         DBCP :=  Copy(CreateDB, I, (PEnd-P));
       end else DBCP := sCS_NONE;
-
-      NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_CreateNewDatabase],
-        ConSettings^.CTRL_CP, zOSCodePage);
       if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
-          Length(NewDB), Pointer(NewDB), FDialect, nil) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, NewDB);
+          Length(DPB), Pointer(DPB), FDialect, nil) <> 0 then
+        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, DPB);
       { Logging connection action }
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-          NewDB+' AS USER "'+ ConSettings^.User+'"');
-      //we did create the db and are connection now.
-      if DBCP <> FClientCodePage then begin
-        if FClientCodePage <> '' then begin
-          if DBCP = sCS_NONE then begin
-            CSNoneCP := FClientCodePage;
-            FClientCodePage := DBCP;
-            (FMetadata as TZInterbase6DatabaseMetadata).SetUTF8CodePageInfo;
-          end;
-          //but we could not use the tdb for an attachment character set
-          //so disconnect from the newly created
-          if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
-            CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, NewDB);
-          TrHandle := 0;
-          FHandle := 0;
-        end;
+          DPB+' AS USER "'+ ConSettings^.User+'"');
+      //we did create the db and are connected now.
+      //we have no dpb so we connect with 'NONE' which is not a problem for the UTF8/NONE charsets
+      //because the metainformations are retrieved in UTF8 encoding
+      if (DBCP <> FClientCodePage) or ((DBCP = sCS_NONE) and (FClientCodePage <> '') and
+         ((FClientCodePage <> 'UTF8') and (FClientCodePage <> sCS_NONE))) then begin
+        //we need a reconnect with a valid dpb
+        if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
+          CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, DPB);
+        TrHandle := 0;
+        FHandle := 0;
       end;
     end;
     Info.Values[ConnProps_CreateNewDatabase] := '';
