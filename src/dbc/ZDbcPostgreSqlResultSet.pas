@@ -69,9 +69,6 @@ uses
 
 type
   TZPGColumnInfo = class(TZColumnInfo)
-  protected
-    fTableOID, FColOID: OID;
-    fTableColNo: Integer;
   public
     TableOID: OID;
     TableColNo: Integer;
@@ -1111,6 +1108,7 @@ var P: PAnsiChar;
   TS: TZTimeStamp absolute BCD;
   UUID: TGUID absolute BCD;
   DT: TDateTime absolute BCD;
+  C: Currency absolute BCD;
   MS: Word;
   ROW_IDX: Integer;
   procedure FromOIDLob(ColumnIndex: Integer);
@@ -1166,7 +1164,8 @@ begin
                       Result := @fTinyBuffer[0];
                     end;
         stCurrency: begin
-                      CurrToUnicode(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), @fTinyBuffer[0], @PEnd);
+                      C := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                      CurrToUnicode(C, @fTinyBuffer[0], @PEnd);
 JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                       Len := PEnd - Result;
                     end;
@@ -1966,7 +1965,7 @@ jmpZero:                PInt64(@Result.Year)^ := 0
       stCurrency, stBigDecimal:  DecodeDateTimeToDate(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
       stAsciiStream, stUnicodeStream,
       stString, stUnicodeString:    goto from_str;
-      else raise CreatePGConvertError(ColumnIndex, FColOID);
+      else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end;
   end;
 end;
@@ -2038,7 +2037,7 @@ jmpZero:              PCardinal(@Result.Hour)^ := 0;
       stCurrency, stBigDecimal: DecodeDateTimeToTime(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
       stAsciiStream, stUnicodeStream,
       stString, stUnicodeString:    goto from_str;
-      else raise CreatePGConvertError(ColumnIndex, FColOID);
+      else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end
   end;
 end;
@@ -2125,7 +2124,7 @@ jmpZero:              PInt64(@Result.Year)^ := 0;
       stCurrency, stBigDecimal: DecodeDateTimeToTimeStamp(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
       stAsciiStream, stUnicodeStream,
       stString, stUnicodeString:    goto from_str;
-      else raise CreatePGConvertError(ColumnIndex, FColOID);
+      else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end
   end;
 end;
@@ -2181,7 +2180,7 @@ begin
                       end else if FIs_bytea_output_hex
                       then Result := TZPostgreSQLByteaHexBlob.Create(P)
                       else Result := TZPostgreSQLByteaEscapedBlob.Create(FPlainDriver, P)
-        else raise CreatePGConvertError(ColumnIndex, FColOID);
+        else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end;
   end;
 end;
