@@ -512,6 +512,8 @@ var
   PreparedRowsOfArray: Integer;
   TypeItem: AnsiChar;
   Buffer: array[0..7] of AnsiChar;
+  FinalChunkSize: Integer;
+label jmpEB;
 
   procedure PrepareArrayStmt(var Slot: TZIBStmt);
   begin
@@ -583,26 +585,21 @@ begin
     inherited Prepare; //log action and prepare params
   end;
   if BatchDMLArrayCount > 0 then begin
-    if FMaxRowsPerBatch = 0 then begin
-      eBlock := GetExecuteBlockString(FParamSQLData,
+    if FMaxRowsPerBatch = 0 then begin //init to find out max rows per batch
+jmpEB:eBlock := GetExecuteBlockString(FParamSQLData,
         IsParamIndex, BindList.Count, BatchDMLArrayCount, FCachedQueryRaw,
         FPlainDriver, FMemPerRow, PreparedRowsOfArray, FMaxRowsPerBatch,
           FTypeTokens, FStatementType, FIBConnection.GetXSQLDAMaxSize);
     end else
       eBlock := '';
-    if (FMaxRowsPerBatch <= BatchDMLArrayCount) and (eBlock <> '') then begin
+    FinalChunkSize := (BatchDMLArrayCount mod FMaxRowsPerBatch);
+    if (FMaxRowsPerBatch <= BatchDMLArrayCount) and (FBatchStmts[True].Obj = nil) then begin
+      if eBlock = '' then goto jmpEB;
       PrepareArrayStmt(FBatchStmts[True]); //max block size per batch
-      if BatchDMLArrayCount > FMaxRowsPerBatch then //final block count
-        PrepareFinalChunk(BatchDMLArrayCount mod PreparedRowsOfArray);
-    end else if (eBlock = '') then begin
-      if (FMaxRowsPerBatch > BatchDMLArrayCount) then begin
-        if (FBatchStmts[False].PreparedRowsOfArray <> BatchDMLArrayCount) then
-          PrepareFinalChunk(BatchDMLArrayCount) //full block of batch
-      end else
-        if (BatchDMLArrayCount <> FMaxRowsPerBatch) and (FBatchStmts[False].PreparedRowsOfArray <> (BatchDMLArrayCount mod FMaxRowsPerBatch)) then
-          PrepareFinalChunk(BatchDMLArrayCount mod FMaxRowsPerBatch); //final block of batch
-    end else if (FBatchStmts[False].PreparedRowsOfArray <> BatchDMLArrayCount) then
-      PrepareArrayStmt(FBatchStmts[False]); //full block of batch
+    end;
+    if (FinalChunkSize > 0) and ((FBatchStmts[False].Obj = nil) or
+       (FinalChunkSize <> FBatchStmts[False].PreparedRowsOfArray)) then //if final chunk then
+      PrepareFinalChunk(FinalChunkSize);
   end;
 end;
 
