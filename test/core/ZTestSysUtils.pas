@@ -131,19 +131,6 @@ implementation
 
 uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}, Windows{$IFEND}{$ENDIF};
 
-{$IFDEF FPC}{$IFNDEF DEFINE FPC3_0UP}
-{These functions help FPC 2.6 to decide wether to call the PChar or PWideChar version of these functions later on}
-function SQLStrToFloatDef(Value: RawByteString; const Def: Extended; Len: Integer = 0): Extended; overload;
-begin
-  Result := SQLStrToFloatDef(PChar(Value), Def, Len);
-end;
-
-function SQLStrToFloatDef(Value: ZWideString; const Def: Extended; Len: Integer = 0): Extended; overload;
-begin
-  Result := SQLStrToFloatDef(PWideChar(Value), Def, Len);
-end;
-{$ENDIF}{$ENDIF}
-
 { TZTestSysUtilsCase }
 
 {**
@@ -462,55 +449,55 @@ end;
 }
 procedure TZTestSysUtilsCase.TestSqlStrToFloatDef;
 begin
-  CheckEquals(12.75, SqlStrToFloatDef(RawByteString('12,75'), 11.11));
-  CheckEquals(12.75, SqlStrToFloatDef(RawByteString('12.75'), 11.11));
-  CheckEquals(0.1275, SqlStrToFloatDef(RawByteString('12.75e-2'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('12.75float'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString(''), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('111,125.33'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(RawByteString('$1.012,75'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(RawByteString('€ 1.012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.0012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€ 1.0012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(RawByteString('$1.012.012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(RawByteString('€  1.012.012,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('$1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('€  1.012.012.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€  1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.012.0121.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€  1.012.0121.111,75'), 11.11));
-  CheckEquals(-1012.75, SqlStrToFloatDef(RawByteString('€ -1.012,75'), 11.11));
-  CheckEquals(-1012012111.75, SqlStrToFloatDef(RawByteString('$-1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('$+1.012.012.111,75'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('€643,11'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('643,11 €'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('643,11 $'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef(PAnsiChar('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef(PAnsiChar('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef(PAnsiChar('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('111,125.33'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(PAnsiChar('$1.012,75'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(PAnsiChar('€ 1.012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('$1.0012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('€ 1.0012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(PAnsiChar('$1.012.012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(PAnsiChar('€  1.012.012,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(PAnsiChar('$1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(PAnsiChar('€  1.012.012.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('$1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('€  1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('$1.012.0121.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('€  1.012.0121.111,75'), 11.11));
+  CheckEquals(-1012.75, SqlStrToFloatDef(PAnsiChar('€ -1.012,75'), 11.11));
+  CheckEquals(-1012012111.75, SqlStrToFloatDef(PAnsiChar('$-1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(PAnsiChar('$+1.012.012.111,75'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('€643,11'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('643,11 €'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('643,11 $'), 11.11));
 
-  CheckEquals(12.75, SqlStrToFloatDef(ZWideString('12,75'), 11.11));
-  CheckEquals(12.75, SqlStrToFloatDef(ZWideString('12.75'), 11.11));
-  CheckEquals(0.1275, SqlStrToFloatDef(ZWideString('12.75e-2'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('12.75float'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString(''), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('111,125.33'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(ZWideString('$1.012,75'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(ZWideString('€ 1.012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.0012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€ 1.0012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(ZWideString('$1.012.012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(ZWideString('€  1.012.012,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('$1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('€  1.012.012.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€  1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.012.0121.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€  1.012.0121.111,75'), 11.11));
-  CheckEquals(-1012.75, SqlStrToFloatDef(ZWideString('€ -1.012,75'), 11.11));
-  CheckEquals(-1012012111.75, SqlStrToFloatDef(ZWideString('$-1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('$+1.012.012.111,75'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(ZWideString('€643,11'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(ZWideString('643,11 €'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(ZWideString('643,11 $'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('111,125.33'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012,75'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ 1.012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.0012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ 1.0012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.0121.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.0121.111,75'), 11.11));
+  CheckEquals(-1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ -1.012,75'), 11.11));
+  CheckEquals(-1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$-1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$+1.012.012.111,75'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€643,11'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('643,11 €'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('643,11 $'), 11.11));
 end;
 
 {**
