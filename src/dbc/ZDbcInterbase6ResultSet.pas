@@ -402,17 +402,18 @@ var L, H, I: Integer;
   end;
   procedure ReadUTF8CLob(const BlobId: TISC_QUAD);
   var Stream: TStream;
-    IbStream: TZInterbaseLobStream absolute Stream;
+    IbStream: TZInterbaseLobStream;
     Clob: IZCLob;
     Buf: PAnsiChar;
-    Size: Int64;
-    L, R: LongInt;
+    L, R, Size: LongInt;
   begin
     CLob := TZInterbase6Clob.Create(FIBConnection, BlobId, lsmRead, zCP_UTF8, FOpenLobStreams);
     Stream := Clob.GetStream(zCP_UTF8);
+    IbStream := Stream as TZInterbaseLobStream;
     Buf := nil;
     try
-      Size := Stream.Size; //opens the stream
+      IbStream.OpenLob;
+      Size := IbStream.BlobInfo.TotalSize;
       if Size = 0 then Exit;
       { read chunked as firebird supports it }
       L := IbStream.BlobInfo.MaxSegmentSize;
@@ -420,9 +421,11 @@ var L, H, I: Integer;
       repeat
         R := Stream.Read(Buf^, L);
         JSONWriter.AddJSONEscape(Buf, R); //is not #0 terminated
+        Dec(Size, R);
+        if L > Size then
+          L := Size;
       until (R = 0){should not happen} or
-            (R < L){if segmentsize < total} or
-            (IbStream.FPosition = Size){end reached segmentsize equals to totalsize};
+            (Size = 0){if segmentsize < total};
     finally
       Stream.Free;
       FreeMem(Buf);
