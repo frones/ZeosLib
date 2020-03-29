@@ -1885,12 +1885,14 @@ var
 
   procedure Put(const Args: array of RawByteString; var Dest: PAnsiChar);
   var I: Integer;
+    L: LengthInt;
   begin
     for I := low(Args) to high(Args) do //Move data
-    begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
-      Inc(Dest, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
-    end;
+      if Pointer(Args[i]) <> nil then begin
+        L := {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^;
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, L);
+        Inc(Dest, L);
+      end;
   end;
   procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
   var I, L: Integer;
@@ -1913,17 +1915,11 @@ begin
     for ParamIndex := 0 to BindCount-1 do
     begin
       case ParamsSQLDA.GetIbSqlType(ParamIndex) and not (1) of
-        SQL_VARYING:
+        SQL_VARYING, SQL_TEXT:
           begin
             CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex));
             AddParam([' VARCHAR(', IntToRaw(ParamsSQLDA.GetIbSqlLen(ParamIndex) div CodePageInfo.CharWidth),
-            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), ' = ?' ], TypeTokens[ParamIndex]);
-          end;
-        SQL_TEXT:
-          begin
-            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex));
-            AddParam([' CHAR(', IntToRaw(ParamsSQLDA.GetIbSqlLen(ParamIndex) div CodePageInfo.CharWidth),
-            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), ' = ?' ], TypeTokens[ParamIndex]);
+            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), '=?' ], TypeTokens[ParamIndex]);
           end;
         SQL_DOUBLE, SQL_D_FLOAT:
            AddParam([' DOUBLE PRECISION=?'], TypeTokens[ParamIndex]);
