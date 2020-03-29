@@ -666,63 +666,6 @@ function AnsiSQLDateToDateTime(P: PWideChar; L: LengthInt): TDateTime; overload;
 function AnsiSQLDateToDateTime(const Value: RawByteString): TDateTime; overload;
 function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime; overload;
 
-{**
-  Converts Ansi SQL Date (DateFormat) to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a Pointer to DateFormat. May be nil;
-  @return a decoded TDateTime value.
-}
-function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-
-
-{**
-  Converts Unicode SQL Date (DateFormat) to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a Pointer to DateFormat. May be nil;
-  @return a decoded TDateTime value.
-}
-function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-
-{**
-  Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
-  @param Value a date and time string.
-  @param Timeformat a TimeFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-
-{**
-  Converts Unicode SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
-  @param Value a date and time string.
-  @param Timeformat a TimeFormat.
-  @return a decoded TDateTime value.
-}
-function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-
-{**
-  Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
-    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
-  @param Value a date and time string.
-  @param DateTimeformat a DateTimeFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-
-{**
-  Converts Unicode SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
-    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
-  @param Value a date and time string.
-  @param DateTimeformat a DateTimeFormat.
-  @return a decoded TDateTime value.
-}
-function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-
 {** EH:
   Converts DateTime value into a raw encoded string with format pattern
   @param Value a TDateTime value.
@@ -1001,20 +944,6 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
 function DateTimeToUni(Year, Month, Day, Hour, Minute, Second: Word;
   Fractions: Cardinal; Buf: PWideChar; const Format: String;
   Quoted, Negative: Boolean): Byte;
-
-{**
-  Converts DateTime value to native string
-}
-function DateTimeToSQLTimeStamp(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: string = ''): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-
-{**
-  Converts TDateTime to Ansi SQL Date/Time
-  @param Value an encoded TDateTime value.
-  @return a  date and time string.
-}
-function DateTimeToAnsiSQLDate(Value: TDateTime; WithMMSec: Boolean = False): string;
 
 {**
   Converts an string into escape PostgreSQL format.
@@ -3879,690 +3808,6 @@ begin
   else Result := AnsiSQLDateToDateTime(P, Length(Value));
 end;
 
-function CheckNumberRange(Value: AnsiChar; out Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-begin
-  Failed := not ((Ord(Value) >= Ord('0')) and (Ord(Value) <= Ord('9')));
-  if Failed then
-    Result := 0
-  else
-    Result := Ord(Value) - Ord('0');
-end;
-
-function CheckNumberRange(Value: WideChar; out Failed: Boolean): Word; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-begin
-  Failed := not ((Ord(Value) >= Ord('0')) and (Ord(Value) <= Ord('9')));
-  if Failed then
-    Result := 0
-  else
-    Result := Ord(Value) - Ord('0');
-end;
-
-function CheckNumberRange(Value: AnsiChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-begin
-  Result := ((Ord(Value) >= Ord('0')) and (Ord(Value) <= Ord('9')));
-end;
-
-function CheckNumberRange(Value: WideChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-begin
-  Result := ((Ord(Value) >= Ord('0')) and (Ord(Value) <= Ord('9')));
-end;
-
-{**
-  Converts Ansi SQL Date (DateFormat)
-  to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a Pointer to DateFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-var
-  Year, Month: Int64;
-  Day: Word;
-  DateFormat: PChar;
-
-  procedure TryExtractDateFromFormat(Value: PAnsiChar);
-  var
-    I: Cardinal;
-  begin
-    Result := 0;
-    Failed := ZFormatSettings.DateFormatLen = 0;
-    if not Failed then
-    begin
-      Year := 0; Month := 0; Day := 0;
-      for i := 0 to ZFormatSettings.DateFormatLen-1 do
-      begin
-        case DateFormat^ of
-          'Y', 'y':
-            begin
-              Year := Year * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-              if Failed then Exit;
-            end;
-          'M', 'm':
-            begin
-              Month := Month * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-              if Failed then Exit;
-            end;
-          'D', 'd':
-            begin
-              Day := Day * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-              if Failed then Exit;
-            end;
-        end;
-        Inc(DateFormat);
-        Inc(Value);
-        if I+1 = vallen then Break;
-      end;
-      Failed := not TryEncodeDate(Year, Month, Day, Result);
-    end;
-  end;
-
-  procedure TryExtractDateFromUnknownSize;
-  var
-    DateLenCount: Cardinal;
-    YPos, MPos, Code: Integer;
-    FltVal: Extended;
-  begin
-    Result := 0;
-    Failed := False;
-    if Value <> nil then
-    begin
-      Year := 0; Month := 0; Day := 0;
-      YPos := 0; MPos := 0; DateLenCount := 0;
-      while ( DateLenCount < ValLen ) and (not (Ord((Value+DateLenCount)^) in [Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
-      begin
-        Year := Year * 10 + CheckNumberRange(AnsiChar((Value+DateLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(DateLenCount);
-        Inc(YPos);
-      end;
-      while ( DateLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+DateLenCount)^))) do
-        Inc(DateLenCount);
-      while ( DateLenCount < ValLen ) and (not (Ord((Value+DateLenCount)^) in [Ord('-'),Ord('/'),Ord('\')]) ) do
-      begin
-        Month := Month * 10 + CheckNumberRange(AnsiChar((Value+DateLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(DateLenCount);
-        Inc(MPos);
-      end;
-      while ( DateLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+DateLenCount)^))) do
-        Inc(DateLenCount);
-      while ( DateLenCount < ValLen ) and (not (Ord((Value+DateLenCount)^) in [Ord('-'),Ord('/'),Ord('\')]) ) do
-      begin
-        Day := Day * 10 + CheckNumberRange(AnsiChar((Value+DateLenCount)^), Failed);
-        if Failed then Exit
-        else Inc(DateLenCount);
-      end;
-      if MPos > 2 then //float ValueTmp
-      begin
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
-        Failed := Code <> 0;
-        if Failed then  Exit;
-      end;
-      if YPos > 4 then //We've a problem! No date delimiters found? -> YYYYMMDD or YYMMDD or ....Float!
-        if YPos = 8 then
-        begin
-          //Let's start from the premise we've LongDateFormat YYYYMMDD
-          Day := Year mod 100;
-          Month := (Year mod 10000) div 100;
-          Year := Year div 10000;
-        end
-        else
-          if YPos = 6 then
-          //Let's start from the premise we've ShortDateFormat YYMMDD
-          begin
-            Day := Year mod 100;
-            Month := (Year mod 10000) div 100;
-            Year := Year div 10000;
-          end
-          else
-          begin
-            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
-            if Code <> 0 then
-              Result := 0;
-            Exit;
-          end;
-      Failed := not TryEncodeDate(Year, Month, Day, Result);
-      if Failed then begin
-        FltVal := ValRawExt(Pointer(Value), AnsiChar('.'), Code);
-        Failed := (Code <> 0) or (FltVal = 0);
-        if Failed
-        then Result := 0
-        else Result := Int(FltVal);
-      end;
-    end;
-  end;
-begin
-  DateFormat := Pointer(ZFormatSettings.DateFormat);
-  Failed := False;
-  if (Value = nil) or (ValLen = 0) then
-    Result := 0
-  else
-  begin
-    TryExtractDateFromFormat(Value);
-    if Failed and ( ZFormatSettings.DateFormatLen = 0 )then
-      TryExtractDateFromUnknownSize;
-  end;
-end;
-
-{**
-  Converts Ansi SQL Date (DateFormat)
-  to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a Pointer to DateFormat.
-  @return a decoded TDateTime value.
-}
-function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-begin
-  Result := RawSQLDateToDateTime(Pointer(UnicodeStringToASCII7(Value, ValLen)),
-    ValLen, ZFormatSettings, Failed);
-end;
-
-{**
-  Converts Ansi SQL Time (TimeFormat)
-  to TDateTime
-  @param Value a date and time string.
-  @param Timeformat a TimeFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-var
-  Hour, Minute: Int64;
-  Sec, MSec: Word;
-  TimeFormat: PChar;
-
-  procedure TryExtractTimeFromFormat(Value: PAnsiChar);
-  var
-    I: Cardinal;
-  begin
-    Result := 0;
-    Failed := ( ZFormatSettings.TimeFormatLen = 0 );
-    if not Failed then
-    begin
-      Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-      Failed := ( ZFormatSettings.TimeFormatLen = 0 ) and not (ValLen <= Byte(ZFormatSettings.TimeFormatLen-4));
-      if not Failed then
-      begin
-        for i := 0 to ZFormatSettings.TimeFormatLen-1 do begin
-          case TimeFormat^ of
-            'H', 'h':
-              begin
-                Hour := Hour * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'N', 'n':
-              begin
-                Minute := Minute * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'S', 's':
-              begin
-                Sec := Sec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'Z', 'z':
-              begin
-                MSec := MSec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if not Failed and ((TimeFormat+1)^ = TimeFormat^) and not (Ord((Value+1)^) in [Ord('0')..Ord('9')]) then begin
-                  Inc(TimeFormat,Ord((TimeFormat+2)^ = TimeFormat^));
-                  Msec := Msec * MSecMulTable[GetOrdinalDigits(Msec)];
-                end;
-                if Failed then Exit;
-              end;
-          end;
-          Inc(TimeFormat);
-          Inc(Value);
-          if i+1 = ValLen then Break;
-        end;
-        Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
-      end;
-    end;
-  end;
-
-  procedure TryExtractTimeFromVaryingSize;
-  var
-    HPos, NPos, Code: Integer;
-    TimeLenCount: Cardinal;
-  begin
-    Result := 0;
-    Failed := False;
-    if Value <> nil then
-    begin
-      Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-      TimeLenCount := 0; HPos := 0; NPos := 0;
-      while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
-      begin
-        Hour := Hour * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(HPos); Inc(TimeLenCount);
-      end;
-      while ( TimeLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+TimeLenCount)^))) do
-        Inc(TimeLenCount);
-      while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
-      begin
-        Minute := Minute * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(NPos); Inc(TimeLenCount);
-      end;
-      while ( TimeLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+TimeLenCount)^))) do
-        Inc(TimeLenCount);
-      while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
-      begin
-        Sec := Sec * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(TimeLenCount);
-      end;
-      while ( TimeLenCount < ValLen ) and (not CheckNumberRange(AnsiChar((Value+TimeLenCount)^)) ) do
-        Inc(TimeLenCount);
-      while ( TimeLenCount < ValLen ) and (not (Ord((Value+TimeLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.')]) ) do
-      begin
-        MSec := MSec * 10 + CheckNumberRange(AnsiChar((Value+TimeLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(TimeLenCount);
-      end;
-      if NPos > 2 then //float value
-      begin
-        Result := Frac(ValRawExt(Pointer(Value), {$IFDEF NO_ANSICHAR}Ord{$ENDIF}('.'), Code));
-        Failed := Code <> 0;
-        if Failed then
-          Result := 0;
-        Exit;
-      end;
-      if HPos > 4 then //We've a problem! No date delimiters found? -> HHNNSSZZZ or HHNNSS or ....Float!
-        case HPos of
-          9:
-            begin //Let's start from the premise we've LongTimeFormat HHNNSSZZZ
-              MSec :=     Hour mod 1000;
-              Sec :=     (Hour mod 100000)   div 1000;
-              Minute :=  (Hour mod 10000000) div 100000;
-              Hour := Hour div 10000000;
-            end;
-          8:
-            begin //Let's start from the premise we've LongTimeFormat HHNNSSZZ
-              MSec :=    Hour mod 100;
-              Sec :=    (Hour mod 10000)   div 100;
-              Minute := (Hour mod 1000000) div 10000;
-              Hour := Hour div 1000000;
-            end;
-          7:
-            begin //Let's start from the premise we've LongTimeFormat HHNNSSZ
-              MSec :=    Hour mod 10;
-              Sec :=    (Hour mod 1000)   div 10;
-              Minute := (Hour mod 100000) div 1000;
-              Hour := Hour div 100000;
-            end;
-          6:
-            begin//Let's start from the premise we've ShortTimeFormat HHNNSS
-              Sec := Hour mod 100;
-              Minute := (Hour mod 10000) div 100;
-              Hour := Hour div 10000;
-            end
-            else
-            begin
-              Result := Frac(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
-              Failed := Code <> 0;
-              if Failed then Result := 0;
-              Exit;
-            end;
-        end;
-      Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
-      if Failed then begin
-        Result := Frac(ValRawExt(Pointer(Value), AnsiChar('.'), Code));
-        Failed := Code <> 0;
-        if Failed then Result := 0;
-      end;
-    end;
-  end;
-begin
-  Failed := False;
-  TimeFormat := Pointer(ZFormatSettings.TimeFormat);
-  if (Value = nil) or (ValLen = 0) then
-    Result := 0
-  else
-  begin
-    TryExtractTimeFromFormat(Value); //prefered. Adapts to given Format-Mask
-    if Failed and ( ZFormatSettings.TimeFormatLen = 0 )then
-      TryExtractTimeFromVaryingSize;
-  end;
-end;
-
-{**
-  Converts Unicode SQL Time (TimeFormat) to TDateTime
-  @param Value a date and time string.
-  @param Timeformat a TimeFormat.
-  @return a decoded TDateTime value.
-}
-function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-begin
-  Result := RawSQLTimeToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
-    ValLen, ZFormatSettings, Failed);
-end;
-
-{**
-  Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
-    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
-  @param Value a date and time string.
-  @param DateTimeformat a DateTimeFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-var
-  Year, Month: Int64;
-  Day, Hour, Minute, Sec, MSec: Word;
-  YPos, MPos, HPos: Integer;
-  TimeStampFormat: PChar;
-
-  procedure CheckFailAndEncode;
-  var timeval: TDateTime;
-  begin
-    Failed := not TryEncodeDate(Year, Month, Day, Result);
-    if Failed then begin
-      if ((Year or Month or Day) = 0) and ((Hour or Minute or Sec or MSec) <> 0) then
-        Failed := not TryEncodeTime(Hour, Minute, Sec, MSec, Result);
-    end else if TryEncodeTime(Hour, Minute, Sec, MSec, timeval) then
-        if Result >= 0
-        then Result := Result + timeval
-        else Result := Result - timeval
-  end;
-
-  procedure TryExtractTimeStampFromFormat(Value: PAnsiChar);
-  var
-    I: Cardinal;
-  begin
-    Failed := ZFormatSettings.DateTimeFormatLen = 0;
-    if not Failed then
-    begin
-      Failed  := (ValLen <= Byte(ZFormatSettings.DateTimeFormatLen-4));
-      if not Failed then
-      begin
-        Year := 0; Month := 0; Day := 0;
-        Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-        for i := 0 to ZFormatSettings.DateTimeFormatLen -1 do
-        begin
-          case TimeStampFormat^ of
-            'Y', 'y':
-              begin
-                Year := Year * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'M', 'm':
-              begin
-                Month := Month * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'D', 'd':
-              begin
-                Day := Day * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'H', 'h':
-              begin
-                Hour := Hour * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'N', 'n':
-              begin
-                Minute := Minute * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'S', 's':
-              begin
-                Sec := Sec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then Exit;
-              end;
-            'Z', 'z':
-              begin
-                MSec := MSec * 10 + CheckNumberRange(AnsiChar(Value^), Failed);
-                if Failed then
-                begin
-                  Failed := not (Ord(Value^) = Ord('+')); //postgres 2013-10-23 12:31:52.48+02 f.e.
-                  if Failed then
-                    Exit
-                  else
-                  begin
-                    Msec := Msec div 10; //align result again
-                    Break;
-                  end;
-                end else if ((TimeStampFormat+1)^ = TimeStampFormat^) and not (Ord((Value+1)^) in [Ord('0')..Ord('9')]) then begin
-                  Inc(TimeStampFormat,Ord((TimeStampFormat+2)^ = TimeStampFormat^));
-                  Msec := Msec * MSecMulTable[GetOrdinalDigits(Msec)];
-                end;
-              end;
-            '.':
-              if (Ord(Value^) = Ord('+')) then Break; //postgres 1997-02-25 00:00:00+01 f.e.
-          end;
-          Inc(TimeStampFormat);
-          Inc(Value);
-          if (i+1) = ValLen then Break;
-        end;
-        CheckFailAndEncode;
-      end;
-    end;
-  end;
-
-  procedure TryExtractTimeStampFromVaryingSize;
-  var
-    DotCount, Code: Integer;
-    TimeStampLenCount: Cardinal;
-
-    procedure ReadDate;
-    begin
-      { read date}
-      while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
-      begin
-        Year := Year * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(YPos); Inc(TimeStampLenCount);
-      end;
-      if Ord((Value+TimeStampLenCount)^) = Ord('.') then
-        Inc(DotCount); //possible float
-      if (Ord((Value+TimeStampLenCount)^) = Ord(':')) and ( YPos < 3) then
-      begin
-        Hour := Year;
-        Year := 0;
-        Exit;
-      end;
-      while ( TimeStampLenCount < ValLen ) and (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) do
-        Inc(TimeStampLenCount);
-      while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
-      begin
-        Month := Month * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(TimeStampLenCount);
-        Inc(MPos);
-      end;
-      while ( TimeStampLenCount < ValLen ) and (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) do
-        Inc(TimeStampLenCount);
-      while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
-      begin
-        Day := Day * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(TimeStampLenCount);
-      end;
-      while ( TimeStampLenCount < ValLen ) and (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) do
-        Inc(TimeStampLenCount);
-    end;
-
-    procedure ReadTime;
-    begin
-      while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
-      begin
-        if HPos = 2 then //hour can't have 3 digits, date was aligned previously instead of time  > let's fix it
-        begin
-          MSec := Hour * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-          if Failed then Exit;
-          Sec := Day; Day := 0;
-          Minute := Month; Month := 0;
-          Hour := Year; Year := 0;
-          exit;
-        end;
-        Hour := Hour * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(HPos); Inc(TimeStampLenCount);
-      end;
-      while ( TimeStampLenCount < ValLen ) and (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) do
-        Inc(TimeStampLenCount);
-      while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
-      begin
-        Minute := Minute * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(TimeStampLenCount);
-      end;
-      while ( TimeStampLenCount < ValLen ) and (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) do
-        Inc(TimeStampLenCount);
-      while ( TimeStampLenCount < ValLen ) and (not (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
-      begin
-        Sec := Sec * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(TimeStampLenCount);
-      end;
-      while ( TimeStampLenCount < ValLen ) and (Ord((Value+TimeStampLenCount)^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) do
-        Inc(TimeStampLenCount);
-      while ( TimeStampLenCount < ValLen ) and (not (Ord(Value^) in [Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord('.'),Ord(' ')]) ) do
-      begin
-        MSec := MSec * 10 + CheckNumberRange(AnsiChar((Value+TimeStampLenCount)^), Failed);
-        if Failed then Exit;
-        Inc(TimeStampLenCount);
-      end;
-    end;
-
-  begin
-    Result := 0;
-    Failed := False;
-    if Value <> nil then
-    begin
-      Year := 0; Month := 0; Day := 0;
-      Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-      YPos := 0; MPos := 0; HPos := 0; TimeStampLenCount := 0; DotCount := 0;
-      ReadDate;
-      {read time}
-      if Failed then Exit
-      else ReadTime;
-      if Failed then Exit;
-
-      if (MPos > 2) and ( DotCount = 1) then //float value
-      begin
-        Result := ValRawExt(Pointer(Value), AnsiChar('.'), Code);
-        Failed := Code <> 0;
-        if Failed then
-          Result := 0;
-        Exit;
-      end;
-      if YPos > 4 then //We've a problem! No date delimiters found? -> YYYYMMDDHHNNSSZZZ or ... or .. HHNNSS or ....Float!
-        if YPos >= 14 then //YYYYMMDDHHNNSS +ZZZ?
-        begin //Let's start from the premise we've LongTimeFormat HHNNSSZZ
-          case YPos of
-            17: //YYYYMMDDHHNNSSZZZ
-              begin
-                MSec := Year mod 1000;
-                Year := Year div 1000;
-              end;
-            16: //YYYYMMDDHHNNSSZZ
-              begin
-                MSec := Year mod 100;
-                Year := Year div 100;
-              end;
-            15: //YYYYMMDDHHNNSSZ
-              begin
-                MSec := Year mod 10;
-                Year := Year div 10;
-              end;
-          end;
-          //YYYYMMDDHHNNSS
-          Sec := Year mod 100;
-          Minute := (Year mod 10000) div 100;
-          Hour := (Year mod 1000000) div 10000;
-          Day := (Year mod 100000000) div 1000000;
-          Month := (Year mod 10000000000) div 100000000;
-          Year := Year div 10000000000;
-        end
-        else
-          if YPos = 8 then //Date?
-          begin
-            //Let's start from the premise we've LongDateFormat YYYYMMDD
-            Day := Year mod 100;
-            Month := (Year mod 10000) div 100;
-            Year := Year div 10000;
-          end
-          else
-          if YPos = 6 then
-          //Let's start from the premise we've ShortTimeFormat HHNNSS
-          begin
-            if MPos > 5 then
-            begin
-              case MPos of
-                9: //HHNNSSZZZ
-                  begin
-                    MSec := Month mod 1000;
-                    Month := Month div 1000;
-                  end;
-                8: //HHNNSSZZ
-                  begin
-                    MSec := Month mod 100;
-                    Month := Month div 100;
-                  end;
-                7: //HHNNSSZ
-                  begin
-                    MSec := Month mod 100;
-                    Month := Month div 100;
-                  end;
-              end;
-              Sec := Month mod 100;
-              Minute := (Month mod 10000) div 100;
-              Hour := (Month mod 1000000) div 10000;
-              Month := 0;
-            end;
-            Day := Year mod 100;
-            Month := (Year mod 10000) div 100;
-            Year := Year div 10000;
-          end
-          else
-            if (DotCount = 1) or (DotCount = 0 ) then
-            begin
-              Result := ValRawExt(Pointer(Value), AnsiChar('.'), Code);
-              Failed := ( Code <> 0 );
-              if Failed then Result := 0;
-              Exit;
-            end
-            else
-            begin
-              Failed := True;
-              Exit;
-            end;
-      CheckFailAndEncode;
-    end;
-  end;
-begin
-  Failed := False;
-  if (Value = nil) or (ValLen = 0) then
-    Result := 0
-  else
-  begin
-    TimeStampFormat := Pointer(ZFormatSettings.DateTimeFormat);
-    TryExtractTimeStampFromFormat(Value);
-    if Failed then
-      TryExtractTimeStampFromVaryingSize;
-  end;
-end;
-
-{**
-  Converts Unicode SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
-    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
-  @param Value a date and time string.
-  @param DateTimeformat a DateTimeFormat.
-  @return a decoded TDateTime value.
-}
-function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
-  const ZFormatSettings: TZFormatSettings; out Failed: Boolean): TDateTime;
-begin
-  Result := RawSQLTimeStampToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
-    ValLen, ZFormatSettings, Failed)
-end;
-
 {**
   Converts DateTime value into a raw encoded string with format pattern
   @param Value a TDateTime value.
@@ -5618,28 +4863,6 @@ begin
 end;
 
 {**
-  Converts DateTime value to native string
-}
-function DateTimeToSQLTimeStamp(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: string): string;
-begin
-  Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLTimeStamp {$ELSE} DateTimeToRawSQLTimeStamp {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
-end;
-
-{**
-  Converts TDateTime to Ansi SQL Date/Time
-  @param Value an encoded TDateTime value.
-  @return a  date and time string.
-}
-function DateTimeToAnsiSQLDate(Value: TDateTime; WithMMSec: Boolean = False): string;
-begin
-  if WithMMSec and (MilliSecondOf(Value) <> 0)
-    then Result := FormatDateTime(SQLDateTimeFmtMSecs, Value)
-    else Result := FormatDateTime(SQLDateTimeFmt, Value);
-end;
-
-{**
   Converts an string into escape PostgreSQL format.
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
@@ -6038,20 +5261,22 @@ begin
 end;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
-var I: Integer;
-  Source: PByteArray;
+begin
+  Result := Ascii7ToUnicodeString(Pointer(Src), Length(Src));
+end;
+
+function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
+var Source: PByteArray absolute Src;
   PEnd: PAnsiChar;
   Dest: PWordArray;
 begin
-  if Pointer(Src) = nil then begin
+  if Src = nil then begin
     Result := '';
     Exit;
   end;
-  Source := Pointer(Src);
-  I := {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^;
-  System.SetString(Result, nil, i);
+  System.SetString(Result, nil, Len);
   Dest := Pointer(Result);
-  PEnd := PAnsiChar(Source)+i-8;
+  PEnd := PAnsiChar(Source)+Len-8;
   while PAnsiChar(Source) < PEnd do begin//making a octed processing loop
     Dest[0] := Source[0];
     Dest[1] := Source[1];
@@ -6062,7 +5287,7 @@ begin
     Dest[6] := Source[6];
     Dest[7] := Source[7];
     Inc(PWideChar(Dest), 8);
-    Inc(PAnsiChar(Source), 8);
+    Inc(PAnsiChar(Src), 8);
   end;
   Inc(PEnd, 8);
   while PAnsiChar(Source) < PEnd do begin//processing final bytes
@@ -6072,58 +5297,28 @@ begin
   end;
 end;
 
-function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
-begin
-  {$IFDEF FPC}Result := '';{$ENDIF}
-  ZSetString(Src, Len, Result);
-end;
-
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString;
-var i, l: integer;
 begin
-  L := System.Length(Src); //temp l speeds x2
-  if L = 0 then
-    Result := EmptyRaw
-  else begin
-    if (Pointer(Result) = nil) or //empty ?
-      ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-      (LengthInt(l) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
-    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    begin
-      Result := EmptyRaw; //speeds up SetLength x2
-      SetLength(Result, l);
-    end;
-    {$ELSE}
-    System.SetString(Result,nil, l);
-    {$ENDIF}
-{$R-}
-    for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
-{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  end;
+  Result := UnicodeStringToASCII7(Pointer(Src), Length(Src));
 end;
 
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString;
 var i: integer;
+  BArr: PByteArray absolute Result;
+  WArr: PWordArray absolute Src;
 begin
   if (Src = nil) or (Len = 0) then
     Result := EmptyRaw
-  else
-  begin
-    if (Pointer(Result) = nil) or //empty ?
-      ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-      (LengthInt(len) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
+  else begin
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    begin
-      Result := EmptyRaw; //speeds up SetLength x2
-      SetLength(Result, len);
-    end;
+    Result := EmptyRaw; //speeds up SetLength x2
+    SetLength(Result, len);
     {$ELSE}
     System.SetString(Result,nil, Len);
     {$ENDIF}
 {$R-}
     for i := 0 to len-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
+      BArr[i] := WArr[i]; //0..255 equals to widechars
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
@@ -8167,110 +7362,8 @@ begin
        so finally compare which one has more digits total }
       Result := Ord(Prec1 > Prec2) - Ord(Prec1 < Prec2);
     end;
-  end;//*)
-  (*Result := Ord(Value1.SignSpecialPlaces and (1 shl 7) <> 0) - Ord(Value2.SignSpecialPlaces and (1 shl 7) <> 0);
-  if Result = 0 then begin
-    if GetPacketBCDOffSets(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
-      ZPackBCDToLeft(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
-    if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
-      ZPackBCDToLeft(Value2, pNibble2, pNibble2, Prec2, Scale2, GetFB2);
-    {determine digits before fractions start: }
-    s1 := Integer(Prec1)-Scale1+Ord(Prec1=Scale1);
-    s2 := Integer(Prec2)-Scale2+Ord(Prec2=Scale2);
-    Result := Ord(s1 > s2) - Ord(s1 < s2);
-    if Result = 0 then begin //both have same amount of digits before a comma(if there is one)
-      if Prec1 <= Prec2 then begin
-        PNibble := PNibble1;
-        PLastNibble := PLastNibble1;
-      end else begin
-        PNibble := PNibble2;
-        PLastNibble := PLastNibble2;
-      end;
-      while PNibble <= PLastNibble do begin
-        s1 := ZBcdNibble2Base100ByteLookup[PByte(PNibble1)^];
-        s2 := ZBcdNibble2Base100ByteLookup[PByte(PNibble2)^];
-        Result := Ord(s1 > s2) - Ord(s1 < s2);
-        if (Result <> 0) and ((Prec1 > 1) or ((Prec1 = Prec2) and (Scale1 = Scale2))) then
-          Exit
-        else begin
-          if (Prec1 = Scale1) then
-            s1 := (PByte(PNibble1)^ shr 4);
-          if (Prec2 = Scale2) then
-            s2 := (PByte(PNibble2)^ shr 4);
-          Result := Ord(s1 > s2) - Ord(s1 < s2);
-          if Result <> 0 then
-            Exit;
-        end;
-        Inc(PNibble);
-        Inc(pNibble1);
-        Inc(pNibble2);
-      end;
-      {both of them have equal digits for the smalles comparable range
-       so finally compare which one has more digits total }
-      Result := Ord(Prec1 > Prec2) - Ord(Prec1 < Prec2);
-    end;
-  end; *)
-end;
-
-(*function GetStringReplaceAllIndices(Source, OldPattern: PAnsiChar; SourceLen, OldPatternLen: Integer): TIntegerDynArray; overload;
-var
-  iPos, L: Integer;
-  ArrIdx: Byte;
-  PosArr: Array[1..256] of Integer;
-begin
-  ArrIdx := 0;
-  Result := nil;
-  L := 0;
-  iPos := PosEx(OldPattern, Source, OldPatternLen, SourceLen);
-  while iPos > 0 do begin
-    if (ArrIdx = High(Byte)) then begin
-      SetLength(Result, L+ArrIdx);
-      Move(PosArr[1], Result[L], ArrIdx*SizeOf(Integer));
-      L := L + ArrIdx;
-      ArrIdx := 0;
-    end;
-    Inc(ArrIdx);
-    PosArr[ArrIdx] := iPos;
-    iPos := PosEx(OldPattern, Source, OldPatternLen, SourceLen, iPos+1);
-  end;
-  if ArrIdx > 0 then begin
-    SetLength(Result, L+ArrIdx);
-    Move(PosArr[1], Result[L], ArrIdx*SizeOf(Integer));
   end;
 end;
-
-function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
-var AllIndices: TIntegerDynArray;
-  I, L, LS, LOP, LNP: Integer;
-  pS, pNP, pRes: PAnsiChar;
-begin
-  LS := Length(Source);
-  LNP := Length(NewPattern);
-  LOP := Length(OldPattern);
-  pS := Pointer(Source);
-  pNP := Pointer(NewPattern);
-  AllIndices := GetStringReplaceAllIndices(ps, Pointer(OldPattern), LS, LOP);
-  L := Length(AllIndices);
-  if L = 0 then begin
-    Result := Source;
-    Exit;
-  end;
-  SetLength(Result, LS+(L*(LNP-LOP)));
-  pRes := Pointer(Result);
-  for I := 0 to L-1 do begin
-    Move((Ps+Ps(I*IPos)^, PRes^, AllIndices[I]-Lop);
-
-  end;
-end;
-
-function StringReplaceAll_CI_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString;
-var AllIndices: TIntegerDynArray;
-  S, OP: RawByteString;
-begin
-  S := UpperCase(Source);
-  Op := UpperCase(OldPattern);
-  AllIndices := GetStringReplaceAllIndices(Pointer(S), Pointer(OP), Length(S), Length(Op));
-end;*)
 
 function BcdToSQLRaw(const Value: TBCD): RawByteString;
 var Digits: array[0..MaxFMTBcdFractionSize-1+1{sign}+1{dot}] of AnsiChar;
@@ -8679,37 +7772,9 @@ begin
     ZBcdNibble2DwoDigitLookupLW[N] := ZFastCode.TwoDigitLookupLW[I];
   end;
 end;
-(*
-procedure Test;
-var BCD: TBCD;
-  PNibble1, PNibble2, PLastNibble1, PLastNibble2, PNibble, PLastNibble: PAnsiChar;
-    Prec1, Prec2, Scale1, Scale2: Word;
-    sPrec1: SmallInt absolute Prec1;
-    sPrec2: SmallInt absolute Prec2;
-    GetFB1, GetFB2: Boolean;
-    s1, s2: Integer;
-    Str1, Str2: String;
-label jmpFraction;
-begin
-  BCD := StrToBCD('0000001,8');
-  Move(BCD.Fraction, BCD.Fraction[2], SizeOf(BCD.Fraction)-2);
-  PWord(@BCD.Fraction[0])^ := 0;
-  BCD.Precision := BCD.Precision + 4;
-  if GetPacketBCDOffSets(BCD, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
-    ZPackBCDToLeft(BCD, pNibble1, pLastNibble1, Prec1, Scale1, True);
-  Str1 := BCDToStr(BCD);
-  Assert(Str1 = '1,8');
-  BCD := StrToBCD('0000001,87');
-  NormalizeBcd(BCD, BCD, 6,2);
-  if GetPacketBCDOffSets(BCD, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
-    ZPackBCDToLeft(BCD, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
-  Str1 := BCDToStr(BCD);
-  Assert(Str1 = '1,87');
-end; *)
 
 initialization;
   BcdNibbleLookupFiller;
-  //Test;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
   BoolConstFiller; //build bool consts
