@@ -1971,8 +1971,8 @@ begin
         SQL_NULL{FB25}:
            AddParam([' CHAR(1)=?'],TypeTokens[ParamIndex]);
       end;
-      Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
-        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));
+      (*Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
+        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));*)
     end;
     Inc(MemPerRow, XSQLDA_LENGTH(InParamCount));
   end;
@@ -2016,7 +2016,8 @@ begin
     //we run into XSQLDA !update! count limit of 255 see:
     //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
     if (PreparedRowsOfArray = MaxRowsPerBatch-1) or
-       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 255)) then begin
+       ((InitialStatementType = stInsert) and (PreparedRowsOfArray > 255)) or
+       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 125)) then begin
       StmtLength := LastStmLen;
       Dec(FullHeaderLen, HeaderLen);
       Break;
