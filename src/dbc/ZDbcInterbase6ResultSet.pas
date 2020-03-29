@@ -400,6 +400,63 @@ var L, H, I: Integer;
     raise EZIBConvertError.Create(Format(SErrorConvertionField,
       [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
   end;
+  procedure ReadUTF8CLob(const BlobId: TISC_QUAD);
+  var Stream: TStream;
+    IbStream: TZInterbaseLobStream absolute Stream;
+    Clob: IZCLob;
+    Buf: PAnsiChar;
+    Size: Int64;
+    L, R: LongInt;
+  begin
+    CLob := TZInterbase6Clob.Create(FIBConnection, BlobId, lsmRead, zCP_UTF8, FOpenLobStreams);
+    Stream := Clob.GetStream(zCP_UTF8);
+    Buf := nil;
+    try
+      Size := Stream.Size; //opens the stream
+      if Size = 0 then Exit;
+      { read chunked as firebird supports it }
+      L := IbStream.BlobInfo.MaxSegmentSize;
+      GetMem(Buf, L);
+      repeat
+        R := Stream.Read(Buf^, L);
+        JSONWriter.AddJSONEscape(Buf, R); //is not #0 terminated
+      until (R = 0){should not happen} or
+            (R < L){if segmentsize < total} or
+            (IbStream.FPosition = Size){end reached segmentsize equals to totalsize};
+    finally
+      Stream.Free;
+      FreeMem(Buf);
+      Clob := nil;
+    end;
+  end;
+  procedure ReadAsWCLob(const BlobId: TISC_QUAD; ColumnCodePage: Word);
+  var Clob: IZCLob;
+    PW: Pointer;
+    L: NativeUInt;
+  begin
+    CLob := TZInterbase6Clob.Create(FIBConnection, BlobId, lsmRead, ColumnCodePage, FOpenLobStreams);
+    try
+      PW := CLob.GetPWideChar(FUniTemp, L);
+      JSONWriter.AddJSONEscapeW(PW, L); //is not #0 terminated
+      FUniTemp := '';
+    finally
+      Clob := nil;
+    end;
+  end;
+  procedure ReadBLob(const BlobId: TISC_QUAD);
+  var Blob: IZBLob;
+    P: Pointer;
+    L: NativeUInt;
+  begin
+    Blob := TZInterbase6Blob.Create(FIBConnection, BlobId, lsmRead, FOpenLobStreams);
+    try
+      P := Blob.GetBuffer(FRawTemp, L); //base 64 can not be added in chunks ):
+      JSONWriter.WrBase64(P, L, True);
+      FRawTemp := '';
+    finally
+      Blob := nil;
+    end;
+  end;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -488,24 +545,13 @@ begin
                           end;
           SQL_QUAD,
           SQL_BLOB      : begin
-                            P := nil;
-                            try
-                              if SqlSubType = isc_blob_text then begin
-                                JSONWriter.Add('"');
-                                ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-                                    PISC_QUAD(sqldata), L, P, False, Self);
-                                if ColumnCodePage = zCP_UTF8
-                                then JSONWriter.AddJSONEscape(P, L)
-                                else WConvert(P, L, ColumnCodePage);
-                                JSONWriter.Add('"');
-                              end else begin
-                                ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-                                  PISC_QUAD(sqldata), L, P, true, Self);
-                                JSONWriter.WrBase64(P, L, True);
-                              end;
-                            finally
-                              FreeMem(P);
-                            end;
+                            if SqlSubType = isc_blob_text then begin
+                              JSONWriter.Add('"');
+                              if ColumnCodePage = zCP_UTF8
+                              then ReadUTF8CLob(PISC_QUAD(sqldata)^)
+                              else ReadAsWCLob(PISC_QUAD(sqldata)^, ColumnCodePage);
+                              JSONWriter.Add('"');
+                            end else ReadBlob(PISC_QUAD(sqldata)^);
                           end;
           //SQL_ARRAY     : JSONWriter.AddShort('"Array"');
           SQL_TYPE_TIME : begin

@@ -248,10 +248,6 @@ function GetNameSqlType(Value: Word): RawByteString;
 procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
   const BlobHandle: TISC_BLOB_HANDLE; out BlobInfo: TIbBlobInfo;
   const ImmediatelyReleasable: IImmediatelyReleasable);
-procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  BlobId: PISC_QUAD; out Size: Integer; out Buffer: Pointer;
-  const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
 
 function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const IsParamIndexArray: TBooleanDynArray;
@@ -1370,68 +1366,6 @@ begin
         BlobInfo.BlobType := ItemVal;
     end;
   end;
-end;
-
-{**
-   Read blob field data to stream by it ISC_QUAD value
-   Note: DefaultBlobSegmentSize constant used for limit segment size reading
-   @param Handle the database connection handle
-   @param TransactionHandle the transaction handle
-   @param BlobId the ISC_QUAD structure
-   @param Size the result buffer size
-   @param Buffer the pointer to result buffer
-
-   Note: Buffer must be nill. Function self allocate memory for data
-    and return it size
-}
-procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  BlobId: PISC_QUAD; out Size: Integer; out Buffer: Pointer;
-  const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
-var
-  TempBuffer: PAnsiChar;
-  BlobInfo: TIbBlobInfo;
-  CurPos: Integer;
-  BytesRead, SegLen: ISC_USHORT;
-  BlobHandle: TISC_BLOB_HANDLE;
-  StatusVector: TARRAY_ISC_STATUS;
-begin
-  BlobHandle := 0;
-  CurPos := 0;
-//  SegmentLenght := UShort(DefaultBlobSegmentSize);
-
-  { open blob }
-  if PlainDriver.isc_open_blob2(@StatusVector, Handle,
-         TransactionHandle, @BlobHandle, @BlobId, 0 , nil) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-
-  { get blob info }
-  GetBlobInfo(PlainDriver, BlobHandle, BlobInfo, ImmediatelyReleasable);
-  Size := BlobInfo.TotalSize;
-  SegLen := BlobInfo.MaxSegmentSize;
-
-  { Allocates a blob buffer }
-  Buffer := AllocMem(BlobInfo.TotalSize+Ord(not Binary)); //left space for leading #0 terminator
-
-  TempBuffer := Buffer;
-
-  { Copies data to blob buffer }
-  while CurPos < BlobInfo.TotalSize do begin
-    if (CurPos + SegLen > BlobInfo.TotalSize) then
-      SegLen := BlobInfo.TotalSize - CurPos;
-    if not(PlainDriver.isc_get_segment(@StatusVector, @BlobHandle,
-           @BytesRead, SegLen, TempBuffer) = 0) or
-          (StatusVector[1] <> isc_segment) then
-      CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-    Inc(CurPos, BytesRead);
-    Inc(TempBuffer, BytesRead);
-  end;
-  if not Binary then
-    PByte(PAnsiChar(Buffer)+Size)^ := Ord(#0);
-
-  { close blob handle }
-  if PlainDriver.isc_close_blob(@StatusVector, @BlobHandle) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
 end;
 
 {**
