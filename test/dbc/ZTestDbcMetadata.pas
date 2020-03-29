@@ -55,7 +55,7 @@ interface
 {$I ZDbc.inc}
 uses
   Types, Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcConnection, ZUrl
+  ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcConnection
   {$IFDEF ENABLE_ASA}        , ZDbcASAMetadata {$ENDIF}
   {$IFDEF ENABLE_DBLIB}      , ZDbcDbLibMetadata {$ENDIF}
   {$IFDEF ENABLE_INTERBASE}  , ZDbcInterbase6Metadata {$ENDIF}
@@ -522,6 +522,11 @@ type
     function StartTransaction: Integer;
     procedure Commit;
     procedure Rollback;
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+    function PrepareCallWithParams(const SQL: string; Info: TStrings):
+      IZCallableStatement;
   protected
     procedure InternalCreate; override;
   public
@@ -534,6 +539,18 @@ procedure TDummyDbcConnection.InternalCreate;
 begin
   Metadata := TZAbstractDatabaseMetadata.Create(Self, Url);
   FMetadata := Metadata;
+end;
+
+function TDummyDbcConnection.PrepareCallWithParams(const SQL: string;
+  Info: TStrings): IZCallableStatement;
+begin
+  Result := nil;
+end;
+
+function TDummyDbcConnection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
+begin
+  Result := nil;
 end;
 
 procedure TDummyDbcConnection.Rollback;
@@ -550,6 +567,12 @@ function TDummyDbcConnection.StartTransaction: Integer;
 begin
   //dummy
   Result := 0;
+end;
+
+function TDummyDbcConnection.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
+begin
+  Result := nil;
 end;
 
 procedure TDummyDbcConnection.InternalClose;

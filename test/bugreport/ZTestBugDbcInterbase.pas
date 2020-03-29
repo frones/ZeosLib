@@ -64,7 +64,8 @@ type
   {** Implements a DBC bug report test case for Interbase. }
   TZTestDbcInterbaseBugReport = class(TZAbstractDbcSQLTestCase)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure Test789879D;
     procedure Test841559;
@@ -86,9 +87,14 @@ uses ZTestCase, ZTestConsts, ZDbcMetadata, ZFastCode;
 
 { TZTestDbcInterbaseBugReport }
 
-function TZTestDbcInterbaseBugReport.GetSupportedProtocols: string;
+//function TZTestDbcInterbaseBugReport.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZTestDbcInterbaseBugReport.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 procedure TZTestDbcInterbaseBugReport.Test789879D;
@@ -165,8 +171,6 @@ begin
   { load data to the stream }
   BinStream := TMemoryStream.Create;
   StrStream := TMemoryStream.Create;
-  BinStream1 := nil;
-  StrStream1 := nil;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -195,17 +199,26 @@ begin
     begin
       CheckEquals(True, Next);
       StrStream1 := GetAsciiStream(B_TEXT_Index);
+      try
+        CheckEquals(StrStream, StrStream1, '512 bytes string stream');
+      finally
+        FreeAndNil(StrStream1);
+      end;
       BinStream1 := GetBinaryStream(B_IMAGE_Index);
+      try
+        CheckEquals(BinStream, BinStream1, '512 bytes binary stream');
+      finally
+        FreeAndNil(BinStream1);
+      end;
       Close;
     end;
-    CheckEquals(BinStream, BinStream1, '512 bytes binary stream');
-    CheckEquals(StrStream, StrStream1, '512 bytes string stream');
 
-    BinStream1.Free;
-    StrStream1.Free;
     BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     BinStream.Size := 1024;
-    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+    if ConnectionConfig.Transport = traWEBPROXY then
+      StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+    else
+      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     StrStream.Size := 1024;
 
     ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES');
@@ -223,17 +236,23 @@ begin
     begin
       CheckEquals(True, Next);
       StrStream1 := GetAsciiStream(B_TEXT_Index);
+      try
+        CheckEquals(StrStream, StrStream1, '1024 bytes string stream');
+      finally
+        FreeAndNil(StrStream1);
+      end;
       BinStream1 := GetBinaryStream(B_IMAGE_Index);
+      try
+        CheckEquals(BinStream, BinStream1, '1024 bytes binary stream');
+      finally
+        FreeAndNil(BinStream1);
+      end;
       Close;
     end;
-    CheckEquals(BinStream, BinStream1, '1024 bytes binary stream');
-    CheckEquals(StrStream, StrStream1, '1024 bytes string stream');
     Statement.Close;
   finally
     FreeAndNil(BinStream);
     FreeAndNil(StrStream);
-    FreeAndNil(BinStream1);
-    FreeAndNil(StrStream1);
   end;
 end;
 
@@ -346,18 +365,9 @@ begin
   begin
     CheckEquals(4, GetColumnCount);
     //Client_Character_set sets column-type!!!!
-    if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
-    begin
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_relation_name)));
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_index_name)));
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_field_name)));
-    end
-    else
-    begin
-      CheckEquals(ord(stString), ord(GetColumnType(rdb_relation_name)));
-      CheckEquals(ord(stString), ord(GetColumnType(rdb_index_name)));
-      CheckEquals(ord(stString), ord(GetColumnType(rdb_field_name)));
-    end;
+    CheckEquals(ord(stString), ord(GetColumnType(rdb_relation_name)));
+    CheckEquals(ord(stString), ord(GetColumnType(rdb_index_name)));
+    CheckEquals(ord(stString), ord(GetColumnType(rdb_field_name)));
     CheckEquals(ord(stSmall), ord(GetColumnType(rdb_field_position)));
   end;
 

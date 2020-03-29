@@ -64,7 +64,8 @@ type
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcInterbaseCase = class(TZAbstractDbcSQLTestCase)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -195,9 +196,14 @@ end;
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
 }
-function TZTestDbcInterbaseCase.GetSupportedProtocols: string;
+//function TZTestDbcInterbaseCase.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZTestDbcInterbaseCase.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 procedure TZTestDbcInterbaseCase.TestConnection;
@@ -207,7 +213,8 @@ begin
   CheckEquals(True, Connection.GetAutoCommit);
   CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
 
-  CheckEquals(3, (Connection as IZInterbase6Connection).GetDialect);
+  if ConnectionConfig.Transport = traNative then
+    CheckEquals(3, (Connection as IZInterbase6Connection).GetDialect);
 
   { Checks without transactions. }
   Connection.CreateStatement;
@@ -710,7 +717,7 @@ begin
   ResultSet.UpdateTimestamp(D_DATETIME,ThisTime);
   ResultSet.UpdateTimestamp(D_TIMESTAMP,ThisTime);
   ResultSet.InsertRow;
-  ResultSet.Last;
+//  ResultSet.Last; // why do we do this in this test?
   Check(ResultSet.GetInt(D_ID) <> 0);
   CheckEquals(Int(ThisTime), ResultSet.GetDate(D_DATE),'Failure field 2');
   ToTS(Frac(ThisTime), TS1);
@@ -828,6 +835,10 @@ begin
   Connection.Close;
   Connection.SetTransactionIsolation(tiReadCommitted);
   Connection.Open;
+
+  if ConnectionConfig.Transport <> traNative then
+    Exit;
+
   with (Connection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo) do begin
     IsFirebird := HostIsFireBird;
     ServerVersion := GetHostVersion;

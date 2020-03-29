@@ -174,21 +174,50 @@ type
     OCIDescriptorAlloc: function(parenth: POCIEnv; var descpp: POCIDescriptor;
       htype: ub4; xtramem_sz: integer; usrmempp: Pointer): sword; cdecl;
     OCIDescriptorFree: function(descp: Pointer; htype: ub4): sword; cdecl;
-
+    { lob methods }
+    OCILobCopy: function(svchp: POCISvcCtx; errhp: POCIError;
+      dst_locp: POCILobLocator; src_locp: POCILobLocator; amount: ub4;
+      dst_offset: ub4; src_offset: ub4): sword; cdecl;
+    OCILobCopy2: function(svchp: POCISvcCtx; errhp: POCIError;
+      dst_locp: POCILobLocator; src_locp: POCILobLocator; amount: oraub8;
+      dst_offset: oraub8; src_offset: oraub8): sword; cdecl;
+    OCILobGetChunkSize: function(svchp: POCISvcCtx; errhp: POCIError;
+      locp: POCILobLocator; out lenp: ub4): sword; cdecl;
+    OCILobGetLength: function (svchp: POCISvcCtx; errhp: POCIError;
+      locp: POCILobLocator; out lenp: ub4): sword; cdecl;
+    OCILobGetLength2: function (svchp: POCISvcCtx; errhp: POCIError;
+      locp: POCILobLocator; out lenp: oraub8): sword; cdecl;
+    OCILobLocatorAssign: function(svchp: POCISvcCtx; errhp: POCIError;
+      const src_locp: POCILobLocator; dst_locpp: PPOCILobLocator): sword; cdecl;
     OCILobOpen: function(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator; mode: ub1): sword; cdecl;
     OCILobRead: function(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator; var amtp: ub4; offset: ub4; bufp: Pointer; bufl: ub4;
       ctxp: Pointer; cbfp: Pointer; csid: ub2; csfrm: ub1): sword; cdecl;
+    OCILobRead2: function(svchp: POCISvcCtx; errhp: POCIError;
+      locp: POCILobLocator; byte_amtp: Poraub8; char_amtp: Poraub8; offset: oraub8;
+      bufp: Pointer; bufl: oraub8; piece: ub1; ctxp: Pointer; cbfp: Pointer;
+      csid: ub2; csfrm: ub1): sword; cdecl;
     OCILobTrim: function(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator; newlen: ub4): sword; cdecl;
+    OCILobTrim2: function(svchp: POCISvcCtx; errhp: POCIError;
+      locp: POCILobLocator; newlen: oraub8): sword; cdecl;
     OCILobWrite: function(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator; var amtp: ub4; offset: ub4; bufp: Pointer; bufl: ub4;
       piece: ub1; ctxp: Pointer; cbfp: Pointer; csid: ub2; csfrm: ub1): sword; cdecl;
+    OCILobWrite2: function(svchp: POCISvcCtx; errhp: POCIError;
+      locp: POCILobLocator; var byte_amtp: oraub8; var char_amtp: oraub8;
+      offset: oraub8; bufp: Pointer; bufl: oraub8; piece: ub1; ctxp: Pointer;
+      cbfp: Pointer; csid: ub2; csfrm: ub1): sword; cdecl;
     OCILobCreateTemporary: function(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator; csid: ub2; csfrm: ub1; lobtype: ub1;
       cache: LongBool; duration: OCIDuration): sword; cdecl;
-    OCILobIsTemporary: function(svchp: POCISvcCtx; errhp: POCIError;
+    OCILobIsEqual: function(envhp: POCIEnv; errhp: POCIError;
+      const x: POCILobLocator; const y: POCILobLocator;
+      is_equal: PLongBool): sword; cdecl;
+    OCILobIsOpen: function(svchp: POCISvcCtx; errhp: POCIError;
+               locp: POCILobLocator; var flag: LongBool): sword; cdecl;
+    OCILobIsTemporary: function(envhp: POCIEnv; errhp: POCIError;
       locp: POCILobLocator; var is_temporary: LongBool): sword; cdecl;
     OCILobFreeTemporary: function(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator): sword; cdecl;
@@ -198,6 +227,7 @@ type
           const locp: POCILobLocator; csid: pub2): sword; cdecl;
     OCILobClose: function(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator): sword; cdecl;
+
     OCIIntervalGetYearMonth: function (hndl: POCIHandle; err: POCIError; yr,mnth: psb4;
                           const int_result: POCIInterval): sword; cdecl;
     OCIIntervalGetDaySecond: function(hndl: POCIHandle; err:  POCIError; dy: psb4;
@@ -263,6 +293,8 @@ type
     function GetDescription: string; override;
 
   end;
+
+  const OCI_UTF16ID = 1000;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
 
@@ -343,7 +375,7 @@ begin
   //AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8);
   AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8, 'AL32UTF8', 4);
   AddCodePage('AL32UTF8', 873, ceUTF8, zCP_UTF8, '', 4);
-  AddCodePage('UTF16', 1000, ceUTF16, zCP_UTF16, '', 2);
+  AddCodePage('UTF16', OCI_UTF16ID, ceUTF16, zCP_UTF16, '', 2);
 //  AddCodePage('AL16UTF16', 2000, ceUTF16, zCP_UTF16BE, '', 4);
 //  AddCodePage('AL16UTF16LE', 2002, ceUTF16, zCP_UTF16, '', 4);
 end;
@@ -399,12 +431,22 @@ begin
     @OCIDescriptorAlloc           := GetAddress('OCIDescriptorAlloc');
     @OCIDescriptorFree            := GetAddress('OCIDescriptorFree');
     {Lob}
+    @OCILobCopy                   := GetAddress('OCILobCopy');
+    @OCILobCopy2                  := GetAddress('OCILobCopy2');
+    @OCILobGetChunkSize           := GetAddress('OCILobGetChunkSize');
+    @OCILobGetLength              := GetAddress('OCILobGetLength');
+    @OCILobGetLength2             := GetAddress('OCILobGetLength2');
+    @OCILobLocatorAssign          := GetAddress('OCILobLocatorAssign');
     @OCILobOpen                   := GetAddress('OCILobOpen');
     @OCILobRead                   := GetAddress('OCILobRead');
+    @OCILobRead2                  := GetAddress('OCILobRead2');
     @OCILobTrim                   := GetAddress('OCILobTrim');
+    @OCILobTrim2                  := GetAddress('OCILobTrim2');
     @OCILobWrite                  := GetAddress('OCILobWrite');
-
+    @OCILobWrite2                 := GetAddress('OCILobWrite2');
     @OCILobCreateTemporary        := GetAddress('OCILobCreateTemporary');
+    @OCILobIsEqual                := GetAddress('OCILobIsEqual');
+    @OCILobIsOpen                 := GetAddress('OCILobIsOpen');
     @OCILobIsTemporary            := GetAddress('OCILobIsTemporary');
     @OCILobFreeTemporary          := GetAddress('OCILobFreeTemporary');
     @OCILobCharSetForm            := GetAddress('OCILobCharSetForm');

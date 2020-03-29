@@ -170,11 +170,11 @@ type
   public
     destructor Destroy; override;
 
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
 
     function AbortOperation: Integer; override;
 
@@ -241,7 +241,7 @@ implementation
 uses
   ZFastCode, ZMessages, ZDbcPostgreSqlStatement, ZDbcUtils,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken, ZDbcProperties,
-  ZPostgreSqlAnalyser, ZEncoding, ZConnProperties, ZDbcMetadata;
+  ZPostgreSqlAnalyser, ZEncoding, ZDbcMetadata;
 
 const
   FON = String('ON');
@@ -603,15 +603,24 @@ procedure TZPostgreSQLConnection.Open;
 
 var
   SCS, Temp: string;
-  LogMessage: RawByteString;
+  LogMessage, aport, apwd, ahost: RawByteString;
 begin
   if not Closed then
     Exit;
 
-
-  { Connect to PostgreSQL database. }
-  LogMessage := BuildConnectStr;
-  Fconn := FPlainDriver.PQconnectdb(Pointer(LogMessage));
+  if Assigned(FPlainDriver.PQsetdbLogin) then begin
+    if Port <> 0
+    then aport := IntToRaw(Port)
+    else aport := '';
+    apwd := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Password);
+    ahost := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(HostName);
+    Fconn := FPlainDriver.PQsetdbLogin(Pointer(ahost), Pointer(aport), nil, nil,
+      Pointer(ConSettings.Database), Pointer(ConSettings.User), Pointer(apwd));
+  end else begin
+    { Connect to PostgreSQL database. }
+    LogMessage := BuildConnectStr;
+    Fconn := FPlainDriver.PQconnectdb(Pointer(LogMessage));
+  end;
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
   try
     if FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD then
@@ -675,38 +684,38 @@ begin
   end;
 end;
 
-procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);
-var SQL: RawByteString;
-begin
-  if Closed then
-    raise EZSQLException.Create(SConnectionIsNotOpened);
-  SQL :='PREPARE TRANSACTION '''+copy(ConSettings^.ConvFuncs.ZStringToRaw(transactionid,
-    ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),1,200)+'''';
-  ExecuteImmediat(SQL, lcTransaction);
-  ExecuteImmediat(cBegin, lcTransaction);
-  AutoCommit := False;
-end;
-
 {**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
 
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
   @param Info a statement parameters.
-  @return a new Statement object
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
 }
-function TZPostgreSQLConnection.CreateRegularStatement(Info: TStrings):
-  IZStatement;
+function TZPostgreSQLConnection.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then
-    Open;
-  Result := TZPostgreSQLStatement.Create(Self, Info);
+     Open;
+  Result := TZPostgreSQLCallableStatement.Create(Self, Name, Info);
 end;
 
 {**
@@ -737,47 +746,46 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZPostgreSQLConnection.CreatePreparedStatement(
-  const SQL: string; Info: TStrings): IZPreparedStatement;
+function TZPostgreSQLConnection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then
      Open;
   Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
 end;
 
+procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);
+var SQL: RawByteString;
+begin
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  SQL :='PREPARE TRANSACTION '''+copy(ConSettings^.ConvFuncs.ZStringToRaw(transactionid,
+    ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),1,200)+'''';
+  ExecuteImmediat(SQL, lcTransaction);
+  ExecuteImmediat(cBegin, lcTransaction);
+  AutoCommit := False;
+end;
 
 {**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures (functions in PostgreSql).
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
+  Creates a <code>Statement</code> object for sending
+  SQL statements to the database.
+  SQL statements without parameters are normally
+  executed using Statement objects. If the same SQL statement
+  is executed many times, it is more efficient to use a
+  <code>PreparedStatement</code> object.
+  <P>
+  Result sets created using the returned <code>Statement</code>
+  object will by default have forward-only type and read-only concurrency.
 
-  <P><B>Note:</B> This method is optimized for handling stored
-  procedure call statements. Some drivers may send the call
-  statement to the database when the method <code>prepareCall</code>
-  is done; others
-  may wait until the <code>CallableStatement</code> object
-  is executed. This has no
-  direct effect on users; however, it does affect which method
-  throws certain SQLExceptions.
-
-  Result sets created using the returned CallableStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
   @param Info a statement parameters.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
+  @return a new Statement object
 }
-function TZPostgreSQLConnection.CreateCallableStatement(
-  const SQL: string; Info: TStrings): IZCallableStatement;
+function TZPostgreSQLConnection.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
 begin
   if IsClosed then
-     Open;
-  Result := TZPostgreSQLCallableStatement.Create(Self, SQL, Info);
+    Open;
+  Result := TZPostgreSQLStatement.Create(Self, Info);
 end;
 
 {**

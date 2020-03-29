@@ -119,7 +119,7 @@ create table string_values
    s_char                         CHAR(255)			null,
    s_varchar                      VARCHAR(255)		null,
    s_nchar                        CHAR(255)			null,
-   s_nvarchar                     VARCHAR(255)		null,
+   s_nvarchar                     NVARCHAR(255)		null,
    s_bit                          long varchar		null,
    s_varbit                       long binary		null,
    primary key (s_id)

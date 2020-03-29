@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
-  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts, ZURL, ZDbcProperties;
+  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts, ZDbcProperties;
 
 type
 
@@ -268,17 +268,23 @@ begin
       Check(Next);
       CheckEquals(TEST_ROW_ID, GetIntByName('p_id'));
       BinStream1 := GetBinaryStreamByName('p_picture');
+      try
+        CheckEquals(BinStream, BinStream1);
+      finally
+        FreeAndNil(BinStream1);
+      end;
       StrStream1 := GetAsciiStreamByName('p_resume');
-      CheckEquals(BinStream, BinStream1);
-      CheckEquals(StrStream, StrStream1);
+      try
+        CheckEquals(StrStream, StrStream1);
+      finally
+        FreeAndNil(StrStream1);
+      end;
       DeleteRow;
       Close;
     end;
   finally
     FreeAndNil(BinStream);
     FreeAndNil(StrStream);
-    FreeAndNil(BinStream1);
-    FreeAndNil(StrStream1);
   end;
 end;
 
@@ -446,10 +452,7 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852 ');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
-  if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
-  else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   Statement.ExecuteUpdate('delete from test815852');
 
@@ -457,10 +460,7 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
-  if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
-  else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   ResultSet.MoveToInsertRow;
   ResultSet.UpdateInt(fld1_index, 123456);
@@ -506,11 +506,7 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780 ');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
-  //Client_Character_set sets column-type!!!!
-  if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
-  else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   Statement.ExecuteUpdate('delete from xyz.test824780');
 
@@ -518,11 +514,7 @@ begin
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
-  //Client_Character_set sets column-type!!!!
-  if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
-  else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   ResultSet.MoveToInsertRow;
   ResultSet.UpdateInt(fld1_index, 123456);
@@ -684,10 +676,7 @@ begin
   with Connection.PrepareStatement('select * from Mantis229') do
   begin
     ResultSet := ExecuteQueryPrepared;
-    if Connection.GetConSettings.CPType = cCP_UTF16 then
-      CheckEquals(Ord(stUnicodeStream), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)))
-    else
-      CheckEquals(Ord(stAsciiStream), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
+    CheckEquals(Ord(stAsciiStream), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
     ResultSet := nil;
     Close;
   end;
@@ -700,10 +689,7 @@ begin
   with Connection.PrepareStatement('select s_char from string_values') do
   begin
     ResultSet := ExecuteQueryPrepared;
-    if Connection.GetConSettings.CPType = cCP_UTF16 then
-      CheckEquals(Ord(stUnicodeString), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)))
-    else
-      CheckEquals(Ord(stString), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
+    CheckEquals(Ord(stString), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
     ResultSet.Next;
     CheckEquals('', ResultSet.GetString(FirstDbcIndex));
     ResultSet.Next;
@@ -745,9 +731,6 @@ begin
   System.SetString(Str2, PWideChar(@Words2[0]), 8);
   {$ENDIF}
   Check(not Connection.IsClosed, 'Connected'); //for FPC which marks tests as failed if not executed
-  if (Connection.GetConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
-    not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
-    Exit;
   CP := connection.GetConSettings.ClientCodePage.CP;
   //eh the russion abrakadabra can no be mapped to other charsets then:
   if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))

@@ -64,9 +64,10 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}
+    {$IFNDEF NO_UNIT_CONTNRS} Contnrs,{$ENDIF} Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZClasses,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
 type
@@ -76,13 +77,16 @@ type
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
 
+  TZADOColumInfo = class(TZColumnInfo)
+  public
+    ADOColumnType: TDataTypeEnum;
+  end;
   { ADO Error Class}
   EZADOConvertError = class(EZSQLException);
 
   {** Implements Ado ResultSet. }
   TZAdoResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
-    AdoColTypeCache: TIntegerDynArray;
     AdoColumnCount: Integer;
     FFirstFetch: Boolean;
     FAdoRecordSet: ZPlainAdo.RecordSet;
@@ -124,7 +128,7 @@ type
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
     {$ENDIF USE_SYNCOMMONS}
@@ -141,6 +145,19 @@ type
 
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+  end;
+
+  TZADOCachedResultSet = Class(TZCachedResultSet)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  end;
+
+  { TZADORowAccessor }
+
+  TZADORowAccessor = class(TZRowAccessor)
+  public
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ADO}
@@ -310,7 +327,7 @@ var
   ppStringsBuffer: PWideChar;
   I,j: Integer;
   FieldSize: Integer;
-  ColumnInfo: TZColumnInfo;
+  ColumnInfo: TZADOColumInfo;
   ColName: string;
   ColType: Integer;
   F: ZPlainAdo.Field20;
@@ -335,7 +352,6 @@ begin
   { Fills the column info }
   ColumnsInfo.Clear;
   AdoColumnCount := FAdoRecordSet.Fields.Count;
-  SetLength(AdoColTypeCache, AdoColumnCount);
 
   if Assigned(prgInfo) then
     if prgInfo.iOrdinal = 0 then
@@ -343,13 +359,13 @@ begin
 
   for I := 0 to AdoColumnCount - 1 do
   begin
-    ColumnInfo := TZColumnInfo.Create;
+    ColumnInfo := TZADOColumInfo.Create;
 
     F := FAdoRecordSet.Fields.Item[I];
     {$IFDEF UNICODE}
     ColName := F.Name;
     {$ELSE}
-    ColName := PUnicodeToString(Pointer(F.Name), Length(F.Name), ConSettings.CTRL_CP);
+    ColName := PUnicodeToRaw(Pointer(F.Name), Length(F.Name), ConSettings.CTRL_CP);
     {$ENDIF}
     ColType := F.Type_;
     ColumnInfo.ColumnLabel := ColName;
@@ -368,7 +384,7 @@ begin
         ColumnInfo.AutoIncrement := Prop.Value
     end;
 
-    ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, F.Precision, F.NumericScale, ConSettings.CPType);
+    ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, F.Precision, F.NumericScale);
     FieldSize := F.DefinedSize;
     if FieldSize < 0 then
       FieldSize := 0;
@@ -394,9 +410,8 @@ begin
       stUnicodeString: ColumnInfo.ColumnType := stUnicodeStream;
     end;
 
+    ColumnInfo.ADOColumnType := ColType;
     ColumnsInfo.Add(ColumnInfo);
-
-    AdoColTypeCache[I] := ColType;
     Inc({%H-}NativeInt(prgInfo), SizeOf(TDBColumnInfo));  //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
   end;
   if Assigned(ppStringsBuffer) then ZAdoMalloc.Free(ppStringsBuffer);
@@ -583,7 +598,7 @@ begin
   else Result := '';
   {$ELSE}
   if ConSettings.AutoEncode then
-    if ConSettings.CPType = cCP_UTF8
+    if ConSettings.CTRL_CP = zCP_UTF8
     then Result := GetUTF8String(ColumnIndex)
     else Result := GetAnsiString(ColumnIndex)
   else begin
@@ -1386,10 +1401,14 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZAdoResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZAdoResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var L: LengthInt;
 label CLOB;
 begin
+  Result := nil;
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
   LastWasNull := IsNull(ColumnIndex); //sets fColValue variant
   if LastWasNull then
     Result := nil
@@ -1410,14 +1429,13 @@ begin
       adLongVarWChar,
       adVarWChar: begin
                   L := ActualSize shr 1;
-CLOB:             Result := TZAbstractClob.CreateWithData(PWidechar(FValueAddr), L, ConSettings);
+CLOB:             Result := TZLocalMemCLob.CreateWithData(PWidechar(FValueAddr), L, ConSettings, FOpenLobStreams);
                 end;
 
       adVarBinary,
       adLongVarBinary,
-      adBinary:   Result := TZAbstractBlob.CreateWithData(TVarData(FColValue).VArray.Data, ActualSize);
-      else
-        Result := nil;
+      adBinary:   Result := TZLocalMemBLob.CreateWithData(TVarData(FColValue).VArray.Data, ActualSize, FOpenLobStreams);
+      else raise CreateCanNotAccessBlobRecordException(ColumnIndex, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType);
     end;
 end;
 
@@ -1490,5 +1508,42 @@ begin
   ColumnInfo.Writable := False;
   ColumnInfo.DefinitelyWritable := False;}
 end;
+{ TZADOCachedResultSet }
+
+class function TZADOCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZADORowAccessor;
+end;
+
+{ TZADORowAccessor }
+
+constructor TZADORowAccessor.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
+  CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
+begin
+  {EH: usually this code is NOT nessecary if we would handle the types as the
+  providers are able to. But in current state we just copy all the incompatibilities
+  from the DataSets into dbc... grumble.}
+  TempColumns := TObjectList.Create(True);
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams available using ADO
+      Current.Precision := -1;
+    end;
+    if Current.ColumnType = stString then begin
+      Current.ColumnType := stUnicodeString; // no raw chars in ADO
+      Current.ColumnCodePage := zCP_UTF16;
+    end else if Current.ColumnType = stBytes then
+      Current.ColumnCodePage := zCP_Binary;
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
+  TempColumns.Free;
+end;
+
 {$ENDIF ZEOS_DISABLE_ADO}
 end.

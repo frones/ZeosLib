@@ -84,10 +84,11 @@ type
   published
     procedure Mantis248_TestNonASCIICharSelect;
   end;
+
 implementation
 
 uses
-  Variants;
+  Variants, DB, ZDatasetUtils;
 
 { ZTestCompSQLiteBugReport }
 
@@ -132,7 +133,7 @@ begin
     Query.SQL.Text := 'select p_name ||'',''|| p_name from people';
     Query.Open;
     CheckEquals(1, Query.FieldCount);
-    CheckStringFieldType(Query.Fields[0].DataType, Query.Connection.DbcConnection.GetConSettings);
+    CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
     CheckEquals('Vasia Pupkin,Vasia Pupkin', Query.Fields[0].AsString, 'The SQLite concat');
     Query.Next;
     CheckEquals('Andy Karto,Andy Karto', Query.Fields[0].AsString, 'The SQLite concat');
@@ -182,21 +183,21 @@ var
   procedure CheckColumnValues(const TestString: ZWideString);
   begin
     {$IFDEF UNICODE}
-    CheckEquals(TestString, Query.FieldByName('s_char').AsString, ConSettings);
-    CheckEquals(TestString, Query.FieldByName('s_varchar').AsString, ConSettings);
-    CheckEquals(TestString, Query.FieldByName('s_nchar').AsString, ConSettings);
-    CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString, ConSettings);
+    CheckEquals(TestString, Query.FieldByName('s_char').AsString);
+    CheckEquals(TestString, Query.FieldByName('s_varchar').AsString);
+    CheckEquals(TestString, Query.FieldByName('s_nchar').AsString);
+    CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString);
     {$ELSE}
-    If ConSettings.CPType = cCP_UTF16
+    If Connection.ControlsCodePage = cCP_UTF16
     then CheckEquals(TestString, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_char')
     else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_char').AsString, 's_char');
-    If ConSettings.CPType = cCP_UTF16
+    If Connection.ControlsCodePage = cCP_UTF16
     then CheckEquals(TestString, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_varchar')
     else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_varchar').AsString, 's_varchar');
-    If ConSettings.CPType = cCP_UTF16
+    If Connection.ControlsCodePage = cCP_UTF16
     then CheckEquals(TestString, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nchar')
     else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_nchar').AsString, 's_nchar');
-    If ConSettings.CPType = cCP_UTF16
+    If Connection.ControlsCodePage = cCP_UTF16
     then CheckEquals(TestString, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nvarchar')
     else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_nvarchar').AsString, 's_nvarchar');
     {$ENDIF}

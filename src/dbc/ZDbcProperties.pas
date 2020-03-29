@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 { Constant property names used by connections, datasets   }
 { and transactions. Common dataset and driver-specific    }
-{ properties                                              }
+{ properties  written by Fr0sT                            }
 {                                                         }
 {*********************************************************}
 
@@ -55,6 +55,65 @@ interface
 
 {$I ZDbc.inc}
 
+
+uses ZDbcIntfs;
+
+//EH @ Fr0sT and aehimself
+//just a proposal which is not related to the docs you guys are planning
+//it would be nice to have a PropertyEditor possibility for the DataSet guys
+//we could define each prop to a rercord. in initialization part of the
+//PropertyEditor unit we could load them into "something"
+//much smarter would be to define all records into an static record of TZProperty
+//like TZPropertyArray = Array[0..x] of TZProperty = ( ...... add all of them )
+//that way a PropertyEditor could access the array directly and we would never
+//forget to add that prop to the Editor unit.. would the docs work for array elements too?
+//It's just an Proposal
+Type
+  TZPropertyType = (
+    ptEmpty,
+    ptBool,
+    ptInteger,
+    ptString,
+    ptBoolOrString);
+const
+  cProptertyTypeDesc: Array[TZPropertyType] of String = (
+    'no value expected',
+    'boolean expresson like ''Y''/''YES''/''T''/''TRUE''/''ON''/<>0 in any case to enable, any other',
+    'any ordinal number',
+    'any string value',
+    'either BOOL expression or string value');
+type
+  PZProperty = ^TZProperty;
+  TZProperty = Record
+    _Type: TZPropertyType;
+    Name: String;
+    Porpose: String;
+  End;
+
+  TZServerProviders = set of TZServerProvider;
+  TZConnProperty = record
+    Prop: TZProperty;
+    Providers: TZServerProviders;
+  end;
+
+const
+  ProposalConst: TZProperty = (
+    _Type: ptEmpty;
+    //add Doc here ?
+    Name: 'proposal';
+    Porpose: 'do what you want');
+
+const ZPropertiesArray: array[0..1] of TZProperty = (
+  (
+    _Type: ptEmpty;
+    Name: 'proposal';
+    Porpose: 'do what you want you have free hand, open your mind (% (:EH'),
+  (
+    _Type: ptBoolOrString;
+    Name: 'Idea';
+    Porpose: 'just an idea for the gui guys..... hope it helps, (:EH')
+  );
+
 { WARNING! Some of the parameter values are used directly in DBC API, so they
   must not be changed. }
 
@@ -64,7 +123,62 @@ interface
     INT     - number
     STR     - string }
 
-const
+  { Parameters common for all DBC's }
+
+  // Type: STR
+  // Same as User property
+  ConnProps_UID = 'UID';
+  ConnProps_Username = 'username';
+  // Type: STR
+  // Same as Password property
+  ConnProps_PWD = 'PWD';
+  ConnProps_Password = 'password';
+  // Type: STR
+  // Same as LibraryLocation property, path to client lib
+  ConnProps_LibLocation = 'LibLocation';
+  // Type: STR, like CP_UTF8
+  // Codepage to interact with driver
+  ConnProps_CodePage = 'codepage';
+  // Type: BOOLEAN
+  // Same as AutoEncodeStrings property
+  ConnProps_AutoEncodeStrings = 'AutoEncodeStrings';
+  // Type: CP_UTF16 | CP_UTF8 | GET_ACP
+  // Same as ControlsCodePage property
+  ConnProps_ControlsCP = 'controls_cp';
+  // Type: INT
+  // The login timeout to use in seconds.
+  ConnProps_Timeout = 'timeout';
+  // Type: STR
+  // Format to display date, like YYYY-MM-DD
+  ConnProps_DateDisplayFormat = 'DateDisplayFormat';
+  // Type: STR
+  // Format to read date
+  ConnProps_DateReadFormat = 'DateReadFormat';
+  // Type: STR
+  // Format to write date
+  ConnProps_DateWriteFormat = 'DateWriteFormat';
+  // Type: STR, like HH:MM:SS
+  // Format to display time
+  ConnProps_TimeDisplayFormat = 'TimeDisplayFormat';
+  // Type: STR
+  // Format to read time
+  ConnProps_TimeReadFormat = 'TimeReadFormat';
+  // Type: STR
+  // Format to write time
+  ConnProps_TimeWriteFormat = 'TimeWriteFormat';
+  // Type: STR
+  // Format to display date & time
+  ConnProps_DateTimeDisplayFormat = 'DatetimeDisplayFormat';
+  // Type: STR
+  // Format to read date & time
+  ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
+  // Type: STR
+  // Format to write date & time
+  ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
+  // Type: STR
+  // Sets TZAbstractDatabaseInfo.IdentifierQuotes property, refer to Zeos manual for details
+  ConnProps_IdentifierQuotes = 'identifier_quotes';
+
   { Parameters common for all DBC's }
 
   { Following parameters are for datasets and statements but could be set for
@@ -210,6 +324,7 @@ const
 {$ENDIF}
 
 {$IFDEF ENABLE_MYSQL}
+
   // Type: BOOLEAN
   // Use SSL
   ConnProps_MYSQLSSL = 'MYSQL_SSL';
@@ -225,6 +340,12 @@ const
   // Type: BOOLEAN
   // Value used to identify BIT(1) as Boolean instead of ENUM('Y','N')
   ConnProps_MySQL_FieldType_Bit_1_IsBoolean = 'MySQL_FieldType_Bit_1_IsBoolean';
+  // Type: STR
+  // Refer to MySql manual for details
+  ConnProps_Datadir = '--datadir';
+  // Type: STR
+  // Path to library
+  ConnProps_Library = 'Library';
 
   { In addition, any server parameter prefixed by value of
     ZPlainMySqlConstants.SERVER_ARGUMENTS_KEY_PREFIX constant and all members from
@@ -459,12 +580,6 @@ const
   ConnProps_ConnectionTimeout = 'ConnectionTimeout';
   ConnProps_MaxConnections = 'MaxConnections';
   ConnProps_Wait = 'Wait';
-{$ENDIF}
-
-{$IFDEF ENABLE_ADO}
-  // Type: BOOLEAN
-  // ?
-  DSProps_UseOLEUpdateParams = 'use_ole_update_params';
 {$ENDIF}
 
 implementation

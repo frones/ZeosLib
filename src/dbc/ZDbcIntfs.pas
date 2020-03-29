@@ -61,10 +61,10 @@ uses
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS}
   {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}DB, {$ENDIF}
-  FmtBcd, Types, Classes, SysUtils,
+  FmtBcd, Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
-  ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
-  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
+  ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema, ZSysUtils,
+  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
 
 const
   { generic constant for first column/parameter index }
@@ -114,6 +114,92 @@ type
   {** Reqquested operation is not (yet) supported by Zeos }
   EZUnsupportedException = class(EZSQLException);
 
+  {** hold some connection parameters }
+  PZConSettings = ^TZConSettings;
+  TZConSettings = record
+    AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
+    CTRL_CP: Word;              //Target CP of raw string conversion (CP_ACP/CP_UPF8/DefaultSytemCodePage)
+    ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
+    ClientCodePage: PZCodePage; //The codepage informations of the current characterset
+    DisplayFormatSettings: TZFormatSettings;
+    ReadFormatSettings: TZFormatSettings;
+    WriteFormatSettings: TZFormatSettings;
+    DataBaseSettings: Pointer;
+    Protocol, Database, User: RawByteString;
+  end;
+
+  {** a base class for most dbc-layer objects }
+  TZCodePagedObject = Class(TInterfacedObject)
+  private
+    FConSettings: PZConSettings;
+  protected
+    procedure SetConSettingsFromInfo(Info: TStrings);
+    property ConSettings: PZConSettings read FConSettings write FConSettings;
+  public
+    function GetConSettings: PZConSettings;
+  end;
+
+type
+  // List of URL properties that could operate with URL-escaped strings
+  TZURLStringList = Class(TStringList)
+  protected
+    function GetURLText: String;
+    procedure SetURLText(const Value: string);
+  public
+    property URLText: String read GetURLText write SetURLText;
+  end;
+
+  TZURL = class
+  private
+    FPrefix: string;
+    FProtocol: string;
+    FHostName: string;
+    FPort: Integer;
+    FDatabase: string;
+    FUserName: string;
+    FPassword: string;
+    FLibLocation: String;
+    FProperties: TZURLStringList;
+    FOnPropertiesChange: TNotifyEvent;
+    procedure SetPrefix(const Value: string);
+    procedure SetProtocol(const Value: string);
+    procedure SetHostName(const Value: string);
+    procedure SetConnPort(const Value: Integer);
+    function GetDatabase: string;
+    procedure SetDatabase(const Value: string);
+    function GetUserName: string;
+    procedure SetUserName(const Value: string);
+    function GetPassword: string;
+    procedure SetPassword(const Value: string);
+    function GetLibLocation: String;
+    procedure SetLibLocation(const Value: String);
+    function GetURL: string;
+    procedure SetURL(const Value: string);
+    procedure DoOnPropertiesChange(Sender: TObject);
+    procedure AddValues(Values: TStrings);
+  public
+    constructor Create; overload;
+    constructor Create(const AURL: String); overload;
+    constructor Create(const AURL: String; Info: TStrings); overload;
+    constructor Create(const AURL: TZURL); overload;
+    constructor Create(Const AURL, AHostName: string; const APort: Integer;
+      const ADatabase, AUser, APassword: string; Info: TStrings); overload;
+
+    destructor Destroy; override;
+    property Prefix: string read FPrefix write SetPrefix;
+    property Protocol: string read FProtocol write SetProtocol;
+    property HostName: string read FHostName write SetHostName;
+    property Port: Integer read FPort write SetConnPort;
+    property Database: string read GetDatabase write SetDatabase;
+    property UserName: string read GetUserName write SetUserName;
+    property Password: string read GetPassword write SetPassword;
+    property LibLocation: string read GetLibLocation write SetLibLocation;
+    property Properties: TZURLStringList read FProperties;
+    property URL: string read GetURL write SetURL;
+
+    property OnPropertiesChange: TNotifyEvent read FOnPropertiesChange write FOnPropertiesChange;
+  end;
+
   // Data types
 type
   /// <summary>
@@ -127,8 +213,14 @@ type
     stDate, stTime, stTimestamp,
     stGUID,
     //now varying size types in equal order
-    stString, stUnicodeString, stBytes,
-    stAsciiStream, stUnicodeStream, stBinaryStream,
+    stString, {should be used for raw strings only}
+    stUnicodeString{should be used for national strings only}, stBytes,
+    //EH: these 3 enums below should be used for real streamed data only (FB/PG(OIDLobs)/MySQL/ODBC/OleDB/Oracle)
+    //otherwise stString...stBytes are sufficent (SQLite, Postgres Varchar/Text/byteea f.e.)
+    //our RowAccassor eats all long data since i added the ptr ref/deref technic years ago
+    //it's not worth it handling all obselete TDataSet incompatibilities on Dbc layer
+    //that's a problem of component layer only
+    stAsciiStream{should be used for raw streams only}, stUnicodeStream{should be used for unicode streams only}, stBinaryStream,
     //finally the object types
     stArray, stDataSet);
 
@@ -227,6 +319,11 @@ type
 
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
   TOnConnect = procedure of Object;
+
+  /// <summary>
+  ///  Defines a LOB stream mode.
+  /// </summary>
+  TZLobStreamMode = (lsmRead, lsmWrite, lsmReadWrite);
 
 // Interfaces
 type
@@ -419,9 +516,7 @@ type
     ['{2157710E-FBD8-417C-8541-753B585332E2}']
 
     function GetSupportedProtocols: TStringDynArray;
-    function GetSupportedClientCodePages(const Url: TZURL;
-      Const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} SupportedsOnly: Boolean;
-      CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
+    function GetClientCodePages(const Url: TZURL): TStringDynArray;
     function Connect(const Url: string; Info: TStrings): IZConnection; overload;
     function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;
@@ -456,10 +551,16 @@ type
     function GetConSettings: PZConSettings;
   end;
 
+  {** Implements a variant manager with connection related convertion rules. }
+  IZClientVariantManager = Interface(IZVariantManager)
+    ['{73A1A2C7-7C38-4620-B7FE-2426BF839BE5}']
+    function UseWComparsions: Boolean;
+  End;
+
   /// <summary>
   ///   Database Connection interface.
   /// </summary>
-  IZConnection = interface(IZInterface)
+  IZConnection = interface(IImmediatelyReleasable)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
   //  procedure SetOnAfterOpen(Handler: TOnConnect);
@@ -543,21 +644,20 @@ type
     {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: ZWideString); overload;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: UnicodeString); overload;
 
-    function GetEscapeString(const Value: ZWideString): ZWideString; overload;
+    function GetEscapeString(const Value: UnicodeString): UnicodeString; overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: ZWideString); overload;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: UnicodeString); overload;
     procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; out Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload;
+    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: UnicodeString); overload;
 
     function GetClientCodePageInformations: PZCodePage;
     function GetAutoEncodeStrings: Boolean;
     procedure SetAutoEncodeStrings(const Value: Boolean);
     property AutoEncodeStrings: Boolean read GetAutoEncodeStrings write SetAutoEncodeStrings;
     function GetEncoding: TZCharEncoding;
-    function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
     function GetURL: String;
     function GetServerProvider: TZServerProvider;
@@ -782,7 +882,7 @@ type
   /// <summary>
   ///  Generic SQL statement interface.
   /// </summary>
-  IZStatement = interface(IZInterface)
+  IZStatement = interface(IImmediatelyReleasable)
     ['{22CEFA7E-6A6D-48EC-BB9B-EE66056E90F1}']
 
     /// <summary>
@@ -795,7 +895,7 @@ type
     ///  a <c>ResultSet</c> object that contains the data produced by the
     ///  given query; never <c>nil</c>
     /// </returns>
-    function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload;
+    function ExecuteQuery(const SQL: UnicodeString): IZResultSet; overload;
     /// <summary>
     ///  Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or
     ///  <c>DELETE</c> statement. In addition,
@@ -810,7 +910,7 @@ type
     ///  either the row count for <c>INSERT</c>, <c>UPDATE</c>
     ///  or <c>DELETE</c> statements, or 0 for SQL statements that return nothing
     /// </returns>
-    function ExecuteUpdate(const SQL: ZWideString): Integer; overload;
+    function ExecuteUpdate(const SQL: UnicodeString): Integer; overload;
     /// <summary>
     ///  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
     ///  <code>DELETE</code> statement. In addition,
@@ -825,7 +925,7 @@ type
     ///  either the row count for <code>INSERT</code>, <code>UPDATE</code>
     ///  or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
     /// </returns>
-    function Execute(const SQL: ZWideString): Boolean; overload;
+    function Execute(const SQL: UnicodeString): Boolean; overload;
     /// <summary>
     ///  Executes an SQL statement that returns a single <c>ResultSet</c> object.
     /// </summary>
@@ -1174,6 +1274,7 @@ type
     ///  that produced this <c>Statement</c> object.
     /// </summary>
     /// <returns>
+    /// <see cref="IZConnection"></see>
     ///  the connection that produced this statement
     /// </returns>
     function GetConnection: IZConnection;
@@ -1245,8 +1346,9 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
-    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString); //AVZ
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); overload;
+    procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); overload;
     procedure SetGuid(ParameterIndex: Integer; const Value: TGUID);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
@@ -1308,7 +1410,7 @@ type
     function GetUTF8String(ParameterIndex: Integer): UTF8String;
     {$ENDIF}
     function GetRawByteString(ParameterIndex: Integer): RawByteString;
-    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
+    function GetUnicodeString(ParameterIndex: Integer): UnicodeString;
 
     function GetBLob(ParameterIndex: Integer): IZBlob;
     //function GetCLob(ParameterIndex: Integer): IZClob;
@@ -1336,7 +1438,7 @@ type
   end;
 
   /// <summary>
-  ///   EH: sort helper procs.
+  ///   Defines a compare method
   /// </summary>
   TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
   TCompareFuncs = Array of TCompareFunc;
@@ -1356,7 +1458,7 @@ type
   /// <summary>
   ///   Rows returned by SQL query.
   /// </summary>
-  IZResultSet = interface(IZInterface)
+  IZResultSet = interface(IImmediatelyReleasable)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']
 
     function Next: Boolean;
@@ -1379,7 +1481,7 @@ type
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
+    function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
@@ -1404,9 +1506,11 @@ type
     function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
     function GetAsciiStream(ColumnIndex: Integer): TStream;
+    function GetAnsiStream(ColumnIndex: Integer): TStream;
+    function GetUTF8Stream(ColumnIndex: Integer): TStream;
     function GetUnicodeStream(ColumnIndex: Integer): TStream;
     function GetBinaryStream(ColumnIndex: Integer): TStream;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     function GetDataSet(ColumnIndex: Integer): IZDataSet;
     function GetValue(ColumnIndex: Integer): TZVariant;
     function GetDefaultExpression(ColumnIndex: Integer): string;
@@ -1425,7 +1529,7 @@ type
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     {$ENDIF}
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
-    function GetUnicodeStringByName(const ColumnName: string): ZWideString;
+    function GetUnicodeStringByName(const ColumnName: string): UnicodeString;
     function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
@@ -1449,9 +1553,11 @@ type
     function GetTimestampByName(const ColumnName: string): TDateTime; overload;
     procedure GetTimeStampByName(const ColumnName: string; var Result: TZTimeStamp); overload;
     function GetAsciiStreamByName(const ColumnName: string): TStream;
+    function GetAnsiStreamByName(const ColumnName: string): TStream;
+    function GetUTF8StreamByName(const ColumnName: string): TStream;
     function GetUnicodeStreamByName(const ColumnName: string): TStream;
     function GetBinaryStreamByName(const ColumnName: string): TStream;
-    function GetBlobByName(const ColumnName: string): IZBlob;
+    function GetBlobByName(const ColumnName: string; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     function GetDataSetByName(const ColumnName: String): IZDataSet;
     function GetValueByName(const ColumnName: string): TZVariant;
 
@@ -1479,7 +1585,53 @@ type
     function First: Boolean;
     function Last: Boolean;
     function GetRow: NativeInt;
+
+    /// <summary>
+    ///  Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object.
+    ///  If the row number is positive, the cursor moves to
+    ///  the given row number with respect to the
+    ///  beginning of the result set.  The first row is row 1, the second
+    ///  is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to
+    ///  the end of the result set.  For example, calling the method
+    ///  <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on.
+    ///  An attempt to position the cursor beyond the first/last row in
+    ///  the result set leaves the cursor before the first row or after
+    ///  the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.
+    /// </summary>
+    /// <param name="Row"><see cref="System.Integer"/>
+    /// </param>
+    /// <returns>
+    /// <see cref="System.Boolean"/>
+    /// <c>true</c> if the cursor is on the result set;<c>false</c> otherwise
+    /// </returns>
     function MoveAbsolute(Row: Integer): Boolean;
+    /// <summary>
+    ///  Moves the cursor a relative number of rows, either positive or negative.
+    ///  Attempting to move beyond the first/last row in the
+    ///  result set positions the cursor before/after the
+    ///  the first/last row. Calling <c>relative(0)</c> is valid, but does
+    ///  not change the cursor position.
+    ///  Note: Calling the method <c>relative(1)</c>
+    ///  is different from calling the method <c>next()</c>
+    ///  because is makes sense to call <c>next()</c> when there
+    ///  is no current row,
+    ///  for example, when the cursor is positioned before the first row
+    ///  or after the last row of the result set.
+    /// </summary>
+    /// <param name="Row"><see cref="System.Integer"/>
+    /// </param>
+    /// <returns>
+    /// <see cref="System.Boolean"/>
+    /// <c>true</c> if the cursor is on a row;<c>false</c> otherwise
+    /// </returns>
     function MoveRelative(Rows: Integer): Boolean;
     function Previous: Boolean;
 
@@ -1532,7 +1684,7 @@ type
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
     {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: UnicodeString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); overload;
     procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); overload;
@@ -1577,7 +1729,7 @@ type
     procedure UpdateUTF8StringByName(const ColumnName: string; const Value: UTF8String);
     {$ENDIF}
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
-    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
+    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: UnicodeString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TBytes);
     procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime); overload;
     procedure UpdateDateByName(const ColumnName: string; const Value: TZDate); overload;
@@ -1609,7 +1761,6 @@ type
       const CompareKinds: TComparisonKindArray): TCompareFuncs;
 
     function GetStatement: IZStatement;
-    function GetConSettings: PZConsettings;
 
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload;
@@ -1661,42 +1812,40 @@ type
     function HasDefaultValue(ColumnIndex: Integer): Boolean;
   end;
 
+  TOnLobUpdate = procedure(Field: NativeInt) of object;
   IZLob = interface(IZInterface)
     ['{DCF816A4-F21C-4FBB-837B-A12DCF886A6F}']
     function IsEmpty: Boolean;
     function IsUpdated: Boolean;
-    function IsClob: Boolean;
-    function Length: Integer;
+    procedure SetUpdated(Value: Boolean);
+    function Length: Integer; //deprecated;
+    procedure Open(LobStreamMode: TZLobStreamMode);
     procedure Clear;
-    function GetBufferAddress: PPointer;
-    function GetLengthAddress: PInteger;
-    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
-    {$ENDIF}
+    procedure SetOnUpdateHandler(Handler: TOnLobUpdate; AField: NativeInt);  //this is for the datasets only
   end;
   /// <summary>
   ///   External or internal blob wrapper object.
   /// </summary>
+
+  { IZBlob }
+
   IZBlob = interface(IZLob)
     ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
-
+    function IsClob: Boolean;
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
     function GetBytes: TBytes;
     procedure SetBytes(const Value: TBytes);
-    function GetStream: TStream;
+    function GetStream: TStream; overload;
     procedure SetStream(const Value: TStream); overload;
-    function GetBuffer: Pointer;
-    procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
-    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal); overload;
-    {$ENDIF}
+    function GetBuffer(var LocalBuffer: RawByteString; Out Len: NativeUInt): Pointer;
+    procedure SetBuffer(Buffer: Pointer; Length: NativeUInt);
 
-    function Clone(Empty: Boolean = False): IZBlob;
+    function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     {Clob operations}
-    function GetRawByteString: RawByteString;
+    function GetRawByteString(CodePage: Word): RawByteString;
     procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word);
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString: AnsiString;
@@ -1706,30 +1855,30 @@ type
     function GetUTF8String: UTF8String;
     procedure SetUTF8String(Const Value: UTF8String);
     {$ENDIF}
-    procedure SetUnicodeString(const Value: ZWideString);
-    function GetUnicodeString: ZWideString;
-    procedure SetStream(const Value: TStream; const CodePage: Word); overload;
+    procedure SetUnicodeString(const Value: UnicodeString);
+    function GetUnicodeString: UnicodeString;
+    //the clob stream implementation
+    //procedure SetStream(const Value: TStream; CodePage: Word); overload;
     function GetRawByteStream: TStream;
     function GetAnsiStream: TStream;
     function GetUTF8Stream: TStream;
     function GetUnicodeStream: TStream;
-    function GetPAnsiChar(const CodePage: Word): PAnsiChar;
-    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
-    function GetPWideChar: PWideChar;
-    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
+    //the clob buff implementation
+    function GetPAnsiChar(CodePage: Word; var LocalBuffer: RawByteString; out Len: NativeUInt): PAnsiChar;
+    procedure SetPAnsiChar(Buffer: PAnsiChar; CodePage: Word; Len: NativeUInt);
+    function GetPWideChar(var LocalBuffer: UnicodeString; out Len: NativeUint): PWideChar;
+    procedure SetPWideChar(Buffer: PWideChar; Len: NativeUInt);
+    procedure SetCodePageTo(Value: Word);
   end;
 
   IZClob = interface(IZBlob)
     ['{2E0ED2FE-5F9F-4752-ADCB-EFE92E39FF94}']
+    function GetStream(CodePage: Word): TStream; overload;
+    procedure SetStream(const Value: TStream; CodePage: Word); overload;
   end;
 
   PIZLob = ^IZBlob;
   IZLobDynArray = array of IZBLob;
-
-  IZUnCachedLob = interface(IZBlob)
-    ['{194F1179-9FFC-4032-B983-5EB3DD2E8B16}']
-    procedure FlushBuffer;
-  end;
 
   /// <summary>
   ///   Database notification interface.
@@ -1780,10 +1929,9 @@ var
   /// </summary>
   DriverManager: IZDriverManager;
   GlobalCriticalSection: TCriticalSection;
-
 implementation
 
-uses ZMessages, ZConnProperties;
+uses ZMessages, ZEncoding, ZDbcProperties, ZFastCode;
 
 type
 
@@ -2193,6 +2341,361 @@ begin
   FreeAndNil(FSpecificData);
   inherited;
 end;
+
+{ TZCodePagedObject }
+
+function TZCodePagedObject.GetConSettings: PZConSettings;
+begin
+  Result := FConSettings;
+end;
+
+procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
+var S: String;
+begin
+  if Assigned(Info) and Assigned(FConSettings) then begin
+    {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
+    S := Info.Values[ConnProps_AutoEncodeStrings];
+    ConSettings.AutoEncode := StrToBoolEx(S); //compatibitity Option for existing Applications;
+    {$ELSE}
+    ConSettings.AutoEncode := False;
+    {$IFEND}
+    S := Info.Values[ConnProps_ControlsCP];
+    S := UpperCase(S);
+    {$IF defined(Delphi) and defined(UNICODE) and defined(MSWINDOWS)}
+    ConSettings.CTRL_CP := DefaultSystemCodePage;
+    {$ELSE}
+      if Info.Values[ConnProps_ControlsCP] = 'GET_ACP'
+      then ConSettings.CTRL_CP := ZOSCodePage
+      else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8'
+      then ConSettings.CTRL_CP := zCP_UTF8
+      {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+      else ConSettings.CTRL_CP := DefaultSystemCodePage;
+      {$ELSE}
+      else ConSettings.CTRL_CP := ZOSCodePage;
+      {$ENDIF}
+    {$IFEND}
+  end;
+end;
+
+// escape the ';' char to #9 and LineEnding to ';'
+function Escape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result := ReplaceChar(';', #9, S);
+  Result := StringReplace(Result, LineEnding, ';', [rfReplaceAll]);
+end;
+
+// unescape the ';' to LineEnding and #9 char to ';'
+function UnEscape(const S: string): string; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result := StringReplace(S, ';', LineEnding, [rfReplaceAll]);
+  Result := ReplaceChar(#9, ';', Result);
+end;
+
+{TZURLStringList}
+
+function TZURLStringList.GetURLText: String;
+var P: PChar absolute Result;
+begin
+  Result := Escape(Text);
+  if (P+Length(Result)-1)^ = ';' then
+    SetLength(Result, Length(Result)-1);
+end;
+
+procedure TZURLStringList.SetURLText(const Value: string);
+begin
+  Text := UnEscape(Value);
+end;
+
+{ TZURL }
+
+constructor TZURL.Create;
+begin
+  inherited;
+
+  FPrefix := 'zdbc';
+  FProperties := TZURLStringList.Create;
+  FProperties.CaseSensitive := False;
+  FProperties.NameValueSeparator := '=';
+  FProperties.OnChange := DoOnPropertiesChange;
+end;
+
+constructor TZURL.Create(const AURL: String);
+begin
+  Create;
+  Self.URL := AURL;
+end;
+
+// Values from Info overwrite those from URL
+constructor TZURL.Create(const AURL: String; Info: TStrings);
+begin
+  Create(AURL);
+  if Assigned(Info) then
+    AddValues(Info);
+end;
+
+constructor TZURL.Create(const AURL: TZURL);
+begin
+  Create(AURL.URL);
+end;
+
+// Values from parameters overwrite those from URL and values from Info overwrite both
+// TODO: this method is odd... properties of URL, except protocol, get overridden
+// with parameters. Likely AProtocol should go here instead of AURL
+constructor TZURL.Create(Const AURL, AHostName: string; const APort: Integer;
+  const ADatabase, AUser, APassword: string; Info: TStrings);
+begin
+  Create(AURL);
+  Self.HostName := AHostName;
+  Self.Port := APort;
+  Self.Database := ADataBase;
+  Self.UserName := AUser;
+  Self.Password := APassword;
+  if Assigned(Info) then
+    AddValues(Info);
+end;
+
+destructor TZURL.Destroy;
+begin
+  FProperties.Free;
+
+  inherited;
+end;
+
+procedure TZURL.SetPrefix(const Value: string);
+begin
+  FPrefix := Value;
+end;
+
+procedure TZURL.SetProtocol(const Value: string);
+begin
+  FProtocol := Value;
+end;
+
+procedure TZURL.SetHostName(const Value: string);
+begin
+  FHostName := Escape(Value);
+end;
+
+procedure TZURL.SetConnPort(const Value: Integer);
+begin
+  FPort := Value;
+end;
+
+function TZURL.GetDatabase: string;
+begin
+  Result := UnEscape(FDatabase);
+end;
+
+procedure TZURL.SetDatabase(const Value: string);
+begin
+  FDatabase := Escape(Value);
+end;
+
+function TZURL.GetUserName: string;
+begin
+  Result := UnEscape(FUserName);
+end;
+
+procedure TZURL.SetUserName(const Value: string);
+begin
+  FUserName := Escape(Value);
+end;
+
+function TZURL.GetPassword: string;
+begin
+  Result := UnEscape(FPassword);
+end;
+
+procedure TZURL.SetPassword(const Value: string);
+begin
+  FPassword := Escape(Value);
+end;
+
+function TZURL.GetLibLocation: String;
+begin
+  Result := UnEscape(FLibLocation);
+end;
+
+procedure TZURL.SetLibLocation(const Value: String);
+begin
+  FLibLocation := Escape(Value);
+end;
+
+function TZURL.GetURL: string;
+var
+  Params: string;
+begin
+  // Prefix, Protocol and always set the doubleslash to avoid unix '/' path issues if host is empty
+  Result := Prefix + ':' + Protocol + ':' + '//';
+
+  // HostName/Port
+  if HostName <> '' then
+  begin
+    Result := Result + HostName;
+    if Port <> 0 then
+      Result := Result + ':' + ZFastCode.IntToStr(Port);
+  end;
+
+  // Database
+  if Database <> '' then
+    Result := Result + '/' + FDatabase;
+
+  // Join the params
+
+  Params := '';
+
+  if FUserName <> '' then
+    AppendSepString(Params, 'username=' + FUserName, ';');
+  if FPassword <> '' then
+    AppendSepString(Params, 'password=' + FPassword, ';');
+  if Properties.Count > 0 then
+    AppendSepString(Params, Properties.URLText, ';'); //Adds the escaped string
+  if FLibLocation <> '' then
+    AppendSepString(Params, 'LibLocation='+ FLibLocation, ';');
+
+  // Construct the final string
+
+  if Params <> '' then
+    Result := Result + '?' + Params;
+end;
+
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5091 off : Local variable "AValue" of managed type does not seem to be initialized}
+{$ENDIF}
+procedure TZURL.SetURL(const Value: string);
+var
+  APrefix: string;
+  AProtocol: string;
+  AHostName: string;
+  APort: string;
+  ADatabase: string;
+  AProperties: string;
+  AValue: string;
+  I: Integer;
+begin
+  APrefix := '';
+  AProtocol := '';
+  AHostName := '';
+  APort := '';
+  ADatabase := '';
+  AProperties := '';
+
+  // Strip out the parameters
+  BreakString(Value, '?', AValue, AProperties);
+
+  // APrefix
+  I := ZFastCode.Pos(':', AValue);
+  if I = 0 then
+    raise Exception.Create('TZURL.SetURL - The prefix is missing');
+  BreakString(AValue, ':', APrefix, AValue);
+
+  // AProtocol
+  I := ZFastCode.Pos(':', AValue);
+  if I = 0 then
+    raise Exception.Create('TZURL.SetURL - The protocol is missing');
+  BreakString(AValue, ':', AProtocol, AValue);
+
+  if StartsWith(AValue, '//') then
+  begin
+    Delete(AValue, 1, Length('//'));
+    // Strip "hostname[:port]" out of "/database"
+    BreakString(AValue, '/', AValue, ADatabase);
+    // AHostName, APort
+    BreakString(AValue, ':', AHostName, APort);
+  end
+  else
+  begin
+    // Likely a database delimited by / so remove the /
+    if StartsWith(AValue, '/') then
+      Delete(AValue, 1, Length('/'));
+    // ADatabase
+    ADatabase := AValue;
+  end;
+
+  FPrefix := APrefix;
+  FProtocol := AProtocol;
+  FHostName := AHostName;
+  FPort := StrToIntDef(APort, 0);
+  FDatabase := ADatabase;
+
+  // Clear fields that MUST be assigned from properties even if empty.
+  // LibLocation should remain uncleared
+  FUserName := '';
+  FPassword := '';
+  FProperties.URLText := AProperties; // will launch DoOnPropertiesChange
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZURL.DoOnPropertiesChange(Sender: TObject);
+
+  // Return a value named ValueName from FProperties and delete the item
+  function ExtractValueFromProperties(const ValueName: string): string;
+  var I: Integer;
+  begin
+    Result := '';
+    I := FProperties.IndexOfName(ValueName);
+    if I = -1 then Exit;
+    Result := FProperties.ValueFromIndex[I];
+    FProperties.Delete(I);
+  end;
+
+var
+  S: string;
+begin
+  FProperties.OnChange := nil; // prevent re-entering
+
+  S := ExtractValueFromProperties(ConnProps_UID);
+  if S <> '' then
+    UserName := S;
+
+  S := ExtractValueFromProperties(ConnProps_Username);
+  if S <> '' then
+    UserName := S;
+
+  S := ExtractValueFromProperties(ConnProps_PWD);
+  if S <> '' then
+    Password := S;
+
+  S := ExtractValueFromProperties(ConnProps_Password);
+  if S <> '' then
+    Password := S;
+
+  S := ExtractValueFromProperties(ConnProps_LibLocation);
+  if S <> '' then
+    LibLocation := S;
+
+  FProperties.OnChange := DoOnPropertiesChange;
+
+  if Assigned(FOnPropertiesChange) then
+    FOnPropertiesChange(Sender);
+end;
+
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5057 off : Local variable "Param" does not seem to be initialized}
+  {$WARN 5091 off : Local variable "Param" of managed type does not seem to be initialized}
+{$ENDIF}
+procedure TZURL.AddValues(Values: TStrings);
+var
+  I: Integer;
+  Param, Value: String;
+begin
+  FProperties.BeginUpdate; // prevent calling OnChange on every iteration
+  for I := 0 to Values.Count -1 do
+  begin
+    BreakString(Values[I], '=', Param, Value);
+    if Value <> '' then
+      FProperties.Values[Param] := Value
+    else
+      if FProperties.IndexOf(Values[I]) = -1 then //add unique params only!
+        FProperties.Add(Values[I]);
+  end;
+  FProperties.EndUpdate;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 
 initialization
   DriverManager := TZDriverManager.Create;

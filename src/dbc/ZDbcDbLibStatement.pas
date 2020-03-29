@@ -125,8 +125,9 @@ type
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);reintroduce;
     procedure SetString(ParameterIndex: Integer; const Value: String);reintroduce;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); reintroduce;
-    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); reintroduce;
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetGuid(ParameterIndex: Integer; const Value: TGUID); reintroduce;
+    procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); reintroduce;
     {$ENDIF}
@@ -169,7 +170,8 @@ type
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);reintroduce;
     procedure SetString(ParameterIndex: Integer; const Value: String);reintroduce;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); reintroduce;
-    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); reintroduce;
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); reintroduce; overload;
+    procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
     procedure SetGuid(ParameterIndex: Integer; const Value: TGUID); reintroduce;
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); reintroduce;
@@ -507,28 +509,36 @@ procedure TZDBLibPreparedStatementEmulated.SetBlob(Index: Integer; SQLType: TZSQ
   const Value: IZBlob);
 var InParamIdx: Integer;
   RefCntLob: IZBlob;
+  P: PAnsiChar;
+  Len: NativeUInt;
   CP: Word;
+  R: RawByteString;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);
   InParamIdx := Index;
   CheckParameterIndex(InParamIdx);
   RefCntLob := Value; //inc RefCount
+  R := EmptyRaw;
   if (RefCntLob <> nil) and not RefCntLob.IsEmpty then
     if (SQLType in [stAsciiStream, stUnicodeStream]) then begin
       if (FClientCP = zCP_UTF8) or FIsNCharIndex[Index]
       then CP := zCP_UTF8
       else CP := FClientCP;
       if Value.IsClob then begin
-        RefCntLob.GetPAnsiChar(CP);
-        FRawTemp := SQLQuotedStr(RefCntLob.GetPAnsiChar(CP), refCntLob.Length, AnsiChar(#39))
+        P := RefCntLob.GetPAnsiChar(CP, R, Len);
+        FRawTemp := SQLQuotedStr(P, Len, AnsiChar(#39))
       end else begin
-        FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings, CP);
+        P := Value.GetBuffer(R, Len);
+        FRawTemp := GetValidatedAnsiStringFromBuffer(P, Len, ConSettings, CP);
         FRawTemp := SQLQuotedStr(FRawTemp, AnsiChar(#39));
       end;
       BindList.Put(Index, stAsciiStream, FRawTemp, CP);
-    end else
-      BindList.Put(Index, stBinaryStream, GetSQLHexAnsiString(RefCntLob.GetBuffer, RefCntLob.Length, True), FClientCP)
+    end else begin
+      P := RefCntLob.GetBuffer(R, Len);
+      FRawTemp := GetSQLHexAnsiString(P, Len, True);
+      BindList.Put(Index, stBinaryStream, FRawTemp, FClientCP)
+    end
   else BindList.SetNull(Index, SQLType);
 end;
 
@@ -546,6 +556,25 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   BindList.Put(ParameterIndex, stByte, IntToRaw(Value), FClientCP);
+end;
+
+{**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZDBLibPreparedStatementEmulated.SetBytes(ParameterIndex: Integer;
+  Value: PByte; Len: NativeUInt);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stBytes, GetSQLHexAnsiString(PAnsiChar(Value), Len, True), FClientCP);
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetBytes(ParameterIndex: Integer;
@@ -859,9 +888,12 @@ begin
         Ord(ConvertSqlTypeToTDSType(Bind.SQLType)), -1, -1, @Bind.Value);
       zbt8Byte: FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),
         Ord(ConvertSqlTypeToTDSType(Bind.SQLType)), -1, -1, {$IFDEF CPU64}@{$ENDIF}Bind.Value);
+      zbtBinByRef: FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),
+        Ord(ConvertSqlTypeToTDSType(Bind.SQLType)), -1, PZBufRec(Bind.Value).Len, PZBufRec(Bind.Value).Buf);
       zbtRawString, zbtUTF8String {$IFNDEF NEXTGEN}, zbtAnsiString{$ENDIF}:
         FPlainDriver.dbRpcParam(FHandle, Pointer(FParamNames[I]), Ord(Bind.ParamType >= pctInOut),
           Ord(ConvertSqlTypeToTDSType(Bind.SQLType)), -1, Length(RawByteString(Bind.Value)), Bind.Value);
+      {$IFDEF FPC}else ;{$ENDIF}
     end;
   end;
 end;
@@ -926,7 +958,7 @@ begin
         Len := FPLainDriver.dbRetLen(FHandle, N);
         ColumnInfo.Precision := Len;
         if (Data = nil) or (RetType = Ord(tdsVoid)) then
-          BindList.SetNull(I, ConvertTDSTypeToSqlType(TTDSType(RetType), Len, 0, ConSettings.CPType))
+          BindList.SetNull(I, ConvertTDSTypeToSqlType(TTDSType(RetType), Len, 0))
         else case TTDSType(RetType) of
           tdsNVarChar, tdsBigNChar, tdsBigNVarChar:
             begin
@@ -1001,9 +1033,9 @@ begin
               PDouble(@fABuffer[0])^ := PDBDATETIME(Data).dtdays + 2 + (PDBDATETIME(Data).dttime / 25920000);
               BindList.Put(I, stTimeStamp, P8Bytes(@fABuffer[0]));
             end;
-          tdsImage: BindList.Put(I, stBinaryStream, TZAbstractBlob.CreateWithData(Data, Len));
-          tdsText:  BindList.Put(I, stBinaryStream, TZAbstractClob.CreateWithData(Data, Len, FClientCP, ConSettings));
-          tdsNText: BindList.Put(I, stBinaryStream, TZAbstractClob.CreateWithData(Data, Len, zCP_UTF8, ConSettings));
+          tdsImage: BindList.Put(I, stBinaryStream, TZLocalMemBLob.CreateWithData(Data, Len));
+          tdsText:  BindList.Put(I, stBinaryStream, TZLocalMemCLob.CreateWithData(Data, Len, FClientCP, ConSettings));
+          tdsNText: BindList.Put(I, stBinaryStream, TZLocalMemCLob.CreateWithData(Data, Len, zCP_UTF8, ConSettings));
           tdsBit: BindList.Put(I, PByte(Data)^ <> 0);
           tdsUnique: BindList.Put(I, PGuid(Data)^);
           else BindList.SetNull(I, BindValue.SQLType);
@@ -1017,9 +1049,7 @@ begin
             tdsUDT:
             tdsMSXML:}
         end;
-        if (BindValue.SQLType in [stString, stAsciiStream]) and (ConSettings.CPType = cCP_UTF16)
-        then ColumnInfo.ColumnType := TZSQLType(Ord(BindValue.SQLType)+1)
-        else ColumnInfo.ColumnType := BindValue.SQLType;
+        ColumnInfo.ColumnType := BindValue.SQLType;
         ColumnsInfo.Add(ColumnInfo);
         Inc(N);
       end;
@@ -1027,6 +1057,7 @@ begin
   finally
     RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
     ColumnsInfo.Free;
+    RS.SetConcurrency(rcUpdatable);
     FOutParamresultSet := RS;
     RS.MoveToInsertRow;
     N := FirstDbcIndex;
@@ -1052,19 +1083,23 @@ begin
           stGUID: RS.UpdateBytes(N, BufferToBytes(BindValue.Value, SizeOf(TGUID)));
           stBytes: RS.UpdateBytes(N, TBytes(BindValue.Value));
           stAsciiStream, stUnicodeStream, stBinaryStream: RS.UpdateLob(N, IZBlob(BindValue.Value));
+          {$IFDEF FPC}else ;{$ENDIF} //weird FPC warning
         end;
         Inc(N);
       end;
     end;
     RS.InsertRow;
     RS.BeforeFirst;
+    RS.SetConcurrency(rcReadonly);
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.Execute(const SQL: RawByteString): Boolean;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZDBLIBPreparedRPCStatement.ExecutePrepared: Boolean;
 begin
@@ -1076,16 +1111,20 @@ begin
   Result := (FResults.Count > 0) and Supports(FResults[0], IZResultSet, FLastResultSet);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.Execute(const SQL: ZWideString): Boolean;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteQuery(
   const SQL: RawByteString): IZResultSet;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZDBLIBPreparedRPCStatement.ExecuteQueryPrepared: IZResultSet;
 begin
@@ -1095,23 +1134,29 @@ begin
   FLastResultSet := nil;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteQuery(
   const SQL: ZWideString): IZResultSet;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteUpdate(
   const SQL: ZWideString): Integer;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteUpdate(
   const SQL: RawByteString): Integer;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZDBLIBPreparedRPCStatement.ExecuteUpdatePrepared: Integer;
 begin
@@ -1182,6 +1227,25 @@ begin
   CheckParameterIndex(ParameterIndex);
   BindList.Put(ParameterIndex, stByte, P4Bytes(@ParameterIndex));
   PByte(@BindList[ParameterIndex].Value)^ := Ord(Value);
+end;
+
+{**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZDBLIBPreparedRPCStatement.SetBytes(ParameterIndex: Integer;
+  Value: PByte; Len: NativeUInt);
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stBytes, Value, Len);
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetBytes(ParameterIndex: Integer;

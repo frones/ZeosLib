@@ -83,7 +83,7 @@ type
 
 implementation
 
-uses ZDbcResultSetMetadata;
+uses ZDbcResultSetMetadata, ZClasses;
 
 { TZTestAbstractBlobCase }
 
@@ -112,41 +112,49 @@ var
   ResultBytes: TBytes;
   ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
+  OpenLobStream: TZSortedList;
 begin
   StreamIn := StreamFromData(FBuffer, BINARY_BUFFER_SIZE);
+  OpenLobStream := TZSortedList.Create;
+  try
+    {Test with defined constructor}
+    Blob := TZLocalMemBLob.CreateWithStream(StreamIn, OpenLobStream);
+    Check(not Blob.IsEmpty, 'IsEmpty');
+    Check(not Blob.IsUpdated, 'IsUpdated');
+    CheckEquals(BINARY_BUFFER_SIZE, Blob.Length, 'Length');
 
-  {Test with defined constructor}
-  Blob := TZAbstractBlob.CreateWithStream(StreamIn);
-  Check(not Blob.IsEmpty, 'IsEmpty');
-  Check(not Blob.IsUpdated, 'IsUpdated');
-  CheckEquals(BINARY_BUFFER_SIZE, Blob.Length, 'Length');
+    StreamOut := Blob.GetStream;
+    try
+      CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
+      ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
+    finally
+      FreeAndNil(StreamOut);
+    end;
+    FreeAndNil(StreamIn);
+    CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
+    CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
 
-  StreamOut := Blob.GetStream;
-  CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
-  ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
-  StreamOut.Free;
-  StreamIn.Free;
+    {string test}
+    Blob.SetString(RawByteString(FString));
+    Check(not Blob.IsEmpty, 'IsEmpty');
+    Check(Blob.IsUpdated, 'IsUpdated');
+    CheckEquals(Length(FString), Blob.Length, 'Length');
+    ResultString := String(Blob.GetString);
+    CheckEquals(FString, ResultString, 'Strings compare');
 
-  CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
-  CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
+    { bytes test}
+    Blob.SetBytes(FBytes);
+    Check(not Blob.IsEmpty, 'IsEmpty');
+    Check(Blob.IsUpdated, 'IsUpdated');
+    CheckEquals(BYTES_LEN, Blob.Length, 'Length');
+    ResultBytes := Blob.GetBytes;
+    CheckEquals(FBytes, ResultBytes, 'Compare arrays');
 
-  {string test}
-  Blob.SetString(RawByteString(FString));
-  Check(not Blob.IsEmpty, 'IsEmpty');
-  Check(Blob.IsUpdated, 'IsUpdated');
-  CheckEquals(Length(FString), Blob.Length, 'Length');
-  ResultString := String(Blob.GetString);
-  CheckEquals(FString, ResultString, 'Strings compare');
-
-  { bytes test}
-  Blob.SetBytes(FBytes);
-  Check(not Blob.IsEmpty, 'IsEmpty');
-  Check(Blob.IsUpdated, 'IsUpdated');
-  CheckEquals(BYTES_LEN, Blob.Length, 'Length');
-  ResultBytes := Blob.GetBytes;
-  CheckEquals(FBytes, ResultBytes, 'Compare arrays');
-
-  Blob := nil;
+  finally
+    FreeAndNil(StreamIn);
+    FreeAndNil(OpenLobStream);
+    Blob := nil;
+  end;
 end;
 
 procedure TZTestAbstractBlobCase.TestBlobClone;
@@ -157,26 +165,35 @@ var
   StreamOut: TStream;
   ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
+  OpenLobStream: TZSortedList;
 begin
   StreamIn := StreamFromData(FBuffer, BINARY_BUFFER_SIZE);
-  Blob := TZAbstractBlob.CreateWithStream(StreamIn);
-
- {Test clone blob}
-  BlobClone := Blob.Clone;
-  Blob := nil;
-  Check(not BlobClone.IsEmpty, 'IsEmpty');
-  Check(not BlobClone.IsUpdated, 'IsUpdated');
-  CheckEquals(BINARY_BUFFER_SIZE, BlobClone.Length, 'Length');
-
-  StreamOut := BlobClone.GetStream;
-  CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
-  ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
-  StreamOut.Free;
-  StreamIn.Free;
-
-  CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
-  CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
+  OpenLobStream := TZSortedList.Create;
   BlobClone := nil;
+  try
+    Blob := TZLocalMemBLob.CreateWithStream(StreamIn, OpenLobStream);
+    {Test clone blob}
+    BlobClone := Blob.Clone;
+    Blob := nil;
+    Check(not BlobClone.IsEmpty, 'IsEmpty');
+    Check(not BlobClone.IsUpdated, 'IsUpdated');
+    CheckEquals(BINARY_BUFFER_SIZE, BlobClone.Length, 'Length');
+    try
+      StreamOut := BlobClone.GetStream;
+      CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
+      ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
+      CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
+      CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
+    finally
+      FreeAndNil(StreamOut);
+      FreeAndNil(StreamIn);
+    end;
+    BlobClone := nil;
+  finally
+    FreeAndNil(StreamIn);
+    BlobClone := nil;
+    FreeAndNil(OpenLobStream);
+  end;
 end;
 
 procedure TZTestAbstractBlobCase.TestBlobNil;
@@ -188,48 +205,59 @@ var
   ResultBytes: TBytes;
   ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
+  OpenLobStream: TZSortedList;
 begin
   StreamIn := StreamFromData(FBuffer, BINARY_BUFFER_SIZE);
-
-  {Test with nil constructor}
-  Blob := TZAbstractBlob.CreateWithStream(nil);
-  Check(Blob.IsEmpty, 'IsEmpty');
-  Check(not Blob.IsUpdated, 'IsUpdated');
-  CheckEquals(-1, Blob.Length, 'Length');
-
-  Blob.SetStream(StreamIn);
-  Check(Blob.IsUpdated, 'IsUpdated');
-  Check(not Blob.IsEmpty, 'IsEmpty');
-  CheckEquals(BINARY_BUFFER_SIZE, Blob.Length, 'Length');
-
-  StreamOut := Blob.GetStream;
-  CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
-  ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
-  StreamIn.Free;
-  StreamOut.Free;
-
-  CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
-  CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
+  OpenLobStream := TZSortedList.Create;
   Blob := nil;
+  try
+    {Test with nil constructor}
+    Blob := TZLocalMemBLob.CreateWithStream(nil, OpenLobStream);
+    Check(Blob.IsEmpty, 'IsEmpty');
+    Check(not Blob.IsUpdated, 'IsUpdated');
+    CheckEquals(-1, Blob.Length, 'Length');
 
-  {string test}
-  Blob := TZAbstractBlob.CreateWithStream(nil);
-  Blob.SetString(RawByteString(FString));
-  Check(not Blob.IsEmpty, 'IsEmpty');
-  Check(Blob.IsUpdated, 'IsUpdated');
-  CheckEquals(Length(FString), Blob.Length, 'Length');
-  ResultString := String(Blob.GetString);
-  CheckEquals(FString, ResultString, 'Strings comapre');
-  Blob := nil;
+    Blob.SetStream(StreamIn);
+    Check(Blob.IsUpdated, 'IsUpdated');
+    Check(not Blob.IsEmpty, 'IsEmpty');
+    CheckEquals(BINARY_BUFFER_SIZE, Blob.Length, 'Length');
+    try
+      StreamOut := Blob.GetStream;
+      CheckEquals(StreamIn, StreamOut, 'StreamIn = StreamOut');
+      ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
+    finally
+      FreeAndNil(StreamIn);
+      FreeAndNil(StreamOut);
+    end;
 
-  { bytes test}
-  Blob := TZAbstractBlob.CreateWithStream(nil);
-  Blob.SetBytes(FBytes);
-  Check(not Blob.IsEmpty, 'IsEmpty');
-  Check(Blob.IsUpdated, 'IsUpdated');
-  CheckEquals(BYTES_LEN, Blob.Length, 'Length');
-  ResultBytes := Blob.GetBytes;
-  CheckEquals(FBytes, ResultBytes, 'Compare arrays');
+    CheckEquals(ReadNum, BINARY_BUFFER_SIZE);
+    CheckEqualsMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE);
+    Blob := nil;
+
+    {string test}
+    Blob := TZLocalMemBLob.CreateWithStream(nil, OpenLobStream);
+    Blob.SetString(RawByteString(FString));
+    Check(not Blob.IsEmpty, 'IsEmpty');
+    Check(Blob.IsUpdated, 'IsUpdated');
+    CheckEquals(Length(FString), Blob.Length, 'Length');
+    ResultString := String(Blob.GetString);
+    CheckEquals(FString, ResultString, 'Strings comapre');
+    Blob := nil;
+
+    { bytes test}
+    Blob := TZLocalMemBLob.CreateWithStream(nil, OpenLobStream);
+    Blob.SetBytes(FBytes);
+    Check(not Blob.IsEmpty, 'IsEmpty');
+    Check(Blob.IsUpdated, 'IsUpdated');
+    CheckEquals(BYTES_LEN, Blob.Length, 'Length');
+    ResultBytes := Blob.GetBytes;
+    CheckEquals(FBytes, ResultBytes, 'Compare arrays');
+  finally
+    FreeAndNil(StreamIn);
+    FreeAndNil(StreamOut);
+    Blob := nil;
+    FreeAndNil(OpenLobStream);
+  end;
 end;
 
 { TZTestColumnInfoCase }

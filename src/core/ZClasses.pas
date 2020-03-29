@@ -360,6 +360,50 @@ type
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
   SQLString = {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
 
+  {** Modified comparison function. }
+  TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
+
+  {** Modified list of pointers. }
+  TZSortedList = class({$IFDEF TLIST_IS_DEPRECATED}TObject{$ELSE}TList{$ENDIF})
+  {$IFDEF TLIST_IS_DEPRECATED}
+  private
+    FList: TPointerList;
+    FCount: Integer;
+    FCapacity: Integer;
+  protected
+    function Get(Index: Integer): Pointer;
+    procedure Grow; virtual;
+    procedure Put(Index: Integer; Item: Pointer);
+    procedure SetCapacity(NewCapacity: Integer);
+    procedure SetCount(NewCount: Integer);
+  public
+    class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
+    class procedure Error(Msg: PResStringRec; Data: NativeInt); overload;
+  public
+    destructor Destroy; override;
+    function Add(Item: Pointer): Integer;
+    procedure Clear; virtual;
+    procedure Delete(Index: Integer);
+    procedure Exchange(Index1, Index2: Integer);
+    function Extract(Item: Pointer): Pointer; inline;
+    function First: Pointer; inline;
+    function IndexOf(Item: Pointer): Integer;
+    procedure Insert(Index: Integer; Item: Pointer);
+    function Last: Pointer;
+    function Remove(Item: Pointer): Integer; inline;
+    property Count: Integer read FCount write SetCount;
+    property Items[Index: Integer]: Pointer read Get write Put; default;
+    property List: TPointerList read FList;
+    property Capacity: Integer read FCapacity write SetCapacity;
+  {$ENDIF}
+    procedure Sort(Compare: TZListSortCompare);
+  end;
+
+  {$IF NOT DECLARED(EArgumentException)}
+  type
+    EArgumentException = Class(Exception);
+  {$IFEND}
+
 implementation
 
 uses ZMessages, ZFastCode
@@ -666,7 +710,7 @@ end;
 procedure TZRawSQLStringWriter.AddOrd(Value: Cardinal; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -675,7 +719,7 @@ var Digits: Byte;
   C: Cardinal;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, C, Negative);
+  Digits := GetOrdinalDigits(Value, C, Negative);
   AddOrd32(C, Digits, Negative, Result);
 end;
 
@@ -948,7 +992,7 @@ end;
 procedure TZRawSQLStringWriter.AddOrd(const Value: UInt64; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd64(Value, Digits, False, Result);
 end;
 
@@ -957,14 +1001,14 @@ var Digits: Byte;
   U: UInt64;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, U, Negative);
+  Digits := GetOrdinalDigits(Value, U, Negative);
   AddOrd64(U, Digits, Negative, Result);
 end;
 
 procedure TZRawSQLStringWriter.AddOrd(Value: Byte; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -972,14 +1016,14 @@ procedure TZRawSQLStringWriter.AddOrd(Value: ShortInt; var Result: RawByteString
 var B, Digits: Byte;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, B, Negative);
+  Digits := GetOrdinalDigits(Value, B, Negative);
   AddOrd32(B, Digits, Negative, Result);
 end;
 
 procedure TZRawSQLStringWriter.AddOrd(Value: Word; var Result: RawByteString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -988,7 +1032,7 @@ var Digits: Byte;
   W: Word;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, W, Negative);
+  Digits := GetOrdinalDigits(Value, W, Negative);
   AddOrd32(W, Digits, Negative, Result);
 end;
 
@@ -1326,7 +1370,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: ShortInt;
 var B, Digits: Byte;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, B, Negative);
+  Digits := GetOrdinalDigits(Value, B, Negative);
   AddOrd32(B, Digits, Negative, Result);
 end;
 
@@ -1334,7 +1378,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: Byte;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -1342,7 +1386,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: Word;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -1352,7 +1396,7 @@ var Digits: Byte;
   U: UInt64;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, U, Negative);
+  Digits := GetOrdinalDigits(Value, U, Negative);
   AddOrd64(U, Digits, Negative, Result);
 end;
 
@@ -1360,7 +1404,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(const Value: UInt64;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd64(Value, Digits, False, Result);
 end;
 
@@ -1370,7 +1414,7 @@ var Digits: Byte;
   C: Cardinal;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, C, Negative);
+  Digits := GetOrdinalDigits(Value, C, Negative);
   AddOrd32(C, Digits, Negative, Result);
 end;
 
@@ -1380,7 +1424,7 @@ var Digits: Byte;
   W: Word;
   Negative: Boolean;
 begin
-  Digits := GetordinalDigits(Value, W, Negative);
+  Digits := GetOrdinalDigits(Value, W, Negative);
   AddOrd32(W, Digits, Negative, Result);
 end;
 
@@ -1388,7 +1432,7 @@ procedure TZUnicodeSQLStringWriter.AddOrd(Value: Cardinal;
   var Result: UnicodeString);
 var Digits: Byte;
 begin
-  Digits := GetordinalDigits(Value);
+  Digits := GetOrdinalDigits(Value);
   AddOrd32(Value, Digits, False, Result);
 end;
 
@@ -1625,6 +1669,334 @@ setp: PWord(FPos)^ := Ord(NewChar);
     end;
   end;
 end;
+
+{ TZSortedList }
+
+{**
+  Origial Autor: Aleksandr Sharahov
+  see http://guildalfa.ru/alsha/
+  Performs hybrid sort algorithm for the list.
+  changes by EgonHugeist:
+  Replace cardinal casts by using our NativeUInt to make it 64Bit compatible too
+  Note Alexandr wrote: For max of speed it is very impotant to use procedures
+    QuickSort_0AA and HybridSort_0AA as is (not in class, not included
+    in other procedure, and not changed parameters and code).
+}
+//~1.57 times faster than Delphi QuickSort on E6850
+{$Q-}
+{$R-}
+const
+  InsCount = 35; //33..49;
+  InsLast = InsCount-1;
+  SOP = SizeOf(pointer);
+  MSOP = NativeUInt(-SOP);
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
+procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
+var
+  I, J, P, T: NativeUInt;
+begin;
+  while true do begin
+    I := L;
+    J := R;
+    if J-I <= InsLast * SOP then break;
+    T := (J-I) shr 1 and MSOP + I;
+
+    if Compare(PPointer(J)^, PPointer(I)^)<0 then begin
+      P := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(J)^;
+      PNativeUInt(J)^ := P;
+    end;
+    P := PNativeUInt(T)^;
+    if Compare(Pointer(P), PPointer(I)^)<0 then
+    begin
+      P := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(T)^;
+      PNativeUInt(T)^ := P;
+    end
+    else
+      if Compare(PPointer(J)^, Pointer(P)) < 0 then
+      begin
+        P := PNativeUInt(J)^;
+        PNativeUInt(J)^ := PNativeUInt(T)^;
+        PNativeUInt(T)^ := P;
+      end;
+
+    repeat
+      Inc(I,SOP);
+    until not (Compare(PPointer(I)^, Pointer(P)) < 0);
+    repeat
+      Dec(J,SOP)
+    until not (Compare(pointer(P), PPointer(J)^) < 0);
+    if I < J then
+      repeat
+        T := PNativeUInt(I)^;
+        PNativeUInt(I)^ := PNativeUInt(J)^;
+        PNativeUInt(J)^ := T;
+        repeat
+          Inc(I,SOP);
+        until not (Compare(PPointer(I)^, pointer(P)) < 0 );
+        repeat
+          Dec(J,SOP);
+        until not (Compare(pointer(P), PPointer(J)^) < 0);
+      until I >= J;
+    Dec(I,SOP); Inc(J,SOP);
+
+    if I-L <= R-J then
+    begin
+      if L + InsLast * SOP < I then
+        QuickSortSha_0AA(L, I, Compare);
+      L := J;
+    end
+    else
+    begin
+      if J + InsLast * SOP < R
+        then QuickSortSha_0AA(J, R, Compare);
+      R := I;
+    end;
+  end;
+end;
+
+procedure HybridSortSha_0AA(List: PPointerList; Count: integer; Compare: TZListSortCompare);
+var
+  I, J, {$IFDEF WITH_IE200706094}J2,{$ENDIF} L, R: NativeUInt;
+begin;
+  if (List<>nil) and (Count>1) then
+  begin
+    L := NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[0]);
+    R := NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[Count-1]);
+    J := R;
+    if Count-1 > InsLast then
+    begin
+      J:=NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[InsLast]);
+      QuickSortSha_0AA(L, R, Compare);
+    end;
+
+    I := L;
+    repeat;
+      if Compare(PPointer(J)^, PPointer(I)^) < 0 then I:=J;
+      dec(J,SOP);
+    until J <= L;
+
+    if I > L then
+    begin
+      J := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(L)^;
+      PNativeUInt(L)^ := J;
+    end;
+
+    J := L + SOP;
+    while true do
+    begin
+      repeat;
+        if J >= R then exit;
+        inc(J,SOP);
+      {$IFDEF WITH_IE200706094} //FPC 64Bit raises an internal Error 200706094!
+        J2 := J+MSOP;
+      until Compare(PPointer(J)^,PPointer(J2)^) < 0;
+      {$ELSE}
+      until Compare(PPointer(J)^,PPointer(J+MSOP)^) < 0;
+      {$ENDIF}
+      I := J - SOP;
+      L := PNativeUInt(J)^;
+      repeat;
+        PNativeUInt(I+SOP)^ := PNativeUInt(I)^;
+        dec(I,SOP);
+      until not (Compare(Pointer(L),PPointer(I)^) < 0);
+      PNativeUInt(I + SOP)^ := L;
+    end;
+  end;
+end;
+
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+
+{$IFDEF TLIST_IS_DEPRECATED}
+function TZSortedList.Add(Item: Pointer): Integer;
+begin
+  Result := FCount;
+  if Result = FCapacity then
+    Grow;
+  FList[Result] := Item;
+  Inc(FCount);
+end;
+
+procedure TZSortedList.Clear;
+begin
+  SetCount(0);
+  SetCapacity(0);
+end;
+
+procedure TZSortedList.Delete(Index: Integer);
+begin
+  if (Index < 0) or (Index >= FCount) then
+    Error(@SListIndexError, Index);
+  Dec(FCount);
+  if Index < FCount then
+    System.Move(FList[Index + 1], FList[Index],
+      (FCount - Index) * SizeOf(Pointer));
+end;
+
+destructor TZSortedList.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
+class procedure TZSortedList.Error(Msg: PResStringRec; Data: NativeInt);
+begin
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at ReturnAddress;
+end;
+
+class procedure TZSortedList.Error(const Msg: string; Data: NativeInt);
+begin
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
+end;
+
+procedure TZSortedList.Exchange(Index1, Index2: Integer);
+var
+  Item: Pointer;
+begin
+  if (Index1 < 0) or (Index1 >= FCount) then
+    Error(@SListIndexError, Index1);
+  if (Index2 < 0) or (Index2 >= FCount) then
+    Error(@SListIndexError, Index2);
+  Item := FList[Index1];
+  FList[Index1] := FList[Index2];
+  FList[Index2] := Item;
+end;
+
+function TZSortedList.Extract(Item: Pointer): Pointer;
+var
+  I: Integer;
+begin
+  Result := nil;
+  I := IndexOf(Item);
+  if I >= 0 then begin
+    Result := Item;
+    FList[I] := nil;
+    Delete(I);
+  end;
+end;
+
+function TZSortedList.First: Pointer;
+begin
+  Result := Get(0);
+end;
+
+function TZSortedList.Get(Index: Integer): Pointer;
+begin
+  if Cardinal(Index) >= Cardinal(FCount) then
+    Error(@SListIndexError, Index);
+  Result := FList[Index];
+end;
+
+procedure TZSortedList.Grow;
+var
+  Delta: Integer;
+begin
+  if FCapacity > 64 then
+    Delta := FCapacity div 4
+  else
+    if FCapacity > 8 then
+      Delta := 16
+    else
+      Delta := 4;
+  SetCapacity(FCapacity + Delta);
+end;
+
+function TZSortedList.IndexOf(Item: Pointer): Integer;
+var
+  P: PAnsiChar;
+begin
+  P := Pointer(FList);
+  for Result := 0 to FCount - 1 do begin
+    if PPointer(P)^ = Item then
+      Exit;
+    Inc(P, SizeOf(Pointer));
+  end;
+  Result := -1;
+end;
+
+procedure TZSortedList.Insert(Index: Integer; Item: Pointer);
+begin
+  if (Index < 0) or (Index > FCount) then
+    Error(@SListIndexError, Index);
+  if FCount = FCapacity then
+    Grow;
+  if Index < FCount then
+    System.Move(FList[Index], FList[Index + 1],
+      (FCount - Index) * SizeOf(Pointer));
+  FList[Index] := Item;
+  Inc(FCount);
+end;
+
+function TZSortedList.Last: Pointer;
+begin
+  if FCount > 0 then
+    Result := FList[Count - 1]
+  else
+  begin
+    Error(@SListIndexError, 0);
+    Result := nil;
+  end;
+end;
+
+procedure TZSortedList.Put(Index: Integer; Item: Pointer);
+begin
+  if (Index < 0) or (Index >= FCount) then
+    Error(@SListIndexError, Index);
+  if Item <> FList[Index] then begin
+    FList[Index] := Item;
+  end;
+end;
+
+function TZSortedList.Remove(Item: Pointer): Integer;
+begin
+  Result := IndexOf(Item);
+  if Result >= 0 then
+    Delete(Result);
+end;
+
+procedure TZSortedList.SetCapacity(NewCapacity: Integer);
+begin
+  if NewCapacity < FCount then
+    Error(@SListCapacityError, NewCapacity);
+  if NewCapacity <> FCapacity then
+  begin
+    SetLength(FList, NewCapacity);
+    FCapacity := NewCapacity;
+  end;
+end;
+
+procedure TZSortedList.SetCount(NewCount: Integer);
+begin
+  if NewCount < 0 then
+    Error(@SListCountError, NewCount);
+  if NewCount <> FCount then begin
+    if NewCount > FCapacity then
+      SetCapacity(NewCount);
+    if NewCount > FCount then
+      FillChar(FList[FCount], (NewCount - FCount) * SizeOf(Pointer), 0);
+    FCount := NewCount;
+  end;
+end;
+{$ENDIF TLIST_IS_DEPRECATED}
+{**
+  Performs sorting for this list.
+  @param Compare a comparison function.
+}
+procedure TZSortedList.Sort(Compare: TZListSortCompare);
+begin
+  {$IFDEF TLIST_ISNOT_PPOINTERLIST}
+  HybridSortSha_0AA(@List, Count, Compare);
+  {$ELSE}
+  HybridSortSha_0AA(List, Count, Compare);
+  {$ENDIF}
+end;
+
 
 end.
 

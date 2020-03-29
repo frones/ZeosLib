@@ -69,7 +69,7 @@ uses
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   UndefinedVarcharAsStringLength: Integer; out Precision: Integer;
-  out Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
+  out Decimals: Integer): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -108,7 +108,7 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   UndefinedVarcharAsStringLength: Integer; out Precision: Integer;
-  out Decimals: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
+  out Decimals: Integer): TZSQLType;
 var
   pBL, pBR, pC: Integer;
   P: PAnsiChar;
@@ -205,12 +205,6 @@ begin
       Result := stAsciiStream
     else
       Precision := UndefinedVarcharAsStringLength;
-
-  if ( CtrlsCPType = cCP_UTF16 ) then
-    case Result of
-      stString:  Result := stUnicodeString;
-      stAsciiStream: Result := stUnicodeStream;
-    end;
 end;
 
 {**

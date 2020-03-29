@@ -286,7 +286,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
-  ZFastCode, ZSelectSchema, Math;
+  ZFastCode, ZSelectSchema, Math, ZDbcUtils;
 
 const
   DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');
@@ -1491,7 +1491,7 @@ begin
       end;
 
       SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, GetInt(FIELD_SCALE_Index),
-        GetInt(FIELD_PRECISION_Index), ConSettings.CPType);
+        GetInt(FIELD_PRECISION_Index));
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(ProcColDataTypeIndex, Ord(SQLType)); //DATA_TYPE
@@ -1746,8 +1746,7 @@ begin
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, L), L);    //TABLE_NAME
       Result.UpdateString(ColumnNameIndex, ColumnName);    //COLUMN_NAME
 
-      SQLType := ConvertInterbase6ToSqlType(BLRSubType, SubTypeName, FieldScale,
-        Precision, ConSettings.CPType);
+      SQLType := ConvertInterbase6ToSqlType(BLRSubType, SubTypeName, FieldScale, Precision);
       if GUIDProps.ColumnIsGUID(SQLType, FieldLength, ColumnDomain, ColumnName) then
         SQLType := stGUID;
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
@@ -2399,7 +2398,7 @@ begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME_Index, Len), Len);
       Result.UpdateInt(TypeInfoDataTypeIndex, Ord(ConvertInterbase6ToSqlType(
-        GetInt(RDB_TYPE_Index), 0, 10, 4, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
+        GetInt(RDB_TYPE_Index), 0, 10, 4))); //added a scale > 4 since type_info doesn't deal with user defined scale
       Result.UpdateInt(TypeInfoPecisionIndex, 9);
       Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNoNulls));
       Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, false);

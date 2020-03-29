@@ -130,6 +130,7 @@ type
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
     procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
 
     procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
@@ -161,7 +162,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZFastCode, ZDbcOracleResultSet, ZTokenizer, ZDbcCachedResultSet,
+  ZFastCode, ZDbcOracleResultSet, ZTokenizer,
   ZEncoding, ZDbcProperties, ZMessages, ZDbcResultSet,
   ZSelectSchema;
 
@@ -213,29 +214,57 @@ procedure TZAbstractOraclePreparedStatement_A.BindLob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob);
 var
   Bind: PZOCIParamBind;
-  WriteTempBlob: IZOracleBlob;
+  OCILob: IZOracleLob;
+  RefCntLob: IZBlob;
+  Stream: TStream;
+  CLob: IZCLob;
 begin
-  Inherited BindLob(Index, SQLType, Value);
-  {$R-}
-  Bind := @FOraVariables[Index];
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-  if (Value = nil) or Value.IsEmpty then
-    Bind.indp[0] := -1
+  CheckParameterIndex(Index);
+  if (Value = nil)
+  then BindList.SetNull(Index, SQLType)
   else begin
+    BindList.Put(Index, SQLType, Value); //incing the refcount 4 FPC
+    {$R-}
+    Bind := @FOraVariables[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
       InitBuffer(SQLType, Bind, Index, 1, SizeOf(POCIDescriptor));
-    if Bind.dty = SQLT_BLOB
-    then WriteTempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0,
-        FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-        PPOCIDescriptor(Bind^.valuep)^, ChunkSize, ConSettings)
-    else WriteTempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
-        FOracleConnection.GetConnectionHandle,
-        FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-        PPOCIDescriptor(Bind^.valuep)^, ChunkSize, ConSettings, ConSettings.ClientCodePage^.CP);
-    WriteTempBlob.CreateBlob;
-    WriteTempBlob.WriteLobFromBuffer(Value.GetBuffer, Value.Length);
-    IZBLob(BindList[Index].Value) := WriteTempBlob;
-    Bind.indp[0] := 0;
+    if Value.IsEmpty then
+      Bind.indp[0] := -1
+    else if Value.QueryInterface(IZOracleLob, OCILob) <> S_OK then begin
+      if Bind.dty = SQLT_BLOB
+      then RefCntLob := TZOracleBlob.CreateFromBlob(Value, nil, FOracleConnection, FOpenLobStreams)
+      else begin
+        if Value.IsClob then
+          if ZEncoding.IsMBCSCodePage(FClientCP)
+          then Value.SetCodePageTo(zCP_UTF16)
+          else Value.SetCodePageTo(FClientCP)
+        else if SQLType = stAsciiStream
+          then PIZLob(BindList[Index].Value)^ := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams)
+          else begin
+            Stream := Value.GetStream;
+            try
+              PIZLob(BindList[Index].Value)^ := TZLocalMemCLob.CreateWithStream(Stream, zCP_UTF16, ConSettings, FOpenLobStreams);
+            finally
+              Stream.Free;
+            end;
+          end;
+        IZBlob(BindList[Index].Value).QueryInterface(IZCLob, Clob);
+        if ZEncoding.IsMBCSCodePage(FClientCP) then begin
+          RefCntLob := TZOracleClob.CreateFromClob(Clob, nil,
+            SQLCS_IMPLICIT, OCI_UTF16ID, FOracleConnection, FOpenLobStreams);
+          SQLType := stUnicodeStream;
+        end else begin
+          RefCntLob := TZOracleClob.CreateFromClob(Clob, nil,
+            SQLCS_IMPLICIT, ConSettings.ClientCodePage.ID, FOracleConnection, FOpenLobStreams);
+          SQLType := stAsciiStream;
+        end;
+      end;
+      BindLob(Index, SQLType, RefCntLob);
+    end else begin
+      PPOCILobLocator(Bind^.valuep)^ := OCILob.GetLobLocator;
+      Bind.indp[0] := 0;
+    end;
   end;
 end;
 
@@ -244,6 +273,7 @@ procedure TZAbstractOraclePreparedStatement_A.BindRawStr(Index: Integer;
 var
   Bind: PZOCIParamBind;
   SQLType: TZSQLType;
+  Lob: IZClob;
 begin
   CheckParameterIndex(Index);
   {$R-}
@@ -258,9 +288,12 @@ begin
     POCILong(Bind.valuep).Len := Len;
     if Buf <> nil then
       Move(Buf^, POCILong(Bind.valuep).data[0], Len);
-  end else if Bind.dty = SQLT_CLOB then
-    BindLob(Index, stAsciiStream, TZAbstractClob.CreateWithData(Buf, Len, ConSettings^.ClientCodePage^.CP, ConSettings));
-  Bind.indp[0] := 0;
+    Bind.indp[0] := 0;
+  end else if Bind.dty = SQLT_CLOB then begin
+    Lob := TZOracleClob.Create(FOracleConnection, nil, SQLCS_IMPLICIT, ConSettings.ClientCodePage.ID, FOpenLobStreams);
+    Lob.SetPAnsiChar(Buf, FClientCP, Len);
+    BindLob(Index, stAsciiStream, Lob);
+  end; //else ? should not happen
 end;
 
 procedure TZAbstractOraclePreparedStatement_A.BindRawStr(Index: Integer;
@@ -297,7 +330,7 @@ end;
 function TZAbstractOraclePreparedStatement_A.CreateResultSet: IZResultSet;
 var
   NativeResultSet: IZResultSet;
-  CachedResultSet: TZCachedResultSet;
+  CachedResultSet: TZOracleCachedResultSet;
 begin
   if FOpenResultSet = nil then begin
     if FStatementType = OCI_STMT_SELECT
@@ -305,7 +338,7 @@ begin
     else NativeResultSet := TZOracleCallableResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FOraVariables, BindList);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
-      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
+      CachedResultSet := TZOracleCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
       if (GetResultSetConcurrency = rcUpdatable) and (FStatementType = OCI_STMT_SELECT) then
         CachedResultSet.SetConcurrency(rcUpdatable);
       CachedResultSet.SetResolver(TZOracleCachedResolver.Create(Self, NativeResultSet.GetMetadata));
@@ -568,7 +601,7 @@ var
   I, OldSize: Integer;
 begin
   { free Desciptors }
-  if (OCIBind.DescriptorType <> 0) then begin
+  if (OCIBind.DescriptorType <> 0) and (OCIBind.DescriptorType <> OCI_DTYPE_LOB) then begin //do not free the descripors of the lobs
     if (OCIBind.DescriptorType <> SQLType2OCIDescriptor[SQLType]) then
       OldSize := 0
     else if (OCIBind.DescriptorType = SQLType2OCIDescriptor[SQLType]) and (ElementCnt < OCIBind.curelen) then
@@ -592,7 +625,7 @@ begin
     OCIBind.dty := SQLT_VNU;
     OCIBind.value_sz := SizeOf(TOCINumber);
   end else if SQLType in [stString, stUnicodeString, stBytes] then { 8 byte aligned buffer -> }
-    OCIBind.value_sz := Max((((Max(Max(OCIBind.Precision, ActualLength)+SizeOf(Sb4), SQLType2OCISize[SQLType])-1) shr 3)+1) shl 3, OCIBind.value_sz)
+    OCIBind.value_sz := Max((((Max(Max(OCIBind.Precision, ActualLength)+SizeOf(Sb4)+2, SQLType2OCISize[SQLType])) shr 3)+1) shl 3, OCIBind.value_sz)
   else OCIBind.value_sz := SQLType2OCISize[SQLType];
 
   if ElementCnt = 1 then
@@ -606,13 +639,14 @@ begin
   //alloc buffer space
   if (OCIBind.DescriptorType <> 0) then begin
     ReallocMem(OCIBind.valuep, OCIBind.value_sz*Integer(ElementCnt));
-    for I := OCIBind.curelen to ElementCnt -1 do begin
-      { allocate lob/time oci descriptors }
-      Status := FPlainDriver.OCIDescriptorAlloc(FOracleConnection.GetConnectionHandle,
-          PPOCIDescriptor(OCIBind.valuep+I*SizeOf(POCIDescriptor))^, OCIBind.DescriptorType, 0, nil);
-      if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings);
-    end;
+    if (OCIBind.DescriptorType <> OCI_DTYPE_LOB) then //EH: do not alloc descrptors for the lobs
+      for I := OCIBind.curelen to ElementCnt -1 do begin
+        { allocate lob/time oci descriptors }
+        Status := FPlainDriver.OCIDescriptorAlloc(FOracleConnection.GetConnectionHandle,
+            PPOCIDescriptor(OCIBind.valuep+I*SizeOf(POCIDescriptor))^, OCIBind.DescriptorType, 0, nil);
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, ASQL, ConSettings);
+      end;
   end else begin
     if OCIBind.valuep <> nil then begin
       FreeMem(OCIBind.valuep, OldSize*Integer(OCIBind.curelen));
@@ -758,7 +792,9 @@ begin
       Bind.ParamName := '';
       if Bind.DescriptorType <> 0 then //deallocate the descriptors
         for J := 0 to Bind.curelen-1 do
-          FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(PAnsiChar(Bind.valuep)+J*SizeOf(POCIDescriptor))^, Bind.DescriptorType);
+          //this tempory descriprors /locators are cleared by the lobs
+          if (Bind.DescriptorType <> OCI_DTYPE_LOB) and (Bind.DescriptorType <> SQLT_BFILEE) then
+            FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(PAnsiChar(Bind.valuep)+J*SizeOf(POCIDescriptor))^, Bind.DescriptorType);
       if Bind.valuep <> nil then
         FreeMem(Bind.valuep, Bind.value_sz*Integer(Bind.curelen));
       if Bind.indp <> nil then
@@ -1215,6 +1251,38 @@ begin
 end;
 
 {**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZOraclePreparedStatement_A.SetBytes(Index: Integer; Value: PByte;
+  Len: NativeUInt);
+var
+  Bind: PZOCIParamBind;
+  SQLType: TZSQLType;
+begin
+  CheckParameterIndex(Index);
+  {$R-}
+  Bind := @FOraVariables[Index];
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType)
+  then SQLType := BindList[Index].SQLType
+  else SQLType := stBytes;
+  if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (ub4(Bind.value_sz) < Len+SizeOf(Integer)) or (Bind.curelen <> 1) then
+    InitBuffer(SQLType, Bind, Index, 1, Len);
+  POCILong(Bind.valuep).Len := Len;
+  if Value <> nil then
+    Move(Value^, POCILong(Bind.valuep).data[0], Len);
+  Bind.indp[0] := -ShortInt(Value = nil);
+end;
+
+{**
   Sets the designated parameter to a Java <code>currency</code> value.
   The driver converts this
   to an SQL <code>CURRENCY</code> value when it sends it to the database.
@@ -1272,8 +1340,10 @@ label bind_direct;
   procedure SetLobs;
   var I: Integer;
     Lob: IZBLob;
-    WriteTempBlob: IZOracleBlob;
+    OCIlob: IZOracleLob;
     OraLobs: TInterfaceDynArray;
+    Blob: IZBlob;
+    Clob: IZClob;
     Arr: TZArray;
   label write_lob;
   begin
@@ -1285,15 +1355,11 @@ label bind_direct;
       if (Bind.dty <> SQLT_BLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
         InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
       for i := 0 to ArrayLen -1 do
-        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
-          WriteTempBlob := TZOracleBlob.Create(FPlainDriver,
-            nil, 0, FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-            PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, ChunkSize, ConSettings);
-write_lob:WriteTempBlob.CreateBlob;
-          WriteTempBlob.WriteLobFromBuffer(Lob.GetBuffer, Lob.Length);
-          OraLobs[i] := WriteTempBlob; //destroy old interface or replace it
-          Lob := nil;
-          WriteTempBlob := nil;
+        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty and
+            Supports(Lob, IZBlob, Blob) and not Supports(Lob, IZOracleLob, OCILob) then begin
+write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
+          PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
+          OraLobs[i] := OciLob; //destroy old interface or replace it
         {$R-}
           Bind.indp[i] := 0;
         end else
@@ -1304,24 +1370,19 @@ write_lob:WriteTempBlob.CreateBlob;
         InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
       for i := 0 to ArrayLen -1 do
         if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
-          if Lob.IsClob then
-            Lob.GetPAnsiChar(ClientCP)
+          if Supports(Lob, IZCLob, CLob) then
+            CLob.SetCodePageTo(ClientCP)
           else begin
-            FRawTemp := GetValidatedAnsiStringFromBuffer(Lob.GetBuffer, lob.Length, Connection.GetConSettings);
-            Lob := TZOracleClob.Create(FPlainDriver,
-              nil, 0, FOracleConnection.GetConnectionHandle,
-              FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
-              ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-            Lob.SetPAnsiChar(Pointer(FRawTemp), ClientCP, Length(FRawTemp));
-            FRawTemp := '';
+            Clob := ZDbcResultSet.CreateRawCLobFromBlob(Lob, ConSettings, FOpenLobStreams);
+            TInterfaceDynArray(Value)[I] := CLob;
+            Lob := Clob;
           end;
-          if not Supports(Lob, IZOracleBlob, WriteTempBlob) or not (WriteTempBlob.IsCLob) then
-            WriteTempBlob := TZOracleClob.Create(FPlainDriver,
-              nil, 0, FOracleConnection.GetConnectionHandle,
-              FOracleConnection.GetServiceContextHandle, FOracleConnection.GetErrorHandle,
-              PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^,
-              ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+          if not Supports(Lob, IZOracleLob, OCILob) then begin
+            OciLob := TZOracleClob.CreateFromClob(Clob, nil, SQLCS_IMPLICIT, 0, FOracleConnection, FOpenLobStreams);
+            PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
+            TInterfaceDynArray(Value)[I] := CLob;
+          end;
+
           goto write_lob;
         end else
           Bind.indp[i] := -1;
@@ -1563,12 +1624,12 @@ bind_direct:
           else BindFromAutoEncode;
         {$ENDIF}
         {$IFNDEF NO_ANSISTRING}
-        vtAnsiString:  if ZCompatibleCodePages(ClientCP, ZOSCodePage)
+        vtAnsiString:  if (ClientCP = ZOSCodePage)
             then BindRawStrings(TRawByteStringDynArray(Value))
             else BindConvertedRaw2RawStrings(ZOSCodePage);
         {$ENDIF}
         {$IFNDEF NO_UTF8STRING}
-        vtUTF8String: if ZCompatibleCodePages(ClientCP, zCP_UTF8)
+        vtUTF8String: if (ClientCP = zCP_UTF8)
             then BindRawStrings(TRawByteStringDynArray(Value))
             else BindConvertedRaw2RawStrings(zCP_UTF8);
         {$ENDIF}
@@ -1587,6 +1648,7 @@ bind_direct:
   FillChar(Bind.indp^, SizeOf(SB2)*ArrayLen, #0);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5036 off : Local variable DT does not seem to be initialized} {$ENDIF}
 procedure TZOraclePreparedStatement_A.SetDate(Index: Integer;
   const Value: TZDate);
 var
@@ -1602,7 +1664,7 @@ begin
   Bind := @FOraVariables[Index];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
-     (OraType <> BindList[Index].SQLType)
+     (stDate <> BindList[Index].SQLType)
   then OraType := BindList[Index].SQLType
   else OraType := stDate;
   if (BindList[Index].SQLType <> OraType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
@@ -1638,6 +1700,7 @@ begin
   end;
   Bind.indp[0] := 0;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>double</code> value.
@@ -1878,6 +1941,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5036 off : Local variable DT does not seem to be initialized} {$ENDIF}
 procedure TZOraclePreparedStatement_A.SetTime(Index: Integer;
   const Value: TZTime);
 var
@@ -1893,7 +1957,7 @@ begin
   Bind := @FOraVariables[Index];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
-     (OraType <> BindList[Index].SQLType)
+     (stTime <> BindList[Index].SQLType)
   then OraType := BindList[Index].SQLType
   else OraType := stTime;
   if (BindList[Index].SQLType <> OraType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then
@@ -1932,6 +1996,7 @@ begin
   end;
   Bind.indp[0] := 0;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
@@ -1956,7 +2021,7 @@ begin
   Bind := @FOraVariables[Index];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType) and
-     (OraType <> BindList[Index].SQLType)
+     (stTimeStamp <> BindList[Index].SQLType)
   then OraType := BindList[Index].SQLType
   else OraType := stTimeStamp;
   if (BindList[Index].SQLType <> OraType) or (Bind.valuep = nil) or (Bind.curelen <> 1) then

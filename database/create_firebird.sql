@@ -175,7 +175,7 @@ stBoolean             CHAR(1),
 stByte                SMALLINT,
 stShort               SMALLINT,
 stInteger             INTEGER,
-stLong                /*BIGINT*/ NUMERIC(18,0),
+stLong                BIGINT,
 stFloat               FLOAT,
 stDouble              DOUBLE PRECISION,
 stBigDecimal          DECIMAL(18,4),
@@ -293,7 +293,7 @@ create table insert_returning
 /* Generator : GEN_ID                                           */
 /*==============================================================*/
 
-CREATE GENERATOR "GEN_ID";
+CREATE GENERATOR GEN_ID;
 
 /*==============================================================*/
 /* Start PSQL section                                           */
@@ -391,7 +391,7 @@ END
 /* Stored procedure: ABTEST                                     */
 /*==============================================================*/
 
-create procedure abtest (
+create or alter procedure abtest (
     P1 integer,
     P2 integer,
     P3 varchar(10))
@@ -408,8 +408,7 @@ end
 /*==============================================================*/
 /* Stored procedure: GUIDTEST                                   */
 /*==============================================================*/
-/*
-CREATE PROCEDURE GUIDTEST (
+CREATE OR ALTER PROCEDURE GUIDTEST (
     G_IN DOM_GUID)
 RETURNS (
     G_OUT DOM_GUID)
@@ -419,7 +418,7 @@ begin
   suspend;
 end
 ^
-*/
+
 /*==============================================================*/
 /* Finish PSQL section                                          */
 /*==============================================================*/

@@ -58,7 +58,8 @@ interface
 {$I ZCore.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
-  ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
+  ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility,
+  ZDbcUtils;
 
 type
   {$UNDEF WITH_UNICODEFROMLOCALECHARS}
@@ -90,15 +91,6 @@ type
     procedure TestQuotedStr;
     procedure TestQuotedStr2;
     procedure TestDequotedStr;
-    procedure TestRawSQLDateToDateTime;
-    procedure TestRawSQLTimeToDateTime;
-    procedure TestRawSQLTimeStampToDateTime;
-    procedure TestDateTimeToRawSQLDate;
-    procedure TestDateTimeToUnicodeSQLDate;
-    procedure TestDateTimeToRawSQLTime;
-    procedure TestDateTimeToUnicodeSQLTime;
-    procedure TestDateTimeToRawSQLTimeStamp;
-    procedure TestDateTimeToUnicodeSQLTimeStamp;
   {$IFDEF BENCHMARK}
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     procedure TestAnsiToUnicodePerformance;
@@ -138,19 +130,6 @@ type
 implementation
 
 uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}, Windows{$IFEND}{$ENDIF};
-
-{$IFDEF FPC}{$IFNDEF DEFINE FPC3_0UP}
-{These functions help FPC 2.6 to decide wether to call the PChar or PWideChar version of these functions later on}
-function SQLStrToFloatDef(Value: RawByteString; const Def: Extended; Len: Integer = 0): Extended; overload;
-begin
-  Result := SQLStrToFloatDef(PChar(Value), Def, Len);
-end;
-
-function SQLStrToFloatDef(Value: ZWideString; const Def: Extended; Len: Integer = 0): Extended; overload;
-begin
-  Result := SQLStrToFloatDef(PWideChar(Value), Def, Len);
-end;
-{$ENDIF}{$ENDIF}
 
 { TZTestSysUtilsCase }
 
@@ -470,55 +449,55 @@ end;
 }
 procedure TZTestSysUtilsCase.TestSqlStrToFloatDef;
 begin
-  CheckEquals(12.75, SqlStrToFloatDef(RawByteString('12,75'), 11.11));
-  CheckEquals(12.75, SqlStrToFloatDef(RawByteString('12.75'), 11.11));
-  CheckEquals(0.1275, SqlStrToFloatDef(RawByteString('12.75e-2'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('12.75float'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString(''), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('111,125.33'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(RawByteString('$1.012,75'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(RawByteString('€ 1.012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.0012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€ 1.0012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(RawByteString('$1.012.012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(RawByteString('€  1.012.012,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('$1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('€  1.012.012.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€  1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.012.0121.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€  1.012.0121.111,75'), 11.11));
-  CheckEquals(-1012.75, SqlStrToFloatDef(RawByteString('€ -1.012,75'), 11.11));
-  CheckEquals(-1012012111.75, SqlStrToFloatDef(RawByteString('$-1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('$+1.012.012.111,75'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('€643,11'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('643,11 €'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('643,11 $'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef(PAnsiChar('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef(PAnsiChar('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef(PAnsiChar('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('111,125.33'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(PAnsiChar('$1.012,75'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(PAnsiChar('€ 1.012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('$1.0012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('€ 1.0012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(PAnsiChar('$1.012.012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(PAnsiChar('€  1.012.012,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(PAnsiChar('$1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(PAnsiChar('€  1.012.012.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('$1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('€  1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('$1.012.0121.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(PAnsiChar('€  1.012.0121.111,75'), 11.11));
+  CheckEquals(-1012.75, SqlStrToFloatDef(PAnsiChar('€ -1.012,75'), 11.11));
+  CheckEquals(-1012012111.75, SqlStrToFloatDef(PAnsiChar('$-1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(PAnsiChar('$+1.012.012.111,75'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('€643,11'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('643,11 €'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('643,11 $'), 11.11));
 
-  CheckEquals(12.75, SqlStrToFloatDef(ZWideString('12,75'), 11.11));
-  CheckEquals(12.75, SqlStrToFloatDef(ZWideString('12.75'), 11.11));
-  CheckEquals(0.1275, SqlStrToFloatDef(ZWideString('12.75e-2'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('12.75float'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString(''), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('111,125.33'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(ZWideString('$1.012,75'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef(ZWideString('€ 1.012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.0012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€ 1.0012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(ZWideString('$1.012.012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef(ZWideString('€  1.012.012,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('$1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('€  1.012.012.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€  1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.012.0121.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€  1.012.0121.111,75'), 11.11));
-  CheckEquals(-1012.75, SqlStrToFloatDef(ZWideString('€ -1.012,75'), 11.11));
-  CheckEquals(-1012012111.75, SqlStrToFloatDef(ZWideString('$-1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('$+1.012.012.111,75'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(ZWideString('€643,11'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(ZWideString('643,11 €'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(ZWideString('643,11 $'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('111,125.33'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012,75'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ 1.012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.0012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ 1.0012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.0121.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.0121.111,75'), 11.11));
+  CheckEquals(-1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ -1.012,75'), 11.11));
+  CheckEquals(-1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$-1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$+1.012.012.111,75'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€643,11'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('643,11 €'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('643,11 $'), 11.11));
 end;
 
 {**
@@ -682,468 +661,6 @@ begin
     FSrc := TestCases_WillRaise[i][1];
     CheckException(RunDequotedStr, EArgumentException, '', 'Source: <'+FSrc+'>');
   end;
-end;
-
-procedure TZTestSysUtilsCase.TestRawSQLDateToDateTime;
-const
-  Date1_0 = RawByteString('1999-12-31');
-  Date2_0 = RawByteString('1999/12/31');
-  Date3_0 = RawByteString('1999\12\31');
-  Date4_0 = RawByteString('1999-12-31');
-  Date5_0 = RawByteString('19991231');
-
-  Date1_1 = RawByteString('99-12-31');
-  Date2_1 = RawByteString('99/12/31');
-  Date3_1 = RawByteString('99\12\31');
-  Date4_1 = RawByteString('99-12-31');
-  Date5_1 = RawByteString('991231');
-
-  Date1_2 = RawByteString('199a-12-31');
-  Date2_2 = RawByteString('1999/1a/31');
-  Date3_2 = RawByteString('1999\12\3a');
-  Date4_2 = RawByteString('0000-00-00');
-  Date5_2 = RawByteString('00000000');
-
-  Date1_3 = RawByteString('36525');
-  Date2_3 = RawByteString('36525.0');
-  Date3_3 = RawByteString('36525a');
-  Date4_3 = RawByteString('36525.0a');
-
-  procedure TestRawSQLDateToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: String = '');
-  var
-    Failed: Boolean;
-    ZFormatSettings: TZFormatSettings;
-  begin
-    ZFormatSettings.DateFormat := DateFormat;
-    ZFormatSettings.DateFormatLen := Length(DateFormat);
-    CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
-    CheckEquals(ExpFailed, Failed, 'Fail value');
-  end;
-
-begin
-  TestRawSQLDateToDateTime(Date1_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date2_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date3_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date4_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date5_0, EncodeDate(1999, 12, 31), False, 'YYYYMMDD');
-
-  TestRawSQLDateToDateTime(Date1_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLDateToDateTime(Date2_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLDateToDateTime(Date3_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLDateToDateTime(Date4_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLDateToDateTime(Date5_1, EncodeDate(99, 12, 31), False, 'YYMMDD');
-
-  TestRawSQLDateToDateTime(Date1_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date2_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date3_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date4_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLDateToDateTime(Date5_2, 0, True, 'YYYYMMDD');
-
-  TestRawSQLDateToDateTime(Date1_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLDateToDateTime(Date2_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLDateToDateTime(Date3_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLDateToDateTime(Date4_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLDateToDateTime(Date5_0, EncodeDate(1999, 12, 31), False);
-
-  TestRawSQLDateToDateTime(Date1_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLDateToDateTime(Date2_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLDateToDateTime(Date3_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLDateToDateTime(Date4_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLDateToDateTime(Date5_1, EncodeDate(99, 12, 31), False);
-
-  TestRawSQLDateToDateTime(Date1_2, 0, True);
-  TestRawSQLDateToDateTime(Date2_2, 0, True);
-  TestRawSQLDateToDateTime(Date3_2, 0, True);
-  TestRawSQLDateToDateTime(Date4_2, 0, True);
-  TestRawSQLDateToDateTime(Date5_2, 0, True);
-
-  TestRawSQLDateToDateTime(Date1_3, EncodeDate(1999, 12, 31), False);
-  TestRawSQLDateToDateTime(Date2_3, EncodeDate(1999, 12, 31), False);
-  TestRawSQLDateToDateTime(Date3_3, 0, True);
-  TestRawSQLDateToDateTime(Date4_3, 0, True);
-end;
-
-procedure TZTestSysUtilsCase.TestRawSQLTimeToDateTime;
-const
-  Time1_0 = RawByteString('23:59:59.999');
-  Time2_0 = RawByteString('23/59/59/999');
-  Time3_0 = RawByteString('23-59-59-999');
-  Time4_0 = RawByteString('23-59/59\999');
-  Time5_0 = RawByteString('235959999');
-  Time7_0 = RawByteString('23595999');
-  Time8_0 = RawByteString('2359599');
-
-  Time1_1 = RawByteString('23:59:59');
-  Time2_1 = RawByteString('23/59/59');
-  Time3_1 = RawByteString('23-59-59');
-  Time4_1 = RawByteString('23-59/59');
-  Time5_1 = RawByteString('235959');
-
-  Time1_2 = RawByteString('2a:59:59.999');
-  Time2_2 = RawByteString('23/5a/59/999');
-  Time3_2 = RawByteString('23-59-5a-999');
-  Time4_2 = RawByteString('23-59/59\9a9');
-  Time5_2 = RawByteString('235959z99');
-
-  Time1_3 = RawByteString('0.999999988425926');
-  Time2_3 = RawByteString('00.999999988425926');
-  Time3_3 = RawByteString('a.999999988425926');
-  Time4_3 = RawByteString('0.9a9999988425926');
-  Time5_3 = RawByteString('00000000000.999999988425926');
-
-  procedure TestRawSQLTimeToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const TimeFormat: String = '');
-  var
-    Failed: Boolean;
-    ZFormatSettings: TZFormatSettings;
-  begin
-    ZFormatSettings.TimeFormat := TimeFormat;
-    ZFormatSettings.TimeFormatLen := Length(TimeFormat);
-    CheckEquals(Expected, ZSysUtils.RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
-    CheckEquals(ExpFailed, Failed, 'Fail value');
-  end;
-begin
-  TestRawSQLTimeToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False, 'HHNNSSZZZ');
-
-  TestRawSQLTimeToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeToDateTime(Time3_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeToDateTime(Time4_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeToDateTime(Time5_1, EncodeTime(23, 59, 59, 0), False, 'HHNNSS');
-
-  TestRawSQLTimeToDateTime(Time1_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time2_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time3_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time4_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeToDateTime(Time5_2, 0, True, 'HHNNSSZZZ');
-
-  TestRawSQLTimeToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeToDateTime(Time7_0, EncodeTime(23, 59, 59, 99), False);
-  TestRawSQLTimeToDateTime(Time8_0, EncodeTime(23, 59, 59, 9), False);
-
-  TestRawSQLTimeToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeToDateTime(Time3_1, EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeToDateTime(Time4_1, EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeToDateTime(Time5_1, EncodeTime(23, 59, 59, 0), False);
-
-  TestRawSQLTimeToDateTime(Time1_2, 0, True);
-  TestRawSQLTimeToDateTime(Time2_2, 0, True);
-  TestRawSQLTimeToDateTime(Time3_2, 0, True);
-  TestRawSQLTimeToDateTime(Time4_2, 0, True);
-  TestRawSQLTimeToDateTime(Time5_2, 0, True);
-
-  TestRawSQLTimeToDateTime(Time1_3, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeToDateTime(Time2_3, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeToDateTime(Time3_3, 0, True);
-  TestRawSQLTimeToDateTime(Time4_3, 0, True);
-  TestRawSQLTimeToDateTime(Time5_3, EncodeTime(23, 59, 59, 999), False);
-end;
-
-procedure TZTestSysUtilsCase.TestRawSQLTimeStampToDateTime;
-const
-  Date1_0 = RawByteString('1999-12-31');
-  Date2_0 = RawByteString('1999/12/31');
-  Date3_0 = RawByteString('1999\12\31');
-  Date4_0 = RawByteString('1999-12-31');
-  Date5_0 = RawByteString('19991231');
-
-  Date1_1 = RawByteString('99-12-31');
-  Date2_1 = RawByteString('99/12/31');
-  Date3_1 = RawByteString('99\12\31');
-  Date4_1 = RawByteString('99-12-31');
-  Date5_1 = RawByteString('991231');
-
-  Date1_2 = RawByteString('199a-12-31');
-  Date2_2 = RawByteString('1999/1a/31');
-  Date3_2 = RawByteString('1999\12\3a');
-  Date4_2 = RawByteString('0000-00-00');
-  Date5_2 = RawByteString('00000000');
-
-  Date1_3 = RawByteString('36525');
-  Date2_3 = RawByteString('36525.0');
-  Date3_3 = RawByteString('36525a');
-  Date4_3 = RawByteString('36525.0a');
-
-  Time1_0 = RawByteString('23:59:59.999');
-  Time2_0 = RawByteString('23/59/59/999');
-  Time3_0 = RawByteString('23-59-59-999');
-  Time4_0 = RawByteString('23-59/59\999');
-  Time5_0 = RawByteString('235959999');
-
-  Time1_1 = RawByteString('23:59:59');
-  Time2_1 = RawByteString('23/59/59');
-  Time3_1 = RawByteString('23-59-59');
-  Time4_1 = RawByteString('23-59/59');
-  Time5_1 = RawByteString('235959');
-
-  Time1_2 = RawByteString('2a:59:59.999');
-  Time2_2 = RawByteString('23/5a/59/999');
-  Time3_2 = RawByteString('23-59-5a-999');
-  Time4_2 = RawByteString('23-59/59\9a9');
-  Time5_2 = RawByteString('235959z99');
-
-  Time1_3 = RawByteString('0.999999988425926');
-  Time2_3 = RawByteString('00.999999988425926');
-  Time3_3 = RawByteString('a.999999988425926');
-  Time4_3 = RawByteString('0.9a9999988425926');
-  Time5_3 = RawByteString('00000000000.999999988425926');
-
-  TimeStamp1_0 = RawByteString('1999-12-31 23:59:59.999');
-  TimeStamp2_0 = RawByteString('1999/12/31 23/59/59/999');
-  TimeStamp3_0 = RawByteString('1999\12\31 23-59-59-999');
-  TimeStamp4_0 = RawByteString('1999-12-31 23-59/59\999');
-  TimeStamp5_0 = RawByteString('19991231235959999');
-
-  TimeStamp1_1 = RawByteString('99-12-31 23:59:59');
-  TimeStamp2_1 = RawByteString('99/12/31-23/59/59');
-  TimeStamp3_1 = RawByteString('99\12\31-23-59-59');
-  TimeStamp4_1 = RawByteString('99-12-31-23-59/59');
-  TimeStamp5_1 = RawByteString('991231 235959');
-  TimeStamp6_1 = RawByteString('99-12-31 23:59:59.999');
-  TimeStamp7_1 = RawByteString('991231 235959999');
-
-  TimeStamp1_2 = RawByteString('199a-12-31 2a:59:59.999');
-  TimeStamp2_2 = RawByteString('1999/1a/31 23/5a/59/999');
-  TimeStamp3_2 = RawByteString('1999\12\3a 23-59-5a-999');
-  TimeStamp4_2 = RawByteString('0000-00-00 00-00-00-000');
-  TimeStamp5_2 = RawByteString('00000000000000000');
-
-  TimeStamp1_3 = RawByteString('36525.999999988425926');
-  TimeStamp2_3 = RawByteString('36525.999999988425926');
-  TimeStamp3_3 = RawByteString('36525a.999999988425926');
-  TimeStamp4_3 = RawByteString('36525.99u999988425926');
-
-  procedure TestRawSQLTimeStampToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const DateTimeFormat: String = '');
-  var
-    Failed: Boolean;
-    ZFormatSettings: TZFormatSettings;
-  begin
-    ZFormatSettings.DateTimeFormat := DateTimeFormat;
-    ZFormatSettings.DateTimeFormatLen := Length(DateTimeFormat);
-    CheckEqualsDate(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), [], 'Expected Date');
-    CheckEquals(ExpFailed, Failed, 'Fail value');
-  end;
-
-begin
-  TestRawSQLTimeStampToDateTime(Date1_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date2_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date3_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date4_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date5_0, EncodeDate(1999, 12, 31), False, 'YYYYMMDD');
-
-  TestRawSQLTimeStampToDateTime(Date1_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date2_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date3_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date4_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date5_1, EncodeDate(99, 12, 31), False, 'YYMMDD');
-
-  TestRawSQLTimeStampToDateTime(Date1_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date2_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date3_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date4_2, 0, True, 'YYYY-MM-DD');
-  TestRawSQLTimeStampToDateTime(Date5_2, 0, True, 'YYYYMMDD');
-
-  TestRawSQLTimeStampToDateTime(Date1_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date2_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date3_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date4_0, EncodeDate(1999, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date5_0, EncodeDate(1999, 12, 31), False);
-
-  TestRawSQLTimeStampToDateTime(Date1_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date2_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date3_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date4_1, EncodeDate(99, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date5_1, EncodeDate(99, 12, 31), False);
-
-  TestRawSQLTimeStampToDateTime(Date1_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Date2_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Date3_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Date4_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Date5_2, 0, True);
-
-  TestRawSQLTimeStampToDateTime(Date1_3, EncodeDate(1999, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date2_3, EncodeDate(1999, 12, 31), False);
-  TestRawSQLTimeStampToDateTime(Date3_3, 0, True);
-  TestRawSQLTimeStampToDateTime(Date4_3, 0, True);
-
-  TestRawSQLTimeStampToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False, 'HHNNSSZZZ');
-
-  TestRawSQLTimeStampToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeStampToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeStampToDateTime(Time3_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeStampToDateTime(Time4_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
-  TestRawSQLTimeStampToDateTime(Time5_1, EncodeTime(23, 59, 59, 0), False, 'HHNNSS');
-
-  TestRawSQLTimeStampToDateTime(Time1_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time2_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time3_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time4_2, 0, True, 'HH-NN-SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(Time5_2, 0, True, 'HHNNSSZZZ');
-
-  TestRawSQLTimeStampToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False);
-//  TestRawSQLTimeStampToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False);
-
-  TestRawSQLTimeStampToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False);
-  {TestRawSQLTimeStampToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(Time3_1, EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(Time4_1, EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(Time5_1, EncodeTime(23, 59, 59, 0), False); }
-
-  TestRawSQLTimeStampToDateTime(Time1_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Time2_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Time3_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Time4_2, 0, True);
-  TestRawSQLTimeStampToDateTime(Time5_2, 0, True);
-
-  TestRawSQLTimeStampToDateTime(Time1_3, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(Time2_3, EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(Time3_3, 0, True);
-  TestRawSQLTimeStampToDateTime(Time4_3, 0, True);
-  TestRawSQLTimeStampToDateTime(Time5_3, EncodeTime(23, 59, 59, 999), False);
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp2_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp3_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp4_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp5_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False, 'YYYYMMDDHHNNSSZZZ');
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False, 'YY-MM-DD HH:NN:SS');
-  TestRawSQLTimeStampToDateTime(TimeStamp2_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False, 'YY-MM-DD HH:NN:SS');
-  TestRawSQLTimeStampToDateTime(TimeStamp3_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False, 'YY-MM-DD HH:NN:SS');
-  TestRawSQLTimeStampToDateTime(TimeStamp4_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False, 'YY-MM-DD HH:NN:SS');
-  TestRawSQLTimeStampToDateTime(TimeStamp5_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False, 'YYMMDD HHNNSS');
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_2, 0, True, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp2_2, 0, True, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp3_2, 0, True, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp4_2, 0, True, 'YYYY-MM-DD HH:NN:SS.ZZZ');
-  TestRawSQLTimeStampToDateTime(TimeStamp5_2, 0, True, 'YYYYMMDDHHNNSSZZZ');
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp2_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp3_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp4_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp5_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp2_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp3_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp4_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp5_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 0), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp6_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp7_1, EncodeDate(99, 12, 31)-EncodeTime(23, 59, 59, 999), False);
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_2, 0, True);
-  TestRawSQLTimeStampToDateTime(TimeStamp2_2, 0, True);
-  TestRawSQLTimeStampToDateTime(TimeStamp3_2, 0, True);
-  TestRawSQLTimeStampToDateTime(TimeStamp4_2, 0, True);
-  TestRawSQLTimeStampToDateTime(TimeStamp5_2, 0, True);
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_3, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp2_3, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
-  TestRawSQLTimeStampToDateTime(TimeStamp3_3, 0, True);
-  TestRawSQLTimeStampToDateTime(TimeStamp4_3, 0, True);
-
-  TestRawSQLTimeStampToDateTime('2013-10-23 12:31:52.48+02', EncodeDate(2013, 10, 23)+EncodeTime(12, 31, 52, 480), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');//postgres 2013-10-23 12:31:52.48+02 f.e.
-  TestRawSQLTimeStampToDateTime('1997-02-25 00:00:00+01', EncodeDate(1997, 2, 25)+EncodeTime(0, 0, 0, 0), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');//postgres 1997-02-25 00:00:00+01 f.e.
-  TestRawSQLTimeStampToDateTime('1997-02-25', EncodeDate(1997, 2, 25)+EncodeTime(0, 0, 0, 0), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');//postgres 1997-02-25 00:00:00+01 f.e.
-  TestRawSQLTimeStampToDateTime('2013-10-23 12:31:52.48', EncodeDate(2013, 10, 23)+EncodeTime(12, 31, 52, 480), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');//postgres 2013-10-23 12:31:52.48 f.e.
-end;
-
-procedure TZTestSysUtilsCase.TestDateTimeToRawSQLDate;
-begin
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
-end;
-
-procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLDate;
-begin
-  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
-  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
-  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
-  CheckEquals(String(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
-end;
-
-procedure TZTestSysUtilsCase.TestDateTimeToRawSQLTime;
-begin
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 50), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 50)));
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 1), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 1)));
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 99), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 99))+#39'::');
-end;
-
-procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLTime;
-begin
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
-end;
-
-procedure TZTestSysUtilsCase.TestDateTimeToRawSQLTimeStamp;
-begin
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
-end;
-
-procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLTimeStamp;
-begin
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
 end;
 
 {$IFDEF BENCHMARK}

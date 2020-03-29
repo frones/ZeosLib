@@ -291,7 +291,7 @@ const ZSQLType2OID: array[Boolean, stUnknown..stBinaryStream] of OID = (
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
-uses Math, ZFastCode, ZMessages, ZSysUtils, ZClasses, ZDbcUtils
+uses Math, ZFastCode, ZMessages, ZSysUtils, ZDbcUtils
   {$IFDEF WITH_SBCDOVERFLOW}, DBConsts{$ENDIF};
 
 {**
@@ -309,10 +309,7 @@ begin
   TypeNameLo := LowerCase(TypeName);
   if (TypeNameLo = 'interval') or (TypeNameLo = 'char') or (TypeNameLo = 'bpchar')
     or (TypeNameLo = 'varchar') or (TypeNameLo = 'bit') or (TypeNameLo = 'varbit')
-  then if (Connection.GetConSettings.CPType = cCP_UTF16) then
-      Result := stUnicodeString
-    else
-      Result := stString
+  then Result := stString
   else if (TypeNameLo = 'text') or (TypeNameLo = 'citext') then
     Result := stAsciiStream
   else if TypeNameLo = 'oid' then
@@ -374,10 +371,6 @@ begin
     Result := stAsciiStream
   else
     Result := stUnknown;
-
-  if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    if Result = stAsciiStream then
-      Result := stUnicodeStream;
 end;
 
 {**
@@ -394,10 +387,7 @@ var Scale: Integer;
 begin
   case TypeOid of
     INTERVALOID, CHAROID, BPCHAROID, VARCHAROID:  { interval/char/bpchar/varchar }
-      if (ConSettings.CPType = cCP_UTF16) then
-          Result := stUnicodeString
-        else
-          Result := stString;
+      Result := stString;
     TEXTOID: Result := stAsciiStream; { text }
     OIDOID: if OidAsBlob
             then Result := stBinaryStream
@@ -444,10 +434,6 @@ begin
     else
       Result := stUnknown;
   end;
-
-  if (ConSettings.CPType = cCP_UTF16) then
-    if Result = stAsciiStream then
-      Result := stUnicodeStream;
 end;
 
 function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: boolean): string;
@@ -1518,7 +1504,6 @@ var
   Precision, Scale: Word;
   Weight: SmallInt;
   GetFirstBCDHalfByte: Boolean;
-  label Done;
 begin
   //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html
   GetPacketBCDOffSets(Src, pNibble, PLastNibble, Precision, Scale, GetFirstBCDHalfByte);
@@ -1892,15 +1877,23 @@ begin
   Result := @PArrayType(a).elemtype;
 end;
 
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinal and pointers is not portable} //the NativeUInt is an alias of PtrInt so it's size aligned
+{$ENDIF}
 function  ARR_DIMS(a: PArrayType): PInteger;
 begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType)));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinal and pointers is not portable} //the NativeUInt is an alias of PtrInt so it's size aligned
+{$ENDIF}
 function ARR_LBOUND(a: PArrayType): PInteger;
 begin
   Result := Pointer(NativeUInt(a)+NativeUInt(SizeOf(TArrayType))+(SizeOf(Integer)*Cardinal(PG2Integer(ARR_NDIM(a)))));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 (**
   Returns the actual array data offset.
@@ -1920,10 +1913,14 @@ end;
 (**
   Returns a pointer to the actual array data.
 *)
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinal and pointers is not portable} //the NativeUInt is an alias of PtrInt so it's size aligned
+{$ENDIF}
 function  ARR_DATA_PTR(a: PArrayType): Pointer;
 begin
   Result := Pointer(NativeUInt(a)+NativeUInt(ARR_DATA_OFFSET(a)));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.

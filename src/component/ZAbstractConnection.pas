@@ -92,8 +92,8 @@ uses
 {$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
-  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
-  ZDbcIntfs, ZCompatibility, ZURL;
+  {$IFDEF TLIST_IS_DEPRECATED}ZClasses,{$ENDIF}
+  ZDbcIntfs, ZCompatibility, ZDatasetUtils;
 
 
 type
@@ -321,8 +321,8 @@ type
 
 implementation
 
-uses ZMessages, ZClasses, ZAbstractRODataset,
-  {$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}ZConnProperties,
+uses ZMessages, ZAbstractRODataset, ZSysUtils,
+  {$IFNDEF TLIST_IS_DEPRECATED}ZClasses, {$ENDIF}ZDbcProperties,
       // Modified by cipto 8/2/2007 10:00:22 AM
       ZSequence, ZAbstractDataset, ZEncoding;
 

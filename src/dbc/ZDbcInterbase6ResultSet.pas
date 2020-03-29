@@ -71,10 +71,16 @@ uses
   ZDbcCache, ZDbcGenericResolver, ZDbcCachedResultSet;
 
 type
+  IZInterbaseResultSet = Interface(IZResultSet)
+    ['{1CFF9886-0B1A-47E1-BD52-2D58ABC2B3CF}']
+    function GetConnection: IZInterbase6Connection;
+  End;
+
   {** Implements Interbase ResultSet. }
-  TZInterbase6XSQLDAResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
+  TZInterbase6XSQLDAResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet,
+    IZInterbaseResultSet)
   private
-    FCachedBlob: boolean;
+    FCachedLobs: boolean;
     FStmtHandle: TISC_STMT_HANDLE;
     FStmtHandleAddr: PISC_STMT_HANDLE;
     FXSQLDA: PXSQLDA;
@@ -96,13 +102,16 @@ type
   protected
     procedure Open; override;
   public
-    TransactionResultSet: Pointer; //EH: this field is a weak resultset reference
-      //it may be an address of a cached resultset which owns this instance.
-      //this pointer should be registered as open cursor on the TA
-      //aim is: if a transaction commit is called the TA checks if
-      //all open resultsets a scollable. If so a fetchall will be done by TA.
-      //finally the TA can commit the handle (i.e. changing the AutoCommit mode)
-      //which would ususally close all pending cursors
+    //EH: this field is a weak resultset reference
+    //it may be an address of a cached resultset which owns this instance.
+    //this pointer should be registered as open cursor on the TA
+    //aim is: if a transaction commit is called the TA checks if
+    //all open resultsets a scollable. If so a fetchall will be done by TA.
+    //finally the TA can commit the handle (i.e. changing the AutoCommit mode)
+    //which would ususally close all pending cursors
+    TransactionResultSet: Pointer;
+  public //implement IZInterbaseResultSet
+    function GetConnection: IZInterbase6Connection;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       StmtHandleAddr: PISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
@@ -134,53 +143,97 @@ type
     {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     {$ENDIF}
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF USE_SYNCOMMONS}
     function Next: Boolean; reintroduce;
   end;
 
-  {** Implements external blob wrapper object for Intebase/Firbird. }
-  TZInterbase6UnCachedBlob = Class(TZAbstractUnCachedBlob, IZUnCachedLob,
-    IImmediatelyReleasable)
+  TZInterbase6Lob = class;
+
+  {** EH: implements a sequential Firebird/Interbase large object stream }
+  TZInterbaseLobStream = class(TZImmediatelyReleasableLobStream, IImmediatelyReleasable)
   private
-    FBlobId: TISC_QUAD;
     FPlainDriver: TZInterbasePlainDriver;
-    FTransaction: IZIBTransaction;
-    FIBConnection: IZInterbase6Connection;
-    FReleased: Boolean;
+    FDB_HANDLE: PISC_DB_HANDLE;
+    FTransactionHandle: PISC_TR_HANDLE;
+    FStatusVector: TARRAY_ISC_STATUS;
+    FBlobHandle: TISC_BLOB_HANDLE;
+    FLobIsOpen: Boolean;
+    FPosition: Integer;
+    FOwnerLob: TZInterbase6Lob;
   protected
-    procedure ReadLob; override;
-  public //IImmediatelyReleasable
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-    function GetConSettings: PZConSettings;
+    procedure FillBlobInfo;
+    function GetSize: Int64; override;
   public
-    constructor Create(const PlainDriver: TZInterbasePlainDriver;
-      var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
-      const Connection: IZInterbase6Connection);
-    procedure BeforeDestruction; override;
+    constructor Create(const OwnerLob: TZInterbase6Lob);
+    destructor Destroy; override;
+  public
+    BlobId: TISC_QUAD;
+    Updated: Boolean;
+    BlobInfo: PIbBlobInfo;
+  public
+    procedure OpenLob;
+    procedure CloseLob;
+    procedure CreateLob;
+    procedure CancelLob;
+  public //TStream overrides
+    function Read(var Buffer; Count: Longint): Longint; overload; override;
+    function Write(const Buffer; Count: Longint): Longint; overload; override;
+    function Seek(Offset: Longint; Origin: Word): Longint; overload; override;
   end;
 
-  TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob, IZUnCachedLob,
-    IImmediatelyReleasable)
+  IZInterbaseLob = interface(IZLob)
+    ['{85E3AA45-07A5-476E-83A7-15D40C4DEFCE}']
+    function GetBlobId: TISC_QUAD;
+  end;
+
+  { TZInterbase6Lob }
+
+  TZInterbase6Lob = Class(TZAbstractStreamedLob, IZLob, IZBlob,
+    IImmediatelyReleasable, IZInterbaseLob)
   private
-    FBlobId: TISC_QUAD;
+    FLobStream: TZInterbaseLobStream;
     FPlainDriver: TZInterbasePlainDriver;
+    FBlobId: TISC_QUAD;
     FIBConnection: IZInterbase6Connection;
-    FTransaction: IZIBTransaction;
     FReleased: Boolean;
+    FBlobInfo: TIbBlobInfo;
+    FBlobInfoFilled: Boolean;
+    FIsTemporary: Boolean;
   protected
-    procedure ReadLob; override;
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public //IImmediatelyReleasable
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     function GetConSettings: PZConSettings;
   public
-    constructor Create(const PlainDriver: TZInterbasePlainDriver;
-      var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
-      const Connection: IZInterbase6Connection);
+    function GetBlobId: TISC_QUAD;
+  public
+    function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+    function IsEmpty: Boolean; override;
+    procedure Clear; override;
+    function Length: Integer; override;
+  public
+    constructor Create(const Connection: IZInterbase6Connection; BlobId: TISC_QUAD;
+      LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
+      const OpenLobStreams: TZSortedList);
+    procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
-  end;
+  End;
+
+  TZInterbase6Clob = Class(TZInterbase6Lob, IZCLob)
+  public
+    constructor Create(const Connection: IZInterbase6Connection;
+      BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode;
+      ColumnCodePage: Word; const OpenLobStreams: TZSortedList);
+  End;
+
+  TZInterbase6Blob = Class(TZInterbase6Lob)
+  public
+    constructor Create(const Connection: IZInterbase6Connection; BlobId: TISC_QUAD;
+      LobStreamMode: TZLobStreamMode; const OpenLobStreams: TZSortedList);
+  End;
 
   {** Implements Interbase ResultSetMetadata object. }
   TZInterbaseResultSetMetadata = Class(TZAbstractResultSetMetadata)
@@ -220,6 +273,24 @@ type
     procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
       const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
   end;
+
+  {**
+    Implements Firebird cached ResultSet. This class should be extended
+    with database specific logic to form SQL data manipulation statements.
+  }
+  TZInterbaseCachedResultSet = Class(TZCachedResultset)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  public
+    function CreateLob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode): IZBlob{IZLob}; override;
+  End;
+
+  TZInterbaseRowAccessor = class(TZRowAccessor)
+  public
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  end;
+
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 implementation
@@ -263,11 +334,11 @@ begin
   FIZSQLDA := XSQLDA; //localize the interface to avoid automatic free the object
   FXSQLDA := XSQLDA.GetData; // localize buffer for fast access
 
-  FCachedBlob := CachedBlob;
+  FCachedLobs := CachedBlob;
   FIBConnection := Statement.GetConnection as IZInterbase6Connection;
   FPISC_DB_HANDLE := FIBConnection.GetDBHandle;
   FISC_TR_HANDLE := FIBConnection.GetTrHandle^;
-  FPlainDriver := TZInterbasePlainDriver(FIBConnection.GetIZPlainDriver.GetInstance);
+  FPlainDriver := FIBConnection.GetPlainDriver;
   FDialect := FIBConnection.GetDialect;
   FStmtType := StmtType; //required to know how to fetch the columns for ExecProc
 
@@ -422,14 +493,14 @@ begin
                               if SqlSubType = isc_blob_text then begin
                                 JSONWriter.Add('"');
                                 ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-                                    PISC_QUAD(sqldata)^, L, P, False, Self);
+                                    PISC_QUAD(sqldata), L, P, False, Self);
                                 if ColumnCodePage = zCP_UTF8
                                 then JSONWriter.AddJSONEscape(P, L)
                                 else WConvert(P, L, ColumnCodePage);
                                 JSONWriter.Add('"');
                               end else begin
                                 ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-                                  PISC_QUAD(sqldata)^, L, P, true, Self);
+                                  PISC_QUAD(sqldata), L, P, true, Self);
                                 JSONWriter.WrBase64(P, L, True);
                               end;
                             finally
@@ -503,10 +574,10 @@ var XSQLVAR: PXSQLVAR;
   begin
     Lob := GetBlob(ColumnIndex);
     if Lob.IsClob
-    then P := Lob.GetPAnsiChar(ZOSCodePage)
-    else P := Lob.GetBuffer;
-    Len := Lob.Length;
+    then P := Lob.GetPAnsiChar(ZOSCodePage, FRawTemp, Len)
+    else P := Lob.GetBuffer(FRawTemp, Len);
     ZSetString(PAnsiChar(P), Len, Result);
+    FRawTemp := '';
   end;
 label SetFromPChar;
 begin
@@ -613,7 +684,8 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZInterbase6XSQLDAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZInterbase6XSQLDAResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   BlobId: TISC_QUAD;
   XSQLVAR: PXSQLVAR;
@@ -622,6 +694,8 @@ begin
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
   Result := nil;
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
@@ -632,25 +706,16 @@ begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_QUAD, SQL_BLOB, SQL_ARRAY: BlobId := PISC_QUAD(XSQLVAR.sqldata)^;
-    else
-      raise EZIBConvertError.Create(SUnsupportedDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr((XSQLVAR.sqltype and not(1))));
+    else raise CreateCanNotAccessBlobRecordException(ColumnIndex,
+       TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType);
     end;
     case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
-      stBinaryStream:
-        if FCachedBlob then begin
-          Result := TZAbstractBlob.Create;
-          ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-            BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, True, Self);
-        end else
-          Result := TZInterbase6UnCachedBlob.Create(FPlainDriver, BlobId, FIBConnection.GetActiveTransaction, FIBConnection);
-      stAsciiStream, stUnicodeStream:
-        if FCachedBlob then begin
-          Result := TZAbstractClob.CreateWithData(nil, 0, Consettings^.ClientCodePage^.CP, ConSettings);
-          ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-            BlobId, Result.GetLengthAddress^, Result.GetBufferAddress^, False, Self);
-        end else
-          Result := TZInterbase6UnCachedClob.Create(FPlainDriver, BlobId, FIBConnection.GetActiveTransaction, FIBConnection);
-      end
+      stBinaryStream: Result := TZInterbase6BLob.Create(FIBConnection, BlobId,
+          lsmRead, FOpenLobStreams);
+      stAsciiStream, stUnicodeStream: Result := TZInterbase6Clob.Create(FIBConnection, BlobId,
+          lsmRead, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnCodePage,
+          FOpenLobStreams);
+    end;
   end;
 end;
 
@@ -886,6 +951,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+function TZInterbase6XSQLDAResultSet.GetConnection: IZInterbase6Connection;
+begin
+  Result := FIBConnection;
+end;
+
 function TZInterbase6XSQLDAResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 var
   P: PAnsiChar;
@@ -1127,8 +1197,7 @@ function TZInterbase6XSQLDAResultSet.GetLobBufAndLen(ColumnIndex: Integer;
   out Len: NativeUInt): Pointer;
 begin
   FBlobTemp := GetBlob(ColumnIndex);
-  Result := FBlobTemp.GetBuffer;
-  Len := FBlobTemp.Length;
+  Result := FBlobTemp.GetBuffer(fRawTemp, Len);
 end;
 
 {**
@@ -1525,10 +1594,11 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
       SQL_BLOB      : Begin
                         FBlobTemp := GetBlob(ColumnIndex);  //localize interface to keep pointer alive
                         if FBlobTemp.IsClob then begin
-                          Result := FBlobTemp.GetPWideChar;
-                          Len := FBlobTemp.Length shr 1;
+                          Result := FBlobTemp.GetPWideChar(FUniTemp, Len);
                         end else begin
-                          FUniTemp := Ascii7ToUnicodeString(FBlobTemp.GetBuffer, FBlobTemp.Length);
+                          Result := FBlobTemp.GetBuffer(FRawTemp, Len);
+                          FUniTemp := Ascii7ToUnicodeString(Pointer(Result), Len);
+                          FRawTemp := '';
                           Result := Pointer(FUniTemp);
                           Len := Length(FUniTemp);
                         end;
@@ -1653,10 +1723,10 @@ var XSQLVAR: PXSQLVAR;
   begin
     Lob := GetBlob(ColumnIndex);
     if Lob.IsClob
-    then P := Lob.GetPAnsiChar(zCP_UTF8)
-    else P := Lob.GetBuffer;
-    Len := Lob.Length;
+    then P := Lob.GetPAnsiChar(zCP_UTF8, fRawTemp, Len)
+    else P := Lob.GetBuffer(FRawTemp, Len);
     ZSetString(PAnsiChar(P), Len, Result);
+    FRawTemp := '';
   end;
 label SetFromPChar;
 begin
@@ -1773,6 +1843,7 @@ var
   ZCodePageInfo: PZCodePage;
   CP: Word;
   XSQLVAR: PXSQLVAR;
+  HasLobs: Boolean;
 begin
   if FStmtHandle=0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -1780,6 +1851,7 @@ begin
   FGUIDProps := TZInterbase6StatementGUIDProps.Create(Statement);
 
   ColumnsInfo.Clear;
+  HasLobs := False;
   if FXSQLDA.sqld > 0 then  //keep track we have a column to avoid range issues see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=10595
     for I := 0 to FXSQLDA.sqld {FieldCount} - 1 do begin
       {$R-}
@@ -1818,8 +1890,10 @@ begin
               then CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
               else CharOctedLength := Precision shl 1;
             end;
-          stAsciiStream, stUnicodeStream:
-            ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+          stAsciiStream, stUnicodeStream: begin
+              HasLobs := True;
+              ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+            end;
           else begin
             ColumnCodePage := zCP_NONE;
             case FieldSqlType of
@@ -1839,6 +1913,7 @@ begin
                 end;
               end;
               stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of milli second fractions
+              stBinaryStream: HasLobs := True;
             end;
           end;
         end;
@@ -1851,6 +1926,7 @@ begin
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;
+  FCachedLobs := FCachedLobs and HasLobs;
   inherited Open;
 end;
 
@@ -1883,129 +1959,6 @@ procedure TZInterbase6XSQLDAResultSet.DeRegisterCursor;
 begin
   FIBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
   FIBTransaction := nil;
-end;
-
-{ TZInterbase6UnCachedBlob }
-
-procedure TZInterbase6UnCachedBlob.BeforeDestruction;
-begin
-  FTransaction.DeRegisterOpenUnCachedLob(Self);
-  inherited;
-end;
-
-constructor TZInterbase6UnCachedBlob.Create(const PlainDriver: TZInterbasePlainDriver;
-  var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
-  const Connection: IZInterbase6Connection);
-begin
-  FBlobId := BlobId;
-  FPlainDriver := PlainDriver;
-  FTransaction := Transaction;
-  FTransaction.RegisterOpenUnCachedLob(Self);
-  FIBConnection := Connection;
-end;
-
-function TZInterbase6UnCachedBlob.GetConSettings: PZConSettings;
-begin
-  if FIBConnection <> nil
-  then Result := FIBConnection.GetConSettings
-  else Result := nil;
-end;
-
-{**
-  Reads the blob information by blob handle.
-  @param handle a Interbase6 database connect handle.
-  @param the statement previously prepared
-}
-procedure TZInterbase6UnCachedBlob.ReadLob;
-var
-  Size: Integer;
-  Buffer: Pointer;
-begin
-  InternalClear;
-  if FIBConnection <> nil then begin
-    ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
-      FBlobId, Size, Buffer, True, Self);
-    BlobSize := Size;
-    BlobData := Buffer;
-  end;
-  inherited ReadLob;
-end;
-
-procedure TZInterbase6UnCachedBlob.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-var Imm: IImmediatelyReleasable;
-begin
-  if (FTransaction <> nil) and (FTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
-     (Sender <> imm) then begin
-    FTransaction.DeRegisterOpenUnCachedLob(Self);
-    FReleased := True;
-    Imm.ReleaseImmediat(Sender, AError);
-    FTransaction := nil;
-    FIBConnection := nil;
-  end;
-end;
-
-{ TZInterbase6UnCachedClob }
-
-{**
-  Reads the blob information by blob handle.
-  @param handle a Interbase6 database connect handle.
-  @param the statement previously prepared
-}
-procedure TZInterbase6UnCachedClob.BeforeDestruction;
-begin
-  if not FReleased and (FTransaction <> nil) then
-    FTransaction.DeRegisterOpenUnCachedLob(Self);
-  inherited;
-end;
-
-constructor TZInterbase6UnCachedClob.Create(const PlainDriver: TZInterbasePlainDriver;
-  var BlobId: TISC_QUAD; const Transaction: IZIBTransaction;
-  const Connection: IZInterbase6Connection);
-begin
-  inherited CreateWithData(nil, 0, Connection.GetConSettings^.ClientCodePage^.CP,
-    Connection.GetConSettings);
-  FTransaction := Transaction;
-  FTransaction.RegisterOpenUnCachedLob(Self);
-  FIBConnection := Connection;
-  FBlobId := BlobId;
-  FPlainDriver := PlainDriver;
-end;
-
-function TZInterbase6UnCachedClob.GetConSettings: PZConSettings;
-begin
-  Result := FConSettings
-end;
-
-procedure TZInterbase6UnCachedClob.ReadLob;
-var
-  Size: Integer;
-  Buffer: Pointer;
-begin
-  InternalClear;
-  if (FIBConnection <> nil) then begin
-    ReadBlobBufer(FPlainDriver, FIBConnection.GetDBHandle, FTransaction.GetTrHandle,
-      FBlobId, Size, Buffer, False, Self);
-    AnsiChar((PAnsiChar(Buffer)+NativeUInt(Size))^) := AnsiChar(#0); //add #0 terminator
-    FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
-    FBlobSize := Size+1;
-    BlobData := Buffer;
-  end;
-  inherited ReadLob;
-end;
-
-procedure TZInterbase6UnCachedClob.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-var imm: IImmediatelyReleasable;
-begin
-  if (FTransaction <> nil) and (FTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
-     (Sender <> imm) then begin
-    FTransaction.DeRegisterOpenUnCachedLob(Self);
-    FReleased := True;
-    Imm.ReleaseImmediat(Sender, AError);
-    FTransaction := nil;
-    FIBConnection := nil;
-  end;
 end;
 
 { TZInterbaseResultSetMetadata }
@@ -2229,6 +2182,471 @@ begin
     then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
     else SQLWriter.AddText('=?', Result);
   end;
+end;
+
+{ TZInterbaseLobStream }
+
+procedure TZInterbaseLobStream.CancelLob;
+begin
+  if not FReleased then begin
+    Assert(Updated);
+    Assert(FLobIsOpen);
+    try
+      if FPlainDriver.isc_cancel_blob(@FStatusVector, @FBlobHandle) <> 0 then
+        CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+    finally
+      FLobIsOpen := False;
+      Updated := False;
+      FPosition := 0;
+      PInt64(@BlobId)^ := 0;
+      PInt64(@FOwnerLob.FBlobId)^ := 0;
+      BlobInfo.TotalSize := 0;
+    end;
+  end;
+end;
+
+procedure TZInterbaseLobStream.CloseLob;
+begin
+  Assert(FLobIsOpen);
+  if FPlainDriver.isc_close_blob(@FStatusVector, @FBlobHandle) <> 0 then
+    CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
+  FLobIsOpen := False;
+  FPosition := 0;
+end;
+
+constructor TZInterbaseLobStream.Create(const OwnerLob: TZInterbase6Lob);
+begin
+  inherited Create(OwnerLob, OwnerLob, OwnerLob.FOpenLobStreams);
+  FOwnerLob := OwnerLob;
+  BlobId := OwnerLob.FBlobId;
+  FPlainDriver := OwnerLob.FPlainDriver;
+  FDB_HANDLE := OwnerLob.FIBConnection.GetDBHandle;
+  FTransactionHandle := OwnerLob.FIBConnection.GetTrHandle;
+  BlobInfo :=  @FOwnerLob.FBlobInfo;
+end;
+
+procedure TZInterbaseLobStream.CreateLob;
+begin
+  { create blob handle }
+  if FPlainDriver.isc_create_blob2(@FStatusVector, FDB_HANDLE, FTransactionHandle,
+     @FBlobHandle, @BlobId, 0, nil) <> 0 then //EH: what about BPB
+    CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+  FOwnerLob.FBlobId := BlobId; //write back to descriptor
+  Updated := True;
+  FLobIsOpen := True;
+  FOwnerLob.FIsTemporary := True;
+  FOwnerLob.FBlobInfoFilled := True;
+  BlobInfo.NumSegments := 0;
+  BlobInfo.TotalSize := 0;
+  BlobInfo.BlobType := Byte(FOwnerLob.IsClob);
+  BlobInfo.MaxSegmentSize := High(Word);
+end;
+
+destructor TZInterbaseLobStream.Destroy;
+begin
+  try
+    if not FReleased and FLobIsOpen then
+  {    close blob handle }
+      if FPlainDriver.isc_close_blob(@FStatusVector, @FBlobHandle) <> 0 then
+        CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
+  finally
+    FOwnerLob.FLobStream := nil;
+    FOwnerLob.FIsUpdated := Updated;
+  end;
+  inherited;
+end;
+
+procedure TZInterbaseLobStream.FillBlobInfo;
+var
+  Items: array[0..3] of Byte;
+  Results: array[0..99] of AnsiChar;
+  pBuf, pBufStart: PAnsiChar;
+  Item, ItemVal: Integer;
+  StatusVector: TARRAY_ISC_STATUS;
+begin
+  Items[0] := isc_info_blob_num_segments;
+  Items[1] := isc_info_blob_max_segment;
+  Items[2] := isc_info_blob_total_length;
+  Items[3] := isc_info_blob_type;
+
+  if FPlainDriver.isc_blob_info(@StatusVector, @FBlobHandle, 4, @items[0],
+      SizeOf(Results), @Results[0]) <> 0 then
+    CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+  pBufStart := @Results[0];
+  pBuf := pBufStart;
+  while pBuf - pBufStart <= SizeOf(Results) do
+  begin
+    Item := Byte(pBuf^);
+    if Item = isc_info_end then
+      Break;
+
+    Inc(pBuf);
+    ItemVal := ReadInterbase6NumberWithInc(FPlainDriver, pBuf);
+
+    case Item of
+      isc_info_blob_num_segments:
+        FOwnerLob.FBlobInfo.NumSegments := ItemVal;
+      isc_info_blob_max_segment:
+        FOwnerLob.FBlobInfo.MaxSegmentSize := ItemVal;
+      isc_info_blob_total_length:
+        FOwnerLob.FBlobInfo.TotalSize := ItemVal;
+      isc_info_blob_type:
+        FOwnerLob.FBlobInfo.BlobType := ItemVal;
+    end;
+  end;
+  FOwnerLob.FBlobInfoFilled := True;
+end;
+
+function TZInterbaseLobStream.GetSize: Int64;
+begin
+  if Int64(BlobID) = 0 then
+    Result := 0
+  else begin
+    if not FLobIsOpen then
+      OpenLob;
+    if FReleased
+    then Result := 0
+    else Result := FOwnerLob.FBlobInfo.TotalSize;
+  end;
+end;
+
+procedure TZInterbaseLobStream.OpenLob;
+begin
+  if not FLobIsOpen then begin
+    if (Int64(BlobID) <> 0) then begin
+       if FPlainDriver.isc_open_blob2(@FStatusVector, FDB_HANDLE,
+       FTransactionHandle, @FBlobHandle, @BlobId, 0 , nil) <> 0 then
+      CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+      FillBlobInfo;
+    end else
+      CreateLob;
+    FLobIsOpen := True;
+  end;
+  //isc_blob_gen_bpb2
+end;
+
+function TZInterbaseLobStream.Read(var Buffer; Count: Longint): Longint;
+var BytesRead, SegLen: ISC_USHORT;
+  Status: ISC_STATUS;
+var PBuf: PAnsiChar;
+begin
+  Result := 0;
+  if not FReleased then begin
+    if FOwnerLob.FLobStreamMode = lsmWrite then
+      raise CreateWriteOnlyException;
+    if not FLobIsOpen then
+      OpenLob;
+
+    PBuf := @Buffer;
+    while Count > 0 do begin
+      if Count > LongInt(FOwnerLob.FBlobInfo.MaxSegmentSize)
+      then SegLen := FOwnerLob.FBlobInfo.MaxSegmentSize
+      else SegLen := Word(Count);
+      Status := FPlainDriver.isc_get_segment(@FStatusVector, @FBlobHandle,
+             @BytesRead, SegLen, PBuf);
+      case Status of
+        0, isc_segment: begin
+            Inc(Result, BytesRead);
+            Dec(Count, BytesRead);
+            Inc(PBuf, BytesRead);
+          end;
+        isc_segstr_eof: begin
+           Inc(Result, BytesRead);
+           Break;
+          end
+        else CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+      end;
+    end;
+  end;
+  FPosition := FPosition + Result;
+end;
+
+function TZInterbaseLobStream.Seek(Offset: Longint; Origin: Word): Longint;
+var P: Pointer;
+begin
+  if Origin = soFromEnd then
+    Result := FOwnerLob.FBlobInfo.TotalSize - OffSet
+  else if Origin = soFromCurrent then
+    Result := FPosition + OffSet
+  else begin
+    Result := OffSet;
+    if (Result = 0) and (FPosition > 0) then //seek to bos ?
+      CloseLob;
+  end;
+  if FPosition > Result //backward seeking is not supported
+  then raise EZSQLException.Create(SOperationIsNotAllowed1)
+  else if Result > FPosition then //seek forward?
+    if FOwnerLob.FLobStreamMode = lsmRead then begin //allowed on reading mode only
+      GetMem(P, FOwnerLob.FBlobInfo.MaxSegmentSize);
+      try
+        while Result > FPosition do begin
+          OffSet := Result - FPosition;
+          if OffSet > LongInt(FOwnerLob.FBlobInfo.MaxSegmentSize)
+          then Origin := FOwnerLob.FBlobInfo.MaxSegmentSize
+          else Origin := Word(OffSet);
+          Inc(FPosition, Read(P^, Origin));
+        end;
+      finally
+        FreeMem(P);
+      end;
+    end
+  else raise CreateWriteOnlyException;
+  FPosition := Result;
+end;
+
+function TZInterbaseLobStream.Write(const Buffer; Count: Longint): Longint;
+var
+  SegLen: Integer;
+  TempBuffer: PAnsiChar;
+begin
+  Result := 0;
+  if FReleased then Exit;
+  if FOwnerLob.FLobStreamMode = lsmRead then
+    raise EZSQLException.Create(SOperationIsNotAllowed2);
+  if (FPosition = 0) and FOwnerLob.FIsTemporary then begin
+    if FLobIsOpen and Updated
+    then CancelLob
+    else CreateLob;
+  end;
+  if not FLobIsOpen then
+    OpenLob;
+  { put data to blob }
+  TempBuffer := @Buffer;
+  while (Count > 0) do begin
+    if Count > LongInt(BlobInfo.MaxSegmentSize)
+    then SegLen := BlobInfo.MaxSegmentSize
+    else SegLen := Count;
+    if FPlainDriver.isc_put_segment(@FStatusVector, @FBlobHandle, SegLen, TempBuffer) <> 0 then
+      CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+    Inc(Result, SegLen);
+    Inc(TempBuffer, SegLen);
+    Dec(Count, SegLen);
+  end;
+  { in write mode we always have a new LOB }
+  BlobInfo.TotalSize := BlobInfo.TotalSize + Result;
+  Updated := True;
+  FPosition := FPosition + Result;
+end;
+
+{ TZInterbaseCachedResultSet }
+
+function TZInterbaseCachedResultSet.CreateLob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode): IZBlob;
+var SQLType: TZSQLType;
+  InterbaseResultSet: IZInterbaseResultSet;
+  IBConnection: IZInterbase6Connection;
+var BlobID: TISC_Quad;
+  i64: Int64 absolute BlobID;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  if ResultSet.QueryInterface(IZInterbaseResultSet, InterbaseResultSet) = S_OK then begin
+    {$IFNDEF GENERIC_INDEX}Dec(ColumnIndex);{$ENDIF}
+    SQLType := TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType;
+    if (Byte(SQLType) >= Byte(stAsciiStream)) and (Byte(SQLType) <= Byte(stBinaryStream)) then begin
+      IBConnection := InterbaseResultSet.GetConnection;
+      i64 := 0;
+      if (SQLType = stBinaryStream)
+      then Result := TZInterbase6Blob.Create(IBConnection, BlobID, LobStreamMode, fOpenLobStreams)
+      else Result := TZInterbase6Clob.Create(IBConnection, BlobID, LobStreamMode,
+        TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, FOpenLobStreams);
+      UpdateLob(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, Result);
+    end else raise CreateCanNotAccessBlobRecordException(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, SQLType);
+  end;
+end;
+
+class function TZInterbaseCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZInterbaseRowAccessor;
+end;
+
+{ TZInterbase6Lob }
+
+procedure TZInterbase6Lob.AfterConstruction;
+begin
+  FIBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(Self);
+  inherited;
+end;
+
+procedure TZInterbase6Lob.BeforeDestruction;
+begin
+  if (FLobStream <> nil) then begin
+    FIBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+    //FLobStream.FTransaction.DeRegisterOpenUnCachedLob(Self);
+    if FLobStream.FLobIsOpen then
+      FLobStream.CloseLob;
+    FreeAndNil(FLobStream);
+  end;
+  inherited;
+end;
+
+procedure TZInterbase6Lob.Clear;
+begin
+  if PInt64(@FBlobID)^ <> 0 then try
+    if FIsTemporary and (FLobStream <> nil) and FLobStream.FLobIsOpen then begin
+      FLobStream.CancelLob;
+      FreeAndNil(FLobStream);
+    end;
+  finally
+    FIsTemporary := False;
+    PInt64(@FBlobID)^ := 0;
+    FIsUpdated := True;
+  end;
+end;
+
+function TZInterbase6Lob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+var Lob: TZInterbase6Lob;
+    ALobID: TISC_QUAD;
+    P: Pointer;
+    SegmentSize, Count: LongInt;
+    ReadStream, WriteStream: TStream;
+begin
+  PInt64(@ALobID)^ := 0;
+  if FColumnCodePage = zCP_Binary
+  then Lob := TZInterbase6BLob.Create(FIBConnection, ALobID, lsmWrite, FOpenLobStreams)
+  else Lob := TZInterbase6Clob.Create(FIBConnection, ALobID, lsmWrite, FColumnCodePage, FOpenLobStreams);
+  Result := Lob;
+  if LobStreamMode <> lsmWrite then begin
+    ReadStream := CreateLobStream(FColumnCodePage, lsmRead);
+    Lob.Open(lsmWrite); //create a lob descriptor
+    WriteStream := Lob.CreateLobStream(FColumnCodePage, lsmWrite);
+    P := nil;
+    try
+      if FBlobInfo.TotalSize > 0 then begin
+        segmentsize := FBlobInfo.MaxSegmentSize;
+        GetMem(P, SegmentSize);
+        while true do begin
+          Count := ReadStream.Read(P^, SegmentSize);
+          WriteStream.Write(P^, Count);
+          if (Count < SegmentSize) or
+            ((Count = SegmentSize) and (FBlobInfo.MaxSegmentSize = FBlobInfo.TotalSize)) then
+            Break;
+        end;
+      end;
+    finally
+      if P <> nil then
+        FreeMem(P);
+      FreeAndNil(ReadStream);
+      FreeAndNil(WriteStream);
+    end;
+  end;
+  Lob.FLobStreamMode := LobStreamMode;
+end;
+
+constructor TZInterbase6Lob.Create(const Connection: IZInterbase6Connection; BlobId: TISC_QUAD;
+  LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
+  const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(ColumnCodePage, OpenLobStreams);
+  Assert(LobStreamMode <> lsmReadWrite);
+  FLobStreamMode := LobStreamMode;
+  FPlainDriver := Connection.GetPlainDriver;
+  FIBConnection := Connection;
+  FBlobId := BlobId;
+end;
+
+function TZInterbase6Lob.CreateLobStream(CodePage: Word;
+  LobStreamMode: TZLobStreamMode): TStream;
+begin
+  FLobStreamMode := LobStreamMode;
+  FLobStream := TZInterbaseLobStream.Create(Self);
+  Result := FLobStream;
+  if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
+    Result := TZCodePageConversionStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
+end;
+
+function TZInterbase6Lob.GetBlobId: TISC_QUAD;
+begin
+  Result := FBlobId;
+end;
+
+function TZInterbase6Lob.GetConSettings: PZConSettings;
+begin
+  if FIBConnection <> nil
+  then Result := FIBConnection.GetConSettings
+  else Result := nil;
+end;
+
+function TZInterbase6Lob.IsEmpty: Boolean;
+begin
+  Result := Int64(FBlobId) = 0;
+end;
+
+function TZInterbase6Lob.Length: Integer;
+var Stream: TStream;
+begin
+  if FReleased or (PInt64(@FBlobID)^ = 0)
+  then Result := 0
+  else begin
+    if not FBlobInfoFilled then begin
+      Stream := CreateLobStream(FColumnCodePage, lsmRead);
+      if Stream <> nil then
+        FLobStream.FillBlobInfo;
+    end;
+    Result := FBlobInfo.TotalSize
+  end;
+end;
+
+procedure TZInterbase6Lob.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var Imm: IImmediatelyReleasable;
+begin
+  if (FIBConnection <> nil) and (FIBConnection.GetActiveTransaction <> nil) and
+     (FIBConnection.GetActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
+     (Sender <> imm) then begin
+    FIBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+    Imm.ReleaseImmediat(Sender, AError);
+    if FlobStream <> nil then begin
+      FlobStream.FReleased := True;
+      FreeAndNil(FlobStream);
+      FreeAndNil(FlobStream);
+    end;
+  end;
+  FReleased := true;
+end;
+
+{ TZInterbase6Clob }
+
+constructor TZInterbase6Clob.Create(const Connection: IZInterbase6Connection;
+  BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
+  const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(Connection, BlobId, LobStreamMode, ColumnCodePage, OpenLobStreams);
+  FConSettings := Connection.GetConSettings;
+end;
+
+{ TZInterbase6Blob }
+
+constructor TZInterbase6Blob.Create(const Connection: IZInterbase6Connection;
+  BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode; const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(Connection, BlobId, LobStreamMode, zCP_Binary, OpenLobStreams);
+end;
+
+{ TZInterbaseRowAccessor }
+
+constructor TZInterbaseRowAccessor.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
+  CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
+begin
+  {EH: usually this code is NOT nessecary if we would handle the types as the
+  providers are able to. But in current state we just copy all the incompatibilities
+  from the DataSets into dbc... grumble.}
+  TempColumns := TObjectList.Create(True);
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-1); // no streams 4 sqlite
+    if Current.ColumnType in [stBytes, stUnicodeStream] then
+      Current.ColumnCodePage := zCP_Binary;
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
+  TempColumns.Free;
 end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit

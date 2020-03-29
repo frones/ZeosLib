@@ -56,6 +56,10 @@ interface
 {$I ZDbc.inc}
 {$Z-}
 
+{$IFDEF WITH_LEGACYIFEND}
+{$LEGACYIFEND ON}
+{$ENDIF}
+
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
@@ -135,6 +139,9 @@ type
     property ClientCP: word read FClientCP;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: RawByteString=EmptyRaw): TZLoggingEvent;
+
+    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
   public
     constructor Create(const Connection: IZConnection; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
     destructor Destroy; override;
@@ -194,8 +201,7 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
-    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
+
     function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; virtual;
   end;
 
@@ -323,6 +329,7 @@ type
     FSupportsDMLBatchArrays: Boolean;
     FBindList: TZBindList;
   protected
+    FOpenLobStreams: TZSortedList;
     FUniTemp: ZWideString;
     FRawTemp: RawByteString;
     FTokenMatchIndex, //did we match a token to indicate if Prepare makes sense?
@@ -573,6 +580,7 @@ type
     procedure SetDate(ParameterIndex: Integer; const Value: TZDate); reintroduce; overload;
     procedure SetTime(ParameterIndex: Integer; const Value: TZTime); reintroduce; overload;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
   public
     function GetResultSet: IZResultSet; override;
     function GetUpdateCount: Integer; override;
@@ -670,7 +678,7 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
-  ZEncoding, ZDbcProperties, ZDbcMetadata,
+  ZEncoding, ZDbcProperties, ZDbcMetadata, ZDbcConnection,
   Math
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND};
 
@@ -1660,7 +1668,7 @@ begin
         {$ENDIF}
         zbtUniString: IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ZWideString(BindValue.Value));
         zbtCharByRef: IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetCharRec(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZCharRec(BindValue.Value)^);
-        //zbtBinByRef:  IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).BindBinary(I, BindValue.SQLType, PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len);
+        zbtBinByRef:  IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetBytes(I, PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len);
         zbtGUID:      IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetGUID(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGUID(BindValue.Value)^);
         zbtBytes:     IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TBytes(BindValue.Value));
         zbtArray,
@@ -2068,10 +2076,12 @@ begin
   TBytes(AquireBuffer(Index, SQLType, zbtBytes).Value) := Value; //inc refcount
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4056 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZBindList.Put(Index: Integer; Value: Boolean);
 begin
-  AquireBuffer(Index, stBoolean, zbtPointer).Value := Pointer(Ord(Value));
+  AquireBuffer(Index, stBoolean, zbtPointer).Value := Pointer(Byte(Value));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes);
 var BindValue: PZBindValue;
@@ -2294,6 +2304,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.BeforeClose;
 begin
+  if (FOpenLobStreams<> nil) and (FOpenLobStreams.Count > 0) then
+    raise EZSQLException.Create('close all open lobstreams before closing the statement');
   inherited BeforeClose;
   if Prepared then
     Unprepare;
@@ -2388,6 +2400,7 @@ begin
   FBindList := TZBindList.Create(ConSettings);
   FClientCP := ConSettings.ClientCodePage.CP;
   FTokenMatchIndex := -1;
+  FOpenLobStreams := TZSortedList.Create;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
 
@@ -2429,8 +2442,8 @@ end;
 destructor TZAbstractPreparedStatement.Destroy;
 begin
   inherited Destroy;
-  if FBindList <> nil then
-    FreeAndNil(FBindList);
+  FreeAndNil(FBindList);
+  FreeAndNil(FOpenLobStreams);
 end;
 
 {**
@@ -3140,32 +3153,22 @@ end;
 procedure TZAbstractPreparedStatement.SetAsciiStream(ParameterIndex: Integer;
   const Value: TStream);
 var
-  CLob: IZBlob; //use a local variable for the FPC
-  MyMemoryStream: TMemoryStream;
-  CreatedMemoryStream: boolean;
+  CLob: IZCLob; //use a local variable for the FPC
+  CP: Word;
 begin
-  MyMemoryStream := nil;
-  CreatedMemoryStream := false;
-  try
-    if Value is TMemoryStream then begin
-      MyMemoryStream := Value as TMemoryStream;
-    end else begin
-      MyMemoryStream := TMemoryStream.Create;
-      CreatedMemoryStream := True;
-      MyMemoryStream.CopyFrom(Value, Value.Size);
-    end;
-
-    if MyMemoryStream.Memory = nil
-    then CLob := TZAbstractClob.CreateWithData(PEmptyAnsiString, MyMemoryStream.Size, ConSettings^.ClientCodePage^.CP, ConSettings)
-    else if ConSettings^.AutoEncode
-      then CLob := TZAbstractClob.CreateWithData(MyMemoryStream.Memory, MyMemoryStream.Size, zCP_NONE, ConSettings)
-      else CLob := TZAbstractClob.CreateWithData(MyMemoryStream.Memory, MyMemoryStream.Size, ConSettings^.ClientCodePage^.CP, ConSettings);
-    SetBlob(ParameterIndex, stAsciiStream, Clob)
-
-  finally
-    if CreatedMemoryStream then
-      FreeAndNil(MyMemoryStream);
+  if Value = nil then begin
+    IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(ParameterIndex, stAsciiStream);
+    Exit;
   end;
+  if ConSettings^.ClientCodePage.Encoding = ceUTF16
+  then CP := ConSettings^.CTRL_CP
+  else CP := ConSettings^.ClientCodePage^.CP;
+  CLob := TZLocalMemCLob.Create(CP, ConSettings, FOpenLobStreams);
+
+  if ConSettings^.AutoEncode then
+     CP := zCP_NONE;
+  Clob.SetStream(Value, CP);
+  SetBlob(ParameterIndex, stAsciiStream, Clob);
 end;
 
 procedure TZAbstractPreparedStatement.SetASQL(const Value: RawByteString);
@@ -3194,8 +3197,10 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetBinaryStream(ParameterIndex: Integer;
   const Value: TStream);
+var Blob: IZBlob;
 begin
-  SetBlob(ParameterIndex, stBinaryStream, TZAbstractBlob.CreateWithStream(Value));
+  Blob := TZLocalMemBLob.CreateWithStream(Value, FOpenLobStreams);
+  SetBlob(ParameterIndex, stBinaryStream, Blob);
 end;
 
 procedure TZAbstractPreparedStatement.SetBlob(ParameterIndex: Integer;
@@ -3486,9 +3491,9 @@ end;
 procedure TZAbstractPreparedStatement.SetUnicodeStream(ParameterIndex: Integer;
   const Value: TStream);
 begin
-  if TMemoryStream(Value).Memory = nil
-  then SetBlob(ParameterIndex, stUnicodeStream, TZAbstractClob.CreateWithData(PEmptyUnicodeString, Value.Size, ConSettings))
-  else SetBlob(ParameterIndex, stUnicodeStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, zCP_UTF16, ConSettings));
+  if Value = nil
+  then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetNull(ParameterIndex, stUnicodeStream)
+  else SetBlob(ParameterIndex, stUnicodeStream, TZLocalMemCLob.CreateWithStream(Value, zCP_UTF16, ConSettings, FOpenLobStreams));
 end;
 
 procedure TZAbstractPreparedStatement.SetValue(ParameterIndex: Integer;
@@ -3642,18 +3647,14 @@ end;
 
 procedure TZRawPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
   const Value: IZBlob);
-var RawTemp: RawByteString;
 begin
   inherited BindLob(Index, SQLType, Value);
-  if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then
-    if Value.IsClob then begin
-      Value.GetPAnsiChar(FClientCP);
-      BindList[Index].SQLType := stAsciiStream;
-    end else begin
-      RawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
-      inherited BindLob(Index, stAsciiStream, TZAbstractCLob.CreateWithData(Pointer(RawTemp),
-        Length(RawTemp), FClientCP, ConSettings));
-    end;
+  if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then begin
+    if Value.IsClob
+    then Value.SetCodePageTo(FClientCP)
+    else PIZLob(BindList[Index].Value)^ := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
+    BindList[Index].SQLType := stAsciiStream;
+  end;
 end;
 
 procedure TZRawPreparedStatement.BindRawStr(Index: Integer;
@@ -3680,7 +3681,7 @@ end;
 procedure TZRawPreparedStatement.SetAnsiString(ParameterIndex: Integer;
   const Value: AnsiString);
 begin
-  if ZCompatibleCodePages(ZOSCodePage, FClientCP)
+  if (ZOSCodePage = FClientCP)
   then BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value)
   else begin
     fUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage);
@@ -3704,7 +3705,7 @@ procedure TZRawPreparedStatement.SetCharRec(ParameterIndex: Integer;
   const Value: TZCharRec);
 var UniTemp: ZWideString;
 begin
-  if ZCompatibleCodePages(Value.CP,FClientCP) then
+  if (Value.CP = FClientCP) then
     BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
   else if Value.CP = zCP_UTF16 then
     BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
@@ -3790,7 +3791,7 @@ end;
 procedure TZRawPreparedStatement.SetUTF8String(ParameterIndex: Integer;
   const Value: UTF8String);
 begin
-  if ZCompatibleCodepages(zCP_UTF8, FClientCP)
+  if (zCP_UTF8 = FClientCP)
   then BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value)
   else begin
     ZEncoding.PRawToRawConvert(Pointer(Value), Length(Value), zCP_UTF8, FClientCP, fRawTemp);
@@ -3848,7 +3849,7 @@ end;
 procedure TZUTF16PreparedStatement.SetCharRec(ParameterIndex: Integer;
   const Value: TZCharRec);
 begin
-  if ZCompatibleCodePages(Value.CP, zCP_UTF16) then
+  if (Value.CP = zCP_UTF16) then
     BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
   else
     BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, PRawToUnicode(Value.P, Value.Len, Value.CP))
@@ -4836,6 +4837,35 @@ begin
   BindUnsignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte, Value);
 end;
 
+{**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZAbstractCallableStatement.SetBytes(ParameterIndex: Integer;
+  Value: PByte; Len: NativeUInt);
+var Bind: PZBindValue;
+begin
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  Bind := FBindList[ParameterIndex];
+  {Registered Param ? }
+  if (Bind.SQLType <> stBytes) and (Bind.ParamType <> pctUnknown) then begin
+    if (Bind.ParamType = pctOut) and not Connection.UseMetadata then
+      Bind.ParamType := pctInOut;
+    case Bind.SQLType of
+      stBinaryStream: FBindList.Put(ParameterIndex, stBinaryStream, TZLocalMemBLob.CreateWithData(Value, Len, FOpenLobStreams));
+      else FBindList.Put(ParameterIndex, stBytes, Value, Len);
+    end;
+  end else FBindList.Put(ParameterIndex, stBytes, Value, Len);
+end;
+
 procedure TZAbstractCallableStatement.SetCurrency(ParameterIndex: Integer;
   const Value: Currency);
 var Bind: PZBindValue;
@@ -5131,6 +5161,11 @@ end;
   @exception SQLException if a database access error occurs
 }
 {$IFNDEF NO_ANSISTRING}
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
+{$ENDIF} // ZSetString does the job even if NOT required
 function TZAbstractCallableStatement_A.GetAnsiString(
   ParameterIndex: Integer): AnsiString;
 var
@@ -5139,13 +5174,14 @@ var
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
-  if ZCompatibleCodePAges(FClientCP, ZOSCodePage) then
+  if (FClientCP = ZOSCodePage) then
     ZSetString(P, L, Result)
   else begin
     FUniTemp := PRawToUnicode(P, L, FClientCP);
     Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 {$ENDIF NO_ANSISTRING}
 
 {**
@@ -5164,6 +5200,11 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
+{$ENDIF} // ZSetString does the job even if NOT required
 function TZAbstractCallableStatement_A.GetRawByteString(
   ParameterIndex: Integer): RawByteString;
 var
@@ -5174,6 +5215,7 @@ begin
   FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
   ZSetString(P, L, Result)
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
@@ -5198,7 +5240,7 @@ begin
   Result := GetUnicodeString(ParameterIndex);
   {$ELSE}
   if ConSettings.AutoEncode then
-    if ZCompatibleCodePages(FClientCP, ConSettings.CTRL_CP) then
+    if (FClientCP = ConSettings.CTRL_CP) then
       Result := GetRawByteString(ParameterIndex)
     else begin
       FUniTemp := GetUnicodeString(ParameterIndex);
@@ -5251,6 +5293,11 @@ end;
   @exception SQLException if a database access error occurs
 }
 {$IFNDEF NO_UTF8STRING}
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
+{$ENDIF} // ZSetString does the job even if NOT required
 function TZAbstractCallableStatement_A.GetUTF8String(
   ParameterIndex: Integer): UTF8String;
 var
@@ -5259,13 +5306,15 @@ var
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
-  if ZCompatibleCodePages(FClientCP, zCP_UTF8) then
+  if (FClientCP = zCP_UTF8) then
     ZSetString(P, L, Result)
   else begin
     FUniTemp := PRawToUnicode(P, L, FClientCP);
     Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
+
 {$ENDIF}
 
 {**
@@ -5283,7 +5332,7 @@ end;
 procedure TZAbstractCallableStatement_A.SetAnsiString(ParameterIndex: Integer;
   const Value: AnsiString);
 begin
-  if ZCompatibleCodepages(zOSCodePage, FClientCP)
+  if (zOSCodePage = FClientCP)
   then IZPreparedStatement(FWeakIntfPtrOfIPrepStmt).SetRawByteString(ParameterIndex, Value)
   else begin
     fUniTemp := PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage);
@@ -5295,7 +5344,7 @@ end;
 procedure TZAbstractCallableStatement_A.SetCharRec(ParameterIndex: Integer;
   const Value: TZCharRec);
 begin
-  if ZCompatibleCodepages(Value.CP, ConSettings^.ClientCodePage.CP) then
+  if (Value.CP = ConSettings^.ClientCodePage.CP) then
     BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
   else begin
     FUniTemp := PRawToUnicode(Value.P, Value.Len, Value.CP);
@@ -5335,7 +5384,7 @@ end;
 procedure TZAbstractCallableStatement_A.SetUTF8String(ParameterIndex: Integer;
   const Value: UTF8String);
 begin
-  if ZCompatibleCodepages(zCP_UTF8, FClientCP)
+  if (zCP_UTF8 = FClientCP)
   then SetRawByteString(ParameterIndex, Value)
   else begin
     fUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8);
@@ -5384,7 +5433,7 @@ begin
   Result := GetUnicodeString(ParameterIndex);
   {$ELSE}
   if ConSettings.AutoEncode then
-    if ZCompatibleCodePages(ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP) then
+    if (ConSettings.ClientCodePage.CP = ConSettings.CTRL_CP) then
       Result := GetRawByteString(ParameterIndex)
     else begin
       FUniTemp := GetUnicodeString(ParameterIndex);

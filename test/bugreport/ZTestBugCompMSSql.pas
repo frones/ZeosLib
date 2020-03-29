@@ -706,7 +706,7 @@ begin
     Query.SQL.Text := 'select * from Mantis164';
     Query.Open;
     CheckEquals(9, Query.Fields.Count);
-    CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+    CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
     CheckEquals(ord(ftDateTime), ord(Query.Fields[2].DataType));
     {$IFDEF WITH_FTGUID}

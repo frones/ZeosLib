@@ -151,12 +151,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'l''objet Tokenizer n''est pas défini';
   cSLibraryNotFound = 'Acune des bibliothèques dynamiques ne peut être trouvée ou chargée: %s !'#10#13'Utilisez TZConnection.LibraryLocation si l''emplacement est incorrect.';
-  cSEncodeDateIsNotSupported = 'Cette version ne supporte pas isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'Cette version ne supporte pas isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'Cette version ne supporte pas isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'Cette version ne supporte pas isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'Cette version ne supporte pas isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'Cette version ne supporte pas isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'Ne peut récupérer l''ensemble de données résultant';
   cSRowBufferIsNotAssigned = 'Le buffer de ligne n''est pas assigné';
@@ -319,12 +313,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Sinalizador não definido';
   cSLibraryNotFound = 'Nenhuma biblioteca dinâmica da lista %s foi encontrada';
-  cSEncodeDateIsNotSupported = 'Esta versão não suporta isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'Esta versão não suporta supported isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'Esta versão não suporta supported isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'Esta versão não suporta isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'Esta versão não suporta isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'Esta versão não suporta isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'Não foi possível obter os dados do ResultSet';
   cSRowBufferIsNotAssigned = 'Buffer da Linha não atribuído';
@@ -484,12 +472,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Tokenizer is niet gedefinieerd';
   cSLibraryNotFound = 'DLL van de lijst %s werd niet gevonden';
-  cSEncodeDateIsNotSupported = 'Deze versie ondersteunt isc_encode_sql_date niet';
-  cSEncodeTimeIsNotSupported = 'Deze versie ondersteunt isc_encode_sql_time niet';
-  cSEncodeTimestampIsNotSupported = 'Deze versie ondersteunt isc_encode_sql_timestamp niet';
-  cSDecodeDateIsNotSupported = 'Deze versie ondersteunt isc_decode_sql_date niet';
-  cSDecodeTimeIsNotSupported = 'Deze versie ondersteunt isc_decode_sql_time niet';
-  cSDecodeTimestampIsNotSupported = 'Deze versie ondersteunt isc_decode_sql_timestamp niet';
 
   cSCanNotRetrieveResultSetData = 'Kan ResultSet data niet ophalen';
   cSRowBufferIsNotAssigned = 'Row buffer is niet toegekend';
@@ -653,12 +635,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Tokenizer wurde nicht definiert';
   cSLibraryNotFound = 'Es wurde keine der in %s gelisteten DLL''s gefunden';
-  cSEncodeDateIsNotSupported = 'Diese Version unterstützt "isc_encode_sql_date" nicht';
-  cSEncodeTimeIsNotSupported = 'Diese Version unterstützt "isc_encode_sql_time" nicht';
-  cSEncodeTimestampIsNotSupported = 'Diese Version unterstützt "isc_encode_sql_timestamp" nicht';
-  cSDecodeDateIsNotSupported = 'Diese Version unterstützt "isc_decode_sql_date" nicht';
-  cSDecodeTimeIsNotSupported = 'Diese Version unterstützt "isc_decode_sql_time" nicht';
-  cSDecodeTimestampIsNotSupported = 'Diese Version unterstützt "isc_decode_sql_timestamp" nicht';
 
   cSCanNotRetrieveResultSetData = 'Die Ergebnismenge kann nicht ermittelt werden';
   cSRowBufferIsNotAssigned = 'Der Zeilen-Buffer ist nicht zugewiesen';
@@ -818,12 +794,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'El objeto Tokenizer no está definido';
   cSLibraryNotFound = 'Ninguna librería dinámica de la lista %s fue encontrada';
-  cSEncodeDateIsNotSupported = 'Esta versión no soporta isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'Esta versión no soporta isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'Esta versión no soporta isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'Esta versión no soporta isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'Esta versión no soporta isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'Esta versión no soporta isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'No se pueden obtener datos del Resultset';
   cSRowBufferIsNotAssigned = 'Buffer de línea no asignado';
@@ -986,12 +956,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Simbolistica nu este definitã';
   cSLibraryNotFound = 'None of the dynamic libraries can be found: %s';
-  cSEncodeDateIsNotSupported = 'Aceastã versiune nu suportã isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'Aceastã versiune nu suportã isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'Aceastã versiune nu suportã isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'Aceastã versiune nu suportã isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'Aceastã versiune nu suportã isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'Aceastã versiune nu suportã isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'Nu pot returna  Resultset data';
   cSRowBufferIsNotAssigned = 'Row buffer nu este asignat';
@@ -1150,12 +1114,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Tokenizer belum ditentukan';
   cSLibraryNotFound = 'Tidak ada library ditemukan: %s';
-  cSEncodeDateIsNotSupported = 'Versi ini tidak mendukung isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'Versi ini tidak mendukung isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'Versi ini tidak mendukung isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'Versi ini tidak mendukung isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'Versi ini tidak mendukung isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'Versi ini tidak mendukung isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'Tidak dapat mengambil data Resultset';
   cSRowBufferIsNotAssigned = 'Row buffer tidak disediakan';
@@ -1317,12 +1275,6 @@ resourcestring
 
   cSTokenizerIsNotDefined                   = 'Ìåòêà íå îïðåäåëåíà';
   cSLibraryNotFound                         = 'Íå îäíîé äèíàìè÷åñêîé áèáëèîòåêè íå íàéäåíî: %s';
-  cSEncodeDateIsNotSupported                = 'Ýòà âåðñèÿ íå ïîääåðæèâàåò isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported                = 'Ýòà âåðñèÿ íå ïîääåðæèâàåò isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported           = 'Ýòà âåðñèÿ íå ïîääåðæèâàåò isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported                = 'Ýòà âåðñèÿ íå ïîääåðæèâàåò isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported                = 'Ýòà âåðñèÿ íå ïîääåðæèâàåò isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported           = 'Ýòà âåðñèÿ íå ïîääåðæèâàåò isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData             = 'Íåâîçìîæíî ïîëó÷èòü íàáîð äàííûõ (Resultset)';
   cSRowBufferIsNotAssigned                  = 'Íå íàçíà÷åí áóôôåð ñòðîêè';
@@ -1485,12 +1437,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Není definován "Tokenizer"';
   cSLibraryNotFound = 'Neexistuje dll knihovna(y): %s';
-  cSEncodeDateIsNotSupported = 'Tato verze nepodporuje isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'Tato verze nepodporuje isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'Tato verze nepodporuje isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'Tato verze nepodporuje isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'Tato verze nepodporuje isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'Tato verze nepodporuje isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'Nelze získat data "Resultset"';
   cSRowBufferIsNotAssigned = 'Není pøiøazen øádkový buffer';
@@ -1655,12 +1601,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Nie zdefiniowano tokenizera';
   cSLibraryNotFound = 'Nie znaleziono ¿adnej z bibliotek dynamicznych: %s';
-  cSEncodeDateIsNotSupported = 'Ta wersja nie obs³uguje isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'Ta wersja nie obs³uguje isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'Ta wersja nie obs³uguje isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'Ta wersja nie obs³uguje isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'Ta wersja nie obs³uguje isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'Ta wersja nie obs³uguje isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'Nie mo¿na pobraæ danych wynikowych';
   cSRowBufferIsNotAssigned = 'Nie przypisano bufora wiersza';
@@ -1822,12 +1762,6 @@ resourcestring
 
   cSTokenizerIsNotDefined = 'Tokenizer is not defined';
   cSLibraryNotFound = 'None of the dynamic libraries can be found or is not loadable: %s !'#10#13'Use TZConnection.LibraryLocation if the location is invalid.';
-  cSEncodeDateIsNotSupported = 'This version does not support isc_encode_sql_date';
-  cSEncodeTimeIsNotSupported = 'This version does not support isc_encode_sql_time';
-  cSEncodeTimestampIsNotSupported = 'This version does not support isc_encode_sql_timestamp';
-  cSDecodeDateIsNotSupported = 'This version does not support isc_decode_sql_date';
-  cSDecodeTimeIsNotSupported = 'This version does not support isc_decode_sql_time';
-  cSDecodeTimestampIsNotSupported = 'This version does not support isc_decode_sql_timestamp';
 
   cSCanNotRetrieveResultSetData = 'Cannot retrieve Resultset data';
   cSRowBufferIsNotAssigned = 'Row buffer is not assigned';
@@ -2204,12 +2138,6 @@ begin
   STokenizerIsNotDefined := cSTokenizerIsNotDefined;
   SLibraryNotFound := cSLibraryNotFound;
   SLibraryNotCompatible := cSLibraryNotCompatible;
-  SEncodeDateIsNotSupported := cSEncodeDateIsNotSupported;
-  SEncodeTimeIsNotSupported := cSEncodeTimeIsNotSupported;
-  SEncodeTimestampIsNotSupported := cSEncodeTimestampIsNotSupported;
-  SDecodeDateIsNotSupported := cSDecodeDateIsNotSupported;
-  SDecodeTimeIsNotSupported := cSDecodeTimeIsNotSupported;
-  SDecodeTimestampIsNotSupported := cSDecodeTimestampIsNotSupported;
 
   SCanNotRetrieveResultSetData := cSCanNotRetrieveResultSetData;
   SRowBufferIsNotAssigned := cSRowBufferIsNotAssigned;

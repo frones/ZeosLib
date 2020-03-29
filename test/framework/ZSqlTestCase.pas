@@ -62,26 +62,27 @@ uses
   Types,
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB, Contnrs,
-  ZDataset, ZURL,
+  ZDataset, ZDatasetUtils,
   ZCompatibility, ZDbcIntfs, ZClasses, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
   { protocol lists }
-  pl_mysql_client_server = 'mysql,mysql-4.1,mysql-5,MariaDB-5';
-  pl_mysql_embedded = 'mysqld-4.1,mysqld-5,mysqld';
-  pl_all_mysql = pl_mysql_client_server + ','+ pl_mysql_embedded;
-  pl_all_postgresql = 'postgresql,postgresql-7,postgresql-8,postgresql-9';
-  pl_all_sqlite = 'sqlite,sqlite-3';
-  pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebird-3.0,firebird,interbase';
-  pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5,firebirdd-3.0,firebird,interbase';
-  pl_all_interbase = pl_interbase_client_server + ',' + pl_interbase_embedded;
-  pl_all_oracle = 'oracle,oracle-9i';
+  pl_all_mysql = 'mysql,mariadb';
+  pl_all_postgresql = 'postgresql';
+  pl_all_sqlite = 'sqlite';
+  pl_all_interbase = 'firebird,interbase';
+  pl_all_oracle = 'oracle';
+  pl_all_dblib = 'mssql,sybase';
+  pl_all_asa = 'asa';
+  pl_all_transports = 'ado,odbc_a,odbc_w,oledb,webserviceproxy';
+  pl_all = pl_all_mysql + ',' + pl_all_postgresql + ',' + pl_all_sqlite + ','
+         + pl_all_interbase + ',' + pl_all_oracle + ',' + pl_all_dblib + ',' + pl_all_asa;
 
   // Protocols needing prefererealprepared option for real prepared statements
   pl_realpreparable = pl_all_mysql;
 
 type
-  TZConfigUse = (cuMainConnection, cuNonAscii, cuRealPrepared, cuAutoEncoded);
+  TZConfigUse = (cuMainConnection, cuNonAscii, cuAutoEncoded);
   TZConfigUses = set of TZConfigUse;
 
   TDataSetTypesDynArray = array of TFieldType;
@@ -131,7 +132,6 @@ type
     FExtended_cGet_UTF16: Boolean;
     FExtended_Codepages: Boolean;
     FExtended_AutoEncoding: Boolean;
-    FSkip_RealPrepared: Boolean;
     FSkip_Performance: Boolean;
     FTestMode: Byte;
     FPerformanceDataSetTypes: TDataSetTypesDynArray;
@@ -139,7 +139,14 @@ type
     FPerformanceFieldSizes: TIntegerDynArray;
     FPerformanceFieldNames: TStringDynArray;
     FPerformanceFieldPropertiesDetermined: Boolean;
+    FProvider: TZServerProvider;
+    FTransport: TZTransport;
     procedure SetConfigUses(AValue: TZConfigUses);
+    function GetConnectionUrl(const Param: String): TZURL;
+    function CreateDbcConnection: IZConnection;
+    function GetProtocolType: TProtocolType;
+    function GetProvider: TZServerProvider;
+    function GetTransport: TZTransport;
   public
     constructor Create; overload;
     constructor Create(TemplateConfig: TZConnectionConfig; Suffix: String); overload;
@@ -173,7 +180,6 @@ type
     property Include_cGet_UTF16: Boolean read FExtended_cGet_UTF16;
     property Include_Codepages: Boolean read FExtended_Codepages;
     property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
-    property Skip_RealPrepared: Boolean read FSkip_RealPrepared;
     property ConfigUses: TZConfigUses read FConfigUses write SetConfigUses;
     property TestMode: Byte read FTestMode write FTestMode;
     property PerformanceDataSetTypes: TDataSetTypesDynArray read FPerformanceDataSetTypes write FPerformanceDataSetTypes;
@@ -181,12 +187,18 @@ type
     property PerformanceFieldSizes: TIntegerDynArray read FPerformanceFieldSizes write FPerformanceFieldSizes;
     property PerformanceFieldNames: TStringDynArray read FPerformanceFieldNames write FPerformanceFieldNames;
     property PerformanceFieldPropertiesDetermined: Boolean read FPerformanceFieldPropertiesDetermined write FPerformanceFieldPropertiesDetermined;
+    property Provider: TZServerProvider read GetProvider;
+    property Transport: TZTransport read GetTransport;
   end;
 
   {** Implements an abstract class for all SQL test cases. }
 
   { TZAbstractSQLTestCase }
 
+  /// <summary>
+  ///   Base class for all Zeos (SQL) Test cases. All tests should be derived
+  ///   from this class.
+  /// </summary>
   TZAbstractSQLTestCase = class(TZAbstractTestCase, IZLoggingListener)
   private
     FCurrentConnectionConfig : TZConnectionConfig;
@@ -229,10 +241,8 @@ type
     function IsProtocolValid(Config: TZConnectionConfig): Boolean; virtual;
     function IsConfigUseValid(Config: TZConnectionConfig): Boolean; virtual;
     function IsNonASCIITest: Boolean; virtual;
-    function IsRealPreparableTest: Boolean; virtual;
     function IsAutoEncodableTest: Boolean; virtual;
     function GetSupportedProtocols: string; virtual;
-    function SkipForReason(Reasons: ZSkipReasons): Boolean; override;
 
     { Random values generators. }
     function RandomStr(Length: Integer): string;
@@ -246,12 +256,12 @@ type
     procedure StartSQLTrace;
     procedure StopSQLTrace;
 
-    procedure CheckStringFieldType(Actual: TFieldType; ConSettings: PZConSettings);
-    procedure CheckMemoFieldType(Actual: TFieldType; ConSettings: PZConSettings);
-
-    function GetDBTestString(const Value: ZWideString; ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString; overload;
-    function GetDBTestString(const Value: RawByteString; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String; overload;
-    function GetDBTestStream(const Value: ZWideString; ConSettings: PZConSettings): TStream; overload;
+    /// <summary>
+    ///   Determines wether the current test can be run on the provided connection
+    ///   configuration. Test cases using this method should return an empty string in
+    ///   GetSupportedProtocols.
+    /// </summary>
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; virtual;
   public
     destructor Destroy; override;
 
@@ -297,9 +307,13 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function IsRealPreparableTest: Boolean; override;
 
     property Connection: IZConnection read FConnection write FConnection;
+  public
+    procedure CheckEquals(Expected, Actual: TZSQLType;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: TZSQLType;
+      const Msg: string = ''); overload;
   end;
 
   {** Implements a bug test case which runs all active protocols. }
@@ -312,13 +326,26 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function IsRealPreparableTest: Boolean; override;
     function IsAutoEncodableTest: Boolean; override;
     function CreateQuery: TZQuery;
     function CreateReadOnlyQuery: TZReadOnlyQuery;
     function CreateTable: TZTable;
 
     property Connection: TZConnection read FConnection write FConnection;
+  public
+    function GetDBTestString(const Value: ZWideString; ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString; overload;
+    procedure CheckEquals(const OrgStr: ZWideString; ActualLobStream: TStream;
+      Actual: TFieldType; ConSettings: PZConSettings; CPType: TZControlsCodePage; const Msg: string = ''); overload;
+    {$IFNDEF UNICODE}
+    procedure CheckEquals(const OrgStr: ZWideString; Actual: String;
+      ConSettings: PZConSettings; CPType: TZControlsCodePage; const Msg: string = ''); overload;
+    {$ENDIF}
+    procedure CheckEquals(Expected, Actual: TFieldType;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: TFieldType;
+      const Msg: string = ''); overload;
+    procedure CheckStringFieldType(Actual: TFieldType; ControlsCodePage: TZControlsCodePage);
+    procedure CheckMemoFieldType(Actual: TFieldType; ControlsCodePage: TZControlsCodePage);
   end;
 
   {** Implements a bug test case which runs all active protocols with MB-Chars }
@@ -351,7 +378,8 @@ implementation
 
 uses
   Math, {$IFDEF ENABLE_POOLED}ZDbcPooled,{$ENDIF}
-  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset, ZDbcProperties;
+  ZSysUtils, ZEncoding, ZTestConfig, ZSqlProcessor, ZAbstractRODataset, ZDbcProperties,
+  TypInfo;
 
 function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var
@@ -425,6 +453,87 @@ begin
   FConfigUses:=AValue;
 end;
 
+function TZConnectionConfig.GetConnectionUrl(const Param: String): TZURL;
+var
+  I: Integer;
+begin
+  Result := TZURL.Create;
+  Result.Protocol := Protocol;
+  Result.HostName := HostName;
+  Result.Port := Port;
+  Result.Database := Database;
+  Result.UserName := UserName;
+  Result.Password := Password;
+  Result.LibLocation := LibLocation;
+
+  for I := 0 to High(Properties) do
+    Result.Properties.Add(Properties[I]);
+  Result.Properties.Add(Param);
+end;
+
+function TZConnectionConfig.CreateDbcConnection: IZConnection;
+var
+  TempURL: TZURL;
+begin
+  TempURL := GetConnectionUrl('');
+  try
+    Result := DriverManager.GetConnection(TempURL.URL);
+    {$IFDEF ZEOS_TEST_ONLY}
+    Result.SetTestMode(ConnectionConfig.TestMode);
+    {$ENDIF}
+  finally
+    TempURL.Free;
+  end;
+end;
+
+function TZConnectionConfig.GetProtocolType: TProtocolType;
+var Prot: string;
+begin
+  Prot := LowerCase(Protocol);
+  for Result := Low(TProtocolType) to High(TProtocolType) do
+    if StartsWith(Prot, ProtocolPrefixes[Result]) then
+      Exit;
+  Result := protUnknown;
+end;
+
+function TZConnectionConfig.GetProvider: TZServerProvider;
+var
+  Connection: IZConnection;
+begin
+  if FProvider <> spUnknown
+  then Result := FProvider
+  else begin
+    case GetProtocolType of
+      protMySQL: FProvider := spMySQL;
+      protPostgre: FProvider := spPostgreSQL;
+      protSQLite: FProvider :=spSQLite;
+      protFirebird, protInterbase: FProvider := spIB_FB;
+      protOracle: FProvider := spOracle;
+      protASA: FProvider := spASA;
+      protMSSQL, protOleDB, protADO, protFreeTDS, protODBC, protSybase: begin
+          Connection := CreateDbcConnection;
+          Connection.Open;
+          FProvider := Connection.GetServerProvider;
+        end;
+    end;
+    Result := FProvider;
+  end;
+end;
+
+function TZConnectionConfig.GetTransport: TZTransport;
+begin
+  if FTransport <> traUnknown then begin
+    Result := FTransport;
+  end else case GetProtocolType of
+    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protFreeTDS, protMSSQL, protSybase: Result := traNative;
+    protOleDB: Result := traOLEDB;
+    protADO: Result := traADO;
+    protODBC: Result := traODBC;
+    protWebServiceProxy: Result := traWEBPROXY;
+    else Result := traUnknown;
+  end;
+end;
+
 constructor TZConnectionConfig.Create;
 begin
   inherited Create;
@@ -440,8 +549,6 @@ begin
     EXTENDED_CODEPAGES_KEY, FALSE_VALUE));
   FExtended_AutoEncoding := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     EXTENDED_AUTOENCODING_KEY, FALSE_VALUE));
-  FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
-    SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
   FSkip_Performance := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     SKIP_PERFORMANCE_KEY, TRUE_VALUE));
   FTestMode := 0;
@@ -500,8 +607,6 @@ begin
   FProperties := SplitStringToArray(TestConfig.ReadProperty(FName,
     DATABASE_PROPERTIES_KEY, ''), ',;');
   FConfigUses := [cuMainConnection];
-  FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(FName,
-    SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
 end;
 
 destructor TZConnectionConfig.Destroy;
@@ -514,10 +619,8 @@ end;
   Creates the additional connection configurations for extended tests
 }
 procedure TZConnectionConfig.CreateExtendedConfigurations(ConnectionsList: TObjectList);
-var
-  TempConfig: TZConnectionConfig;
   {$IFDEF ZEOS_TEST_ONLY}
-  MaxTestMode, TestMode: Byte;
+var  MaxTestMode, TestMode: Byte;
   {$ENDIF}
 
   procedure SetCharacterSets(const Current: TZConnectionConfig);
@@ -530,7 +633,7 @@ var
       begin
         MyCurrent := TZConnectionConfig.Create(Current, Current.CharacterSets[iCharacterSets]);
         //Writeln(MyCurrent.Name);
-        SetProperty(MyCurrent, 'codepage',Current.CharacterSets[iCharacterSets]);
+        SetProperty(MyCurrent, ConnProps_CodePage,Current.CharacterSets[iCharacterSets]);
         ConnectionsList.Add(MyCurrent);
       end;
   end;
@@ -540,10 +643,10 @@ var
   begin
     if Include_AutoEncoding then
     begin
-      MyCurrent := TZConnectionConfig.Create(Current, 'AutoEncodeStrings');
+      MyCurrent := TZConnectionConfig.Create(Current, ConnProps_AutoEncodeStrings);
       MyCurrent.ConfigUses:=MyCurrent.ConfigUses+[cuAutoEncoded];
       //Writeln(MyCurrent.Name);
-      SetProperty(MyCurrent, 'AutoEncodeStrings','ON');
+      SetProperty(MyCurrent, ConnProps_AutoEncodeStrings,'ON');
       ConnectionsList.Add(MyCurrent);
       SetCharacterSets(MyCurrent);
       {autoencodings off is default so nothing must be added...}
@@ -563,7 +666,7 @@ var
         MyCurrent := TZConnectionConfig.Create(Current, CPType);
         MyCurrent.ConfigUses:=MyCurrent.ConfigUses+[cuNonAscii];
         //Writeln(MyCurrent.Name);
-        SetProperty(MyCurrent, 'controls_cp',CPType);
+        SetProperty(MyCurrent, ConnProps_ControlsCP,CPType);
         ConnectionsList.Add(MyCurrent);
       end;
       if (CPType = 'CP_UTF16') then //autoencoding is allways true
@@ -614,7 +717,7 @@ var
   begin
     TempCharacterSets := SplitStringToArray(TestConfig.ReadProperty(Self.Name,
       DATABASE_CHARACTERSETS_KEY, ''), LIST_DELIMITERS);
-    if PropPos(ConnectionConfig, 'codepage') > -1 then //add a empty dummy value to get the autodetecting running for PG for example
+    if PropPos(ConnectionConfig, ConnProps_CodePage) > -1 then //add a empty dummy value to get the autodetecting running for PG for example
       SetLength(TempCharacterSets, Length(TempCharacterSets)+1);
     ConnectionConfig.CharacterSets := TempCharacterSets;
 
@@ -625,18 +728,6 @@ begin
   begin
     create_charsets_encodings(self);
   end;
-
-  if Not Skip_RealPrepared then
-    if ProtocolInProtocols(self.Protocol,pl_realpreparable) then
-    begin
-      //writeln('create preferprepared');
-      TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
-      SetProperty(TempConfig, 'preferprepared', 'True');
-      ConnectionsList.Add(TempConfig);
-      TempConfig.ConfigUses:=[cuRealPrepared];
-      if ExtendedTest then
-        create_charsets_encodings(TempConfig);
-    end;
 
   {$IFDEF ZEOS_TEST_ONLY}
   // Test Modes
@@ -855,11 +946,6 @@ begin
     Selection := True;
     Objection := Objection or Not(isNonASciiTest) //Non Ascii connections are only valid for NonAscii tests
   end;
-  If (cuRealPrepared in Config.ConfigUses) then
-  begin
-    Selection := True;
-    Objection := Objection or Not(isRealPreparableTest) //PreferRealPrepared connections are only usefull for specific tests
-  end;
   If (cuAutoEncoded in Config.ConfigUses) then
   begin
     Selection := True;
@@ -879,11 +965,6 @@ begin
   Result := False;
 end;
 
-function TZAbstractSQLTestCase.IsRealPreparableTest: Boolean;
-begin
-  Result := False;
-end;
-
 function TZAbstractSQLTestCase.IsAutoEncodableTest: Boolean;
 begin
   result := False;
@@ -892,14 +973,6 @@ end;
 function TZAbstractSQLTestCase.GetSupportedProtocols: string;
 begin
   result := '';
-end;
-
-function TZAbstractSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
-begin
-  Result:=inherited SkipForReason(Reasons) or
-          ((srMysqlRealPreparedConnection in Reasons) and
-           (ProtocolInProtocols(Protocol,pl_all_mysql)) and
-           (PropPos(Properties,'preferprepared')>-1));
 end;
 
 {**
@@ -1075,123 +1148,11 @@ begin
   DriverManager.RemoveLoggingListener(Self);
 end;
 
-procedure TZAbstractSQLTestCase.CheckStringFieldType(Actual: TFieldType;
-  ConSettings: PZConSettings);
+function TZAbstractSQLTestCase.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  case ConSettings.CPType of
-    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftString), Ord(Actual), 'String Field/Parameter-Type');
-    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideString), Ord(Actual), 'String Field/Parameter-Type');{$ENDIF}
-  end;
+  Result := true;
 end;
 
-procedure TZAbstractSQLTestCase.CheckMemoFieldType(Actual: TFieldType;
-  ConSettings: PZConSettings);
-begin
-  case ConSettings.CPType of
-    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftMemo), Ord(Actual), 'Memo-Field/Parmeter-Type');
-    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideMemo), Ord(Actual), 'Memo-FieldParameter-Type');{$ENDIF}
-  end;
-end;
-
-{**
-  Get a valid String to Test the encoding. If AutoEncodeStrings then the
-  Encoding is reverted to get proper test-behavior.
-  @param Value a string which should be prepared for the Test.
-  @return the right or reverted encoded string to check the behavior.
-}
-{$IFDEF UNICODE}
-  {$WARNINGS OFF}
-{$ENDIF}
-function TZAbstractSQLTestCase.GetDBTestString(const Value: ZWideString;
-  ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString;
-{$IFNDEF UNICODE}
-var CP: Word;
-{$ENDIF}
-begin
-  {$IFNDEF UNICODE}
-  if ConSettings.CPType = cCP_UTF16 then
-    if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
-      if ConSettings.CTRL_CP = zCP_UTF8
-      then CP := zCP_UTF8
-      else CP := ZOSCodePage
-    else CP := ConSettings.ClientCodePage.CP
-  else case ConSettings.ClientCodePage.Encoding of
-    ceAnsi:
-      if ConSettings.AutoEncode //Revert the expected value to test
-      then CP := zCP_UTF8
-      else CP := ConSettings.ClientCodePage.CP; //Return the expected value to test
-    ceUTF8: //, ceUTF32
-      if ConSettings.AutoEncode
-      then CP := ZOSCodePage //Revert the expected value to test
-      else CP := zCP_UTF8;
-    ceUTF16:
-      if ConSettings.AutoEncode //Revert the expected value to test
-      then if ConSettings.CPType = cCP_UTF8
-        then CP := ZOSCodePage
-        else CP := zCP_UTF8
-      else CP := ConSettings.CTRL_CP;
-    else CP := ZOSCodePage; //Souldn't be possible
-  end;
-  Result := ZUnicodeToString(Value, CP);
-  {$ELSE}
-  Result := Value;
-  {$ENDIF}
-  if (MaxLen > 0) and (Length(Result) > MaxLen) then
-    SetLength(Result, MaxLen);
-end;
-
-function TZAbstractSQLTestCase.GetDBTestString(const Value: RawByteString;
-  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String;
-var
-  W: ZWideString;
-begin
-  if IsUTF8Encoded then
-    W := UTF8Decode(Value)
-  else
-    W := ZRawToUnicode(Value, ZOSCodePage);
-  Result := GetDBTestString(W, ConSettings, MaxLen);
-end;
-
-{$IFDEF UNICODE}
-  {$WARNINGS ON}
-{$ENDIF}
-
-function TZAbstractSQLTestCase.GetDBTestStream(const Value: ZWideString;
-  ConSettings: PZConSettings): TStream;
-var
-  Ansi: RawByteString;
-begin
-  if ( ConSettings.CPType = cCP_UTF16 ) then
-    Result := StreamFromData(Value)
-  else begin
-    case ConSettings.ClientCodePage.Encoding of
-      ceAnsi:
-        if ConSettings.AutoEncode then //Revert the expected value to test
-          Ansi := UTF8Encode(Value)
-        else
-          Ansi := ZUnicodeToRaw(Value, ZOSCodePage);
-      ceUTF8:
-        if ConSettings.AutoEncode then //Revert the expected value to test
-          Ansi := ZUnicodeToRaw(Value, ZOSCodePage)
-        else
-          Ansi := UTF8Encode(Value);
-      else
-        case ConSettings.CPType of
-          cGET_ACP:
-            if ConSettings.AutoEncode then //Revert the expected value to test
-              Ansi := UTF8Encode(Value)
-            else
-              Ansi := ZUnicodeToRaw(Value, ZOSCodePage);
-          else
-            if ConSettings.AutoEncode then //Revert the expected value to test
-              Ansi := ZUnicodeToRaw(Value, ZOSCodePage)
-            else
-              Ansi := UTF8Encode(Value);
-        end;
-    end;
-    Result := StreamFromData(Ansi);
-  end;
-end;
 
 {$IFNDEF FPC}
 {**
@@ -1205,7 +1166,8 @@ var
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
-       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
+       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) and
+       SupportsConfig(ConnectionConfigs[I] as TZConnectionConfig) then
     begin
       ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
     //writeln('Using : '+Current.Name);
@@ -1224,7 +1186,8 @@ var
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
-       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
+       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) and
+       SupportsConfig(ConnectionConfigs[I] as TZConnectionConfig) then
     begin
       ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
       //writeln('Using : '+ConnectionName);
@@ -1238,18 +1201,8 @@ end;
   @return a created database ZDBC connection object.
 }
 function TZAbstractSQLTestCase.CreateDbcConnection: IZConnection;
-var
-  TempURL: TZURL;
 begin
-  TempURL := GetConnectionUrl('');
-  try
-    Result := DriverManager.GetConnection(TempURL.URL);
-    {$IFDEF ZEOS_TEST_ONLY}
-    Result.SetTestMode(ConnectionConfig.TestMode);
-    {$ENDIF}
-  finally
-    TempURL.Free;
-  end;
+  Result := FCurrentConnectionConfig.CreateDbcConnection;
 end;
 
 {**
@@ -1269,8 +1222,16 @@ begin
   Result.User := UserName;
   Result.Password := Password;
   Result.LoginPrompt := False;
-  for I := 0 to High(Properties) do
-  begin
+  for I := 0 to High(Properties) do begin
+    if StartsWith(Properties[I], ConnProps_ControlsCP) then begin
+      if EndsWith(Properties[I], 'GET_ACP')
+      then Result.ControlsCodePage := cGET_ACP
+      else if EndsWith(Properties[I], 'CP_UTF8')
+        then Result.ControlsCodePage := cCP_UTF8
+        else {if EndsWith(Result.Properties[I], 'CP_UTF16')
+          then} Result.ControlsCodePage := cCP_UTF16
+          //else Result.ControlsCodePage := cCP_Native;
+    end;
     Result.Properties.Add(Properties[I])
   end;
   {$IFDEF ZEOS_TEST_ONLY}
@@ -1330,7 +1291,7 @@ begin
               if Stream <> nil then
               begin
                 try
-                  ReadNum := Stream.Read(Buffer, 100);
+                  ReadNum := Stream.Read(Buffer{%H-}, 100);
                   System.Write('''' + BufferToStr(Buffer, ReadNum) + '''');
                 finally
                   Stream.Free;
@@ -1370,21 +1331,8 @@ end;
   @return a built connection URL object.
 }
 function TZAbstractSQLTestCase.GetConnectionUrl(const Param: String): TZURL;
-var
-  I: Integer;
 begin
-  Result := TZURL.Create;
-  Result.Protocol := Protocol;
-  Result.HostName := HostName;
-  Result.Port := Port;
-  Result.Database := Database;
-  Result.UserName := UserName;
-  Result.Password := Password;
-  Result.LibLocation := LibLocation;
-
-  for I := 0 to High(Properties) do
-    Result.Properties.Add(Properties[I]);
-  Result.Properties.Add(Param);
+  Result := FCurrentConnectionConfig.GetConnectionUrl(Param);
 end;
 
 type
@@ -1542,6 +1490,15 @@ end;
 
 { TZAbstractDbcSQLTestCase}
 
+procedure TZAbstractDbcSQLTestCase.CheckNotEquals(Expected, Actual: TZSQLType;
+  const Msg: string);
+var E, A: String;
+begin
+  E := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  inherited CheckNotEquals(E, A, Msg);
+end;
+
 procedure TZAbstractDbcSQLTestCase.SetUp;
 begin
   FConnection := CreateDbcConnection;
@@ -1556,9 +1513,13 @@ begin
   end;
 end;
 
-function TZAbstractDbcSQLTestCase.IsRealPreparableTest: Boolean;
+procedure TZAbstractDbcSQLTestCase.CheckEquals(Expected, Actual: TZSQLType;
+  const Msg: string = '');
+var E, A: String;
 begin
-  Result:= True;
+  E := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  inherited CheckEquals(E, A, Msg);
 end;
 
 { TZAbstractCompSQLTestCase }
@@ -1577,14 +1538,130 @@ begin
   end;
 end;
 
-function TZAbstractCompSQLTestCase.IsRealPreparableTest: Boolean;
-begin
-  Result:= True;
-end;
-
 function TZAbstractCompSQLTestCase.IsAutoEncodableTest: Boolean;
 begin
   Result:=True;
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: ZWideString;
+  ActualLobStream: TStream; Actual: TFieldType; ConSettings: PZConSettings;
+  CPType: TZControlsCodePage; const Msg: string);
+var
+  StrStream: TMemoryStream;
+  procedure SetAnsiStream(Value: RawByteString);
+  begin
+    StrStream.Write(PAnsiChar(Value)^, Length(Value));
+    StrStream.Position := 0;
+  end;
+begin
+  StrStream := TMemoryStream.Create;
+  case CPType of
+    cGET_ACP, cCP_UTF8:
+      if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
+        SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings.CTRL_CP))
+      else
+        SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings^.ClientCodePage^.CP));
+    cCP_UTF16:
+      begin
+        StrStream.Write(PWideChar(OrgStr)^, Length(OrgStr)*2);
+        StrStream.Position := 0;
+      end;
+  end;
+  try
+    CheckEquals(StrStream, ActualLobStream, Msg);
+  finally
+    StrStream.Free;
+  end;
+end;
+
+{**
+   Function compare two strings with depenedent to the ConnectionSettings.
+   If strings not equals raise exception.
+   @param Expected the first stream for compare
+   @param Actual the second stream for compare
+   @param ConSettings the Connection given settings
+}
+{$IFNDEF UNICODE}
+procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: ZWideString;
+  Actual: String; ConSettings: PZConSettings;
+  CPType: TZControlsCodePage; const Msg: string);
+{$IFNDEF UNICODE}
+var Temp: String;
+{$ENDIF}
+begin
+  {$IFNDEF UNICODE}
+  if ConSettings.ClientCodePage.Encoding = ceUTF16 then
+    Temp := ZUnicodeToString(OrgStr, Consettings.CTRL_CP)
+  else if ConSettings.ClientCodePage.Encoding = ceUTF8 then
+    if (CPType = cCP_UTF8) then
+      if ConSettings.AutoEncode //emultate what GetDBTestring is doing
+      then Temp := ZUnicodeToString(OrgStr, zOSCodePage)
+      else Temp := UTF8Encode(OrgStr)
+    else //cGET_ACP / cCP_UTF16
+      if Consettings.CTRL_CP = zCP_UTF8 then
+        Temp := UTF8Encode(OrgStr)
+      else
+        if ConSettings.AutoEncode or ( CPType = cCP_UTF16 ) then
+          Temp := ZUnicodeToString(OrgStr, Consettings.CTRL_CP)
+        else
+          Temp := UTF8Encode(OrgStr)
+  else //ceAnsi
+    if ( CPType = cGET_ACP ) or ( CPType = cCP_UTF16 ) then //ftWideString returns a decoded value
+      if Consettings.CTRL_CP = zCP_UTF8 then
+        Temp := UTF8Encode(OrgStr)
+      else
+        Temp := ZUnicodeToString(OrgStr, ZOSCodePage)
+    else
+      //cCP_UTF8
+      if CPType = cCP_UTF16 then
+        if Consettings.CTRL_CP = zCP_UTF8 then
+          Temp := UTF8Encode(OrgStr)
+        else
+          Temp := OrgStr
+      else
+        if ConSettings.AutoEncode then
+          Temp := UTF8Encode(OrgStr)
+        else
+          Temp := OrgStr;
+  {$ENDIF}
+  CheckEquals({$IFNDEF UNICODE}Temp{$ELSE}OrgStr{$ENDIF}, Actual, Msg)
+end;
+{$ENDIF UNICODE}
+
+procedure TZAbstractCompSQLTestCase.CheckNotEquals(Expected, Actual: TFieldType;
+  const Msg: string);
+var E, A: String;
+begin
+  E := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  inherited CheckNotEquals(E, A, Msg);
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckStringFieldType(Actual: TFieldType;
+  ControlsCodePage: TZControlsCodePage);
+begin
+  case ControlsCodePage of
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(ftString, Actual, 'String Field/Parameter-Type');
+    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(ftWideString, Actual, 'String Field/Parameter-Type');{$ENDIF}
+  end;
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckEquals(Expected, Actual: TFieldType;
+  const Msg: string);
+var E, A: String;
+begin
+  E := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  inherited CheckEquals(E, A, Msg);
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckMemoFieldType(Actual: TFieldType;
+  ControlsCodePage: TZControlsCodePage);
+begin
+  case ControlsCodePage of
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(ftMemo, Actual, 'Memo-Field/Parmeter-Type');
+    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(ftWideMemo, Actual, 'Memo-FieldParameter-Type');{$ENDIF}
+  end;
 end;
 
 function TZAbstractCompSQLTestCase.CreateQuery: TZQuery;
@@ -1613,6 +1690,52 @@ begin
   if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
     Result.Options := Result.Options + [doPreferPrepared];
 end;
+
+{$IFDEF UNICODE}
+  {$WARNINGS OFF}
+{$ENDIF}
+function TZAbstractCompSQLTestCase.GetDBTestString(const Value: ZWideString;
+  ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString;
+{$IFNDEF UNICODE}
+var CP: Word;
+{$ENDIF}
+begin
+  {$IFNDEF UNICODE}
+  if Connection.ControlsCodePage = cCP_UTF16 then
+    if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
+      if ConSettings.CTRL_CP = zCP_UTF8
+      then CP := zCP_UTF8
+      else CP := ZOSCodePage
+    else CP := ConSettings.ClientCodePage.CP
+  else case ConSettings.ClientCodePage.Encoding of
+    ceAnsi:
+      if ConSettings.AutoEncode //Revert the expected value to test
+      then CP := zCP_UTF8
+      else CP := ConSettings.ClientCodePage.CP; //Return the expected value to test
+    ceUTF8: //, ceUTF32
+      if ConSettings.AutoEncode
+      then CP := ZOSCodePage //Revert the expected value to test
+      else CP := zCP_UTF8;
+    ceUTF16:
+      if ConSettings.AutoEncode //Revert the expected value to test
+      then if Connection.ControlsCodePage = cCP_UTF8
+        then CP := ZOSCodePage
+        else CP := zCP_UTF8
+      else CP := ConSettings.CTRL_CP;
+    else CP := ZOSCodePage; //Souldn't be possible
+  end;
+  Result := ZUnicodeToString(Value, CP);
+  {$ELSE}
+  Result := Value;
+  {$ENDIF}
+  if (MaxLen > 0) and (Length(Result) > MaxLen) then
+    SetLength(Result, MaxLen);
+end;
+
+{$IFDEF UNICODE}
+  {$WARNINGS ON}
+{$ENDIF}
+
 
 { TZAbstractDbcSQLTestCaseMBCs }
 

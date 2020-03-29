@@ -73,12 +73,16 @@ type
   end;
   TZFieldsLookUpDynArray = array of TZFieldsLookUp;
 
+  {** Defines the Target Ansi codepages for the Controls }
+  TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
+
 {**
   Converts DBC Field Type to TDataset Field Type.
   @param Value an initial DBC field type.
   @return a converted TDataset field type.
 }
-function ConvertDbcToDatasetType(Value: TZSQLType): TFieldType;
+function ConvertDbcToDatasetType(Value: TZSQLType; CPType: TZControlsCodePage;
+  Precision: Integer): TFieldType;
 
 {**
   Converts TDataset Field Type to DBC Field Type.
@@ -334,7 +338,8 @@ uses
   @param Value an initial DBC field type.
   @return a converted TDataset field type.
 }
-function ConvertDbcToDatasetType(Value: TZSQLType): TFieldType;
+function ConvertDbcToDatasetType(Value: TZSQLType; CPType: TZControlsCodePage;
+  Precision: Integer): TFieldType;
 begin
   case Value of
     stBoolean:
@@ -365,9 +370,16 @@ begin
     stCurrency:
       //Result := ftCurrency;
       Result := ftBCD;
-    stString:
-      Result := ftString;
-    stBytes: Result := ftVarBytes;
+    stString: if Precision <= 0
+      then {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
+        then Result := ftWideMemo
+        else {$ENDIF}Result := ftMemo
+      else if CPType = cCP_UTF16
+        then Result := ftWideString
+        else Result := ftString;
+    stBytes: if (Precision <= 0) or (Precision > High(Word))
+      then Result := ftBlob
+      else Result := ftVarBytes;
     stGUID: Result := {$IFNDEF WITH_FTGUID}ftBytes{$ELSE}ftGUID{$ENDIF};
     stDate:
       Result := ftDate;
@@ -375,14 +387,21 @@ begin
       Result := ftTime;
     stTimestamp:
       Result := ftDateTime;
-    stAsciiStream:
-      Result := ftMemo;
+    stAsciiStream: {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
+        then Result := ftWideMemo
+        else {$ENDIF}Result := ftMemo;
     stBinaryStream:
       Result := ftBlob;
-    stUnicodeString:
-      Result := ftWideString;
-    stUnicodeStream:
-      Result := {$IFNDEF WITH_WIDEMEMO}ftWideString{$ELSE}ftWideMemo{$ENDIF};
+    stUnicodeString: if (Precision <= 0) or (Precision > dsMaxStringSize)
+      then {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
+        then Result := ftWideMemo
+        else {$ENDIF}Result := ftMemo
+      else if CPType = cCP_UTF16
+        then Result := ftWideString
+        else Result := ftString;
+    stUnicodeStream: {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
+        then Result := ftWideMemo
+        else {$ENDIF}Result := ftMemo;
     {$IFDEF WITH_FTDATASETSUPPORT}
     stDataSet:
       Result := ftDataSet;
@@ -430,11 +449,12 @@ begin
       Result := stDouble;
     {$IFDEF WITH_FTEXTENDED}
     ftExtended:
-      Result := stBigDecimal;
+      Result := stDouble;
     {$ENDIF}
     ftLargeInt:
       Result := stLong;
-    ftCurrency: Result := stDouble;
+    ftCurrency:
+      Result := stBigDecimal;
     ftBCD:
       Result := stCurrency;
     ftFmtBCD:
@@ -1183,7 +1203,7 @@ begin
             end;
         stBigDecimal: begin
                         ResultSet.GetBigDecimal(ColumnIndex, BCD);
-                        Result := BCDCompare(KeyValues[I].VBigDecimal, BCD) = 0;
+                        Result := ZBCDCompare(KeyValues[I].VBigDecimal, BCD) = 0;
                       end;
         stDate,
         stTime,
@@ -1249,7 +1269,8 @@ function CompareKeyFields(Field1: TField; const ResultSet: IZResultSet;
   Field2: TField): Boolean;
 var
   ColumnIndex: Integer;
-  BCD: TBCD;
+  BCD1: TBCD;
+  BCD2: TBCD;
 begin
   Result := False;
   if Field1.FieldNo >= 1 then
@@ -1287,8 +1308,9 @@ begin
           then Result := ResultSet.GetLong(ColumnIndex) = TLargeIntField(Field2).AsLargeInt
           else Result := ResultSet.GetInt(ColumnIndex) = Field2.AsInteger;
       ftFmtBCD: begin
-          ResultSet.GetBigDecimal(ColumnIndex, BCD);
-          Result := BCDCompare(Field2.AsBCD, BCD) = 0;
+          ResultSet.GetBigDecimal(ColumnIndex, BCD2);
+          BCD1 := Field2.AsBCD;
+          Result := ZBCDCompare(BCD1, BCD2) = 0;
         end;
       ftBCD: Result := ResultSet.GetCurrency(ColumnIndex) = TBCDField(Field2).AsCurrency;
       ftCurrency: Result := (ResultSet.GetDouble(ColumnIndex) - Field2.AsFloat) < FLOAT_COMPARE_PRECISION;
@@ -1701,6 +1723,7 @@ var
   ConSettings: PZConSettings;
   CP: Word;
   P: Pointer;
+  L: NativeUInt;
   UniTemp: ZWideString;
   {$IFNDEF UNICODE}
   R: RawByteString;
@@ -1802,7 +1825,7 @@ begin
               P :=  Pointer(UniTemp);
               if P = nil then
                 P := PEmptyUnicodeString;
-              Lob := TZAbstractClob.CreateWithData(PWideChar(P), Length(UniTemp), ConSettings);
+              Lob := TZLocalMemCLob.CreateWithData(PWideChar(P), Length(UniTemp), ConSettings, nil);
               Statement.SetBlob(Index, stUnicodeStream, Lob);
             end;
           {$IFNDEF UNICODE}
@@ -1835,19 +1858,29 @@ begin
               P := Pointer(BlobData);
               if p = nil then
                 P := PEmptyUnicodeString;
+              L := Length(BlobData);
               {$IFDEF WITH_WIDEMEMO}
               if Param.DataType = ftWideMemo then begin
-                 Lob := TZAbstractClob.CreateWithData(PWideChar(P), Length(BlobData) shr 1, ConSettings);
+                 Lob := TZLocalMemCLob.CreateWithData(PWideChar(P), L shr 1, ConSettings, nil);
                  Statement.SetBlob(Index, stUnicodeStream, Lob);
               end else {$ENDIF}begin
-                {$IFNDEF UNICODE}
-                if ConSettings.AutoEncode
-                then CP := zCP_NONE
+                if ConSettings.ClientCodePage.Encoding = ceUTF16
+                then CP := ConSettings.CTRL_CP
                 else CP := ConSettings.ClientCodePage.CP;
-                {$ELSE}
-                CP := zCP_NONE;
-                {$ENDIF}
-                Lob := TZAbstractClob.CreateWithData(PAnsiChar(P), Length(BlobData), CP, ConSettings);
+                if ConSettings.AutoEncode then case ZDetectUTF8Encoding(P, L) of
+                  etAnsi: if CP = zCP_UTF8 then //otherwise we'll keep the code page
+                        if (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+                          if (ConSettings^.CTRL_CP = zCP_UTF8) then
+                            if (ZOSCodePage = zCP_UTF8) then
+                            {no idea what to do with ansiencoding, if everything if set to UTF8!}
+                              CP := zCP_WIN1252 //all convertions would fail so.. let the server raise an error!
+                            else CP := ZOSCodePage
+                          else CP := ConSettings^.CTRL_CP
+                        else CP := ConSettings^.ClientCodePage^.CP;
+                  etUTF8: CP := zCP_UTF8;
+                  else {etUSASCII}; //do nothing just satisfy FPC 3.1+
+                end;
+                Lob := TZLocalMemCLob.CreateWithData(PAnsiChar(P), L, CP, ConSettings, nil);
                 Statement.SetBlob(Index, stAsciiStream, Lob);
               end;
             end;
@@ -1856,7 +1889,7 @@ begin
     ftBlob, ftGraphic:
       begin
         BlobData := Param.AsBlob;
-        Lob := TZAbstractBlob.CreateWithData(Pointer(BlobData), Length(BlobData));
+        Lob := TZLocalMemBLob.CreateWithData(Pointer(BlobData), Length(BlobData), nil);
         Statement.SetBlob(Index, stBinaryStream, Lob);
       end;
     else

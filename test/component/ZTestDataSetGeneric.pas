@@ -75,7 +75,6 @@ type
   protected
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
-    function IsRealPreparableTest: Boolean; override;
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
@@ -146,7 +145,8 @@ type
     procedure Test_SP_ParamBytesSetVal;
     procedure Test_SP_Type_Name;
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestGUIDs;
   end;
@@ -356,7 +356,10 @@ begin
       Params[5].LoadFromStream(BinStream, ftBlob);
 
       StrStream := TMemoryStream.Create;
-      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+      if ConnectionConfig.Transport = traWEBPROXY then
+        StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+      else
+        StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
 //      Params[6].LoadFromStream(StrStream, {$IFDEF UNICODE}ftWideMemo{$ELSE}ftMemo{$ENDIF});
       Params[6].LoadFromStream(StrStream, ftMemo);
 
@@ -392,7 +395,7 @@ begin
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
@@ -403,17 +406,23 @@ begin
         StrStream.Position := 0;
       end;
       StrStream1 := TMemoryStream.Create;
-      (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
-      CheckEquals(StrStream, StrStream1, 'Ascii Stream');
-      StrStream.Free;
-      StrStream1.Free;
+      try
+        (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
+        CheckEquals(StrStream, StrStream1, 'Ascii Stream');
+      finally
+        FreeAndNil(StrStream1);
+        FreeAndNil(StrStream);
+      end;
 
       { compare BinaryStream }
       BinStream1 := TMemoryStream.Create;
-      (FieldByName('p_picture') as TBlobField).SaveToStream(BinStream1);
-      CheckEquals(BinStream, BinStream1, 'Binary Stream');
-      BinStream.Free;
-      BinStream1.Free;
+      try
+        (FieldByName('p_picture') as TBlobField).SaveToStream(BinStream1);
+        CheckEquals(BinStream, BinStream1, 'Binary Stream');
+      finally
+        FreeAndNil(BinStream);
+        FreeAndNil(BinStream1);
+      end;
       Close;
 
       { Delete the row. }
@@ -790,14 +799,17 @@ begin
 
       Sql_ := 'SELECT * FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       StrStream := TMemoryStream.Create();
-      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+      if ConnectionConfig.Transport = traWEBPROXY then
+        StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+      else
+        StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
 
       //Modification by EgonHugeist: Different behavior for the Same Field
       //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
       //Now we read a none Wide-Stream in! What happens? Zeos is now able
       //to autodetect such strange things! But Zeos converts the Ansi-Stream to
       //a WiteString-Stream. So this test must be modified...
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       begin
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
@@ -808,8 +820,6 @@ begin
       end;
       BinStream := TMemoryStream.Create();
       BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
-      BinStream1 := TMemoryStream.Create;
-      StrStream1 := TMemoryStream.Create;
 
       { insert test record to people table }
       SQL.Text := Sql_;
@@ -888,19 +898,26 @@ begin
       CheckEquals('Somebody', FieldByName('p_name').AsString);
       CheckEquals(EncodeTime(12, 11, 20, 0), FieldByName('p_begin_work').AsDateTime, 0.0001);
       CheckEquals(EncodeTime(22, 36, 55, 0), FieldByName('p_end_work').AsDateTime, 0.0001);
-
-      (FieldByName('p_picture')as TBlobField).SaveToStream(BinStream1);
-      (FieldByName('p_resume')as TBlobField).SaveToStream(StrStream1);
-
-      CheckEquals(BinStream, BinStream1);
-      CheckEquals(StrStream, StrStream1);
+      BinStream1 := TMemoryStream.Create;
+      try
+        (FieldByName('p_picture')as TBlobField).SaveToStream(BinStream1);
+        CheckEquals(BinStream, BinStream1);
+      finally
+        FreeAndNil(BinStream1);
+      end;
+      StrStream1 := TMemoryStream.Create;
+      try
+        (FieldByName('p_resume')as TBlobField).SaveToStream(StrStream1);
+        CheckEquals(StrStream, StrStream1);
+      finally
+        FreeAndNil(StrStream1);
+      end;
       CheckEquals(1, FieldByName('p_redundant').AsInteger);
       Delete;
 
       FreeAndNil(BinStream);
-      FreeAndNil(BinStream1);
       FreeAndNil(StrStream);
-      FreeAndNil(StrStream1);
+
 
       { create and update resultset for equipment table for eq_id = TEST_ROW_ID }
       SQL.Text := Sql_;
@@ -1363,11 +1380,6 @@ begin
     end;
     //*)
   end;
-end;
-
-function TZGenericTestDataSet.IsRealPreparableTest: Boolean;
-begin
-  Result:= true;
 end;
 
 {**
@@ -1928,7 +1940,7 @@ begin
         ParamByName('b_id').DataType := ftInteger;
         Params[0].AsInteger := TEST_ROW_ID-2;
         {$IFDEF WITH_WIDEMEMO}
-        if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 then
+        if Connection.ControlsCodePage = cCP_UTF16 then
         begin
           ParamByName('b_text').DataType := ftWideMemo;
           Params[1].AsWideString := '';
@@ -1987,7 +1999,7 @@ begin
 
   Query := CreateQuery;
   try
-    if ProtocolType = protPostgre then
+    if (ProtocolType = protPostgre) or (ProtocolType = protOracle) then
     begin
       TempConnection := TZConnection.Create(nil);
       TempConnection.HostName := Connection.HostName;
@@ -2032,7 +2044,7 @@ begin
 
       TextStreamE := TMemoryStream.Create;
       {$IFDEF WITH_WIDEMEMO}
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         TextStreamE.Write(ZWideString(teststring)[1], Length(teststring)*2)
       else
       {$ENDIF}
@@ -2044,88 +2056,114 @@ begin
       Insert;
       FieldByName('b_id').AsInteger := TEST_ROW_ID-1;
       TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmWrite);
-      {$IFDEF WITH_WIDEMEMO}
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
-        TextStreamA.Write(ZWideString(teststring)[1], Length(teststring)*2)
-      else
-      {$ENDIF}
-        TextStreamA.Write(teststring[1],length(teststring));
-      TextStreamA.Free;
+      try
+        {$IFDEF WITH_WIDEMEMO}
+        if ( Connection.ControlsCodePage = cCP_UTF16 ) then
+          TextStreamA.Write(ZWideString(teststring)[1], Length(teststring)*2)
+        else
+        {$ENDIF}
+          TextStreamA.Write(teststring[1],length(teststring));
+      finally
+        FreeAndNil(TextStreamA);
+      end;
+
+      {
       BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmWrite);
       TMemoryStream(BinStreamA).LoadFromFile(TestFilePath('images/horse.jpg'));
-      BinStreamA.Free;
+      FreeAndNil(BinStreamA);
+      }
+      TBlobField(Query.FieldByName(BinLob)).LoadFromFile(TestFilePath('images/horse.jpg'));
       Post;
-
       SQL.Text := 'SELECT * FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       Open;
       TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmRead);
+      try
+        CheckEquals(TextStreamE, TextStreamA, 'Text-Stream');
+      finally
+        FreeAndNil(TextStreamA);
+      end;
       BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmRead);
-
-      CheckEquals(TextStreamE, TextStreamA, 'Text-Stream');
-      CheckEquals(BinStreamE, BinStreamA, 'Bin-Stream');
-
-      FreeAndNil(TextStreamA);
-      FreeAndNil(BinStreamA);
+      try
+        CheckEquals(BinStreamE, BinStreamA, 'Bin-Stream');
+      finally
+        FreeAndNil(BinStreamA);
+      end;
 
       Edit;
 
       TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmReadWrite);
-      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmReadWrite);
+      try
+        {$IFDEF WITH_WIDEMEMO}
+        TextStreamA.Position := 0;
+        if ( Connection.ControlsCodePage = cCP_UTF16 ) then
+        begin
+          SetLength(TempU, Length(TestString));
+          TextStreamA.Read(PWideChar(TempU)^, Length(teststring)*2);
+          CheckEquals(TempU, ZWideString(TestString));
+        end
+        else
+        {$ENDIF}
+        begin
+          SetLength(TempA, Length(TestString));
+          TextStreamA.Read(PAnsiChar(TempA)^, Length(teststring));
+          CheckEquals(TempA, TestString);
+        end;
+        CheckEquals(TextStreamE, TextStreamA);
+        TextStreamE.Size := TextStreamE.Size div 2;
 
-      {$IFDEF WITH_WIDEMEMO}
-      TextStreamA.Position := 0;
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
-      begin
-        SetLength(TempU, Length(TestString));
-        TextStreamA.Read(PWideChar(TempU)^, Length(teststring)*2);
-        CheckEquals(TempU, ZWideString(TestString));
-      end
-      else
-      {$ENDIF}
-      begin
-        SetLength(TempA, Length(TestString));
-        TextStreamA.Read(PAnsiChar(TempA)^, Length(teststring));
-        CheckEquals(TempA, TestString);
+        if TextStreamA is TMemoryStream then
+          TMemoryStream(TextStreamA).LoadFromStream(TextStreamE)
+        else begin
+          TextStreamA.Size := 0;
+          TextStreamA.CopyFrom(TextStreamE, TextStreamE.Size);
+        end;
+      finally
+        FreeAndNil(TextStreamA);
       end;
-      CheckEquals(BinStreamE, BinStreamA);
-      CheckEquals(TextStreamE, TextStreamA);
 
-      TextStreamE.Size := TextStreamE.Size div 2;
-      BinStreamE.Size := 1024;
-
-      TMemoryStream(TextStreamA).LoadFromStream(TextStreamE);
-      TMemoryStream(BinStreamA).LoadFromStream(BinStreamE);
-      FreeAndNil(TextStreamA);
-      FreeAndnil(BinStreamA);
-
+      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmReadWrite);
+      try
+        CheckEquals(BinStreamE, BinStreamA);
+        BinStreamE.Size := 1024;
+        if BinStreamA is TMemoryStream then
+          TMemoryStream(BinStreamA).LoadFromStream(BinStreamE)
+        else begin
+          BinStreamA.Size := 0;
+          BinStreamA.CopyFrom(BinStreamE, BinStreamE.Size);
+        end;
+      finally
+        FreeAndNil(BinStreamA);
+      end;
       Post;
-
       Close;
       Open;
 
       TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmRead);
-      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmRead);
-
-      CheckEquals(TextStreamE, TextStreamA, 'Text-Stream');
-      CheckEquals(BinStreamE, BinStreamA, 'Bin-Stream');
-
-      {$IFDEF WITH_WIDEMEMO}
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
-      begin
-        SetLength(TempU, TextStreamA.Size div 2);
-        TextStreamE.Read(PWideChar(TempU)^, TextStreamA.Size);
-        CheckEquals(Copy(ZWideString(TestString), 1, Length(teststring) div 2), TempU);
-      end
-      else
-      {$ENDIF}
-      begin
-        SetLength(TempA, TextStreamA.Size);
-        TextStreamE.Read(PAnsiChar(TempA)^, TextStreamA.Size);
-        CheckEquals(Copy(TestString, 1, Length(teststring) div 2), TempA);
+      try
+        CheckEquals(TextStreamE, TextStreamA, 'Text-Stream');
+        {$IFDEF WITH_WIDEMEMO}
+        if ( Connection.ControlsCodePage = cCP_UTF16 ) then
+        begin
+          SetLength(TempU, TextStreamA.Size div 2);
+          TextStreamE.Read(PWideChar(TempU)^, TextStreamA.Size);
+          CheckEquals(Copy(ZWideString(TestString), 1, Length(teststring) div 2), TempU);
+        end
+        else
+        {$ENDIF}
+        begin
+          SetLength(TempA, TextStreamA.Size);
+          TextStreamE.Read(PAnsiChar(TempA)^, TextStreamA.Size);
+          CheckEquals(Copy(TestString, 1, Length(teststring) div 2), TempA);
+        end;
+      finally
+        FreeAndNil(TextStreamA);
       end;
-
-      FreeAndNil(TextStreamA);
-      FreeAndNil(BinStreamA);
+      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmRead);
+      try
+        CheckEquals(BinStreamE, BinStreamA, 'Bin-Stream');
+      finally
+        FreeAndNil(BinStreamA);
+      end;
       Close;
     end;
   finally
@@ -2151,10 +2189,10 @@ var
 
   function GetNonQuotedAlias(const Value: String): String;
   begin
-    case ProtocolType of
-      protPostgre:
+    case ConnectionConfig.Provider of
+      spPostgreSQL:
         Result := LowerCase(Value);
-      protOracle, protFirebird, protInterbase:
+      spOracle, spIB_FB:
         Result := UpperCase(Value);
       else
         Result := Value;
@@ -2458,7 +2496,7 @@ begin
 end;
 
 type
-  THackQuery = class(TZAbstractRODataSet);
+  THackQuery = class(TZQuery);
 // Test if fields got the right types - the simplest method is to try
 // assigning boundary values (range checking must be enabled)
 procedure TZGenericTestDataSet.TestInsertNumbers;
@@ -2573,7 +2611,12 @@ begin
 end;
 
 procedure TZGenericTestDataSet.TestVeryLargeBlobs;
-const teststring: ZWideString = '123456????';
+{$IFDEF MSWINDOWS}
+const teststring: ZWideString = '123456'+Chr(192)+Chr(193)+Chr(194)+Chr(195);
+{$ELSE}
+const teststring: ZWideString = '123456\##/';
+{$ENDIF}
+
 var
   Query: TZQuery;
   BinStreamE,BinStreamA,TextStream: TMemoryStream;
@@ -2581,6 +2624,7 @@ var
   TextLob, BinLob: String;
   W: ZWideString;
   TempConnection: TZConnection;
+  ConSettings: PZConSettings;
 
   function WideDupeString(const AText: ZWideString; ACount: Integer): ZWideString;
   var i,l : integer;
@@ -2620,6 +2664,10 @@ begin
       Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
     end;
+    if not Query.Connection.Connected then
+      Query.Connection.Connect;
+
+    ConSettings := Query.Connection.DbcConnection.GetConSettings;
     with Query do
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
@@ -2651,12 +2699,14 @@ begin
       TextStream := TMemoryStream.Create;
       W := WideDupeString(teststring,6000);
       {$IFNDEF UNICODE}
-      s:= GetDBTestString(W, Connection.DbcConnection.GetConSettings);
+      s:= GetDBTestString(W, ConSettings);
       {$ELSE}
-      S := ZUnicodeToRaw(W, Connection.DbcConnection.GetConSettings.CTRL_CP);
+      if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16)
+      then S := ZUnicodeToRaw(W, ConSettings.CTRL_CP)
+      else S := ZUnicodeToRaw(W, ConSettings.ClientCodePage.CP);
       {$ENDIF}
 
-      TextStream.Write(s[1],length(s));
+      TextStream.Write(Pointer(S)^,length(s));
       s := '';
       Params[1].LoadFromStream(TextStream, ftMemo);
       FreeAndNil(TextStream);
@@ -2668,8 +2718,6 @@ begin
       CheckEquals(BinStreamE.Size * 10, length(s), 'Length of DupeString result');
       S := '';
       BinStreamE.Position := 0;
-      // this operation is useless - s is empty so length(s) is zero - even worse - it generates a range overflow because s[1] doesn't exist.
-      //BinStreamE.Write(s[1], length(s));
       Params[2].LoadFromStream(BinStreamE, ftBlob);
       ExecSQL;
 
@@ -2684,7 +2732,7 @@ begin
       CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
       TextStream := TMemoryStream.Create;
       (FieldByName(TextLob) as TBlobField).SaveToStream(TextStream);
-      CheckEquals(W, TextStream, Connection.DbcConnection.GetConSettings, 'Text-Stream');
+      CheckEquals(W, TextStream, FieldByName(TextLob).DataType, ConSettings, Connection.ControlsCodePage, 'Text-Stream');
       FreeAndNil(TextStream);
       BinStreamA := TMemoryStream.Create;
       BinStreamA.Position:=0;
@@ -2708,25 +2756,21 @@ begin
   end;
 end;
 
-{ TZInterbaseTestGUIDS }
 procedure TZGenericTestDataSet.TestEmptyMemoAfterFullMemo;
 var
   Query: TZQuery;
   TxtValue: String;
   ValueIsNull: Boolean;
 begin
-  if ProtocolType = protOracle then
-  begin
-    BlankCheck;
-    Exit;   //not resolveable with ora -> empty is always null except use the or func
-  end;
   Query := CreateQuery;
   try
     try
       Query.Connection.Connect;
       Query.Connection.StartTransaction;
       try
-        Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';
+        if ProtocolType = protOracle
+        then Query.SQL.Text := 'insert into blob_values (b_id, b_clob) values (:id, :text)'
+        else Query.SQL.Text := 'insert into blob_values (b_id, b_text) values (:id, :text)';
         Query.ParamByName('id').DataType := ftInteger;
         Query.ParamByName('text').DataType := ftMemo;
 
@@ -2744,8 +2788,13 @@ begin
       Query.SQL.Text := 'select * from blob_values where b_id = 2001';
       Query.Open;
       try
-        TxtValue := Query.FieldByName('b_text').AsString;
-        ValueIsNull := Query.FieldByName('b_text').IsNull;
+        if ProtocolType = protOracle then begin
+          TxtValue := Query.FieldByName('b_clob').AsString;
+          ValueIsNull := Query.FieldByName('b_clob').IsNull;
+        end else begin
+          TxtValue := Query.FieldByName('b_text').AsString;
+          ValueIsNull := Query.FieldByName('b_text').IsNull;
+        end;
       finally
         Query.Close;
       end;
@@ -2776,9 +2825,15 @@ const
 var
   GuidVal: TGUID;
 
-function TZInterbaseTestGUIDS.GetSupportedProtocols: string;
+{ TZInterbaseTestGUIDS }
+//function TZInterbaseTestGUIDS.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZInterbaseTestGUIDS.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 procedure TZInterbaseTestGUIDS.SetDefaults;

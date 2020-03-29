@@ -63,7 +63,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZOleDB, ZDbcConnection, ZURL, ActiveX;
+  ZCompatibility, ZOleDB, ZDbcConnection, ActiveX;
 
 type
   TSuppSchemaRec = record
@@ -1727,7 +1727,7 @@ begin
         if not IsNull(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex]) then
           Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), Len);
         Result.UpdateSmall(ProcColColumnTypeIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex]));
-        SQLType := ConvertOleDBTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), ConSettings.CPType, RS);
+        SQLType := ConvertOleDBTypeToSQLType(GetSmall(fProcedureColumnsColMap.ColIndices[ProcColDataTypeIndex]), RS);
         Result.UpdateSmall(ProcColDataTypeIndex, Ord(SQLType));
         Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), Len);
         if SQLType in [stString, stUnicodeString]
@@ -2016,7 +2016,7 @@ begin
         SQLType := ConvertOleDBTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           ((FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
-          GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]), ConSettings.CPType);
+          GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
         if SQLType in [stCurrency, stBigDecimal] then begin
           Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
@@ -2240,7 +2240,7 @@ begin
         Result.UpdateSmall(TableColVerScopeIndex, 0);
         Result.UpdatePWideChar(TableColVerColNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
         Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmallByName('DATA_TYPE'), Flags and DBCOLUMNFLAGS_ISLONG <> 0, 0, 0, ConSettings.CPType)));
+          GetSmallByName('DATA_TYPE'), Flags and DBCOLUMNFLAGS_ISLONG <> 0, 0, 0)));
         Result.UpdatePWideChar(TableColVerTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
@@ -2659,7 +2659,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideChar(TypeInfoTypeNameIndex, Len), Len);
         Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmall(TypeInfoDataTypeIndex), GetBoolean(iIS_LONG), 0, 0, ConSettings.CPType)));
+          GetSmall(TypeInfoDataTypeIndex), GetBoolean(iIS_LONG), 0, 0)));
         Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
         Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideChar(TypeInfoLiteralPrefixIndex, Len), Len);
         Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideChar(TypeInfoLiteralSuffixIndex, Len), Len);

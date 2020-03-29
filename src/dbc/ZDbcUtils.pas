@@ -57,7 +57,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} TypInfo, FmtBcd,
-  ZCompatibility, ZDbcIntfs, ZClasses, ZTokenizer, ZVariant,
+  ZCompatibility, ZDbcIntfs, ZClasses, ZTokenizer, ZVariant, ZSysUtils,
   ZDbcResultSetMetadata;
 
 const SQL_MAX_NUMERIC_LEN = 16;
@@ -140,6 +140,14 @@ procedure CopyColumnsInfo(FromList: TObjectList; ToList: TObjectList);
 function DefineStatementParameter(const Statement: IZStatement;
   const ParamName: string; const Default: string): string; overload;
 
+{**
+  Defines a statement specific parameter.
+  @param Statement a statement interface reference.
+  @param an info list for the lookups.
+  @param ParamName a name of the parameter.
+  @param Default a parameter default value.
+  @return a parameter value or default if nothing was found.
+}
 function DefineStatementParameter(const Connection: IZConnection;
   const StmtInfo: TStrings; const ParamName: string;
   const Default: string): string; overload;
@@ -179,6 +187,7 @@ function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False):
   @param NumericLen the count of value digits of the numeric
 *)
 procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
+
 (** written by EgonHugeist
   converts a <code>java.math.BigDecimal</code> value into a oledb DB_(VAR)NUMERIC
   @param Dest the pointer to a valid oledn DB_(VAR)NUMERIC struct which to be converted
@@ -186,7 +195,20 @@ procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
 *)
 procedure BCD2SQLNumeric(const Src: TBCD; Dest: PDB_NUMERIC);
 
+(** written by EgonHugeist
+  converts an oledb DB_(VAR)NUMERIC into a raw string buffer
+  @param Src the DB_(VAR)NUMERIC value which should be converted
+  @param Dest the pointer to the raw buffer we write in
+  @param NumericLen fill the length in bytes of the converted value
+*)
 procedure SQLNumeric2Raw(Src: PDB_NUMERIC; Dest: PAnsiChar; var NumericLen: NativeUint);
+
+(** written by EgonHugeist
+  converts an oledb DB_(VAR)NUMERIC into a utf16 string buffer
+  @param Src the DB_(VAR)NUMERIC value which should be converted
+  @param Dest the pointer to the utf16 buffer we write in
+  @param NumericLen fill the length in words of the converted value
+*)
 procedure SQLNumeric2Uni(Src: PDB_NUMERIC; Dest: PWideChar; var NumericLen: NativeUint);
 
 (** written by EgonHugeist
@@ -226,9 +248,6 @@ function TokenizeSQLQueryUni(const SQL: {$IF defined(FPC) and defined(WITH_RAWBY
 
 function ExtractFields(const FieldNames: string; const SepChars: Array of Char): TStrings;
 
-procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
-  const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
-  const PAramTypes: TZProcedureColumnTypeDynArray);
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -237,24 +256,19 @@ procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   @return a valid utf8 encoded stringstram
 }
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings): RawByteString; overload;
+  ConSettings: PZConSettings): RawByteString; overload; //deprecated;
 
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings; ToCP: Word): RawByteString; overload;
-
-function GetValidatedAnsiString(const Ansi: RawByteString;
-  ConSettings: PZConSettings; const FromDB: Boolean): RawByteString; overload;
+  ConSettings: PZConSettings; ToCP: Word): RawByteString; overload; //deprecated;
 
 {**
-  GetValidatedUnicodeStream the incoming Stream for his given Memory and
-  returns a valid Unicode/Widestring Stream
-  @param Buffer the pointer to the Data
-  @return a valid Unicode encoded stringstram
+  Set the string-types conversion funtion in relation to the Connection-Settings.
+  The Results should be as optimal as possible to speed up the behavior
+  @param ConSettings a Pointer to the ConnectionSetting
 }
-function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings; FromDB: Boolean): TStream; overload;
+procedure SetConvertFunctions(ConSettings: PZConSettings);
 
-procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
+function CreateUnsupportedParameterTypeException(Index: Integer; ParamType: TZSQLType): EZSQLException;
 
 function IsNullFromArray(ZArray: PZArray; Index: Cardinal): Boolean;
 
@@ -295,6 +309,17 @@ procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray; var MaxLen: LengthInt): TUnicodeStringDynArray; overload;
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeStringDynArray; overload;
 
+function CreateCanNotAccessBlobRecordException(ColumnIndex: Integer; SQLType: TZSQLType): EZSQLException;
+function CreateWriteOnlyException: EZSQLException;
+
+{**
+  creates an "operation is not allowed in READ ONLY mode" exception.
+}
+function CreateReadOnlyException: EZSQLException;
+function CreateBinaryException: EZSQLException;
+function CreateNonBinaryException: EZSQLException;
+function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType): EZSQLException;
+
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
   i4SpaceUni: Int64 = 9007336695791648;  //integer representation of the four wide space chars
@@ -327,7 +352,7 @@ const
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZFastCode, ZGenericSqlToken, Math;
+uses ZMessages, ZEncoding, ZFastCode, ZGenericSqlToken, Math;
   //{$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
@@ -407,9 +432,9 @@ begin
     stTime:
       Result := InitialType in [stString, stUnicodeString, stTime, stTimestamp, stDouble];
     stBinaryStream:
-      Result := (InitialType in [stBinaryStream, stBytes]) and (InitialType <> stUnknown);
+      Result := (InitialType in [stBinaryStream, stBytes]);
     stAsciiStream, stUnicodeStream:
-      Result := (InitialType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) and (InitialType <> stUnknown);
+      Result := (InitialType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]);
     else
       Result := (ResultType = InitialType) and (InitialType <> stUnknown);
   end;
@@ -1537,84 +1562,7 @@ begin
   end;
 end;
 
-procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
-  const OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
-  const ParamTypes: TZProcedureColumnTypeDynArray);
-var
-  ParamIndex, I: Integer;
-  HasRows: Boolean;
-  SupportsMoveAbsolute: Boolean;
-  Meta: IZResultSetMetadata;
-begin
-  SupportsMoveAbsolute := ResultSet.GetType <> rtForwardOnly;
-  if SupportsMoveAbsolute then ResultSet.BeforeFirst;
-  HasRows := ResultSet.Next;
-
-  I := FirstDbcIndex;
-  Meta := ResultSet.GetMetadata;
-  for ParamIndex := 0 to OutParamCount - 1 do
-  begin
-    if not (ParamTypes[ParamIndex] in [pctInOut, pctOut, pctReturn]) then
-      Continue;
-    if I > Meta.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
-      Break;
-
-    if (not HasRows) or (ResultSet.IsNull(I)) then
-      OutParamValues[ParamIndex] := NullVariant
-    else
-      case Meta.GetColumnType(I) of
-        stBoolean:
-          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
-        stByte:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
-        stShort:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
-        stWord:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
-        stSmall:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
-        stLongword:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
-        stInteger:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
-        stULong:
-          OutParamValues[ParamIndex] := EncodeUInteger(ResultSet.GetULong(I));
-        stLong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
-        stBytes:
-          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-        stFloat:
-          OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetFloat(I));
-        stDouble:
-          OutParamValues[ParamIndex] := EncodeDouble(ResultSet.GetDouble(I));
-        stCurrency:
-          OutParamValues[ParamIndex] := EncodeCurrency(ResultSet.GetCurrency(I));
-        stBigDecimal: begin
-            InitializeVariant(OutParamValues[ParamIndex], vtBigDecimal);
-            ResultSet.GetBigDecimal(I, OutParamValues[ParamIndex].VBigDecimal);
-          end;
-        stString, stAsciiStream:
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-        stUnicodeString, stUnicodeStream:
-          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
-        stDate:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetDate(I));
-        stTime:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTime(I));
-        stTimestamp:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTimestamp(I));
-        stBinaryStream:
-          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
-        else
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-      end;
-    Inc(I);
-  end;
-  if SupportsMoveAbsolute then ResultSet.BeforeFirst;
-end;
-
-function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
-  const ConSettings: PZConSettings): TZCharEncoding;
+function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal): TZCharEncoding;
 begin
   Result := ceDefault;
   {EgonHugeist:
@@ -1663,7 +1611,7 @@ begin
   begin
     SetLength(Bytes, Size +2);
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.move(Buffer^, Pointer(Bytes)^, Size);
-    Encoding := TestEncoding(Bytes, Size, ConSettings);
+    Encoding := TestEncoding(Bytes, Size);
     SetLength(Bytes, 0);
     case Encoding of
       ceDefault: ZSetString(Buffer, Size, Result);
@@ -1726,74 +1674,11 @@ begin
   ConSettings.ClientCodePage.CP := DB_CP;
 end;
 
-function GetValidatedAnsiString(const Ansi: RawByteString;
-  ConSettings: PZConSettings; const FromDB: Boolean): RawByteString;
-begin
-  if FromDB then
-    if ( ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP ) or not ConSettings.AutoEncode then
-      Result := Ansi
-    else
-      {$IFDEF WITH_LCONVENCODING}
-      Result := Consettings.DbcConvertFunc(Ansi)
-      {$ELSE}
-      Result := ZUnicodeToRaw(ZRawToUnicode(Ansi, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP)
-      {$ENDIF}
-  else
-    Result := EmptyRaw; // not done yet  and not needed. Makes the compiler happy
-end;
-
-{**
-  GetValidatedUnicodeStream the incoming Stream for his given Memory and
-  returns a valid Unicode/Widestring Stream
-  @param Stream the Stream with the unknown format and data
-  @return a valid Unicode encoded stringstram
-}
-function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings; FromDB: Boolean): TStream;
-var
-  US: ZWideString;
-  Bytes: TByteDynArray;
-  Encoding: TZCharEncoding;
-begin
-  Result := nil;
-  US := '';
-  if Assigned(Buffer) and ( Size > 0 ) then
-  begin
-    SetLength(Bytes, Size +2);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Bytes)^, Size);
-    if FromDB then //do not check encoding twice
-      US := PRawToUnicode(Buffer, Size, ConSettings.ClientCodePage.CP)
-    else begin
-      Encoding := TestEncoding(Bytes, Size, ConSettings);
-      SetLength(Bytes, 0);
-      case Encoding of
-        ceDefault: US := USASCII7ToUnicodeString(Buffer, Size);
-        ceAnsi: //We've to start from the premisse we've got a Unicode string in here ):
-          begin
-            SetLength(US, Size shr 1);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US)^, Size);
-          end;
-        ceUTF8: US := PRawToUnicode(Buffer, size, zCP_UTF8);
-        ceUTF16:
-          begin
-            SetLength(US, Size shr 1);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(US)^, Size);
-          end;
-        else ; //hide weird FPC warning
-      end;
-    end;
-
-    if US <> '' then
-      Result := StreamFromData(US);
-  end;
-end;
-
-procedure RaiseUnsupportedParameterTypeException(ParamType: TZSQLType);
-var
-  TypeName: String;
+function CreateUnsupportedParameterTypeException(Index: Integer; ParamType: TZSQLType): EZSQLException;
+var TypeName: String;
 begin
   TypeName := GetEnumName(TypeInfo(TZSQLType), Ord(ParamType));
-  raise EZSQLException.Create(SUnsupportedParameterType + ': ' + TypeName);
+  Result := EZSQLException.Create(SUnsupportedParameterType + ': ' + TypeName+', Index: '+ZFastCode.IntToStr(Index));
 end;
 
 const
@@ -1869,7 +1754,7 @@ begin
                                 ((Length(TUnicodeStringDynArray(P)[Index]) = 4) and
                                   ZSysUtils.SameText(null_w, Pointer(TRawByteStringDynArray(P)[Index]), 4));
               vtCharRec:
-                if ZCompatibleCodePages(TZCharRecDynArray(P)[Index].CP, zCP_UTF16)
+                if (TZCharRecDynArray(P)[Index].CP = zCP_UTF16)
                 then IsNullFromArray := StrToBoolEx(PWideChar(TZCharRecDynArray(P)[Index].P)) or
                                 ((TZCharRecDynArray(P)[Index].Len = 4) and
                                   ZSysUtils.SameText(null_w, PWideChar(TZCharRecDynArray(P)[Index].P), 4))
@@ -2254,7 +2139,7 @@ begin
     vtRawByteString:  Result := RawToIntDef(TRawByteStringDynArray(ZArray.VArray)[Index], 0);
     {$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString:  Result := UnicodeToIntDef(TUnicodeStringDynArray(ZArray.VArray)[Index], 0);
     vtCharRec:
-      if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+      if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToIntDef(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToIntDef(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
     vtNull:  case TZSQLType(ZArray.VArrayType) of
@@ -2290,7 +2175,7 @@ begin
     vtRawByteString:  Result := RawToUInt64Def(TRawByteStringDynArray(ZArray.VArray)[Index], 0);
     {$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString:  Result := UnicodeToUInt64Def(TUnicodeStringDynArray(ZArray.VArray)[Index], 0);
     vtCharRec:
-      if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+      if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
     vtNull:  case TZSQLType(ZArray.VArrayType) of
@@ -2326,7 +2211,7 @@ begin
     vtRawByteString:  Result := RawToInt64Def(TRawByteStringDynArray(ZArray.VArray)[Index], 0);
     {$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString:  Result := UnicodeToInt64Def(TUnicodeStringDynArray(ZArray.VArray)[Index], 0);
     vtCharRec:
-      if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+      if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
     vtNull:  case TZSQLType(ZArray.VArrayType) of
@@ -2362,7 +2247,7 @@ begin
     vtRawByteString:  Result := RawToUInt64Def(TRawByteStringDynArray(ZArray.VArray)[Index], 0);
     {$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString:  Result := UnicodeToUInt64Def(TUnicodeStringDynArray(ZArray.VArray)[Index], 0);
     vtCharRec:
-      if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+      if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
     vtNull:  case TZSQLType(ZArray.VArrayType) of
@@ -2405,7 +2290,7 @@ begin
         SQLStrToFloatDef(PWideChar(P), 0, Result, Length(TUnicodeStringDynArray(ZArray.VArray)[Index]));
       end;
     vtCharRec:
-      if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+      if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then SQLStrToFloatDef(PWideChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len)
       else SQLStrToFloatDef(PAnsiChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
@@ -2450,7 +2335,7 @@ begin
         SQLStrToFloatDef(PWideChar(P), 0, Result, Length(TUnicodeStringDynArray(ZArray.VArray)[Index]));
       end;
     vtCharRec:
-      if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+      if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then SQLStrToFloatDef(PWideChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len)
       else SQLStrToFloatDef(PAnsiChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
@@ -2489,7 +2374,7 @@ begin
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: Result := StrToBoolEx(TUnicodeStringDynArray(ZArray.VArray)[Index]);
     vtCharRec:
-      if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+      if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := StrToBoolEx(PWideChar(TZCharRecDynArray(ZArray.VArray)[Index].P))
       else Result := StrToBoolEx(PAnsiChar(TZCharRecDynArray(ZArray.VArray)[Index].P));
     vtNull:  case TZSQLType(ZArray.VArrayType) of
@@ -2541,7 +2426,7 @@ begin
     vtCharRec: begin
         P := TZCharRecDynArray(ZArray.VArray)[Index].P;
         L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
-        B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
+        B := (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16);
 Str_Conv:
         if B
         then B := TryPCharToDateTime(PWideChar(P), L, formatSettings, Result{%H-})
@@ -2588,7 +2473,7 @@ begin
     vtCharRec: begin
         P := TZCharRecDynArray(ZArray.VArray)[Index].P;
         L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
-        B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
+        B := (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16);
 Str_Conv:
         if B
         then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result{%H-})
@@ -2635,7 +2520,7 @@ begin
     vtCharRec: begin
         P := TZCharRecDynArray(ZArray.VArray)[Index].P;
         L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
-        B := ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16);
+        B := (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16);
 Str_Conv:
         if B
         then B := TryPCharToDateTime(PWideChar(P), L, FormatSettings, Result{%H-})
@@ -2663,7 +2548,7 @@ begin
   case ZArray.VArrayVariantType of
     vtCharRec: begin
         P := TZCharRecDynArray(ZArray.VArray)[Index].P;
-        if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+        if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
         then goto W_Conv
         else goto A_Conv;
       end;
@@ -2706,7 +2591,7 @@ begin
     vtCharRec: begin
         P := TZCharRecDynArray(ZArray.VArray)[Index].P;
         L := TZCharRecDynArray(ZArray.VArray)[Index].Len;
-        if ZCompatibleCodePages(TZCharRecDynArray(ZArray.VArray)[Index].CP, zCP_UTF16)
+        if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
         then goto W_Conv
         else goto A_Conv;
       end;
@@ -2747,6 +2632,90 @@ W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd valu
 DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+end;
+
+procedure SetConvertFunctions(ConSettings: PZConSettings);
+begin
+  FillChar(ConSettings^.ConvFuncs, SizeOf(ConSettings^.ConvFuncs), #0);
+
+  //Let's start with the AnsiTo/From types..
+  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then begin
+    //last but not least the String to/from converters
+    //string represents the DataSet/IZResultSet Strings
+
+    {$IFDEF UNICODE}
+    Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRaw;
+    Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+
+    ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+    Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
+    {$ELSE}
+    {String To/From Raw}
+    if (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP) then begin
+      Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
+      if ConSettings^.AutoEncode
+      then Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode
+      else Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+    end else if ConSettings^.AutoEncode then begin
+      Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+      Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+    end else begin
+      Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+      Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
+    end;
+
+    {String To/From Unicode}
+    if ConSettings^.CTRL_CP = zCP_UTF8
+    then Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString_CPUTF8
+    else Consettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+
+    if ConSettings^.AutoEncode
+    then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode
+    else if ConSettings^.CTRL_CP = zCP_UTF8
+      then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertString_CPUTF8ToUnicode
+      else Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
+    {$ENDIF}
+  end else begin //autoencode strings is allways true
+    Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+    Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+    ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+    Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
+  end;
+end;
+
+function CreateCanNotAccessBlobRecordException(ColumnIndex: Integer; SQLType: TZSQLType): EZSQLException;
+begin
+  Result := EZSQLException.Create( Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(SQLType)]));
+end;
+
+function CreateWriteOnlyException: EZSQLException;
+begin
+  Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['WRITE ONLY']));
+end;
+
+{**
+  Raises operation is not allowed in READ ONLY mode exception.
+}
+function CreateReadOnlyException: EZSQLException;
+begin
+  Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['READ ONLY']));
+end;
+
+function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType): EZSQLException;
+begin
+  Result := EZSQLException.Create(Format(SConvertionIsNotPossible, [ColumnIndex,
+     DefineColumnTypeName(Actual), DefineColumnTypeName(Expected)]));
+end;
+
+function CreateBinaryException: EZSQLException;
+begin
+  Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['BINARY']));
+end;
+
+function CreateNonBinaryException: EZSQLException;
+begin
+  Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['NON BINARY']));
 end;
 
 {$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}

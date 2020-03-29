@@ -193,7 +193,6 @@ type
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
     procedure SetBigDecimal(Index: Integer; const Value: TBCD);
-
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
@@ -209,7 +208,8 @@ type
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
     procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
 
-    procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce;
+    procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
+    procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
     procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
 
@@ -351,8 +351,10 @@ end;
 }
 procedure TZAbstractOleDBStatement.Prepare;
 begin
-  if FCommand = nil then
+  if FCommand = nil then begin
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
+    CheckError(FCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)), lcOther);
+  end;
   if FCallResultCache <> nil then
     ClearCallResultCache;
   inherited Prepare;
@@ -628,6 +630,7 @@ procedure TZAbstractOleDBStatement.Unprepare;
 var
   Status: HRESULT;
   FRowSet: IRowSet;
+  CommandPrepare: ICommandPrepare;
 begin
   if Prepared then
     try
@@ -642,7 +645,11 @@ begin
         until Failed(Status) or (Status = DB_S_NORESULT);
         FMultipleResults := nil;
       end;
-      CheckError((FCommand as ICommandPrepare).UnPrepare, lcOther, nil);
+      if FCommand.QueryInterface(ICommandPrepare, CommandPrepare) = S_OK then try
+        CheckError(CommandPrepare.UnPrepare, lcOther, nil);
+      finally
+        CommandPrepare := nil;
+      end;
     finally
       FCommand := nil;
       FMultipleResults := nil;
@@ -658,6 +665,11 @@ end;
 { TZOleDBPreparedStatement }
 
 //const OleDbNotNullTable: array[Boolean] of DBSTATUS = (DBSTATUS_S_ISNULL, DBSTATUS_S_OK);
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}
+{$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.BindBatchDMLArrays;
 var
   ZData, Data, P: Pointer;
@@ -730,8 +742,7 @@ var
     case SQLType of
       stBinaryStream: begin
                 TempLob := TInterfaceDynArray(ZData)[J] as IZBLob;
-                PLen^ := TempLob.Length;
-                P := TempLob.GetBuffer;
+                P := TempLob.GetBuffer(FRawTemp, PLen^);
                 TempLob := nil;
               end;
       stBytes: begin
@@ -752,17 +763,12 @@ var
   end;
   procedure Bind_Long_DBTYPE_WSTR_BY_REF;
   var TempLob: IZBlob;
-    TmpStream: TStream;
+    Len: NativeUInt;
   begin
     TempLob := TInterfaceDynArray(ZData)[J] as IZBLob;
-    if not TempLob.IsClob then begin
-      TmpStream := GetValidatedUnicodeStream(TempLob.GetBuffer, TempLob.Length, ConSettings, False);
-      TempLob := TZAbstractClob.CreateWithStream(TmpStream, zCP_UTF16, ConSettings);
-      TInterfaceDynArray(ZData)[J] := TempLob; //keep mem alive!
-      TmpStream.Free;
-    end;
-    PPointer(Data)^:= TempLob.GetPWideChar;
-    PLen^ := TempLob.Length;
+    TempLob.SetCodePageTo(zCP_UTF16);
+    PPointer(Data)^:= TempLob.GetPWideChar(fUniTemp, Len);
+    PLen^ := Len;
   end;
 label W_Len, WStr;
 begin
@@ -1159,6 +1165,7 @@ W_Len:                if PLen^ > MaxL then
   end;
   {$IF defined (RangeCheckEnabled)}{$R+}{$IFEND}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure TZOleDBPreparedStatement.BindInParameters;
 begin
@@ -1178,6 +1185,10 @@ begin
     end;
 end;
 
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.BindRaw(Index: Integer;
   const Value: RawByteString; CP: Word);
 var L: Cardinal;
@@ -1207,6 +1218,7 @@ begin
     else InitVaryBind(Index, (L+1) shl 1, DBTYPE_WSTR);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure TZOleDBPreparedStatement.CalcParamSetsAndBufferSize;
 var
@@ -1585,24 +1597,20 @@ end;
 
 procedure TZOleDBPreparedStatement.Prepare;
 var
-  FOlePrepareCommand: ICommandPrepare;
   DBInfo: IZDataBaseInfo;
+  CommandPrepare: ICommandPrepare;
 begin
   if Not Prepared then begin//prevent PrepareInParameters
     fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
-    try
       SetOleCommandProperties;
       CheckError(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)), lcOther);
-      OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
+      OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare));
       if fDEFERPREPARE then begin
-        CheckError(FOlePrepareCommand.Prepare(0), lcOther);
+        CheckError(CommandPrepare.Prepare(0), lcOther);
         fBindImmediat := True;
       end else
         fBindImmediat := False;
-    finally
-      FOlePrepareCommand := nil;
-    end;
     DBInfo := Connection.GetMetadata.GetDatabaseInfo;
     if FSupportsMultipleResultSets
     then fMoreResultsIndicator := mriUnknown
@@ -1860,6 +1868,9 @@ var Bind: PDBBINDING;
   Data: PAnsichar;
   DBStatus: PDBSTATUS;
   DBLENGTH: PDBLENGTH;
+  Len: NativeUInt;
+  PA: PAnsiChar;
+  PW: PWideChar absolute PA;
 label Fix_CLob;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -1880,41 +1891,44 @@ begin
     case Bind.wType of
       (DBTYPE_STR or DBTYPE_BYREF):
         if Value.IsClob then begin
-          PPointer(Data)^ := Value.GetPAnsiChar(FClientCP);
-          DBLENGTH^ := Value.Length;
-        end else begin
-Fix_CLob: FRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
-          SetBLob(Index, stAsciiStream, TZAbstractCLob.CreateWithData(Pointer(FRawTemp),
-            Length(FRawTemp), FClientCP, ConSettings));
-        end;
+          Value.SetCodePageTo(FClientCP);
+          PPointer(Data)^ := Value.GetPAnsiChar(FClientCP, FRawTemp, Len);
+          DBLENGTH^ := Len;
+        end else
+Fix_CLob: SetBLob(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-              PPointer(Data)^ := Value.GetPWideChar;
-              DBLENGTH^ := Value.Length;
+              Value.SetCodePageTo(zCP_UTF16);
+              PPointer(Data)^ := Value.GetPWideChar(fUniTemp, Len);
+              DBLENGTH^ := Len shl 1;
             end;
       (DBTYPE_GUID or DBTYPE_BYREF):;
       (DBTYPE_BYTES or DBTYPE_BYREF): begin
-          PPointer(Data)^ := Value.GetBuffer;
-          DBLENGTH^ := Value.Length;
+          FRawTemp := '';
+          PPointer(Data)^ := Value.GetBuffer(FrawTemp, DBLENGTH^);
+          if Pointer(FRawTemp) <> nil then
+             SetBlob(Index, stBinaryStream, TZLocalMemBLob.CreateWithData(PPointer(Data)^, DBLENGTH^, FOpenLobStreams));
         end;
       DBTYPE_BYTES: begin
-              DBLENGTH^ := Value.Length;
+              PA := Value.GetBuffer(FRawTemp, DBLENGTH^);
               if DBLENGTH^ < Bind.cbMaxLen
-              then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+              then Move(PA^, Data^, DBLENGTH^)
               else RaiseExceeded(Index);
             end;
       DBTYPE_STR: if Value.IsClob then begin
-                Value.GetPAnsiChar(FClientCP);
-                DBLENGTH^ := Value.Length;
-                if DBLENGTH^ < Bind.cbMaxLen
-                then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+                Value.SetCodePageTo(FClientCP);
+                PA := Value.GetPAnsiChar(FClientCP, FRawTemp, Len);
+                DBLENGTH^ := Len;
+                if Len < Bind.cbMaxLen
+                then Move(PA^, Data^, DBLENGTH^)
                 else RaiseExceeded(Index);
               end else
                 goto Fix_CLob;
       DBTYPE_WSTR: begin
-              Value.GetPWideChar;
-              DBLENGTH^ := Value.Length;
+              Value.SetCodePageTo(FClientCP);
+              PW := Value.GetPWideChar(FUniTemp, Len);
+              DBLENGTH^ := Len shl 1;
               if DBLENGTH^ < Bind.cbMaxLen
-              then Move(Value.GetBuffer^, Data^, DBLENGTH^)
+              then Move(PW^, Data^, DBLENGTH^)
               else RaiseExceeded(Index);
             end;
       else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
@@ -1947,6 +1961,30 @@ end;
 procedure TZOleDBPreparedStatement.SetByte(Index: Integer; Value: Byte);
 begin
   InternalBindUInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZOleDBPreparedStatement.SetBytes(Index: Integer;
+  Value: PByte; Len: NativeUInt);
+begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  BindList.Put(Index, stBytes, Value, Len); //localize
+  if fBindImmediat
+  then SetPAnsiChar(Index, PAnsiChar(Value), Len)
+  else InitVaryBind(Index, Len, DBTYPE_BYTES);
 end;
 
 {**
@@ -2136,6 +2174,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetDate(Index: Integer;
   const Value: TZDate);
 var Bind: PDBBINDING;
@@ -2200,6 +2239,7 @@ DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
     BindList.Put(Index, Value);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>double</code> value.
@@ -2296,6 +2336,11 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 5057 off : Local variable "Len" does not seem to be initialized}
+{$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.AddParamLogValue(ParamIndex: Integer;
   SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
 var Bind: PDBBINDING;
@@ -2367,6 +2412,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOleDBPreparedStatement.SetInt(Index, Value: Integer);
 begin
@@ -2452,6 +2498,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param sqlType the SQL type code defined in <code>java.sql.Types</code>
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.SetNull(Index: Integer; SQLType: TZSQLType);
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -2473,6 +2520,7 @@ begin
     else InitLongBind(Index, SQLType2OleDBTypeEnum[SQLType])
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOleDBPreparedStatement.SetOleCommandProperties;
 var
@@ -2546,6 +2594,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetPAnsiChar(Index: Word; Value: PAnsiChar;
   Len: Cardinal);
 var Bind: PDBBINDING;
@@ -2653,6 +2702,7 @@ Fail:    raise CreateOleDBConvertErrror(Index, Bind.wType, stString);
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOleDBPreparedStatement.SetParamCount(NewParamCount: Integer);
 var OldParamCount: Integer;
@@ -2665,6 +2715,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZOleDBPreparedStatement.SetPWideChar(Index: Word; Value: PWideChar;
   Len: Cardinal);
 var Bind: PDBBINDING;
@@ -2785,6 +2836,7 @@ Fail:     raise CreateOleDBConvertErrror(Index, Bind.wType, stUnicodeString);
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>raw encoded string</code> value.
@@ -2860,6 +2912,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
 var Bind: PDBBINDING;
@@ -2930,6 +2983,7 @@ TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
     BindList.Put(Index, Value);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
@@ -2939,6 +2993,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetTimestamp(Index: Integer;
   const Value: TZTimeStamp);
 var Bind: PDBBINDING;
@@ -3020,6 +3075,7 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
     BindList.Put(Index, Value);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>usigned 32bit int</code> value.

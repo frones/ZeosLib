@@ -1685,7 +1685,7 @@ var
   SQLType: TZSQLType;
   OwnerCondition,TableCondition,ColumnCondition: String;
   FieldSize, Precision: Integer;
-
+  B: Boolean;
   function CreateWhere: String;
   begin
     Result := '';
@@ -1729,7 +1729,7 @@ begin
       oDataType := GetString(DATA_TYPE_Index);
       Precision := GetInt(DATA_PRECISION_Index);
       SQLType := ConvertOracleTypeToSQLType(oDataType,
-        Precision, GetInt(DATA_SCALE_Index), ConSettings.CPType);
+        Precision, GetInt(DATA_SCALE_Index));
       Result.UpdateByte(TableColColumnTypeIndex, Ord(SQLType));
       Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(DATA_TYPE_Index, Len), Len);
       FieldSize := GetInt(DATA_LENGTH_Index);
@@ -1769,9 +1769,10 @@ begin
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
         IC.IsCaseSensitive(GetString(COLUMN_NAME_Index)));
       Result.UpdateBoolean(TableColColumnSearchableIndex, True);
-      Result.UpdateBoolean(TableColColumnWritableIndex, not (oDataType = 'BFILE'));
-      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
-      Result.UpdateBoolean(TableColColumnReadonlyIndex, (oDataType = 'BFILE'));
+      B := (oDataType = 'BFILE') or (oDataType = 'CFILE');
+      Result.UpdateBoolean(TableColColumnWritableIndex, not B);
+      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, not B);
+      Result.UpdateBoolean(TableColColumnReadonlyIndex, B);
 
       Result.InsertRow;
     end;

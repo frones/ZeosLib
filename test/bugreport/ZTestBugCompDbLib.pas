@@ -76,7 +76,7 @@ implementation
 
 { ZTestCompDbLibBugReport }
 
-uses ZAbstractRODataset, SysUtils, DB;
+uses ZAbstractRODataset, SysUtils, ZDatasetUtils, DB;
 
 procedure ZTestCompDbLibBugReport.BlankTest;
 begin
@@ -142,7 +142,7 @@ begin
     Query.Open;
     CheckEquals(5, Query.FieldCount, 'The SQL >' + Query.SQL.Text + '< returned less fields than were expected.');
     {$IFNDEF UNICODE}
-    if (ConSettings.CPType = cCP_UTF8) and ((ConSettings.ClientCodePage.Encoding = ceUTF8) or ConSettings.AutoEncode) then
+    if (Connection.ControlsCodePage = cCP_UTF8) and ((ConSettings.ClientCodePage.Encoding = ceUTF8) or ConSettings.AutoEncode) then
     begin
       CheckEquals(UTF8Encode(Str3), Query.FieldByName('s_nchar').AsString, 's_nchar value');
       CheckEquals(UTF8Encode(Str3), Query.FieldByName('s_nvarchar').AsString, 's_nvarchar value');

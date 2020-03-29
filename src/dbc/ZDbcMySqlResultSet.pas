@@ -67,7 +67,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZClasses,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement, ZDbcMySqlUtils,
-  ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema, ZVariant;
+  ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema, ZVariant, ZdbcMySql;
 
 type
   {** Implements MySQL ResultSet Metadata. }
@@ -120,14 +120,15 @@ type
     FTempBlob: IZBlob; //temporary Lob
     FClosing: Boolean;
     FClientCP: Word;
+    FMySQLConnection: IZMySQLConnection;
     function CreateMySQLConvertError(ColumnIndex: Integer; DataType: TMysqlFieldType): EZMySQLConvertError;
   protected
     procedure Open; override;
   public
-    constructor Create(const PlainDriver: TZMySQLPlainDriver;
-      const Statement: IZStatement; const SQL: string; IsOutParamResult: Boolean;
-      PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; MYSQL_ColumnsBinding: PMYSQL_ColumnsBinding; AffectedRows: PInteger;
-      out OpenCursorCallback: TOpenCursorCallback);
+    constructor Create(const Statement: IZStatement; const SQL: string;
+      const Connection: IZMySQLConnection; IsOutParamResult: Boolean;
+      PMYSQL_STMT: PPMYSQL_STMT; MYSQL_ColumnsBinding: PMYSQL_ColumnsBinding;
+      AffectedRows: PInteger; out OpenCursorCallback: TOpenCursorCallback);
     destructor Destroy; override;
     procedure BeforeClose; override;
     procedure AfterClose; override;
@@ -151,7 +152,7 @@ type
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
@@ -200,17 +201,82 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
-  TZMySQLPreparedClob = Class(TZAbstractClob)
+  TZMySQLPreparedLob = Class(TZAbstractStreamedLob, IZLob, IImmediatelyReleasable)
+  private
+    FPlainDriver: TZMySQLPlainDriver;
+    FBind: PMYSQL_aligned_BIND;
+    FStmtHandle: PPMYSQL_STMT;
+    FIndex: Cardinal;
+    FOwner: IImmediatelyReleasable;
+    FReleased: Boolean;
+    FLobRow: Integer;
+    FCurrentRowAddr: PInteger;
+  protected
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public
-    constructor Create(const PlainDriver: TZMySQLPlainDriver; Bind: PMYSQL_aligned_BIND;
-      StmtHandle: PPMYSQL_STMT; ColumnIndex: Cardinal; const Sender: IImmediatelyReleasable);
+    constructor Create(const Connection: IZMySQLConnection; Bind: PMYSQL_aligned_BIND;
+      StmtHandle: PMYSQL_STMT; Index: Cardinal; ColumnCodePage: Word;
+      LobStreamMode: TZLobStreamMode; const OpenLobStreams: TZSortedList;
+      CurrentRowAddr: PInteger);
+  public //implement IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    function GetConSettings: PZConSettings;
+  public //implement IZLob
+    function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+    function IsEmpty: Boolean; override;
+    procedure Clear; override;
+    function Length: Integer; override;
   End;
 
-  TZMySQLPreparedBlob = Class(TZAbstractBlob)
+  TZMySQLPreparedBLob = class(TZMySQLPreparedLob, IZBlob);
+
+  TZMySQLPreparedCLob = class(TZMySQLPreparedLob, IZBlob, IZCLob);
+
+  TZMySQLLobStream = class(TZImmediatelyReleasableLobStream)
+  private
+    FOwner: TZMySQLPreparedLob;
+    FOffSet: ULong;
+  protected
+    function GetSize: Int64; override;
   public
-    constructor Create(const PlainDriver: TZMySQLPlainDriver; Bind: PMYSQL_aligned_BIND;
-      StmtHandle: PMySql_Stmt; ColumnIndex: Cardinal; const Sender: IImmediatelyReleasable);
-  End;
+    constructor Create(const Owner: TZMySQLPreparedLob);
+  public
+    function Read(var Buffer; Count: Longint): Longint; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
+  end;
+
+  TZMySQLUseResultsCachedResultSet = Class(TZCachedResultSet)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  end;
+
+  TZMySQLPreparedUseResultsCachedResultSet = Class(TZCachedResultSet)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  end;
+
+  {** EH: Emplement a cached resultset making local copies of the
+      mysql_stmt_fetch_column lobs. Seeking+fetching id not optimal implemented
+      in mysql. }
+  TZMySQLPreparedStoreResultsCachedLobsResultSet = class(TZMySQLPreparedUseResultsCachedResultSet);
+
+
+  { TZMySQLUseResultRowAccessor }
+
+  TZMySQLUseResultRowAccessor = class(TZRowAccessor)
+  public
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  end;
+
+  { TZMySQLPreparedUseResultRowAccessor }
+
+  TZMySQLPreparedUseResultRowAccessor = class(TZMySQLUseResultRowAccessor)
+  public
+    procedure FetchLongData(AsStreamedType: TZSQLType; const ResultSet: IZResultSet;
+      ColumnIndex: Integer; Data: PPZVarLenData); override;
+  end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
@@ -219,7 +285,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZSysUtils, ZMessages, ZEncoding,
-  ZDbcMySQL, ZDbcUtils, ZDbcMetadata, ZDbcLogging;
+  ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 { TZMySQLResultSetMetadata }
 
@@ -352,6 +418,7 @@ var
   H, I: Integer;
   P: PAnsiChar;
   Bind: PMYSQL_aligned_BIND;
+  L: NativeUint;
   MS: Word;
 label FinalizeDT;
 begin
@@ -455,10 +522,12 @@ begin
                           Bind^.buffer_Length_address^ := 0;
                           JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], Bind^.Length[0]);
                         end else begin
-                          FTempBlob := TZMySQLPreparedClob.Create(FplainDriver,
-                            Bind, FPMYSQL^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Self);
-                          P := FTempBlob.GetPAnsiChar(zCP_UTF8);
+                          FTempBlob := TZMySQLPreparedCLob.Create(FMySQLConnection,
+                            Bind, FMYSQL_STMT, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+                            FClientCP, lsmRead, FOpenLobStreams, @FRowNo);
+                          P := FTempBlob.GetPAnsiChar(zCP_UTF8, fRawTemp, L);
                           JSONWriter.AddNoJSONEscape(P, FTempBlob.Length);
+                          FTempBlob := nil;
                         end;
           FIELD_TYPE_ENUM,
           FIELD_TYPE_SET,
@@ -491,17 +560,23 @@ begin
                             JSONWriter.AddJSONEscape(@FTinyBuffer[0], Bind^.Length[0]);
                             JSONWriter.Add('"');
                           end;
-                        end else if Bind^.binary then begin
-                          FTempBlob := TZMySQLPreparedBlob.Create(FplainDriver,
-                            Bind, FPMYSQL^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Self);
-                          JSONWriter.WrBase64(FTempBlob.GetBuffer, FTempBlob.Length, True)
                         end else begin
-                          JSONWriter.Add('"');
-                          FTempBlob := TZMySQLPreparedClob.Create(FplainDriver,
-                            Bind, FPMYSQL^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Self);
-                          P := FTempBlob.GetPAnsiChar(zCP_UTF8);
-                          JSONWriter.AddJSONEscape(P, FTempBlob.Length);
-                          JSONWriter.Add('"');
+                          if Bind^.binary then begin
+                            FTempBlob := TZMySQLPreparedBLob.Create(FMySQLConnection,
+                              Bind, FMYSQL_STMT, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+                              zCP_Binary, lsmRead, FOpenLobStreams, @FRowNo);
+                            P := FTempBlob.GetBuffer(fRawTemp, L);
+                            JSONWriter.WrBase64(P, L, True)
+                          end else begin
+                            JSONWriter.Add('"');
+                            FTempBlob := TZMySQLPreparedCLob.Create(FMySQLConnection,
+                              Bind, FMYSQL_STMT, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+                              FClientCP, lsmRead, FOpenLobStreams, @FRowNo);
+                            P := FTempBlob.GetPAnsiChar(zCP_UTF8, fRawTemp, L);
+                            JSONWriter.AddJSONEscape(P, L);
+                            JSONWriter.Add('"');
+                          end;
+                          FTempBlob := nil;
                         end;
         end;
       end
@@ -616,27 +691,27 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZAbstractMySQLResultSet.Create(const PlainDriver: TZMySQLPlainDriver;
-  const Statement: IZStatement; const SQL: string; IsOutParamResult: Boolean;
-  PMYSQL: PPMYSQL; PMYSQL_STMT: PPMYSQL_STMT; MYSQL_ColumnsBinding: PMYSQL_ColumnsBinding;
+constructor TZAbstractMySQLResultSet.Create(const Statement: IZStatement;
+  const SQL: string; const Connection: IZMySQLConnection; IsOutParamResult: Boolean;
+  PMYSQL_STMT: PPMYSQL_STMT; MYSQL_ColumnsBinding: PMYSQL_ColumnsBinding;
   AffectedRows: PInteger; out OpenCursorCallback: TOpenCursorCallback);
 //var ClientVersion: ULong;
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self),
-      Statement.GetConnection.GetConSettings);
+    Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
+  FMySQLConnection := Connection;
   FClientCP := ConSettings.ClientCodePage.CP;
   fServerCursor := Self is TZMySQL_Use_ResultSet;
   FMYSQL_Col_BIND_Address := @MYSQL_ColumnsBinding.MYSQL_Col_BINDs;
   FMYSQL_aligned_BINDs := MYSQL_ColumnsBinding.MYSQL_aligned_BINDs;
   FFieldCount := MYSQL_ColumnsBinding.FieldCount;
-  FPMYSQL := PMYSQL;
+  FPMYSQL := Connection.GetConnectionHandle;
   FPMYSQL_STMT := PMYSQL_STMT;
   FMYSQL_STMT  := FPMYSQL_STMT^;
   FQueryHandle := nil;
   FRowHandle := nil;
 //  FFieldCount := 0;
-  FPlainDriver := PlainDriver;
+  FPlainDriver := Connection.GetPlainDriver;
   ResultSetConcurrency := rcReadOnly;
   OpenCursorCallback := OpenCursor;
   //hooking very old versions -> we use this struct for some more logic
@@ -1002,8 +1077,7 @@ set_Results:Len := Result - PAnsiChar(@FTinyBuffer);
               Len := ColBind^.Length[0];
             end else begin
               FTempBlob := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-              Len := FTempBlob.Length;
-              Result := FTempBlob.GetBuffer;
+              Result := FTempBlob.GetBuffer(FRawTemp, Len);
             end;
         else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       end;
@@ -1148,11 +1222,11 @@ set_Results:Len := Result - PWideChar(@FTinyBuffer);
               goto set_from_tmp;
             end else begin
               FTempBlob := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-              if FTempBlob.IsClob then begin
-                Result := FTempBlob.GetPWideChar;
-                Len := FTempBlob.Length shr 1;
-              end else begin
-                FUniTemp := Ascii7ToUnicodeString(FTempBlob.GetBuffer, FTempBlob.Length);
+              if FTempBlob.IsClob then
+                Result := FTempBlob.GetPWideChar(FUniTemp, Len)
+              else begin
+                Result := FTempBlob.GetBuffer(FRawTemp, Len);
+                FUniTemp := Ascii7ToUnicodeString(Pointer(Result), Len);
                 goto set_from_tmp;
               end;
             end;
@@ -1185,14 +1259,14 @@ end;
 procedure TZAbstractMySQLResultSet.InitColumnBinds(Bind: PMYSQL_aligned_BIND;
   MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS; Iters: Integer);
 begin
-  Bind^.is_unsigned_address^ := Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0);
-  bind^.buffer_type_address^ := PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^; //safe initialtype
+  Bind^.is_unsigned_address^ := Ord(PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0);
+  bind^.buffer_type_address^ := PMysqlFieldType(PAnsiChar(MYSQL_FIELD)+FieldOffsets._type)^; //safe initialtype
   if FieldOffsets.charsetnr > 0
-  then bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ = 63) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0)
-  else bind^.binary := (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0);
+  then bind^.binary := (PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.charsetnr)^ = 63) and (PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0)
+  else bind^.binary := (PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0);
 
   case bind^.buffer_type_address^ of
-    FIELD_TYPE_BIT: case PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ of
+    FIELD_TYPE_BIT: case PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^ of
                       0..8  : Bind^.Length[0] := SizeOf(Byte);
                       9..16 : Bind^.Length[0] := SizeOf(Word);
                       17..32: Bind^.Length[0] := SizeOf(Cardinal);
@@ -1211,14 +1285,14 @@ begin
         bind^.buffer_type_address^ := FIELD_TYPE_LONG;
       end;
     FIELD_TYPE_FLOAT, FIELD_TYPE_DOUBLE: begin
-        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ = 12 then begin
+        if PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^ = 12 then begin
           Bind^.Length[0] := SizeOf(Single);
           bind^.buffer_type_address^ := FIELD_TYPE_FLOAT
         end else begin
           Bind^.Length[0] := SizeOf(Double);
           bind^.buffer_type_address^ := FIELD_TYPE_DOUBLE;
         end;
-        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
+        bind^.decimals := PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.decimals)^;
       end;
     MYSQL_TYPE_JSON,
     FIELD_TYPE_BLOB,
@@ -1226,47 +1300,47 @@ begin
     FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB,
     FIELD_TYPE_GEOMETRY:    if FIsOutParamResult
-                            then Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.max_length)^
+                            then Bind^.Length[0] := PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.max_length)^
                             else Bind^.Length[0] := 0;//http://bugs.mysql.com/file.php?id=12361&bug_id=33086
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING,
     FIELD_TYPE_ENUM, FIELD_TYPE_SET: begin
         bind^.buffer_type_address^ := FIELD_TYPE_STRING;
-        Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
+        Bind^.Length[0] := PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^;
       end;
     FIELD_TYPE_NEWDECIMAL,
     FIELD_TYPE_DECIMAL:
-      if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^ = 0 then begin
-        if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(2+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
+      if PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.decimals)^ = 0 then begin
+        if PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(2+(Byte(PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_TINY;
           Bind^.Length[0] := 1;
-        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(4+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
+        end else if PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(4+(Byte(PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           Bind^.Length[0] := 2;
           bind^.buffer_type_address^ := FIELD_TYPE_SHORT;
-        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(9+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
+        end else if PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(9+(Byte(PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONG;
           Bind^.Length[0] := 4;
-        end else if PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(18+(Ord(PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
+        end else if PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^ <= Byte(18+(Byte(PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and UNSIGNED_FLAG <> 0))) then begin
           bind^.buffer_type_address^ := FIELD_TYPE_LONGLONG;
           Bind^.Length[0] := 8;
         end else begin
-          Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
-          bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
+          Bind^.Length[0] := PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^;
+          bind^.decimals := PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.decimals)^;
         end;
       end else begin
-        Bind^.Length[0] := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
-        bind^.decimals := PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.decimals)^;
+        Bind^.Length[0] := PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^;
+        bind^.decimals := PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.decimals)^;
         //see: http://www.iskm.org/mysql56/libmysql_8c_source.html / setup_one_fetch_function mysql always converts the decimal_t record to a string
       end;
     else begin
-      Bind^.Length[0] := (((PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^) shr 3)+1) shl 3; //8Byte Aligned
+      Bind^.Length[0] := (((PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^) shr 3)+1) shl 3; //8Byte Aligned
     end;
     //Length := MYSQL_FIELD^.length;
   end;
   if (bind^.Length[0] = 0) or (Iters = 0)
   then Bind^.Buffer := nil
-  else ReallocMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Ord(bind^.buffer_type_address^ in [FIELD_TYPE_STRING, FIELD_TYPE_NEWDECIMAL, FIELD_TYPE_DECIMAL]))) shr 3)+1) shl 3) ); //8Byte aligned
+  else ReallocMem(Bind^.Buffer, ((((bind^.Length^[0]+Byte(Byte(bind^.buffer_type_address^ in [FIELD_TYPE_STRING, FIELD_TYPE_NEWDECIMAL, FIELD_TYPE_DECIMAL]))) shr 3)+1) shl 3) ); //8Byte aligned
   Bind^.buffer_address^ := Bind^.buffer;
   Bind^.buffer_length_address^ := bind^.Length[0];
 end;
@@ -1420,8 +1494,7 @@ begin
             Len := ColBind^.Length[0];
           end else begin
             FTempBlob := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-            Result := FTempBlob.GetBuffer;
-            Len := FTempBlob.Length;
+            Result := FTempBlob.GetBuffer(FRawTemp, Len);
           end
         else raise CreateMySQLConvertError(ColumnIndex, ColBind^.buffer_type_address^);
       End;
@@ -2345,11 +2418,13 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZAbstractMySQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZAbstractMySQLResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   Buffer: PAnsiChar;
   Len: NativeUInt;
   ColBind: PMYSQL_aligned_BIND;
+label LobFromBuf;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -2361,20 +2436,25 @@ begin
   ColBind := @FMYSQL_aligned_BINDs[ColumnIndex];
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := nil;
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
+  if Ord(ColBind^.buffer_type_address^) < Ord(MYSQL_TYPE_JSON) then
+    raise CreateCanNotAccessBlobRecordException(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+        TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType);
   if fBindBufferAllocated then begin
     LastWasNull := ColBind^.is_null = 1;
     if not LastWasNull then
-      if ColBind^.buffer_address^ = nil then
+      if ColBind^.buffer_address^ = nil then begin
         if ColBind^.binary
-        then Result := TZMySQLPreparedBlob.Create(FplainDriver,
-            ColBind, FMYSQL_STMT, ColumnIndex, Self)
-        else Result := TZMySQLPreparedClob.Create(FplainDriver,
-            ColBind, FMYSQL_STMT, ColumnIndex, Self)
-      else begin
-          Buffer := GetPAnsiChar(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Len);
-          Result := TZAbstractClob.CreateWithData(Buffer, Len,
-            ConSettings^.ClientCodePage^.CP, ConSettings);
-        end;
+        then Result := TZMySQLPreparedBlob.Create(FMySQLConnection, ColBind,
+          FMYSQL_STMT, ColumnIndex, zCP_Binary, lsmRead, FOpenLobStreams, @FRowNo)
+        else Result := TZMySQLPreparedCLob.Create(FMySQLConnection, ColBind,
+          FMYSQL_STMT, ColumnIndex, FClientCP, lsmRead, FOpenLobStreams, @FRowNo)
+      end else begin
+        Buffer := ColBind^.buffer;
+        Len := ColBind^.length[0];
+        goto LobFromBuf;
+      end;
   end else begin
     {$R-}
     Buffer := PMYSQL_ROW(FRowHandle)[ColumnIndex];
@@ -2382,10 +2462,14 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     LastWasNull := Buffer = nil;
     if not LastWasNull then
-      if ColBind^.binary
-      then Result := TZAbstractBlob.CreateWithData(Buffer, Len)
-      else Result := TZAbstractClob.CreateWithData(Buffer, Len,
-            ConSettings^.ClientCodePage^.CP, ConSettings)
+LobFromBuf:
+      if not fServerCursor or (Statement.GetResultSetType = rtForwardOnly) then
+        if ColBind^.binary
+        then Result := TZMemoryReferencedBLob.CreateWithData(Buffer, Len, FOpenLobStreams)
+        else Result := TZMemoryReferencedCLob.CreateWithData(Buffer, Len, FClientCP, ConSettings, FOpenLobStreams)
+      else if ColBind^.binary
+        then Result := TZLocalMemBLob.CreateWithData(Buffer, Len, FOpenLobStreams)
+        else Result := TZLocalMemCLob.CreateWithData(Buffer, Len, FClientCP, ConSettings, FOpenLobStreams);
   end;
 end;
 
@@ -2601,50 +2685,86 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{ TZMySQLPreparedClob }
-constructor TZMySQLPreparedClob.Create(const PlainDriver: TZMySQLPlainDriver;
-  Bind: PMYSQL_aligned_BIND; StmtHandle: PPMYSQL_STMT;
-  ColumnIndex: Cardinal; const Sender: IImmediatelyReleasable);
-var
-  offset: ULong;
-  Status: Integer;
+{ TZMySQLPreparedLob }
+
+procedure TZMySQLPreparedLob.Clear;
 begin
-  inherited Create;
-  FConSettings := Sender.GetConSettings;
-  FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
-  FBlobSize := Bind^.Length[0]+1; //MySQL sets a trailing #0 on top of data
-  GetMem(FBlobData, FBlobSize);
-  offset := 0;
-  Bind^.buffer_Length_address^ := Bind^.Length[0]; //indicate size of Buffer
-  Bind^.buffer_address^ := FBlobData;
-  Status := PlainDriver.mysql_stmt_fetch_column(StmtHandle, bind^.mysql_bind, ColumnIndex, offset); //move data to buffer
-  Bind^.buffer_address^ := nil; //set nil again
-  Bind^.buffer_Length_address^ := 0;
-  if Status = 1 then
-    checkMySQLError(PlainDriver, nil, StmtHandle^, lcOther, '', Sender);
-  PByte(PAnsiChar(FBlobData)+FBlobSize-1)^ := Ord(#0);
+  FBind.is_null_address^ := 1;
+end;
+
+function TZMySQLPreparedLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+var Stream: TStream;
+begin
+  //we can not clone the lob on database.. we need a local copy
+  Stream := GetStream(FColumnCodePage);
+  if FColumnCodePage = zCP_Binary
+  then Result := TZLocalMemBLob.CreateWithStream(TZImmediatelyReleasableLobStream(Stream), True, FOpenLobStreams)
+  else Result := TZLocalMemCLob.CreateWithStream(TZImmediatelyReleasableLobStream(Stream), FColumnCodePage, True, FOpenLobStreams);
+end;
+
+constructor TZMySQLPreparedLob.Create(const Connection: IZMySQLConnection;
+  Bind: PMYSQL_aligned_BIND; StmtHandle: PMYSQL_STMT; Index: Cardinal;
+  ColumnCodePage: Word; LobStreamMode: TZLobStreamMode;
+  const OpenLobStreams: TZSortedList; CurrentRowAddr: PInteger);
+begin
+  inherited Create(ColumnCodePage, OpenLobStreams);
+  FConSettings := Connection.GetConSettings;
+  FPlainDriver := Connection.GetPlainDriver;
+  FBind := Bind;
+  FStmtHandle := StmtHandle;
+  FIndex := Index;
+  FOwner := Connection;
+  FLobStreamMode := LobStreamMode;
+  FCurrentRowAddr := CurrentRowAddr;
+  FLobRow := FCurrentRowAddr^ -1;
 End;
 
-{ TZMySQLPreparedBlob }
-constructor TZMySQLPreparedBlob.Create(const PlainDriver: TZMySQLPlainDriver;
-  Bind: PMYSQL_aligned_BIND; StmtHandle: PMySql_Stmt;
-  ColumnIndex: Cardinal; const Sender: IImmediatelyReleasable);
-var
-  offset: ULong;
-  Status: Integer;
+function TZMySQLPreparedLob.CreateLobStream(CodePage: Word;
+  LobStreamMode: TZLobStreamMode): TStream;
+var Status: Integer;
 begin
-  inherited Create;
-  FBlobSize := Bind^.Length[0];
-  GetMem(FBlobData, FBlobSize);
-  offset := 0;
-  Bind^.buffer_Length_address^ := Bind^.Length[0]; //indicate size of Buffer
-  Bind^.buffer_address^ := FBlobData;
-  Status := PlainDriver.mysql_stmt_fetch_column(StmtHandle, bind^.mysql_bind, ColumnIndex, offset); //move data to buffer
-  Bind^.buffer_address^ := nil; //set nil again
-  Bind^.buffer_Length_address^ := 0;
-  if Status = 1 then
-    checkMySQLError(PlainDriver, nil, StmtHandle, lcOther, '', Sender);
-End;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if FReleased
+  then Result := nil
+  else begin
+    if LobStreamMode <> lsmWrite then begin
+      if FCurrentRowAddr^ -1 <> FLobRow then begin
+        FPlainDriver.mysql_stmt_data_seek(FStmtHandle, FLobRow);
+        Status := FPlainDriver.mysql_stmt_fetch(FStmtHandle);
+        if Status = STMT_FETCH_ERROR then
+          checkMySQLError(FPlainDriver, nil, FStmtHandle, lcOther, 'mysql_stmt_fetch', Self);
+        FCurrentRowAddr^ := FLobRow +1;
+      end;
+    end;
+    Result := TZMySQLLobStream.Create(Self);
+  end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+end;
+
+function TZMySQLPreparedLob.GetConSettings: PZConSettings;
+begin
+  Result := FOwner.GetConSettings
+end;
+
+function TZMySQLPreparedLob.IsEmpty: Boolean;
+begin
+  Result := (FBind.is_null_address^ = 1) or FReleased
+end;
+
+function TZMySQLPreparedLob.Length: Integer;
+begin
+  if (FBind.is_null_address^ = 1) or FReleased
+  then Result := 0
+  else Result := FBind.length[0];
+end;
+
+procedure TZMySQLPreparedLob.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  FReleased := True;
+  if Sender <> FOwner then
+    FOwner.ReleaseImmediat(Sender, AError);
+end;
 
 { TZMySQL_Use_ResultSet }
 
@@ -2675,5 +2795,145 @@ begin
   end;
 end;
 
+{ TZMySQLLobStream }
+
+constructor TZMySQLLobStream.Create(const Owner: TZMySQLPreparedLob);
+begin
+  inherited Create(Owner, Owner, Owner.FOpenLobStreams); //keep refcount high!
+  FOwner := Owner;
+end;
+
+function TZMySQLLobStream.GetSize: Int64;
+begin
+  Result := FOwner.FBind.length[0];
+end;
+
+function TZMySQLLobStream.Read(var Buffer; Count: Longint): Longint;
+var Status: Integer;
+begin
+  if FReleased then begin
+    Result := 0;
+    Exit;
+  end;
+  if FOwner.FLobStreamMode = lsmWrite then
+    raise CreateReadOnlyException;
+  if ULong(Count) + FOffset > FOwner.FBind.Length[0] then
+    Count := FOwner.FBind.Length[0] - FOffset;
+  FOwner.FBind^.buffer_Length_address^ := Count;
+  FOwner.FBind^.buffer_address^ := @Buffer;
+  Status := FOwner.FPlainDriver.mysql_stmt_fetch_column(FOwner.FStmtHandle, FOwner.FBind.mysql_bind, FOwner.FIndex, Foffset);
+  FOwner.FBind^.buffer_Length_address^ := 0;
+  FOwner.FBind^.buffer_address^ := nil;
+  if Status = STMT_FETCH_ERROR then
+    checkMySQLError(FOwner.FPlainDriver, nil, FOwner.FStmtHandle^, lcOther, 'mysql_stmt_fetch_column', FOwner);
+  Result := Count;
+  FOffSet := Foffset + ULong(Count);
+end;
+
+function TZMySQLLobStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
+begin
+  Result := 0;
+  if FReleased then
+    Exit;
+  case Origin of
+    soBeginning: Result := Offset;
+    soCurrent: Result := Int64(FOffSet)+Offset;
+    soEnd: Result := Int64(FOwner.FBind.length[0]) + Offset;
+  end;
+  if (FOwner.FLobStreamMode = lsmWrite) and (Int64(FOffSet) <> Result) then
+    raise EZSQLException.Create(SOperationIsNotAllowed1);
+  FOffSet := Result;
+end;
+
+function TZMySQLLobStream.Write(const Buffer; Count: Integer): Longint;
+var Status: Integer;
+begin
+  if FReleased then begin
+    Result := 0;
+    Exit;
+  end;
+  if FOwner.FLobStreamMode = lsmRead then
+    raise CreateWriteOnlyException;
+  Status := FOwner.FPlainDriver.mysql_stmt_send_long_data(FOwner.FStmtHandle, FOwner.FIndex,
+    @Buffer, Count);
+  if Status = 1 then
+    checkMySQLError(FOwner.FPlainDriver, nil, FOwner.FStmtHandle, lcOther, 'mysql_stmt_send_long_data', FOwner);
+  Result := Count;
+  FOffSet := Foffset + ULong(Result);
+  FOwner.FBind.length[0] := Foffset;
+end;
+
+{ TZMySQLUseResultsCachedResultSet }
+
+class function TZMySQLUseResultsCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZMySQLUseResultRowAccessor;
+end;
+
+{ TZMySQLUseResultRowAccessor }
+
+constructor TZMySQLUseResultRowAccessor.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
+begin
+  TempColumns := TObjectList.Create(True);
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    //EH: MySQL supports streamed data only in realprepared mode
+    //we need cached memory only if we use a server cursor i.e. forward only
+    //in that case we don't need any lob objects
+    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3);
+      Current.Precision := -1;
+    end;
+    if Current.ColumnType = stUnicodeString then
+      Current.ColumnType := stString; // no national chars supported
+    if Current.ColumnType = stString then
+      Current.ColumnCodePage := TZColumnInfo(ColumnsInfo[I]).ColumnCodePage
+    else if Current.ColumnType = stBytes then
+      Current.ColumnCodePage := zCP_Binary;
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
+  TempColumns.Free;
+end;
+
+{ TZMySQLPreparedUseResultsCachedResultSet }
+
+class function TZMySQLPreparedUseResultsCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZMySQLPreparedUseResultRowAccessor;
+end;
+
+{ TZMySQLPreparedUseResultRowAccessor }
+
+procedure TZMySQLPreparedUseResultRowAccessor.FetchLongData(
+  AsStreamedType: TZSQLType; const ResultSet: IZResultSet; ColumnIndex: Integer;
+  Data: PPZVarLenData);
+var Lob: IZBlob;
+  Stream: TStream;
+  Len: Cardinal;
+begin
+  if Data^ <> nil then
+    FreeMem(Data^);
+  Lob := ResultSet.GetBlob(ColumnIndex);
+  Stream := Lob.GetStream;
+  try
+    Len := Stream.Size;
+    if Len = 0 then Exit;
+    GetMem(Data^, SizeOf(Cardinal)+Len+Byte(AsStreamedType=stAsciiStream));
+    Data^.Len := Len;
+    Stream.Read(Data^.Data, Len);
+    if AsStreamedType = stAsciiStream then
+      PByte(PAnsiChar(Data^)+SizeOf(Cardinal)+Len)^ := 0;
+  finally
+    Stream.Free;
+    Lob := nil;
+  end;
+end;
+
+initialization
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.

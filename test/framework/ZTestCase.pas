@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   Classes, {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, SysUtils, StrUtils,
-  ZCompatibility;
+  ZCompatibility, ZDbcIntfs;
 
 type
   {$IFDEF FPC}
@@ -72,10 +72,7 @@ type
 
   TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
   TDateParts = set of TDatePart;
-  ZSkipReason = (srClosedBug,srNonZeos,srNoPerformance
-                 //database dependent
-                 ,srMysqlRealPreparedConnection
-                );
+  ZSkipReason = (srClosedBug,srNonZeos,srNoPerformance);
   ZSkipReasons = set of ZSkipReason;
 
   {** Implements an abstract class for all test cases. }
@@ -131,14 +128,6 @@ type
       ActualLen: PNativeUInt; const Msg: string = ''); overload;
     procedure CheckEquals(const Expected, Actual: TBytes;
       const Msg: string = ''); overload;
-    procedure CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
-      const Msg: string = ''); overload;
-    {$IFNDEF UNICODE}
-    procedure CheckEquals(Expected: ZWideString; Actual: String; ConSettings: PZConSettings;
-      const Msg: string = ''); overload;
-    {$ENDIF UNICODE}
-    procedure CheckEquals(OrgStr: ZWideString; ActualLobStream: TStream; ConSettings: PZConSettings;
-      const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: PAnsiChar;
@@ -149,6 +138,8 @@ type
     procedure CheckEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string = '');
     procedure CheckNotEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string = '');
     procedure CheckEquals(Expected, Actual: WideString;
+      const Msg: string = ''); overload;
+    procedure CheckEquals(Expected: UnicodeString; Actual: WideString;
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
@@ -192,6 +183,38 @@ type
 
 function AddToMsg(const Msg, Add: string): string;
 
+var
+  {$IFDEF FPC} {$PUSH}
+    {$WARN 3177 off : Some fields coming after "$1" were not initialized}
+    {$WARN 3175 off : Some fields coming before "$1" were not initialized}
+  {$ENDIF}
+  ConSettingsDummy: TZConSettings =
+    (AutoEncode: False;
+      ClientCodePage: @CodePageDummy;
+      DisplayFormatSettings:
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+      ReadFormatSettings:
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+      WriteFormatSettings:
+          (DateFormat: DefDateFormatYMD;
+          DateFormatLen: Length(DefDateFormatYMD);
+          TimeFormat: DefTimeFormatMsecs;
+          TimeFormatLen: Length(DefTimeFormatMsecs);
+          DateTimeFormat: DefDateTimeFormatMsecsDMY;
+          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+    );
+  {$IFDEF FPC} {$POP} {$ENDIF}
+
 implementation
 
 uses
@@ -206,7 +229,7 @@ uses
 {$IFDEF WITH_INLINE}
   ZFastCode,
 {$ENDIF}
-  ZSysUtils, ZTestConfig, ZEncoding;
+  ZSysUtils, ZTestConfig, ZEncoding, ZDbcUtils;
 
 const
   SStringLengthsDiffer = 'string lengths differ';
@@ -469,90 +492,6 @@ begin
 end;
 
 {**
-   Function compare two strings with depenedent to the ConnectionSettings.
-   If strings not equals raise exception.
-   @param Expected the first stream for compare
-   @param Actual the second stream for compare
-   @param ConSettings the Connection given settings
-}
-procedure TZAbstractTestCase.CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
-  const Msg: string);
-{$IFNDEF UNICODE}
-var Temp: String;
-{$ENDIF}
-begin
-  {$IFNDEF UNICODE}
-  if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-    if (ConSettings.CPType = cCP_UTF8) then
-      Temp := UTF8Encode(WideString(Expected))
-    else //cGET_ACP / cCP_UTF16
-      if Consettings.CTRL_CP = zCP_UTF8 then
-        Temp := UTF8Encode(WideString(Expected))
-      else
-        if ConSettings.AutoEncode or ( ConSettings.CPType = cCP_UTF16 ) then
-          Temp := Expected
-        else
-          Temp := UTF8Encode(WideString(Expected))
-  else //ceAnsi
-    if ( ConSettings.CPType = cGET_ACP ) or ( ConSettings.CPType = cCP_UTF16 ) then //ftWideString returns a decoded value
-      if Consettings.CTRL_CP = zCP_UTF8 then
-        Temp := UTF8Encode(WideString(Expected))
-      else
-        Temp := Expected
-    else
-      //cCP_UTF8
-      if ConSettings.CPType = cCP_UTF16 then
-        if Consettings.CTRL_CP = zCP_UTF8 then
-          Temp := UTF8Encode(WideString(Expected))
-        else
-          Temp := Expected
-      else
-        if ConSettings.AutoEncode then
-          Temp := UTF8Encode(WideString(Expected))
-        else
-          Temp := Expected;
-  {$ENDIF}
-  CheckEquals({$IFNDEF UNICODE}Temp{$ELSE}Expected{$ENDIF}, Actual, Msg)
-end;
-
-{**
-   Function compare a Original-given String with then BlobStream dependend to the ConnectionSettings.
-   If streams not equals raise exception.
-   @param Expected the first stream for compare
-   @param Actual the second stream for compare
-   @param ConSettings the Connection given settings
-}
-procedure TZAbstractTestCase.CheckEquals(OrgStr: ZWideString; ActualLobStream: TStream;
-  ConSettings: PZConSettings; const Msg: string);
-var
-  StrStream: TMemoryStream;
-  procedure SetAnsiStream(Value: RawByteString);
-  begin
-    StrStream.Write(PAnsiChar(Value)^, Length(Value));
-    StrStream.Position := 0;
-  end;
-begin
-  StrStream := TMemoryStream.Create;
-  case ConSettings.CPType of
-    cGET_ACP, cCP_UTF8:
-      if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
-        SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings.CTRL_CP))
-      else
-        SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings^.ClientCodePage^.CP));
-    cCP_UTF16:
-      begin
-        StrStream.Write(PWideChar(OrgStr)^, Length(OrgStr)*2);
-        StrStream.Position := 0;
-      end;
-  end;
-  try
-    CheckEquals(StrStream, ActualLobStream, Msg);
-  finally
-    StrStream.Free;
-  end;
-end;
-
-{**
    Function compare two streams. If streams not equals raise exception.
    @param Expected the first stream for compare
    @param Actual the second stream for compare
@@ -611,6 +550,16 @@ end;
 {$IFDEF FPC}
 // Made in accordance with DUnitCompatibleInterface.inc
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: WideString;
+  const Msg: string);
+begin
+  {$IFDEF FPC2_6DOWN}
+  AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
+  {$ELSE}
+  AssertTrue(ComparisonMsg(Msg, String(Expected), String(Actual)), Expected = Actual, CallerAddr);
+  {$ENDIF}
+end;
+
+procedure TZAbstractTestCase.CheckEquals(Expected: UnicodeString; Actual: WideString;
   const Msg: string);
 begin
   {$IFDEF FPC2_6DOWN}
@@ -683,7 +632,7 @@ begin
   CheckNotEquals(Integer(Expected), Integer(Actual), Msg)
 end;
 {$ENDIF WITH_OVERLOAD_BUG}
-
+(*
 {$IFNDEF UNICODE}
 procedure TZAbstractTestCase.CheckEquals(Expected: ZWideString; Actual: String;
   ConSettings: PZConSettings; const Msg: string);
@@ -696,7 +645,7 @@ begin
   else
     CheckEquals(Expected, ZRawToUnicode(Actual, ConSettings^.ClientcodePage^.CP), Msg);
 end;
-{$ENDIF UNICODE}
+{$ENDIF UNICODE}*)
 
 procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
   Parts: TDateParts; const Msg: string);
@@ -838,5 +787,17 @@ begin
 {$ENDIF}
 end;
 
+initialization
+  ConSettingsDummy.CTRL_CP :=
+  {$IFDEF UNICODE}
+  DefaultSystemCodePage
+  {$ELSE}
+    {$IFDEF FPC}
+    zCP_UTF8
+    {$ELSE}
+    ZOSCodePage
+    {$ENDIF}
+  {$ENDIF};
+  SetConvertFunctions(@ConSettingsDummy);
 end.
 

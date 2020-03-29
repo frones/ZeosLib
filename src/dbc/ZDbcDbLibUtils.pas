@@ -64,16 +64,14 @@ uses Classes, SysUtils,
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertODBCToSqlType(FieldType: SmallInt; Precision, Scale: Integer;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertODBCToSqlType(FieldType: SmallInt; Precision, Scale: Integer): TZSQLType;
 
 {**
   Converts a DBLib native types into ZDBC SQL types.
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer): TZSQLType;
 
 {**
   Converts ZDBC SQL types into MS SQL native types.
@@ -109,8 +107,7 @@ uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses, ZFastCode
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertODBCToSqlType(FieldType: SmallInt; Precision, Scale: Integer;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertODBCToSqlType(FieldType: SmallInt; Precision, Scale: Integer): TZSQLType;
 begin
   case FieldType of
     1{char}, 12{varchar}, -8{nchar}, -9{nvarchar}: Result := stString;
@@ -127,55 +124,40 @@ begin
       else Result := stBigDecimal;
     6, 7, 8: Result := stDouble;
     11, 93: Result := stTimestamp;
-    -1{text}, -10: Result{ntext} := stAsciiStream;
+    -1{text}: Result := stAsciiStream;
+    -10: Result{ntext} := stAsciiStream;
     -4{image}: Result := stBinaryStream;
     -2{binary},-3{varbinary}: Result := stBytes;
     -11{uniqueidentifier}: Result := stGUID;
   else
     Result := stUnknown;
   end;
-  if CtrlsCPType = cCP_UTF16 then
-  case Result of
-    stString: Result := stUnicodeString;
-    stAsciiStream: Result := stUnicodeStream;
-  end;
 end;
 
 {**
   Converts a tabular data stream native types into ZDBC SQL types.
   @param FieldType dblibc native field type.
-  @param CtrlsCPType the string code Page of the IDE Controls
   @return a SQL undepended type.
 }
-function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer): TZSQLType;
 begin
   case FieldType of
     tdsVoid, tdsUDT:
       Result := stUnknown; //Null columns
     tdsImage:
       Result := stBinaryStream;
-    tdsText, tdsNText, tdsMSXML:
-      if CtrlsCPType = cCP_UTF16 then
-        Result := stUnicodeStream
-      else
-        Result := stAsciiStream;
+    tdsText: Result := stAsciiStream; //currently we have no national encoding..
+    tdsNText, tdsMSXML: Result := stUnicodeStream;
     tdsUnique:
       Result := stGUID;
-    tdsBinary, tdsVarBinary, tdsBigBinary, tdsBigVarBinary:
+    tdsBinary, tdsVarBinary:
       Result := stBytes;
+    tdsBigBinary, tdsBigVarBinary:
+      Result := stBinaryStream;
     tdsIntN:
       Result := stInteger;
-    tdsVarchar, tdsNVarChar, tdsBigVarChar, tdsBigNVarChar:
-      if CtrlsCPType = cCP_UTF16 then
-        Result := stUnicodeString
-      else
-        Result := stString;
-    tdsChar, tdsBigChar, tdsBigNChar:
-      if CtrlsCPType = cCP_UTF16 then
-        Result := stUnicodeString
-      else
-        Result := stString;
+    tdsChar, tdsVarchar, tdsBigChar, tdsBigVarChar: Result := stString;
+    tdsBigNChar, tdsNVarChar, tdsBigNVarChar: Result := stUnicodeString;
     tdsInt1:
       Result := stByte;
     tdsBit, tdsBitN:

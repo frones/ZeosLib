@@ -85,12 +85,13 @@ type
     procedure CloseTransaction;
     function GetTrHandle: PISC_TR_HANDLE;
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
-    procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
+    procedure RegisterOpenUnCachedLob(const Lob: IZlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
-    procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
+    procedure DeRegisterOpenUnCachedLob(const Lob: IZlob);
     function GetTransactionLevel: Integer;
     function GetOpenCursorCount: Integer;
     function IsReadOnly: Boolean;
+    function IsAutoCommit: Boolean;
     function GetTPB: RawByteString;
     function StartTransaction: Integer;
   end;
@@ -107,6 +108,7 @@ type
     function GetActiveTransaction: IZIBTransaction;
     function IsFirebirdLib: Boolean;
     function IsInterbaseLib: Boolean;
+    function GetPlainDriver: TZInterbasePlainDriver;
   end;
 
   TGUIDDetectFlag = (gfByType, gfByDomain, gfByFieldName);
@@ -190,20 +192,20 @@ type
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
     function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
-    procedure CreateNewDatabase(const SQL: RawByteString);
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     function GetActiveTransaction: IZIBTransaction;
+    function GetPlainDriver: TZInterbasePlainDriver;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Transaction: IZTransaction);
     procedure SetActiveTransaction(const Value: IZTransaction);
   public
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
 
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
@@ -260,13 +262,14 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
-    procedure RegisterOpenUnCachedLob(const Lob: IZBlob);
+    procedure RegisterOpenUnCachedLob(const Lob: IZlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
-    procedure DeRegisterOpenUnCachedLob(const Lob: IZBlob);
+    procedure DeRegisterOpenUnCachedLob(const Lob: IZlob);
     function GetTransactionLevel: Integer;
     function GetOpenCursorCount: Integer;
     function GetTPB: RawByteString;
     function IsReadOnly: Boolean;
+    function IsAutoCommit: Boolean;
   public
     constructor Create(const Owner: TZInterbase6Connection; AutoCommit, ReadOnly: Boolean;
       const TPB: RawByteString);
@@ -288,7 +291,7 @@ implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages,
-  ZConnProperties, ZDbcProperties, Math
+  ZDbcProperties, Math
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES},System.Types{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -536,28 +539,6 @@ begin
 end;
 
 {**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
-
-  @param Info a statement parameters.
-  @return a new Statement object
-}
-function TZInterbase6Connection.CreateRegularStatement(Info: TStrings):
-  IZStatement;
-begin
-  if IsClosed then
-    Open;
-  Result := TZInterbase6Statement.Create(Self, Info);
-end;
-
-{**
   Gets the host's full version number. Initially this should be 0.
   The format of the version returned must be XYYYZZZ where
    X   = Major version
@@ -568,6 +549,11 @@ end;
 function TZInterbase6Connection.GetHostVersion: Integer;
 begin
   Result := FHostVersion;
+end;
+
+function TZInterbase6Connection.GetPlainDriver: TZInterbasePlainDriver;
+begin
+  Result := FPlainDriver;
 end;
 
 {**
@@ -792,10 +778,13 @@ const sCS_NONE = 'NONE';
 var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
-  NewDB: RawByteString;
-  ConnectionString, CSNoneCP, DBCP: String;
+  ConnectionString, CSNoneCP, DBCP, CreateDB: String;
   ti: IZIBTransaction;
   Statement: IZStatement;
+  I: Integer;
+  P, PEnd: PChar;
+  TrHandle: TISC_TR_HANDLE;
+  DBCreated: Boolean;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -833,30 +822,63 @@ begin
   CSNoneCP := Info.Values[DSProps_ResetCodePage];
 
   FHandle := 0;
+  DBCreated := False;
   { Create new db if needed }
-  if Info.Values[ConnProps_CreateNewDatabase] <> '' then begin
-    if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
+  if (Info.Values[ConnProps_CreateNewDatabase] <> '') then begin
+    CreateDB := Info.Values[ConnProps_CreateNewDatabase];
+    if (GetClientVersion >= 2005000) and IsFirebirdLib and (Length(CreateDB)<=4) and StrToBoolEx(CreateDB, False) then begin
       if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
         Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-      if Database = '' then begin
-        DataBase := Info.Values[ConnProps_CreateNewDatabase];
-        ConnectionString := ConstructConnectionString;
-      end;
+      DBCP := Info.Values['isc_dpb_set_db_charset'];
       PrepareDPB;
       if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(@DBName[0])),
           @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcConnect);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+          'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"');
     end else begin
-      NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_CreateNewDatabase],
-        ConSettings^.CTRL_CP, zOSCodePage);
-      CreateNewDatabase(NewDB);
+      {$IFDEF UNICODE}
+      DPB := ZUnicodeToRaw(CreateDB, zOSCodePage);
+      {$ELSE}
+      DPB := CreateDB;
+      {$ENDIF}
+      CreateDB := UpperCase(CreateDB);
+      I := PosEx('CHARACTER', CreateDB);
+      if I > 0 then begin
+        I := PosEx('SET', CreateDB, I);
+        P := Pointer(CreateDB);
+        Inc(I, 3); Inc(P, I); Inc(I);
+        While P^ = ' ' do begin
+          Inc(I); Inc(P);
+        end;
+        PEnd := P;
+        While ((Ord(PEnd^) >= Ord('A')) and (Ord(PEnd^) <= Ord('Z'))) or
+              ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
+          Inc(PEnd);
+        DBCP :=  Copy(CreateDB, I, (PEnd-P));
+      end else DBCP := sCS_NONE;
+      if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
+          Length(DPB), Pointer(DPB), FDialect, nil) <> 0 then
+        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, DPB);
       { Logging connection action }
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-          'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
-      FHandle := 0;
+          DPB+' AS USER "'+ ConSettings^.User+'"');
+      //we did create the db and are connected now.
+      //we have no dpb so we connect with 'NONE' which is not a problem for the UTF8/NONE charsets
+      //because the metainformations are retrieved in UTF8 encoding
+      if (DBCP <> FClientCodePage) or ((DBCP = sCS_NONE) and (FClientCodePage <> '') and
+         ((FClientCodePage <> 'UTF8') and (FClientCodePage <> sCS_NONE))) then begin
+        //we need a reconnect with a valid dpb
+        if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
+          CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, DPB);
+        TrHandle := 0;
+        FHandle := 0;
+      end;
     end;
     Info.Values[ConnProps_CreateNewDatabase] := '';
+    DBCreated := True;
   end;
 reconnect:
   if FHandle = 0 then begin
@@ -878,7 +900,7 @@ reconnect:
   FRestartTransaction := not AutoCommit;
 
   FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
-  if DBCP <> '' then
+  if (DBCP <> '') and not DBCreated then
     Exit;
   inherited Open;
 
@@ -892,22 +914,23 @@ reconnect:
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
     and no convertions where done except the collumns using collations}
-  Statement := CreateRegularStatement(nil);
-  try
-    with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
-      'FROM RDB$DATABASE') do begin
-      if Next then DBCP := GetString(FirstDbcIndex);
-      Close;
+  if not DBCreated then begin
+    Statement := CreateStatementWithParams(nil);
+    try
+      with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME FROM RDB$DATABASE') do begin
+        if Next then DBCP := GetString(FirstDbcIndex);
+        Close;
+      end;
+    finally
+      Statement := nil;
     end;
-  finally
-    Statement := nil;
-  end;
-  ti := GetActiveTransaction;
-  try
-    ti.CloseTransaction;
-    ReleaseTransaction(ti);
-  finally
-    ti := nil;
+    ti := GetActiveTransaction;
+    try
+      ti.CloseTransaction;
+      ReleaseTransaction(ti);
+    finally
+      ti := nil;
+    end;
   end;
   if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
     EH: the server makes !NO! charset conversion if CS_NONE.
@@ -944,82 +967,8 @@ reconnect:
       InternalClose;
       goto reconnect; //build new TDB and reopen in SC_NONE mode
     end;
-{        'Deprecated database characterset "NONE" found!'+Lineending+
-        'Either dump your database and recreate it with a "stable" characterset.(recommented)'+LineEnding+
-        'Or set a codepage which represents the encoding of CS_NONE.'+LineEnding+
-        'To avoid reconnect with CS_NONE attachment characterset for the subtypes'+LineEnding+
-        'use parameter: '''+DSProps_ResetCodePage+''' in your Connection.Properties'); }
   end else if FClientCodePage = '' then
     CheckCharEncoding(DBCP);
-end;
-
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
-function TZInterbase6Connection.CreatePreparedStatement(
-  const SQL: string; Info: TStrings): IZPreparedStatement;
-begin
-  if IsClosed then
-    Open;
-  Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
-end;
-
-{**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures.
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
-
-  <P><B>Note:</B> This method is optimized for handling stored
-  procedure call statements. Some drivers may send the call
-  statement to the database when the method <code>prepareCall</code>
-  is done; others
-  may wait until the <code>CallableStatement</code> object
-  is executed. This has no
-  direct effect on users; however, it does affect which method
-  throws certain SQLExceptions.
-
-  Result sets created using the returned CallableStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
-  @param Info a statement parameters.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
-}
-function TZInterbase6Connection.CreateCallableStatement(const SQL: string;
-  Info: TStrings): IZCallableStatement;
-begin
-  if IsClosed then
-    Open;
-  Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -1116,6 +1065,76 @@ begin
 end;
 
 {**
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
+
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
+}
+function TZInterbase6Connection.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
+begin
+  if IsClosed then
+    Open;
+  Result := TZInterbase6CallableStatement.Create(Self, Name, Info);
+end;
+
+{**
+  Creates a <code>PreparedStatement</code> object for sending
+  parameterized SQL statements to the database.
+
+  A SQL statement with or without IN parameters can be
+  pre-compiled and stored in a PreparedStatement object. This
+  object can then be used to efficiently execute this statement
+  multiple times.
+
+  <P><B>Note:</B> This method is optimized for handling
+  parametric SQL statements that benefit from precompilation. If
+  the driver supports precompilation,
+  the method <code>prepareStatement</code> will send
+  the statement to the database for precompilation. Some drivers
+  may not support precompilation. In this case, the statement may
+  not be sent to the database until the <code>PreparedStatement</code> is
+  executed.  This has no direct effect on users; however, it does
+  affect which method throws certain SQLExceptions.
+
+  Result sets created using the returned PreparedStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param sql a SQL statement that may contain one or more '?' IN
+    parameter placeholders
+  @param Info a statement parameters.
+  @return a new PreparedStatement object containing the
+    pre-compiled statement
+}
+function TZInterbase6Connection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
+begin
+  if IsClosed then
+    Open;
+  Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
+end;
+
+{**
    Start Interbase transaction
 }
 function TZInterbase6Connection.StartTransaction: Integer;
@@ -1137,7 +1156,7 @@ var I: Integer;
     Stmt: IZStatement;
   begin
     Result := False;
-    Stmt := CreateRegularStatement(Info);
+    Stmt := CreateStatementWithParams(Info);
     RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
     if RS <> nil then try
       if RS.Next then begin
@@ -1186,25 +1205,6 @@ begin
     TransactIsolationLevel := Level;
     //restart automatically happens on GetTrHandle
   end;
-end;
-
-{**
-  Creates new database
-  @param SQL a sql strinf for creation database
-}
-procedure TZInterbase6Connection.CreateNewDatabase(const SQL: RawByteString);
-var
-  TrHandle: TISC_TR_HANDLE;
-begin
-  TrHandle := 0;
-  if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
-      Length(SQL), Pointer(sql), FDialect, nil) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, SQL);
-  //disconnect from the newly created database because the connection character set is NONE,
-  //which usually nobody wants
-  if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, SQL);
-  TrHandle := 0;
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
@@ -1365,6 +1365,28 @@ function TZInterbase6Connection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   Result := TZInterbase6Sequence.Create(Self, Sequence, BlockSize);
+end;
+
+{**
+  Creates a <code>Statement</code> object for sending
+  SQL statements to the database.
+  SQL statements without parameters are normally
+  executed using Statement objects. If the same SQL statement
+  is executed many times, it is more efficient to use a
+  <code>PreparedStatement</code> object.
+  <P>
+  Result sets created using the returned <code>Statement</code>
+  object will by default have forward-only type and read-only concurrency.
+
+  @param Info a statement parameters.
+  @return a new Statement object
+}
+function TZInterbase6Connection.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
+begin
+  if IsClosed then
+    Open;
+  Result := TZInterbase6Statement.Create(Self, Info);
 end;
 
 function TZInterbase6Connection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
@@ -1631,7 +1653,7 @@ begin
   FOpenCursors.Delete(I);
 end;
 
-procedure TZIBTransaction.DeRegisterOpenUnCachedLob(const Lob: IZBlob);
+procedure TZIBTransaction.DeRegisterOpenUnCachedLob(const Lob: IZlob);
 var I: Integer;
 begin
   {$IFDEF DEBUG}Assert(FOpenUncachedLobs <> nil, 'Wrong DeRegisterOpenUnCachedLob beahvior'); {$ENDIF DEBUG}
@@ -1662,6 +1684,11 @@ begin
   Result := @FTrHandle
 end;
 
+function TZIBTransaction.IsAutoCommit: Boolean;
+begin
+  Result := FAutoCommit;
+end;
+
 function TZIBTransaction.IsReadOnly: Boolean;
 begin
   Result := FReadOnly;
@@ -1672,7 +1699,7 @@ begin
   FOpenCursors.Add(Pointer(CursorRS));
 end;
 
-procedure TZIBTransaction.RegisterOpenUnCachedLob(const Lob: IZBlob);
+procedure TZIBTransaction.RegisterOpenUnCachedLob(const Lob: IZlob);
 begin
   FOpenUncachedLobs.Add(Pointer(Lob));
 end;

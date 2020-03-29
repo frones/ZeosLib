@@ -60,19 +60,32 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver,
-  ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils,
-  ZPlainOracleConstants, ZPlainDriver, ZDbcStatement;
+  ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver, ZDbcCache,
+  ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils, ZClasses,
+  ZPlainOracleConstants, ZPlainDriver, ZDbcStatement, ZDbcCachedResultSet;
 
 type
-  { Interbase Error Class}
+  { Oracle Error Class}
   EZOCIConvertError = class(EZSQLException);
 
+  IZOracleResultSet = Interface(IInterface)
+    ['{114B78EC-86F8-44E0-B0F5-127BAA78D335}']
+    procedure AssignColumnsInfo(const Dest: TObjectList);
+  End;
+
+  TZOracleColumnInfo = class(TZColumnInfo)
+  public
+    dty: ub2;
+    csid: ub2;
+    CharsetForm: ub1;
+  end;
+
   {** Implements Oracle ResultSet. }
-  TZOracleAbstractResultSet_A = class(TZAbstractReadOnlyResultSet_A)
+  TZOracleAbstractResultSet_A = class(TZAbstractReadOnlyResultSet_A, IZOracleResultSet)
   private
     FStmtHandle: POCIStmt;
     FErrorHandle: POCIError;
@@ -95,8 +108,7 @@ type
   public
     constructor Create(
       const Statement: IZStatement; const SQL: string;
-      const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
-      const ZBufferSize: Integer);
+      StmtHandle: POCIStmt; ErrorHandle: POCIError; const ZBufferSize: Integer);
     procedure BeforeClose; override;
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
@@ -116,10 +128,12 @@ type
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
     function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
     {$ENDIF USE_SYNCOMMONS}
+  public //implement IZOracleResultSet
+    procedure AssignColumnsInfo(const Dest: TObjectList);
   end;
 
   TZOracleResultSet_A = class(TZOracleAbstractResultSet_A, IZResultSet)
@@ -147,66 +161,200 @@ type
     function Next: Boolean; reintroduce;
   End;
 
-  {** Represents an interface, specific for Oracle blobs. }
-  IZOracleBlob = interface(IZBlob)
-    ['{3D861AAC-B263-42F1-B359-2A188D1D986A}']
-    procedure CreateBlob;
-    procedure ReadLob;
-    procedure WriteLob;
-    procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
+  IZOracleLob = interface(IInterface)
+    ['{98115C0C-143E-4457-8D17-D45C9FB82221}']
+    function GetLobLocator: POCILobLocator;
+    procedure CopyLocator;
   end;
 
-  {** Implements external blob wrapper object for Oracle. }
-  TZOracleBlob = class(TZAbstractBlob, IZOracleBlob)
+  TZAbstracOracleLobStream = class; //forward
+  {** implements an abstract oracle lob }
+  TZAbstractOracleBlob = class(TZAbstractStreamedLob, IZLob, IZOracleLob)
   private
+    FConnection: IZOracleConnection;
+    FOCIError: POCIError;
+    FOCIEnv: POCIEnv;
     FOCISvcCtx: POCISvcCtx;
-    FErrorHandle: POCIError;
-    FLobLocator: POCILobLocator;
-    FNativePlainDriver: IZPlainDriver; //keep alive
-    FPlainDriver: TZOraclePlainDriver;
-    FTemporary: Boolean;
-    FChunkSize: Integer;
-    FConSettings: PZConSettings;
+    FLobLocator, FParentLocator: POCILobLocator;
+    Fdty: ub2;
+    FCharsetForm: ub1;
+    Fcsid: ub2;
+    FDescriptorType: ub4;
+    FOwner: IImmediatelyReleasable;
+    FHas64BitLobMethods: Boolean;
+    FLobStream: TZAbstracOracleLobStream;
+    FplainDriver: TZOraclePlainDriver;
+    FLocatorAllocated: Boolean; //need to know if we destroy the stream if the locator should be freed too
+    FIsCloned: Boolean;
   protected
-    procedure InternalSetData(AData: Pointer; ASize: Integer);
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public
-    constructor Create(const PlainDriver: TZOraclePlainDriver;
-      const Data: Pointer; const Size: Int64; const OCISvcCtx: POCISvcCtx;
-      const ErrorHandle: POCIError; const LobLocator: POCILobLocator;
-      const ChunkSize: Integer; const ConSettings: PZConSettings);
+    constructor Create(const Connection: IZOracleConnection;
+      LobLocator: POCILobLocator; dty: ub2; const OpenLobStreams: TZSortedList);
     destructor Destroy; override;
-
-    procedure CreateBlob;
-    procedure ReadLob; //override;
-    procedure WriteLob; //override;
-    procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
+  public
+    function GetLobLocator: POCILobLocator;
+    procedure CopyLocator;
+  public //implement IZLob
+    function IsEmpty: Boolean; override;
+    procedure Clear; override;
+  public
+    function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+  public //obsolete
+    function Length: Integer; override;
   end;
 
-  {EH: my current uncached implementation doesn't work here since we've no
-   scrollable RS}
-  {** Implements external blob wrapper object for Oracle. }
-  TZOracleClob = class(TZAbstractCLob, IZOracleBlob)
+  {** EH: Implements external (B/C)lob or (B/C)File Stream object for Oracle.}
+  TZAbstracOracleLobStream = class(TZImmediatelyReleasableLobStream)
   private
-    FOCISvcCtx: POCISvcCtx;
-    FErrorHandle: POCIError;
-    FLobLocator: POCILobLocator;
-    FConnectionHandle: POCIEnv;
-    FNativePlainDriver: IZPlainDriver; //keep alive
     FPlainDriver: TZOraclePlainDriver;
-    FTemporary: Boolean;
-    FChunkSize: Integer;
+    FOCISvcCtx: POCISvcCtx;
+    FOCIError: POCIError;
+    FOCIEnv: POCIEnv;
+    fchunk_size: ub4;
+    Flobtype: ub1;
+    fcsid: ub2;
+    FOwnerLob: TZAbstractOracleBlob;
+    FPosition: Int64;
+    FOpenLobStreams: TZSortedList;
+    procedure CheckError(Status: sword; const Msg: RawByteString);
+    procedure AllocLobLocator;
+    procedure BeforeWrite;
   public
-    constructor Create(const PlainDriver: TZOraclePlainDriver;
-      const Data: Pointer; const Size: Cardinal; const ConnectionHandle: POCIEnv;
-      const OCISvcCtx: POCISvcCtx; const ErrorHandle: POCIError;
-      const LobLocator: POCILobLocator; const ChunkSize: Integer;
-      const ConSettings: PZConSettings; const CodePage: Word);
-    destructor Destroy; override;
+    procedure CreateTemporary;
+    function IsOpen: LongBool;
+    function IsTemporary: LongBool;
+    procedure FreeTemporary;
+    procedure CopyLocator;
+    procedure FreeLocator;
+    procedure Open;
+    procedure Close;
+    procedure CopyLob;
+  public
+    constructor Create(LobLocator: POCILobLocator; const OwnerLob: TZAbstractOracleBlob;
+      const Owner: IImmediatelyReleasable; const OpenLobStreams: TZSortedList);
+    Destructor Destroy; override;
+  end;
 
-    procedure CreateBlob;
-    procedure ReadLob; //override;
-    procedure WriteLob; //override;
-    procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
+  {** EH: implements a 32 bit stream for large objects }
+  TZOracleLobStream32 = class(TZAbstracOracleLobStream)
+  protected
+    function GetSize: Int64; override;
+    procedure SetSize(const NewSize: Int64); overload; override;
+    function ReadPoll(pBuff: PAnsiChar): ub4;
+  public //TStream  overrides
+    function Read(var Buffer; Count: Longint): Longint; overload; override;
+    function Seek(Offset: Longint; Origin: Word): Longint; overload; override;
+  end;
+
+  {** EH: implements a 64 bit stream for large character objects and raw multibyte codepages
+   this class loads all data to mem, using the polling mode.
+   reason is, oracle returns amount of chars for clobs,
+   but we have no possibility to find out the exact stream size in bytes}
+  TZOracleRawMultibyteStream32 = class(TZCodePageConversionStream)
+  private
+    FBytesPerChar: Cardinal;
+  protected
+    procedure FlushMemToStream(Buf: Pointer; Len: NativeUInt; Stream: TStream); override;
+    procedure ReadStreamToMem(var Buf: Pointer; var Len: NativeUint; Stream: TStream); override;
+  public
+    constructor Create(const Owner: TStream; SourceCodePage, DestCodePage: Word;
+      ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; BytesPerChar: Cardinal);
+  end;
+
+  {** EH: implements a 32 bit stream for large character objects and raw multibyte codepages
+   this class loads all data to mem, using the polling mode.
+   reason is, oracle returns amount of chars for clobs,
+   but we have no possibility to find out the exact stream size in bytes}
+  TZOracleRawMultibyteStream64 = class(TZOracleRawMultibyteStream32)
+  protected
+    procedure FlushMemToStream(Buf: Pointer; Len: NativeUInt; Stream: TStream); override;
+    procedure ReadStreamToMem(var Buf: Pointer; var Len: NativeUint; Stream: TStream); override;
+  end;
+
+  {** EH: implements a 32 bit stream for internal binary or character large objects }
+  TZOracleInternalLobStream32 = class(TZOracleLobStream32)
+  protected
+    procedure WritePoll(pBuff: PAnsiChar; Len: NativeUInt);
+  public
+    function Write(const Buffer; Count: Longint): Longint; overload; override;
+  end;
+
+  {** EH: implements a 32 bit stream for file large objects }
+  TZOracleExternalLobStream32 = class(TZOracleLobStream32)
+  public
+    function Write(const Buffer; Count: Longint): Longint; overload; override;
+  end;
+
+  {** EH: implements a 64 bit stream for large objects }
+  TZOracleLobStream64 = class(TZAbstracOracleLobStream)
+  protected
+    function GetSize: Int64; override;
+    procedure SetSize(const NewSize: Int64); overload; override;
+    function ReadPoll(pBuff: PAnsiChar): oraub8;
+  public //TStream  overrides
+    function Read(var Buffer; Count: Longint): Longint; overload; override;
+    function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; overload; override;
+  end;
+
+  {** EH: implements a 64 bit stream for internal binary or character large objects }
+  TZOracleInternalLobStream64 = class(TZOracleLobStream64)
+  protected
+    procedure WritePoll(pBuff: PAnsiChar; Len: NativeUInt);
+  public
+    function Write(const Buffer; Count: Longint): Longint; overload; override;
+  end;
+
+  {** EH: implements a 64 bit stream for external file large objects }
+  TZOracleExternalLobStream64 = class(TZOracleLobStream64)
+  public
+    function Write(const Buffer; Count: Longint): Longint; overload; override;
+  end;
+
+  TZOrcacleFileLob = class(TZAbstractOracleBlob);
+
+  TZOracleLob = class(TZAbstractOracleBlob);
+
+  TZOracleBlob = class(TZOracleLob, IZBlob)
+  public
+    constructor CreateFromBlob(const Lob: IZBLob; LobLocator: POCILobLocator;
+      const Connection: IZOracleConnection; const OpenLobStreams: TZSortedList);
+  end;
+
+  TZOracleClob = class(TZOracleLob, IZBlob, IZCLob)
+  private
+    FBytesPerChar: Byte;
+  protected
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
+  public
+    function GetPAnsiChar(CodePage: Word; var ConversionBuf: RawByteString; out Len: NativeUInt): PAnsiChar; reintroduce;
+  public
+    constructor Create(const Connection: IZOracleConnection;
+      LobLocator: POCILobLocator; CharsetForm: ub1; csid: ub2;
+      const OpenLobStreams: TZSortedList);
+    constructor CreateFromClob(const Lob: IZCLob; LobLocator: POCILobLocator;
+      CharsetForm: ub1; csid: ub2; const Connection: IZOracleConnection;
+      const OpenLobStreams: TZSortedList); reintroduce;
+  end;
+
+  {**
+    Implements Oracle cached ResultSet. This class should be extended
+    with database specific logic to form SQL data manipulation statements.
+  }
+  TZOracleCachedResultSet = Class(TZCachedResultset)
+  protected
+    procedure FillColumnsInfo(const ColumnsInfo: TObjectList); override;
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  public
+    function CreateLob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode): IZBlob{IZLob}; override;
+  End;
+
+  { TZOracleRowAccessor }
+
+  TZOracleRowAccessor = class(TZRowAccessor)
+  public
+    procedure FillFromFromResultSet(const ResultSet: IZResultSet;
+        {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -214,8 +362,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
-  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
-  ZMessages, ZEncoding, ZDbcUtils;
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} SysConst,
+  ZFastCode, ZMessages, ZEncoding, ZDbcUtils;
 
 { TZOracleAbstractResultSet_A }
 
@@ -228,7 +376,8 @@ var
   Month, Day: Byte;
   Hour, Minute, Second: Byte;
   Year: SmallInt;
-  Millis: Cardinal;
+  L: NativeUInt;
+  Millis: Cardinal absolute L;
   procedure AddJSONEscape(P: PAnsichar; Len: LengthInt);
   begin
     JSONWriter.Add('"');
@@ -374,14 +523,15 @@ begin
         SQLT_BFILEE,
         SQLT_CFILEE     : begin
                             FTempLob := GetBlob(C+{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                            JSONWriter.WrBase64(FTempLob.GetBuffer, FTempLob.Length, True);
+                            P := FTempLob.GetBuffer(fRawTemp, L);
+                            JSONWriter.WrBase64(P, L, True);
                             FTempLob := nil;
                           end;
         SQLT_CLOB       : begin
                             JSONWriter.Add('"');
                             FTempLob := GetBlob(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                            P := FTempLob.GetPAnsiChar(zCP_UTF8);
-                            JSONWriter.AddJSONEscape(P, FTempLob.Length);
+                            P := FTempLob.GetPAnsiChar(zCP_UTF8, fRawTemp, L);
+                            JSONWriter.AddJSONEscape(P, L);
                             FTempLob := nil;
                             JSONWriter.Add('"');
                           end;
@@ -408,6 +558,53 @@ end;
   @param SQL a SQL statement.
   @param Handle a Oracle specific query handle.
 }
+procedure TZOracleAbstractResultSet_A.AssignColumnsInfo(
+  const Dest: TObjectList);
+var
+  I: Integer;
+  Current: TZOracleColumnInfo;
+  ColumnInfo: TZOracleColumnInfo;
+begin
+  for I := 0 to ColumnsInfo.Count - 1 do
+  begin
+    Current := TZOracleColumnInfo(ColumnsInfo[I]);
+    ColumnInfo := TZOracleColumnInfo.Create;
+
+    ColumnInfo.AutoIncrement := Current.AutoIncrement;
+    ColumnInfo.CaseSensitive := Current.CaseSensitive;
+    ColumnInfo.Searchable := Current.Searchable;
+    ColumnInfo.Currency := Current.Currency;
+    ColumnInfo.Nullable := Current.Nullable;
+    ColumnInfo.Signed := Current.Signed;
+    ColumnInfo.ColumnLabel := Current.ColumnLabel;
+    ColumnInfo.ColumnName := Current.ColumnName;
+    ColumnInfo.SchemaName := Current.SchemaName;
+    ColumnInfo.Precision := Current.Precision;
+    ColumnInfo.Scale := Current.Scale;
+    ColumnInfo.TableName := Current.TableName;
+    ColumnInfo.CatalogName := Current.CatalogName;
+    if (Current.dty = SQLT_CLOB) then
+      if (Current.ColumnCodePage = zCP_UTF16) or IsMBCSCodePage(Current.ColumnCodePage)
+      then ColumnInfo.ColumnType := stUnicodeStream
+      else ColumnInfo.ColumnType := stAsciiStream
+    else if Current.ColumnType in [stString, stUnicodeString] then
+      if (Current.ColumnCodePage = zCP_UTF16)
+      then ColumnInfo.ColumnType := stUnicodeString
+      else ColumnInfo.ColumnType := stString
+    else ColumnInfo.ColumnType := Current.ColumnType;
+    ColumnInfo.ReadOnly := Current.ReadOnly;
+    ColumnInfo.Writable := Current.Writable;
+    ColumnInfo.DefinitelyWritable := Current.DefinitelyWritable;
+    ColumnInfo.ColumnCodePage := Current.ColumnCodePage;
+
+    ColumnInfo.dty := Current.dty;
+    ColumnInfo.csid := Current.csid;
+    ColumnInfo.CharsetForm := Current.CharsetForm;
+
+    Dest.Add(ColumnInfo);
+  end;
+end;
+
 procedure TZOracleAbstractResultSet_A.BeforeClose;
 begin
   FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
@@ -416,17 +613,15 @@ begin
 end;
 
 constructor TZOracleAbstractResultSet_A.Create(
-  const Statement: IZStatement;
-  const SQL: string; const StmtHandle: POCIStmt; const ErrorHandle: POCIError;
-  const ZBufferSize: Integer);
+  const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
+  ErrorHandle: POCIError; const ZBufferSize: Integer);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
-
+  FConnection := Statement.GetConnection as IZOracleConnection;
   FStmtHandle := StmtHandle;
   FErrorHandle := ErrorHandle;
-  FPlainDriver := TZOraclePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
+  FPlainDriver := FConnection.GetPlainDriver;
   ResultSetConcurrency := rcReadOnly;
-  FConnection := Statement.GetConnection as IZOracleConnection;
   FConnectionHandle := FConnection.GetConnectionHandle;
   FOCISvcCtx := FConnection.GetServiceContextHandle;
   FChunkSize := Statement.GetChunkSize;
@@ -613,14 +808,14 @@ set_Result:       Len := Result - @FTinyBuffer[0];
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
           FTempLob  := GetBlob(ColumnIndex);
-          Result    := FTempLob.GetBuffer;
-          Len       := FTempLob.Length;
+          Result    := FTempLob.GetBuffer(FRawTemp, Len);
+          FTempLob  := nil;
         end;
       SQLT_CLOB:
         begin
           FTempLob  := GetBlob(ColumnIndex);
-          Result    := FTempLob.GetPAnsiChar(FClientCP);
-          Len       := FTempLob.Length;
+          Result    := FTempLob.GetPAnsiChar(FClientCP, FRawTemp, Len);
+          FTempLob  := nil;
         end;
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
@@ -778,7 +973,9 @@ set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
       SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
           FTempLob  := GetBlob(ColumnIndex);
-          FUniTemp := Ascii7ToUnicodeString(FTempLob.GetBuffer, FTempLob.Length);
+          Result := FTempLob.GetBuffer(FRawTemp, Len);
+          FUniTemp := Ascii7ToUnicodeString(PAnsiChar(Result), Len);
+          FTempLob := nil;
 set_from_tmp:
           Len := Length(FUniTemp);
           if Len = 0
@@ -788,8 +985,8 @@ set_from_tmp:
       SQLT_CLOB:
         begin
           FTempLob  := GetBlob(ColumnIndex); //localize
-          Result    := FTempLob.GetPWideChar;
-          Len       := FTempLob.Length;
+          Result    := FTempLob.GetPWideChar(FUniTemp, Len);
+          FTempLob  := nil;
         end;
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
@@ -823,6 +1020,7 @@ function TZOracleAbstractResultSet_A.GetBoolean(ColumnIndex: Integer): Boolean;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -869,7 +1067,10 @@ begin
       SQLT_DAT, SQLT_TIMESTAMP:
         Result := GetTimeStamp(ColumnIndex) <> 0;
       //SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
-      SQLT_CLOB: Result := StrToBoolEx(GetBlob(ColumnIndex).GetPAnsiChar(FClientCP));
+      SQLT_CLOB: begin
+          P := GetBlob(ColumnIndex).GetPAnsiChar(FClientCP, fRawTemp, Len);
+          Result := StrToBoolEx(P, P+Len);
+        end;
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
@@ -962,6 +1163,7 @@ function TZOracleAbstractResultSet_A.GetLong(ColumnIndex: Integer): Int64;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  L: NativeUInt;
   Status: sword;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1028,9 +1230,11 @@ begin
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
         Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetTimeStamp(ColumnIndex));
-      SQLT_BLOB, SQLT_CLOB: begin
+      SQLT_CLOB: begin
           FTempLob := GetBlob(ColumnIndex);
-          Result := RawToInt64Def(FTempLob.GetBuffer, 0);
+          P := FTempLob.GetBuffer(fRawTemp, L);
+          Result := RawToInt64Def(P, P+L, 0);
+          fRawTemp := '';
         end;
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
@@ -1066,6 +1270,7 @@ var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
   Status: sword;
+  L: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
@@ -1131,10 +1336,12 @@ begin
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
         Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetTimeStamp(ColumnIndex));
-      SQLT_BLOB, SQLT_CLOB: begin
-          FTempLob := GetBlob(ColumnIndex);
-          Result := RawToUInt64Def(FTempLob.GetBuffer, 0);
-        end;
+      SQLT_CLOB: begin
+        FTempLob := GetBlob(ColumnIndex);
+        P := FTempLob.GetBuffer(fRawTemp, L);
+        Result := RawToUInt64Def(P, P+L, 0);
+        fRawTemp := '';
+      end
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
@@ -1216,6 +1423,8 @@ function TZOracleAbstractResultSet_A.GetDouble(ColumnIndex: Integer): Double;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  PW: PWideChar absolute P;
+  L: NativeUint;
   Status: sword;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1227,7 +1436,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
     Result := 0
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder^.valuep+(FCurrentRowBufIndex*SQLVarHolder^.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
@@ -1271,8 +1480,13 @@ begin
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
         Result := GetTimeStamp(ColumnIndex);
-      SQLT_BLOB, SQLT_CLOB:
-        SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
+      SQLT_CLOB: if (ColumnCodePage = zCP_UTF16) then begin
+          PW := GetPWideChar(ColumnIndex, L);
+          SqlStrToFloatDef(PW, 0, Result, L);
+        end else begin
+          P := GetPAnsiChar(ColumnIndex, L);
+          SqlStrToFloatDef(P, 0, Result, L);
+        end
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
@@ -1292,6 +1506,8 @@ procedure TZOracleAbstractResultSet_A.GetBigDecimal(ColumnIndex: Integer; var Re
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  PW: PWideChar absolute P;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -1302,7 +1518,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
     Result := NullBcd;
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
@@ -1311,7 +1527,13 @@ begin
       SQLT_VST,
       SQLT_VCS,
       SQLT_LVC,
-      SQLT_CLOB: LastWasNull := not TryStrToBCD(GetString(ColumnIndex), Result{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
+      SQLT_CLOB: if (ColumnCodePage = zCP_UTF16) then begin
+                  PW := GetPWideChar(ColumnIndex, Len);
+                  LastWasNull := not TryUniToBcd(PW, Len, Result, '.');
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, Len);
+                  LastWasNull := not TryRawToBcd(P, Len, Result, '.');
+                end;
       { the oracle soft decimal }
       SQLT_VNU: Nvu2BCD(POCINumber(P), Result);
       { the ordinals we yet do support }
@@ -1356,6 +1578,8 @@ function TZOracleAbstractResultSet_A.GetCurrency(ColumnIndex: Integer): Currency
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  PW: PWideChar absolute P;
+  L: NativeUint;
   Status: sword;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1367,7 +1591,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
     Result := 0
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
@@ -1423,8 +1647,13 @@ begin
       { the date/time types we support }
       SQLT_DAT, SQLT_TIMESTAMP:
         Result := GetTimeStamp(ColumnIndex);
-      SQLT_BLOB, SQLT_CLOB:
-        SqlStrToFloatDef(PAnsiChar(GetBlob(ColumnIndex).GetBuffer), 0, Result);
+      SQLT_CLOB: if (ColumnCodePage = zCP_UTF16) then begin
+          PW := GetPWideChar(ColumnIndex, L);
+          SqlStrToFloatDef(PW, 0, Result, L);
+        end else begin
+          P := GetPAnsiChar(ColumnIndex, L);
+          SqlStrToFloatDef(P, 0, Result, L);
+        end
       else raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
     end;
   end;
@@ -1637,6 +1866,7 @@ var
   SQLVarHolder: PZSQLVar;
   DT: TDateTime;
   P: PAnsiChar absolute DT;
+  PW: PWideChar absolute DT;
   Len: NativeUInt;
   Status: sword absolute Len;
   yr, mnth, dy, hr, mm, ss, fsec: sb4;
@@ -1658,8 +1888,10 @@ begin
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
-Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
-  end else begin
+Fill: PInt64(@Result.Year)^ := 0;
+    PInt64(@Result.Minute)^ := 0;
+    PInt64(PAnsiChar(@Result.Fractions)-2)^ := 0;
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
@@ -1668,7 +1900,10 @@ Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
       SQLT_VST,
       SQLT_VCS,
       SQLT_LVC,
-      SQLT_CLOB: begin
+      SQLT_CLOB: if (ColumnCodePage = zCP_UTF16) then begin
+                  PW := GetPWideChar(ColumnIndex, Len);
+                  LastWasNull := not TryPCharToTimeStamp(PW, Len, ConSettings^.ReadFormatSettings, Result);
+                end else begin
                   P := GetPAnsiChar(ColumnIndex, Len);
                   LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
                 end;
@@ -1835,13 +2070,15 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZOracleAbstractResultSet_A.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZOracleAbstractResultSet_A.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   SQLVarHolder: PZSQLVar;
-  Len: NativeUInt;
   P: PAnsiChar;
 begin
   Result := nil ;
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
@@ -1856,33 +2093,23 @@ begin
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: Result := TZAbstractClob.CreateWithData(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP, ConSettings);
-      SQLT_VST: Result := TZAbstractClob.CreateWithData(PAnsiChar(@PPOCILong(P)^.data[0]),
-        PPOCILong(P)^.Len, FClientCP, ConSettings);
-      SQLT_VCS: Result := TZAbstractClob.CreateWithData(PAnsiChar(@POCIVary(P).data[0]),
-        POCIVary(P)^.Len, FClientCP, ConSettings);
-      SQLT_LVC: Result := TZAbstractClob.CreateWithData(PAnsiChar(@POCILong(P).data[0]),
-        POCILong(P)^.Len, FClientCP, ConSettings);
-      SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE: begin
-            Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FOCISvcCtx,
-            FConnection.GetErrorHandle, PPOCIDescriptor(P)^, FChunkSize, ConSettings);
-          (Result as IZOracleBlob).ReadLob; //nasty: we've got only one descriptor if we fetch the rows. Loading on demand isn't possible
-        end;
-      SQLT_CLOB: begin
-          Result := TZOracleClob.Create(FPlainDriver, nil, 0,
-            FConnectionHandle, FOCISvcCtx,
-            FConnection.GetErrorHandle, PPOCIDescriptor(P)^, FChunkSize, ConSettings,
-            FClientCP);
-          (Result as IZOracleBlob).ReadLob; //nasty: we've got only one descriptor if we fetch the rows. Loading on demand isn't possible
-        end;
-      SQLT_NTY: Result := TZAbstractBlob.CreateWithStream(nil);
+      SQLT_AFC: Result := TZLocalMemCLob.CreateWithData(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP, ConSettings, FOpenLobStreams);
+      SQLT_VST: Result := TZLocalMemCLob.CreateWithData(PAnsiChar(@PPOCILong(P)^.data[0]),
+        PPOCILong(P)^.Len, FClientCP, ConSettings, FOpenLobStreams);
+      SQLT_VCS: Result := TZLocalMemCLob.CreateWithData(PAnsiChar(@POCIVary(P).data[0]),
+        POCIVary(P)^.Len, FClientCP, ConSettings, FOpenLobStreams);
+      SQLT_LVC: Result := TZLocalMemCLob.CreateWithData(PAnsiChar(@POCILong(P).data[0]),
+        POCILong(P)^.Len, FClientCP, ConSettings, FOpenLobStreams);
+      SQLT_BLOB,
+      SQLT_BFILEE,
+      SQLT_CFILEE: Result := TZOracleBlob.Create(FConnection, PPOCIDescriptor(P)^, SQLVarHolder.dty, FOpenLobStreams);
+      SQLT_CLOB: with TZOracleColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+          Result := TZOracleClob.Create(FConnection, PPOCIDescriptor(P)^, CharSetForm, csid, FOpenLobStreams);
+      SQLT_NTY: Result := TZLocalMemBLob.CreateWithStream(nil, FOpenLobStreams);
       { the binary raw we support }
-      SQLT_VBI: Result := TZAbstractBlob.CreateWithData(PAnsiChar(@POCIVary(P)^.data[0]), POCIVary(P)^.Len);
-      SQLT_LVB: Result := TZAbstractBlob.CreateWithData(PAnsiChar(@POCILong(P)^.data[0]), POCILong(P)^.Len);
-      else begin
-          P := GetPAnsiChar(ColumnIndex, Len);
-          Result := TZAbstractClob.CreateWithData(P, Len, FClientCP, ConSettings);
-        end;
+      SQLT_VBI: Result := TZLocalMemBLob.CreateWithData(PAnsiChar(@POCIVary(P)^.data[0]), POCIVary(P)^.Len, FOpenLobStreams);
+      SQLT_LVB: Result := TZLocalMemBLob.CreateWithData(PAnsiChar(@POCILong(P)^.data[0]), POCILong(P)^.Len, FOpenLobStreams);
+      else raise CreateCanNotAccessBlobRecordException(ColumnIndex, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType);
     end;
   end;
 end;
@@ -1896,31 +2123,35 @@ procedure TZOracleResultSet_A.Open;
 var
 //  char_semantics: ub1;
   I, J: Integer;
-  ColumnInfo: TZColumnInfo;
+  ColumnInfo: TZOracleColumnInfo;
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
-  TempColumnNameLen, CSForm: Integer;
+  TempColumnNameLen: Integer;
   P: PAnsiChar;
   DescriptorColumnCount,SubObjectColumnCount: Integer;
   //CanBindInt64: Boolean;
   paramdpp: Pointer;
   RowSize: Integer;
   defn_or_bindpp:     POCIHandle;
-  function AttributeToString(var P: PAnsiChar; Len: Integer): string;
+  function AttributeToString(var P: PAnsiChar; Len: Integer):
+    {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
   begin
     if P <> nil then
       {$IFDEF UNICODE}
       Result := ZEncoding.PRawToUnicode(P, Len, FClientCP)
       {$ELSE}
-      if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(FClientCP, ConSettings^.CTRL_CP) then
+      if (not ConSettings^.AutoEncode) or (FClientCP = ConSettings^.CTRL_CP) then
         Result := BufferToStr(P, Len)
-      else
-        Result := ZUnicodeToString(PRawToUnicode(P, Len, FClientCP), ConSettings^.CTRL_CP)
+      else begin
+        Result := '';
+        PRawToRawConvert(P, Len, FclientCP, ConSettings^.CTRL_CP, Result);
+      end
       {$ENDIF}
     else
       Result := '';
     P := nil;
   end;
+label CSFormAndID;
 begin
   //CanBindInt64 := FConnection.GetClientVersion >= 11002000;
   if ResultSetConcurrency = rcUpdatable then
@@ -1951,7 +2182,7 @@ begin
     CurrentVar := @FColumns.Variables[I-1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 
-    ColumnInfo := TZColumnInfo.Create;
+    ColumnInfo := TZOracleColumnInfo.Create;
     ColumnsInfo.Add(ColumnInfo);
 
     paramdpp := nil; //init
@@ -1990,6 +2221,7 @@ begin
       CurrentVar^.Scale := 0;
       CurrentVar^.Precision := 0;
     end;
+    ColumnInfo.dty := CurrentVar^.dty;
     P := nil; //init
     CheckOracleError(FPlainDriver, FErrorHandle,
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
@@ -2024,18 +2256,21 @@ begin
       then CurrentVar^.value_sz := ColumnInfo.Precision * ConSettings.ClientCodePage.CharWidth + 1
       else CurrentVar^.value_sz := ColumnInfo.Precision shl 1 + SizeOf(WideChar);
       CurrentVar^.value_sz := ((CurrentVar^.value_sz shr 3)+1) shl 3;
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
-      if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
-        ColumnInfo.Precision := ColumnInfo.Precision shr 1;
       ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
-      if ColumnInfo.ColumnType = stString then begin
-        ColumnInfo.CharOctedLength := ColumnInfo.Precision * ConSettings^.ClientCodePage^.CharWidth;
-      end else begin
-        ColumnInfo.CharOctedLength := ColumnInfo.Precision shl 1;
-      end;
+      if ColumnInfo.ColumnType = stString
+      then ColumnInfo.CharOctedLength := ColumnInfo.Precision * ConSettings^.ClientCodePage^.CharWidth
+      else ColumnInfo.CharOctedLength := ColumnInfo.Precision shl 1;
+CSFormAndID:
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
+      if ColumnInfo.CharsetForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
+        ColumnInfo.Precision := ColumnInfo.Precision shr 1;
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
     end else if (ColumnInfo.ColumnType = stBytes ) then
       ColumnInfo.Precision := CurrentVar^.value_sz
+    else if (ColumnInfo.ColumnType in [stAsciiStream, stUnicodeStream] ) then
+      goto CSFormAndID
     else
       ColumnInfo.Precision := CurrentVar^.Precision;
     if CurrentVar.dty = SQLT_NTY  then begin
@@ -2126,6 +2361,7 @@ end;
 procedure TZOracleResultSet_A.ResetCursor;
 begin
   FCurrentRowBufIndex := 0;
+  fTempLob := nil;
   inherited;
 
 end;
@@ -2274,7 +2510,7 @@ end;
 procedure TZOracleCallableResultSet_A.Open;
 var
   I: Integer;
-  ColumnInfo: TZColumnInfo;
+  ColumnInfo: TZOracleColumnInfo;
   CurrentVar: PZSQLVar;
 begin
   { Fills the column info. }
@@ -2284,7 +2520,7 @@ begin
     {$R-}
     CurrentVar := @FColumns.Variables[I];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    ColumnInfo := TZColumnInfo.Create;
+    ColumnInfo := TZOracleColumnInfo.Create;
 
     with ColumnInfo do begin
       ColumnName := '';
@@ -2297,25 +2533,15 @@ begin
 
       ColumnType := CurrentVar^.ColType;
       Scale := CurrentVar^.Scale;
-
+      ColumnInfo.dty := CurrentVar^.dty;
       {Reset the column type which can be changed by user before}
       if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
       begin
         ColumnInfo.ColumnCodePage := FClientCP;
-        if (ColumnType = stUnicodeStream) and not ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stAsciiStream;
-        if (ColumnType = stAsciiStream) and ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stUnicodeStream;
-        if (ColumnType = stUnicodeString) and not ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stString;
-        if (ColumnType = stString) and ( ConSettings^.CPType = cCP_UTF16) then
-          ColumnType := stUnicodeString;
       end else
         ColumnInfo.ColumnCodePage := High(Word);
 
-      if ( ColumnType in [stString, stUnicodeString] )
-      then Precision := CurrentVar.value_sz
-      else Precision := CurrentVar.Precision;
+      Precision := CurrentVar.Precision;
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;
@@ -2323,255 +2549,1069 @@ begin
   inherited Open;
 end;
 
-{ TZOracleBlob }
+{ TZAbstracOracleLobStream }
 
-{**
-  Constructs this class and assignes the main properties.
-  @param PlainDriver a Oracle plain driver.
-  @param Data a pointer to the blobdata.
-  @param Size the size of the blobdata.
-  @param Handle a Oracle connection reference.
-  @param LobLocator an Oracle lob locator reference.
-  @param BlobType a blob type.
-}
-constructor TZOracleBlob.Create(const PlainDriver: TZOraclePlainDriver;
-  const Data: Pointer; const Size: Int64; const OCISvcCtx: POCISvcCtx;
-  const ErrorHandle: POCIError; const LobLocator: POCILobLocator;
-  const ChunkSize: Integer; const ConSettings: PZConSettings);
+procedure TZAbstracOracleLobStream.BeforeWrite;
 begin
-  inherited CreateWithData(Data, Size);
-  FOCISvcCtx := OCISvcCtx;
-  FErrorHandle := ErrorHandle;
-  FLobLocator := LobLocator;
-  FPlainDriver := PlainDriver;
-  FNativePlainDriver := PlainDriver;
-  FTemporary := False;
-  FChunkSize := ChunkSize;
-  FConSettings := ConSettings;
+  if (FOwnerLob.FLobStreamMode = lsmRead) or (FOwnerLob.FDescriptorType = OCI_DTYPE_FILE) then
+    raise CreateReadOnlyException;
+  if FOwnerLob.FIsCloned or (FOwnerLob.FLobLocator = nil) then begin
+    CreateTemporary;
+    FOwnerLob.FIsCloned := False;
+    Open;
+  end else if not IsOpen then
+    Open;
+  FOwnerLob.FIsUpdated := True;
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZOracleBlob.Destroy;
+procedure TZAbstracOracleLobStream.CheckError(Status: sword; const Msg: RawByteString);
 begin
-  if FTemporary then
-    FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FErrorHandle, FLobLocator);
-  inherited Destroy;
+  CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, msg, GetConSettings);
 end;
 
-{**
-  Creates a temporary blob.
-}
-procedure TZOracleBlob.CreateBlob;
+procedure TZAbstracOracleLobStream.Close;
+var Status: sword;
 begin
-  CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCILobCreateTemporary(FOCISvcCtx, FErrorHandle,
-      FLobLocator, OCI_DEFAULT, OCI_DEFAULT, OCI_TEMP_BLOB, False,
-      OCI_DURATION_DEFAULT),
-    lcOther, 'Create Large Object', FConSettings);
-
-  FTemporary := True;
-end;
-
-{**
-  Reads the blob by the blob handle.
-}
-procedure TZOracleBlob.ReadLob;
-const
-  MemDelta = 1 shl 12;  // read page (2^...)
-var
-  Status: Integer;
-  Buf: PByteArray;
-  ReadNumBytes, Offset, Cap: ub4;
-begin
-  if not Updated and (FLobLocator <> nil)
-    and (BlobData = nil) and (not FTemporary) then
-  begin
-    { Opens a large object or file for read. }
-    Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
+  if IsOpen then begin
+    Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object', FConSettings);
-    try
-      { Reads data in chunks by MemDelta or more }
-      Offset := 0;
-      Buf := nil;
-      try
-        repeat
-          {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
-          Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
-          ReallocMem(Buf, Cap);
-          ReadNumBytes := Cap - Offset;
+      CheckError(Status, 'OCILobClose');
+  end;
+end;
 
-          Status := FPlainDriver.OCILobRead(FOCISvcCtx, FErrorHandle,
-            FLobLocator, ReadNumBytes, Offset + 1, {$R-}@Buf[Offset]{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}, ReadNumBytes,
-            nil, nil, 0, SQLCS_IMPLICIT);
-          if Status <> OCI_SUCCESS then
-            CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Read Large Object', FConSettings);
-          if ReadNumBytes > 0 then
-            Inc(Offset, ReadNumBytes);
-        until Offset < Cap;
-      except
-        FreeMem(Buf);
-        Buf := nil;
-        raise;
+procedure TZAbstracOracleLobStream.CopyLob;
+var Status: sword;
+    size8: oraub8;
+    size4: ub4 absolute size8;
+begin
+  BeforeWrite;
+  { copy the whole lob on server side }
+  if FOwnerLob.FIsCloned and (FOwnerLob.FLobStreamMode = lsmReadWrite) then begin
+    try
+      if Assigned(FPLainDriver.OCILobCopy2) then begin
+        Status := FPlainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size8);
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+        if Status <> OCI_SUCCESS then
+          CheckError(Status, 'OCILobGetLength2');
+        Status := FPLainDriver.OCILobCopy2(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size8, 1, 1);
+          CheckError(Status, 'OCILobCopy2');
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      end else begin
+        Status := FPlainDriver.OCILobGetLength(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size4);
+        if Status <> OCI_SUCCESS then
+          CheckError(Status, 'OCILobGetLength');
+        Status := FPLainDriver.OCILobCopy(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size4, 1, 1);
+          CheckError(Status, 'OCILobCopy');
       end;
     finally
-      { Closes large object or file. }
-      Status := FPlainDriver.OCILobClose(FOCISvcCtx,FErrorHandle, FLobLocator);
-      if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
+      { notify the current locator does no longer point to copy of Parent locator }
+      FOwnerlob.FParentLocator := nil;
+      FOwnerLob.FIsCloned := False;
     end;
-    { Assigns data }
-    InternalSetData(Buf, Offset);
   end;
-  //inherited ReadLob;
 end;
 
-{**
-  Writes the blob by the blob handle.
-}
-procedure TZOracleBlob.WriteLob;
+procedure TZAbstracOracleLobStream.CopyLocator;
+var Status: sword;
 begin
-  OraWriteLob(FPlainDriver, BlobData, FOCISvcCtx, FErrorHandle, FLobLocator,
-    FChunkSize, BlobSize, True, nil);
+  { create a local descriptor }
+  if (FOwnerLob.FLobLocator <> nil) then begin
+    FOwnerLob.FParentLocator := FOwnerLob.FLobLocator; //local copy
+    AllocLobLocator;
+    { copy locator next fetch may fill the org locator with next lob infos }
+    Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FOwnerLob.FParentLocator, @FOwnerLob.FLobLocator);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobLocatorAssign');
+  end;
 end;
 
-procedure TZOracleBlob.WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
+constructor TZAbstracOracleLobStream.Create(LobLocator: POCILobLocator;
+  const OwnerLob: TZAbstractOracleBlob; const Owner: IImmediatelyReleasable;
+  const OpenLobStreams: TZSortedList);
 begin
-  OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
-    FChunkSize, Len, True, nil);
+  inherited Create(OwnerLob, Owner, OpenLobStreams);
+  FPlainDriver := OwnerLob.FplainDriver;
+  FOCIEnv := OwnerLob.FOCIEnv;
+  FOCISvcCtx := OwnerLob.FOCISvcCtx;
+  FOCIError := OwnerLob.FOCIError;
+  FOwnerLob := OwnerLob;
+  FOpenLobStreams := OpenLobStreams;
+  if FOwnerLob.Fdty = SQLT_CLOB
+  then {if (FOwnerLob.Fcsid >= OCI_UTF16ID) or (FOwnerlob.FCharsetForm = SQLCS_NCHAR)
+    then flobType := OCI_TEMP_NCLOB
+    else} Flobtype := OCI_TEMP_CLOB
+  else Flobtype := OCI_TEMP_BLOB;
 end;
 
-{**
-  Replace data in blob by AData without copy (keep ref of AData)
-}
-procedure TZOracleBlob.InternalSetData(AData: Pointer; ASize: Integer);
+procedure TZAbstracOracleLobStream.AllocLobLocator;
+var Status: sword;
 begin
-  InternalClear;
-  BlobData := AData;
-  BlobSize := ASize;
+  FOwnerLob.FLobLocator := nil;
+  Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv,
+    FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType, 0, nil);
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCIDescriptorAlloc');
+  FOwnerLob.FLocatorAllocated := True;
+end;
+
+procedure TZAbstracOracleLobStream.CreateTemporary;
+var Status: sword;
+begin
+  if not FReleased then begin
+    if FOwnerLob.FLobLocator = nil then
+      AllocLobLocator;
+    Status := FPlainDriver.OCILobCreateTemporary(FOCISvcCtx, FOCIError,
+        FOwnerLob.FLobLocator, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm, Flobtype,
+        False, OCI_DURATION_DEFAULT);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobCreateTemporary');
+  end;
+end;
+
+destructor TZAbstracOracleLobStream.Destroy;
+begin
+  FOwnerLob.FLobStream := nil;
+  if (FOwnerLob.FLobLocator <> nil) then
+    Close;
+  inherited;
+end;
+
+procedure TZAbstracOracleLobStream.FreeLocator;
+var Status: sword;
+begin
+  Status := FPlainDriver.OCIDescriptorFree(FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType);
+  FOwnerLob.FLobLocator := nil;
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCIDescriptorFree');
+end;
+
+procedure TZAbstracOracleLobStream.FreeTemporary;
+var Status: sword;
+begin
+  if not FReleased then begin
+    Status := FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobFreeTemporary');
+  end;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function result variable does not seem to be set} {$ENDIF}
+function TZAbstracOracleLobStream.IsOpen: LongBool;
+var Status: sword;
+begin
+  if not FReleased then begin
+    Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, Result);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobIsOpen');
+  end else Result := False;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function result variable does not seem to be set} {$ENDIF}
+function TZAbstracOracleLobStream.IsTemporary: LongBool;
+var Status: sword;
+begin
+  if not FReleased then begin
+    Status := FPlainDriver.OCILobIsTemporary(FOCIEnv, FOCIError, FOwnerLob.FLobLocator, Result);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobIsTemporary');
+  end else Result := False;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+const OCIOpenModes: array[TZLobStreamMode] of ub1 = (OCI_LOB_READONLY, OCI_LOB_READWRITE, OCI_LOB_READWRITE);
+procedure TZAbstracOracleLobStream.Open;
+var Status: sword;
+    mode: ub1;
+begin
+  if not FReleased then begin
+    mode := OCIOpenModes[fOwnerLob.FLobStreamMode];
+    Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, mode);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobOpen');
+    Status := FplainDriver.OCILobCharSetId(FOCIEnv, FOCIError,
+      FOwnerLob.FLobLocator, @Fcsid);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobCharSetId');
+    Status := FplainDriver.OCILobCharSetForm(FOCIEnv, FOCIError,
+      FOwnerLob.FLobLocator, @FOwnerLob.FCharsetForm);
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobCharSetForm');
+    if FOwnerLob.FDescriptorType <> OCI_DTYPE_FILE then begin
+      Status := FplainDriver.OCILobGetChunkSize(FOCISvcCtx, FOCIError,
+        FOwnerLob.FLobLocator, FChunk_Size);
+      if Status <> OCI_SUCCESS then
+        CheckError(Status, 'OCILobGetChunkSize');
+    end;
+  end;
+end;
+
+{ TZOracleLobStream32 }
+
+function TZOracleLobStream32.GetSize: Int64;
+var Status: sword;
+  lenp: ub4;
+begin
+  if FReleased
+  then Result := 0
+  else begin
+    if Not IsOpen then
+      Open;
+    Status := FplainDriver.OCILobGetLength(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, lenp);
+    Result := lenp;
+    if (Flobtype = OCI_TEMP_CLOB) and (FOwnerLob.Fcsid = OCI_UTF16ID) then
+      Result := Result shl 1;
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobGetLength');
+  end;
+end;
+
+function TZOracleLobStream32.Read(var Buffer; Count: Longint): Longint;
+var
+  bufl: ub4;
+  Status: sword;
+  pBuff: PAnsiChar;
+  Offset, amtp, amtpBytes: ub4;
+begin
+  if (Count < 0) then
+    raise ERangeError.CreateRes(@SRangeError);
+  if not IsOpen then
+    Open;
+  Result := 0;
+  if Count = 0 then
+    Exit;
+  if FOwnerLob.Fcsid = OCI_UTF16ID then begin
+    Offset := (FPosition shr 1) + 1;
+    amtp := Count shr 1;
+    Count := amtp shl 1;
+    bufl := count;
+  end else begin
+    Offset := FPosition +1;
+    amtp := Count;
+    bufl := count;
+  end;
+  Status := OCI_SUCCESS;
+  pBuff := @Buffer;
+  while Result < Count do begin
+    Status := FPlainDriver.OCILobRead(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+      amtp, offset, pBuff, bufl, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
+    if (Status <> OCI_SUCCESS) then
+      Break;
+    amtpBytes := amtp;
+    Offset := Offset + amtp;
+    if FOwnerLob.Fcsid = OCI_UTF16ID then
+      amtpBytes := amtpBytes shl 1;
+    Inc(pBuff, amtpBytes);
+    Dec(bufl, amtpBytes);
+    Inc(Result, Longint(amtpBytes));
+  end;
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCILobRead');
+  FPosition := FPosition + Result;
+end;
+
+function TZOracleLobStream32.ReadPoll(pBuff: PAnsiChar): ub4;
+var
+  Status: sword;
+  Offset, amtp, bufl: ub4;
+  pStart: PAnsiChar;
+begin
+  OffSet := 1;
+  if fchunk_size = 0
+  then bufl := 8*1024
+  else bufl := fchunk_size;
+  PStart := pBuff;
+  Status := OCI_NEED_DATA;
+  while Status = OCI_NEED_DATA do begin
+    amtp := 0; //enter polling mode without callback
+    Status := FPlainDriver.OCILobRead(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+      amtp, offset, pBuff, bufl, nil, nil, Fcsid, FOwnerLob.FCharsetForm);
+    { amtp returns amount of byte filled in the buffer }
+    Inc(pBuff, amtp);
+  end;
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCILobRead');
+  Result := pBuff - pStart;
+  FPosition := Result;
+  Close;
+end;
+
+function TZOracleLobStream32.Seek(Offset: Integer; Origin: Word): Longint;
+begin
+  if Origin = soFromEnd then
+    Result := FPosition - OffSet
+  else if Origin = soFromCurrent then
+    Result := FPosition + OffSet
+  else
+    Result := OffSet;
+  if Result <> FPosition then
+    FPosition := Result;
+end;
+
+procedure TZOracleLobStream32.SetSize(const NewSize: Int64);
+var Status: sword;
+    newlen: ub4;
+    ASize: Int64;
+begin
+  if (NewSize < Low(ub4)) or (NewSize > High(ub4)) then
+    raise ERangeError.CreateRes(@SRangeError);
+  BeforeWrite;
+  ASize := GetSize;
+  if not FReleased and (NewSize <> ASize) then begin
+    if NewSize < ASize then begin
+      newlen := ub4(NewSize);
+      if FOwnerLob.Fcsid = OCI_UTF16ID then
+        newlen := newlen shr 1;
+      Status := FPlainDriver.OCILobTrim(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
+      if Status <> OCI_SUCCESS then
+        CheckError(Status, 'OCILobTrim');
+      if FPosition > NewSize then
+        FPosition := NewSize;
+    end else if NewSize > ASize then
+      raise EZSQLException.Create(SOperationIsNotAllowed1);
+  end;
+end;
+
+{ TZOracleInternalLobStream32 }
+
+function TZOracleInternalLobStream32.Write(const Buffer; Count: Integer): Longint;
+var
+  Status: sword;
+  Offset, amtpBytes, amtp: ub4;
+  pBuff: PAnsiChar;
+begin
+  if (Count < 0) then
+    raise ERangeError.CreateRes(@SRangeError);
+  BeforeWrite;
+  if Count = 0 then begin
+    Result := 0;
+    Exit;
+  end;
+  if FOwnerLob.Fcsid = OCI_UTF16ID then begin
+    Count := Count shr 1;
+    amtp := Count;
+    amtpBytes := Count shl 1; //round to two words no half word excepted
+    Offset := (FPosition shr 1) +1;
+  end else begin
+    amtpBytes := Count;
+    amtp := Count;
+    Offset := FPosition +1;
+  end;
+  pBuff := @Buffer;
+  Status := FPLainDriver.OCILobWrite(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+    amtp, offset, pBuff, amtpBytes, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCILobWrite');
+  Result := amtpBytes;
+  FPosition := FPosition + Result;
+end;
+
+procedure TZOracleInternalLobStream32.WritePoll(pBuff: PAnsiChar;
+  Len: NativeUInt);
+var
+  Status: sword;
+  Offset, amtp, bufl: ub4;
+  pEnd: PAnsiChar;
+  piece: ub1;
+begin
+  BeforeWrite;
+  if Len = 0 then
+    Exit;
+  pEnd := pBuff+Len;
+  if FChunk_Size = 0
+  then bufl := 8*1024
+  else bufl := FChunk_Size;
+  if (Len < bufl) then begin
+    piece := OCI_LAST_PIECE;
+    bufl := len;
+  end else piece := OCI_FIRST_PIECE;
+  Status := OCI_NEED_DATA;
+  Offset := 1;
+  while Status = OCI_NEED_DATA do begin
+    amtp := 0;
+    Status := FPLainDriver.OCILobWrite(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+      amtp, offset, pBuff, bufl, Piece, nil, nil, Fcsid, FOwnerLob.FCharsetForm);
+    Inc(pBuff, amtp);
+    if (pBuff + bufl) < pEnd
+    then piece := OCI_NEXT_PIECE
+    else piece := OCI_LAST_PIECE
+ end;
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCILobWrite');
+end;
+
+{ TZAbstractOracleBlob }
+
+procedure TZAbstractOracleBlob.Clear;
+var Stream: TStream;
+begin
+  if FLobLocator <> nil then begin
+    if FlobStream = nil
+    then Stream := CreateLobStream(FcolumnCodePage, lsmWrite)
+    else Stream := FLobStream;
+    if FLobStream.IsTemporary
+    then FLobStream.FreeTemporary
+    else Stream.Size := 0; //trim the lob
+    if FLocatorAllocated then
+      FlobStream.FreeLocator;
+    FreeAndNil(FlobStream);
+  end;
+end;
+
+function TZAbstractOracleBlob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+var AbstractOracleBlob: TZAbstractOracleBlob;
+begin
+  Result := nil;
+  case Fdty of
+    SQLT_BFILEE,
+    SQLT_CFILEE,
+    SQLT_BLOB:  begin
+                  AbstractOracleBlob := TZOracleBlob.Create(FConnection, FLobLocator, Fdty, FOpenLobStreams);
+                  Result := TZOracleBlob(AbstractOracleBlob);
+                end;
+    SQLT_CLOB:  begin
+                  AbstractOracleBlob := TZOracleClob.Create(FConnection, FLobLocator, Fcharsetform, fcsid, FOpenLobStreams);
+                  Result := TZOracleClob(AbstractOracleBlob);
+                end;
+    else raise EZSQLException.Create(SUnsupportedOperation);
+  end;
+  AbstractOracleBlob.CopyLocator;
+  AbstractOracleBlob.FLobStreamMode := LobStreamMode;
+  AbstractOracleBlob.FIsCloned := True;
+end;
+
+procedure TZAbstractOracleBlob.CopyLocator;
+var Status: sword;
+begin
+  { create a local descriptor }
+  Assert(FLobLocator <> nil);
+  FParentLocator := FLobLocator; //local copy
+  FLobLocator := nil;
+  Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv, FLobLocator, FDescriptorType, 0, nil);
+  if Status <> OCI_SUCCESS then
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
+  FLocatorAllocated := True;
+  { copy locator next fetch may fill the org locator with next lob infos }
+  Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FParentLocator, @FLobLocator);
+  if Status <> OCI_SUCCESS then
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobLocatorAssign', FConSettings);
+end;
+
+constructor TZAbstractOracleBlob.Create(const Connection: IZOracleConnection;
+  LobLocator: POCILobLocator; dty: ub2; const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(zCP_Binary, OpenLobStreams);
+  FConnection := Connection;
+  FOCIEnv := Connection.GetConnectionHandle;
+  FOCISvcCtx := Connection.GetServiceContextHandle;
+  FLobLocator := LobLocator;
+  FOCIError := Connection.GetErrorHandle;
+  Fdty := dty;
+  FOwner := Connection;
+  FPlainDriver := Connection.GetPlainDriver;
+  FHas64BitLobMethods := Assigned(FPlainDriver.OCILobRead2);
+  FConSettings := Connection.GetConSettings;
+  if (Fdty = SQLT_CLOB) or (Fdty = SQLT_BLOB)
+  then FDescriptorType := OCI_DTYPE_LOB
+  else if (Fdty = SQLT_BFILEE) or (Fdty = OCI_DTYPE_FILE)
+    then FDescriptorType := OCI_DTYPE_FILE
+    else FDescriptorType := 0; //will raise an error by oci
+end;
+
+function TZAbstractOracleBlob.CreateLobStream(CodePage: Word;
+  LobStreamMode: TZLobStreamMode): TStream;
+begin
+  FLobStreamMode := LobStreamMode;
+  if FlobStream = nil then
+    case Fdty of
+      SQLT_BFILEE,
+      SQLT_CFILEE,
+      SQLT_BLOB:  if FHas64BitLobMethods
+                  then FlobStream := TZOracleInternalLobStream64.Create(FLobLocator, Self, FOwner, FOpenLobStreams)
+                  else FlobStream := TZOracleInternalLobStream32.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+      SQLT_CLOB:  begin
+                    if FHas64BitLobMethods
+                    then FlobStream := TZOracleInternalLobStream64.Create(FLobLocator, Self, FOwner, FOpenLobStreams)
+                    else FlobStream := TZOracleInternalLobStream32.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+                    if (Fcsid =  OCI_UTF16ID) then begin { we do not overwrite FColumnCodePage but for all MBCS we can seek/read/write safely only if we use UTF16 }
+                      if (CodePage <> zCP_UTF16) then begin
+                        Result := TZCodePageConversionStream.Create(FlobStream, zCP_UTF16, CodePage, FConSettings, FOpenLobStreams);
+                        Exit;
+                      end;
+                    end else if (CodePage <> FColumnCodePage) then begin
+                      Result := TZCodePageConversionStream.Create(FlobStream, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
+                      Exit;
+                    end else if True then
+
+                  end;
+
+      else raise EZSQLException.Create(SUnsupportedOperation);
+    end;
+  Result := FlobStream;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "B" does not seem to be initialized} {$ENDIF}
+destructor TZAbstractOracleBlob.Destroy;
+var Status: sword;
+  B: LongBool;
+begin
+  if (FLobLocator <> nil) and FLocatorAllocated then try
+    Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FLobLocator, B);
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsOpen', FConSettings);
+    if B then begin
+      Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FLobLocator);
+      if Status <> OCI_SUCCESS then
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobClose', FConSettings);
+    end;
+  finally
+    Status := FPlainDriver.OCIDescriptorFree(FLobLocator, FDescriptorType);
+    FLobLocator := nil;
+    if Status <> OCI_SUCCESS then
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorFree', FConSettings);
+  end;
+  inherited;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZAbstractOracleBlob.GetLobLocator: POCILobLocator;
+begin
+  Result := FLobLocator;
+end;
+
+function TZAbstractOracleBlob.IsEmpty: Boolean;
+begin
+  Result := (FLobLocator = nil);
+end;
+
+function TZAbstractOracleBlob.Length: Integer;
+var Stream: TStream;
+begin
+  Result := -1;
+  if (FLobLocator <> nil) then begin
+    Stream := CreateLobStream(FColumnCodePage, lsmRead);
+    try
+      Result := Stream.Size;
+    finally
+      Stream.Free;
+    end;
+  end;
+end;
+
+{ TZOracleBlob }
+
+constructor TZOracleBlob.CreateFromBlob(const Lob: IZBLob; LobLocator: POCILobLocator;
+  const Connection: IZOracleConnection; const OpenLobStreams: TZSortedList);
+var P: Pointer;
+  L: NativeUint;
+  R: RawByteString;
+  Stream: TZAbstracOracleLobStream;
+begin
+  Create(Connection, LobLocator, SQLT_BLOB, OpenLobStreams);
+  R := '';
+  Fdty := SQLT_BLOB;
+  FLobStreamMode := lsmWrite;
+  if not Lob.IsEmpty then begin
+    P := Lob.GetBuffer(R, L);
+    if FHas64BitLobMethods
+    then Stream := TZOracleInternalLobStream64.Create(nil, Self, FOwner, OpenLobStreams)
+    else Stream := TZOracleInternalLobStream32.Create(nil, Self, FOwner, OpenLobStreams);
+    try
+      Stream.CreateTemporary;
+      if P <> nil then
+        Assert(Stream.Write(P^, L) = NativeInt(L));
+    finally
+      Stream.Free;
+    end;
+  end;
 end;
 
 { TZOracleClob }
 
-constructor TZOracleClob.Create(const PlainDriver: TZOraclePlainDriver;
-  const Data: Pointer; const Size: Cardinal; const ConnectionHandle: POCIEnv;
-  const OCISvcCtx: POCISvcCtx; const ErrorHandle: POCIError;
-  const LobLocator: POCILobLocator; const ChunkSize: Integer;
-  const ConSettings: PZConSettings; const CodePage: Word);
+constructor TZOracleClob.Create(const Connection: IZOracleConnection;
+      LobLocator: POCILobLocator; CharsetForm: ub1; csid: ub2;
+      const OpenLobStreams: TZSortedList);
+var CodePage: PZCodePage;
 begin
-  if ZCompatibleCodePages(CodePage, zCP_UTF16) then
-    inherited CreateWithData(Data, Size shr 1, ConSettings) //shr 1 = div 2 but faster
-  else
-    inherited CreateWithData(Data, Size, CodePage, ConSettings);
-  FOCISvcCtx := OCISvcCtx;
-  FConnectionHandle := ConnectionHandle;
-  FErrorHandle := ErrorHandle;
-  FLobLocator := LobLocator;
-  FPlainDriver := PlainDriver;
-  FNativePlainDriver := PlainDriver;
-  FTemporary := False;
-  FChunkSize := ChunkSize;
-end;
-
-destructor TZOracleClob.Destroy;
-begin
-  if FTemporary then
-    FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FErrorHandle, FLobLocator);
-  inherited Destroy;
-end;
-
-{**
-  Creates a temporary blob.
-}
-procedure TZOracleClob.CreateBlob;
-begin
-  CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCILobCreateTemporary(FOCISvcCtx, FErrorHandle, FLobLocator,
-      OCI_DEFAULT, OCI_DEFAULT, OCI_TEMP_CLOB, False, OCI_DURATION_DEFAULT),
-    lcOther, 'Create Large Object', FConSettings);
-
-  FTemporary := True;
-end;
-
-procedure TZOracleClob.ReadLob;
-var
-  Status: Integer;
-  Buf: PByteArray;
-  ReadNumChars, Offset: ub4;
-  csfrm: ub1;
-
-  procedure DoRead(const csid: ub2; const csfrm: ub1);
-  begin
-    ReadNumChars := 0;
-    Status := FPlainDriver.OCILobRead(FOCISvcCtx,FErrorHandle, FLobLocator,
-      ReadNumChars, Offset + 1, Buf, FChunkSize, nil, nil, csid, csfrm);
-    if ReadNumChars > 0 then
-    begin
-      Inc(Offset, ReadNumChars);
-      ReallocMem(FBlobData, Offset+1);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf^, (PAnsiChar(FBlobData)+NativeUInt(OffSet-ReadNumChars))^, ReadNumChars);
-    end;
+  inherited Create(Connection, Loblocator, SQLT_CLOB, OpenLobStreams);
+  Fcsid := csid;
+  FCharsetForm := CharsetForm;
+  if (FCharsetForm = SQLCS_NCHAR) or (csid >= OCI_UTF16ID) then begin
+    FColumnCodePage := zCP_UTF16;
+    Fcsid := OCI_UTF16ID;
+    FBytesPerChar := 2;
+  end else if csid = 0 {binary}
+  then FColumnCodePage := zCP_Binary
+  else begin
+    CodePage := FPlainDriver.ValidateCharEncoding(csid);
+    if CodePage.ID = 0
+    then FColumnCodePage := FconSettings.ClientCodePage.CP
+    else if ZEncoding.IsMBCSCodePage(CodePage.CP) then
+      Fcsid := OCI_UTF16ID; //oracle is vinny nilly reading chunks for mbcs's only ut16 works savely
+    FBytesPerChar := CodePage.CharWidth;
+    FColumnCodePage := CodePage.CP;
   end;
+end;
+
+constructor TZOracleClob.CreateFromClob(const Lob: IZCLob; LobLocator: POCILobLocator;
+  CharsetForm: ub1; csid: ub2; const Connection: IZOracleConnection;
+  const OpenLobStreams: TZSortedList);
+var P: Pointer;
+  L: NativeUint;
+  R: RawByteString;
+  U: UnicodeString;
+  Stream: TZAbstracOracleLobStream;
 begin
-  FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
-  if not Updated and (FLobLocator <> nil) and (BlobData = nil) and (not FTemporary) then
-  begin
-    { Opens a large object or file for read. }
-    Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object', FConSettings);
+  Create(Connection, LobLocator, CharsetForm, csid, OpenLobStreams);
+  FLobStreamMode := lsmWrite;
+  if Fcsid = OCI_UTF16ID then begin
+    U := '';
+    P := Lob.GetPWideChar(U, L);
+    L := L shl 1;
+  end else begin
+    R := '';
+    P := Lob.GetBuffer(R, L);
+  end;
+  if P <> nil then begin
+    if FHas64BitLobMethods
+    then Stream := TZOracleInternalLobStream64.Create(nil, Self, FOwner, OpenLobStreams)
+    else Stream := TZOracleInternalLobStream32.Create(nil, Self, FOwner, OpenLobStreams);
     try
-      { Reads data in chunks by MemDelta or more }
-      Offset := 0;
-      Buf := nil;
-      try
-        GetMem(Buf, FChunkSize+1);
-        Offset := 0;
-        CheckOracleError(FPlainDriver, FErrorHandle,
-          FPlainDriver.OCILobCharSetForm(FConnectionHandle, FErrorHandle,
-            FLobLocator, @csfrm),
-          lcOther, 'Determine LOB SCFORM', FConSettings); //need to determine proper CharSet-Form
-        DoRead(FConSettings^.ClientCodePage^.ID, csfrm);
-        while Status = OCI_NEED_DATA do
-          DoRead(FConSettings^.ClientCodePage^.ID, csfrm);
-        CheckOracleError(FPlainDriver, FErrorHandle,
-          Status, lcOther, 'Read Large Object', FConSettings);
-        BlobSize := OffSet+1; //oracle includes #0 terminator
-        if OffSet = 0 then ReallocMem(FBlobData, 1);
-        (PAnsiChar(FBlobData)+NativeUInt(OffSet))^ := #0;
-      except
-        FreeMem(Buf);
-        Buf := nil;
-        raise;
-      end;
+      Stream.CreateTemporary;
+      Assert(Stream.Write(P^, L) = NativeInt(L));
     finally
-      { Closes large object or file. }
-      Status := FPlainDriver.OCILobClose(FOCISvcCtx, FErrorHandle, FLobLocator);
-      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
-      if Buf <> nil then
-        FreeMem(Buf);
+      Stream.Free;
     end;
   end;
-  //inherited ReadLob;
 end;
 
-procedure TZOracleClob.WriteLob;
+function TZOracleClob.CreateLobStream(CodePage: Word;
+  LobStreamMode: TZLobStreamMode): TStream;
 begin
-  GetPAnsiChar(FConSettings^.ClientCodePage^.CP); //convert if required
-  OraWriteLob(FPlainDriver, BlobData, FOCISvcCtx, FErrorHandle, FLobLocator,
-    FChunkSize, BlobSize, False, FConSettings);
+  if (CodePage = FColumnCodePage) and (CodePage <> zCP_UTF16) and IsMBCSCodePage(CodePage) then begin
+    FLobStreamMode := LobStreamMode;
+    if FHas64BitLobMethods then begin
+      FlobStream := TZOracleInternalLobStream64.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+      Result := TZOracleRawMultibyteStream64.Create(FlobStream, CodePage, CodePage, FconSettings, FOpenLobStreams, FBytesPerChar);
+    end else begin
+      FlobStream := TZOracleInternalLobStream32.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+      Result := TZOracleRawMultibyteStream32.Create(FlobStream, CodePage, CodePage, FconSettings, FOpenLobStreams, FBytesPerChar);
+    end
+  end else Result := inherited CreateLobStream(CodePage, LobStreamMode);
 end;
 
-procedure TZOracleClob.WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
+function TZOracleClob.GetPAnsiChar(CodePage: Word;
+  var ConversionBuf: RawByteString; out Len: NativeUInt): PAnsiChar;
+var
+  OCIStream32: TZOracleInternalLobStream32;
+  OCIStream64: TZOracleInternalLobStream64;
+  Size: Int64;
+  pBuf: PAnsiChar;
 begin
-  if Buffer = nil then
-    OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
-      FChunkSize, Len, False, FConSettings)
+  if FlobLocator = nil then begin
+    Result := nil;
+    Len := 0;
+    Exit;
+  end;
+  {EH: this is a optimization to prevent A2W+W2A conversion for Multibyte char sets.
+   Oci does NOT return the amount of chars NOT bytes. The streams are made to work
+   with bytes so we have no clue how many bytes we can fetch for UTF8 f.e. using
+   chunked Stream.Read(), but here we read full size. and we can calc
+   the bufl param by chars*BytesPerChar ... And of cours we can perform poll reads }
+  if (CodePage = FColumnCodePage) and (FBytesPerChar > 1) then begin
+    if FHas64BitLobMethods then begin
+      OCIStream64 := TZOracleInternalLobStream64.Create(FLobLocator, Self, FConnection, FOpenLobStreams);
+      Size := OCIStream64.Size;
+      OCIStream32 := nil
+    end else begin
+      OCIStream32 := TZOracleInternalLobStream32.Create(FLobLocator, Self, FConnection, FOpenLobStreams);
+      Size := OCIStream32.Size;
+      OCIStream64 := nil;
+    end;
+    try
+      if Size = 0 then begin
+        Result := pEmptyAnsiString;
+        Len := 0;
+        Exit;
+      end;
+      Size := Size shr 1;
+      ConversionBuf := EmptyRaw;
+      ZSetString(nil, Size*FBytesPerChar, ConversionBuf{$IFDEF WITH_RAWBYTESTRING}, CodePage{$ENDIF}); //reserve full mem
+      pBuf := Pointer(ConversionBuf);
+      if FHas64BitLobMethods
+      then Len := OCIStream64.ReadPoll(pBuf)
+      else Len := OCIStream32.ReadPoll(pBuf);
+      SetLength(ConversionBuf, len);
+      Result := Pointer(ConversionBuf);
+    finally
+      FreeAndNil(OCIStream32);
+      FreeAndNil(OCIStream64);
+    end;
+  end else
+    Result := inherited GetPAnsiChar(CodePage, ConversionBuf, Len);
+end;
+
+{ TZOracleLobStream64 }
+
+function TZOracleLobStream64.GetSize: Int64;
+var Status: sword;
+  lenp: oraub8;
+begin
+  if FReleased or (FOwnerLob.FlobLocator = nil)
+  then Result := 0
+  else begin
+    if Not IsOpen then
+      Open;
+    Status := FplainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, lenp);
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+    Result := lenp;
+    if Status <> OCI_SUCCESS then
+      CheckError(Status, 'OCILobGetLength2');
+    if (FOwnerLob.Fcsid = OCI_UTF16ID) then
+      Result := Result shl 1;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  end;
+end;
+
+function TZOracleLobStream64.Read(var Buffer; Count: Integer): Longint;
+var
+  Status: sword;
+  pBuff: PAnsiChar;
+  asize, byte_amtp, char_amtp, bufl, Offset: oraub8;
+begin
+  if (Count < 0) then
+    raise ERangeError.CreateRes(@SRangeError);
+  if not IsOpen then
+    Open;
+  Result := 0; //init
+  if Count = 0 then Exit;
+
+  { get bytes/(single-byte)character count of lob }
+  Status := FplainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, asize);
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCILobGetLength2');
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if FOwnerLob.Fcsid = OCI_UTF16ID then begin
+    Offset := (FPosition shr 1) +1; //align to char position
+    char_amtp := Count shr 1;
+    byte_amtp := char_amtp shl 1; //no odd bytes allowed
+  end else begin
+    Offset := FPosition +1;
+    char_amtp := Count;
+    byte_amtp := char_amtp;
+  end;
+
+  pBuff := @Buffer;
+  bufl := byte_amtp;
+  Status := FPlainDriver.OCILobRead2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+    @byte_amtp, @char_amtp, Offset, pBuff, bufl, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
+  Result := byte_amtp;
+  if (Status <> OCI_SUCCESS) then
+    CheckError(Status, 'OCILobRead2');
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  FPosition := FPosition + Result;
+end;
+
+function TZOracleLobStream64.ReadPoll(pBuff: PAnsiChar): oraub8;
+var byte_amtp, char_amtp, bufl, OffSet: oraub8;
+  piece: ub1;
+  Status: Sword;
+  pStart: pAnsiChar;
+begin
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if FChunk_Size = 0
+  then bufl := 8*1024
+  else bufl := FChunk_Size; //usually 8k/chunk
+  OffSet := 1;
+  pStart := pBuff;
+  Status := OCI_NEED_DATA;
+  { these parameters need to be set to initialize the poilling mode
+    without using a callback function:
+    piece must be OCI_FIRST_PIECE
+    byte_amtp and char_amtp must be zero
+    bufl must be greater than zero
+    Offset is ignored
+  }
+  piece := OCI_FIRST_PIECE;
+  while (Status = OCI_NEED_DATA) do begin
+    byte_amtp := 0;
+    char_amtp := 0;
+    Status := FPlainDriver.OCILobRead2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+      @byte_amtp, @char_amtp, Offset, pBuff, bufl, piece, nil, nil, Fcsid, FOwnerLob.FCharsetForm);
+    Inc(pBuff, byte_amtp);
+    piece := OCI_NEXT_PIECE;
+  end;
+  if (Status <> OCI_SUCCESS) then
+    CheckError(Status, 'OCILobRead2');
+  Result := pBuff - pStart;
+  FPosition := Result;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  Close;
+end;
+
+function TZOracleLobStream64.Seek(const Offset: Int64;
+  Origin: TSeekOrigin): Int64;
+begin
+  if Origin = soEnd then
+    Result := FPosition - OffSet
+  else if Origin = soCurrent then
+    Result := FPosition + OffSet
   else
-    {%H-}OraWriteLob(FPlainDriver, Buffer, FOCISvcCtx, FErrorHandle, FLobLocator,
-      FChunkSize, Int64(Len)+1, False, FConSettings);
+    Result := OffSet;
+  if Result <> FPosition then
+    FPosition := Result;
 end;
-{$ENDIF ZEOS_DISABLE_ORACLE}
 
+procedure TZOracleLobStream64.SetSize(const NewSize: Int64);
+var Status: sword;
+    newlen: oraub8;
+    ASize: Int64;
+begin
+  if (NewSize < 0) then
+    raise ERangeError.CreateRes(@SRangeError);
+  BeforeWrite;
+  ASize := GetSize;
+  if not FReleased and (NewSize <> ASize) then begin
+    if NewSize < ASize then begin
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+      newlen := oraub8(NewSize);
+      if (FOwnerLob.Fcsid = OCI_UTF16ID) then
+        newlen := newlen shr 1; //need size in chars not bytes
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      Status := FPlainDriver.OCILobTrim2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
+      if Status <> OCI_SUCCESS then
+        CheckError(Status, 'OCILobTrim2');
+      if FPosition > NewSize then
+        FPosition := NewSize;
+      {$IFDEF DEBUG}
+      Assert(GetSize = NewSize);
+      {$ENDIF}
+    end else if NewSize > ASize then
+      raise EZSQLException.Create(SOperationIsNotAllowed1);
+  end;
+end;
+
+{ TZOracleInternalLobStream64 }
+
+function TZOracleInternalLobStream64.Write(const Buffer;
+  Count: Integer): Longint;
+var
+  Status: sword;
+  byte_amtp, char_amtp, Offset: oraub8;
+  pBuff: PAnsiChar;
+begin
+  if (Count < 0) then
+    raise ERangeError.CreateRes(@SRangeError);
+  BeforeWrite;
+  if Count = 0 then begin
+    Result := 0;
+    Exit;
+  end;
+
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if FOwnerLob.Fcsid = OCI_UTF16ID then begin//UTF16
+    Offset := (FPosition shr 1) +1;
+    char_amtp := Count shr 1;
+    byte_amtp := char_amtp shl 1;
+  end else begin
+    Offset := Position +1;
+    char_amtp := Count;
+    byte_amtp := char_amtp;
+  end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  pBuff := @Buffer;
+  Status := FPLainDriver.OCILobWrite2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+    byte_amtp, char_amtp, offset, pBuff, byte_amtp, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCILobWrite2');
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  Result := byte_amtp;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  FPosition := FPosition + Result;
+end;
+
+{ TZOracleExternalLobStream64 }
+
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
+function TZOracleExternalLobStream64.Write(const Buffer;
+  Count: Integer): Longint;
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{ TZOracleExternalLobStream32 }
+
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
+function TZOracleExternalLobStream32.Write(const Buffer;
+  Count: Integer): Longint;
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZOracleInternalLobStream64.WritePoll(pBuff: PAnsiChar;
+  Len: NativeUInt);
+var
+  Status: sword;
+  Offset, byte_amtp, char_amtp, bufl: oraub8;
+  pEnd: PAnsiChar;
+  piece: ub1;
+begin
+  BeforeWrite;
+  if Len = 0 then
+    Exit;
+  pEnd := pBuff+Len;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if FChunk_Size = 0
+  then bufl := 8*1024
+  else bufl := FChunk_Size;
+  if (Len < bufl) then
+    bufl := len;
+  piece := OCI_FIRST_PIECE;
+  Status := OCI_NEED_DATA;
+  Offset := 1;
+  while Status = OCI_NEED_DATA do begin
+    char_amtp := 0;
+    byte_amtp := 0;
+    Status := FPLainDriver.OCILobWrite2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
+      byte_amtp, char_amtp, offset, pBuff, bufl, piece, nil, nil, Fcsid, FOwnerLob.FCharsetForm);
+    Inc(pBuff, byte_amtp);
+    if (pBuff + bufl) < pEnd
+    then piece := OCI_NEXT_PIECE
+    else begin
+      piece := OCI_LAST_PIECE;
+      bufl := pEnd - pBuff;
+    end;
+ end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  if Status <> OCI_SUCCESS then
+    CheckError(Status, 'OCILobWrite');
+end;
+
+{ TZOracleCachedResultSet }
+
+function TZOracleCachedResultSet.CreateLob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode): IZBlob;
+var ColumnInfo: TZOracleColumnInfo;
+  Connection: IZOracleConnection;
+  OracleLob: TZOracleLob;
+begin
+  Result := nil;
+  ColumnInfo := TZOracleColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+  Connection := GetStatement.GetConnection as IZOracleConnection;
+  case ColumnInfo.dty of
+    SQLT_BLOB,
+    SQLT_BFILEE,
+    SQLT_CFILEE: begin
+                  OracleLob := TZOracleBlob.Create(Connection, nil, ColumnInfo.dty, FOpenLobStreams);
+                  OracleLob.FLobStreamMode := LobStreamMode;
+                  Result := TZOracleBLob(OracleLob);
+                end;
+    SQLT_CLOB:  begin
+                  OracleLob := TZOracleClob.Create(Connection, nil, ColumnInfo.CharsetForm,
+                    ColumnInfo.csid, FOpenLobStreams);
+                  OracleLob.FLobStreamMode := LobStreamMode;
+                  Result := TZOracleClob(OracleLob);
+                end;
+    else Result := inherited CreateLob(ColumnIndex, LobStreamMode);
+  end;
+  UpdateLob(ColumnIndex, Result);
+end;
+
+procedure TZOracleCachedResultSet.FillColumnsInfo(
+  const ColumnsInfo: TObjectList);
+var OracleResultSet: IZOracleResultSet;
+begin
+  if Supports(ResultSet, IZOracleResultSet, OracleResultSet)
+  then OracleResultSet.AssignColumnsInfo(ColumnsInfo)
+  else inherited FillColumnsInfo(ColumnsInfo);
+end;
+
+class function TZOracleCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZOracleRowAccessor;
+end;
+
+{ TZOracleRowAccessor }
+
+procedure TZOracleRowAccessor.FillFromFromResultSet(const ResultSet: IZResultSet;
+  {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList);
+var
+  ColumnIndex, i: Integer;
+  IndexPair: PZIndexPair;
+  SQLType: TZSQLType;
+
+  procedure CopyLobLocator;
+  var Lob: IZBlob;
+      OCILob: IZOracleLob;
+      IsNull: Boolean;
+  begin
+    Lob := GetBlob(ColumnIndex, IsNull);
+    if (Lob <> nil) and (Lob.QueryInterface(IZOracleLob, OCILob) = S_OK) then
+      OCILob.CopyLocator;
+  end;
+begin
+  inherited FillFromFromResultSet(ResultSet, IndexPairList);
+  if (FHighLobCols > -1) and not FCachedLobs then
+    for i := 0 to IndexPairList.Count -1 do begin
+      IndexPair := IndexPairList[i];
+      ColumnIndex := IndexPair.ColumnIndex;
+      SQLType := FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+      if (SQLType in [stAsciiStream..stBinaryStream]) then
+        CopyLobLocator;
+    end;
+end;
+
+{ TZOracleRawMultibyteStream32 }
+
+constructor TZOracleRawMultibyteStream32.Create(const Owner: TStream;
+  SourceCodePage, DestCodePage: Word; ConSettings: PZConSettings;
+  const OpenLobStreams: TZSortedList; BytesPerChar: Cardinal);
+begin
+  FBytesPerChar := BytesPerChar;
+  inherited Create(Owner, SourceCodePage, DestCodePage, ConSettings,
+    OpenLobStreams);
+end;
+
+procedure TZOracleRawMultibyteStream32.FlushMemToStream(Buf: Pointer;
+  Len: NativeUInt; Stream: TStream);
+begin
+  TZOracleInternalLobStream32(Stream).WritePoll(Buf, Len);
+end;
+
+procedure TZOracleRawMultibyteStream32.ReadStreamToMem(var Buf: Pointer;
+  var Len: NativeUint; Stream: TStream);
+var BytesTotal: NativeUint;
+begin
+  Len := Len shr 1;
+  BytesTotal := Len * FBytesPerChar;
+  GetMem(Buf, BytesTotal);
+  Len := TZOracleInternalLobStream32(Stream).ReadPoll(Buf);
+  if Len <> BytesTotal then
+    ReallocMem(Buf, Len);
+end;
+
+{ TZOracleRawMultibyteStream64 }
+
+procedure TZOracleRawMultibyteStream64.FlushMemToStream(Buf: Pointer;
+  Len: NativeUInt; Stream: TStream);
+begin
+  TZOracleInternalLobStream64(Stream).WritePoll(Buf, Len);
+end;
+
+procedure TZOracleRawMultibyteStream64.ReadStreamToMem(var Buf: Pointer;
+  var Len: NativeUint; Stream: TStream);
+var BytesTotal: NativeUint;
+begin
+  Len := Len shr 1;
+  BytesTotal := Len * FBytesPerChar;
+  GetMem(Buf, BytesTotal);
+  Len := TZOracleInternalLobStream64(Stream).ReadPoll(Buf);
+  if Len <> BytesTotal then
+    ReallocMem(Buf, Len);
+end;
+
+initialization
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

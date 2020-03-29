@@ -84,6 +84,8 @@ type
   dvoid   = Pointer;
   text    = PAnsiChar;
   size_T  = NativeUInt;
+  oraub8  = Uint64;
+  Poraub8 = ^oraub8;
 
   pub1 = ^ub1;
   psb1 = ^sb1;
@@ -128,6 +130,7 @@ type
   POCIDescriptor = Pointer;
   PPOCIDescriptor = ^POCIDescriptor;
   POCISnapshot = POCIDescriptor;          //OCI snapshot descriptor
+  PPOCILobLocator = ^POCILobLocator;
   POCILobLocator = POCIDescriptor;        //OCI Lob Locator descriptor
   POCIParam = POCIDescriptor;             //OCI Parameter descriptor
   POCIRowid = POCIDescriptor;             //OCI ROWID descriptor
@@ -185,6 +188,7 @@ Its heap is from PGA }
 
   OCI_TEMP_BLOB     = 1; { LOB type - BLOB }
   OCI_TEMP_CLOB     = 2; { LOB type - CLOB }
+  OCI_TEMP_NCLOB    = 3; { LOB type - NCLOB }
 
 const
   MAXTXNAMELEN    = 64;

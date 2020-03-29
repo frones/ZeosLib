@@ -62,8 +62,8 @@ uses
   Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
-  ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}
+  ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils, ZClasses
+  {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
 type
@@ -170,6 +170,7 @@ type
     FStatement: IZPreparedStatement;
     FResultSet: IZResultSet;
     FResultSetMetadata: IZResultSetMetadata;
+    FOpenLobStreams: TZSortedList;
 
     FRefreshInProgress: Boolean;
     //for the Date/Time/DateTimeFields: circumvent duplicate conversions
@@ -193,7 +194,7 @@ type
     FIndexFieldNames : String; {bangfauzan addition}
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
-
+    FCachedLobs: WordBool;
     FSortType : TSortType; {bangfauzan addition}
     FHasOutParams: Boolean;
     FLastRowFetched: Boolean;
@@ -243,6 +244,7 @@ type
     function StringFieldGetterRaw2RawConvert(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar; UseResultSet: Boolean): Boolean;
     function WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer; Buffer: PWideChar; UseResultSet: Boolean): Boolean;
     function WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer; Buffer: PWideChar; UseResultSet: Boolean): Boolean;
+    procedure OnBlobUpdate(AField: NativeInt);
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -1540,7 +1542,7 @@ const
 
 implementation
 
-uses ZFastCode, Math, ZVariant, ZMessages, ZStreamBlob,
+uses ZFastCode, Math, ZVariant, ZMessages,
   ZSelectSchema, ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding,
   ZDbcProperties, ZDbcResultSet
   {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
@@ -1622,6 +1624,7 @@ end;
 constructor TZAbstractRODataset.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FOpenLobStreams := TZSortedList.Create;
 
   FSQL := TZSQLStrings.Create;
   TZSQLStrings(FSQL).Dataset := Self;
@@ -1685,7 +1688,7 @@ begin
   {$IFNDEF WITH_NESTEDDATASETS}
   FreeAndNil(FNestedDataSets);
   {$ENDIF}
-
+  FreeAndNil(FOpenLobStreams);
   inherited Destroy;
 end;
 
@@ -1961,13 +1964,13 @@ begin
     if ConSettings^.AutoEncode then
     begin
       FStringFieldSetter := StringFieldSetterFromRawAutoEncode;
-      if ConSettings.CPType = cCP_UTF8 then
+      if ConSettings.CTRL_CP = zCP_UTF8 then
         if (ConSettings^.ClientCodePage^.Encoding = ceUTF8) then
           FStringFieldGetter := StringFieldGetterFromAnsiRec
         else
           FStringFieldGetter := StringFieldGetterRaw2RawConvert
       else if (ConSettings^.ClientCodePage^.Encoding = ceAnsi) and
-              ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
+              (ZOSCodePage = ConSettings^.ClientCodePage^.CP) then
         FStringFieldGetter := StringFieldGetterFromAnsiRec
       else
         FStringFieldGetter := StringFieldGetterRaw2RawConvert;
@@ -1976,7 +1979,7 @@ begin
       FStringFieldSetter := StringFieldSetterFromRaw;
     end;
     {$ELSE}
-    if ZCompatibleCodePages(ZOSCodePage, ConSettings^.ClientCodePage^.CP) then
+    if (ZOSCodePage = ConSettings^.ClientCodePage^.CP) then
       FStringFieldGetter := StringFieldGetterFromAnsiRec
     else
       FStringFieldGetter := StringFieldGetterRaw2RawConvert;
@@ -2396,7 +2399,7 @@ begin
     UpdateCursorPos; //see http://sourceforge.net/p/zeoslib/tickets/89/
     if (CurrentRow > 0) and (CurrentRow <= CurrentRows.Count) and
        (CurrentRows.Count > 0) then
-      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
     CurrentRows.Clear;
@@ -2423,7 +2426,13 @@ var
   I: Integer;
   Param: TParam;
   TempBlob: IZBlob;
+  P: Pointer;
+  L: NativeUint;
+  R: RawByteString;
   BCD: TBCD;
+  {$IFDEF WITH_TVALUEBUFFER}
+  VB: TValueBuffer;
+  {$ENDIF}
 begin
   for I := 0 to Params.Count - 1 do begin
     Param := Params[I];
@@ -2507,8 +2516,17 @@ begin
         ftBlob:
           begin
             TempBlob := Statement.GetValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).VInterface as IZBlob;
-            if not TempBlob.IsEmpty then
-              Param.SetBlobData({$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}(TempBlob.GetBuffer), TempBlob.Length);
+            if not TempBlob.IsEmpty then begin
+              P := TempBlob.GetBuffer(R, L);
+              {$IFDEF WITH_TVALUEBUFFER}
+              SetLength(VB, L);
+              Move(P^, Pointer(VB)^, L);
+              Param.SetBlobData(VB, L);
+              {$ELSE}
+              Param.SetBlobData({$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}(P), L);
+              {$ENDIF}
+            end else
+            Param.Clear;
             TempBlob := nil;
           end
         else
@@ -2631,7 +2649,7 @@ begin
 
   if Result = grOK then
   begin
-    RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+    RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
     if (ResultSet.GetRow <> RowNo) then
       ResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := PZRowBuffer(Buffer);
@@ -2676,7 +2694,7 @@ begin
       end;
     dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
     dsOldValue, dsNewValue, dsCurValue: begin
-        RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+        RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
 
@@ -2698,6 +2716,7 @@ begin
             RowBuffer := nil;
         end;
       end;
+    {$IFDEF FPC}else; {$ENDIF}
   end;
   Result := RowBuffer <> nil;
 end;
@@ -3429,7 +3448,7 @@ begin
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
         SQLType := GetColumnType(I);
-        FieldType := ConvertDbcToDatasetType(SQLType);
+        FieldType := ConvertDbcToDatasetType(SQLType, Connection.ControlsCodePage, GetPrecision(I));
         if (FieldType = ftVarBytes) and IsSigned(I) then
           FieldType := ftBytes;
         (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
@@ -3635,7 +3654,7 @@ begin
       Cnt := ColumnList.Count;
       try
         //the RowAccessor wideneds the fieldbuffers for calculated field
-        FRowAccessor := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings)
+        FRowAccessor := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings, FOpenLobStreams, FCachedLobs)
       finally
         ColumnList.Free;
       end;
@@ -4043,8 +4062,10 @@ end;
 }
 procedure TZAbstractRODataset.SetOptions(Value: TZDatasetOptions);
 begin
-  if FOptions <> Value then
+  if FOptions <> Value then begin
     FOptions := Value;
+    FCachedLobs := doCachedLobs in FOptions
+  end;
 end;
 
 {**
@@ -4136,6 +4157,8 @@ end;
 }
 procedure TZAbstractRODataset.InternalUnPrepare;
 begin
+  if FOpenLobStreams.Count > 0 then
+    raise EZSQLException.Create('you can''t close the DataSet while LobStreams are open');
   FResultSetMetadata := nil;
   if FResultSet <> nil then begin
     FResultSet.Close;
@@ -4329,7 +4352,7 @@ begin
   if not Assigned(Bookmark1) or not Assigned(Bookmark2) then
     Exit;
 
-  Index1 := CurrentRows.IndexOf({%H-}Pointer(PInteger(Bookmark1)^));
+  Index1 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark1)^));
   Index2 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark2)^));
 
   if Index1 < Index2 then Result := -1
@@ -4381,7 +4404,7 @@ begin
   begin
     if CurrentRow > 0 then
     begin
-      RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
 
@@ -4620,6 +4643,11 @@ begin
   end;
 end;
 
+procedure TZAbstractRODataset.OnBlobUpdate(AField: NativeInt);
+begin
+  DataEvent(deFieldChange, AField);
+end;
+
 {**
   Performs an internal record search.
   @param KeyFields a list of field names.
@@ -4630,7 +4658,8 @@ end;
 function TZAbstractRODataset.InternalLocate(const KeyFields: string;
   const KeyValues: Variant; Options: TLocateOptions): LongInt;
 var
-  I, RowNo, RowCount: Integer;
+  RowNo: NativeInt;
+  I, RowCount: Integer;
   FieldRefs: TObjectDynArray;
   FieldIndices: TZFieldsLookUpDynArray;
   OnlyDataFields: Boolean;
@@ -4679,7 +4708,7 @@ begin
         if I >= RowCount then
           Break;
 
-        RowNo := Integer(CurrentRows[I]);
+        RowNo := {%H-}NativeInt(CurrentRows[I]);
         ResultSet.MoveAbsolute(RowNo);
 
         RowAccessor.RowBuffer := SearchRowBuffer;
@@ -4716,7 +4745,7 @@ begin
       if I >= RowCount then
         Break;
 
-      RowNo := Integer(CurrentRows[I]);
+      RowNo := {%H-}NativeInt(CurrentRows[I]);
       ResultSet.MoveAbsolute(RowNo);
 
       if CompareFieldsFromResultSet(FieldRefs, DecodedKeyValues,
@@ -4773,7 +4802,7 @@ end;
 function TZAbstractRODataset.Lookup(const KeyFields: string;
   const KeyValues: Variant; const ResultFields: string): Variant;
 var
-  RowNo: Integer;
+  RowNo: NativeInt;
   FieldRefs: TObjectDynArray;
   FieldIndices: TZFieldsLookUpDynArray;
   OnlyDataFields: Boolean;
@@ -4798,7 +4827,7 @@ begin
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
   {$ENDIF}
   try
-    RowNo := Integer(CurrentRows[RowNo - 1]);
+    RowNo := {%H-}NativeInt(CurrentRows[RowNo - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
 
@@ -4826,12 +4855,12 @@ end;
 }
 function TZAbstractRODataset.UpdateStatus: TUpdateStatus;
 var
-  RowNo: Integer;
+  RowNo: NativeInt;
 begin
   Result := usUnmodified;
   if (ResultSet <> nil) and (CurrentRows.Count > 0) then
   begin
-    RowNo := Integer(CurrentRows[CurrentRow - 1]);
+    RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
 
@@ -4914,78 +4943,50 @@ end;
 }
 function TZAbstractRODataset.CreateBlobStream(Field: TField;
   Mode: TBlobStreamMode): TStream;
-(*var
-  ColumnIndex: Integer;
-  RowBuffer: PZRowBuffer;
-  Blob: IZBlob;
-  WasNull: Boolean;
-  //CP: Word;
-begin
-  WasNull := False;
-  CheckActive;
-
-  Result := nil;
-  if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}])
-    and GetActiveBuffer(RowBuffer) then
-  begin
-    ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
-    RowAccessor.RowBuffer := RowBuffer;
-
-    Blob := RowAccessor.GetBlob(ColumnIndex, WasNull);
-    //CP := FResultSetMetadata.GetColumnCodePage(ColumnIndex);
-    if Mode <> bmRead then begin
-      if Blob <> nil then
-        Blob := Blob.Clone(Mode = bmWrite);
-      RowAccessor.SetBlob(ColumnIndex, Blob);
-    end;
-    Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
-      FConnection.DbcConnection.GetConSettings{, CP})
-  end;
-  if Result = nil then
-    Result := TMemoryStream.Create;
-*)
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   Blob: IZBlob;
+  CLob: IZCLob;
+  ConSettings: PZConSettings;
+  CP: Word;
 begin
   CheckActive;
 
   Result := nil;
   if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}])
-    and GetActiveBuffer(RowBuffer) then
-  begin
+    and GetActiveBuffer(RowBuffer) then begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
 
-    if Mode = bmRead then
-    begin
-      Blob := FResultSet.GetBlob(ColumnIndex);
-      if Blob = nil then
-        if Field.DataType in [ftMemo, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}]
-        then Blob := TZAbstractCLob.CreateWithData(nil, 0, FResultSetMetaData.GetColumnCodePage(ColumnIndex), FRowAccessor.ConSettings)
-        else Blob := TZAbstractBlob.Create;
-      Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
-        FConnection.DbcConnection.GetConSettings);
-    end
-    else
-    begin
-      Blob := FResultSet.GetBlob(ColumnIndex);
-      if Blob = nil then
-        if Field.DataType in [ftMemo, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}]
-        then Blob := TZAbstractCLob.CreateWithData(nil, 0, FResultSetMetaData.GetColumnCodePage(ColumnIndex), FRowAccessor.ConSettings)
-        else Blob := TZAbstractBlob.Create
-      else if Blob <> nil then begin
-        Blob := Blob.Clone(Mode =  bmWrite);
-        FResultSet.UpdateLob(ColumnIndex, Blob);
+    Blob := FResultSet.GetBlob(ColumnIndex, TZLobStreamMode(Mode));
+    if (Blob <> nil) then
+      Blob.Open(TZLobStreamMode(Mode));
+    if Blob <> nil then begin
+      case Field.DataType of
+        {$IFDEF WITH_WIDEMEMO}
+        ftWideMemo: begin
+            Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
+            Result := Clob.GetStream(zCP_UTF16);
+          end;
+        {$ENDIF}
+        ftMemo, ftFmtMemo: begin
+            ConSettings := FConnection.DbcConnection.GetConSettings;
+            if FConnection.AutoEncodeStrings or (ConSettings.ClientCodePage.Encoding = ceUTF16)
+            then CP := ConSettings.CTRL_CP
+            else CP := ConSettings.ClientCodePage.CP;
+            Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
+            Result := Clob.GetStream(CP);
+          end;
+        else Result := Blob.GetStream
       end;
-      Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
-        FConnection.DbcConnection.GetConSettings);
+      if Mode <> bmRead then
+        Blob.SetOnUpdateHandler(OnBlobUpdate, NativeInt(Field));
     end;
+    //Result := TZBlobStream.Create(Result, TBlobField(Field), Blob, Mode);
   end;
   if Result = nil then
     Result := TMemoryStream.Create;
-
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
@@ -5056,7 +5057,7 @@ var
         else CP := FResultSetMetadata.GetColumnCodePage(FFieldsLookupTable[i].Index);
         ColumnList.Add(ConvertFieldToColumnInfo(TField(FFieldsLookupTable[i].Field), CP))
       end;
-      Result := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings)
+      Result := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings, FOpenLobStreams, FCachedLobs)
     finally
       ColumnList.Free;
     end;
@@ -5070,7 +5071,7 @@ begin
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then
-      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
 
@@ -5113,7 +5114,7 @@ begin
       end;
     end;
 
-    CurrentRow := CurrentRows.IndexOf(Pointer(RowNo)) + 1;
+    CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(0, CurrentRow), CurrentRows.Count);
     if not (State in [dsInactive]) then
        Resync([]);
@@ -5131,7 +5132,7 @@ end;
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
   //no real pointer addresses here, just a Integer represented as Pointer! -> overflow save!
-  Result := NativeInt(Item1) - NativeInt(Item2);
+  Result := {%H-}NativeInt(Item1) - {%H-}NativeInt(Item2);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -5149,7 +5150,7 @@ var
   RowNo: NativeInt;
 begin
   { Gets the first row. }
-  RowNo := NativeInt(Item1);
+  RowNo := {%H-}NativeInt(Item1);
   FResultSet.MoveAbsolute(RowNo);
   FFieldsAccessor.RowBuffer := FSortRowBuffer1;
   FFieldsAccessor.RowBuffer^.Index := RowNo;
@@ -5160,7 +5161,7 @@ begin
   GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer1));
 
   { Gets the second row. }
-  RowNo := NativeInt(Item2);
+  RowNo := {%H-}NativeInt(Item2);
   ResultSet.MoveAbsolute(RowNo);
   FFieldsAccessor.RowBuffer := FSortRowBuffer2;
   FFieldsAccessor.RowBuffer^.Index := RowNo;
@@ -5186,7 +5187,7 @@ end;
 }
 function TZAbstractRODataset.LowLevelSort(Item1, Item2: Pointer): Integer;
 begin
-  Result := ResultSet.CompareRows(Integer(Item1), Integer(Item2),
+  Result := ResultSet.CompareRows({%H-}NativeInt(Item1), {%H-}NativeInt(Item2),
     FSortedFieldIndices, FCompareFuncs);
 end;
 
@@ -8920,8 +8921,8 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZFMTBCDField.GetText(var Text: string; DisplayText: Boolean);
-var Format: TFloatFormat;
-    Digits: Integer;
+var {$IFNDEF FPC}Format: TFloatFormat;
+    Digits: Integer;{$ENDIF}
     FmtStr: string;
     Bcd: TBcd;
 begin
@@ -9740,14 +9741,14 @@ begin
   else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
   with TZAbstractRODataset(DataSet) do begin
     if (L = 0) then
-      if Assigned(OnValidate) or not FRowAccessor.IsRaw
+      if Assigned(OnValidate) or (FColumnCP <> zCP_UTF16)
       then SetW(zCP_WIN1252)
       else goto jmpMove
     else begin
       if RowAccessor.ConSettings^.AutoEncode then
         case ZDetectUTF8Encoding(P, L) of
           etUSASCII:  if (L <= NativeUInt(Size))
-                      then if not Assigned(OnValidate) and FRowAccessor.IsRaw
+                      then if not Assigned(OnValidate) and (FColumnCP <> zCP_UTF16)
                         then goto jmpMove
                         else SetW(zCP_WIN1252)
                       else goto jmpRange;
@@ -9758,15 +9759,15 @@ begin
                   then SetW(zCP_None)
                   else goto jmpACP;
         end
-      else if RowAccessor.ConSettings^.CPType = cCP_UTF8 then
-jmpUTF8:if (FColumnCP = ZCP_UTF8) and FRowAccessor.IsRaw and not Assigned(OnValidate) then
+      else if RowAccessor.ConSettings^.CTRL_CP = zCP_UTF8 then
+jmpUTF8:if (FColumnCP = ZCP_UTF8) and not Assigned(OnValidate) then
           if ((L <= NativeUInt(Size)) or (CountOfUtf8Chars(P,L)  <= NativeUInt(Size)))
           then goto jmpMove else
 jmpRange:   raise CreateSizeError
           else SetW(zCP_UTF8)
         else
-jmpACP: if (FColumnCP = ZOSCodePage) and FRowAccessor.IsRaw and not
-          Assigned(OnValidate) and (L <= NativeUInt(Size*ZOSCodePageMaxCharSize)) then begin
+jmpACP: if (FColumnCP = ZOSCodePage) and not Assigned(OnValidate) and
+           (L <= NativeUInt(Size*ZOSCodePageMaxCharSize)) then begin
 jmpMove:  Prepare4DataManipulation(Self);
           FResultSet.UpdatePAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
           if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
@@ -9964,13 +9965,14 @@ function TZVarBytesField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray
 var P: PByte;
     L: NativeUint;
 begin
+  Result := nil;
   if IsRowDataAvailable then begin
     P := TZAbstractRODataset(DataSet).FResultSet.GetBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
     if L > 0 then begin
       SetLength(Result, L);
       Move(P^, Pointer(Result)^, L);
-    end else Result := nil;
-  end else Result := nil;
+    end;
+  end;
 end;
 
 function TZVarBytesField.GetIsNull: Boolean;
@@ -10071,7 +10073,7 @@ begin
     if (FColumnCP = zCP_UTF16) then begin
        if P = nil then
           P:= PEmptyUnicodeString;
-       CLob := TZAbstractCLob.CreateWithData(nil, 0, FRowAccessor.ConSettings);
+       CLob := TZLocalMemCLob.CreateWithData(nil, 0, FRowAccessor.ConSettings, FOpenLobStreams);
        Clob.SetPWideChar(P, Len); //notify updated
     end else begin
       R := PUnicodeToRaw(P,Len,FColumnCP);
@@ -10079,7 +10081,7 @@ begin
       if Len = 0
       then P := PEmptyUnicodeString
       else P := Pointer(R);
-      CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+      CLob := TZLocalMemCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings, FOpenLobStreams);
       CLob.SetPAnsiChar(P, FColumnCP, Len);
     end;
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
@@ -10109,33 +10111,14 @@ end;
 
 {$IFNDEF NO_ANSISTRING}
 function TZRawCLobField.GetAsAnsiString: AnsiString;
-var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
-    U: UnicodeString;
-    Lob: IZBlob;
-label jmp2Raw;
+var Lob: IZBlob;
+    Clob: IZClob;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-jmp2Raw:  Result := PUnicodeToRaw(P, L, zOSCodePage);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          if FColumnCP = zOSCodePage then
-            ZSetString(P,L, Result)
-          else begin
-            U := PRawToUnicode(P, L, FColumnCP);
-            P := Pointer(U);
-            L := Length(U);
-            goto jmp2Raw;
-          end;
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := CLob.GetAnsiString
       else Result := '';
     end
   else Result := '';
@@ -10143,25 +10126,19 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 function TZRawCLobField.GetAsRawByteString: RawByteString;
-var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
-    Lob: IZBlob;
+var Lob: IZBlob;
+    Clob: IZClob;
+    CP: Word;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          Result := PUnicodeToRaw(P, L, FRowAccessor.ConSettings^.CTRL_CP);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          ZSetString(P, L, Result);
-        end
-      else Result := ''
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
+        if FColumnCP = zCP_UTF16
+        then CP := FRowAccessor.ConSettings^.CTRL_CP
+        else CP := FColumnCP;
+        Result := Clob.GetRawByteString(CP);
+      end else Result := ''
     end
   else Result := '';
 end;
@@ -10170,15 +10147,11 @@ end;
 function TZRawCLobField.GetAsString: String;
 {$IFNDEF UNICODE}
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
     Lob: IZBlob;
-  function A2AConvert(FromCP, ToCP: Word): String;
-  var U: UnicodeString;
-  begin
-    U := PRawToUnicode(P, L, FromCP);
-    Result := PUnicodeToRaw(Pointer(U), Length(U), ToCP);
-  end;
+    CP: Word;
+    R: RawByteString;
+    P: PAnsiChar;
+    L: NativeUInt;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
@@ -10187,19 +10160,14 @@ begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          Result := PUnicodeToRaw(P, L, FRowAccessor.ConSettings^.CTRL_CP);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          if not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP) or (L = 0)
-          then System.SetString(Result, PAnsichar(P), L)
-          else Result := A2AConvert(FColumnCP, FRowAccessor.ConSettings^.CTRL_CP);
-        end
-      else Result := ''
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
+        if not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP)
+        then CP := FColumnCP
+        else CP := FRowAccessor.ConSettings^.CTRL_CP;
+        R := '';
+        P := Clob.GetPAnsiChar(CP, R, L);
+        System.SetString(Result, PAnsichar(P), L)
+      end else Result := ''
     end
   else Result := '';
   {$ENDIF}
@@ -10208,23 +10176,13 @@ end;
 {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
 function TZRawCLobField.GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
     Lob: IZBlob;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          System.SetString(Result, PWidechar(P), L);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          Result := PRawToUnicode(P, L, FColumnCP);
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := CLob.GetUnicodeString
       else Result := ''
     end
   else Result := '';
@@ -10234,23 +10192,13 @@ end;
 {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
 function TZRawCLobField.GetAsUnicodeString: UnicodeString;
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
     Lob: IZBlob;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          System.SetString(Result, PWidechar(P), L);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          Result := PRawToUnicode(P, L, FColumnCP);
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := CLob.GetUnicodeString
       else Result := ''
     end
   else Result := '';
@@ -10260,32 +10208,13 @@ end;
 {$IFNDEF NO_UTF8STRING}
 function TZRawCLobField.GetAsUTF8String: UTF8String;
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
-    U: UnicodeString;
     Lob: IZBlob;
-label jmp2Raw;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-jmp2Raw:  Result := PUnicodeToRaw(P, L, zCP_UTF8);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          if FColumnCP = zCP_UTF8 then
-            ZSetString(P,L, Result)
-          else begin
-            U := PRawToUnicode(P, L, FColumnCP);
-            P := Pointer(U);
-            L := Length(U);
-            goto jmp2Raw;
-          end;
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := CLob.GetUTF8String
       else Result := ''
     end
   else Result := '';
@@ -10341,7 +10270,8 @@ end;
 
 {$IFNDEF NO_ANSISTRING}
 procedure TZRawCLobField.SetAsAnsiString(const Value: AnsiString);
-var Clob: IZClob;
+var Blob: IZBlob;
+    Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
     R: RawByteString;
@@ -10353,7 +10283,8 @@ begin
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+    Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+    BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16) then begin
       U := PRawToUnicode(P,L,zOSCodePage);
       P := Pointer(U);
@@ -10366,7 +10297,7 @@ begin
       R := PUnicodeToRaw(P,L,FColumnCP);
       CLob.SetRawByteString(R, FColumnCP);
     end;
-    FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
+    FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, CLob);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;
@@ -10374,7 +10305,8 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 procedure TZRawCLobField.SetAsRawByteString(const Value: RawByteString);
-var Clob: IZClob;
+var Blob: IZBlob;
+    Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
     U: UnicodeString;
@@ -10392,8 +10324,8 @@ begin
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FRowAccessor.SetNotNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+    Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+    BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
     then SetW(FRowAccessor.ConSettings^.CTRL_CP)
     else CLob.SetPAnsiChar(P, FColumnCP, L);
@@ -10408,6 +10340,7 @@ procedure TZRawCLobField.SetAsString(const Value: String);
 {$IFNDEF UNICODE}
 var L: LengthInt;
     P: PAnsiChar;
+    Blob: IZBlob;
     Clob: IZCLob;
 label jumpSetP;
   procedure SetW(StrCP: Word);
@@ -10447,7 +10380,8 @@ begin
       end
     else if FColumnCP = zCP_UTF16
     then SetW(FRowAccessor.ConSettings^.CTRL_CP) else begin
-jumpSetP: CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+jumpSetP: Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+      BLob.QueryInterface(IZCLob, Clob);
       CLob.SetPAnsiChar(P,FColumnCP,L);
       FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     end;
@@ -10471,7 +10405,8 @@ end;
 
 {$IFNDEF NO_UTF8STRING}
 procedure TZRawCLobField.SetAsUTF8String(const Value: UTF8String);
-var Clob: IZClob;
+var Blob: IZBlob;
+    Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
     R: RawByteString;
@@ -10483,7 +10418,8 @@ begin
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+    Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+    BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16) then begin
       U := PRawToUnicode(P,L,zCP_UTF8);
       P := Pointer(U);
@@ -10541,17 +10477,19 @@ begin
 end;
 
 procedure TZUnicodeCLobField.SetPWideChar(P: Pointer; Len: NativeUint);
-var Clob: IZClob;
+var Blob: IZBlob;
+    Clob: IZClob;
     R: RawByteString;
 begin
   if not FBound then
     raise CreateUnBoundError;
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
+    Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+    BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16) then begin
        if P = nil then
           P:= PEmptyUnicodeString;
-       CLob := TZAbstractCLob.CreateWithData(nil, 0, FRowAccessor.ConSettings);
        Clob.SetPWideChar(P, Len); //notify updated
     end else begin
       R := PUnicodeToRaw(P,Len,FColumnCP);
@@ -10559,7 +10497,6 @@ begin
       if Len = 0
       then P := PEmptyUnicodeString
       else P := Pointer(R);
-      CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
       CLob.SetPAnsiChar(P, FColumnCP, Len); //notify updated
     end;
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
@@ -10577,32 +10514,13 @@ end;
 {$IFNDEF NO_ANSISTRING}
 function TZUnicodeCLobField.GetAsAnsiString: AnsiString;
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
-    U: UnicodeString;
     Lob: IZBlob;
-label jmp2Raw;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-jmp2Raw:  Result := PUnicodeToRaw(P, L, zOSCodePage);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          if FColumnCP = zOSCodePage then
-            ZSetString(P,L, Result)
-          else begin
-            U := PRawToUnicode(P, L, FColumnCP);
-            P := Pointer(U);
-            L := Length(U);
-            goto jmp2Raw;
-          end;
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := CLob.GetAnsiString
       else Result := ''
     end
   else Result := '';
@@ -10611,24 +10529,18 @@ end;
 
 function TZUnicodeCLobField.GetAsRawByteString: RawByteString;
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
     Lob: IZBlob;
+    CP: Word;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          Result := PUnicodeToRaw(P, L, FRowAccessor.ConSettings^.CTRL_CP);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          ZSetString(P, L, Result);
-        end
-      else Result := ''
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
+        if FColumnCP = zCP_UTF16
+        then CP := FRowAccessor.ConSettings^.CTRL_CP
+        else CP := FColumnCP;
+        Result := Clob.GetRawByteString(CP);
+      end else Result := ''
     end
   else Result := '';
 end;
@@ -10637,15 +10549,11 @@ end;
 function TZUnicodeCLobField.GetAsString: String;
 {$IFNDEF UNICODE}
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
     Lob: IZBlob;
-  function A2AConvert(FromCP, ToCP: Word): String;
-  var U: UnicodeString;
-  begin
-    U := PRawToUnicode(P, L, FromCP);
-    Result := PUnicodeToRaw(Pointer(U), Length(U), ToCP);
-  end;
+    CP: Word;
+    R: RawByteString;
+    P: PAnsiChar;
+    L: NativeUInt;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
@@ -10654,19 +10562,14 @@ begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          Result := PUnicodeToRaw(P, L, FRowAccessor.ConSettings^.CTRL_CP);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          if not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP) or (L = 0)
-          then System.SetString(Result, PAnsichar(P), L)
-          else Result := A2AConvert(FColumnCP, FRowAccessor.ConSettings^.CTRL_CP);
-        end
-      else Result := ''
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
+        if not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP)
+        then CP := FColumnCP
+        else CP := FRowAccessor.ConSettings^.CTRL_CP;
+        R := '';
+        P := Clob.GetPAnsiChar(CP, R, L);
+        System.SetString(Result, PAnsichar(P), L)
+      end else Result := ''
     end
   else Result := '';
   {$ENDIF}
@@ -10675,23 +10578,13 @@ end;
 {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
 function TZUnicodeCLobField.GetAsWideString: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF};
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
     Lob: IZBlob;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          System.SetString(Result, PWidechar(P), L);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          Result := PRawToUnicode(P, L, FColumnCP);
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := Clob.GetUnicodeString
       else Result := ''
     end
   else Result := '';
@@ -10701,23 +10594,13 @@ end;
 {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
 function TZUnicodeCLobField.GetAsUnicodeString: UnicodeString;
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
     Lob: IZBlob;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-          System.SetString(Result, PWidechar(P), L);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          Result := PRawToUnicode(P, L, FColumnCP);
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := Clob.GetUnicodeString
       else Result := ''
     end
   else Result := '';
@@ -10727,32 +10610,13 @@ end;
 {$IFNDEF NO_UTF8STRING}
 function TZUnicodeCLobField.GetAsUTF8String: UTF8String;
 var Clob: IZClob;
-    P: Pointer;
-    L: NativeUInt;
-    U: UnicodeString;
     Lob: IZBlob;
-label jmp2Raw;
 begin
   if IsRowDataAvailable then
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)  then
-        if (FColumnCP = zCP_UTF16) then begin
-          P := Clob.GetPWideChar;
-          L := Clob.Length;
-jmp2Raw:  Result := PUnicodeToRaw(P, L, zCP_UTF8);
-        end else begin
-          P := Clob.GetPAnsiChar(FColumnCP);
-          L := Clob.Length;
-          if FColumnCP = zCP_UTF8 then
-            ZSetString(P,L, Result)
-          else begin
-            U := PRawToUnicode(P, L, FColumnCP);
-            P := Pointer(U);
-            L := Length(U);
-            goto jmp2Raw;
-          end;
-        end
+      if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK)
+      then Result := Clob.GetString
       else Result := ''
     end
   else Result := '';
@@ -10802,7 +10666,8 @@ end;
 
 {$IFNDEF NO_ANSISTRING}
 procedure TZUnicodeCLobField.SetAsAnsiString(const Value: AnsiString);
-var Clob: IZClob;
+var Blob: IZBlob;
+    Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
     R: RawByteString;
@@ -10814,7 +10679,8 @@ begin
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+    Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+    BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16) then begin
       U := PRawToUnicode(P,L,zOSCodePage);
       P := Pointer(U);
@@ -10835,7 +10701,8 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 procedure TZUnicodeCLobField.SetAsRawByteString(const Value: RawByteString);
-var Clob: IZClob;
+var Blob: IZBlob;
+    Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
     U: UnicodeString;
@@ -10854,7 +10721,8 @@ begin
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     FRowAccessor.SetNotNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+    Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+    BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
     then SetW(FRowAccessor.ConSettings^.CTRL_CP)
     else CLob.SetPAnsiChar(P, FColumnCP, L);
@@ -10868,6 +10736,7 @@ procedure TZUnicodeCLobField.SetAsString(const Value: String);
 {$IFNDEF UNICODE}
 var L: LengthInt;
     P: PAnsiChar;
+    Blob: IZBlob;
     Clob: IZCLob;
 label jumpSetP;
   procedure SetW(StrCP: Word);
@@ -10907,7 +10776,8 @@ begin
       end
     else if FColumnCP = zCP_UTF16
     then SetW(FRowAccessor.ConSettings^.CTRL_CP) else begin
-jumpSetP: CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+jumpSetP: Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+      BLob.QueryInterface(IZCLob, Clob);
       CLob.SetPAnsiChar(P,FColumnCP,L);
       FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     end;
@@ -10924,7 +10794,8 @@ end;
 
 {$IFNDEF NO_UTF8STRING}
 procedure TZUnicodeCLobField.SetAsUTF8String(const Value: UTF8String);
-var Clob: IZClob;
+var Blob: IZBlob;
+    Clob: IZClob;
     P: Pointer;
     L: NativeUInt;
     R: RawByteString;
@@ -10936,7 +10807,8 @@ begin
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    CLob := TZAbstractCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings);
+    Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
+    BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16) then begin
       U := PRawToUnicode(P,L,zCP_UTF8);
       P := Pointer(U);

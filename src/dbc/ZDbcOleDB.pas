@@ -59,8 +59,8 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
-  ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer, ZClasses,
-  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZDbcOleDBUtils,
+  ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
+  ZGenericSqlAnalyser, ZCompatibility, ZDbcOleDBUtils,
   ZOleDB, ZPlainOleDBDriver, ZOleDBToken;
 
 type
@@ -110,15 +110,14 @@ type
   public
     destructor Destroy; override;
 
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
-
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;
-
 
     procedure Open; override;
     procedure Commit;
@@ -155,7 +154,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
 uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils, ZEncoding,
-  ZMessages, ZFastCode, ZConnProperties, ZDbcProperties, ZCollections;
+  ZMessages, ZFastCode, ZDbcProperties;
 
 { TZOleDBDriver }
 
@@ -257,9 +256,9 @@ begin
     rgDBPROPSET_DBPROPSET_SESSION.dwPropertyID := DBPROP_SESS_AUTOCOMMITISOLEVELS;
     rgDBPROPSET_DBPROPSET_SESSION.dwOptions    := DBPROPOPTIONS_REQUIRED;
     rgDBPROPSET_DBPROPSET_SESSION.colid        := DB_NULLID;
-    rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[TransactIsolationLevel];
+    rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[Level];
     CheckError(SessionProperties.SetProperties(1, @prgPropertySets), lcOther, EmptyRaw);
-    FAutoCommitTIL := TIL[TransactIsolationLevel];
+    FAutoCommitTIL := TIL[Level];
   end;
 end;
 
@@ -279,6 +278,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "pParams" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBConnection.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
 var Cmd: ICommandText;
@@ -304,6 +304,7 @@ begin
   if DriverManager.HasLoggingListener then
     DoLog;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets this connection's auto-commit mode.
@@ -356,7 +357,7 @@ procedure TZOleDBConnection.SetCatalog(const Catalog: string);
 begin
   if Catalog <> '' then
     if GetServerProvider in [spASE,spMSSQL, spMySQL] then begin
-      CreateRegularStatement(info).ExecuteUpdate('use '+Catalog);
+      CreateStatementWithParams(info).ExecuteUpdate('use '+Catalog);
       fCatalog := Catalog;
     end;
 end;
@@ -548,45 +549,11 @@ end;
   @param Info a statement parameters.
   @return a new Statement object
 }
-function TZOleDBConnection.CreateRegularStatement(Info: TStrings):
-  IZStatement;
-begin
-  Result := CreatePreparedStatement('', Info);
-end;
-
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @param Info a statement parameters.
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
-function TZOleDBConnection.CreatePreparedStatement(const SQL: string; Info: TStrings):
-  IZPreparedStatement;
+function TZOleDBConnection.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
 begin
   if Closed then Open;
-  Result := TZOleDBPreparedStatement.Create(Self, SQL, Info);
+  Result := TZOleDBPreparedStatement.Create(Self, '', Info);
 end;
 
 {**
@@ -605,14 +572,6 @@ end;
 {**
   Returs the Ole-ICommandText interface of current connection
 }
-function TZOleDBConnection.CreateCallableStatement(const SQL: string;
-  Info: TStrings): IZCallableStatement;
-begin
-  if (GetServerProvider = spMSSQL)
-  then Result := TZOleDBCallableStatementMSSQL.Create(Self, SQL, Info)
-  else Result := inherited CreateCallableStatement(SQL, Info);
-end;
-
 function TZOleDBConnection.CreateCommand: ICommandText;
 begin
   Result := nil;
@@ -868,6 +827,78 @@ begin
     end;
   end;
 end;
+
+{**
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
+
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
+}
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
+function TZOleDBConnection.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
+begin
+  if (GetServerProvider = spMSSQL)
+  then Result := TZOleDBCallableStatementMSSQL.Create(Self, Name, Info)
+  else Raise EZUnsupportedException.Create(SUnsupportedOperation);
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{**
+  Creates a <code>PreparedStatement</code> object for sending
+  parameterized SQL statements to the database.
+
+  A SQL statement with or without IN parameters can be
+  pre-compiled and stored in a PreparedStatement object. This
+  object can then be used to efficiently execute this statement
+  multiple times.
+
+  <P><B>Note:</B> This method is optimized for handling
+  parametric SQL statements that benefit from precompilation. If
+  the driver supports precompilation,
+  the method <code>prepareStatement</code> will send
+  the statement to the database for precompilation. Some drivers
+  may not support precompilation. In this case, the statement may
+  not be sent to the database until the <code>PreparedStatement</code> is
+  executed.  This has no direct effect on users; however, it does
+  affect which method throws certain SQLExceptions.
+
+  Result sets created using the returned PreparedStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param sql a SQL statement that may contain one or more '?' IN
+    parameter placeholders
+  @param Info a statement parameters.
+  @return a new PreparedStatement object containing the
+    pre-compiled statement
+}
+function TZOleDBConnection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
+begin
+  if Closed then Open;
+  Result := TZOleDBPreparedStatement.Create(Self, SQL, Info);
+end;
+
 
 {**
   Releases a Connection's database and JDBC resources

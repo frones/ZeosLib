@@ -73,7 +73,8 @@ type
   {** Implements a test case for class TZStoredProc. }
   TZTestInterbaseStoredProcedure = class(TZTestStoredProcedure)
   protected
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestStoredProc;
     procedure Test_abtest;
@@ -151,7 +152,7 @@ type
 
 implementation
 
-uses Classes, ZSysUtils, ZDbcIntfs, ZDbcPostgreSQL,
+uses Classes, ZSysUtils, ZDbcIntfs, ZDbcPostgreSQL, ZDatasetUtils,
   ZCompatibility, ZVariant, ZEncoding;
 
 
@@ -182,9 +183,14 @@ end;
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
 }
-function TZTestInterbaseStoredProcedure.GetSupportedProtocols: string;
+//function TZTestInterbaseStoredProcedure.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZTestInterbaseStoredProcedure.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := Config.Provider = spIB_FB;
 end;
 
 {**
@@ -562,13 +568,13 @@ begin
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  CheckStringFieldType(StoredProc.Params[2].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[2].DataType, Connection.ControlsCodePage);
   CheckEquals('P4', StoredProc.Params[3].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   CheckEquals('P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.ControlsCodePage);
 
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -586,7 +592,7 @@ begin
   CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   {$ENDIF}
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.ControlsCodePage);
 
   S := 'a';
   P2 := 100;
@@ -613,13 +619,13 @@ begin
 
   CheckEquals(2, StoredProc.Fields.Count);
   CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
-  CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.ControlsCodePage);
 
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.ControlsCodePage);
 end;
 
 procedure TZTestMySQLStoredProcedure.Test_TEST_All_TYPES;
-const Str1: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
+const Str1: {$IFNDEF UNICIDE}WideString{$ELSE}UnicodeString{$ENDIF} = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
 var
   SQLTime: TDateTime;
   TempBytes: TBytes;
@@ -631,7 +637,7 @@ begin
   ConSettings := connection.DbcConnection.GetConSettings;
   CP := ConSettings.ClientCodePage.CP;
   //eh the russion abrakadabra can no be mapped to other charsets then:
-  if (ConSettings.CPType = cGET_ACP) and {no unicode strings or utf8 allowed}
+  if (Connection.ControlsCodePage = cGET_ACP) and {no unicode strings or utf8 allowed}
     not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
     Exit;
   if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
@@ -682,7 +688,7 @@ begin
 
   CheckEquals('P11', StoredProc.Params[10].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[10].ParamType));
-  CheckStringFieldType(StoredProc.Params[10].DataType, ConSettings);
+  CheckStringFieldType(StoredProc.Params[10].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P12', StoredProc.Params[11].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[11].ParamType));
@@ -706,7 +712,7 @@ begin
 
   CheckEquals('P17', StoredProc.Params[16].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[16].ParamType));
-  CheckEquals(ord(ftBlob), ord(StoredProc.Params[16].DataType));
+  CheckEquals(ord(ftVarBytes), ord(StoredProc.Params[16].DataType));
 
   CheckEquals('P18', StoredProc.Params[17].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[17].ParamType));
@@ -722,19 +728,19 @@ begin
 
   CheckEquals('P21', StoredProc.Params[20].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[20].ParamType));
-  CheckMemoFieldType(StoredProc.Params[20].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Params[20].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P22', StoredProc.Params[21].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[21].ParamType));
-  CheckMemoFieldType(StoredProc.Params[21].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Params[21].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P23', StoredProc.Params[22].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[22].ParamType));
-  CheckMemoFieldType(StoredProc.Params[22].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Params[22].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P24', StoredProc.Params[23].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[23].ParamType));
-  CheckMemoFieldType(StoredProc.Params[23].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Params[23].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P25', StoredProc.Params[24].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[24].ParamType));
@@ -742,7 +748,7 @@ begin
 
   CheckEquals('P26', StoredProc.Params[25].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[25].ParamType));
-  CheckStringFieldType(StoredProc.Params[25].DataType, ConSettings);
+  CheckStringFieldType(StoredProc.Params[25].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P27', StoredProc.Params[26].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[26].ParamType));
@@ -826,13 +832,13 @@ begin
   {$IFDEF UNICODE}
   CheckEquals(Str1, StoredProc.Fields[10].AsString, 'P11 String');
   {$ELSE}
-  If ConSettings.CPType = cCP_UTF16 then
+  If Connection.ControlsCodePage = cCP_UTF16 then
     CheckEquals(Str1, StoredProc.Fields[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P11 String')
   else if ConSettings.AutoEncode
     then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[10].AsString, 'P11 String')
     else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[10].AsString, 'P11 String');
   {$ENDIF}
-  CheckStringFieldType(StoredProc.Fields[10].DataType, ConSettings);
+  CheckStringFieldType(StoredProc.Fields[10].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P12', StoredProc.Fields[11].DisplayName);
   CheckEquals(Int(SQLTime), StoredProc.Fields[11].AsDateTime);
@@ -855,7 +861,7 @@ begin
   CheckEquals(ord(ftDateTime), ord(StoredProc.Fields[15].DataType));
 
   CheckEquals('P17', StoredProc.Fields[16].DisplayName);
-  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[16].DataType));
+  CheckEquals(ftBlob, StoredProc.Fields[16].DataType); //mysql returns FIELD_TYPE_BLOB which is 64kb by default -> fall back to ftBlob
 
   CheckEquals('P18', StoredProc.Fields[17].DisplayName);
   CheckEquals(ord(ftBlob), ord(StoredProc.Fields[17].DataType));
@@ -870,49 +876,49 @@ begin
   {$IFDEF UNICODE}
   CheckEquals(Str1, StoredProc.Fields[20].AsString, 'P21 String');
   {$ELSE}
-  If ConSettings.CPType = cCP_UTF16 then
+  If Connection.ControlsCodePage = cCP_UTF16 then
     CheckEquals(Str1, StoredProc.Fields[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P21 String')
   else if ConSettings.AutoEncode
     then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[20].AsString, 'P21 String')
     else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[20].AsString, 'P21 String');
   {$ENDIF}
-  CheckMemoFieldType(StoredProc.Fields[20].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Fields[20].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P22', StoredProc.Fields[21].DisplayName);
   {$IFDEF UNICODE}
   CheckEquals(Str1, StoredProc.Fields[21].AsString, 'P22 String');
   {$ELSE}
-  If ConSettings.CPType = cCP_UTF16 then
+  If Connection.ControlsCodePage = cCP_UTF16 then
     CheckEquals(Str1, StoredProc.Fields[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P22 String')
   else if ConSettings.AutoEncode
     then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[21].AsString, 'P22 String')
     else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[21].AsString, 'P22 String');
   {$ENDIF}
-  CheckMemoFieldType(StoredProc.Fields[21].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Fields[21].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P23', StoredProc.Fields[22].DisplayName);
   {$IFDEF UNICODE}
   CheckEquals(Str1, StoredProc.Fields[22].AsString, 'P23 String');
   {$ELSE}
-  If ConSettings.CPType = cCP_UTF16 then
+  If Connection.ControlsCodePage = cCP_UTF16 then
     CheckEquals(Str1, StoredProc.Fields[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P23 String')
   else if ConSettings.AutoEncode
     then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[22].AsString, 'P23 String')
     else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[22].AsString, 'P23 String');
   {$ENDIF}
-  CheckMemoFieldType(StoredProc.Fields[22].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Fields[22].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P24', StoredProc.Fields[23].DisplayName);
   {$IFDEF UNICODE}
   CheckEquals(Str1, StoredProc.Fields[23].AsString, 'P24 String');
   {$ELSE}
-  If ConSettings.CPType = cCP_UTF16 then
+  If Connection.ControlsCodePage = cCP_UTF16 then
     CheckEquals(Str1, StoredProc.Fields[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P24 String')
   else if ConSettings.AutoEncode
     then CheckEquals(ZUnicodeToRaw(Str1, ConSettings.CTRL_CP), StoredProc.Fields[23].AsString, 'P24 String')
     else CheckEquals(ZUnicodeToRaw(Str1, CP), StoredProc.Fields[23].AsString, 'P24 String');
   {$ENDIF}
-  CheckMemoFieldType(StoredProc.Fields[23].DataType, ConSettings);
+  CheckMemoFieldType(StoredProc.Fields[23].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
   TempBytes :=StrToBytes(RawByteString('121415'));
@@ -926,7 +932,7 @@ begin
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);
   CheckEquals('a', StoredProc.Fields[25].AsString);
-  CheckStringFieldType(StoredProc.Fields[25].DataType, ConSettings);
+  CheckStringFieldType(StoredProc.Fields[25].DataType, Connection.ControlsCodePage);
 
   CheckEquals('P27', StoredProc.Fields[26].DisplayName);
   CheckEquals(50000, StoredProc.Fields[26].AsInteger);
@@ -978,7 +984,7 @@ begin
 
   CheckEquals('p_name', StoredProc.Params[1].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  CheckStringFieldType(StoredProc.Params[1].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[1].DataType, Connection.ControlsCodePage);
 
   StoredProc.Params[0].AsInteger := 2;
   StoredProc.Params[1].AsString := 'Yan Pater';
@@ -1141,13 +1147,13 @@ begin
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[2].DataType));
   CheckEquals('@p3', StoredProc.Params[3].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
-  CheckStringFieldType(StoredProc.Params[3].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[3].DataType, Connection.ControlsCodePage);
   CheckEquals('@p4', StoredProc.Params[4].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[4].ParamType));
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
   CheckEquals('@p5', StoredProc.Params[5].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
-  CheckStringFieldType(StoredProc.Params[5].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[5].DataType, Connection.ControlsCodePage);
 
   StoredProc.ParamByName('@p1').AsInteger := 50;
   StoredProc.ParamByName('@p2').AsInteger := 100;
@@ -1165,7 +1171,7 @@ begin
   CheckEquals(ord(ftString), ord(StoredProc.Params[3].DataType));
   {$ENDIF}
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
-  CheckStringFieldType(StoredProc.Params[5].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[5].DataType, Connection.ControlsCodePage);
 
   StoredProc.Prepare;
   S := 'a';
@@ -1194,9 +1200,9 @@ begin
   CheckEquals(3, ord(StoredProc.Fields.Count));
   CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
   CheckEquals('@RETURN_VALUE', StoredProc.Fields[0].FieldName);
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType)); //oledb correctly describes the params
+  CheckEquals(ftInteger, StoredProc.Fields[1].DataType); //oledb correctly describes the params
   CheckEquals('@p4', StoredProc.Fields[1].FieldName);
-  CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.ControlsCodePage);
   CheckEquals('@p5', StoredProc.Fields[2].FieldName);
 end;
 
@@ -1221,13 +1227,13 @@ begin
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  CheckStringFieldType(StoredProc.Params[2].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[2].DataType, Connection.ControlsCodePage);
   CheckEquals('P4', StoredProc.Params[3].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   CheckEquals('P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.ControlsCodePage);
 
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -1255,7 +1261,7 @@ begin
   CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   {$ENDIF}
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.ControlsCodePage);
 
   StoredProc.Prepare;
   S := 'a';
@@ -1293,9 +1299,9 @@ begin
 
   CheckEquals(2, ord(StoredProc.Fields.Count));
   // CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
-  CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.ControlsCodePage);
 
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.ControlsCodePage);
 
   CheckEquals(600, StoredProc.FieldByName('P4').AsInteger);
   CheckEquals('aa', StoredProc.FieldByName('P5').AsString);
@@ -1308,11 +1314,11 @@ begin
 
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  CheckStringFieldType(StoredProc.Params[0].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[0].DataType, Connection.ControlsCodePage);
 
   CheckEquals('X', StoredProc.Params[1].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
-  CheckStringFieldType(StoredProc.Params[1].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[1].DataType, Connection.ControlsCodePage);
 
 
   StoredProc.ParamByName('x').AsString := 'a';
@@ -1324,9 +1330,9 @@ begin
 
   StoredProc.Open;
   CheckEquals(2, StoredProc.Fields.Count);
-  CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.ControlsCodePage);
   CheckEquals('X', StoredProc.Fields[1].DisplayName);
-  CheckStringFieldType(StoredProc.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Fields[0].DataType, Connection.ControlsCodePage);
   CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
 
   CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('X').AsString);
@@ -1396,7 +1402,7 @@ begin
 
   CheckEquals('ABTEST_P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  CheckStringFieldType(StoredProc.Params[2].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[2].DataType, Connection.ControlsCodePage);
 
   CheckEquals('ABTEST_P4', StoredProc.Params[3].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
@@ -1404,15 +1410,15 @@ begin
 
   CheckEquals('ABTEST_P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.ControlsCodePage);
 
   CheckEquals('myfuncInOutReturn_ReturnValue', StoredProc.Params[5].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[5].ParamType));
-  CheckStringFieldType(StoredProc.Params[5].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[5].DataType, Connection.ControlsCodePage);
 
   CheckEquals('myfuncInOutReturn_X', StoredProc.Params[6].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[6].ParamType));
-  CheckStringFieldType(StoredProc.Params[6].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(StoredProc.Params[6].DataType, Connection.ControlsCodePage);
 
   CheckEquals('SIMPLE_FUNC_ReturnValue', StoredProc.Params[7].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[7].ParamType));

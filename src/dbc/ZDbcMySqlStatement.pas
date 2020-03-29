@@ -74,7 +74,7 @@ type
     FMySQLConnection: IZMySQLConnection;
     FMYSQL_STMT: PMYSQL_STMT; //a allocated stmt handle
     FPlainDriver: TZMySQLPlainDriver;
-    FUseResult, //single row fetches with tabular streaming
+    FUseResult, //single row fetches with tabular foward only streaming
     FUseDefaults, //prozess default values -> EH: this should be handled higher up (my POV)
     FMySQL_FieldType_Bit_1_IsBoolean, //self-descriptive isn't it?
     FInitial_emulate_prepare, //the user given mode
@@ -173,6 +173,7 @@ type
     procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
     procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
 
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); override;
@@ -530,15 +531,15 @@ begin
   end else begin
     { circumvent a mysql bug: the use_result has fetch error on the outparams for the lob types }
     if (TokenMatchIndex <> Ord(myCall)) and (FUseResult and not FLastWasOutParams)//server cursor?
-    then NativeResultSet := TZMySQL_Use_ResultSet.Create(FPlainDriver, Self, SQL,
-      False, FPMYSQL, @FMYSQL_STMT, MYSQL_ColumnsBinding , nil, FOpenCursorCallback)
-    else NativeResultSet := TZMySQL_Store_ResultSet.Create(FPlainDriver, Self, SQL,
-      FLastWasOutParams, FPMYSQL, @FMYSQL_STMT, MYSQL_ColumnsBinding, nil, FOpenCursorCallback);
+    then NativeResultSet := TZMySQL_Use_ResultSet.Create(Self, SQL, FMySQLConnection,
+      False, @FMYSQL_STMT, MYSQL_ColumnsBinding , nil, FOpenCursorCallback)
+    else NativeResultSet := TZMySQL_Store_ResultSet.Create(Self, SQL, FMySQLConnection,
+      FLastWasOutParams, @FMYSQL_STMT, MYSQL_ColumnsBinding, nil, FOpenCursorCallback);
     if TokenMatchIndex = Ord(myCall) then begin
       Result := NativeResultSet; //inc the refcount
       Result := Connection.GetMetadata.CloneCachedResultSet(Result); //replace the result
     end else if (GetResultSetConcurrency = rcUpdatable) or
-       ((GetResultSetType = rtScrollInsensitive) and FUseResult) then begin
+       ((GetResultSetType <> rtForwardOnly) and FUseResult) then begin
       if (GetResultSetConcurrency = rcUpdatable) then
         if FEmulatedParams
         then CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver,
@@ -546,10 +547,19 @@ begin
         else CachedResolver := TZMySQLCachedResolver.Create(FPlainDriver,
           FPMYSQL, FMYSQL_STMT, Self, NativeResultSet.GetMetaData)
       else CachedResolver := nil;
-      CachedResultSet := TZCachedResultSet.CreateWithColumns(NativeResultSet.ColumnsInfo,
-        NativeResultSet, SQL, CachedResolver, ConSettings);
+      if FUseResult then
+        if FEmulatedParams
+        then CachedResultSet := TZMySQLUseResultsCachedResultSet.CreateWithColumns(
+          NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
+        else CachedResultSet := TZMySQLPreparedUseResultsCachedResultSet.CreateWithColumns(
+          NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
+      else if CachedLob and not FEmulatedParams
+        then CachedResultSet := TZMySQLPreparedStoreResultsCachedLobsResultSet.CreateWithColumns(
+          NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
+        else CachedResultSet := TZMySQLUseResultsCachedResultSet.CreateWithColumns(
+          NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings);
       if fUseResult then begin
-        CachedResultSet.Last; //invoke fetch all -> note this is done on msql_strore_result too
+        CachedResultSet.Last; //invoke fetch all -> note this is done on msql_strore_result in the lib too
         CachedResultSet.BeforeFirst;
       end;
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
@@ -559,7 +569,7 @@ begin
       Result := NativeResultSet;
     FOpenResultSet := Pointer(Result);
   end;
-  //not to myselve: OutParams are always the last resultset see:
+  //note to myselve: OutParams are always the last resultset see:
   //https://dev.mysql.com/doc/refman/5.7/en/c-api-prepared-call-statements.html
 (*  if FLastWasOutParams or (BindList.HasOutOrInOutOrResultParam and (BufferIndex = 0)) then
     FOutParamResultSet := Result; *)
@@ -850,7 +860,7 @@ begin
           FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
           FPlainDriver.mysql_free_result(FQueryHandle);
         end;
-      end else if Status > 0 then begin
+      end else if (Status > 0) then begin
         CheckMySQLError(FPlainDriver, FPMYSQL^, nil, lcExecute, ASQL, Self);
         Break;
       end;
@@ -867,7 +877,7 @@ begin
             checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
             ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
               ConSettings^.ClientCodePage^.CP), Self);
-      end else if Status > 0 then begin
+      end else if (Status > 0) then begin
         checkMySQLError(FPlainDriver, FPMYSQL^, FMYSQL_STMT, lcExecPrepStmt,
           ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
             ConSettings^.ClientCodePage^.CP), Self);
@@ -1338,6 +1348,7 @@ begin
                             Bind^.Length[0] := 1;
                             PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
                           end;
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stInteger, SQLType);
     end;
     Bind^.is_null_address^ := 0;
   end;
@@ -1374,8 +1385,7 @@ begin
     for I := 0 to BindList.Count - 1 do begin
       Bind := @FMYSQL_aligned_BINDs[I];
       if (Bind^.is_null_address^ = 0) and (Bind^.buffer = nil) and (BindList[i].BindType = zbtLob) then begin
-        P := IZBlob(BindList[I].Value).GetBuffer;
-        Len := IZBlob(BindList[I].Value).Length;
+        P := IZBlob(BindList[I].Value).GetBuffer(FRawTemp, Len);
         OffSet := 0;
         PieceSize := ChunkSize;
         while (OffSet < Len) or (Len = 0) do begin
@@ -1398,14 +1408,17 @@ procedure TZMySQLPreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
   const Value: IZBlob);
 var
   Bind: PMYSQL_aligned_BIND;
+  P: Pointer;
+  L: NativeUInt;
 begin
   inherited BindLob(Index, SQLType, Value); //refcounts
   if (Value = nil) or (Value.IsEmpty) then
     SetNull(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType)
   else if FEmulatedParams then begin
+    P := Value.GetBuffer(FRawTemp, L);
     if SQLType = stBinaryStream
-    then Connection.GetBinaryEscapeString(Value.GetBuffer, Value.Length, FEmulatedValues[Index])
-    else Connection.GetEscapeString(Value.GetBuffer, Value.Length, FEmulatedValues[Index])
+    then Connection.GetBinaryEscapeString(P, L, FEmulatedValues[Index])
+    else Connection.GetEscapeString(P, L, FEmulatedValues[Index])
   end else begin
     FChunkedData := True;
     {$R-}
@@ -1500,6 +1513,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZMySQLPreparedStatement.BindRawStr(Index: Integer; Buf: PAnsiChar;
   Len: LengthInt);
 var
@@ -1514,12 +1528,12 @@ var
     P: PAnsiChar;
   begin
     if SQLType = stBinaryStream then
-      Lob := TZAbstractBlob.CreateWithData(Buf, Len)
+      Lob := TZLocalMemBLob.CreateWithData(Buf, Len)
     else begin
       if Len = 0
       then P := PEmptyAnsiString
       else P := Buf;
-      Lob := TZAbstractClob.CreateWithData(P, Len, FClientCP, ConSettings);
+      Lob := TZLocalMemCLob.CreateWithData(P, Len, FClientCP, ConSettings);
       BindLob(Index, SQLType, Lob);
     end;
   end;
@@ -1573,10 +1587,11 @@ begin
       stTimeStamp: if TryPCharToTimeStamp(Buf, Len, ConSettings.WriteFormatSettings, TS)
                   then SetTimeStamp(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
       stAsciiStream..stBinaryStream: BindAsLob;
-
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stString, BindValue.SQLType);
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
@@ -1647,6 +1662,50 @@ begin
 end;
 
 {**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZMySQLPreparedStatement.SetBytes(Index: Integer; Value: PByte;
+  Len: NativeUInt);
+var
+  Bind: PMYSQL_aligned_BIND;
+begin
+  {$IFNDEF GENERIC_INDEX}Index := Index -1;{$ENDIF}
+  CheckParameterIndex(Index);
+  if FEmulatedParams then begin
+    if FTokenMatchIndex <> -1
+    then BindList.Put(Index, stBytes, Value, Len)
+    else CheckParameterIndex(Index);
+    Connection.GetBinaryEscapeString(Value, Len, FEmulatedValues[Index])
+  end else begin
+    CheckParameterIndex(Index);
+    {$R-}
+    Bind := @FMYSQL_aligned_BINDs[Index];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (BindList.SQLTypes[Index] <> stBytes) or (Bind^.buffer_length_address^ < (Len+1)) then begin
+      InitBuffer(stBytes, Index, Bind, Len);
+      BindList[Index].SQLType := stBytes;
+    end;
+    if Len = 0
+    then PByte(Bind^.buffer)^ := Ord(#0)
+    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, Pointer(Bind^.buffer)^, Len);
+    Bind^.Length[0] := Len;
+    if Value = nil then
+      if FUseDefaults
+      then Bind^.is_null_address^ := STMT_INDICATOR_DEFAULT
+      else Bind^.is_null_address^ := STMT_INDICATOR_NULL
+    else Bind^.is_null_address^ := 0;
+  end;
+end;
+
+{**
   Sets the designated parameter to a Java <code>currency</code> value.
   The driver converts this
   to an SQL <code>CURRENCY</code> value when it sends it to the database.
@@ -1700,6 +1759,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZMySQLPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
 var
@@ -1716,8 +1776,10 @@ var
   T: TZTime absolute TS;
   procedure BindLobs;
   var Lob: IZBLob;
-    RawTemp: RawByteString;
+    CLob: IZCLob;
     I: Integer;
+    P: Pointer;
+    L: NativeUint;
   begin
     ReAllocMem(Bind^.length, BatchDMLArrayCount*SizeOf(ULong));
     Bind^.length_address^ := Bind^.length;
@@ -1726,20 +1788,15 @@ var
     for I := 0 to BatchDMLArrayCount -1 do begin
       if (TInterfaceDynArray(Value)[i] = nil) or not Supports(TInterfaceDynArray(Value)[i], IZBlob, Lob) or Lob.IsEmpty then
         {$R-}Bind^.indicators[i] := Ord(STMT_INDICATOR_NULL){$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      else if (Lob.Length = 0) then begin
-        {$R-}Bind^.length[i] := 0;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-        PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := PEmptyAnsiString;
-      end else begin
-        if SQLType <> stBinaryStream then begin
-          if not Lob.IsClob then begin
-            RawTemp := GetValidatedAnsiStringFromBuffer(Lob.GetBuffer, Lob.Length, ConSettings);
-            Lob := TZAbstractCLob.CreateWithData(Pointer(RawTemp), Length(RawTemp), ClientCP, ConSettings);
-            TInterfaceDynArray(Value)[i] := Lob;
-          end;
-          Lob.GetPAnsiChar(ClientCP);
+      else begin
+        if (SQLType <> stBinaryStream) then begin
+          if not Supports(Lob, IZCLob, CLob)
+          then TInterfaceDynArray(Value)[i] := CreateRawCLobFromBlob(Lob, ConSettings, FOpenLobStreams)
+          else CLob.SetCodePageTo(ClientCP);
         end;
-        PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := Lob.GetBuffer;
-        {$R-}Bind^.length[i] := Lob.Length;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        P := Lob.GetBuffer(FRawTemp, L);
+        PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := P;
+        {$R-}Bind^.length[i] := L;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       end;
     end;
     Bind^.buffer_address^ := Pointer(Bind^.Buffer);
@@ -1821,10 +1878,10 @@ move_from_temp:
       vtCharRec:      begin
           ReAllocMem(Bind^.Buffer, SizeOf(Pointer)*BatchDMLArrayCount); //minumum size
           for I := 0 to BatchDMLArrayCount -1 do
-            if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, ClientCP) or (TZCharRecDynArray(Value)[i].Len = 0) then begin
+            if (TZCharRecDynArray(Value)[i].CP = ClientCP) or (TZCharRecDynArray(Value)[i].Len = 0) then begin
               {$R-}Bind^.length[i] := TZCharRecDynArray(Value)[i].Len;{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
               PPointer(PAnsiChar(Bind^.buffer)+(I*SizeOf(Pointer)))^ := TZCharRecDynArray(Value)[i].P; //wite address
-            end else if ZCompatibleCodePages(TZCharRecDynArray(Value)[i].CP, zCP_UTF16) then begin
+            end else if (TZCharRecDynArray(Value)[i].CP = zCP_UTF16) then begin
               ClientStrings[i] := PUnicodeToRaw(TZCharRecDynArray(Value)[i].P, TZCharRecDynArray(Value)[i].Len, ClientCP);
               BufferSize := BufferSize + Cardinal(Length(ClientStrings[i])) +1;
               {$R-}Bind^.length[i] := Length(ClientStrings[i]);{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
@@ -2056,17 +2113,17 @@ begin
         Bind^.length_address^ := Bind^.length;
         case VariantType of
           {$IFNDEF UNICODE}
-          vtString: if not ConSettings.AutoEncode and ZCompatibleCodePages(ConSettings^.CTRL_CP, ClientCP)
+          vtString: if not ConSettings.AutoEncode and (ConSettings^.CTRL_CP = ClientCP)
             then BindRaw
             else BindRawFromConvertion;
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}
-          vtAnsiString: if ZCompatibleCodePages(ZOSCodePage, ClientCP)
+          vtAnsiString: if (ZOSCodePage = ClientCP)
             then BindRaw
             else BindRawFromConvertion;
           {$ENDIF}
           {$IFNDEF NO_UTF8STRING}
-          vtUTF8String: if ZCompatibleCodePages(zCP_UTF8, ClientCP)
+          vtUTF8String: if (zCP_UTF8 = ClientCP)
             then BindRaw
             else BindRawFromConvertion;
           {$ENDIF}
@@ -2083,6 +2140,7 @@ begin
   end;
   Bind^.Iterations := BatchDMLArrayCount;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a <code<java.sql.Date</code> value.
@@ -2722,11 +2780,7 @@ begin
           ColumnInfo := TZColumnInfo.Create;
           with ColumnInfo do begin
             ColumnLabel := FInParamNames[i];
-            if (Bind.SQLType in [stString, stAsciiStream]) and (ConSettings.CPType = cCP_UTF16)
-            then ColumnType := TZSQLType(Ord(Bind.SQLType)+1)
-            else if (Bind.SQLType in [stUnicodeString, stUnicodeStream]) and (ConSettings.CPType <> cCP_UTF16)
-              then ColumnType := TZSQLType(Ord(Bind.SQLType)-1)
-              else ColumnType := Bind.SQLType;
+            ColumnType := Bind.SQLType;
             Precision := FInParamPrecisionArray[i];
             Scale := FInParamScaleArray[i];
           end;

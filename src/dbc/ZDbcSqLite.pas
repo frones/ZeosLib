@@ -109,9 +109,11 @@ type
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
   public
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
 
     function AbortOperation: Integer; override;
   public
@@ -379,6 +381,76 @@ begin
 end;
 
 {**
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
+
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
+}
+{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
+function TZSQLiteConnection.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
+begin
+  Raise EZUnsupportedException.Create(SUnsupportedOperation);
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{**
+  Creates a <code>PreparedStatement</code> object for sending
+  parameterized SQL statements to the database.
+
+  A SQL statement with or without IN parameters can be
+  pre-compiled and stored in a PreparedStatement object. This
+  object can then be used to efficiently execute this statement
+  multiple times.
+
+  <P><B>Note:</B> This method is optimized for handling
+  parametric SQL statements that benefit from precompilation. If
+  the driver supports precompilation,
+  the method <code>prepareStatement</code> will send
+  the statement to the database for precompilation. Some drivers
+  may not support precompilation. In this case, the statement may
+  not be sent to the database until the <code>PreparedStatement</code> is
+  executed.  This has no direct effect on users; however, it does
+  affect which method throws certain SQLExceptions.
+
+  Result sets created using the returned PreparedStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param sql a SQL statement that may contain one or more '?' IN
+    parameter placeholders
+  @param Info a statement parameters.
+  @return a new PreparedStatement object containing the
+    pre-compiled statement
+}
+function TZSQLiteConnection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
+begin
+  if IsClosed then
+    Open;
+  Result := TZSQLiteCAPIPreparedStatement.Create(Self, SQL, Info, FHandle);
+end;
+
+{**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
   SQL statements without parameters are normally
@@ -392,8 +464,8 @@ end;
   @param Info a statement parameters.
   @return a new Statement object
 }
-function TZSQLiteConnection.CreateRegularStatement(Info: TStrings):
-  IZStatement;
+function TZSQLiteConnection.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
 begin
   if IsClosed then
     Open;
@@ -451,42 +523,6 @@ begin
       CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings);
     end;
   end;
-end;
-
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @param Info a statement parameters.
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
-function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
-  Info: TStrings): IZPreparedStatement;
-begin
-  if IsClosed then
-    Open;
-  Result := TZSQLiteCAPIPreparedStatement.Create(Self, SQL, Info, FHandle);
 end;
 
 {**

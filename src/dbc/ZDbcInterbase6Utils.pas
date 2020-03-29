@@ -126,6 +126,7 @@ type
     contain iformation about blob size in bytes,
     segments count, segment size in bytes and blob type
     Note: blob type can be text and binary }
+  PIbBlobInfo = ^TIbBlobInfo;
   TIbBlobInfo = record
     NumSegments: Word;
     MaxSegmentSize: Word;
@@ -240,8 +241,7 @@ function GetAffectedRows(const PlainDriver: TZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
   const ImmediatelyReleasable: IImmediatelyReleasable): integer;
 
-function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer;
-  const CtrlsCPType: TZControlsCodePage): TZSqlType;
+function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer): TZSqlType;
 
 function GetNameSqlType(Value: Word): RawByteString;
 { interbase blob routines }
@@ -250,7 +250,7 @@ procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
   const ImmediatelyReleasable: IImmediatelyReleasable);
 procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  const BlobId: TISC_QUAD; out Size: Integer; out Buffer: Pointer;
+  BlobId: PISC_QUAD; out Size: Integer; out Buffer: Pointer;
   const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
 
 function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
@@ -970,8 +970,7 @@ end;
 
   <b>Note:</b> The interbase type and subtype get from RDB$TYPES table
 }
-function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer): TZSQLType;
 label testBCD;
 begin
   case SqlType of
@@ -1030,11 +1029,6 @@ testBCD:  Scale := Abs(Scale);
     else
       Result := ZDbcIntfs.stUnknown;
   end;
-  if ( CtrlsCPType = cCP_UTF16) then
-    case result of
-      stString: Result := stUnicodeString;
-      stAsciiStream: Result := stUnicodeStream;
-    end;
 end;
 
 {**
@@ -1392,7 +1386,7 @@ end;
 }
 procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  const BlobId: TISC_QUAD; out Size: Integer; out Buffer: Pointer;
+  BlobId: PISC_QUAD; out Size: Integer; out Buffer: Pointer;
   const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
 var
   TempBuffer: PAnsiChar;
@@ -1596,7 +1590,7 @@ begin
       Inc(M, 2);
     end;
     GetMem(SqlVar.sqldata, m);
-    if Fixed2VariableSize then begin {Praremeters}
+    if Fixed2VariableSize then begin {Paraemeters}
       //This code used when allocated sqlind parameter for Param SQLDA
       SqlVar.sqltype := SqlVar.sqltype or 1;
       IbReAlloc(SqlVar.sqlind, 0, SizeOf(Short));
@@ -1645,7 +1639,7 @@ begin
   then Result := PRawToUnicode(Buffer, BufLen, zCP_UTF8)
   else Result := PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
-    if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) then
+    if (not ConSettings^.AutoEncode) or (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP) then
       SetString(Result, PChar(Buffer), BufLen)
     else if ConSettings^.ClientCodePage^.ID = CS_NONE
       then Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, zCP_UTF8), ConSettings^.CTRL_CP)
@@ -1787,14 +1781,8 @@ begin
         then Result := stAsciiStream
         else Result := stBinaryStream;
     SQL_ARRAY: Result := stArray;
-  else
-      Result := stString;
+    else  Result := stString;
   end;
-  if ( ConSettings.CPType = cCP_UTF16 ) then
-    case result of
-      stString: Result := stUnicodeString;
-      stAsciiStream: Result := stUnicodeStream;
-    end;
 end;
 
 {**

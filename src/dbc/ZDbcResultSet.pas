@@ -63,15 +63,14 @@ uses
   Windows,
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBcd,
-  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
-  ZDbcIntfs, ZSysUtils, ZCompatibility, ZVariant;
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  ZDbcIntfs, ZSysUtils, ZCompatibility, ZVariant, ZClasses;
 
 type
   {** Implements Abstract ResultSet. }
   TZAbstractResultSet = class(TZCodePagedObject,
     IImmediatelyReleasable)
   private
-    FRowNo: Integer;
     FLastRowNo: Integer;
     FMaxRows: Integer;
     FClosed: Boolean;
@@ -88,12 +87,13 @@ type
     //note: while in destruction IZResultSet(Self) has no longer the same pointer address!
     //so we mark the address in constructor
   protected
+    FRowNo: Integer;
     FRawTemp: RawByteString;
-    FUniTemp: ZWideString;
+    FUniTemp: UnicodeString;
     LastWasNull: Boolean;
+    FOpenLobStreams: TZSortedList;
 
     procedure RaiseForwardOnlyException;
-    procedure RaiseReadOnlyException;
     procedure CheckClosed;
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
     procedure CheckBlobColumn(ColumnIndex: Integer);
@@ -117,7 +117,7 @@ type
     constructor Create(const Statement: IZStatement; const SQL: string;
       Metadata: TContainedObject; ConSettings: PZConSettings);
     destructor Destroy; override;
-
+  public
     procedure SetType(Value: TZResultSetType);
     procedure SetConcurrency(Value: TZResultSetConcurrency);
 
@@ -140,7 +140,9 @@ type
     function GetSmall(ColumnIndex: Integer): SmallInt;
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetAsciiStream(ColumnIndex: Integer): TStream; virtual;
+    function GetAnsiStream(ColumnIndex: Integer): TStream; virtual;
     function GetUnicodeStream(ColumnIndex: Integer): TStream; virtual;
+    function GetUTF8Stream(ColumnIndex: Integer): TStream; virtual;
     function GetBinaryStream(ColumnIndex: Integer): TStream; virtual;
     function GetDataSet(ColumnIndex: Integer): IZDataSet; virtual;
     function GetValue(ColumnIndex: Integer): TZVariant;
@@ -164,7 +166,7 @@ type
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     {$ENDIF}
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
-    function GetUnicodeStringByName(const ColumnName: string): ZWideString;
+    function GetUnicodeStringByName(const ColumnName: string): UnicodeString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
     function GetShortByName(const ColumnName: string): ShortInt;
@@ -187,9 +189,11 @@ type
     function GetTimestampByName(const ColumnName: string): TDateTime; overload;
     procedure GetTimeStampByName(const ColumnName: string; var Result: TZTimeStamp); overload;
     function GetAsciiStreamByName(const ColumnName: string): TStream;
+    function GetAnsiStreamByName(const ColumnName: string): TStream;
+    function GetUTF8StreamByName(const ColumnName: string): TStream;
     function GetUnicodeStreamByName(const ColumnName: string): TStream;
     function GetBinaryStreamByName(const ColumnName: string): TStream;
-    function GetBlobByName(const ColumnName: string): IZBlob;
+    function GetBlobByName(const ColumnName: string; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     function GetDataSetByName(const ColumnName: String): IZDataSet;
     function GetValueByName(const ColumnName: string): TZVariant;
 
@@ -281,7 +285,7 @@ type
     procedure UpdateUTF8StringByName(const ColumnName: string; const Value: UTF8String);
     {$ENDIF}
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
-    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
+    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: UnicodeString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TBytes);
     procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime); overload;
     procedure UpdateDateByName(const ColumnName: string; const Value: TZDate); overload;
@@ -321,7 +325,7 @@ type
   protected
     FTinyBuffer: Array[Byte] of Byte;
   public //getter
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
+    function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetString(ColumnIndex: Integer): String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
   public //setter
@@ -350,7 +354,7 @@ type
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
     {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: UnicodeString);
     procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
@@ -363,6 +367,206 @@ type
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
   end;
 
+  //sequential stream with faket interface implementationm, not refcounted
+  //aim is to have a object which can handle connection loss
+  TZImmediatelyReleasableLobStream = class(TStream, IImmediatelyReleasable)
+  protected
+    FCodePage: Word;  //in case of binary strem the CP is zero
+    FReleased: Boolean;
+    FOwner: IImmediatelyReleasable;
+    FOwnerLob: IZLob; //keep lob alive while stream is underway
+    FOpenLobStreams: TZSortedList;
+  public
+    constructor Create(const OwnerLob: IZLob; const Owner: IImmediatelyReleasable; const OpenLobStreams: TZSortedList);
+    destructor Destroy; override;
+  public //IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
+    function GetConSettings: PZConSettings;
+  protected //implement fakes IInterface
+    function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IF not defined(MSWINDOWS) and defined(FPC)}cdecl{$ELSE}stdcall{$IFEND};
+    function _AddRef: Integer; {$IF not defined(MSWINDOWS) and defined(FPC)}cdecl{$ELSE}stdcall{$IFEND};
+    function _Release: Integer; {$IF not defined(MSWINDOWS) and defined(FPC)}cdecl{$ELSE}stdcall{$IFEND};
+  end;
+
+  { TZAbstractLob }
+
+  {** EH: implements an abstract large object descriptor }
+  TZAbstractLob = class(TInterfacedObject{, IZLob})
+  protected
+    FWeakRefOfBlob, FWeakRefOfClob: Pointer;
+    FColumnCodePage, RawControlsCP: Word;
+    FIsUpdated: Boolean;
+    FLobStreamMode: TZLobStreamMode;
+    FConSettings: PZConSettings;
+    FOnUpdateHandler: TOnLobUpdate;
+    FField: NativeInt;
+    FOpenLobStreams: TZSortedList;
+    //FRawTemp: RawByteString; //place holder for PAnsiChar
+    //FUniTemp: UnicodeString; //place holder for PWideChar
+    function CreateBinaryException: EZSQLException;
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; virtual; abstract;
+  public //the string implementation
+    function GetRawByteString(CodePage: Word): RawByteString;
+    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word);
+    {$IFNDEF NO_ANSISTRING}
+    function GetAnsiString: AnsiString;
+    procedure SetAnsiString(Const Value: AnsiString);
+    {$ENDIF}
+    {$IFNDEF NO_UTF8STRING}
+    function GetUTF8String: UTF8String;
+    procedure SetUTF8String(Const Value: UTF8String);
+    {$ENDIF}
+    procedure SetUnicodeString(const Value: UnicodeString);
+    function GetUnicodeString: UnicodeString;
+  public //the buffer implementations
+    procedure SetPAnsiChar(Buffer: PAnsiChar; CodePage: Word; Len: NativeUInt); virtual; abstract;
+    procedure SetPWideChar(Buffer: PWideChar; Len: NativeUInt); virtual; abstract;
+  public
+    function GetStream(CodePage: Word): TStream; overload;
+  public //the streamed clob implementation
+    procedure SetStream(const Value: TStream; CodePage: Word); overload; virtual; abstract;
+    function GetStream: TStream; overload;
+    function GetRawByteStream: TStream;
+    function GetAnsiStream: TStream;
+    function GetUTF8Stream: TStream;
+    function GetUnicodeStream: TStream;
+  public //bin implementation
+    procedure SetStream(const Value: TStream); overload;
+    procedure SetString(const Value: RawByteString);
+    procedure SetBytes(const Value: TBytes);
+  public
+    constructor Create(ColumnCodePage: Word; const OpenLobStreams: TZSortedList);
+    procedure AfterConstruction; override;
+  public //might be obsolete in future
+    function IsClob: Boolean;
+    function Length: Integer; virtual; abstract;
+  public
+    function IsEmpty: Boolean; virtual; abstract;
+    function IsUpdated: Boolean; virtual;
+    procedure SetUpdated(Value: Boolean); virtual;
+    procedure Clear; virtual; abstract;
+    procedure Open(LobStreamMode: TZLobStreamMode); virtual;
+  public //add an update notify handle for the datasets oslt
+    procedure SetOnUpdateHandler(Handler: TOnLobUpdate; AField: NativeInt);
+  public //bin implementation
+    function GetString: RawByteString;
+  end;
+
+  {** implements a Lob descriptor object for streamed lobs }
+  TZAbstractStreamedLob = class(TZAbstractLob{, IZLob clear is not introduced})
+  public //the buffer implementations
+    function GetPAnsiChar(CodePage: Word; var ConversionBuf: RawByteString; out Len: NativeUInt): PAnsiChar;
+    procedure SetPAnsiChar(Buffer: PAnsiChar; CodePage: Word; Len: NativeUInt); override;
+    function GetPWideChar(var ConversionBuf: UnicodeString; Out Len: NativeUint): PWideChar;
+    procedure SetPWideChar(Buffer: PWideChar; Len: NativeUInt); override;
+    procedure SetCodePageTo(Value: Word);
+  public //the streamed implementation
+    procedure SetStream(const Value: TStream; CodePage: Word); overload; override;
+  public //bin implementation
+    function GetBytes: TBytes;
+    function GetBuffer(var LocalBuffer: RawByteString; out Len: NativeUInt): Pointer;
+    procedure SetBuffer(Buffer: Pointer; Len: NativeUInt);
+  end;
+
+
+  PZVarLenData = ^TZVarLenData;
+  TZVarLenData = packed record //that's how the memref works in TZRowAccessor
+    Len: Cardinal;
+    Data: array[0..0] of Byte;
+  end;
+
+  PZVarLenDataRef = ^TZVarLenDataRef;
+  TZVarLenDataRef = packed record //that's the local field representation in the rowbuffer
+    IsNotNull: Byte;
+    VarLenData: PZVarLenData;  //if is null or len is zero the ptr^ is nil!
+  end;
+
+  { implements a Memory Referenced lob descriptor }
+
+  { TZVarLenDataRefLob }
+
+  TZVarLenDataRefLob = class(TZAbstractLob, IZLob)
+  protected
+    FDataRefAddress: PZVarLenDataRef;
+    FLobStreamMode: TZLobStreamMode;
+    FCapacity: NativeUint;
+    procedure InternalClear;
+    procedure SetCapacity(Value: NativeUint);
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
+  public //the string implementation
+    procedure SetCodePageTo(Value: Word);
+  public //the buffer implementations
+    function GetPAnsiChar(CodePage: Word; var Buffer: RawByteString; out Len: NativeUInt): PAnsiChar;
+    procedure SetPAnsiChar(Buffer: PAnsiChar; CodePage: Word; Len: NativeUInt); override;
+    function GetPWideChar(var Buffer: UnicodeString; out Len: NativeUInt): PWideChar;
+    procedure SetPWideChar(Buffer: PWideChar; Len: NativeUInt); override;
+  public
+    constructor Create(CodePage: Word; DataRefAddress: PZVarLenDataRef; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList);
+  public //the streamed implementation
+    procedure SetStream(const Value: TStream; CodePage: Word); override;
+  public //bin implementation
+    function GetBytes: TBytes;
+    function GetBuffer(var LocalBuffer: RawByteString; Out Len: NativeUInt): Pointer;
+    procedure SetBuffer(Buffer: Pointer; Len: NativeUInt);
+  public //might be obsolete
+    procedure Clear; override;
+    function IsEmpty: Boolean; override;
+    function Length: Integer; override;
+  end;
+
+  TZCodePageFixedVarLenDataRefLob = class(TZVarLenDataRefLob)
+  public
+    procedure SetCodePageTo(Value: Word);
+  end;
+
+  { TZLocalMemBLob }
+
+  {** EH: implements an inmemory binary large object descriptor }
+  TZLocalMemBLob = class(TZCodePageFixedVarLenDataRefLob, IZBlob)
+  private
+    FDataRef: TZVarLenDataRef;
+  public
+    function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+  public
+    constructor Create(const OpenLobStreams: TZSortedList = nil);
+    constructor CreateWithData(Data: Pointer; BytesCount: NativeUInt; const OpenLobStreams: TZSortedList = nil);
+    constructor CreateWithStream(Value: TZImmediatelyReleasableLobStream;
+      FreeStream: Boolean; const OpenLobStreams: TZSortedList = nil); overload;
+    constructor CreateWithStream(Value: TStream; const OpenLobStreams: TZSortedList = nil); overload;
+    constructor CreateFromBlob(const Value: IZBlob; const OpenLobStreams: TZSortedList = nil);
+    destructor Destroy; override;
+  end;
+
+  TZAbstractBLob = TZLocalMemBLob;
+
+  TZCodePageVariableVarLenDataRefLob = class(TZVarLenDataRefLob)
+  public
+    procedure SetCodePageTo(Value: Word);
+  end;
+
+  { TZLocalMemCLob }
+
+  {** EH: implements an inmemory character large object descriptor }
+  TZLocalMemCLob = class(TZCodePageVariableVarLenDataRefLob, IZBlob, IZClob)
+  private
+    FDataRef: TZVarLenDataRef;
+  public
+    function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+  public
+    constructor Create(CodePage: Word; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList = nil);
+    constructor CreateWithData(Data: Pointer; BytesCount: NativeUInt; CodePage: Word; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList = nil); overload;
+    constructor CreateWithData(Data: PWideChar; WordCount: NativeUint; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList = nil); overload;
+    constructor CreateWithStream(Value: TZImmediatelyReleasableLobStream;
+      ColumnCodePage: Word; FreeStream: Boolean; const OpenLobStreams: TZSortedList = nil); overload;
+    constructor CreateWithStream(Value: TStream; ColumnCodePage: Word; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList = nil); overload;
+    constructor CreateFromClob(const Value: IZClob; ColumnCodePage: Word; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList = nil);
+    destructor Destroy; override;
+  end;
+  TZAbstractCLob = TZLocalMemCLob;
+
+  {** EH: implements a readonly resultset for raw encoded protocols }
   TZAbstractReadOnlyResultSet_A = class(TZAbstractReadOnlyResultSet)
   public
     {$IFNDEF NO_ANSISTRING}
@@ -373,198 +577,118 @@ type
     {$ENDIF}
   end;
 
-  {** implements a optimal Converter function for Date, Time, DateTime conversion }
-  TDateTimeConverter = function (Value, Format: PAnsiChar;
-    Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-
-  {** Implements external or internal blob wrapper object. }
-  TZAbstractBlob = class(TInterfacedObject, IZBlob)
+  {** EH: implements a codepage conversion stream helper}
+  TZCodePageConversionStream = class(TMemoryStream)
   private
-  protected
-    FBlobData: Pointer;
-    FBlobSize: Integer; //All Mem operations except AllocMem(also calls FillChar(P, 0)) use integers. So we can only load MaxInt bytes. More intersting on 64Bit env.
-    FUpdated: Boolean;
-    procedure InternalClear; virtual;
-    property BlobData: Pointer read FBlobData write FBlobData;
-    property BlobSize: Integer read FBlobSize write FBlobSize;
-    property Updated: Boolean read FUpdated write FUpdated;
-  public
-    constructor CreateWithStream(Stream: TStream); virtual;
-    constructor CreateWithData(Data: Pointer; Size: Integer); virtual;
-    destructor Destroy; override;
-
-    function IsEmpty: Boolean; virtual;
-    function IsUpdated: Boolean; virtual;
-    function Length: Integer; virtual;
-
-    function GetString: RawByteString; virtual;
-    procedure SetString(const Value: RawByteString); virtual;
-    function GetBytes: TBytes; virtual;
-    procedure SetBytes(const Value: TBytes); virtual;
-    function GetStream: TStream; virtual;
-    procedure SetStream(const Value: TStream); overload; virtual;
-    function GetBufferAddress: PPointer;
-    function GetLengthAddress: PInteger;
-    function GetBuffer: Pointer; virtual;
-    procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
-    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal); overload;
-    {$ENDIF}
-
-    procedure Clear; virtual;
-    function Clone(Empty: Boolean = False): IZBlob; virtual;
-    function IsClob: Boolean; virtual;
-
-    {clob operations}
-    function GetRawByteString: RawByteString; virtual;
-    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word); virtual;
-    {$IFNDEF NO_ANSISTRING}
-    function GetAnsiString: AnsiString; virtual;
-    procedure SetAnsiString(Const Value: AnsiString); virtual;
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
-    function GetUTF8String: UTF8String; virtual;
-    procedure SetUTF8String(Const Value: UTF8String); virtual;
-    {$ENDIF}
-    procedure SetUnicodeString(const Value: ZWideString); virtual;
-    function GetUnicodeString: ZWideString; virtual;
-    procedure SetStream(const Value: TStream; const CodePage: Word); overload; virtual;
-    function GetRawByteStream: TStream; virtual;
-    function GetAnsiStream: TStream; virtual;
-    function GetUTF8Stream: TStream; virtual;
-    function GetUnicodeStream: TStream; virtual;
-    function GetPAnsiChar(const CodePage: Word): PAnsiChar; virtual;
-    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal); virtual;
-    function GetPWideChar: PWideChar; virtual;
-    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal); virtual;
-    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload; virtual;
-    {$ENDIF}
-  end;
-
-  TZAbstractUnCachedBlob = class(TZAbstractBlob)
-  private
-    FLoaded: Boolean;
-  protected
-    procedure ReadLob; virtual;
-    procedure WriteLob; virtual;
-    property Loaded: Boolean read FLoaded;
-  public
-    function IsEmpty: Boolean; override;
-    function Length: Integer; override;
-    function GetString: RawByteString; override;
-    function GetBytes: TBytes; override;
-    function GetStream: TStream; override;
-    function GetBuffer: Pointer; override;
-    function Clone(Empty: Boolean = False): IZBlob; override;
-    procedure FlushBuffer; virtual;
-  end;
-
-  {** Implements external or internal clob wrapper object. }
-  TZAbstractCLob = class(TZAbstractBlob, IZCLob)
-  protected
-    FCurrentCodePage: Word;
+    FNativeCodePage, FCurrentCodePage: Word;
+    FOwnerStream: TStream;
     FConSettings: PZConSettings;
-    procedure InternalSetRawByteString(Const Value: RawByteString; const CodePage: Word);
-    {$IFNDEF NO_ANSISTRING}
-    procedure InternalSetAnsiString(Const Value: AnsiString);
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
-    procedure InternalSetUTF8String(Const Value: UTF8String);
-    {$ENDIF}
-    procedure InternalSetUnicodeString(const Value: ZWideString);
-    procedure InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
-    procedure InternalSetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
-    property Updated: Boolean read FUpdated write FUpdated;
-    property CurrentCodePage: Word read FCurrentCodePage;
+    FUpdated: Boolean;
+    FInConstructionState: Boolean;
+    FOpenLobStreams: TZSortedList;
+  protected
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+  protected
+    procedure FlushMemToStream(Buf: Pointer; Len: NativeUInt; Stream: TStream); virtual;
+    procedure ReadStreamToMem(var Buf: Pointer; var Len: NativeUint; Stream: TStream); virtual;
   public
-    constructor CreateWithStream(Stream: TStream; const CodePage: Word;
-      const ConSettings: PZConSettings); reintroduce;
-    constructor CreateWithData(Data: PAnsiChar; const Len: Cardinal;
-      const CodePage: Word; const ConSettings: PZConSettings); reintroduce; overload;
-    constructor CreateWithData(Data: PWideChar; const Len: Cardinal;
-      const ConSettings: PZConSettings); reintroduce; overload;
-
-    function Length: Integer; override;
-    function GetString: RawByteString; override; //deprected;
-    function GetRawByteString: RawByteString; override;
-    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word); override;
-    {$IFNDEF NO_ANSISTRING}
-    function GetAnsiString: AnsiString; override;
-    procedure SetAnsiString(Const Value: AnsiString); override;
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
-    function GetUTF8String: UTF8String; override;
-    procedure SetUTF8String(Const Value: UTF8String); override;
-    {$ENDIF}
-    function GetUnicodeString: ZWideString; override;
-    procedure SetUnicodeString(const Value: ZWideString); override;
-    function GetStream: TStream; override;
-    procedure SetStream(const Value: TStream); overload; override;
-    procedure SetStream(const Value: TStream; const CodePage: Word); reintroduce; overload; override;
-    function GetRawByteStream: TStream; override;
-    {$IFNDEF NO_ANSISTRING}
-    function GetAnsiStream: TStream; override;
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
-    function GetUTF8Stream: TStream; override;
-    {$ENDIF}
-    function GetUnicodeStream: TStream; override;
-    function GetPAnsiChar(const CodePage: Word): PAnsiChar; override;
-    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal); override;
-    function GetPWideChar: PWideChar; override;
-    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal); override;
-    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); override;
-    {$ENDIF}
-    function GetConSetting: PZConSettings;
-
-    function Clone(Empty: Boolean = False): IZBLob; override;
-    function IsClob: Boolean; override;
+    constructor Create(const Owner: TStream; SourceCodePage, DestCodePage: Word;
+      ConSettings: PZConSettings; const OpenLobStreams: TZSortedList);
+    destructor Destroy; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
   end;
 
-  TZAbstractUnCachedCLob = Class(TZAbstractCLob)
-  private
-    FLoaded: Boolean;
+  {** EH: implements a codepage conversion stream helper to read data only}
+  TZCodePageConversionROStream = class(TZCodePageConversionStream)
   protected
-    property Loaded: Boolean read FLoaded;
-    procedure ReadLob; virtual;
-    procedure WriteLob; virtual;
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+  end;
+
+  TZVarVarLenDataRefStream = class(TMemoryStream)
+  private
+    FVarLenDataRef: PZVarLenDataRef;
+    FColumnCodePage: Word;
+    FLobStreamMode: TZLobStreamMode;
+    FUpdated: Boolean;
+    FOwner: IZLob; //this keeps data alive while the stream is underway
+    FOpenLobStreams: TZSortedList;
+  protected
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
   public
+    Constructor Create(const Owner: IZLob; CodePage: Word;
+      VarLenDataRef: PZVarLenDataRef; LobStreamMode: TZLobStreamMode;
+      const OpenLobStreams: TZSortedList);
+    destructor Destroy; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+  end;
+
+  {** EH: implements a readonly stream
+    use it for MySQL(store_result) or Postgres <> non single_row_mode
+    in non updatable mode only }
+  TZReadOnlyDataRefStream = class(TMemoryStream)
+  private
+    FOwner: IZLob; //this keeps data alive while the stream is underway
+    FOpenLobStreams: TZSortedList;
+  public
+    Constructor Create(const Owner: IZLob; Data: Pointer; DataLen: NativeUInt;
+      const OpenLobStreams: TZSortedList);
+    destructor Destroy; override;
+    function Write(const Buffer; Count: Longint): Longint; override;
+    procedure SetSize(NewSize: Longint); override;
+  end;
+
+  TZMemoryReferencedLob = class(TZAbstractLob, IZLob)
+  private
+    FMemoryReference: Pointer;
+    FDataLen: NativeUInt;
+  protected
+    function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
+  public
+    constructor CreateWithData(Buffer: Pointer; DataLen: NativeUInt;
+      ColumnCodePage: Word; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList);
+  public
+    function GetUnicodeString: UnicodeString;
+  public //the buffer implementations
+    function GetPAnsiChar(CodePage: Word; var Buffer: RawByteString; out Len: NativeUInt): PAnsiChar;
+    procedure SetPAnsiChar(Buffer: PAnsiChar; CodePage: Word; Len: NativeUInt); override;
+    function GetPWideChar(var Buffer: UnicodeString; out Len: NativeUInt): PWideChar;
+    procedure SetPWideChar(Buffer: PWideChar; Len: NativeUInt); override;
+  public //bin implementation
+    function GetBytes: TBytes;
+    function GetBuffer(var LocalBuffer: RawByteString; Out Len: NativeUInt): Pointer;
+    procedure SetBuffer(Buffer: Pointer; Len: NativeUInt);
+  public //the streamed clob implementation
+    procedure SetStream(const Value: TStream; CodePage: Word); overload; override;
+  public //might be obsolete in future
     function Length: Integer; override;
+  public
     function IsEmpty: Boolean; override;
-    function GetRawByteString: RawByteString; override;
-    {$IFNDEF NO_ANSISTRING}
-    function GetAnsiString: AnsiString; override;
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
-    function GetUTF8String: UTF8String; override;
-    {$ENDIF}
-    function GetUnicodeString: ZWideString; override;
-    function GetStream: TStream; override;
-    function GetRawByteStream: TStream; override;
-    function GetAnsiStream: TStream; override;
-    function GetUTF8Stream: TStream; override;
-    function GetUnicodeStream: TStream; override;
-    function GetPAnsiChar(const CodePage: Word): PAnsiChar; override;
-    function GetPWideChar: PWideChar; override;
-    function GetBuffer: Pointer; override;
-    function Clone(Empty: Boolean = False): IZBLob; override;
-    procedure FlushBuffer; virtual;
-  End;
+    procedure Clear; override;
+    procedure Open(LobStreamMode: TZLobStreamMode); override;
+    function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+    procedure SetCodePageTo(Value: Word);
+  end;
+
+  TZMemoryReferencedBLob = class(TZMemoryReferencedLob, IZBlob)
+  public
+    constructor CreateWithData(Buffer: Pointer; DataLen: NativeUInt; const OpenLobStreams: TZSortedList);
+  end;
+
+  TZMemoryReferencedCLob = class(TZMemoryReferencedLob, IZBlob, IZClob);
+
 
 {$IFDEF USE_SYNCOMMONS}
 const
   JSONBool: array[Boolean] of ShortString = ('false', 'true');
-  ZeroTimeMagic = Int64(3472339291344613424); //00:00:00
-  ZeroYearMagic = Cardinal(808464432); //0000
 {$ENDIF USE_SYNCOMMONS}
+
+function CreateRawCLobFromBlob(Value: IZBlob; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList): IZClob;
 
 implementation
 
 uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
-  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, Math;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameters not used intentionally
 function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for complex types we can't sort quickly like arrays, dataset ...
@@ -617,7 +741,7 @@ begin
   if Null1 and Null2 then Result := 0
   else if Null1 then Result := -1
   else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VDouble > TZVariant(V2).VDouble)-Ord(TZVariant(V1).VDouble < TZVariant(V2).VDouble);
+  else Result := Ord(CompareValue(TZVariant(V1).VDouble, TZVariant(V2).VDouble));
 end;
 
 function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -643,7 +767,7 @@ begin
   if Null1 and Null2 then Result := 0
   else if Null1 then Result := -1
   else if Null2 then Result := 1
-  else Result := BcdCompare(TZVariant(V1).VBigDecimal, TZVariant(V2).VBigDecimal);
+  else Result := ZBCDCompare(PBCD(@TZVariant(V1).VBigDecimal.Precision)^, PBCD(@TZVariant(V2).VBigDecimal.Precision)^);
 end;
 
 function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -715,6 +839,130 @@ begin
   Result := -CompareUnicodeString_Asc(Null1, Null2, V1, V2);
 end;
 
+{ TZLocalMemCLob }
+
+function TZLocalMemCLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+var P: Pointer;
+  L: NativeUInt;
+  R: RawByteString;
+begin
+  R := '';
+  P := GetBuffer(R, L);
+  Result := TZLocalMemCLob.CreateWithData(P, L, FColumnCodePage, FConSettings, FOpenLobStreams);
+  Result.Open(LobStreamMode)
+end;
+
+constructor TZLocalMemCLob.Create(CodePage: Word; ConSettings: PZConSettings;
+  const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(CodePage, @FDataRef, ConSettings, OpenLobStreams);
+end;
+
+constructor TZLocalMemCLob.CreateFromClob(const Value: IZClob;
+  ColumnCodePage: Word; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList);
+var Stream: TStream;
+begin
+  Create(ColumnCodePage, ConSettings, OpenLobStreams);
+  FColumnCodePage := ColumnCodePage;
+  FConSettings := ConSettings;
+  Stream := Value.GetStream(ColumnCodePage);
+  if Stream = nil then
+    Exit;
+  FDataRef.IsNotNull := 1;
+  try
+    SetCapacity(Stream.Size);
+    Stream.Read(FDataRef.VarLenData.Data, Stream.Size);
+  finally
+    Stream.Free;
+  end;
+end;
+
+constructor TZLocalMemCLob.CreateWithData(Data: PWideChar;
+  WordCount: NativeUint; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList);
+begin
+  CreateWithData(Data, WordCount shl 1, zCP_UTF16, ConSettings, OpenLobStreams);
+end;
+
+constructor TZLocalMemCLob.CreateWithData(Data: Pointer;
+  BytesCount: NativeUInt; CodePage: Word; ConSettings: PZConSettings;
+  const OpenLobStreams: TZSortedList);
+begin
+  Create(CodePage, ConSettings, OpenLobStreams);
+  if Data <> nil then begin
+     FDataRef.IsNotNull := 1;
+     GetMem(FDataRef.VarLenData, SizeOf(Cardinal)+BytesCount+1+Byte(CodePage = zCP_UTF16));
+     Move(Data^, FDataRef.VarLenData.Data, BytesCount);
+     if CodePage = zCP_UTF16
+     then PWord(PAnsiChar(@FDataRef.VarLenData.Data)+BytesCount)^ := 0
+     else PByte(PAnsiChar(@FDataRef.VarLenData.Data)+BytesCount)^ := 0;
+     FDataRef.VarLenData.Len := BytesCount;
+  end;
+end;
+
+constructor TZLocalMemCLob.CreateWithStream(Value: TStream;
+  ColumnCodePage: Word; ConSettings: PZConSettings;
+  const OpenLobStreams: TZSortedList);
+const
+  MaxBufSize = $F000;
+var Count, BufSize, ReadBytes: LongInt;
+  Buf: PAnsichar;
+begin
+  Create(ColumnCodePage, ConSettings, OpenLobStreams);
+  if Value = nil then Exit;
+  Count := Value.Size;
+  FDataRef.IsNotNull := 1;
+  SetCapacity(Count);
+  if Count > MaxBufSize
+  then BufSize := MaxBufSize
+  else BufSize := Count;
+  Buf := PAnsiChar(@FDataRef.VarLenData.Data);
+  while Count <> 0 do begin
+    ReadBytes := Value.Read(Buf^, BufSize);
+    Dec(Count, ReadBytes);
+    Inc(Buf, ReadBytes);
+    if Count < BufSize then
+      BufSize := Count;
+  end;
+  { set trailing terms for the postgres server only (uses StrLen() & ignores the length attibutes)}
+  if ColumnCodePage = zCP_UTF16
+  then PWord(Buf)^ := 0
+  else PByte(Buf)^ := 0;
+end;
+
+destructor TZLocalMemCLob.Destroy;
+begin
+  if FDataRef.VarLenData <> nil then begin
+    FreeMem(FDataRef.VarLenData);
+    FDataRef.VarLenData := nil;
+  end;
+  inherited;
+end;
+
+constructor TZLocalMemCLob.CreateWithStream(
+  Value: TZImmediatelyReleasableLobStream; ColumnCodePage: Word;
+  FreeStream: Boolean; const OpenLobStreams: TZSortedList);
+begin
+  CreateWithStream(Value, ColumnCodePage, Value.FOwner.GetConSettings, OpenLobStreams);
+  if FreeStream then Value.Free;
+end;
+
+{ TZLocalMemBLob }
+
+function TZLocalMemBLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+var P: Pointer;
+  L: NativeUInt;
+  R: RawByteString;
+begin
+  if LobStreamMode = lsmWrite then begin
+    P := nil;
+    L := 0;
+  end else begin
+    R := '';
+    P := GetBuffer(R, L);
+  end;
+  Result := TZLocalMemBLob.CreateWithData(P, L, FOpenLobStreams);
+end;
+
 { TZAbstractResultSet }
 
 {**
@@ -735,6 +983,7 @@ begin
   FRowNo := 0;
   FLastRowNo := 0;
   FClosed := True;
+  FOpenLobStreams := TZSortedList.Create;
 
   { the constructor keeps the refcount to 1}
   QueryInterface(IZResultSet, RS);
@@ -777,6 +1026,7 @@ begin
     Close;
   FreeAndNil(FMetadata);
   FreeAndNil(FColumnsInfo);
+  FreeAndNil(FOpenLobStreams);
   inherited Destroy;
 end;
 
@@ -786,14 +1036,6 @@ end;
 procedure TZAbstractResultSet.RaiseForwardOnlyException;
 begin
   raise EZSQLException.Create(SOperationIsNotAllowed1);
-end;
-
-{**
-  Raises operation is not allowed in READ ONLY mode exception.
-}
-procedure TZAbstractResultSet.RaiseReadOnlyException;
-begin
-  raise EZSQLException.Create(SOperationIsNotAllowed2);
 end;
 
 {**
@@ -921,6 +1163,8 @@ end;
 procedure TZAbstractResultSet.Close;
 var RefCountAdded: Boolean;
 begin
+  if FOpenLobStreams.Count > 0 then
+    raise EZSQLException.Create('close all lob streams before closing the resultset');
   if not Closed then begin
     BeforeClose;
     FClosed := True;
@@ -1055,8 +1299,9 @@ end;
     <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetAsciiStream(ColumnIndex: Integer): TStream;
-var
-  Blob: IZBlob;
+var Blob: IZBlob;
+    Clob: IZCLob;
+    CP: Word;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
@@ -1067,29 +1312,28 @@ begin
   else begin
     Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
     if not LastWasNull and (Blob <> nil) then
-      if Blob.IsClob then
-        Result := Blob.GetStream
-      else if GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream then begin
-        FRawTemp := GetValidatedAnsiStringFromBuffer(Blob.GetBuffer,
-            Blob.Length, ConSettings, ConSettings.CTRL_CP);
-        Result := StreamFromData(Pointer(FRawTemp), Length(FRawTemp){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
-      end else
-          Result := Blob.GetStream;
+      Blob.QueryInterface(IZCLob, Clob);
+      if Clob = nil then
+        Result := (Blob).GetStream
+      else begin
+        if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16)
+        then CP := ConSettings.CTRL_CP
+        else CP := ConSettings.ClientCodePage.CP;
+        Result := Clob.GetStream(CP)
+      end;
     LastWasNull := (Result = nil);
   end;
 end;
 
 {**
-  Gets the value of a column in the current row as a stream of
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   as a stream of Unicode characters.
   The value can then be read in chunks from the
   stream. This method is particularly
-  suitable for retrieving large<code>LONGVARCHAR</code>values.  The JDBC driver will
+  suitable for retrieving large<code>LONGNVARCHAR</code>values.  The JDBC driver will
   do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be Java UTF-8,
-  as specified in the Java virtual machine specification.
+  The byte format of the Unicode stream must be UTF16.
 
   <P><B>Note:</B> All the data in the returned stream must be
   read prior to getting the value of any other column. The next
@@ -1100,12 +1344,12 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return a Java input stream that delivers the database column value
-    as a stream in Java UTF-8 byte format; if the value is SQL
+    as a stream in Java UTF16 byte format; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
-var
-  Blob: IZBlob;
+var Blob: IZBlob;
+    CLob: IZCLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
@@ -1115,11 +1359,9 @@ begin
     LastWasNull := True
   else begin
     Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
-    if not LastWasNull and (Blob <> nil) then
-      if Blob.IsClob then
-        Result := Blob.GetUnicodeStream
-      else
-        Result := Blob.GetStream;
+    if not LastWasNull and (Blob <> nil) and Supports(Blob, IZClob, CLob)
+    then Result := Clob.GetStream(zCP_UTF16)
+    else Result := Blob.GetStream;
     LastWasNull := (Result = nil);
   end;
 end;
@@ -1145,8 +1387,7 @@ end;
     if the value is SQL <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetBinaryStream(ColumnIndex: Integer): TStream;
-var
-  Blob: IZBlob;
+var Blob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
@@ -1336,6 +1577,75 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a stream of ASCII characters. The value can then be read in chunks from the
+  stream. This method is particularly
+  suitable for retrieving large <char>LONGVARCHAR</char> values.
+  The JDBC driver will
+  do any necessary conversion from the database format into single byte
+  raw format depending to operating system.
+
+  <P><B>Note:</B> All the data in the returned stream must be
+  read prior to getting the value of any other column. The next
+  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
+  stream may return <code>0</code> when the method
+  <code>InputStream.available</code>
+  is called whether there is data available or not.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return a Java input stream that delivers the database column value
+    as a stream of one-byte characters; if the value is SQL
+    <code>NULL</code>, the value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetAnsiStream(ColumnIndex: Integer): TStream;
+var Blob: IZBlob;
+  CLob: IZCLob;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stUnicodeStream);
+{$ENDIF}
+  Result := nil;
+  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+    LastWasNull := True
+  else begin
+    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    if not LastWasNull and (Blob <> nil) and Supports(Blob, IZClob, CLob)
+    then Result := Clob.GetStream(zOSCodePage)
+    else Result := Blob.GetStream;
+    LastWasNull := (Result = nil);
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a stream of
+  Unicode characters. The value can then be read in chunks from the
+  stream. This method is particularly
+  suitable for retrieving large <code>LONGVARCHAR</code> values.
+  The JDBC driver will
+  do any necessary conversion from the database format into Unicode.
+  do any necessary conversion from the database format into single byte
+  raw format depending to operating system.
+
+  <P><B>Note:</B> All the data in the returned stream must be
+  read prior to getting the value of any other column. The next
+  call to a <code>getXXX</code> method implicitly closes the stream. Also, a
+  stream may return <code>0</code> when the method <code>available</code>
+  is called whether there is data available or not.
+
+  @param columnName the SQL name of the column
+  @return a Java input stream that delivers the database column value
+    as a stream of one byte characters.
+    If the value is SQL <code>NULL</code>, the value returned is <code>null</code>.
+}
+function TZAbstractResultSet.GetAnsiStreamByName(
+  const ColumnName: string): TStream;
+begin
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiStream(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>AnsiString</code> in the Java programming language.
 
   @param columnName the SQL name of the column
@@ -1348,6 +1658,76 @@ begin
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiString(GetColumnIndex(ColumnName));
 end;
 {$ENDIF}
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  as a stream of Unicode characters.
+  The value can then be read in chunks from the
+  stream. This method is particularly
+  suitable for retrieving large<code>LONGVARCHAR</code>values.  The JDBC driver will
+  do any necessary conversion from the database format into Unicode.
+  The byte format of the Unicode stream must be UTF-8,
+  as specified in the Java virtual machine specification.
+
+  <P><B>Note:</B> All the data in the returned stream must be
+  read prior to getting the value of any other column. The next
+  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
+  stream may return <code>0</code> when the method
+  <code>InputStream.available</code>
+  is called whether there is data available or not.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return a Java input stream that delivers the database column value
+    as a stream in Java UTF-8 byte format; if the value is SQL
+    <code>NULL</code>, the value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetUTF8Stream(ColumnIndex: Integer): TStream;
+var Blob: IZBlob;
+    CLob: IZCLob;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stUnicodeStream);
+{$ENDIF}
+  Result := nil;
+  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+    LastWasNull := True
+  else begin
+    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    if not LastWasNull and (Blob <> nil) and Supports(Blob, IZClob, CLob)
+    then Result := Clob.GetStream(zCP_UTF8)
+    else Result := Blob.GetStream;
+    LastWasNull := (Result = nil);
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a stream of
+  Unicode characters. The value can then be read in chunks from the
+  stream. This method is particularly
+  suitable for retrieving large <code>LONGVARCHAR</code> values.
+  The JDBC driver will
+  do any necessary conversion from the database format into Unicode.
+  The byte format of the Unicode stream must be Java UTF-8,
+  as defined in the Java virtual machine specification.
+
+  <P><B>Note:</B> All the data in the returned stream must be
+  read prior to getting the value of any other column. The next
+  call to a <code>getXXX</code> method implicitly closes the stream. Also, a
+  stream may return <code>0</code> when the method <code>available</code>
+  is called whether there is data available or not.
+
+  @param columnName the SQL name of the column
+  @return a Java input stream that delivers the database column value
+    as a stream of two-byte Unicode characters.
+    If the value is SQL <code>NULL</code>, the value returned is <code>null</code>.
+}
+function TZAbstractResultSet.GetUTF8StreamByName(
+  const ColumnName: string): TStream;
+begin
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8Stream(GetColumnIndex(ColumnName));
+end;
 
 {**
   Gets the value of the designated column in the current row
@@ -1382,14 +1762,14 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>WideString</code> in the Object Pascal programming language.
+  a <code>UnicodeString</code> in the Object Pascal programming language.
 
   @param columnName the SQL name of the column
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetUnicodeStringByName(const ColumnName: string):
-  ZWideString;
+  UnicodeString;
 begin
   Result := IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeString(GetColumnIndex(ColumnName));
 end;
@@ -1669,7 +2049,7 @@ end;
 }
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5057 off : Local variable "T" does not seem to be initialized}
   {$WARN 5060 off : Function result variable does not seem to be initialized}
 {$ENDIF}
 function TZAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
@@ -1714,7 +2094,7 @@ end;
 
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5057 off : Local variable "TS" does not seem to be initialized}
   {$WARN 5060 off : Function result variable does not seem to be initialized}
 {$ENDIF}
 function TZAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
@@ -1788,11 +2168,10 @@ end;
   of this <code>ResultSet</code> object as a stream of
   Unicode characters. The value can then be read in chunks from the
   stream. This method is particularly
-  suitable for retrieving large <code>LONGVARCHAR</code> values.
+  suitable for retrieving large <code>LONGNVARCHAR</code> values.
   The JDBC driver will
   do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be Java UTF-8,
-  as defined in the Java virtual machine specification.
+  The byte format of the Unicode stream must be Java UTF16.
 
   <P><B>Note:</B> All the data in the returned stream must be
   read prior to getting the value of any other column. The next
@@ -1802,7 +2181,7 @@ end;
 
   @param columnName the SQL name of the column
   @return a Java input stream that delivers the database column value
-    as a stream of two-byte Unicode characters.
+    as a stream of two-byte UTF16 characters.
     If the value is SQL <code>NULL</code>, the value returned is <code>null</code>.
 }
 function TZAbstractResultSet.GetUnicodeStreamByName(const ColumnName: string): TStream;
@@ -1844,9 +2223,10 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZAbstractResultSet.GetBlobByName(const ColumnName: string): IZBlob;
+function TZAbstractResultSet.GetBlobByName(const ColumnName: string;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(GetColumnIndex(ColumnName), LobStreamMode);
 end;
 
 function TZAbstractResultSet.GetDataSetByName(const ColumnName: string): IZDataSet;
@@ -2329,8 +2709,6 @@ begin
   Result := False;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
-
 {**
   Updates the designated column with a variant value.
   The <code>updateXXX</code> methods are used to update column values in the
@@ -2380,8 +2758,6 @@ begin
     IZResultSet(FWeakIntfPtrOfSelf).UpdateNull(ColumnIndex);
   end;
 end;
-
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Updates the designated column with a <code>null</code> value.
@@ -2725,7 +3101,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateUnicodeStringByName(const ColumnName: string;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateUnicodeString(GetColumnIndex(ColumnName), Value);
 end;
@@ -2986,7 +3362,7 @@ end;
 }
 procedure TZAbstractResultSet.InsertRow;
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;
 end;
 
 {**
@@ -2996,7 +3372,7 @@ end;
 }
 procedure TZAbstractResultSet.UpdateRow;
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;
 end;
 
 {**
@@ -3006,7 +3382,7 @@ end;
 }
 procedure TZAbstractResultSet.DeleteRow;
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;
 end;
 
 {**
@@ -3063,7 +3439,7 @@ end;
 }
 procedure TZAbstractResultSet.CancelRowUpdates;
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;
 end;
 
 {**
@@ -3085,7 +3461,7 @@ end;
 }
 procedure TZAbstractResultSet.MoveToInsertRow;
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;
 end;
 
 {**
@@ -3236,1088 +3612,6 @@ begin
   Result := FStatement;
 end;
 
-{ TZAbstractBlob }
-
-{**
-  Constructs this class and assignes the main properties.
-  @param Stream a data string object.
-}
-constructor TZAbstractBlob.CreateWithStream(Stream: TStream);
-begin
-  inherited Create;
-  FUpdated := False;
-  if Assigned(Stream) then
-  begin
-    FBlobSize := Stream.Size;
-    if FBlobSize > 0 then
-    begin
-      GetMem(FBlobData, FBlobSize);
-      Stream.Position := 0;
-      Stream.ReadBuffer(FBlobData^, FBlobSize);
-    end;
-  end
-  else
-  begin
-    FBlobSize := -1;
-    FBlobData := nil;
-  end;
-end;
-
-{**
-  Constructs this class and assignes the main properties.
-  @param Data a pointer to the blobdata.
-  @param Size the size of the blobdata.
-}
-constructor TZAbstractBlob.CreateWithData(Data: Pointer; Size: Integer);
-begin
-  inherited Create;
-  FBlobData := nil;
-  FBlobSize := Size;
-  if FBlobSize > 0 then
-  begin
-    GetMem(FBlobData, FBlobSize);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, FBlobData^, FBlobSize);
-  end;
-  FUpdated := False;
-end;
-
-procedure TZAbstractBlob.InternalClear;
-begin
-  if Assigned(FBlobData) then
-    FreeMem(FBlobData);
-  FBlobData := nil;
-  FBlobSize := -1;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZAbstractBlob.Destroy;
-begin
-  Clear;
-  inherited Destroy;
-end;
-
-{**
-  Clears the content of this blob.
-}
-procedure TZAbstractBlob.Clear;
-begin
-  InternalClear;
-  FUpdated := True;
-end;
-
-{**
-  Clones this blob object.
-  @return a clonned blob object.
-}
-function TZAbstractBlob.Clone(Empty: Boolean = False): IZBlob;
-begin
-  if Empty then
-    Result := TZAbstractBlob.CreateWithData(nil, 0)
-  else
-    Result := TZAbstractBlob.CreateWithData(FBlobData, FBlobSize);
-end;
-
-function TZAbstractBlob.IsClob: Boolean;
-begin
-  Result := False;
-end;
-
-function TZAbstractBlob.GetRawByteString: RawByteString;
-begin
-  ZSetString(FBlobData, FBlobSize, Result);
-end;
-
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5024 off : Parameter "$1" not used}                 // base class - parameters not used intentionally
-  {$WARN 5033 off : Function result does not seem to be set} // base class - result not returned intentionally
-{$ENDIF}
-
-procedure TZAbstractBlob.SetRawByteString(Const Value: RawByteString; const CodePage: Word);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-{$IFNDEF NO_ANSISTRING}
-function TZAbstractBlob.GetAnsiString: AnsiString;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-procedure TZAbstractBlob.SetAnsiString(Const Value: AnsiString);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-{$ENDIF}
-
-{$IFNDEF NO_UTF8STRING}
-function TZAbstractBlob.GetUTF8String: UTF8String;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-procedure TZAbstractBlob.SetUTF8String(Const Value: UTF8String);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-{$ENDIF}
-
-procedure TZAbstractBlob.SetUnicodeString(const Value: ZWideString);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-function TZAbstractBlob.GetUnicodeString: ZWideString;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-procedure TZAbstractBlob.SetStream(const Value: TStream; const CodePage: Word);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-function TZAbstractBlob.GetRawByteStream: TStream;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-function TZAbstractBlob.GetAnsiStream: TStream;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-function TZAbstractBlob.GetUTF8Stream: TStream;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-function TZAbstractBlob.GetUnicodeStream: TStream;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-function TZAbstractBlob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-procedure TZAbstractBlob.SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-function TZAbstractBlob.GetPWideChar: PWideChar;
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-procedure TZAbstractBlob.SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-
-{$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-procedure TZAbstractBlob.SetBlobData(const Buffer: Pointer; const Len: Cardinal);
-begin
-  if Buffer <> FBlobData then
-    Clear;
-  Self.FBlobData := Buffer;
-  Self.FBlobSize := Len;
-  Self.FUpdated := True;
-end;
-
-procedure TZAbstractBlob.SetBlobData(const Buffer: Pointer; const Len: Cardinal;
-  Const CodePage: Word);
-begin
-  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
-end;
-{$ENDIF}
-
-{$IFDEF FPC} {$POP} {$ENDIF}
-
-{**
-  Checks if this blob has an empty content.
-  @return <code>True</code> if this blob is empty.
-}
-function TZAbstractBlob.IsEmpty: Boolean;
-begin
-  Result := FBlobSize < 0;
-end;
-
-{**
-  Checks if the content of this blob was updated.
-  @return <code>True</code> is this blob was updated.
-}
-function TZAbstractBlob.IsUpdated: Boolean;
-begin
-  Result := FUpdated;
-end;
-
-{**
-  Gets the length of the stored data.
-  @return the length of the stored data or null if the blob is empty.
-}
-function TZAbstractBlob.Length: Integer;
-begin
-  Result := FBlobSize;
-end;
-
-{**
-  Gets the string from the stored data.
-  @return a string which contains the stored data.
-}
-function TZAbstractBlob.GetString: RawByteString;
-begin
-  SetLength(Result, FBlobSize);
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, Pointer(Result)^, FBlobSize);
-end;
-
-{**
-  Sets a new string data to this blob content.
-  @param Value a new string data.
-}
-procedure TZAbstractBlob.SetString(const Value: RawByteString);
-begin
-  Clear;
-  if IsClob then begin
-    FBlobSize := System.Length(Value)+1;
-    GetMem(FBlobData, FBlobSize);
-    if FBlobSize > 1 then
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
-    AnsiChar((PAnsiChar(FBlobData)+FBlobSize-1)^) := AnsiChar(#0);
-  end else begin
-    FBlobSize := System.Length(Value);
-    if FBlobSize > 0 then begin
-      GetMem(FBlobData, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
-    end;
-  end;
-  FUpdated := True;
-end;
-
-{**
-  Gets the byte buffer from the stored data.
-  @return a byte buffer which contains the stored data.
-}
-function TZAbstractBlob.GetBytes: TBytes;
-begin
-  if not IsEmpty then
-  begin
-    if (FBlobSize > 0) and Assigned(FBlobData) then begin
-      Result := BufferToBytes(FBlobData, FBlobSize)
-    end else
-      Result := nil;
-  end
-  else
-    Result := nil;
-end;
-
-function TZAbstractBlob.GetLengthAddress: PInteger;
-begin
-  Result := @FBlobSize;
-end;
-
-{**
-  Sets a new byte buffer to this blob content.
-  @param Value a new byte buffer.
-}
-procedure TZAbstractBlob.SetBytes(const Value: TBytes);
-begin
-  Clear;
-  if Value <> nil then
-  begin
-    FBlobSize := System.Length(Value);
-    if FBlobSize > 0 then
-    begin
-      GetMem(FBlobData, FBlobSize);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
-    end;
-  end;
-  FUpdated := True;
-end;
-
-{**
-  Gets the associated stream object.
-  @return an associated or newly created stream object.
-}
-function TZAbstractBlob.GetStream: TStream;
-begin
-  if (FBlobSize > 0) and Assigned(FBlobData) then
-    Result := StreamFromData(FBlobData, FBlobSize)
-  else
-    Result := TMemoryStream.Create;
-end;
-
-{**
-  Sets a data from the specified stream into this blob.
-  @param Value a stream object to be stored into this blob.
-}
-procedure TZAbstractBlob.SetStream(const Value: TStream);
-begin
-  Clear;
-  if Assigned(Value) then
-  begin
-    FBlobSize := Value.Size;
-    if FBlobSize > 0 then
-    begin
-      GetMem(FBlobData, FBlobSize);
-      Value.Position := 0;
-      Value.ReadBuffer(FBlobData^, FBlobSize);
-    end;
-  end
-  else
-  begin
-    FBlobSize := -1;
-    FBlobData := nil;
-  end;
-  FUpdated := True;
-end;
-
-function TZAbstractBlob.GetBuffer: Pointer;
-begin
-  Result := FBlobData;
-end;
-
-function TZAbstractBlob.GetBufferAddress: PPointer;
-begin
-  Result := @FBlobData;
-end;
-
-procedure TZAbstractBlob.SetBuffer(const Buffer: Pointer; const Length: Integer);
-begin
-  InternalClear;
-  FBlobSize := Length;
-  if Assigned(Buffer) and ( Length > 0 ) then
-  begin
-    GetMem(FBlobData, Length);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, Length);
-  end;
-  FUpdated := True;
-end;
-
-{ TZAbstractUnCachedBlob }
-
-procedure TZAbstractUnCachedBlob.ReadLob;
-begin
-  FLoaded := True;
-end;
-
-procedure TZAbstractUnCachedBlob.WriteLob;
-begin
-  //do nothing here, just a placeholder
-end;
-
-{**
-  Checks if this blob has an empty content.
-  @return <code>True</code> if this blob is empty.
-}
-function TZAbstractUnCachedBlob.IsEmpty: Boolean;
-begin
-  if not FLoaded then ReadLob;
-  Result := inherited IsEmpty;
-end;
-
-function TZAbstractUnCachedBlob.Length: Integer;
-begin
-  if not FLoaded then ReadLob;
-  Result := inherited Length;
-end;
-
-{**
-  Gets the string from the stored data.
-  @return a RawByteString which contains the stored data.
-}
-function TZAbstractUnCachedBlob.GetString: RawByteString;
-begin
-  if not FLoaded then ReadLob;
-  Result := inherited GetString;
-end;
-
-{**
-  Gets the byte buffer from the stored data.
-  @return a byte buffer which contains the stored data.
-}
-function TZAbstractUnCachedBlob.GetBytes: TBytes;
-begin
-  if not FLoaded then ReadLob;
-  Result := inherited GetBytes;
-end;
-
-function TZAbstractUnCachedBlob.GetStream: TStream;
-begin
-  if not FLoaded then ReadLob;
-  Result := inherited GetStream;
-end;
-
-function TZAbstractUnCachedBlob.GetBuffer: Pointer;
-begin
-  if not FLoaded then ReadLob;
-  Result := inherited Getbuffer;
-end;
-
-function TZAbstractUnCachedBlob.Clone(Empty: Boolean = False): IZBlob;
-begin
-  if not Empty and not Floaded then
-  begin
-    ReadLob;
-    Result := inherited Clone(Empty);
-    FlushBuffer;
-  end
-  else
-    Result := inherited Clone(Empty);
-end;
-
-procedure TZAbstractUnCachedBlob.FlushBuffer;
-begin
-  if not FUpdated then
-  begin
-    InternalClear;
-    Floaded := False;
-  end;
-end;
-
-{ TZAbstractCLob }
-
-procedure TZAbstractCLob.InternalSetRawByteString(Const Value: RawByteString;
-  const CodePage: Word);
-begin
-  FBlobSize := System.Length(Value)+1;
-  FCurrentCodePage := CodePage;
-  ReallocMem(FBlobData, FBlobSize);
-  if fBlobSize = 1
-  then PByte(FBlobData)^ := 0
-  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
-end;
-
-{$IFNDEF NO_ANSISTRING}
-procedure TZAbstractCLob.InternalSetAnsiString(Const Value: AnsiString);
-begin
-  FBlobSize := System.Length(Value)+1;
-  FCurrentCodePage := ZOSCodePage;
-  ReallocMem(FBlobData, FBlobSize);
-  if fBlobSize = 1
-  then PByte(FBlobData)^ := 0
-  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
-end;
-{$ENDIF}
-
-{$IFNDEF NO_UTF8STRING}
-procedure TZAbstractCLob.InternalSetUTF8String(Const Value: UTF8String);
-begin
-  FBlobSize := System.Length(Value)+1;
-  FCurrentCodePage := zCP_UTF8;
-  ReallocMem(FBlobData, FBlobSize);
-  if fBlobSize = 1
-  then PByte(FBlobData)^ := 0
-  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
-end;
-{$ENDIF}
-
-procedure TZAbstractCLob.InternalSetUnicodeString(const Value: ZWideString);
-begin
-  FBlobSize := (System.Length(Value)+1) shl 1;
-  FCurrentCodePage := zCP_UTF16;
-  ReallocMem(FBlobData, FBlobSize);
-  if fBlobSize = 2
-  then PWord(FBlobData)^ := 0
-  else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, FBlobData^, FBlobSize);
-end;
-
-procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
-//var RawTemp: RawByteString;
-label SetData;
-begin
-  InternalClear;
-  if Buffer <> nil then
-  begin
-    if CodePage = zCP_NONE then
-    begin
-      {if Len mod 2 = 0 then //could be UTF16
-      begin
-        RawTemp := GetValidatedAnsiStringFromBuffer(Buffer, Len, FConSettings);
-        InternalSetRawByteString(RawTemp, FConSettings^.ClientCodePage^.CP);
-      end
-      else //can't be UCS2
-      begin}
-        case ZEncoding.ZDetectUTF8Encoding(Buffer, Len) of
-          etUSASCII: CodePage := FConSettings^.ClientCodePage^.CP;
-          etUTF8: CodePage := zCP_UTF8;
-          else
-            if zCompatibleCodePages(FConSettings^.ClientCodePage^.CP, zCP_UTF8) then
-              if ZCompatibleCodePages(FConSettings^.CTRL_CP, zCP_UTF8) then
-                CodePage := ZOSCodePage
-              else
-                CodePage := FConSettings^.CTRL_CP
-            else
-              CodePage := FConSettings^.ClientCodePage^.CP;
-        end;
-        goto SetData;
-      //end;
-    end
-    else
-    begin
-SetData:
-      FBlobSize := Len +1;
-      FCurrentCodePage := CodePage;
-      GetMem(FBlobData, FBlobSize);
-      if Buffer <> nil then
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-1);
-      PByte((PAnsiChar(FBlobData)+Len))^ := Ord(#0); //set leading terminator
-    end;
-  end;
-end;
-
-procedure TZAbstractCLob.InternalSetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
-begin
-  if Buffer = nil then
-    Clear
-  else begin
-    FBlobSize := (Len +1) shl 1; //shl 1 = * 2 but faster
-    FCurrentCodePage := zCP_UTF16;
-    ReallocMem(FBlobData, FBlobSize);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, FBlobData^, FBlobSize-2);
-    PWord((PWideChar(FBlobData)+Len))^ := Ord(#0); //set leading terminator
-  end;
-end;
-
-constructor TZAbstractCLob.CreateWithStream(Stream: TStream; const CodePage: Word;
-  const ConSettings: PZConSettings);
-begin
-  inherited Create;
-  FBlobData := nil;
-  FCurrentCodePage := CodePage;
-  FConSettings := ConSettings;
-  if Stream = nil then
-    FBlobSize := -1
-  else
-    if (CodePage = zCP_UTF16) or (CodePage = zCP_UTF16BE) then
-      InternalSetPWidechar(TMemoryStream(Stream).Memory, Stream.Size shr 1)
-    else
-      InternalSetPAnsiChar(TMemoryStream(Stream).Memory, CodePage, Stream.Size);
-  FUpdated := False;
-end;
-
-constructor TZAbstractCLob.CreateWithData(Data: PAnsiChar; const Len: Cardinal;
-  const CodePage: Word; const ConSettings: PZConSettings);
-begin
-  inherited Create;
-  FBlobData := nil;
-  FCurrentCodePage := CodePage;
-  FConSettings := ConSettings;
-  if Data = nil then
-    FBlobSize := -1
-  else
-    InternalSetPAnsiChar(Data, CodePage, Len);
-  FUpdated := False;
-end;
-
-constructor TZAbstractCLob.CreateWithData(Data: PWideChar; const Len: Cardinal;
-  const ConSettings: PZConSettings);
-begin
-  inherited Create;
-  FBlobData := nil;
-  FBlobSize := Len;
-  FCurrentCodePage := zCP_UTF16;
-  FConSettings := ConSettings;
-  if Data <> nil then
-  begin
-    FBlobSize := (Len+1) shl 1; //shl 1 = * 2 but faster, include #0#0 terminator
-    GetMem(FBlobData, FBlobSize);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Data^, FBlobData^, FBlobSize);
-    PWord((PWideChar(FBlobData)+Len))^ := Ord(#0);
-  end
-  else
-    FBlobSize := 0;
-  FUpdated := False;
-end;
-
-function TZAbstractCLob.Length: Integer;
-begin
-  if FBlobSize < 1 then
-    Result := 0
-  else
-    if ( FCurrentCodePage = zCP_UTF16 ) or
-       ( FCurrentCodePage = zCP_UTF16BE ) then
-      Result := FBlobSize -2
-    else
-      Result := FBlobSize -1;
-
-end;
-
-function TZAbstractCLob.GetString: RawByteString;
-begin
-  Result := GetRawByteString;
-end;
-
-{**
-  Gets the string from the stored data.
-  @return a RawByteString which contains the stored data - client encoded.
-}
-function TZAbstractCLob.GetRawByteString: RawByteString;
-var
-  WS: ZWideString; //possible WideString which is COM based -> localize it
-begin
-  Result := EmptyRaw;
-  if FBlobSize > 0 then
-    if ZCompatibleCodePages(FCurrentCodePage, FConSettings^.ClientCodePage^.CP) then
-      ZSetString(FBlobData, FBlobSize-1, Result)
-    else
-    begin
-      if ( FCurrentCodePage = zCP_UTF16 ) or
-         ( FCurrentCodePage = zCP_UTF16BE ) then
-        Result := PUnicodeToRaw(FBlobData, (FBlobSize shr 1) -1, FConSettings^.ClientCodePage^.CP)
-      else
-      begin
-        WS := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage);
-        Result := ZUnicodeToRaw(WS, FConSettings^.ClientCodePage^.CP);
-      end;
-      InternalSetRawByteString(Result, FConSettings^.ClientCodePage^.CP);
-    end;
-end;
-
-procedure TZAbstractCLob.SetRawByteString(Const Value: RawByteString; const CodePage: Word);
-begin
-  InternalSetRawByteString(Value, CodePage);
-  FUpdated := True;
-end;
-
-{$IFNDEF NO_ANSISTRING}
-function TZAbstractCLob.GetAnsiString: AnsiString;
-var
-  UniTemp: ZWideString;
-begin
-  Result := '';
-  if FBlobSize > 0 then
-    if ZCompatibleCodePages(FCurrentCodePage, ZOSCodePage) then
-       System.SetString(Result, PAnsiChar(FBlobData), FBlobSize -1)
-    else
-    begin
-      if ( FCurrentCodePage = zCP_UTF16 ) or
-         ( FCurrentCodePage = zCP_UTF16BE ) then
-        System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize shr 1) -1)
-      else
-        UniTemp := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage); //localize possible COM based WideString to prevent overflow
-      Result := ZUnicodeToRaw(UniTemp, ZOSCodePage);
-      InternalSetAnsiString(Result);
-    end;
-end;
-{$ENDIF}
-
-function TZAbstractCLob.GetConSetting: PZConSettings;
-begin
-  Result := FConSettings;
-end;
-
-{$IFNDEF NO_ANSISTRING}
-procedure TZAbstractCLob.SetAnsiString(Const Value: AnsiString);
-begin
-  InternalSetAnsiString(Value);
-  FUpdated := True;
-end;
-{$ENDIF}
-
-{$IFNDEF NO_UTF8STRING}
-function TZAbstractCLob.GetUTF8String: UTF8String;
-var
-  Uni: ZWideString;
-begin
-  Result := '';
-  if FBlobSize > 0 then
-    if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8) then
-      ZSetString(PAnsiChar(FBlobData), FBlobSize -1, Result)
-    else begin
-      if ( FCurrentCodePage = zCP_UTF16 ) or
-         ( FCurrentCodePage = zCP_UTF16BE ) then
-      begin
-        System.SetString(Uni, PWidechar(FBlobData), (FBlobSize shr 1) -1);
-        {$IFDEF WITH_RAWBYTESTRING}
-        Result := UTF8String(Uni)
-        {$ELSE}
-        Result := UTF8Encode(Uni)
-        {$ENDIF}
-      end
-      else
-      begin
-        Uni := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage);
-        {$IFDEF WITH_RAWBYTESTRING}
-        Result := UTF8String(Uni);
-        {$ELSE}
-        Result := UTF8Encode(Uni);
-        {$ENDIF}
-      end;
-      InternalSetUTF8String(Result);
-    end;
-end;
-{$ENDIF}
-
-procedure TZAbstractCLob.SetUnicodeString(Const Value: ZWideString);
-begin
-  InternalSetUnicodeString(Value);
-  FUpdated := True;
-end;
-
-function TZAbstractCLob.GetUnicodeString: ZWideString;
-begin
-  Result := '';
-  if FBlobSize > 0 then
-    if (FCurrentCodePage = zCP_UTF16) or
-       (FCurrentCodePage = zCP_UTF16BE) then
-    begin
-      SetLength(Result, (FBlobSize shr 1) -1);
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FBlobData^, PWideChar(Result)^, FBlobSize - 2);
-    end
-    else
-    begin
-      Result := PRawToUnicode(FBlobData, FBlobSize -1, FCurrentCodePage);
-      InternalSetUnicodeString(Result);
-    end;
-end;
-
-{$IFNDEF NO_UTF8STRING}
-procedure TZAbstractCLob.SetUTF8String(Const Value: UTF8String);
-begin
-  InternalSetUTF8String(Value);
-  FUpdated := True;
-end;
-{$ENDIF}
-
-{**
-  Gets the associated stream object.
-  @return an associated or newly created stream object.
-}
-function TZAbstractCLob.GetStream: TStream;
-begin
-  if (FBlobSize > 0) and Assigned(FBlobData) then
-  begin
-    if FConSettings^.AutoEncode then
-      GetPAnsiChar(FConSettings^.CTRL_CP)
-    else
-      GetPAnsiChar(FConSettings^.ClientCodePage^.CP);
-    Result := StreamFromData(FBlobData, Length);
-  end
-  else
-    Result := TMemoryStream.Create;
-end;
-
-procedure TZAbstractCLob.SetStream(const Value: TStream);
-begin
-  SetStream(Value, zCP_NONE); //because we don't know the codepage here
-end;
-
-procedure TZAbstractCLob.SetStream(const Value: TStream; const CodePage: Word);
-begin
-  if Value = nil then
-    InternalClear
-  else
-  begin
-    if (CodePage = zCP_UTF16) or (CodePage = zCP_UTF16BE) then
-      SetPWideChar(TMemoryStream(Value).Memory, Value.Size shr 1)
-    else
-      SetPAnsiChar(TMemoryStream(Value).Memory, CodePage, Value.Size)
-  end;
-  FUpdated := True;
-end;
-
-function TZAbstractCLob.GetRawByteStream: TStream;
-var Tmp: RawByteString;
-begin
-  if (FBlobSize > 0) and Assigned(FBlobData) then
-  begin
-    if ZCompatibleCodePages(FCurrentCodePage, FConSettings^.ClientCodePage^.CP) then
-      Result := StreamFromData(FBlobData, FBlobSize-1)
-    else
-    begin
-      Tmp := GetRawByteString;
-      Result := StreamFromData(Pointer(Tmp), Length);
-    end;
-  end
-  else
-    Result := TMemoryStream.Create;
-end;
-
-{$IFNDEF NO_ANSISTRING}
-function TZAbstractCLob.GetAnsiStream: TStream;
-begin
-  if (FBlobSize > 0) and Assigned(FBlobData) then
-  begin
-    if ZCompatibleCodePages(FCurrentCodePage, ZOSCodePage) then
-      Result := StreamFromData(FBlobData, Length)
-    else
-    begin
-      GetAnsiString; //does the required conversion
-      Result := StreamFromData(FBlobData, Length);
-    end;
-  end
-  else
-    Result := TMemoryStream.Create;
-end;
-{$ENDIF}
-
-{$IFNDEF NO_UTF8STRING}
-function TZAbstractCLob.GetUTF8Stream: TStream;
-begin
-  if (FBlobSize > 0) and Assigned(FBlobData) then
-  begin
-    if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8) then
-      Result := StreamFromData(FBlobData, FBlobSize-1)
-    else
-    begin
-      GetUTF8String; //does the required conversion
-      Result := StreamFromData(FBlobData, Length);
-    end;
-  end
-  else
-    Result := TMemoryStream.Create;
-end;
-{$ENDIF}
-
-function TZAbstractCLob.GetUnicodeStream: TStream;
-begin
-  if (FBlobSize > 0) and Assigned(FBlobData) then
-  begin
-    if (FCurrentCodePage = zCP_UTF16) or
-       (FCurrentCodePage = zCP_UTF16) then
-      Result := StreamFromData(FBlobData, FBlobSize-2)
-    else
-    begin
-      GetUnicodeString;
-      Result := StreamFromData(FBlobData, FBlobSize-2)
-    end;
-  end
-  else
-    Result := TMemoryStream.Create;
-end;
-
-function TZAbstractCLob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
-var
-  TempRaw: RawByteString;
-  WS: ZWideString;
-begin
-  if FBlobData = nil then
-    Result := nil
-  else
-    if ZCompatibleCodePages(FCurrentCodePage, CodePage) then
-      Result := FBlobData
-    else
-    begin
-      if (FCurrentCodePage = zCP_UTF16) or
-         (FCurrentCodePage = zCP_UTF16BE) then
-        TempRaw := PUnicodeToRaw(FBlobData, (FBlobSize shr 1) -1, CodePage)
-      else
-      begin
-        WS := PRawToUnicode(FBlobData, FBlobSize -1, FCurrentCodePage);
-        TempRaw := ZUniCodeToRaw(WS, CodePage);
-      end;
-      InternalSetRawByteString(TempRaw, CodePage);
-      Result := PAnsiChar(FBlobData);
-    end;
-end;
-
-procedure TZAbstractCLob.SetPAnsiChar(const Buffer: PAnsiChar;
-  const CodePage: Word; const Len: Cardinal);
-begin
-  InternalSetPAnsiChar(Buffer, CodePage, Len);
-  FUpdated := True;
-end;
-
-function TZAbstractCLob.GetPWideChar: PWideChar;
-begin
-  if FBlobData = nil then
-    Result := nil
-  else
-    if (FCurrentCodePage = zCP_UTF16) or
-       (FCurrentCodePage = zCP_UTF16BE) then
-      Result := PWideChar(FBlobData)
-    else
-    begin
-      FBlobSize := (PRaw2PUnicodeBuf(FBlobData, Length, 0, FBlobData, FCurrentCodePage)+1) shl 1 ;
-      FCurrentCodePage := zCP_UTF16;
-      Result := PWideChar(FBlobData);
-    end;
-end;
-
-procedure TZAbstractCLob.SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
-begin
-  InternalSetPWideChar(Buffer, Len);
-  FUpdated := True;
-end;
-
-{$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
-procedure TZAbstractCLob.SetBlobData(const Buffer: Pointer; const Len: Cardinal;
-  const CodePage: Word);
-begin
-  if Buffer <> FBlobData then
-    InternalClear;
-  FBlobData := Buffer;
-  FBlobSize := Len;
-  FCurrentCodePage := CodePage;
-  FUpdated := True;
-end;
-{$ENDIF}
-
-{**
-  Clones this blob object.
-  @return a clonned blob object.
-}
-function TZAbstractCLob.Clone(Empty: Boolean = False): IZBLob;
-begin
-  if (FCurrentCodePage = zCP_UTF16) or
-     (FCurrentCodePage = zCP_UTF16BE) then
-    if Empty or not Assigned(FBlobData) or (FBlobSize <= 1) then
-      Result := TZAbstractCLob.CreateWithData(nil, 0, FConSettings)
-    else
-      Result := TZAbstractCLob.CreateWithData(FBlobData, (FBlobSize shr 1)-1, FConSettings)
-  else
-    if Empty or not Assigned(FBlobData) or (FBlobSize <= 0) then
-      Result := TZAbstractCLob.CreateWithData(nil, 0, FCurrentCodePage, FConSettings)
-    else
-      Result := TZAbstractCLob.CreateWithData(FBlobData, FBlobSize-1, FCurrentCodePage, FConSettings);
-end;
-
-function TZAbstractCLob.IsClob: Boolean;
-begin
-  Result := True;
-end;
-
-{ TZAbstractUnCachedCLob }
-
-procedure TZAbstractUnCachedCLob.ReadLob;
-begin
-  FLoaded := True;
-end;
-
-procedure TZAbstractUnCachedCLob.WriteLob;
-begin
-end;
-
-function TZAbstractUnCachedCLob.Length: Integer;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited Length;
-end;
-
-{**
-  Checks if this blob has an empty content.
-  @return <code>True</code> if this blob is empty.
-}
-function TZAbstractUnCachedCLob.IsEmpty: Boolean;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited IsEmpty;
-end;
-
-{**
-  Gets the string from the stored data.
-  @return a RawByteString which contains the stored data - client encoded.
-}
-function TZAbstractUnCachedCLob.GetRawByteString: RawByteString;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetRawByteString;
-end;
-
-{$IFNDEF NO_ANSISTRING}
-function TZAbstractUnCachedCLob.GetAnsiString: AnsiString;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetAnsiString;
-end;
-{$ENDIF}
-
-{$IFNDEF NO_UTF8STRING}
-function TZAbstractUnCachedCLob.GetUTF8String: UTF8String;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetUTF8String;
-end;
-{$ENDIF}
-
-function TZAbstractUnCachedCLob.GetUnicodeString: ZWideString;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetUnicodeString;
-end;
-
-{**
-  Gets the associated stream object.
-  @return an associated or newly created stream object.
-}
-function TZAbstractUnCachedCLob.GetStream: TStream;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetStream;
-end;
-
-function TZAbstractUnCachedCLob.GetRawByteStream: TStream;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetRawByteStream;
-end;
-
-function TZAbstractUnCachedCLob.GetAnsiStream: TStream;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetAnsiStream;
-end;
-
-function TZAbstractUnCachedCLob.GetUTF8Stream: TStream;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetUTF8Stream;
-end;
-
-function TZAbstractUnCachedCLob.GetUnicodeStream: TStream;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetUnicodeStream;
-end;
-
-function TZAbstractUnCachedCLob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetPAnsiChar(CodePage);
-end;
-
-function TZAbstractUnCachedCLob.GetPWideChar: PWideChar;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetPWideChar;
-end;
-
-function TZAbstractUnCachedCLob.GetBuffer: Pointer;
-begin
-  if not Loaded then ReadLob;
-  Result := inherited GetBuffer;
-end;
-
-{**
-  Clones this blob object.
-  @return a clonned blob object.
-}
-function TZAbstractUnCachedCLob.Clone(Empty: Boolean = False): IZBLob;
-begin
-  if not Empty and not Loaded then
-  begin
-    ReadLob;
-    Result := inherited Clone(Empty);
-    FlushBuffer;
-  end
-  else
-    Result := inherited Clone(Empty);
-end;
-
-procedure TZAbstractUnCachedCLob.FlushBuffer;
-begin
-  if not FUpdated then
-  begin
-    InternalClear;
-    FLoaded := False;
-  end;
-end;
-
 { TZAbstractReadOnlyResultSet }
 
 {**
@@ -4368,7 +3662,7 @@ begin
   else Result := '';
   {$ELSE}
   if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
-    if ConSettings.CPType = cCP_UTF8
+    if ConSettings.CTRL_CP = zCP_UTF8
     then Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8String(ColumnIndex)
     else Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiString(ColumnIndex)
   else begin
@@ -4392,7 +3686,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractReadOnlyResultSet.GetUnicodeString(
-  ColumnIndex: Integer): ZWideString;
+  ColumnIndex: Integer): UnicodeString;
 var P: PWideChar;
   L: NativeUInt;
 begin
@@ -4419,7 +3713,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateAnsiString(ColumnIndex: Integer;
   const Value: AnsiString);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;
 end;
 {$ENDIF}
 
@@ -4437,7 +3731,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateAsciiStream(ColumnIndex: Integer;
   const Value: TStream);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4454,7 +3748,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateBigDecimal(ColumnIndex: Integer;
   const Value: TBCD);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4471,7 +3765,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateBinaryStream(ColumnIndex: Integer;
   const Value: TStream);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4487,7 +3781,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateBoolean(ColumnIndex: Integer;
   Value: Boolean);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4504,7 +3798,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateByte(ColumnIndex: Integer;
   Value: Byte);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4521,7 +3815,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateBytes(ColumnIndex: Integer;
   Value: PByte; var Len: NativeUInt);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4537,7 +3831,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateCurrency(ColumnIndex: Integer;
   const Value: Currency);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4553,7 +3847,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateDate(ColumnIndex: Integer;
   const Value: TZDate);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4565,7 +3859,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateDefaultExpression(
   ColumnIndex: Integer; const Value: string);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4581,7 +3875,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateDouble(ColumnIndex: Integer;
   const Value: Double);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4597,13 +3891,13 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateFloat(ColumnIndex: Integer;
   Value: Single);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 procedure TZAbstractReadOnlyResultSet.UpdateGUID(ColumnIndex: Integer;
   const Value: TGUID);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4619,7 +3913,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateInt(ColumnIndex: Integer;
   Value: Integer);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4635,7 +3929,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateLob(ColumnIndex: Integer;
   const Value: IZBlob);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4651,7 +3945,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateLong(ColumnIndex: Integer;
   const Value: Int64);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4666,7 +3960,7 @@ end;
 }
 procedure TZAbstractReadOnlyResultSet.UpdateNull(ColumnIndex: Integer);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4683,7 +3977,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
   Value: PAnsiChar; var Len: NativeUInt);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4700,7 +3994,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdatePWideChar(ColumnIndex: Integer;
   Value: PWideChar; var Len: NativeUInt);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4716,7 +4010,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateRawByteString(ColumnIndex: Integer;
   const Value: RawByteString);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4733,7 +4027,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateShort(ColumnIndex: Integer;
   Value: ShortInt);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4749,7 +4043,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateSmall(ColumnIndex: Integer;
   Value: SmallInt);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4765,7 +4059,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateString(ColumnIndex: Integer;
   const Value: String);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4781,7 +4075,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateTime(ColumnIndex: Integer;
   const Value: TZTime);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4798,7 +4092,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateTimestamp(ColumnIndex: Integer;
   const Value: TZTimeStamp);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4814,7 +4108,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateUInt(ColumnIndex: Integer;
   Value: Cardinal);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4830,7 +4124,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateULong(ColumnIndex: Integer;
   const Value: UInt64);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4846,7 +4140,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateUnicodeStream(ColumnIndex: Integer;
   const Value: TStream);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4860,9 +4154,9 @@ end;
   @param x the new column value
 }
 procedure TZAbstractReadOnlyResultSet.UpdateUnicodeString(ColumnIndex: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4879,14 +4173,14 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateUTF8String(ColumnIndex: Integer;
   const Value: UTF8String);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 {$ENDIF}
 
 procedure TZAbstractReadOnlyResultSet.UpdateValue(ColumnIndex: Integer;
   const Value: TZVariant);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 
 {**
@@ -4903,7 +4197,7 @@ end;
 procedure TZAbstractReadOnlyResultSet.UpdateWord(ColumnIndex: Integer;
   Value: Word);
 begin
-  RaiseReadOnlyException;
+  raise CreateReadOnlyException;;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -4971,5 +4265,1323 @@ begin
   end else Result := '';
 end;
 {$ENDIF}
+
+constructor TZLocalMemBLob.Create(const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(zCP_Binary, @FDataRef, nil, OpenLobStreams);
+end;
+
+constructor TZLocalMemBLob.CreateFromBlob(const Value: IZBlob;
+  const OpenLobStreams: TZSortedList);
+var Stream: TStream;
+begin
+  Create(OpenLobStreams);
+  Stream := Value.GetStream;
+  if Stream = nil then
+    Exit;
+  FDataRef.IsNotNull := 1;
+  try
+    SetCapacity(Stream.Size);
+    Stream.Read(FDataRef.VarLenData.Data, Stream.Size);
+  finally
+    Stream.Free;
+  end;
+end;
+
+constructor TZLocalMemBLob.CreateWithData(Data: Pointer; BytesCount: NativeUInt;
+  const OpenLobStreams: TZSortedList);
+begin
+  Create(OpenLobStreams);
+  if Data <> nil then begin
+     FDataRef.IsNotNull := 1;
+     SetCapacity(BytesCount);
+     Move(Data^, FDataRef.VarLenData.Data, BytesCount);
+  end;
+end;
+
+constructor TZLocalMemBLob.CreateWithStream(
+  Value: TZImmediatelyReleasableLobStream;
+  FreeStream: Boolean; const OpenLobStreams: TZSortedList);
+begin
+  CreateWithStream(Value, OpenLobStreams);
+  if FreeStream then Value.Free;
+end;
+
+constructor TZLocalMemBLob.CreateWithStream(Value: TStream;
+  const OpenLobStreams: TZSortedList);
+const
+  MaxBufSize = $F000;
+var Count, BufSize, ReadBytes: LongInt;
+  Buf: PAnsichar;
+begin
+  Create(OpenLobStreams);
+  if Value = nil then Exit;
+  Count := Value.Size;
+  FDataRef.IsNotNull := 1;
+  SetCapacity(Count);
+  if Count > MaxBufSize
+  then BufSize := MaxBufSize
+  else BufSize := Count;
+  Buf := @FDataRef.VarLenData.Data;
+  while Count <> 0 do begin
+    ReadBytes := Value.Read(Buf^, BufSize);
+    Dec(Count, ReadBytes);
+    Inc(Buf, readBytes);
+    if Count < BufSize then
+      BufSize := Count;
+  end;
+end;
+
+destructor TZLocalMemBLob.Destroy;
+begin
+  if FDataRef.VarLenData <> nil then begin
+    FreeMem(FDataRef.VarLenData);
+    FDataRef.VarLenData := nil;
+  end;
+  inherited Destroy;
+end;
+
+{ TZImmediatelyReleasableLobStream }
+
+constructor TZImmediatelyReleasableLobStream.Create(const OwnerLob: IZLob;
+  const Owner: IImmediatelyReleasable; const OpenLobStreams: TZSortedList);
+begin
+  inherited Create;
+  FOwnerLob := OwnerLob;
+  FOwner := Owner;
+  FOpenLobStreams := OpenLobStreams;
+  FOpenLobStreams.Add(Pointer(Self));
+end;
+
+destructor TZImmediatelyReleasableLobStream.Destroy;
+var Idx: Integer;
+begin
+  Idx := FOpenLobStreams.IndexOf(Pointer(Self));
+  FOpenLobStreams.Delete(Idx);
+  inherited;
+end;
+
+function TZImmediatelyReleasableLobStream.GetConSettings: PZConSettings;
+begin
+  Result := FOwner.GetConSettings;
+end;
+
+function TZImmediatelyReleasableLobStream.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID;
+  out Obj): HResult;
+begin
+  if GetInterface(IID, Obj) then
+    Result := 0
+  else
+    Result := E_NOINTERFACE;
+end;
+
+procedure TZImmediatelyReleasableLobStream.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  FReleased := True;
+  if (FOwner <> Sender) and (FOwner <> nil) then
+     FOwner.ReleaseImmediat(Sender, AError);
+end;
+
+function TZImmediatelyReleasableLobStream._AddRef: Integer;
+begin
+  Result := -1;
+end;
+
+function TZImmediatelyReleasableLobStream._Release: Integer;
+begin
+  Result := -1;
+end;
+
+{ TZCodePageConversionStream }
+
+constructor TZCodePageConversionStream.Create(const Owner: TStream;
+  SourceCodePage, DestCodePage: Word; ConSettings: PZConSettings;
+  const OpenLobStreams: TZSortedList);
+var Src, Dst: Pointer;
+  L: NativeUint;
+label W2A;
+begin
+  FNativeCodePage := SourceCodePage;
+  FCurrentCodePage := DestCodePage;
+  FOwnerStream := Owner;
+  FConSettings := ConSettings;
+  FOpenLobStreams := OpenLobStreams;
+  if FOpenLobStreams <> nil then
+    FOpenLobStreams.Add(Pointer(Self));
+
+  Src := nil;
+  L := Owner.Size;
+  if L = 0 then Exit;
+  if (SourceCodePage = DestCodePage) then begin
+    ReadStreamToMem(Src, L, Owner);
+    SetPointer(Src, L);
+    FInConstructionState := True;
+    Capacity := L; //realloc mem
+    FInConstructionState := False;
+  end else begin
+    ReadStreamToMem(Src, L, Owner);
+    FInConstructionState := True;
+    try
+W2A:  GetMem(Dst, (L+1) shl 1);
+      if SourceCodePage = zCP_UTF16
+      then L := PUnicode2PRawBuf(Src, Dst, L shr 1, L shl 1, DestCodePage)
+      else begin
+        L := PRaw2PUnicodeBuf(Src, Dst, L, SourceCodePage);
+        L := L shl 1; //word to bytelen
+        if DestCodePage <> zCP_UTF16 then begin  //A2A convert?
+          FreeMem(Src);
+          Src := Dst;
+          SourceCodePage := zCP_UTF16;
+          goto W2A; //get new mem + convert from W to A
+        end;
+      end;
+      SetPointer(Dst, L);
+      Capacity := L; //realloc mem
+    finally
+      FreeMem(Src);
+      FInConstructionState := False;
+    end;
+  end;
+end;
+
+destructor TZCodePageConversionStream.Destroy;
+var Src, Dst: Pointer;
+    L, idx: Integer;
+label jmpW2A;
+begin
+  if FOpenLobStreams <> nil then begin
+    Idx := FOpenLobStreams.IndexOf(Pointer(Self));
+    FOpenLobStreams.Delete(Idx);
+  end;
+  try
+    if FUpdated then begin
+      L := Size;
+      Src := Memory;
+      SetPointer(nil, 0); //the destructor should not kill our mem
+      if (FCurrentCodePage <> zCP_UTF16) and FConSettings^.AutoEncode then
+        case ZDetectUTF8Encoding(Src, L) of
+          etAnsi: if FNativeCodePage = zCP_UTF8 then //otherwise we'll keep the code page
+                if (FConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+                  if (FConSettings^.CTRL_CP = zCP_UTF8) then
+                    if (ZOSCodePage = zCP_UTF8) then
+                    {no idea what to do with ansiencoding, if everything if set to UTF8!}
+                      FCurrentCodePage := zCP_WIN1252 //all convertions would fail so.. let the server raise an error!
+                    else FCurrentCodePage := ZOSCodePage
+                  else FCurrentCodePage := FConSettings^.CTRL_CP
+                else FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
+          etUTF8: FCurrentCodePage := zCP_UTF8;
+          else {etUSASCII}
+                if FNativeCodePage <> zCP_UTF16
+                then FCurrentCodePage := FNativeCodePage
+                else FCurrentCodePage := FConSettings^.CTRL_CP;
+        end;
+      if (FCurrentCodePage = FNativeCodePage)
+      then Dst := Src
+      else begin
+jmpW2A: GetMem(Dst, (L+1) shl 1);
+        if (FCurrentCodePage = zCP_UTF16) then begin
+          L := PUnicode2PRawBuf(Src, Dst, l shr 1, l shl 1, FNativeCodePage);
+          FreeMem(Src);
+        end else begin
+          L := PRaw2PUnicodeBuf(Src, Dst, L, FCurrentCodePage);
+          FreeMem(Src);
+          L := L shl 1;
+          if FNativeCodePage <> zCP_UTF16 then begin
+            FCurrentCodePage := zCP_UTF16;
+            Src := Dst;
+            goto jmpW2A;
+          end;
+        end;
+      end;
+      try
+        FlushMemToStream(Dst,L,FOwnerStream);
+      finally
+        FreeMem(Dst);
+      end;
+    end;
+  finally
+    FInConstructionState := True;
+    inherited Destroy;
+    FreeAndNil(FOwnerStream);
+  end;
+end;
+
+procedure TZCodePageConversionStream.FlushMemToStream(Buf: Pointer;
+  Len: NativeUInt; Stream: TStream);
+begin
+  Stream.Size := 0;
+  Stream.Position := 0;
+  Stream.Write(Buf^, Len); //notify updated
+end;
+
+procedure TZCodePageConversionStream.ReadStreamToMem(var Buf: Pointer;
+  var Len: NativeUint; Stream: TStream);
+begin
+  if Buf <> nil then
+    FreeMem(Buf);
+  Len := Stream.Size;
+  GetMem(Buf, Len);
+  Stream.Read(Buf^, Len); //Move data
+end;
+
+function TZCodePageConversionStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+begin
+  Result := Memory;
+  if FInConstructionState then begin
+    if NewCapacity <> Capacity then
+      ReallocMem(Result, NewCapacity);
+  end else begin
+    FUpdated := True;
+    ReallocMem(Result, NewCapacity); //d7 uses GlobalAllocPtr we can't free this ptr so we do the job here
+  end;
+end;
+
+function TZCodePageConversionStream.Write(const Buffer;
+  Count: Longint): Longint;
+begin
+  if (Position = 0) and (Size > 0) then
+    Clear;
+  Result := inherited Write(Buffer, Count);
+  FUpdated := True;
+end;
+
+{ TZAbstractLob }
+
+procedure TZAbstractLob.AfterConstruction;
+var Clob: IZCLob;
+    Blob: IZBlob;
+begin
+  QueryInterface(IZCLob, Clob);
+  FWeakRefOfClob := Pointer(Clob);
+  CLob := nil;
+  QueryInterface(IZBLob, Blob);
+  FWeakRefOfBlob := Pointer(Blob);
+  BLob := nil;
+  inherited;
+end;
+
+constructor TZAbstractLob.Create(ColumnCodePage: Word;
+  const OpenLobStreams: TZSortedList);
+begin
+  inherited Create;
+  FColumnCodePage := ColumnCodePage;
+  FOpenLobStreams := OpenLobStreams;
+end;
+
+function TZAbstractLob.CreateBinaryException: EZSQLException;
+begin
+  Result := EZSQLException.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractLob.SetRawByteString(const Value: RawByteString;
+  const CodePage: Word);
+var P: PAnsiChar;
+    L: NativeUInt;
+begin
+  L := System.Length(Value);
+  P := Pointer(Value);
+  if P = nil then
+    P := PEmptyAnsiString;
+  SetPAnsiChar(P, CodePage, L)
+end;
+
+{$IFNDEF NO_ANSISTRING}
+procedure TZAbstractLob.SetAnsiString(const Value: AnsiString);
+begin
+  SetRawByteString(Value, ZOSCodePage);
+end;
+{$ENDIF NO_ANSISTRING}
+
+procedure TZAbstractLob.SetBytes(const Value: TBytes);
+begin
+  SetPAnsiChar(Pointer(Value), zCP_Binary, System.Length(Value));
+end;
+
+procedure TZAbstractLob.SetOnUpdateHandler(Handler: TOnLobUpdate;
+  AField: NativeInt);
+begin
+  FOnUpdateHandler := Handler;
+  FField := AField;
+end;
+
+{$IFNDEF NO_UTF8STRING}
+procedure TZAbstractLob.SetUTF8String(const Value: UTF8String);
+begin
+  SetRawByteString(Value, zCP_UTF8);
+end;
+{$ENDIF NO_UTF8STRING}
+
+procedure TZAbstractLob.SetUnicodeString(const Value: UnicodeString);
+var P: PWideChar;
+    L: NativeUInt;
+begin
+  L := System.Length(Value);
+  P := Pointer(Value);
+  if P = nil then
+    P := PEmptyUnicodeString;
+  SetPWideChar(P, L)
+end;
+
+procedure TZAbstractLob.SetUpdated(Value: Boolean);
+begin
+  if (FLobStreamMode = lsmRead) and Value then
+    raise CreateReadOnlyException;
+  FIsUpdated := Value;
+  if Value and Assigned(FOnUpdateHandler) then
+    FOnUpdateHandler(FField);
+end;
+
+function TZAbstractLob.GetAnsiStream: TStream;
+begin
+  {$IFDEF FPC}Result := nil;{$ENDIF}
+  if FWeakRefOfClob <> nil
+  then Result := GetStream(ZOSCodePage)
+  else raise CreateBinaryException;
+end;
+
+{$IFNDEF NO_ANSISTRING}
+function TZAbstractLob.GetAnsiString: AnsiString;
+begin
+  Result := GetRawByteString(ZOSCodePage);
+end;
+{$ENDIF NO_ANSISTRING}
+
+function TZAbstractLob.GetRawByteStream: TStream;
+var CP: Word;
+begin
+  {$IFDEF FPC}Result := nil;{$ENDIF}
+  if FWeakRefOfClob <> nil
+  then if FColumnCodePage = zCP_UTF16
+    then CP := RawControlsCP
+    else CP := FColumnCodePage
+  else CP := zCP_Binary;
+  Result := GetStream(CP)
+end;
+
+function TZAbstractLob.GetRawByteString(CodePage: Word): RawByteString;
+var P: PAnsiChar;
+    Len: NativeUint;
+begin
+  Result := '';
+  if (FWeakRefOfClob = nil) and (CodePage <> zCP_Binary) then
+    raise CreateBinaryException;
+  if (FWeakRefOfClob <> nil)
+  then P := IZClob(FWeakRefOfClob).GetPAnsiChar(CodePage, Result, Len)
+  else P := IZBlob(FWeakRefOfBlob).GetBuffer(Result, Len);
+  if P <> Pointer(Result) then
+    ZSetString(P, Len, Result{$IFDEF WITH_RAWBYTESTRING}, CodePage{$ENDIF});
+end;
+
+function TZAbstractLob.GetStream(CodePage: Word): TStream;
+begin
+  Result := CreateLobStream(CodePage, FLobStreamMode);
+end;
+
+function TZAbstractLob.GetStream: TStream;
+begin
+  Result := GetStream(FColumnCodePage);
+end;
+
+function TZAbstractLob.GetString: RawByteString;
+begin
+  if IsClob and (FColumnCodePage = zCP_UTF16)
+  then Result := GetRawByteString(FconSettings.CTRL_CP)
+  else Result := GetRawByteString(FColumnCodePage);
+end;
+
+function TZAbstractLob.GetUnicodeStream: TStream;
+begin
+  {$IFDEF FPC}Result := nil;{$ENDIF}
+  if FWeakRefOfClob <> nil
+  then Result := GetStream(zCP_UTF16)
+  else raise CreateBinaryException;
+end;
+
+function TZAbstractLob.GetUnicodeString: UnicodeString;
+var P: PWideChar;
+    Len: NativeUInt;
+begin
+  if FWeakRefOfClob <> nil then begin
+    Result := '';
+    P := IZClob(FWeakRefOfClob).GetPWideChar(Result, Len);
+    if P <> Pointer(Result) then
+      System.SetString(Result, P, Len);
+  end else raise CreateBinaryException;
+end;
+
+function TZAbstractLob.GetUTF8Stream: TStream;
+begin
+  {$IFDEF FPC}Result := nil;{$ENDIF}
+  if FWeakRefOfClob <> nil
+  then Result := GetStream(zCP_UTF8)
+  else raise CreateBinaryException;
+end;
+
+{$IFNDEF NO_UTF8STRING}
+function TZAbstractLob.GetUTF8String: UTF8String;
+begin
+  Result := GetRawByteString(zCP_UTF8);
+end;
+{$ENDIF NO_UTF8STRING}
+
+function TZAbstractLob.IsClob: Boolean;
+begin
+  Result := FWeakRefOfClob <> nil
+end;
+
+function TZAbstractLob.IsUpdated: Boolean;
+begin
+  Result := FIsUpdated;
+end;
+
+procedure TZAbstractLob.Open(LobStreamMode: TZLobStreamMode);
+begin
+  FLobStreamMode := LobStreamMode;
+end;
+
+procedure TZAbstractLob.SetStream(const Value: TStream);
+var CP: Word;
+begin
+  if IsCLob
+  then CP := zCP_None
+  else CP := zCP_Binary;
+  SetStream(Value, CP);
+end;
+
+procedure TZAbstractLob.SetString(const Value: RawByteString);
+var CP: Word;
+begin
+  if FWeakRefOfClob <> nil
+  then if FColumnCodePage = zCP_UTF16
+    then CP := RawControlsCP
+    else CP := FColumnCodePage
+  else CP := zCP_Binary;
+  SetRawByteString(Value, CP);
+end;
+
+{ TZAbstractStreamedLob }
+
+function TZAbstractStreamedLob.GetBuffer(var LocalBuffer: RawByteString;
+  out Len: NativeUInt): Pointer;
+var Stream: TStream;
+begin
+  LocalBuffer := '';
+  if IsEmpty then
+    Result := nil
+  else begin
+    Stream := CreateLobStream(FColumnCodePage, lsmRead);
+    Len := Stream.Size;
+    try
+      SetLength(LocalBuffer, Len);
+      Stream.Read(Pointer(LocalBuffer)^, Len);
+    finally
+      Stream.Free;
+    end;
+    Result := Pointer(LocalBuffer);
+    if (Result = nil) and (FColumnCodePage <> zCP_Binary) then
+      Result := PEmptyUnicodeString;
+  end;
+end;
+
+function TZAbstractStreamedLob.GetBytes: TBytes;
+var Stream: TStream;
+begin
+  Stream := CreateLobStream(FColumnCodePage, lsmRead);
+  try
+    SetLength(Result, Stream.Size);
+    Stream.Read(Pointer(Result)^, Stream.Size);
+  finally
+    Stream.Free;
+  end;
+end;
+
+
+function TZAbstractStreamedLob.GetPAnsiChar(CodePage: Word;
+  var ConversionBuf: RawByteString; out Len: NativeUInt): PAnsiChar;
+var Stream: TStream;
+begin
+  if IsEmpty then begin
+    Result := nil;
+    Len := 0;
+  end else begin
+    Stream := CreateLobStream(CodePage, lsmRead);
+    Len := Stream.Size;
+    try
+      ZSetString(nil, Len, ConversionBuf{$IFDEF WITH_RAWBYTESTRING}, CodePage{$ENDIF});
+      Stream.Read(Pointer(ConversionBuf)^, Len);
+    finally
+      Stream.Free;
+    end;
+    Result := Pointer(ConversionBuf);
+    if Result = nil then
+      Result := PEmptyAnsiString;
+  end;
+end;
+
+function TZAbstractStreamedLob.GetPWideChar(var ConversionBuf: UnicodeString;
+  Out Len: NativeUint): PWideChar;
+var Stream: TStream;
+begin
+  if IsEmpty then begin
+    Result := nil;
+    Len := 0;
+  end else begin
+    Stream := CreateLobStream(zCP_UTF16, lsmRead);
+    Len := Stream.Size shr 1;
+    try
+      SetLength(ConversionBuf, Len);
+      Stream.Read(Pointer(ConversionBuf)^, Stream.Size);
+    finally
+      Stream.Free;
+    end;
+    Result := Pointer(ConversionBuf);
+    if Result = nil then
+      Result := PEmptyUnicodeString;
+  end;
+end;
+
+procedure TZAbstractStreamedLob.SetBuffer(Buffer: Pointer;
+  Len: NativeUInt);
+var Stream: TStream;
+begin
+  Stream := CreateLobStream(FColumnCodePage, lsmWrite);
+  try
+    Stream.Write(Buffer, Len)
+  finally
+    Stream.Free;
+  end;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractStreamedLob.SetCodePageTo(Value: Word);
+begin
+  //{$Message 'todo remove SetCodePageTo. code page conversion should happen by recreating the lob or we use behavior injection technics!'}
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZAbstractStreamedLob.SetPAnsiChar(Buffer: PAnsiChar;
+  CodePage: Word; Len: NativeUint);
+var Stream: TStream;
+begin
+  if (Buffer = nil) or ((CodePage = zCP_Binary) and (Len = 0)) then
+    Clear
+  else begin
+    Stream := CreateLobStream(CodePage, lsmWrite);
+    try
+      Stream.Write(Buffer^, Len)
+    finally
+      Stream.Free;
+    end;
+  end;
+end;
+
+procedure TZAbstractStreamedLob.SetPWideChar(Buffer: PWideChar;
+  Len: NativeUInt);
+var Stream: TStream;
+begin
+  if (Buffer = nil) then
+    Clear
+  else begin
+    Stream := CreateLobStream(zCP_UTF16, lsmWrite);
+    try
+      Stream.Write(Buffer^, Len)
+    finally
+      Stream.Free;
+    end;
+  end;
+end;
+
+procedure TZAbstractStreamedLob.SetStream(const Value: TStream;
+  CodePage: Word);
+var Stream: TStream;
+begin
+  if Value = nil then
+    Clear
+  else begin
+    Stream := GetStream(CodePage);
+    try
+      if Stream = Value then
+        raise EZSQLException.Create('Source- and Deststream are equal');
+      Stream.Size := 0;
+      Stream.CopyFrom(Value, Value.Size);
+      Value.Position := 0;
+      FIsUpdated := True;
+    finally
+      Stream.Free;
+    end;
+  end;
+end;
+
+{ TZVarLenDataRefLob }
+
+procedure TZVarLenDataRefLob.Clear;
+begin
+  InternalClear;
+end;
+
+constructor TZVarLenDataRefLob.Create(CodePage: Word;
+  DataRefAddress: PZVarLenDataRef; ConSettings: PZConSettings;
+  const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(CodePage, OpenLobStreams);
+  FDataRefAddress := DataRefAddress;
+  FColumnCodePage := CodePage;
+  FConSettings := ConSettings;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LocalBuffer" not used} {$ENDIF}
+function TZVarLenDataRefLob.GetBuffer(var LocalBuffer: RawByteString;
+  out Len: NativeUInt): Pointer;
+label SetNil;
+begin
+  if FDataRefAddress.IsNotNull = 1 then
+    if FDataRefAddress.VarLenData = nil then begin
+      if FColumnCodePage <> zCP_Binary
+      then Result := PEmptyUnicodeString else
+SetNil: Result := nil;
+      Len := 0;
+    end else begin
+      Result := @FDataRefAddress.VarLenData.Data;
+      Len := FDataRefAddress.VarLenData.Len;
+    end
+  else goto SetNil;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+
+function TZVarLenDataRefLob.GetBytes: TBytes;
+var P: PAnsiChar;
+    Len: NativeUInt;
+    R: RawByteString;
+begin
+  R := EmptyRaw;
+  P := GetPAnsiChar(zCP_Binary, R, Len);
+  Result := BufferToBytes(P, Len);
+end;
+
+function TZVarLenDataRefLob.GetPAnsiChar(CodePage: Word;
+  var Buffer: RawByteString; out Len: NativeUInt): PAnsiChar;
+var P: Pointer;
+label FromA;
+begin
+  if (FWeakRefOfClob = nil) and (CodePage <> zCP_Binary) then
+    raise CreateBinaryException;
+  if FLobStreamMode = lsmWrite then
+    raise CreateWriteOnlyException;
+
+  if FDataRefAddress.IsNotNull = 0 then begin
+    Result := nil;
+    Len := 0;
+  end else if FDataRefAddress.VarLenData = nil then begin
+    if CodePage = zCP_Binary
+    then Result := nil
+    else Result := PEmptyAnsiString;
+    Len := 0;
+  end else begin
+    Result := @FDataRefAddress.VarLenData.Data;
+    Len := FDataRefAddress.VarLenData.Len;
+    if FColumnCodePage = CodePage then Exit;
+    if FColumnCodePage = zCP_UTF16 then begin
+      Buffer := PUnicodeToRaw(PWideChar(Result), Len shr 1, CodePage);
+FromA:Len := System.Length(Buffer);
+      if Len = 0
+      then Result := PEmptyAnsiString
+      else Result := Pointer(Buffer)
+    end else begin
+      GetMem(P, (Len+1) shl 1);
+      Len := ZEncoding.PRaw2PUnicodeBuf(Result, P, Len, FColumnCodePage);
+      Buffer := PUnicodeToRaw(P, Len, CodePage);
+      FreeMem(P);
+      goto FromA;
+    end;
+  end;
+end;
+
+function TZVarLenDataRefLob.GetPWideChar(
+  var Buffer: UnicodeString; out Len: NativeUInt): PWideChar;
+begin
+  if FWeakRefOfClob = nil then
+    raise CreateBinaryException;
+  if FLobStreamMode = lsmWrite then
+    raise CreateWriteOnlyException;
+  if FDataRefAddress.IsNotNull = 0 then begin
+    Result := nil;
+    Len := 0;
+  end else if FDataRefAddress.VarLenData = nil then begin
+    Result := PEmptyUnicodeString;
+    Len := 0;
+  end else begin
+    Result := @FDataRefAddress.VarLenData.Data;
+    Len := FDataRefAddress.VarLenData.Len;
+    if FColumnCodePage = zCP_UTF16 then begin
+      Len := Len shr 1;
+      Exit;
+    end;
+    Buffer := PRawToUnicode(PAnsiChar(Result), Len, FColumnCodePage);
+    Len := System.Length(Buffer);
+    if Len = 0
+    then Result := PEmptyUnicodeString
+    else Result := Pointer(Buffer)
+  end;
+end;
+
+function TZVarLenDataRefLob.CreateLobStream(CodePage: Word;
+  LobStreamMode: TZLobStreamMode): TStream;
+begin
+  Result := TZVarVarLenDataRefStream.Create(Self, FColumnCodePage, FDataRefAddress, LobStreamMode, FOpenLobStreams);
+  if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
+    Result := TZCodePageConversionStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
+end;
+
+procedure TZVarLenDataRefLob.InternalClear;
+begin
+  if FDataRefAddress.VarLenData <> nil then begin
+    FreeMem(FDataRefAddress.VarLenData);
+    FDataRefAddress.VarLenData := nil;
+  end;
+  FDataRefAddress.IsNotNull := 0;
+  FIsUpdated := True;
+end;
+
+function TZVarLenDataRefLob.IsEmpty: Boolean;
+begin
+  Result := FDataRefAddress.IsNotNull = 0
+end;
+
+function TZVarLenDataRefLob.Length: Integer;
+begin
+  if (FDataRefAddress.IsNotNull = 0)
+  then Result := -1
+  else if (FDataRefAddress.VarLenData = nil)
+    then Result := 0
+    else Result := FDataRefAddress.VarLenData.Len;
+end;
+
+procedure TZVarLenDataRefLob.SetBuffer(Buffer: Pointer;
+  Len: NativeUInt);
+begin
+  if FColumnCodePage <> zCP_Binary then
+    raise CreateNonBinaryException;
+  InternalClear;
+  if (Buffer <> nil) and (Len >0) then begin
+    SetCapacity(Len);
+    Move(Buffer^, FDataRefAddress.VarLenData.Data, Len);
+  end;
+end;
+
+procedure TZVarLenDataRefLob.SetCapacity(Value: NativeUint);
+var Current: Cardinal;
+begin
+  if (FDataRefAddress.VarLenData = nil)
+  then Current := 0
+  else Current := FDataRefAddress.VarLenData.Len;
+  if Value <> Current then
+    if Value = 0 then begin
+       FreeMem(FDataRefAddress.VarLenData);
+       FDataRefAddress.VarLenData := nil;
+    end else begin
+      ReallocMem(FDataRefAddress.VarLenData, Value+SizeOf(Cardinal)+Byte(FColumnCodePage <> zCP_Binary)+Byte(FColumnCodePage = zCP_UTF16));
+      FDataRefAddress.VarLenData.Len := Value;
+    end;
+end;
+
+procedure TZVarLenDataRefLob.SetCodePageTo(Value: Word);
+begin
+  if FColumnCodePage <> Value then
+    raise EZSQLException.Create('codepage conversion for this class is not possible');
+end;
+
+procedure TZVarLenDataRefLob.SetPAnsiChar(Buffer: PAnsiChar;
+  CodePage: Word; Len: NativeUInt);
+  procedure SetW;
+  var P: Pointer;
+    WL: LengthInt;
+  begin
+    GetMem(P, (Len+1) shl 1);
+    try
+      WL := ZEncoding.PRaw2PUnicodeBuf(Buffer, P, Len, CodePage);
+      SetPWidechar(P, WL);
+    finally
+      FreeMem(P);
+    end;
+  end;
+begin
+  if (FColumnCodePage = zCP_Binary) and (CodePage <> zCP_Binary) then
+    raise CreateBinaryException;
+  InternalClear;
+  if (Buffer <> nil) then begin
+    FDataRefAddress.IsNotNull := 1;
+    if Len > 0 then
+      if (CodePage = FColumnCodePage) or (FColumnCodePage = zCP_None) or (FColumnCodePage = zCP_Binary) then begin
+        FColumnCodePage := CodePage;
+        GetMem(FDataRefAddress.VarLenData, SizeOf(Cardinal)+Len+Byte(CodePage <> zCP_Binary));
+        Move(Buffer^, FDataRefAddress.VarLenData.Data, Len);
+        if CodePage <> zCP_Binary then
+          PByte(PAnsiChar(@FDataRefAddress.VarLenData.Data)+Len)^ := 0;
+        FDataRefAddress.VarLenData.Len := Len;
+      end else SetW;
+  end;
+end;
+
+procedure TZVarLenDataRefLob.SetPWideChar(Buffer: PWideChar;
+  Len: NativeUInt);
+  procedure SetA;
+  var P: Pointer;
+    AL: LengthInt;
+  begin
+    AL := Len shl 2;
+    GetMem(P, AL+1);
+    try
+      AL := ZEncoding.PUnicode2PRawBuf(Buffer, P, Len, Al, FColumnCodePage);
+      SetPAnsiChar(P, FColumnCodePage, AL);
+    finally
+      FreeMem(P);
+    end;
+  end;
+begin
+  if (FColumnCodePage = zCP_Binary) then
+    raise CreateBinaryException;
+  InternalClear;
+  if (Buffer <> nil) then begin
+    FDataRefAddress.IsNotNull := 1;
+    if Len > 0 then
+      if (FColumnCodePage = zCP_UTF16) or (FColumnCodePage = zCP_None) then begin
+        FColumnCodePage := zCP_UTF16;
+        Len := Len shl 1;
+        GetMem(FDataRefAddress.VarLenData, (SizeOf(Cardinal)+Len+2));
+        Move(Buffer^, FDataRefAddress.VarLenData.Data, Len);
+        PWord(PAnsiChar(@FDataRefAddress.VarLenData.Data)+Len)^ := 0;
+        FDataRefAddress.VarLenData.Len := Len;
+      end else SetA;
+  end;
+end;
+
+procedure TZVarLenDataRefLob.SetStream(const Value: TStream;
+  CodePage: Word);
+var P: Pointer;
+  L: NativeUInt;
+begin
+  InternalClear;
+  if Value = nil then Exit;
+  L := Value.Size;
+  if (L = 0) then begin
+    if (FColumnCodePage <> zCP_Binary) then
+      FDataRefAddress.IsNotNull := 1;
+    Exit;
+  end;
+  FDataRefAddress.IsNotNull := 1;
+  if (CodePage = FColumnCodePage) or (FColumnCodePage = zCP_Binary) then begin
+    GetMem(FDataRefAddress.VarLenData, SizeOf(Cardinal)+L+Byte(FColumnCodePage <> zCP_Binary)+Byte(FColumnCodePage=zCP_UTF16));
+    Value.Read(FDataRefAddress.VarLenData.Data, L);
+    if FColumnCodePage = zCP_UTF16
+    then PWord(PAnsiChar(@FDataRefAddress.VarLenData.Data)+L)^ := 0
+    else if FColumnCodePage <> zCP_Binary then
+      PByte(PAnsiChar(@FDataRefAddress.VarLenData.Data)+L)^ := 0;
+    FDataRefAddress.VarLenData.Len := L;
+  end else begin
+    GetMem(P, L);
+    try
+      Value.Read(P^, L);
+      if FConSettings.AutoEncode and (CodePage = zCP_None) then begin
+        case ZEncoding.ZDetectUTF8Encoding(P, L) of
+          etUSASCII: CodePage := FConSettings^.ClientCodePage^.CP;
+          etUTF8: CodePage := zCP_UTF8;
+          else
+            if (FConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+              if (FConSettings^.CTRL_CP = zCP_UTF8)
+              then CodePage := ZOSCodePage
+              else  CodePage := FConSettings^.CTRL_CP
+            else CodePage := FConSettings^.ClientCodePage^.CP;
+        end;
+        SetPAnsiChar(P, CodePage, L);
+      end else if CodePage = zCP_UTF16
+        then SetPWideChar(P, L)
+        else SetPAnsiChar(P, CodePage, L);
+    finally
+      FreeMem(P);
+    end;
+  end;
+end;
+
+function CreateRawCLobFromBlob(Value: IZBlob; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList): IZClob;
+var RLob, Dest: RawbyteString;
+  P: Pointer;
+  L: NativeUint;
+begin
+  Rlob := '';
+  P := Value.GetBuffer(Rlob, L);
+  Dest := GetValidatedAnsiStringFromBuffer(P, L, ConSettings);
+  RLob := EmptyRaw;
+  L := Length(Dest);
+  if L = 0
+  then P := PEmptyAnsiString
+  else P := Pointer(Dest);
+  Result := TZLocalMemCLob.CreateWithData(P, L, ConSettings.ClientCodePage.CP, ConSettings, OpenLobStreams);
+end;
+
+{ TZVarVarLenDataRefStream }
+
+constructor TZVarVarLenDataRefStream.Create(const Owner: IZLob; CodePage:Word;
+  VarLenDataRef: PZVarLenDataRef; LobStreamMode: TZLobStreamMode;
+  const OpenLobStreams: TZSortedList);
+var P: Pointer;
+  L: NativeUInt;
+begin
+  FOwner := Owner;
+  FVarLenDataRef := VarLenDataRef;
+  Assert(VarLenDataRef <> nil);
+  FColumnCodePage := CodePage;
+  fLobStreamMode := LobStreamMode;
+  FOpenLobStreams := OpenLobStreams;
+  if FOpenLobStreams <> nil then
+    FOpenLobStreams.Add(Pointer(Self));
+  if FVarLenDataRef.VarLenData = nil then begin
+    L := 0;
+    P := nil;
+  end else begin
+    L := FVarLenDataRef.VarLenData.Len;
+    P := @FVarLenDataRef.VarLenData.Data;
+  end;
+  SetPointer(P, L);
+end;
+
+destructor TZVarVarLenDataRefStream.Destroy;
+var P: Pointer;
+  PA: PAnsiChar;
+  Idx: Integer;
+begin
+  P := FVarLenDataRef.VarLenData;
+  FVarLenDataRef.VarLenData := nil; //do not relloc memory on destruction
+  if FUpdated then
+    FOwner.SetUpdated(True);
+  inherited; //calls realloc
+  FVarLenDataRef.VarLenData := P; //the memory is owned by lob or reference
+  { now add a null term for Postgres f.e.}
+  if (P <> nil) and (FColumnCodePage <> zCP_Binary) then begin
+    PA := @FVarLenDataRef.VarLenData.Data;
+    Inc(PA, FVarLenDataRef.VarLenData.Len);
+    if FColumnCodePage = zCP_UTF16
+    then PWord(PA)^ := 0
+    else PByte(PA)^ := 0;
+  end;
+  if FOpenLobStreams <> nil then begin
+    idx := FOpenLobStreams.IndexOf(Pointer(Self));
+    FOpenLobStreams.Delete(idx);
+  end;
+  FOwner := nil;
+end;
+
+function TZVarVarLenDataRefStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+begin
+  if (NewCapacity = 0) then begin
+    if (FVarLenDataRef.VarLenData <> nil) then begin
+      FreeMem(FVarLenDataRef.VarLenData);
+      FVarLenDataRef.VarLenData := nil;
+      FVarLenDataRef.IsNotNull := 0;
+    end;
+    Result := nil;
+  end else begin
+    ReallocMem(FVarLenDataRef.VarLenData, NewCapacity+SizeOf(Cardinal)+Byte(FColumnCodePage<>zCP_Binary)+Byte(FColumnCodePage=zCP_UTF16));
+    FVarLenDataRef.VarLenData.Len := NewCapacity;
+    Result := @FVarLenDataRef.VarLenData.Data;
+    FVarLenDataRef.IsNotNull := 1;
+  end;
+  FUpdated := True;
+end;
+
+function TZVarVarLenDataRefStream.Write(const Buffer; Count: Longint): Longint;
+begin
+  FUpdated := True;
+  Result := inherited Write(Buffer, Count);
+end;
+
+{ TZCodePageFixedVarLenDataRefLob }
+
+procedure TZCodePageFixedVarLenDataRefLob.SetCodePageTo(Value: Word);
+begin
+  if FColumnCodePage <> Value then
+    raise EZSQLException.Create('codepage conversion for this class is not possible');
+end;
+
+{ TZCodePageVariableVarLenDataRefLob }
+
+procedure TZCodePageVariableVarLenDataRefLob.SetCodePageTo(Value: Word);
+var P: Pointer;
+  L: NativeUInt;
+label W2A;
+begin
+  if (FColumnCodePage <> Value) and (FDataRefAddress.VarLenData <> nil) then begin
+    if Value = zCP_Binary then
+      raise CreateNonBinaryException;
+    if Value = zCP_None then
+      raise EZSQLException.Create('codepage invalid');
+    if FColumnCodePage = zCP_UTF16 then begin
+W2A:  L := FDataRefAddress.VarLenData.Len shl 1;
+      GetMem(P, L+1);
+      try
+        L := ZEncoding.PUnicode2PRawBuf(@FDataRefAddress.VarLenData.Data, P,
+          FDataRefAddress.VarLenData.Len shr 1, L, Value);
+        FreeMem(FDataRefAddress.VarLenData);
+        GetMem(FDataRefAddress.VarLenData, L+SizeOf(Cardinal)+1);
+        Move(P^, FDataRefAddress.VarLenData.Data, L);
+        PByte(PAnsiChar(@FDataRefAddress.VarLenData.Data)+L)^ := 0;
+        FDataRefAddress.VarLenData.Len := L;
+      finally
+        FreeMem(P);
+      end;
+      FColumnCodePage := Value;
+    end else begin
+      L := FDataRefAddress.VarLenData.Len shl 1;
+      GetMem(P, L+2);
+      try
+        L := ZEncoding.PRaw2PUnicodeBuf(@FDataRefAddress.VarLenData.Data, P,
+          FDataRefAddress.VarLenData.Len, FColumnCodePage);
+        FreeMem(FDataRefAddress.VarLenData);
+        L := L shl 1;
+        GetMem(FDataRefAddress.VarLenData, SizeOf(Cardinal)+L+2);
+        Move(P^, FDataRefAddress.VarLenData.Data, L);
+        PWord(PAnsiChar(@FDataRefAddress.VarLenData.Data)+L)^ := 0;
+        FDataRefAddress.VarLenData.Len := L;
+      finally
+        FreeMem(P);
+      end;
+      FColumnCodePage := zCP_UTF16;
+      if Value <> zCP_UTF16 then
+        goto W2A;
+    end;
+  end;
+end;
+
+{ TZReadOnlyDataRefStream }
+
+constructor TZReadOnlyDataRefStream.Create(const Owner: IZLob; Data: Pointer;
+  DataLen: NativeUInt; const OpenLobStreams: TZSortedList);
+begin
+  inherited Create;
+  FOwner := Owner;
+  FOpenLobStreams := OpenLobStreams;
+  FOpenLobStreams.Add(Pointer(Self));
+  SetPointer(Data, DataLen);
+end;
+
+destructor TZReadOnlyDataRefStream.Destroy;
+var idx: Integer;
+begin
+  idx := FOpenLobStreams.IndexOf(Pointer(Self));
+  FOpenLobStreams.Delete(Idx);
+  inherited;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "NewSize" not used} {$ENDIF}
+procedure TZReadOnlyDataRefStream.SetSize(NewSize: Integer);
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "NewSize,Count" not used}
+{$ENDIF}
+function TZReadOnlyDataRefStream.Write(const Buffer; Count: Integer): Longint;
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{ TZCodePageConversionROStream }
+
+function TZCodePageConversionROStream.Realloc(
+  var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+begin
+  if FInConstructionState
+  then Result := inherited Realloc(NewCapacity)
+  else raise CreateReadOnlyException;
+end;
+
+{ TZMemoryReferencedLob }
+
+procedure TZMemoryReferencedLob.Clear;
+begin
+  raise CreateReadOnlyException;
+end;
+
+function TZMemoryReferencedLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
+begin
+  if FWeakRefOfClob <> nil
+  then Result := TZLocalMemCLob.CreateWithData(FMemoryReference, FDataLen, FColumnCodePage, FConSettings, FOpenLobStreams)
+  else Result := TZLocalMemBLob.CreateWithData(FMemoryReference, FDataLen, FOpenLobStreams);
+  Result.Open(LobStreamMode);
+end;
+
+function TZMemoryReferencedLob.CreateLobStream(CodePage: Word;
+  LobStreamMode: TZLobStreamMode): TStream;
+begin
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
+  Result := TZReadOnlyDataRefStream.Create(Self, FMemoryReference, FDataLen, FOpenLobStreams);
+  if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
+    Result := TZCodePageConversionROStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
+end;
+
+constructor TZMemoryReferencedLob.CreateWithData(Buffer: Pointer;
+  DataLen: NativeUInt; ColumnCodePage: Word; ConSettings: PZConSettings;
+  const OpenLobStreams: TZSortedList);
+begin
+  inherited Create(ColumnCodePage, OpenLobStreams);
+  FColumnCodePage := ColumnCodePage;
+  FMemoryReference := Buffer;
+  FDataLen := DataLen;
+  FConSettings := ConSettings;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LocalBuffer" not used} {$ENDIF}
+function TZMemoryReferencedLob.GetBuffer(var LocalBuffer: RawByteString;
+  out Len: NativeUInt): Pointer;
+begin
+  Result := FMemoryReference;
+  Len := FDataLen;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZMemoryReferencedLob.GetBytes: TBytes;
+begin
+  Result := BufferToBytes(FMemoryReference, FDataLen);
+end;
+
+function TZMemoryReferencedLob.GetPAnsiChar(CodePage: Word;
+  var Buffer: RawByteString; out Len: NativeUInt): PAnsiChar;
+var P: Pointer;
+label FromA;
+begin
+  if (FWeakRefOfClob = nil) and (CodePage <> zCP_Binary) then
+    raise CreateBinaryException;
+  if FLobStreamMode = lsmWrite then
+    raise CreateWriteOnlyException;
+
+  if FMemoryReference = nil then begin
+    Result := nil;
+    Len := 0;
+  end else if FDataLen = 0 then begin
+    if CodePage = zCP_Binary
+    then Result := nil
+    else Result := PEmptyAnsiString;
+    Len := 0;
+  end else begin
+    Result := FMemoryReference;
+    Len := FDataLen;
+    if FColumnCodePage = CodePage then Exit;
+    if FColumnCodePage = zCP_UTF16 then begin
+      Buffer := PUnicodeToRaw(PWideChar(Result), Len, CodePage);
+FromA:Len := System.Length(Buffer);
+      if Len = 0
+      then Result := PEmptyAnsiString
+      else Result := Pointer(Buffer)
+    end else begin
+      GetMem(P, (Len+1) shl 1);
+      Len := ZEncoding.PRaw2PUnicodeBuf(Result, P, Len, FColumnCodePage);
+      Buffer := PUnicodeToRaw(P, Len, CodePage);
+      FreeMem(P);
+      goto FromA;
+    end;
+  end;
+end;
+
+function TZMemoryReferencedLob.GetPWideChar(var Buffer: UnicodeString;
+  out Len: NativeUInt): PWideChar;
+begin
+  if FWeakRefOfClob = nil then
+    raise CreateBinaryException;
+  if FLobStreamMode = lsmWrite then
+    raise CreateWriteOnlyException;
+  if FMemoryReference = nil then begin
+    Result := nil;
+    Len := 0;
+  end else if FDataLen = 0 then begin
+    Result := PEmptyUnicodeString;
+    Len := 0;
+  end else begin
+    Result := FMemoryReference;
+    Len := FDataLen;
+    if FColumnCodePage = zCP_UTF16 then Exit;
+    Buffer := PRawToUnicode(PAnsiChar(Result), Len, FColumnCodePage);
+    Len := System.Length(Buffer);
+    if Len = 0
+    then Result := PEmptyUnicodeString
+    else Result := Pointer(Buffer)
+  end;
+end;
+
+function TZMemoryReferencedLob.GetUnicodeString: UnicodeString;
+var P: PWideChar;
+    Len: NativeUInt;
+begin
+  Result := '';
+  P := GetPWideChar(Result, Len);
+  if P <> Pointer(Result) then
+    System.SetString(Result, P, Len);
+end;
+
+function TZMemoryReferencedLob.IsEmpty: Boolean;
+begin
+  Result := FMemoryReference = nil;
+end;
+
+function TZMemoryReferencedLob.Length: Integer;
+begin
+  Result := FDataLen
+end;
+
+procedure TZMemoryReferencedLob.Open(LobStreamMode: TZLobStreamMode);
+begin
+  if LobStreamMode <> lsmRead then
+    raise CreateReadOnlyException;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LocalBuffer/Len" not used} {$ENDIF}
+procedure TZMemoryReferencedLob.SetBuffer(Buffer: Pointer; Len: NativeUInt);
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZMemoryReferencedLob.SetCodePageTo(Value: Word);
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Buffer/CodePage" not used} {$ENDIF}
+procedure TZMemoryReferencedLob.SetPAnsiChar(Buffer: PAnsiChar; CodePage: Word;
+  Len: NativeUInt);
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Buffer/Len" not used} {$ENDIF}
+procedure TZMemoryReferencedLob.SetPWideChar(Buffer: PWideChar;
+  Len: NativeUInt);
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value/CodePage" not used} {$ENDIF}
+procedure TZMemoryReferencedLob.SetStream(const Value: TStream; CodePage: Word);
+begin
+  raise CreateReadOnlyException;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{ TZMemoryReferencedBLob }
+
+constructor TZMemoryReferencedBLob.CreateWithData(Buffer: Pointer;
+  DataLen: NativeUInt; const OpenLobStreams: TZSortedList);
+begin
+  inherited CreateWithData(Buffer, DataLen, zCP_Binary, nil, OpenLobStreams);
+end;
 
 end.

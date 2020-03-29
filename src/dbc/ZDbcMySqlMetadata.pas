@@ -60,7 +60,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZURL, ZDbcConnection, ZPlainMySqlConstants;
+  ZDbcConnection, ZPlainMySqlConstants;
 
 type
 
@@ -2578,7 +2578,7 @@ var
   SQL: String;
   TypeName, Temp: RawByteString;
   ParamList, Params, Names{ Returns}: TStrings;
-  I, ColumnSize, Precision: Integer;
+  I, ColumnSize, Scale: Integer;
   FieldType: TZSQLType;
   ProcedureNameCondition, SchemaCondition: string;
 
@@ -2713,7 +2713,7 @@ begin
           Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_index, Len), Len); //PROCEDURE_SCHEM
           Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), Len); //PROCEDURE_NAME
           TypeName := ConSettings^.ConvFuncs.ZStringToRaw(Params[2], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-          ConvertMySQLColumnInfoFromString(TypeName, ConSettings, Temp, FieldType, ColumnSize, Precision,
+          ConvertMySQLColumnInfoFromString(TypeName, ConSettings, Temp, FieldType, ColumnSize, Scale,
             fMySQL_FieldType_Bit_1_IsBoolean);
           { process COLUMN_NAME }
           if Params[1] = '' then
@@ -2742,10 +2742,13 @@ begin
           Result.UpdateByte(ProcColDataTypeIndex, Ord(FieldType));
           { TYPE_NAME }
           Result.UpdateRawByteString(ProcColTypeNameIndex, TypeName);
+
           { PRECISION }
           Result.UpdateInt(ProcColPrecisionIndex, ColumnSize);
           { LENGTH }
-          Result.UpdateInt(ProcColLengthIndex, Precision);
+          Result.UpdateInt(ProcColLengthIndex, ColumnSize);
+          { SCALE }
+          Result.UpdateInt(ProcColScaleIndex, Scale);
 
           //Result.UpdateNull(ProcColScaleIndex);
           //Result.UpdateNull(ProcColRadixIndex);
@@ -2851,9 +2854,7 @@ var
         ZScale := MySqlScale;
       end;
     end else if EndsWith(TypeName, 'char') then begin
-      if FConSettings.CPType = cCP_UTF16
-      then ZType := Ord(stUnicodeString)
-      else ZType := Ord(stString);
+      ZType := Ord(stString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end else if TypeName = 'date' then begin
@@ -2881,9 +2882,7 @@ var
       ZPrecision := -1;
       ZScale := -1;
     end else if EndsWith(TypeName, 'text') then begin
-      if FConSettings.CPType = cCP_UTF16
-      then ZType := Ord(stUnicodeStream)
-      else ZType := Ord(stAsciiStream);
+      ZType := Ord(stAsciiStream);
       ZPrecision := -1;
       ZScale := -1;
     end else if EndsWith(TypeName, 'binary') then begin
@@ -2891,7 +2890,7 @@ var
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end else if TypeName = 'set' then begin
-      ZType := Ord(stUnicodeString);
+      ZType := Ord(stString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
     end;

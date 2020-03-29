@@ -76,13 +76,13 @@ type
     procedure CheckDbcError(RETCODE: SQLRETURN);
     function GetArrayRowSupported: Boolean;
     function GetArraySelectSupported: Boolean;
-    function GetPlainDriver: IODBC3BasePlainDriver;
+    function GetPlainDriver: TZODBC3PlainDriver;
     procedure SetLastWarning(Warning: EZSQLWarning);
     function ODBCVersion: SQLUSMALLINT;
   End;
 
-  TZAbstractODBCConnection = class(TZAbstractDbcConnection, IZConnection,
-    IZODBCConnection, IZTransaction)
+  TZAbstractODBCConnection = class(TZAbstractDbcConnection,
+    IZTransaction)
   private
     fPlainDriver: TZODBC3PlainDriver;
     fHDBC: SQLHDBC;
@@ -95,6 +95,7 @@ type
     fServerProvider: TZServerProvider;
     FSavePoints: TStrings;
     FRestartTransaction: Boolean;
+    FWeakODBCConRefOfSelf: Pointer;
     procedure DetermineAttachmentCharset;
   protected
     procedure InternalCreate; override;
@@ -105,12 +106,13 @@ type
   public
     function GetArrayRowSupported: Boolean;
     function GetArraySelectSupported: Boolean;
-    function GetPlainDriver: IODBC3BasePlainDriver;
+    function GetPlainDriver: TZODBC3PlainDriver;
     procedure CheckDbcError(RETCODE: SQLRETURN);
     procedure SetLastWarning(Warning: EZSQLWarning);
     function ODBCVersion: Word;
   public
     destructor Destroy; override;
+    procedure AfterConstruction; override;
 
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
@@ -132,35 +134,37 @@ type
     function GetServerProvider: TZServerProvider; override;
   end;
 
-  TZODBCConnectionW = class(TZAbstractODBCConnection)
+  TZODBCConnectionW = class(TZAbstractODBCConnection, IZODBCConnection, IZConnection)
   protected
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreateCallableStatement(const StoredProcedureName: string; Info: TStrings):
-      IZCallableStatement; override;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); override;
     function SavePoint(const AName: String): Integer; override;
     procedure ReleaseSavePoint(Index: Integer); override;
     procedure RollBackTo(Index: Integer); override;
   public
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+
     function NativeSQL(const SQL: string): string; override;
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
   end;
 
-  TZODBCConnectionA = class(TZAbstractODBCConnection)
+  TZODBCConnectionA = class(TZAbstractODBCConnection, IZODBCConnection, IZConnection)
   protected
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreateCallableStatement(const StoredProcedureName: string; Info: TStrings):
-      IZCallableStatement; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
     function SavePoint(const AName: String): Integer; override;
     procedure ReleaseSavePoint(Index: Integer); override;
     procedure RollBackTo(Index: Integer); override;
   public
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+
     function NativeSQL(const SQL: string): string; override;
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
@@ -176,7 +180,7 @@ implementation
 uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
-  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZConnProperties, ZDbcProperties,
+  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZDbcProperties,
   ZMessages, ZCollections {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZODBCDriver }
@@ -230,10 +234,19 @@ end;
 
 { TZAbstractODBCConnection }
 
+procedure TZAbstractODBCConnection.AfterConstruction;
+var ODBCConnection: IZODBCConnection;
+begin
+  QueryInterface(IZODBCConnection, ODBCConnection);
+  FWeakODBCConRefOfSelf := Pointer(ODBCConnection);
+  ODBCConnection :=  nil;
+  inherited AfterConstruction; //dec constructors RefCnt
+end;
+
 procedure TZAbstractODBCConnection.CheckDbcError(RETCODE: SQLRETURN);
 begin
   if RetCode <> SQL_SUCCESS then
-    CheckODBCError(RetCode, fHDBC, SQL_HANDLE_DBC, '', self, Self);
+    CheckODBCError(RetCode, fHDBC, SQL_HANDLE_DBC, '', self, IZODBCConnection(FWeakODBCConRefOfSelf));
 end;
 
 {**
@@ -393,7 +406,7 @@ begin
   Result := fCatalog;
 end;
 
-function TZAbstractODBCConnection.GetPlainDriver: IODBC3BasePlainDriver;
+function TZAbstractODBCConnection.GetPlainDriver: TZODBC3PlainDriver;
 begin
   Result := fPlainDriver;
 end;
@@ -432,7 +445,8 @@ begin
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
   else begin
     //set minimum Major Version 3
-    CheckODBCError(fPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0), fHENV, SQL_HANDLE_ENV, 'SQL_ATTR_ODBC_VERSION', Self, Self);
+    CheckODBCError(fPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0),
+      fHENV, SQL_HANDLE_ENV, 'SQL_ATTR_ODBC_VERSION', Self, IZODBCConnection(FWeakODBCConRefOfSelf));
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
   end;
 end;
@@ -488,7 +502,8 @@ begin
   if not Closed then
     Exit;
   DetermineAttachmentCharset; //do this by default!
-  CheckODBCError(fPLainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC),fHENV, SQL_HANDLE_ENV, '', Self, Self);
+  CheckODBCError(fPLainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC),fHENV,
+    SQL_HANDLE_ENV, '', Self, IZODBCConnection(FWeakODBCConRefOfSelf));
   if Info.Values[ConnProps_Timeout] <> '' then
   begin
     TimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_Timeout],0);
@@ -707,36 +722,21 @@ end;
 { TZODBCConnectionW }
 
 {**
-  Creates a regular statement object.
-  @param StoredProcedureName a name of a stored procedure or function.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
-function TZODBCConnectionW.CreateCallableStatement(const StoredProcedureName: string;
-  Info: TStrings): IZCallableStatement;
-begin
-  Result := TZODBCCallableStatementW.Create(Self, fHDBC, StoredProcedureName, Info);
-end;
+  Creates a <code>Statement</code> object for sending
+  SQL statements to the database.
+  SQL statements without parameters are normally
+  executed using Statement objects. If the same SQL statement
+  is executed many times, it is more efficient to use a
+  <code>PreparedStatement</code> object.
+  <P>
+  Result sets created using the returned <code>Statement</code>
+  object will by default have forward-only type and read-only concurrency.
 
-{**
-  Creates a prepared statement object.
-  @param SQL a SQL query string.
   @param Info a statement parameters.
-  @returns a created statement.
+  @return a new Statement object
 }
-function TZODBCConnectionW.CreatePreparedStatement(const SQL: string;
-  Info: TStrings): IZPreparedStatement;
-begin
-  if Closed then Open;
-  Result := TZODBCPreparedStatementW.Create(Self, fHDBC, SQL, Info);
-end;
-
-{**
-  Creates a regular statement object.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
-function TZODBCConnectionW.CreateRegularStatement(Info: TStrings): IZStatement;
+function TZODBCConnectionW.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
 begin
   Result := TZODBCStatementW.Create(Self, fHDBC, Info);
 end;
@@ -820,6 +820,73 @@ begin
   end else Result := '';
 end;
 
+{**
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
+
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
+}
+function TZODBCConnectionW.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
+begin
+  Result := TZODBCCallableStatementW.Create(Self, fHDBC, Name, Info);
+end;
+
+{**
+  Creates a <code>PreparedStatement</code> object for sending
+  parameterized SQL statements to the database.
+
+  A SQL statement with or without IN parameters can be
+  pre-compiled and stored in a PreparedStatement object. This
+  object can then be used to efficiently execute this statement
+  multiple times.
+
+  <P><B>Note:</B> This method is optimized for handling
+  parametric SQL statements that benefit from precompilation. If
+  the driver supports precompilation,
+  the method <code>prepareStatement</code> will send
+  the statement to the database for precompilation. Some drivers
+  may not support precompilation. In this case, the statement may
+  not be sent to the database until the <code>PreparedStatement</code> is
+  executed.  This has no direct effect on users; however, it does
+  affect which method throws certain SQLExceptions.
+
+  Result sets created using the returned PreparedStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param sql a SQL statement that may contain one or more '?' IN
+    parameter placeholders
+  @param Info a statement parameters.
+  @return a new PreparedStatement object containing the
+    pre-compiled statement
+}
+function TZODBCConnectionW.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
+begin
+  if Closed then Open;
+  Result := TZODBCPreparedStatementW.Create(Self, fHDBC, SQL, Info);
+end;
+
 procedure TZODBCConnectionW.ReleaseSavePoint(Index: Integer);
 var S: UnicodeString;
 begin
@@ -880,36 +947,21 @@ end;
 { TZODBCConnectionA }
 
 {**
-  Creates a regular statement object.
-  @param StoredProcedureName a name of a stored procedure or function.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
-function TZODBCConnectionA.CreateCallableStatement(
-  const StoredProcedureName: string; Info: TStrings): IZCallableStatement;
-begin
-  Result := TZODBCCallableStatementA.Create(Self, fHDBC, StoredProcedureName, Info);
-end;
+  Creates a <code>Statement</code> object for sending
+  SQL statements to the database.
+  SQL statements without parameters are normally
+  executed using Statement objects. If the same SQL statement
+  is executed many times, it is more efficient to use a
+  <code>PreparedStatement</code> object.
+  <P>
+  Result sets created using the returned <code>Statement</code>
+  object will by default have forward-only type and read-only concurrency.
 
-{**
-  Creates a prepared statement object.
-  @param SQL a SQL query string.
   @param Info a statement parameters.
-  @returns a created statement.
+  @return a new Statement object
 }
-function TZODBCConnectionA.CreatePreparedStatement(const SQL: string;
-  Info: TStrings): IZPreparedStatement;
-begin
-  if Closed then Open;
-  Result := TZODBCPreparedStatementA.Create(Self, fHDBC, SQL, Info);
-end;
-
-{**
-  Creates a regular statement object.
-  @param Info a statement parameters.
-  @returns a created statement.
-}
-function TZODBCConnectionA.CreateRegularStatement(Info: TStrings): IZStatement;
+function TZODBCConnectionA.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
 begin
   Result := TZODBCStatementA.Create(Self, fHDBC, Info);
 end;
@@ -993,6 +1045,73 @@ begin
     SetLength(Result, NewLength);
     {$ENDIF}
   end else Result := '';
+end;
+
+{**
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
+
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
+}
+function TZODBCConnectionA.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
+begin
+  Result := TZODBCCallableStatementA.Create(Self, fHDBC, Name, Info);
+end;
+
+{**
+  Creates a <code>PreparedStatement</code> object for sending
+  parameterized SQL statements to the database.
+
+  A SQL statement with or without IN parameters can be
+  pre-compiled and stored in a PreparedStatement object. This
+  object can then be used to efficiently execute this statement
+  multiple times.
+
+  <P><B>Note:</B> This method is optimized for handling
+  parametric SQL statements that benefit from precompilation. If
+  the driver supports precompilation,
+  the method <code>prepareStatement</code> will send
+  the statement to the database for precompilation. Some drivers
+  may not support precompilation. In this case, the statement may
+  not be sent to the database until the <code>PreparedStatement</code> is
+  executed.  This has no direct effect on users; however, it does
+  affect which method throws certain SQLExceptions.
+
+  Result sets created using the returned PreparedStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param sql a SQL statement that may contain one or more '?' IN
+    parameter placeholders
+  @param Info a statement parameters.
+  @return a new PreparedStatement object containing the
+    pre-compiled statement
+}
+function TZODBCConnectionA.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
+begin
+  if Closed then Open;
+  Result := TZODBCPreparedStatementA.Create(Self, fHDBC, SQL, Info);
 end;
 
 procedure TZODBCConnectionA.ReleaseSavePoint(Index: Integer);

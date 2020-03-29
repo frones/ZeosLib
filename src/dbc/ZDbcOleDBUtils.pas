@@ -80,10 +80,10 @@ const
   VARIANT_FALSE = SmallInt(0);
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
-  Scale, Precision: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType; overload;
+  Scale, Precision: Integer): TZSQLType; overload;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
-  CtrlsCPType: TZControlsCodePage; const SrcRS: IZResultSet): TZSQLType; overload;
+  const SrcRS: IZResultSet): TZSQLType; overload;
 
 procedure OleDBCheck(aResult: HRESULT; const SQL: String;
   const {%H-}Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray = nil);
@@ -97,8 +97,8 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; ParamInfoArray: PDBParamInfoArray): DBROWOFFSET;
 
 function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
-  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
-  var LobColIndexArray: TIntegerDynArray): DBROWOFFSET;
+  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO{;
+  var LobColIndexArray: TIntegerDynArray}): DBROWOFFSET;
 
 function MapOleTypesToZeos(DBType: DBTYPEENUM; Precision, Scale: Integer): DBTYPE;
 
@@ -127,7 +127,7 @@ uses
   ZClasses;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
-  Scale, Precision: Integer; CtrlsCPType: TZControlsCodePage): TZSQLType;
+  Scale, Precision: Integer): TZSQLType;
 begin
   case OleDBType of
     DBTYPE_EMPTY:       Result := stUnknown;
@@ -138,8 +138,9 @@ begin
     DBTYPE_R8:          Result := stDouble;
     DBTYPE_CY:          Result := stCurrency;
     DBTYPE_DATE:        Result := stTimeStamp;
-    DBTYPE_BSTR:        if IsLong then Result := stAsciiStream
-                        else Result := stString;
+    DBTYPE_BSTR:        if IsLong
+                        then Result := stUnicodeStream
+                        else Result := stUnicodeString;
     DBTYPE_ERROR:       Result := stInteger;
     DBTYPE_BOOL:        Result := stBoolean;
     DBTYPE_VARIANT:     Result := stString;
@@ -156,12 +157,15 @@ begin
     DBTYPE_I8:          Result := stLong;
     DBTYPE_UI8:         Result := stULong;
     DBTYPE_GUID:        Result := stGUID;
-    DBTYPE_BYTES:       if IsLong then Result := stBinaryStream
+    DBTYPE_BYTES:       if IsLong
+                        then Result := stBinaryStream
                         else Result := stBytes;
-    DBTYPE_STR:         if IsLong then Result := stAsciiStream
+    DBTYPE_STR:         if IsLong
+                        then Result := stAsciiStream
                         else Result := stString;
-    DBTYPE_WSTR:        if IsLong then Result := stAsciiStream
-                        else Result := stString;
+    DBTYPE_WSTR:        if IsLong
+                        then Result := stUnicodeStream
+                        else Result := stUnicodeString;
     DBTYPE_UDT:         Result := stUnknown;
     DBTYPE_DBDATE:      Result := stDate;
     DBTYPE_DBTIME,
@@ -169,22 +173,17 @@ begin
     DBTYPE_DBTIMESTAMP:	Result := stTimeStamp;
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
-    DBTYPE_XML:         Result := stAsciiStream;
+    DBTYPE_XML:         Result := stUnicodeStream;
     DBTYPE_TABLE:       Result := stDataSet;
     else //makes compiler happy
       {
       DBTYPE_IDISPATCH:
       DBTYPE_HCHAPTER:    }Result := stUnknown;
   end;
-  if (CtrlsCPType = cCP_UTF16) then
-    if (Result = stString) then
-      Result := stUnicodeString
-    else if (Result = stAsciiStream) then
-      Result := stUnicodeStream;
 end;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
-  CtrlsCPType: TZControlsCodePage; const SrcRS: IZResultSet): TZSQLType; overload;
+  const SrcRS: IZResultSet): TZSQLType; overload;
 const LongNames: array [0..8] of ZWideString = ('TEXT', 'NTEXT', 'MEDIUMTEXT',
   'LONGTEXT', 'CLOB', 'BLOB', 'MEDIUMBLOB', 'LONGBLOB', 'IMAGE');
 function IsLong: Boolean;
@@ -212,8 +211,8 @@ begin
     DBTYPE_CY:        Result := stCurrency;
     DBTYPE_DATE:      Result := stTimeStamp;
     DBTYPE_BSTR:      if IsLong
-                      then Result := stAsciiStream
-                      else Result := stString;
+                      then Result := stUnicodeStream
+                      else Result := stUnicodeString;
     DBTYPE_ERROR:     Result := stInteger;
     DBTYPE_BOOL:      Result := stBoolean;
     DBTYPE_VARIANT:   Result := stString;
@@ -241,8 +240,8 @@ begin
                       else Result := stBytes;
     DBTYPE_STR:       if IsLong then Result := stAsciiStream
                       else Result := stString;
-    DBTYPE_WSTR:      if IsLong then Result := stAsciiStream
-                      else Result := stString;
+    DBTYPE_WSTR:      if IsLong then Result := stUnicodeStream
+                      else Result := stUnicodeString;
     DBTYPE_UDT:         Result := stUnknown;
     DBTYPE_DBDATE:      Result := stDate;
     DBTYPE_DBTIME,
@@ -257,10 +256,6 @@ begin
       DBTYPE_IDISPATCH:
       DBTYPE_HCHAPTER:    }Result := stUnknown;
   end;
-  if (Result = stString) and (CtrlsCPType = cCP_UTF16) then
-    Result := stUnicodeString;
-  if (Result = stAsciiStream) and (CtrlsCPType = cCP_UTF16) then
-    Result := stUnicodeStream;
 end;
 
 procedure OleDBCheck(aResult: HRESULT; const SQL: String;
@@ -502,8 +497,8 @@ begin
 end;
 
 function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
-  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
-  var LobColIndexArray: TIntegerDynArray): DBROWOFFSET;
+  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO{;
+  var LobColIndexArray: TIntegerDynArray}): DBROWOFFSET;
 var
   I: Integer;
   procedure SetDBBindingProps(Index: Integer);
@@ -516,17 +511,13 @@ var
     if (DBCOLUMNINFO^.dwFlags and DBPARAMFLAGS_ISLONG <> 0) then begin //lob's
       //using ISeqentialStream -> Retrieve data directly from Provider
       DBBindingArray[Index].cbMaxLen  := 0;
-      DBBindingArray[Index].dwPart    := DBPART_STATUS; //we only need a NULL indicator!
+      DBBindingArray[Index].dwPart    := DBPART_LENGTH or DBPART_STATUS;
       DBBindingArray[Index].wType     := DBCOLUMNINFO^.wType; //Save the wType to know Binary/Ansi/Unicode-Lob's later on
-      DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength;
+      DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
       //DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
-      //dirty improvements!
-      DBBindingArray[Index].obLength  := Length(LobColIndexArray); //Save the HACCESSOR lookup index -> avoid loops!
-      SetLength(LobColIndexArray, Length(LobColIndexArray)+1);
-      LobColIndexArray[High(LobColIndexArray)] := Index;
     end else if DBBindingArray[Index].wType in [DBTYPE_VARNUMERIC, DBTYPE_BYTES, DBTYPE_STR, DBTYPE_WSTR, DBTYPE_BSTR] then begin
       DBBindingArray[Index].obValue := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
-      DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
+      DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS;
       if DBBindingArray[Index].wType = DBTYPE_STR then
         DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize +1
       else if DBBindingArray[Index].wType in [DBTYPE_WSTR, DBTYPE_BSTR] then begin
@@ -564,7 +555,6 @@ var
     //makes trouble !!DBBindingArray[Index].dwFlags :=  DBCOLUMNINFO^.dwFlags; //set found flags to indicate long types too
   end;
 begin
-  SetLength(LobColIndexArray, 0);
   SetLength(DBBindingArray, DBUPARAMS);
   DBBindingArray[0].obStatus := 0;
   SetDBBindingProps(0);

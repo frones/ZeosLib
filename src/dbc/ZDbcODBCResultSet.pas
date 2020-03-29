@@ -60,10 +60,14 @@ uses
 {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
 {$ENDIF USE_SYNCOMMONS}
-  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
+  System.Types, System.Contnrs
+  {$ELSE}
+    {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} Types
+  {$ENDIF},
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  ZSysUtils, ZDbcIntfs, ZClasses,
+  ZSysUtils, ZDbcIntfs, ZClasses, ZDbcCachedResultSet, ZDbcCache,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
   ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils;
 
@@ -108,6 +112,7 @@ type
     fFirstGetDataIndex, fLastGetDataIndex: Integer;
     FTinyBuffer: array[Byte] of Byte;
     FClientCP: Word;
+    FTempLob: IZBlob;
     procedure LoadUnBoundColumns;
     function CreateODBCConvertError(ColumnIndex: Integer; DataType: Word): EZODBCConvertError;
   protected
@@ -137,7 +142,7 @@ type
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF USE_SYNCOMMONS}
@@ -186,24 +191,51 @@ type
       ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); override;
   end;
 
-  TZODBCBlob = class(TZAbstractBlob)
+  TZODBCBlob = class(TZLocalMemBLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver);
+      StrLen_or_IndPtr: PSQLLEN; const PlainDriver: TZODBC3PlainDriver;
+      const OpenLobStreams: TZSortedList);
   end;
 
-  TZODBCClobA = class(TZAbstractCLob)
+  TZODBCClobA = class(TZLocalMemCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver;
-      ConSettings: PZConSettings);
+      StrLen_or_IndPtr: PSQLLEN; const PlainDriver: TZODBC3PlainDriver;
+      ConSettings: PZConSettings; const OpenLobStreams: TZSortedList);
   end;
 
   TZODBCClobW = class(TZAbstractCLob)
   public
     constructor Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-      StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver;
-      ConSettings: PZConSettings);
+      StrLen_or_IndPtr: PSQLLEN; const PlainDriver: TZODBC3PlainDriver;
+      ConSettings: PZConSettings; const OpenLobStreams: TZSortedList);
+  end;
+
+  TZODBCachedResultSetW = class(TZCachedResultSet)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  end;
+
+  { TZODBCRowAccessorW }
+
+  TZODBCRowAccessorW = class(TZRowAccessor)
+  public
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  end;
+
+  TZODBCachedResultSetA = class(TZCachedResultSet)
+  protected
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  end;
+
+  { TZODBCRowAccessorW }
+
+  TZODBCRowAccessorA = class(TZRowAccessor)
+  public
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
   end;
 
   TZODBCOutParamColumnInfo = class(TZODBCColumnInfo)
@@ -255,6 +287,7 @@ procedure TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
 var C, H, I: Integer;
     P: Pointer;
     BCD: TBCD;
+    L: NativeUint absolute BCD;
 begin
   //init
   if JSONWriter.Expand then
@@ -374,17 +407,18 @@ begin
         stAsciiStream, stUnicodeStream: begin
             JSONWriter.Add('"');
             if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or (ConSettings^.ClientCodePage^.CP <> zCP_UTF8) then begin
-              P := IZBlob(fColDataPtr).GetPWideChar;
-              JSONWriter.AddJSONEscapeW(P, IZBlob(fColDataPtr).Length shr 1);
+              P := IZBlob(fColDataPtr).GetPWideChar(fUniTemp, L);
+              JSONWriter.AddJSONEscapeW(P, L);
             end else begin
-              P := IZBlob(fColDataPtr).GetPAnsiChar(zCP_UTF8);
-              JSONWriter.AddJSONEscape(P, IZBlob(fColDataPtr).Length);
+              P := IZBlob(fColDataPtr).GetPAnsiChar(zCP_UTF8, fRawTemp, L);
+              JSONWriter.AddJSONEscape(P, L);
             end;
             JSONWriter.Add('"');
           end;
-        stBinaryStream:
-          JSONWriter.WrBase64(IZBlob(fColDataPtr).GetBuffer, IZBlob(fColDataPtr).Length, True);
-        else //stArray, stDataSet:
+        stBinaryStream: begin
+          P := IZBlob(fColDataPtr).GetBuffer(fRawTemp, L);
+          JSONWriter.WrBase64(P, L, True);
+        end else //stArray, stDataSet:
           JSONWriter.AddShort('null,') ;
       end;
       JSONWriter.Add(',');
@@ -436,8 +470,14 @@ begin
                           end;
                         end;
         end;
-      stAsciiStream, stUnicodeStream:
-        Result := GetBlob(ColumnIndex).GetAnsiString;
+      stAsciiStream, stUnicodeStream: begin
+          FTempLob := GetBlob(ColumnIndex);
+          if FTempLob <> nil then begin
+            Result := FTempLob.GetAnsiString;
+            FTempLob := nil;
+          end else
+            Result := '';
+        end;
       else Result := '';
     end;
   end;
@@ -480,14 +520,15 @@ begin
   end else Result := NullBCD;
 end;
 
-function TAbstractODBCResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TAbstractODBCResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
   Result := nil;
   if not IsNull(ColumnIndex) then
     with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin //loads the lob on demand -> a second call is impossible
     if ColumnType in [stBinaryStream, stAsciiStream, stUnicodeStream]
     then Result := IZBlob(ColumnBuffer)
-    else Result := TZAbstractBlob.Create;
+    else raise CreateCanNotAccessBlobRecordException(ColumnIndex, ColumnType);
   end;
 end;
 
@@ -1028,13 +1069,9 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
                     begin
-                      if IZBlob(ColumnBuffer).IsCLob then begin
-                        Result := IZBlob(ColumnBuffer).GetPAnsiChar(FClientCP);
-                        Len := IZBlob(ColumnBuffer).Length;
-                      end else begin
-                        Result := IZBlob(ColumnBuffer).GetBuffer;
-                        Len := IZBlob(ColumnBuffer).Length;
-                      end;
+                      if IZBlob(ColumnBuffer).IsCLob
+                      then Result := IZBlob(ColumnBuffer).GetPAnsiChar(FClientCP, FRawTemp, Len)
+                      else Result := IZBlob(ColumnBuffer).GetBuffer(fRawTemp, Len);
                     end
       else          begin
                       Result := pEmptyAnsiString;
@@ -1165,11 +1202,11 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                     end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
                     begin
-                      if IZBlob(ColumnBuffer).IsCLob then begin
-                        Result := IZBlob(ColumnBuffer).GetPWideChar;
-                        Len := IZBlob(ColumnBuffer).Length shr 1;
-                      end else begin
-                        fUniTemp := Ascii7ToUnicodeString(IZBlob(ColumnBuffer).GetBuffer, IZBlob(ColumnBuffer).Length);
+                      if IZBlob(ColumnBuffer).IsCLob
+                      then Result := IZBlob(ColumnBuffer).GetPWideChar(fUniTemp, Len)
+                      else begin
+                        Result := IZBlob(ColumnBuffer).GetBuffer(fRawTemp, Len);
+                        fUniTemp := Ascii7ToUnicodeString(PAnsiChar(Result), Len);
 Set_From_Temp:          Len := Length(fUniTemp);
                         if Len > 0
                         then Result := Pointer(fUniTemp)
@@ -1247,6 +1284,7 @@ function TAbstractODBCResultSet.GetRawByteString(
   ColumnIndex: Integer): RawByteString;
 var P: Pointer;
   L: NativeUInt;
+  CP: Word;
 begin
   with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     if (Ord(ColumnType) < Ord(stString)) or (ColumnType in [stBytes, stBinaryStream]) then begin
@@ -1268,8 +1306,16 @@ begin
                           ZSetString(PAnsiChar(fColDataPtr), L, Result);
                         end;
         end;
-      stAsciiStream, stUnicodeStream:
-        Result := GetBlob(ColumnIndex).GetRawByteString;
+      stAsciiStream, stUnicodeStream: begin
+          if fIsUnicodeDriver
+          then CP := ConSettings^.CTRL_CP
+          else CP := FClientCP;
+          FTemplob := GetBlob(ColumnIndex);
+          if FTemplob <> nil then begin
+            Result := FTemplob.GetRawByteString(CP);
+            FTemplob := nil;
+          end else Result := '';
+        end;
       else Result := '';
     end;
   end;
@@ -1506,8 +1552,15 @@ begin
                           end;
                         end;
         end;
-      stAsciiStream, stUnicodeStream:
-        Result := GetBlob(ColumnIndex).GetUTF8String;
+      stAsciiStream, stUnicodeStream: begin
+          FTempLob := GetBlob(ColumnIndex);
+          FTempLob := GetBlob(ColumnIndex);
+          if FTempLob <> nil then begin
+            Result := FTempLob.GetUTF8String;
+            FTempLob := nil;
+          end else
+            Result := '';
+        end;
       else Result := '';
     end;
   end;
@@ -1551,11 +1604,11 @@ begin
           if StrLen_or_IndPtr^ = SQL_NULL_DATA then
             PIZlob(@ColumnBuffer)^ := nil
           else if ColumnType = stBinaryStream
-            then PIZlob(@ColumnBuffer)^ := TZODBCBlob.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver)
+            then PIZlob(@ColumnBuffer)^ := TZODBCBlob.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fPlainDriver, FOpenLobStreams)
             else if ColumnType in [stAsciiStream, stUnicodeStream]
               then if ConSettings^.ClientCodePage^.Encoding = ceUTF16
-                then PIZlob(@ColumnBuffer)^ := TZODBCClobW.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver, ConSettings)
-                else PIZlob(@ColumnBuffer)^ := TZODBCClobA.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fChunkSize, fPlainDriver, ConSettings);
+                then PIZlob(@ColumnBuffer)^ := TZODBCClobW.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fPlainDriver, ConSettings, FOpenLobStreams)
+                else PIZlob(@ColumnBuffer)^ := TZODBCClobA.Create(ColumnIndex +1, fPHSTMT^, StrLen_or_IndPtr, fPlainDriver, ConSettings, FOpenLobStreams);
         end;
   end;
 end;
@@ -1773,6 +1826,7 @@ begin
             SQL_CHAR, SQL_WCHAR: begin
                 FixedWidth := True;
                 Scale := Precision;
+                Signed := True;
               end;
             SQL_BINARY: begin
                 Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
@@ -1790,13 +1844,11 @@ begin
           {numeric data type infos: }
           if (ColumnType in [stDouble, stCurrency]) then
             Currency := IsMoney;
-          if ColumnType in [stString, stUnicodeString] then begin
-            { character / binary info}
-            if ColumnType in [stString, stUnicodeString] then
-              if Ord(ConSettings^.ClientCodePage^.Encoding) >= Ord(ceUTF16)
-              then ColumnCodePage := zCP_UTF16
-              else ColumnCodePage := FClientCP;
-          end;
+          if ColumnType in [stString, stAsciiStream] then
+            ColumnCodePage := FClientCP
+          else if ColumnType in [stUnicodeString, stUnicodeStream] then
+            ColumnCodePage := zCP_UTF16;
+
         end else begin
           DescribeColumn(ColumnNumber, StrBuf, ColumnInfo);
           ColumnLabel := ColumnName;
@@ -1820,10 +1872,10 @@ begin
     //GetData don't work with multiple fetched rows for most drivers
     //calculate max count of rows for a single fetch call
     if RowSize > 0 //see https://sourceforge.net/p/zeoslib/tickets/383/
-    then fMaxFetchableRows := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(Ord(not LobsInResult)))
+    then fMaxFetchableRows := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(1, (Cardinal(fZBufferSize) div RowSize)*Byte(not LobsInResult))
     else fMaxFetchableRows := 1;
     if fMaxFetchableRows > 1 then begin
-      CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, SQLPOINTER(fMaxFetchableRows), 0));
+      CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROW_ARRAY_SIZE, {%H-}SQLPOINTER(fMaxFetchableRows), 0));
       CheckStmtError(fPlainDriver.SQLSetStmtAttr(fPHSTMT^, SQL_ATTR_ROWS_FETCHED_PTR, @fFetchedRowCount, 0));
     end;
     fFirstGetDataIndex := fColumnCount;
@@ -1845,11 +1897,11 @@ begin
         if (ColumnType in [stBigDecimal, stCurrency]) then begin
           CheckStmtError(FPlainDriver.SQLGetStmtAttr(fPHSTMT^, SQL_ATTR_APP_ROW_DESC, @Desc, 0, nil));
           CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
-            SQL_DESC_CONCISE_TYPE, SQLPointer(ODBC_CType), SQL_IS_SMALLINT));
+            SQL_DESC_CONCISE_TYPE, {%H-}SQLPointer(ODBC_CType), SQL_IS_SMALLINT));
           CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
-            SQL_DESC_PRECISION, SQLPointer(Precision), SQL_IS_INTEGER));
+            SQL_DESC_PRECISION, {%H-}SQLPointer(Precision), SQL_IS_INTEGER));
           CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
-            SQL_DESC_SCALE, SQLPointer(Scale), SQL_IS_SMALLINT));
+            SQL_DESC_SCALE, {%H-}SQLPointer(Scale), SQL_IS_SMALLINT));
           if Bound then CheckStmtError(FPlainDriver.SQLSetDescField(Desc, ColumnNumber+1,
             SQL_DESC_DATA_PTR, ColumnBuffer, SQL_IS_POINTER));
         end;
@@ -1875,6 +1927,7 @@ begin
     CheckStmtError(fPlainDriver.SQLCloseCursor(fPHSTMT^)); //close cursor and discard pending result
     fCursorOpened := False;
   end;
+  fFetchedRowCount := 0;
   inherited ResetCursor;
 end;
 
@@ -2037,119 +2090,125 @@ end;
 { TZODBCBlob }
 
 constructor TZODBCBlob.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-  StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer; const PlainDriver: TZODBC3PlainDriver);
+  StrLen_or_IndPtr: PSQLLEN;  const PlainDriver: TZODBC3PlainDriver;
+  const OpenLobStreams: TZSortedList);
+const
+  MaxBufSize = $F000;
 var
   OffSetPtr: PAnsiChar;
   i: Integer;
+  L: Cardinal absolute I;
 begin
-  inherited Create;
-  if StrLen_or_IndPtr^ >= 0 then begin
-    FBlobSize := StrLen_or_IndPtr^;
-    GetMem(FBlobData, FBlobSize);
-    OffSetPtr := FBlobData;
-    for i := 1 to StrLen_or_IndPtr^ div ChunkSize do begin
-      Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
-      Inc(OffSetPtr, ChunkSize);
-    end;
-    Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
-  end else if StrLen_or_IndPtr^ = SQL_NULL_DATA then
-    FBlobSize := -1
+  inherited Create(OpenLobStreams);
+  if StrLen_or_IndPtr^ = SQL_NULL_DATA then
+    FDataRefAddress.IsNotNull := 0
   else begin
-    Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
-    GetMem(FBlobData, ChunkSize);
-    FBlobSize := ChunkSize;
-    OffSetPtr := FBlobData;
-    while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
-      ReallocMem(FBlobData, FBlobSize + ChunkSize);
-      OffSetPtr := {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(FBlobSize));
-      FBlobSize := FBlobSize + ChunkSize;
-    end;
-    FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^;
-    ReallocMem(FBlobData, FBlobSize);
+    FDataRefAddress.IsNotNull := 1;
+    if StrLen_or_IndPtr^ = 0 then Exit;
+    if StrLen_or_IndPtr^ > 0 then begin
+      SetCapacity(StrLen_or_IndPtr^);
+      OffSetPtr := @FDataRefAddress.VarLenData.Data;
+      for i := 1 to StrLen_or_IndPtr^ div MaxBufSize do begin
+        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber,
+          SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
+        Inc(OffSetPtr, MaxBufSize);
+      end;
+      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
+    end else if StrLen_or_IndPtr^ = SQL_NO_TOTAL then begin
+      SetCapacity(MaxBufSize);
+      OffSetPtr := @FDataRefAddress.VarLenData.Data;
+      while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
+        L := FDataRefAddress.VarLenData.Len;
+        SetCapacity(L+MaxBufSize);
+        OffSetPtr := PAnsiChar(@FDataRefAddress.VarLenData.Data)+L;
+      end;
+      SetCapacity(FDataRefAddress.VarLenData.Len - MaxBufSize + NativeUInt(StrLen_or_IndPtr^));
+    end else
+      Assert(StrLen_or_IndPtr^ = 0)
   end;
 end;
 
 { TZODBCClobA }
 
 constructor TZODBCClobA.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-  StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer;
-  const PlainDriver: TZODBC3PlainDriver; ConSettings: PZConSettings);
+  StrLen_or_IndPtr: PSQLLEN; const PlainDriver: TZODBC3PlainDriver;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList);
+const
+  MaxBufSize = $F000;
 var
   OffSetPtr: PAnsiChar;
   i: Integer;
+  L: Cardinal absolute I;
 begin
-  inherited Create;
-  FConSettings := ConSettings;
-  FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
+  inherited Create(ConSettings^.ClientCodePage^.CP, ConSettings, OpenLobStreams);
   if StrLen_or_IndPtr^ = SQL_NULL_DATA then
-    FBlobSize := -1
+    FDataRefAddress.IsNotNull := 0
   else begin
+    FDataRefAddress.IsNotNull := 1;
     { truncated string data always have a trailing #0 on top of data }
+    if StrLen_or_IndPtr^ = 0 then Exit;
     if StrLen_or_IndPtr^ >= 0 then begin
-      FBlobSize := StrLen_or_IndPtr^ +SizeOf(AnsiChar);
-      GetMem(FBlobData, FBlobSize);
-      OffSetPtr := FBlobData;
-      for i := 1 to StrLen_or_IndPtr^ div ChunkSize do begin
-        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
-        Inc(OffSetPtr, ChunkSize-SizeOf(AnsiChar));
+      SetCapacity(StrLen_or_IndPtr^);
+      OffSetPtr := @FDataRefAddress^.VarLenData.Data;
+      for i := 1 to StrLen_or_IndPtr^ div MaxBufSize do begin
+        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
+        Inc(OffSetPtr, (MaxBufSize-SizeOf(AnsiChar)));
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
+      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
-      GetMem(FBlobData, ChunkSize);
-      FBlobSize := ChunkSize;
-      OffSetPtr := FBlobData;
-      while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
-        ReallocMem(FBlobData, FBlobSize + ChunkSize);
-        OffSetPtr := PAnsiChar(FBlobData)+FBlobSize-SizeOf(AnsiChar);
-        FBlobSize := FBlobSize + ChunkSize-SizeOf(AnsiChar);
+      SetCapacity(MaxBufSize);
+      OffSetPtr := @FDataRefAddress.VarLenData.Data;
+      while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
+        L := FDataRefAddress.VarLenData.Len -SizeOf(AnsiChar);
+        SetCapacity(L+MaxBufSize);
+        OffSetPtr := PAnsiChar(@FDataRefAddress.VarLenData.Data)+L;
       end;
-      FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +SizeOf(AnsiChar);
-      ReallocMem(FBlobData, FBlobSize);
+      SetCapacity(FDataRefAddress.VarLenData.Len - MaxBufSize + NativeUInt(StrLen_or_IndPtr^));
     end;
-    PByte(PAnsiChar(FBlobData)+FBlobSize-SizeOf(AnsiChar))^ := Ord(#0); //set trailing #0
+    PByte(PAnsiChar(@FDataRefAddress.VarLenData.Data)+FDataRefAddress.VarLenData.Len)^ := 0;
   end;
 end;
 
 { TZODBCClobW }
 
 constructor TZODBCClobW.Create(ColumnNumber: SQLSMALLINT; StmtHandle: SQLHSTMT;
-  StrLen_or_IndPtr: PSQLLEN; ChunkSize: Integer;
-  const PlainDriver: TZODBC3PlainDriver; ConSettings: PZConSettings);
+  StrLen_or_IndPtr: PSQLLEN; const PlainDriver: TZODBC3PlainDriver;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList);
+const
+  MaxBufSize = $F000;
 var
   OffSetPtr: PAnsiChar;
   I: Integer;
+  L: Cardinal absolute I;
 begin
-  inherited Create;
-  FConSettings := ConSettings;
-  FCurrentCodePage := zCP_UTF16;
+  inherited Create(zCP_UTF16, ConSettings, OpenLobStreams);
   if StrLen_or_IndPtr^ = SQL_NULL_DATA then
-    FBlobSize := -1
+    FDataRefAddress.IsNotNull := 0
   else begin
+    FDataRefAddress.IsNotNull := 1;
+    if StrLen_or_IndPtr^ = 0 then Exit;
     { truncated string data always have a trailing #0 on top of data }
     if StrLen_or_IndPtr^ >= 0 then begin
-      FBlobSize := StrLen_or_IndPtr^ +SizeOf(WideChar);
-      GetMem(FBlobData, FBlobSize);
-      OffSetPtr := FBlobData;
-      for i := 1 to StrLen_or_IndPtr^ div ChunkSize do begin
-        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr));
-        Inc(OffSetPtr, ChunkSize-2);
+      SetCapacity(StrLen_or_IndPtr^);
+      OffSetPtr := @FDataRefAddress^.VarLenData.Data;
+      for i := 1 to StrLen_or_IndPtr^ div MaxBufSize do begin
+        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
+        Inc(OffSetPtr, (MaxBufSize-SizeOf(WideChar)));
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr)));
+      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
-      GetMem(FBlobData, ChunkSize);
-      FBlobSize := ChunkSize;
-      OffSetPtr := FBlobData;
-      while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, ChunkSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
-        ReallocMem(FBlobData, FBlobSize + ChunkSize);
-        OffSetPtr := PAnsiChar(FBlobData)+FBlobSize-SizeOf(WideChar);
-        FBlobSize := FBlobSize + ChunkSize-SizeOf(WideChar);
+      SetCapacity(MaxBufSize);
+      OffSetPtr := @FDataRefAddress.VarLenData.Data;
+      while (PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS_WITH_INFO) do begin
+        L := FDataRefAddress.VarLenData.Len -SizeOf(WideChar);
+        SetCapacity(L+MaxBufSize);
+        OffSetPtr := PAnsiChar(@FDataRefAddress.VarLenData.Data)+L;
       end;
-      FBlobSize := FBlobSize - ChunkSize + StrLen_or_IndPtr^ +SizeOf(WideChar);
-      ReallocMem(FBlobData, FBlobSize);
+      SetCapacity(FDataRefAddress.VarLenData.Len - MaxBufSize + NativeUInt(StrLen_or_IndPtr^));
     end;
-    PWord(PAnsiChar(FBlobData)+FBlobSize-SizeOf(WideChar))^ := Ord(#0); //set trailing #0
+    PWord(PAnsiChar(@FDataRefAddress.VarLenData.Data)+FDataRefAddress.VarLenData.Len)^ := 0;
   end;
 end;
 
@@ -2228,5 +2287,68 @@ begin
   inherited Open;
 end;
 
+{ TZODBCachedResultSetW }
+
+class function TZODBCachedResultSetW.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZODBCRowAccessorW;
+end;
+
+{ TZODBCRowAccessorW }
+
+constructor TZODBCRowAccessorW.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
+  CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
+begin
+  TempColumns := TObjectList.Create(True);
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    if Current.ColumnType in [stString, stAsciiStream] then
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)+1); // no raw chars in 4 odbc_w
+    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
+      Current.ColumnCodePage := zCP_UTF16
+    else if Current.ColumnType in [stBytes, stBinaryStream] then
+      Current.ColumnCodePage := zCP_Binary;
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
+  TempColumns.Free;
+end;
+
+{ TZODBCRowAccessorA }
+
+constructor TZODBCRowAccessorA.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
+  CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
+begin
+  TempColumns := TObjectList.Create(True);
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-1); // no national chars in 4 odbc_w
+    if Current.ColumnType in [stString, stAsciiStream] then
+      Current.ColumnCodePage := Consettings.ClientCodePage.CP
+    else if Current.ColumnType in [stBytes, stBinaryStream] then
+      Current.ColumnCodePage := zCP_Binary;
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
+  TempColumns.Free;
+end;
+
+{ TZODBCachedResultSetA }
+
+class function TZODBCachedResultSetA.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZODBCRowAccessorA;
+end;
+
+initialization
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.

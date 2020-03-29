@@ -851,17 +851,19 @@ var
   PropLength: SQLSMALLINT;
   PlainW: IODBC3UnicodePlainDriver;
   PlainA: IODBC3RawPlainDriver;
+  Plain: TZODBC3PlainDriver;
   ODBCConnection: IZODBCConnection;
 begin
   Result := False; //satisfy compiler
   ODBCConnection := GetODBCConnection;
-  if ODBCConnection.GetPlainDriver.QueryInterface(IODBC3UnicodePlainDriver, PlainW) = S_OK then begin
-    ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
+  plain := ODBCConnection.GetPlainDriver;
+  if Plain.GetInterface(IODBC3UnicodePlainDriver, PlainW) then begin
+    ODBCConnection.CheckDbcError(Plain.SQLGetInfo(fPHDBC^,
       InfoType, @Buf[0], SizeOf(Buf), @PropLength));
     Result := ZSysUtils.StrToBoolEx(PWideChar(@Buf[0]), False)
   end else
-    if ODBCConnection.GetPlainDriver.QueryInterface(IODBC3RawPlainDriver, PlainA) = S_OK then begin
-      ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
+    if Plain.GetInterface(IODBC3RawPlainDriver, PlainA) then begin
+      ODBCConnection.CheckDbcError(Plain.SQLGetInfo(fPHDBC^,
         InfoType, @Buf[0], SizeOf(Buf), @PropLength));
       Result := ZSysUtils.StrToBoolEx(PAnsiChar(@Buf[0]), False)
     end;

@@ -285,10 +285,7 @@ begin
 //    CheckEquals('public', GetStringByName('TABLE_SCHEM'));
     CheckEquals('people', GetStringByName('TABLE_NAME'));
     CheckEquals('p_resume', GetStringByName('COLUMN_NAME'));
-    if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
-      CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'))
-    else
-      CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
+    CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
     CheckEquals('TEXT', UpperCase(GetStringByName('TYPE_NAME')));
     CheckEquals(-1, GetIntByName('COLUMN_SIZE'));
     CheckEquals(0, GetIntByName('BUFFER_LENGTH'));

@@ -56,7 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility, ZSqlUpdate, ZSqlProcessor, ZSqlMetadata, ZClasses;
 
 type
@@ -124,6 +125,8 @@ type
     procedure TestSF286_getSmaller;
     procedure TestSF301;
     procedure TestSF238;
+    procedure TestSF418_SortedFields;
+    procedure TestSF418_IndexFieldNames;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -146,7 +149,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZEncoding;
+  SysUtils, ZDatasetUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZEncoding;
 
 { ZTestCompCoreBugReport }
 
@@ -881,7 +884,7 @@ begin
   Query.SQL.Text := 'select p_id, p_name, p_resume from people'
     + ' where p_id < 4 order by p_id';
 
-  if ProtocolType in [protInterbase, protFirebird, protOracle] then
+  if ConnectionConfig.Provider in [spIB_FB, spOracle] then
   begin
     try
       Query.Open;
@@ -1437,8 +1440,7 @@ procedure ZTestCompCoreBugReport.Test985629;
 var
   Query: TZQuery;
 begin
-  // Float values are not guaranteed to be exact for mysql real prepared statements
-  if SkipForReason([srClosedBug,srMysqlRealPreparedConnection]) then Exit;
+  if SkipForReason([srClosedBug]) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select c_cost from cargo order by c_id';
@@ -1461,8 +1463,7 @@ procedure ZTestCompCoreBugReport.TestFloatPrecision;
 var
   Query: TZQuery;
 begin
-  // Float values are not guaranteed to be exact for mysql real prepared statements
-  if SkipForReason([srClosedBug,srMysqlRealPreparedConnection]) then Exit;
+  if SkipForReason([srClosedBug]) then Exit;
 
   Query := CreateQuery;
   try
@@ -1858,6 +1859,84 @@ begin
   end;
 end;
 
+procedure ZTestCompCoreBugReport.TestSF418_SortedFields;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Connection.Connect;
+  try
+    Connection.ExecuteDirect('delete from number_values where n_id in (1001, 1002, 1003, 1003, 1004, 1005)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1001, 0.0)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1002, 1.3376)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1003, 0.8246)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1004, 0.8459)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1005, 0.5684)');
+
+    Query := TZReadOnlyQuery.Create(nil);
+    try
+      Query.Connection := Connection;
+      Query.SQL.Text := 'select n_id, n_numeric from number_values where n_id in (1001, 1002, 1003, 1004, 1005) order by n_id';
+      Query.Open;
+      Query.SortedFields := 'n_numeric';
+
+      Query.First;
+      CheckEquals(1001, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1005, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1003, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1004, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1002, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+    finally
+      FreeAndNil(Query);
+    end;
+  finally
+    Connection.Disconnect;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF418_IndexFieldNames;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Connection.Connect;
+  try
+    Connection.ExecuteDirect('delete from number_values where n_id in (1001, 1002, 1003, 1003, 1004, 1005)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1001, 0.0)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1002, 1.3376)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1003, 0.8246)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1004, 0.8459)');
+    Connection.ExecuteDirect('insert into number_values (n_id, n_numeric) values (1005, 0.5684)');
+
+    Query := TZReadOnlyQuery.Create(nil);
+    try
+      Query.Connection := Connection;
+      Query.SQL.Text := 'select n_id, n_numeric from number_values where n_id in (1001, 1002, 1003, 1004, 1005) order by n_id';
+      Query.Open;
+      Query.IndexFieldNames := 'n_numeric';
+
+      Query.First;
+      CheckEquals(1001, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1005, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1003, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1004, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+      CheckEquals(1002, Query.FieldByName('n_id').AsInteger);
+      Query.Next;
+    finally
+      FreeAndNil(Query);
+    end;
+  finally
+    Connection.Disconnect;
+  end;
+end;
+
 procedure ZTestCompCoreBugReport.TestSF270_1;
 var
   Query: TZQuery;
@@ -2147,11 +2226,11 @@ begin
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
 
-        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, ConSettings, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
+        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
         {$IFDEF UNICODE}
         CheckEquals(Str3, FieldByName('P_NAME').AsString, 'Field(P_NAME) as String');
         {$ELSE}
-        if ConSettings.CPType = cCP_UTF16 then
+        if Connection.ControlsCodePage = cCP_UTF16 then
           CheckEquals(Str3, FieldByName('P_NAME').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'Field(P_NAME) as WideString '+Protocol)
         else begin
           if (ConSettings.AutoEncode) or (ConSettings^.ClientCodePage.Encoding = ceUTF16) then
@@ -2193,7 +2272,7 @@ var
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-    if ConSettings.CPType = cCP_UTF16 then begin
+    if Query.Connection.ControlsCodePage = cCP_UTF16 then begin
       Query.ParamByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_char;
       Query.ParamByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_varchar;
       Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nchar;
@@ -2320,14 +2399,14 @@ begin
   {$ENDIF}
   try
     {no unicode strings or utf8 allowed}
-    if ((ConSettings.CPType = cGET_ACP)
+    if ((Connection.ControlsCodePage = cGET_ACP)
 {$IF defined(MSWINDOWS) and not (defined(LCL) and defined(WITH_DEFAULTSYSTEMCODEPAGE))} //LCL is hacking the default-systemcodepage so they can pass this test pass nice (utf8 to Widcharmove)
-          or (ConSettings.CPType = cCP_UTF8)
+          or (Connection.ControlsCodePage = cCP_UTF8)
 {$IFEND}
       ) and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP)) then
       Exit;
     CP := ConSettings.ClientCodePage.CP;
-    if not ((CP = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP))
+    if not ((CP = zCP_UTF8) or (CP = zCP_UTF16) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP))
       {add some more if you run into same issue !!} then
       Exit;
     { firebird CS_NONE just support 1Byte/Char if CP is not native like russion single byte the test just would raise exception we are aware about -> skip}

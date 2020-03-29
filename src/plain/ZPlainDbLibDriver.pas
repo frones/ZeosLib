@@ -60,8 +60,7 @@ interface
 
 uses Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZCompatibility, ZPlainDriver, ZPlainDbLibConstants
-  {$IFDEF TEST_CALLBACK}, ZClasses{$ENDIF}
-  {$IFDEF TLIST_IS_DEPRECATED},ZSysUtils{$ENDIF};
+  {$IFDEF TLIST_IS_DEPRECATED},ZClasses{$ENDIF};
 
 type
   {** Represents a generic interface to DBLIB native API. }

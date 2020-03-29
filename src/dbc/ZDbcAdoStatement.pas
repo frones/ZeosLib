@@ -61,9 +61,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, ZSysUtils, ZOleDB, FmtBCD,
+  ZCompatibility, ZSysUtils, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
-  ZDbcOleDBUtils, ZDbcOleDBStatement, ZDbcUtils;
+  ZDbcOleDBStatement, ZDbcUtils;
 
 type
   {** Implements Prepared ADO Statement. }
@@ -96,7 +96,7 @@ type
   private
     FRefreshParamsFailed, FEmulatedParams: Boolean;
   protected
-    function CheckParameterIndex(Index, ASize: Integer; SQLType: TZSQLType): DataTypeEnum; reintroduce;
+    function CheckParameterIndex(Index, ASize: Integer; SQLType: TZSQLType): TDataTypeEnum; reintroduce;
     procedure PrepareInParameters; override;
     function CreateResultSet: IZResultSet; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
@@ -139,7 +139,8 @@ type
     procedure SetTime(Index: Integer; const AValue: TZTime); overload;
     procedure SetTimestamp(Index: Integer; const AValue: TZTimeStamp); overload;
 
-    procedure SetBytes(Index: Integer; const AValue: TBytes); reintroduce;
+    procedure SetBytes(Index: Integer; const AValue: TBytes); reintroduce; overload;
+    procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
     procedure SetGUID(Index: Integer; const AValue: TGUID); reintroduce;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const AValue: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
@@ -162,7 +163,7 @@ uses
   Variants, Math, {$IFNDEF FPC}Windows{inline},{$ENDIF}
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZFastCode,
+  ZEncoding, ZDbcLogging, ZDbcResultSet, ZFastCode,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcAdoResultSet,
   ZMessages, ZDbcProperties;
 
@@ -176,7 +177,7 @@ begin
   if Assigned(FAdoRecordset) and ((FAdoRecordSet.State and adStateOpen) = adStateOpen) then begin
     NativeResultSet := TZAdoResultSet.Create(Self, SQL, FAdoRecordSet);
     if ResultSetConcurrency = rcUpdatable then
-      Result := TZCachedResultSet.Create(NativeResultSet, SQL,
+      Result := TZADOCachedResultSet.Create(NativeResultSet, SQL,
         TZAdoCachedResolver.Create(FAdoConnection.GetAdoConnection, Self,
           NativeResultSet.GetMetaData), ConSettings)
     else Result := NativeResultSet;
@@ -351,7 +352,7 @@ end;
 { TZAdoPreparedStatement }
 
 function TZAdoPreparedStatement.CheckParameterIndex(Index, ASize: Integer;
-  SQLType: TZSQLType): DataTypeEnum;
+  SQLType: TZSQLType): TDataTypeEnum;
 var ParamDirection: ParameterDirectionEnum;
   I: Integer;
   W: WideString;
@@ -404,6 +405,7 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
     BD: TBCD;
     PD: PDecimal;
     L: NativeUInt;
+    AdType: TDataTypeEnum;
   begin
     ColumnsInfo := TObjectList.Create;
     try
@@ -413,13 +415,20 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
         ColumnInfo := TZColumnInfo.Create;
         with ColumnInfo do begin
           {$IFNDEF UNICODE}
-          ColumnLabel := PUnicodeToString(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
+          ColumnLabel := PUnicodeToRaw(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
           {$ELSE}
           ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
           {$ENDIF}
-          ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_,
-            FAdoCommand.Parameters.Item[I].Precision, FAdoCommand.Parameters.Item[I].NumericScale, ConSettings.CPType);
-          Precision := FAdoCommand.Parameters.Item[I].Precision;
+          AdType := FAdoCommand.Parameters.Item[I].Type_;
+          case AdType of
+            adChar, adVarChar, adLongVarChar,
+            adWChar, adVarWChar, adBSTR, adLongVarWChar,
+            adBinary, adVarBinary, adLongVarBinary:
+                Precision := FAdoCommand.Parameters.Item[I].Size
+            else FAdoCommand.Parameters.Item[I].Precision;
+          end;
+          ColumnType := ConvertAdoToSqlType(AdType,
+            Precision, FAdoCommand.Parameters.Item[I].NumericScale);
         end;
         ColumnsInfo.Add(ColumnInfo);
       end;
@@ -427,7 +436,7 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
       RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
       with RS do begin
         SetType(rtScrollInsensitive);
-        SetConcurrency(rcReadOnly);
+        SetConcurrency(rcUpdatable);
         RS.MoveToInsertRow;
         J := 0;
         for i := 0 to FAdoCommand.Parameters.Count -1 do begin
@@ -476,7 +485,7 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
                                       if VarIsArray(Temp) then begin
                                         P := VarArrayLock(Temp);
                                         try
-                                          Blob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(Temp, 1)+1);
+                                          Blob := TZLocalMemBLob.CreateWithData(P, VarArrayHighBound(Temp, 1)+1);
                                           RS.UpdateLob(J+FirstDbcIndex, Blob);
                                         finally
                                           VarArrayUnLock(Temp);
@@ -489,7 +498,8 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
             end;
           end;
         end;
-        RS.InsertRow;
+        InsertRow;
+        SetConcurrency(rcReadOnly);
       end;
       fOutParamResultSet := RS;
       fOpenResultSet := Pointer(Result);
@@ -520,7 +530,7 @@ begin
     for I := 0 to BindList.Count -1 do
       with FAdoCommand.Parameters[i] do
         BindList.SetParamTypes(I, ConvertAdoToSqlType(Get_Type_, Get_Precision,
-          Get_NumericScale, ConSettings.CPType), AdoType2ZProcedureColumnType[Get_Direction]);
+          Get_NumericScale), AdoType2ZProcedureColumnType[Get_Direction]);
   except { do not handle the exception
       tag ADO did fail to compute the paramter info's instead!
       an example: Insert into Foo Values (?,?),(?,?),(?,?) crash with ado but native oledb succeeds !
@@ -572,6 +582,7 @@ procedure TZAdoPreparedStatement.SetBlob(Index: Integer;
   SQLType: TZSQLType; const AValue: IZBlob);
 var P: Pointer;
   Lob: IZBlob;
+  Len: NativeUint;
 begin
   Lob := AValue; //inc refcnt else FPC leaks many memory
   if (AValue = nil) or (aValue.IsEmpty) then
@@ -579,15 +590,21 @@ begin
   else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, 0, SQLType) of
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
     adLongVarWChar: if Lob.IsClob then begin
-                      P := Lob.GetPWideChar;
-                      SetPWideChar(Index, P, Lob.Length shr 1);
+                      Lob.SetCodePageTo(zCP_UTF16);
+                      P := Lob.GetPWideChar(FUniTemp, Len);
+                      SetPWideChar(Index, P, Len);
                     end else begin
-                      fUniTemp := ZDbcUtils.GetSQLHexWideString(Lob.GetBuffer, Lob.Length, True);
+                      P := Lob.GetBuffer(FRawTemp, Len);
+                      fUniTemp := ZDbcUtils.GetSQLHexWideString(P, Len, True);
                       SetPWideChar(Index, Pointer(fUniTemp), Length(fUniTemp));
                     end;
     adBinary,
     adVarBinary,
-    adLongVarBinary: SetPBytes(Index, Lob.GetBuffer, Lob.Length);
+    adLongVarBinary: begin
+                       P := Lob.GetBuffer(FRawTemp, Len);
+                       SetPBytes(Index, P, Len);
+                     end;
+    else raise CreateConversionError(Index, SQLType, stUnknown)
   end;
 end;
 
@@ -620,6 +637,39 @@ begin
     SetUInt(Index, AValue);
 end;
 
+{**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZAdoPreparedStatement.SetBytes(ParameterIndex: Integer; Value: PByte;
+  Len: NativeUInt);
+begin
+  if (Value = nil) or (Len = 0) then
+    SetNull(ParameterIndex, stBytes)
+  else case CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, 0, stBytes) of
+    adBinary,
+    adVarBinary,
+    adLongVarBinary: SetPBytes(ParameterIndex, Value, Len);
+    else raise CreateConversionError(ParameterIndex, stBytes, stUnknown)
+  end;
+end;
+
+{**
+  Sets the designated parameter to a Java array of bytes.  The driver converts
+  this to an SQL <code>VARBINARY</code> or <code>LONGVARBINARY</code>
+  (depending on the argument's size relative to the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZAdoPreparedStatement.SetBytes(Index: Integer;
   const AValue: TBytes);
 var P: Pointer;
@@ -994,9 +1044,21 @@ procedure TZAdoPreparedStatement.SetPBytes(Index: Word; AValue: PByte;
   Len: Cardinal);
 var V: OleVariant;
 begin
-  V := VarArrayCreate([0, Len - 1], varByte);
-  Move(AValue^, TVarData(V).VArray.Data^, Len);
-  FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
+  if AValue = nil then
+    SetNull(Index, stBytes)
+  else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len, stBytes) of
+    adBinary,
+    adVarBinary,
+    adLongVarBinary: if FEmulatedParams then begin
+        FUniTemp := GetSQLHexWideString(PAnsiChar(AValue), Len, True);
+        BindList.Put(Index, BindList[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].SQLType, fUniTemp);
+      end else begin
+        V := VarArrayCreate([0, Len - 1], varByte);
+        Move(AValue^, TVarData(V).VArray.Data^, Len);
+        FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
+      end;
+    else raise CreateConversionError(Index, stBytes, stUnknown)
+  end;
 end;
 
 procedure TZAdoPreparedStatement.SetPWideChar(Index: Word;

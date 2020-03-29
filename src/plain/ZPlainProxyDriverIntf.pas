@@ -64,32 +64,37 @@ interface
 uses
   Classes;
 
-  type IZDbcProxy = Interface(IUnknown)
+  type
+  {$IFDEF NEXTGEN}
+  WideString = String;
+  {$ENDIF}
+
+  IZDbcProxy = Interface(IUnknown)
     ['{374CAA55-95CD-44FE-8FF3-F90BF8D1DF8C}']
-    procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
-    procedure Disconnect; safecall;
-    procedure SetAutoCommit(const Value: LongBool); safecall;
-    procedure Commit; safecall;
-    procedure Rollback; safecall;
-    function SetProperties(const Properties : WideString): WideString; safecall;
-    function ExecuteStatement(const SQL, Parameters: WideString; const MaxRows: LongWord): WideString; safecall;
-    function GetTables(const Catalog, SchemaPattern, TableNamePattern, Types: WideString): WideString; safecall;
-    function GetSchemas: WideString; safecall;
-    function GetCatalogs: WideString; safecall;
-    function GetTableTypes: WideString; safecall;
-    function GetColumns(const Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern: WideString): WideString; safecall;
-    function GetTablePrivileges(const Catalog, SchemaPattern, TableNamePattern: WideString): WideString; safecall;
-    function GetColumnPrivileges(const Catalog, Schema, Table, ColumnNamePattern: WideString): WideString; safecall;
-    function GetPrimaryKeys(const Catalog, Schema, Table: WideString): WideString; safecall;
-    function GetImportedKeys(const Catalog, Schema, Table: WideString): WideString; safecall;
-    function GetExportedKeys(const Catalog, Schema, Table: WideString): WideString; safecall;
-    function GetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: WideString): WideString; safecall;
-    function GetIndexInfo(const Catalog, Schema, Table: WideString; const Unique, Approximate: LongBool):WideString; safecall;
-    function GetSequences(const Catalog, SchemaPattern, SequenceNamePattern : WideString ): WideString; safecall;
-    function GetTriggers(const Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern: WideString): WideString; safecall;
-    function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; safecall;
-    function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; safecall;
-    function GetCharacterSets(): WideString; safecall;	
+    procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    procedure Disconnect; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    procedure SetAutoCommit(const Value: LongBool); {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    procedure Commit; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    procedure Rollback; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function SetProperties(const Properties : WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function ExecuteStatement(const SQL, Parameters: WideString; const MaxRows: LongWord): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetTables(const Catalog, SchemaPattern, TableNamePattern, Types: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetSchemas: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetCatalogs: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetTableTypes: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetColumns(const Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetTablePrivileges(const Catalog, SchemaPattern, TableNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetColumnPrivileges(const Catalog, Schema, Table, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetPrimaryKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetImportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetExportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetIndexInfo(const Catalog, Schema, Table: WideString; const Unique, Approximate: LongBool):WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetSequences(const Catalog, SchemaPattern, SequenceNamePattern : WideString ): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetTriggers(const Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+    function GetCharacterSets(): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
   end;
 
 {$ENDIF ZEOS_DISABLE_PROXY}

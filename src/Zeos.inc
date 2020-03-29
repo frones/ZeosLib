@@ -90,7 +90,7 @@
   {$IF not defined(CPU64) and (defined(CPUX64) or defined(CPU64BITS) or defined(CPUARM64) or defined(CPU64BITS))}
     {$DEFINE CPU64}
   {$IFEND}
-  {$IF CompilerVersion >= 27}
+  {$IF CompilerVersion >= 25}
     {$LEGACYIFEND ON}
   {$IFEND}
   {$DEFINE DELPHI}
@@ -286,6 +286,7 @@
                         {$IFEND}
                       {$ENDIF}
                       {$IF CompilerVersion >= 25} //Delphi XE4+
+                        {$DEFINE WITH_LEGACIFEND}               //Compiler supports the LEGACYIFEND directive
                         {$DEFINE WITH_VAR_TVALUEBUFFER}	        //GetFieldata overloads using !var! Buffer: TValueBuffer
                         {$DEFINE WITH_BUFFERS_IS_TRECBUF}       //Buffers[index] is TRecBuf type NativeInt
                         {$DEFINE WITH_GETCALCFIELDS_TRECBUF}    //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
@@ -315,6 +316,7 @@
                           {$ENDIF}  
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
+                              {$DEFINE WITH_OMNIXML}
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
                               {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead							  
                               {$IF CompilerVersion >= 29} //Delphi XE8+

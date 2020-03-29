@@ -2649,7 +2649,11 @@ end; {PatchMove}
 {$ENDIF PatchSystemMove}
 {$IFEND} //set in Zeos.inc
 
-{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
+{$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(Value: Cardinal): RawByteString;
 var Digits: Byte;
 begin
@@ -3014,7 +3018,11 @@ asm
   pop    ebx
 end;
 {$ELSE}
-{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
+{$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(Value: Integer): RawByteString;
 var C: Cardinal;
   Digits: Byte;
@@ -3030,7 +3038,11 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 
-{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
+{$IFDEF FPC}
+  {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
+{$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(Value: Int64): RawByteString;
 var U: UInt64;
   Digits: Byte;
@@ -3200,7 +3212,10 @@ cardinal_range:
     PByte(Buf)^ := I32 or ord('0');
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized}
+{$ENDIF} // ZSetString does the job even if NOT required
 function IntToRaw(const Value: UInt64): RawByteString;
 var Digits: Byte;
 begin
@@ -3257,9 +3272,9 @@ end;
 
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5060 off : Function result variable does not seem to be initialized}
-  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}// ZSetString does the job even if NOT required
-{$ENDIF}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
+{$ENDIF} // ZSetString does the job even if NOT required
 function CurrToRaw(const Value: Currency): RawByteString;
 var buf: array[0..31] of AnsiChar;
   P: PAnsiChar;
@@ -7013,25 +7028,22 @@ end;
 //Optimized for:     Pure-Pascal
 
 //changed to PByte support:
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 function StrLen_JOH_PAS_3_a(const Str: PAnsiChar): Cardinal;
 var
   P, PStr: PAnsiChar;
   I, J: Integer;
 begin
-  if (Str = nil) or (Ord(Str^) = Ord(#0)) then
-    begin
+  if (Str = nil) or (PByte(Str)^ = 0) then begin
       Result := 0; Exit;
     end;
-  if Ord((Str+1)^) = Ord(#0) then
-    begin
+  if PByte(Str+1)^ = 0 then begin
       Result := 1; Exit;
     end;
-  if Ord((Str+2)^) = Ord(#0) then
-    begin
+  if PByte(Str+2)^ = 0 then begin
       Result := 2; Exit;
     end;
-  if Ord((Str+3)^) = Ord(#0) then
-    begin
+  if PByte(Str+3)^ = 0 then begin
       Result := 3; Exit;
     end;
  P := Pointer(Str);
@@ -7054,6 +7066,7 @@ begin
      else
        Inc(Result, 3)
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
   {$ENDIF PUREPASCAL}
 {$ENDIF USE_FAST_STRLEN}
 

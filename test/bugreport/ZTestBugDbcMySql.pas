@@ -301,17 +301,8 @@ begin
     + ' ON (table881634b.ft1 = table881634a.idt1)');
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(idt2_Index)));
-  //Client_Character_set sets column-type!!!!
-  if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
-  begin
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(ft2_Index)));
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(ft1_Index)));
-  end
-  else
-  begin
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(ft2_Index)));
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(ft1_Index)));
-  end;
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(ft2_Index)));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(ft1_Index)));
 end;
 
 {**

@@ -160,7 +160,8 @@ type
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
     procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
 
-    procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce;
+    procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
+    procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
     procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
@@ -460,7 +461,7 @@ function TZAbstractInterbase6PreparedStatement.CreateResultSet: IZResultSet;
 var
   NativeResultSet: TZInterbase6XSQLDAResultSet;
   CachedResolver: TZInterbase6CachedResolver;
-  CachedResultSet: TZCachedResultSet;
+  CachedResultSet: TZInterbaseCachedResultSet;
 begin
   if FOpenResultSet <> nil then
     Result := IZResultSet(FOpenResultSet)
@@ -471,7 +472,7 @@ begin
       if FIBConnection.IsFirebirdLib and (FIBConnection.GetHostVersion >= 2000000) //is the SQL2003 st. IS DISTINCT FROM supported?
       then CachedResolver  := TZCachedResolverFirebird2up.Create(Self, NativeResultSet.GetMetadata)
       else CachedResolver  := TZInterbase6CachedResolver.Create(Self, NativeResultSet.GetMetadata);
-      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
+      CachedResultSet := TZInterbaseCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
       Result := CachedResultSet;
     end else
@@ -511,6 +512,8 @@ var
   PreparedRowsOfArray: Integer;
   TypeItem: AnsiChar;
   Buffer: array[0..7] of AnsiChar;
+  FinalChunkSize: Integer;
+label jmpEB;
 
   procedure PrepareArrayStmt(var Slot: TZIBStmt);
   begin
@@ -582,26 +585,21 @@ begin
     inherited Prepare; //log action and prepare params
   end;
   if BatchDMLArrayCount > 0 then begin
-    if FMaxRowsPerBatch = 0 then begin
-      eBlock := GetExecuteBlockString(FParamSQLData,
+    if FMaxRowsPerBatch = 0 then begin //init to find out max rows per batch
+jmpEB:eBlock := GetExecuteBlockString(FParamSQLData,
         IsParamIndex, BindList.Count, BatchDMLArrayCount, FCachedQueryRaw,
         FPlainDriver, FMemPerRow, PreparedRowsOfArray, FMaxRowsPerBatch,
           FTypeTokens, FStatementType, FIBConnection.GetXSQLDAMaxSize);
     end else
       eBlock := '';
-    if (FMaxRowsPerBatch <= BatchDMLArrayCount) and (eBlock <> '') then begin
+    FinalChunkSize := (BatchDMLArrayCount mod FMaxRowsPerBatch);
+    if (FMaxRowsPerBatch <= BatchDMLArrayCount) and (FBatchStmts[True].Obj = nil) then begin
+      if eBlock = '' then goto jmpEB;
       PrepareArrayStmt(FBatchStmts[True]); //max block size per batch
-      if BatchDMLArrayCount > FMaxRowsPerBatch then //final block count
-        PrepareFinalChunk(BatchDMLArrayCount mod PreparedRowsOfArray);
-    end else if (eBlock = '') then begin
-      if (FMaxRowsPerBatch > BatchDMLArrayCount) then begin
-        if (FBatchStmts[False].PreparedRowsOfArray <> BatchDMLArrayCount) then
-          PrepareFinalChunk(BatchDMLArrayCount) //full block of batch
-      end else
-        if (BatchDMLArrayCount <> FMaxRowsPerBatch) and (FBatchStmts[False].PreparedRowsOfArray <> (BatchDMLArrayCount mod FMaxRowsPerBatch)) then
-          PrepareFinalChunk(BatchDMLArrayCount mod FMaxRowsPerBatch); //final block of batch
-    end else if (FBatchStmts[False].PreparedRowsOfArray <> BatchDMLArrayCount) then
-      PrepareArrayStmt(FBatchStmts[False]); //full block of batch
+    end;
+    if (FinalChunkSize > 0) and ((FBatchStmts[False].Obj = nil) or
+       (FinalChunkSize <> FBatchStmts[False].PreparedRowsOfArray)) then //if final chunk then
+      PrepareFinalChunk(FinalChunkSize);
   end;
 end;
 
@@ -937,7 +935,9 @@ procedure TZInterbase6PreparedStatement.SetBlob(Index: Integer;
 var
   XSQLVAR: PXSQLVAR;
   P: PAnsiChar;
-  L: LengthInt;
+  L: NativeUint;
+  IBLob: IZInterbaseLob;
+  ibsqltype: ISC_SHORT;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -947,28 +947,32 @@ begin
   XSQLVAR := @FParamXSQLDA.sqlvar[Index];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   SQLType := FParamSQLData.GetFieldSqlType(Index);
-  if (Value = nil) then begin
+  ibsqltype := XSQLVAR.sqltype and not(1);
+  if (Value = nil) or Value.IsEmpty then begin
     BindList.SetNull(Index, SQLType);
     P := nil;
     L := 0;//satisfy compiler
+    //if (XSQLVAR.sqlind = nil) then //ntNullable -> Exception?
+  end else if Supports(Value, IZInterbaseLob, IBLob) and ((ibsqltype = SQL_QUAD) or (ibsqltype = SQL_BLOB)) then begin
+    PISC_QUAD(XSQLVAR.sqldata)^ := IBLob.GetBlobId;
+    if (XSQLVAR.sqlind <> nil) then
+      XSQLVAR.sqlind^ := ISC_NOTNULL;
+    Exit;
   end else begin
     BindList.Put(Index, SQLType, Value); //localize for the refcount
     if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then
-      if Value.IsClob then
-        P := Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP)
-      else begin
-        fRawTemp := GetValidatedAnsiStringFromBuffer(Value.GetBuffer, Value.Length, ConSettings);
-        BindList.Put(Index, stAsciiStream, TZAbstractCLob.CreateWithData(Pointer(fRawTemp),
-          Length(fRawTemp), ConSettings^.ClientCodePage.CP, ConSettings));
-        fRawTemp := '';
-        P := IZBlob(BindList[Index].Value).GetBuffer;
+      if Value.IsClob then begin
+        Value.SetCodePageTo(ConSettings^.ClientCodePage.CP);
+        P := Value.GetPAnsiChar(ConSettings^.ClientCodePage.CP, FRawTemp, L)
+      end else begin
+        BindList.Put(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
+        P := IZCLob(BindList[Index].Value).GetPAnsiChar(ConSettings^.ClientCodePage.CP, FRawTemp, L);
       end
     else
-      P := Value.GetBuffer;
-    L := IZBlob(BindList[Index].Value).Length;
+      P := Value.GetBuffer(FRawTemp, L);
   end;
   if P <> nil then begin
-    case (XSQLVAR.sqltype and not(1)) of
+    case ibsqltype of
       SQL_TEXT,
       SQL_VARYING   : EncodePData(XSQLVAR, P, L);
       SQL_BLOB,
@@ -976,7 +980,7 @@ begin
       else raise EZIBConvertError.Create(SUnsupportedDataType);
     end;
   end else if (XSQLVAR.sqlind <> nil) then
-       XSQLVAR.sqlind^ := ISC_NULL;
+    XSQLVAR.sqlind^ := ISC_NULL;
 
 end;
 
@@ -1037,6 +1041,37 @@ procedure TZInterbase6PreparedStatement.SetByte(Index: Integer;
   Value: Byte);
 begin
   SetSmall(Index, Value);
+end;
+
+{**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZInterbase6PreparedStatement.SetBytes(ParameterIndex: Integer;
+  Value: PByte; Len: NativeUInt);
+var XSQLVAR: PXSQLVAR;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex -1;
+  {$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  {$R-}
+  XSQLVAR := @FParamXSQLDA.sqlvar[ParameterIndex];
+  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  case (XSQLVAR.sqltype and not(1)) of
+    SQL_TEXT,
+    SQL_VARYING   : EncodePData(XSQLVAR, PAnsiChar(Value), Len);
+    SQL_BLOB,
+    SQL_QUAD      : WriteLobBuffer(XSQLVAR, Value, Len);
+    else raise EZIBConvertError.Create(SUnsupportedDataType);
+  end;
 end;
 
 {**

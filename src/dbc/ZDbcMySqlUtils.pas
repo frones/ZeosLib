@@ -60,7 +60,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging,
-  ZCompatibility, ZDbcResultSetMetadata, ZVariant, ZDbcMySql;
+  ZCompatibility, ZDbcResultSetMetadata, ZVariant;
 
 const
   MAXBUF = 65535;
@@ -76,8 +76,8 @@ type
   @param FieldFlags field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS;
-  CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
+function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
+  FieldOffsets: PMYSQL_FIELDOFFSETS; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -218,7 +218,7 @@ implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   Math, TypInfo,
-  ZMessages, ZDbcUtils, ZFastCode, ZEncoding, ZClasses;
+  ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
 
 threadvar
   SilentMySQLError: Integer;
@@ -240,8 +240,9 @@ end;
   @param FieldFlags a field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD; FieldOffsets: PMYSQL_FIELDOFFSETS;
-  CtrlsCPType: TZControlsCodePage; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
+function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
+  FieldOffsets: PMYSQL_FIELDOFFSETS; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 var PrecOrLen: ULong;
 begin
   case PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ of
@@ -305,17 +306,18 @@ begin
       Result := stTime;
     FIELD_TYPE_DATETIME, FIELD_TYPE_TIMESTAMP:
       Result := stTimestamp;
-    MYSQL_TYPE_JSON: If ( CtrlsCPType = cCP_UTF16)
-                      then Result := stUnicodeStream
-                      else Result := stAsciiStream;
-    FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
+    MYSQL_TYPE_JSON: Result := stAsciiStream;
+    FIELD_TYPE_TINY_BLOB:
+      if ((FieldOffsets.charsetnr > 0) and ((PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary}) or (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))) or
+         ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))
+        then Result := stString
+        else Result := stBytes;
+    FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
       if ((FieldOffsets.charsetnr > 0) and ((PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary}) or (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))) or
-         ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0)) then
-        If ( CtrlsCPType = cCP_UTF16)
-        then Result := stUnicodeStream
-        else Result := stAsciiStream
-      else Result := stBinaryStream;
+         ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))
+        then Result := stAsciiStream
+        else Result := stBinaryStream;
     FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
       case PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ of
         1: if MySQL_FieldType_Bit_1_IsBoolean
@@ -331,11 +333,9 @@ begin
     FIELD_TYPE_STRING:
       if (PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^ = 0) or //handle null columns: select null union null
         ((FieldOffsets.charsetnr > 0) and ((PUInt(NativeUInt(MYSQL_FIELD)+NativeUInt(FieldOffsets.charsetnr))^ <> 63{binary}) or (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))) or
-          ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0)) then
-        if ( CtrlsCPType = cCP_UTF16)
-        then Result := stUnicodeString
-        else Result := stString
-      else Result := stBytes;
+          ((FieldOffsets.charsetnr < 0) and (PUInt(NativeUInt(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG = 0))
+        then Result := stString
+        else Result := stBytes;
     FIELD_TYPE_ENUM:
       Result := stString;
     FIELD_TYPE_SET:
@@ -350,6 +350,7 @@ begin
       raise Exception.Create('Unknown MySQL data type!');
    end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
   MYSQL: PMYSQL; MYSQL_STMT: PMYSQL_STMT; LogCategory: TZLoggingCategory;
@@ -448,6 +449,7 @@ end;
   @param FieldHandle the handle of the fetched field
   @returns a new TZColumnInfo
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 function GetMySQLColumnInfoFromFieldHandle(MYSQL_FIELD: PMYSQL_Field;
   FieldOffsets: PMYSQL_FIELDOFFSETS; ConSettings: PZConSettings;
   MySQL_FieldType_Bit_1_IsBoolean:boolean): TZColumnInfo;
@@ -465,7 +467,7 @@ var
       {$IFDEF UNICODE}
       Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
       {$ELSE}
-      if (not ConSettings^.AutoEncode) or ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+      if (not ConSettings^.AutoEncode) or (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP)
       then System.SetString(Result, Buf, Len)
       else begin
         tmp := PRawToUnicode(Buf, len, ConSettings^.ClientCodePage^.CP);
@@ -499,8 +501,10 @@ begin
     end;
     Result.ReadOnly := (FieldOffsets.org_table <0) or (Result.TableName = '') or (Result.ColumnName = '');
     Result.Writable := not Result.ReadOnly;
-    Result.ColumnType := ConvertMySQLHandleToSQLType(MYSQL_FIELD, FieldOffsets, ConSettings.CPType, MySQL_FieldType_Bit_1_IsBoolean);
-    FieldLength := PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
+    Result.ColumnType := ConvertMySQLHandleToSQLType(MYSQL_FIELD, FieldOffsets, MySQL_FieldType_Bit_1_IsBoolean);
+    if PMysqlFieldType(NativeUInt(MYSQL_FIELD)+FieldOffsets._type)^ = FIELD_TYPE_TINY_BLOB
+    then FieldLength := 255
+    else FieldLength := PULong(NativeUInt(MYSQL_FIELD)+FieldOffsets.length)^;
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
 
     if Result.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]
@@ -569,6 +573,7 @@ begin
   else
     Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure ConvertMySQLColumnInfoFromString(var TypeName: RawByteString;
   ConSettings: PZConSettings; out TypeInfoSecond: RawByteString;
@@ -584,6 +589,10 @@ var
   pB, pC: Integer;
   Signed: Boolean;
   P: PAnsiChar;
+  function CreateFailException: EZSQLException;
+  begin
+    Result := EZSQLException.Create('Unknown MySQL data type! '+String(TypeName))
+  end;
 label SetLobSize, lByte, lWord, lLong, lLongLong, SetTimeScale, SetVarScale;
 begin
   TypeInfoSecond := '';
@@ -696,14 +705,15 @@ SetTimeScale:
   end else if EndsWith(TypeName, RawByteString('blob')) then begin //includes 'TINYBLOB', 'MEDIUMBLOB', 'LONGBLOB'
     FieldType := stBinaryStream;
 SetLobSize:
-    if StartsWith(TypeName, RawByteString('tiny')) then
+    if StartsWith(TypeName, RawByteString('tiny')) then begin
+      FieldType := TZSQLType(Byte(FieldType)-3); //move down to string by default
       ColumnSize := 255
-    else if StartsWith(TypeName, RawByteString('medium')) then
-      ColumnSize := 16277215//may be 65535
+    end else if StartsWith(TypeName, RawByteString('medium')) then
+      ColumnSize := 16277215
     else if StartsWith(TypeName, RawByteString('long')) then
-      ColumnSize := High(Integer)//2147483657//may be 65535
-    else ColumnSize := MAXBUF;
-  end else if EndsWith(TypeName, RawByteString('text')) then begin //includes 'TINYTEXT', 'MEDIUMTEXT', 'LONGTEXT'
+      ColumnSize := High(Integer)//usually high cardinal ->4294967295
+    else ColumnSize := 65535; //no suffix found use default high Word size
+  end else if EndsWith(TypeName, RawByteString('text')) then begin//includes 'TINYTEXT', 'MEDIUMTEXT', 'LONGTEXT'
     FieldType := stAsciiStream;
     goto SetLobSize;
   end else if TypeName = 'bit' then begin //see: http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
@@ -727,11 +737,8 @@ SetLobSize:
           Break;
        end;
 
-  case FieldType of
-    stString: if ( ConSettings^.CPType = cCP_UTF16) then FieldType := stUnicodeString;
-    stAsciiStream: if ( ConSettings^.CPType = cCP_UTF16) then FieldType := stUnicodeStream;
-    stUnknown: raise Exception.Create('Unknown MySQL data type!'+String(TypeName));
-  end;
+  if FieldType = stUnknown then
+    raise CreateFailException;
 end;
 
 function GetMySQLOptionValue(Option: TMySQLOption): string;
@@ -816,6 +823,7 @@ begin
     Result := MYSQL323_server_status_offset
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 procedure ReallocBindBuffer(var BindBuffer: Pointer;
   var MYSQL_aligned_BINDs: PMYSQL_aligned_BINDs; BindOffsets: PMYSQL_BINDOFFSETS;
   OldCount, NewCount: Integer; Iterations: ULong);
@@ -869,6 +877,8 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
+
 
 procedure ReAllocMySQLColumnBuffer(OldRSCount, NewRSCount: Integer;
   var ColumnsBindingArray: PMYSQL_ColumnsBindingArray; BindOffset: PMYSQL_BINDOFFSETS);
@@ -890,6 +900,7 @@ begin
 end;
 
 initialization
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
   with MARIADB_BIND1027_Offset do begin
     buffer_type   := NativeUint(@(PMARIADB_BIND1027(nil).buffer_type));
     buffer_length := NativeUint(@(PMARIADB_BIND1027(nil).buffer_length));
@@ -1011,6 +1022,7 @@ initialization
     decimals        := NativeUInt(@(PMYSQL_FIELD32(nil).decimals));
     max_length      := NativeUInt(@(PMYSQL_FIELD32(nil).max_length));
   end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.

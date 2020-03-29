@@ -114,7 +114,8 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if ProtocolType in [protInterbase, protFirebird, protOracle] then
+  Connection.Open;
+  if Connection.GetServerProvider in [spIB_FB, spOracle] then
     Exit;
 
   Statement := Connection.CreateStatement;

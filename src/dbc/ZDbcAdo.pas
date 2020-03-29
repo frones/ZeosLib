@@ -63,7 +63,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainAdoDriver,
-  ZPlainAdo, ZURL, ZTokenizer, ZClasses, ZDbcLogging;
+  ZPlainAdo, ZTokenizer, ZDbcLogging;
 
 type
   {** Implements Ado Database Driver. }
@@ -99,17 +99,18 @@ type
 
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;
 
     procedure Commit;
     procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer;
+
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+    function PrepareCallWithParams(const Name: string; Info: TStrings):
+      IZCallableStatement;
 
     procedure Open; override;
 
@@ -129,9 +130,8 @@ implementation
 
 uses
   Variants, ActiveX, ZOleDB,
-  ZDbcUtils, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties,
-  ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding, ZCollections,
-  ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
+  ZDbcUtils, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties, ZDbcAdoStatement,
+  ZDbcAdoMetaData, ZEncoding, ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
 
 const                                                //adXactUnspecified
   IL: array[TZTransactIsolationLevel] of TOleEnum = (adXactChaos, adXactReadUncommitted, adXactReadCommitted, adXactRepeatableRead, adXactSerializable);
@@ -301,34 +301,37 @@ begin
   end;
 end;
 
-function TZAdoConnection.GetBinaryEscapeString(const Value: TBytes): String;
-begin
-  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
-end;
-
-function TZAdoConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
-end;
-
 {**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
 
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name an procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
   @param Info a statement parameters.
-  @return a new Statement object
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
 }
-function TZAdoConnection.CreateRegularStatement(Info: TStrings): IZStatement;
+function TZAdoConnection.PrepareCallWithParams(const Name: string;
+  Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoStatement.Create(Self, Info);
+  Result := TZAdoCallableStatement2.Create(Self, Name, Info);
 end;
 
 {**
@@ -359,44 +362,41 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZAdoConnection.CreatePreparedStatement(
-  const SQL: string; Info: TStrings): IZPreparedStatement;
+function TZAdoConnection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
   Result := TZAdoPreparedStatement.Create(Self, SQL, Info)
 end;
 
+function TZAdoConnection.GetBinaryEscapeString(const Value: TBytes): String;
+begin
+  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
+end;
+
+function TZAdoConnection.GetBinaryEscapeString(const Value: RawByteString): String;
+begin
+  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
+end;
+
 {**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures.
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
+  Creates a <code>Statement</code> object for sending
+  SQL statements to the database.
+  SQL statements without parameters are normally
+  executed using Statement objects. If the same SQL statement
+  is executed many times, it is more efficient to use a
+  <code>PreparedStatement</code> object.
+  <P>
+  Result sets created using the returned <code>Statement</code>
+  object will by default have forward-only type and read-only concurrency.
 
-  <P><B>Note:</B> This method is optimized for handling stored
-  procedure call statements. Some drivers may send the call
-  statement to the database when the method <code>prepareCall</code>
-  is done; others
-  may wait until the <code>CallableStatement</code> object
-  is executed. This has no
-  direct effect on users; however, it does affect which method
-  throws certain SQLExceptions.
-
-  Result sets created using the returned CallableStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
   @param Info a statement parameters.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
+  @return a new Statement object
 }
-function TZAdoConnection.CreateCallableStatement(const SQL: string; Info: TStrings):
-  IZCallableStatement;
+function TZAdoConnection.CreateStatementWithParams(Info: TStrings): IZStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoCallableStatement2.Create(Self, SQL, Info);
+  Result := TZAdoStatement.Create(Self, Info);
 end;
 
 {**
@@ -557,7 +557,7 @@ begin
     if FSavePoints.Count > 0 then begin
       S := cSavePointSyntaxW[fServerProvider][spqtRollback];
       if S <> '' then begin
-        S := S+FSavePoints[FSavePoints.Count-1];
+        S := S+UnicodeString(FSavePoints[FSavePoints.Count-1]);
         ExecuteImmediat(S, lcTransaction);
       end;
       FSavePoints.Delete(FSavePoints.Count-1);

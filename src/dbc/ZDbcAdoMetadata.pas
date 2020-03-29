@@ -62,7 +62,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
+  ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection,
   ZOleDB, ActiveX, ZDbcOleDBMetadata;
 
@@ -309,6 +309,7 @@ function TZAdoDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
   Len: NativeUInt;
+  Precision: Integer;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -332,12 +333,16 @@ begin
         else
           Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctUnknown));
         end;
+        if not IsNullByName('NUMERIC_PRECISION')
+        then Precision := GetIntByName('CHARACTER_OCTET_LENGTH')
+        else Precision := GetIntByName('NUMERIC_PRECISION');
         Result.UpdateSmall(ProcColDataTypeIndex, Ord(ConvertAdoToSqlType(
-          GetSmallByName('DATA_TYPE'), GetIntByName('NUMERIC_PRECISION'),
-          GetSmallByName('NUMERIC_SCALE'), ConSettings.CPType)));
+          GetSmallByName('DATA_TYPE'), Precision, GetSmallByName('NUMERIC_SCALE'))));
         Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
-        Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('NUMERIC_PRECISION'));
-        Result.UpdateInt(ProcColLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
+        if not IsNullByName('NUMERIC_PRECISION')then
+          Result.UpdateInt(ProcColPrecisionIndex, GetIntByName('NUMERIC_PRECISION'));
+        if not IsNullByName('CHARACTER_OCTET_LENGTH')then
+          Result.UpdateInt(ProcColLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateSmall(ProcColScaleIndex, GetSmallByName('NUMERIC_SCALE'));
   //      Result.UpdateSmall(ProcColRadixIndex, GetSmallByName('RADIX'));
         if GetStringByName('IS_NULLABLE') = 'NO' then
@@ -606,7 +611,7 @@ begin
         Result.UpdatePWideChar(ColumnNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
 
         SQLType := ConvertAdoToSqlType(GetSmallByName('DATA_TYPE'),
-          GetSmallByName('NUMERIC_PRECISION'), GetIntByName('NUMERIC_SCALE'), ConSettings.CPType);
+          GetSmallByName('NUMERIC_PRECISION'), GetIntByName('NUMERIC_SCALE'));
         Flags := GetIntByName('COLUMN_FLAGS');
 //!!!If the field type is long then this is the only way to know it because it just returns string type
         if ((Flags and DBCOLUMNFLAGS_ISLONG) <> 0 ) and (SQLType in [stBytes, stString, stUnicodeString]) then
@@ -834,7 +839,7 @@ begin
         Result.UpdatePWideChar(TableColVerColNameIndex, GetPWideCharByName('COLUMN_NAME', Len), Len);
         Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertAdoToSqlType(
           GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'),
-          GetIntByName('NUMERIC_SCALE'), ConSettings.CPType)));
+          GetIntByName('NUMERIC_SCALE'))));
         Result.UpdatePWideChar(TableColVerTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
@@ -1241,7 +1246,7 @@ begin
         Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertAdoToSqlType(
           GetSmallByName('DATA_TYPE'), GetIntByName('FIXED_PREC_SCALE'),
-          GetSmallByName('MAXIMUM_SCALE'), ConSettings.CPType)));
+          GetSmallByName('MAXIMUM_SCALE'))));
         Result.UpdateInt(TypeInfoPecisionIndex, 0);//GetIntByName('PRECISION'));
         Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideCharByName('LITERAL_PREFIX', Len), Len);
         Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideCharByName('LITERAL_SUFFIX', Len), Len);

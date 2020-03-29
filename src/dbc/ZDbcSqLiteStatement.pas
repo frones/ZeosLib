@@ -125,6 +125,7 @@ type
     procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
     procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
   end;
 
   TZSQLiteStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZStatement)
@@ -140,7 +141,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
-  ZDbcUtils, ZDbcProperties, ZFastCode, ZClasses;
+  ZDbcUtils, ZDbcProperties, ZFastCode;
 
 const DeprecatedBoolRaw: array[Boolean] of {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = ('N','Y');
 
@@ -186,7 +187,7 @@ begin
     { Creates a cached result set. }
     CachedResolver := TZSQLiteCachedResolver.Create(FHandle, Self,
       NativeResultSet.GetMetaData);
-    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL,
+    CachedResultSet := TZSQLiteCachedResultSet.Create(NativeResultSet, Self.SQL,
       CachedResolver,GetConnection.GetConSettings);
     CachedResultSet.SetType(rtScrollInsensitive);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
@@ -236,6 +237,8 @@ procedure TZAbstractSQLiteCAPIPreparedStatement.BindInParameters;
 var
   I, Errorcode: Integer;
   BindVal: PZBindValue;
+  P: Pointer;
+  L: NativeUInt;
 begin
   if FBindLater and (BindList.Count > 0) then begin
     for i := 0 to BindList.Count-1 do begin
@@ -253,13 +256,15 @@ begin
         stBytes:    if BindVal.BindType = zbtBytes
                     then Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, I +1, BindVal.Value, Length(TBytes(BindVal.Value)), nil)
                     else Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, I +1, PZBufRec(BindVal.Value).Buf, PZBufRec(BindVal.Value).Len, nil);
-        stAsciiStream: Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, IZBlob(BindVal.Value).GetBuffer, IZBlob(BindVal.Value).Length, nil);
-        stBinaryStream,
-        stUnicodeStream:Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, I +1, IZBlob(BindVal.Value).GetBuffer, IZBlob(BindVal.Value).Length, nil);
-        else begin
-          ErrorCode := SQLITE_ERROR; //satisfy comiler
-          RaiseUnsupportedParameterTypeException(BindVal^.SQLType);
-        end;
+        stAsciiStream: begin
+                    P := IZBlob(BindVal.Value).GetBuffer(FRawTemp, L);
+                    Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, I +1, P, L, nil);
+                  end;
+        stBinaryStream: begin
+                    P := IZBlob(BindVal.Value).GetBuffer(FRawTemp, L);
+                    Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, I +1, P, L, nil);
+                  end;
+        else raise CreateUnsupportedParameterTypeException(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindVal^.SQLType);
       end;
       if ErrorCode <> SQLITE_OK then
         CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
@@ -273,14 +278,19 @@ end;
 procedure TZAbstractSQLiteCAPIPreparedStatement.BindLob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob);
 var ErrorCode: Integer;
+  P: Pointer;
+  L: NativeUInt;
 begin
   inherited; //localize lob and make clob conversion if reqired
   if not FBindLater then begin
     if (Value = nil) or Value.IsEmpty then
       Errorcode := FPlainDriver.sqlite3_bind_null(FStmtHandle, Index +1)
-    else if SQLType = stBinaryStream
-      then Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, Index +1, Value.GetBuffer, Value.Length, nil)
-      else Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Value.GetBuffer, Value.Length, nil);
+    else begin
+      P := Value.GetBuffer(FRawTemp, L);
+      if SQLType = stBinaryStream
+      then Errorcode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, Index +1, P, L, nil)
+      else Errorcode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, P, L, nil);
+    end;
     if ErrorCode <> SQLITE_OK then
       CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcBindPrepStmt, ASQL, ConSettings);
   end;
@@ -565,6 +575,33 @@ begin
 end;
 
 {**
+  Sets the designated parameter to a Java array of bytes by reference.
+  The driver converts this to an SQL <code>VARBINARY</code> or
+  <code>LONGVARBINARY</code> (depending on the argument's size relative to
+  the driver's limits on
+  <code>VARBINARY</code> values) when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param Value the parameter value address
+  @param Len the length of the addressed value
+}
+procedure TZSQLiteCAPIPreparedStatement.SetBytes(Index: Integer; Value: PByte;
+  Len: NativeUInt);
+var ErrorCode: Integer;
+begin
+  {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
+  CheckParameterIndex(Index);
+  if FBindLater or FHasLoggingListener then
+    BindList.Put(Index, stBytes, Value, Len);
+  if not FBindLater then begin
+    ErrorCode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, Index +1, Value, Len, nil);
+    if ErrorCode <> SQLITE_OK then
+      CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
+  end else
+    FLateBound := True;
+end;
+
+{**
   Sets the designated parameter to a Java <code>currency</code> value.
   The driver converts this
   to an SQL <code>CURRENCY</code> value when it sends it to the database.
@@ -588,6 +625,7 @@ begin
     FLateBound := True;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZSQLiteCAPIPreparedStatement.SetDate(Index: Integer;
   const Value: TZDate);
 var
@@ -618,6 +656,8 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 
 {**
   Sets the designated parameter to a Java <code>double</code> value.
@@ -751,6 +791,7 @@ begin
   SetInt(ParameterIndex, Value);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZSQLiteCAPIPreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
 var
@@ -781,7 +822,10 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZSQLiteCAPIPreparedStatement.SetTimestamp(Index: Integer;
   const Value: TZTimeStamp);
 var
@@ -813,6 +857,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>usigned 32bit int</code> value.

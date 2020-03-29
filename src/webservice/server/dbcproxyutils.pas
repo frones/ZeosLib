@@ -149,6 +149,11 @@ begin
   Result := '<field value="' + FloatToStr(RS.GetDouble(Idx), ProxyFormatSettings) + '" />';
 end;
 
+function ConvertCurrency(const RS: IZResultSet; Const Idx: Integer): String;
+begin
+  Result := '<field value="' + CurrToStr(RS.GetCurrency(Idx), ProxyFormatSettings) + '" />';
+end;
+
 {$IFNDEF ZEOS73UP}
 function ConvertExtended(const RS: IZResultSet; Const Idx: Integer): String;
 begin
@@ -160,7 +165,7 @@ var
   BCD: TBCD;
 begin
   RS.GetBigDecimal(Idx, BCD);
-  Result := BCDToStr(BCD, ProxyFormatSettings);
+  Result := '<field value="' + BCDToStr(BCD, ProxyFormatSettings) + '" />';
 end;
 {$ENDIF}
 
@@ -259,12 +264,9 @@ begin
         stByte, stShort, stWord, stSmall, stLongWord, stInteger: CF[Idx - 1] := ConvertInt;
         stULong, stLong: CF[Idx - 1] := ConvertInt64;
         stFloat: CF[Idx - 1] := ConvertSingle;
-        stDouble, stCurrency: CF[Idx - 1] := ConvertDouble;
-        {$IFNDEF ZEOS73UP}
-        stBigDecimal: CF[Idx - 1] := ConvertExtended;
-        {$ELSE}
-        stBigDecimal: CF[Idx - 1] := ConvertBcd;
-        {$ENDIF}
+        stDouble: CF[Idx - 1] := ConvertDouble;
+        stCurrency: CF[Idx - 1] := ConvertCurrency;
+        stBigDecimal: CF[Idx - 1] := {$IFNDEF ZEOS73UP}ConvertExtended{$ELSE}ConvertBcd{$ENDIF};
         stString, stUnicodeString: CF[Idx - 1] := ConvertString;
         stDate: CF[Idx - 1] := ConvertDate;
         stTime: CF[Idx - 1] := ConvertTime;

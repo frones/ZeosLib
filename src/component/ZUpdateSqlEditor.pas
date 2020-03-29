@@ -309,7 +309,7 @@ begin
       {$ELSE}
         if not (FieldDefs[I].DataType in [ftBlob..ftTypedBinary]) then
       {$ENDIF}
-          List.AddObject(FieldDefs[I].Name, Pointer(Ord(not FieldDefs[I].Required)));
+          List.AddObject(FieldDefs[I].Name, {%H-}Pointer(Ord(not FieldDefs[I].Required)));
     finally
       List.EndUpdate;
     end;
@@ -330,7 +330,7 @@ begin
     try
       List.Clear;
       for I := 0 to FieldDefs.Count - 1 do
-        List.AddObject(FieldDefs[I].Name, Pointer(not FieldDefs[I].Required));
+        List.AddObject(FieldDefs[I].Name, {%H-}Pointer(not FieldDefs[I].Required));
     finally
       List.EndUpdate;
     end;
@@ -510,7 +510,7 @@ begin
       NextToken;
       while FToken = stSymbol do
       begin
-        List.AddObject(FTokenString, Pointer(Integer(FSymbolQuoted)));
+        List.AddObject(FTokenString, {%H-}Pointer(Integer(FSymbolQuoted)));
         if NextToken = stSymbol then NextToken;
         if FToken = stComma then NextToken
         else break;
@@ -794,7 +794,7 @@ begin
       while ResultSet.Next do
       begin
         if ResultSet.GetBooleanByName('SEARCHABLE') then
-          KeyFieldList.Items.AddObject(ResultSet.GetStringByName('COLUMN_NAME'), Pointer(ResultSet.GetIntByName('NULLABLE') <> 0));
+          KeyFieldList.Items.AddObject(ResultSet.GetStringByName('COLUMN_NAME'), {%H-}Pointer(ResultSet.GetIntByName('NULLABLE') <> 0));
         if ResultSet.GetBooleanByName('WRITABLE') then
           UpdateFieldList.Items.Add(ResultSet.GetStringByName('COLUMN_NAME')) ;
       end;

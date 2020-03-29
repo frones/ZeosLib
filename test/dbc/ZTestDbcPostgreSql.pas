@@ -58,7 +58,7 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZSqlTestCase,
-  ZURL, ZCompatibility, ZDbcProperties;
+  ZCompatibility, ZDbcProperties;
 
 type
 
@@ -211,10 +211,17 @@ begin
     Check(ResultSet.Next, 'ResultSet.Next');
     CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('b_id'));
     TempStream := ResultSet.GetAsciiStreamByName('b_text');
-    CheckEquals(TextStream, TempStream);
-    TempStream.Free;
+    try
+      CheckEquals(TextStream, TempStream);
+    finally
+      FreeAndNil(TempStream);
+    end;
     TempStream := ResultSet.GetBinaryStreamByName('b_image');
-    CheckEquals(ImageStream, TempStream);
+    try
+      CheckEquals(ImageStream, TempStream);
+    finally
+      FreeAndNil(TempStream);
+    end;
     ResultSet.Close;
 
     Statement.Close;
@@ -224,7 +231,7 @@ begin
     FreeAndNil(URL);
     FreeAndNil(TextStream);
     FreeAndNil(ImageStream);
-    FreeAndNil(TempStream);
+
   end;
 end;
 

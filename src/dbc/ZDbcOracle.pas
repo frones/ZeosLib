@@ -88,6 +88,7 @@ type
     function GetSessionHandle: POCISession;
     function GetTransactionHandle: POCITrans;
     function GetDescribeHandle: POCIDescribe;
+    function GetPlainDriver: TZOraclePlainDriver;
   end;
 
   IZOracleTransaction = interface(IZTransaction)
@@ -133,12 +134,13 @@ type
   public
     destructor Destroy; override;
   public
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; override;
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
   public { txn support }
     procedure Commit;
     procedure Rollback;
@@ -163,11 +165,14 @@ type
     function GetSessionHandle: POCISession;
     function GetTransactionHandle: POCITrans;
     function GetDescribeHandle: POCIDescribe;
+    function GetPlainDriver: TZOraclePlainDriver;
+  public
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetServerProvider: TZServerProvider; override;
+
   end;
 
   {** Implements a specialized cached resolver for Oracle. }
@@ -340,14 +345,6 @@ end;
 procedure TZOracleConnection.InternalSetCatalog(const Catalog: RawByteString);
 begin
   ExecuteImmediat('ALTER SESSION SET CURRENT_SCHEMA = '+Catalog, lcOther);
-end;
-
-function TZOracleConnection.CreateCallableStatement(const SQL: string;
-  Info: TStrings): IZCallableStatement;
-begin
-  if IsClosed then
-     Open;
-  Result := TZOracleCallableStatement_A.Create(Self, SQL, Info);
 end;
 
 {**
@@ -531,64 +528,6 @@ begin
 end;
 
 {**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
-
-  @param Info a statement parameters.
-  @return a new Statement object
-}
-function TZOracleConnection.CreateRegularStatement(Info: TStrings):
-  IZStatement;
-begin
-  if IsClosed then
-     Open;
-  Result := TZOracleStatement_A.Create(Self, Info);
-end;
-
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @param Info a statement parameters.
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
-function TZOracleConnection.CreatePreparedStatement(const SQL: string;
-  Info: TStrings): IZPreparedStatement;
-begin
-  if IsClosed then
-     Open;
-  Result := TZOraclePreparedStatement_A.Create(Self, SQL, Info);
-end;
-
-{**
   Attempts to kill a long-running operation on the database server
   side
 }
@@ -674,6 +613,76 @@ begin
 end;
 
 {**
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
+
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
+}
+function TZOracleConnection.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
+begin
+  if IsClosed then
+     Open;
+  Result := TZOracleCallableStatement_A.Create(Self, Name, Info);
+end;
+
+{**
+  Creates a <code>PreparedStatement</code> object for sending
+  parameterized SQL statements to the database.
+
+  A SQL statement with or without IN parameters can be
+  pre-compiled and stored in a PreparedStatement object. This
+  object can then be used to efficiently execute this statement
+  multiple times.
+
+  <P><B>Note:</B> This method is optimized for handling
+  parametric SQL statements that benefit from precompilation. If
+  the driver supports precompilation,
+  the method <code>prepareStatement</code> will send
+  the statement to the database for precompilation. Some drivers
+  may not support precompilation. In this case, the statement may
+  not be sent to the database until the <code>PreparedStatement</code> is
+  executed.  This has no direct effect on users; however, it does
+  affect which method throws certain SQLExceptions.
+
+  Result sets created using the returned PreparedStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param sql a SQL statement that may contain one or more '?' IN
+    parameter placeholders
+  @param Info a statement parameters.
+  @return a new PreparedStatement object containing the
+    pre-compiled statement
+}
+function TZOracleConnection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
+begin
+  if IsClosed then
+     Open;
+  Result := TZOraclePreparedStatement_A.Create(Self, SQL, Info);
+end;
+
+{**
   Releases a Connection's database and JDBC resources
   immediately instead of waiting for
   them to be automatically released.
@@ -742,7 +751,7 @@ end;
 function TZOracleConnection.GetCatalog: string;
 begin
   if not Closed and (FCatalog = '') then
-    with CreateRegularStatement(nil).ExecuteQuery('SELECT SYS_CONTEXT (''USERENV'', ''CURRENT_SCHEMA'') FROM DUAL') do begin
+    with CreateStatementWithParams(nil).ExecuteQuery('SELECT SYS_CONTEXT (''USERENV'', ''CURRENT_SCHEMA'') FROM DUAL') do begin
       if Next then
         FCatalog := GetString(FirstDBCIndex);
       Close;
@@ -855,6 +864,28 @@ end;
 function TZOracleConnection.CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
 begin
   Result := TZOracleSequence.Create(Self, Sequence, BlockSize);
+end;
+
+{**
+  Creates a <code>Statement</code> object for sending
+  SQL statements to the database.
+  SQL statements without parameters are normally
+  executed using Statement objects. If the same SQL statement
+  is executed many times, it is more efficient to use a
+  <code>PreparedStatement</code> object.
+  <P>
+  Result sets created using the returned <code>Statement</code>
+  object will by default have forward-only type and read-only concurrency.
+
+  @param Info a statement parameters.
+  @return a new Statement object
+}
+function TZOracleConnection.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
+begin
+  if IsClosed then
+     Open;
+  Result := TZOracleStatement_A.Create(Self, Info);
 end;
 
 function ZDbc2OCITxnMode(ReadOnly: Boolean; TIL: TZTransactIsolationLevel): TZOCITxnMode;
@@ -976,6 +1007,11 @@ begin
   if FPlainDriver.OCIServerRelease(FServerHandle,FErrorHandle,buf,1024,OCI_HTYPE_SERVER,@version)=OCI_SUCCESS then
     Result := EncodeSQLVersioning((version shr 24) and $ff,(version shr 20) and $f,(version shr 12) and $ff);
   freemem(buf);
+end;
+
+function TZOracleConnection.GetPlainDriver: TZOraclePlainDriver;
+begin
+  Result := FPlainDriver;
 end;
 
 function TZOracleConnection.GetBinaryEscapeString(const Value: TBytes): String;

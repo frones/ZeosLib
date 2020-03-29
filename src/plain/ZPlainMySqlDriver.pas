@@ -103,11 +103,6 @@ type
   IZMySQLPlainDriver = interface (IZPlainDriver)
     ['{D1CB3F6C-72A1-4125-873F-791202ACC5F0}']
     function IsMariaDBDriver: Boolean;
-
-    function Init(const mysql: PMYSQL): PMYSQL;
-
-    {non API functions}
-    procedure SetDriverOptions(Options: TStrings); // changed by tohenk, 2009-10-11
   end;
 
   {** Implements a base driver for MySQL}
@@ -117,6 +112,7 @@ type
   TZMySQLPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZMySQLPlainDriver)
   public
     FIsMariaDBDriver: Boolean;
+    fIsInitialized: Boolean;
     { ************** Plain API Function types definition ************* }
     { Functions to get information from the MYSQL and MYSQL_RES structures
       Should definitely be used if one uses shared libraries. }
@@ -239,21 +235,16 @@ type
 
     mariadb_stmt_execute_direct:  function(stmt: PMYSQL_STMT; query: PAnsiChar; Length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
-    ServerArgs: array of PAnsiChar;
-    ServerArgsRaw: array of RawByteString;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
-    procedure BuildServerArguments(const Options: TStrings);
     function Clone: IZPlainDriver; override;
   public
     constructor Create;
     destructor Destroy; override;
 
     function IsMariaDBDriver: Boolean;
-    function Init(const mysql: PMYSQL): PMYSQL; virtual;
-
-    procedure SetDriverOptions(Options: TStrings); virtual; // changed by tohenk, 2009-10-11
+    property IsInitialized: Boolean read fIsInitialized write fIsInitialized;
   public
     function GetProtocol: string; override;
     function GetDescription: string; override;
@@ -265,7 +256,7 @@ implementation
 
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 
-uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode, ZConnProperties
+uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZMySQLPlainBaseDriver }
@@ -333,6 +324,9 @@ begin
 end;
 
 procedure TZMySQLPlainDriver.LoadApi;
+var
+  ClientInfo: PAnsiChar;
+  L: LengthInt;
 begin
 { ************** Load adresses of API Functions ************* }
   with Loader do begin
@@ -424,7 +418,7 @@ begin
 
   //http://dev.mysql.com/doc/refman/4.1/en/mysql-stmt-attr-set.html
   //http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-attr-set.html
-  if Assigned(mariadb_stmt_execute_direct) or (mysql_get_client_version >= 50107) //avoid heap crashs !
+  if Assigned(mariadb_stmt_execute_direct) or (mysql_get_client_version >= 50107)
   then @mysql_stmt_attr_set517UP := GetAddress('mysql_stmt_attr_set') //uses mybool
   else @mysql_stmt_attr_set      := GetAddress('mysql_stmt_attr_set'); //uses ulong
 
@@ -456,42 +450,9 @@ begin
   //@mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
   @mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
   end;
-end;
-
-procedure TZMySQLPlainDriver.BuildServerArguments(const Options: TStrings);
-var
-  TmpList: TStringList;
-  i: Integer;
-begin
-  TmpList := TStringList.Create;
-  try
-    TmpList.Add(ParamStr(0));
-    for i := 0 to Options.Count - 1 do
-      if SameText(SERVER_ARGUMENTS_KEY_PREFIX,
-                  Copy(Options.Names[i], 1,
-                       Length(SERVER_ARGUMENTS_KEY_PREFIX))) then
-        TmpList.Add(Options.ValueFromIndex[i]);
-    //Check if DataDir is specified, if not, then add it to the Arguments List
-    if TmpList.Values[ConnProps_Datadir] = '' then
-       TmpList.Values[ConnProps_Datadir] := EMBEDDED_DEFAULT_DATA_DIR;
-
-    SetLength(ServerArgs, TmpList.Count);
-    SetLength(ServerArgsRaw, TmpList.Count);
-    for i := 0 to TmpList.Count - 1 do begin
-      {$IFDEF UNICODE}
-      ServerArgsRaw[i] := ZUnicodeToRaw(TmpList[i], ZOSCodePage);
-      {$ELSE}
-      ServerArgsRaw[i] := TmpList[i];
-      {$ENDIF}
-      ServerArgs[i] :=  Pointer(TmpList[i]);
-    end;
-  finally
-    {$IFDEF AUTOREFCOUNT}
-    TmpList := nil;
-    {$ELSE}
-    TmpList.Free;
-    {$ENDIF}
-  end;
+  ClientInfo := mysql_get_client_info;
+  L := ZFastCode.StrLen(ClientInfo);
+  FIsMariaDBDriver := Assigned(mariadb_stmt_execute_direct) or CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
 end;
 
 function TZMySQLPlainDriver.Clone: IZPlainDriver;
@@ -539,9 +500,6 @@ end;
 
 destructor TZMySQLPlainDriver.Destroy;
 begin
-  SetLength(ServerArgs, 0);
-  SetLength(ServerArgsRaw, 0);
-
   if (FLoader.Loaded) then
     if Assigned(mysql_library_end) then
       mysql_library_end //since 5.0.3
@@ -553,40 +511,6 @@ end;
 function TZMySQLPlainDriver.IsMariaDBDriver: Boolean;
 begin
   Result := FIsMariaDBDriver;
-end;
-
-function TZMySQLPlainDriver.Init(const mysql: PMYSQL): PMYSQL;
-var
-  ClientInfo: PAnsiChar;
-  L: LengthInt;
-  ErrorNo: Integer;
-begin
-  if (Assigned(mysql_server_init) or Assigned(mysql_library_init)){ and (ServerArgsLen > 0) }then begin
-    ErrorNo := Length(ServerArgs);
-    if Assigned(mysql_library_init) then //http://dev.mysql.com/doc/refman/5.7/en/mysql-library-init.html
-      ErrorNo := mysql_library_init(ErrorNo, ServerArgs, @SERVER_GROUPS) //<<<-- Isn't threadsafe
-    else //http://dev.mysql.com/doc/refman/5.7/en/mysql-server-init.html
-      ErrorNo := mysql_server_init(ErrorNo, ServerArgs, @SERVER_GROUPS); //<<<-- Isn't threadsafe
-    if ErrorNo <> 0 then
-      raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
-  end;
-  Result := mysql_init(mysql);
-  if not Assigned(Result) then
-    raise Exception.Create('Could not finish the call to mysql_init. Not enough memory?');
-  ClientInfo := mysql_get_client_info;
-  L := ZFastCode.StrLen(ClientInfo);
-  FIsMariaDBDriver := Assigned(mariadb_stmt_execute_direct) or CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
-end;
-
-procedure TZMySQLPlainDriver.SetDriverOptions(Options: TStrings);
-var
-  PreferedLibrary: String;
-begin
-  PreferedLibrary := Options.Values[ConnProps_Library];
-  if PreferedLibrary <> '' then
-    Loader.AddLocation(PreferedLibrary);
-  if Assigned(mysql_library_init) and Assigned(mysql_library_end) then
-    BuildServerArguments(Options);
 end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}

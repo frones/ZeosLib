@@ -61,8 +61,8 @@ uses
 {$ENDIF USE_SYNCOMMONS}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBCD,
-  {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
-  ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcCache, ZCompatibility;
+  ZDbcResultSetMetadata, ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcCache,
+  ZCompatibility;
 
 type
   // Forward declarations.
@@ -114,6 +114,7 @@ type
   TZAbstractCachedResultSet = class (TZAbstractResultSet, IZResultSet, IZCachedResultSet)
   private
     FCachedUpdates: Boolean;
+    FCachedLobs: WordBool;
     FRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FInitialRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FCurrentRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
@@ -130,6 +131,7 @@ type
     FNativeResolver: IZCachedResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   protected
+    class function GetRowAccessorClass: TZRowAccessorClass; virtual;
     procedure CheckAvailable;
     procedure CheckUpdatable;
     procedure Open; override;
@@ -203,7 +205,7 @@ type
     procedure GetDate(ColumnIndex: Integer; Var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
-    function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     function GetDefaultExpression(ColumnIndex: Integer): string; override;
 
     //---------------------------------------------------------------------
@@ -293,6 +295,8 @@ type
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]);
     {$ENDIF USE_SYNCOMMONS}
+
+    function CreateLob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode): IZBlob; virtual;
   end;
 
   TZStringFieldAssignFromResultSet = procedure(ColumnIndex: Integer) of object;
@@ -308,6 +312,7 @@ type
     procedure ZStringFieldAssignFromResultSet_AnsiRec(ColumnIndex: Integer);
     procedure ZStringFieldAssignFromResultSet_Unicode(ColumnIndex: Integer);
   protected
+    procedure FillColumnsInfo(const ColumnsInfo: TObjectList); virtual;
     procedure Open; override;
     function Fetch: Boolean; virtual;
     procedure FetchAll; virtual;
@@ -333,10 +338,55 @@ type
 
 implementation
 
-uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding;
+uses ZMessages, ZDbcGenericResolver, ZDbcUtils, ZEncoding, ZDbcProperties,
+  ZSysUtils;
 
 
 { TZAbstractCachedResultSet }
+
+function TZAbstractCachedResultSet.CreateLob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode): IZBlob;
+var SQLType: TZSQLType;
+  DataAddress: Pointer;
+  IsNull: Boolean;
+  CP: Word;
+label Fail;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  if ResultSetConcurrency = rcUpdatable then begin
+    DataAddress := RowAccessor.GetColumnData(ColumnIndex, IsNull);
+    SQLType := RowAccessor.GetColumnType(ColumnIndex);
+    CP := RowAccessor.GetColumnCodePage(ColumnIndex);
+    case SQLType of
+      stBytes: if RowAccessor.GetColumnLength( ColumnIndex) <= 0
+          then Result := TZRowAccessorBytesLob.CreateWithDataAddess(DataAddress, zCP_Binary, ConSettings, FOpenLobStreams)
+          else goto Fail;
+      stString, stUnicodeString: if RowAccessor.GetColumnLength( ColumnIndex) <= 0 then
+          if CP = zCP_UTF16
+          then Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(DataAddress, CP, ConSettings, FOpenLobStreams)
+          else Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(DataAddress, CP, ConSettings, FOpenLobStreams)
+        else goto Fail;
+      stAsciiStream, stUnicodeStream: begin
+          Result := TZLocalMemCLob.Create(CP, ConSettings, FOpenLobStreams);
+          PIZLob(DataAddress)^ := Result;
+          if IsNull then
+            PByte(PAnsiChar(DataAddress)-1)^ := 1;
+        end;
+      stBinaryStream: begin
+          Result := TZLocalMemBLob.Create(FOpenLobStreams);
+          PIZLob(DataAddress)^ := Result;
+          if IsNull then
+            PByte(PAnsiChar(DataAddress)-1)^ := 1;
+        end
+      else
+Fail:   raise CreateCanNotAccessBlobRecordException(ColumnIndex, SQLType);
+    end;
+  end else
+    raise CreateReadOnlyException;
+  Result.Open(LobStreamMode);
+end;
 
 constructor TZAbstractCachedResultSet.CreateWithColumns(
   const Statement: IZStatement; ColumnsInfo: TObjectList; const SQL: string;
@@ -406,7 +456,7 @@ procedure TZAbstractCachedResultSet.CheckUpdatable;
 begin
   CheckAvailable;
   if ResultSetConcurrency <> rcUpdatable then
-    RaiseReadOnlyException;
+    raise CreateReadOnlyException;;
 end;
 
 {**
@@ -510,6 +560,11 @@ end;
 function TZAbstractCachedResultSet.GetResolver: IZCachedResolver;
 begin
   Result := FResolver;
+end;
+
+class function TZAbstractCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZRowAccessor;
 end;
 
 {**
@@ -759,9 +814,9 @@ begin
   FInitialRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FCurrentRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
 
-  FRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
-  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
-  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
+  FRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
+  FOldRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
+  FNewRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
 
   FUpdatedRow :=FRowAccessor.AllocBuffer;
   FInsertedRow := FRowAccessor.AllocBuffer;
@@ -1217,12 +1272,17 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZAbstractCachedResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
+function TZAbstractCachedResultSet.GetBlob(ColumnIndex: Integer;
+  LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
+  if LobStreamMode <> lsmRead then
+    PrepareRowForUpdates;
   Result := FRowAccessor.GetBlob(ColumnIndex, LastWasNull);
+  if (Result = nil) and (LobStreamMode <> lsmRead) then
+    Result := CreateLob(ColumnIndex, LobStreamMode);
 end;
 
 {**
@@ -1775,12 +1835,31 @@ end;
 }
 procedure TZAbstractCachedResultSet.UpdateAsciiStream(ColumnIndex: Integer;
   const Value: TStream);
+var Blob: IZBlob;
+    CLob: IZClob;
+    CP: Word;
+    IsNull: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetAsciiStream(ColumnIndex, Value);
+  if (Value = nil) then
+    RowAccessor.SetNull(ColumnIndex)
+  else begin
+    Blob := FRowAccessor.GetBlob(ColumnIndex, IsNull);
+    if Blob = nil
+    then Blob := CreateLob(ColumnIndex, lsmWrite)
+    else Blob.Open(lsmWrite);
+    if Blob.QueryInterface(IZCLob, Clob) = S_OK then begin
+      CP := FRowAccessor.GetColumnCodePage(ColumnIndex);
+      if ConSettings^.AutoEncode
+      then CP := zCP_None
+      else if CP = zCP_UTF16 then
+        CP := ConSettings.CTRL_CP;
+      Clob.SetStream(Value, CP);
+    end else Blob.SetStream(Value);
+  end;
 end;
 
 {**
@@ -1796,12 +1875,22 @@ end;
 }
 procedure TZAbstractCachedResultSet.UpdateBinaryStream(
   ColumnIndex: Integer; const Value: TStream);
+var Blob: IZBlob;
+  IsNull: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetBinaryStream(ColumnIndex, Value);
+  if (Value = nil) or (Value.Size = 0) then
+    RowAccessor.SetNull(ColumnIndex)
+  else begin
+    Blob := FRowAccessor.GetBlob(ColumnIndex, IsNull);
+    if Blob = nil
+    then Blob := CreateLob(ColumnIndex, lsmWrite)
+    else Blob.Open(lsmWrite);
+    Blob.SetStream(Value);
+  end;
 end;
 
 procedure TZAbstractCachedResultSet.UpdateLob(ColumnIndex: Integer;
@@ -1815,7 +1904,7 @@ begin
 end;
 
 {**
-  Updates the designated column with a character stream value.
+  Updates the designated column with a UTF16 character stream value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
   update the underlying database; instead the <code>updateRow</code> or
@@ -1826,12 +1915,25 @@ end;
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeStream(
   ColumnIndex: Integer; const Value: TStream);
+var Blob: IZBlob;
+    CLob: IZClob;
+    IsNull: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetUnicodeStream(ColumnIndex, Value);
+  if (Value = nil) then
+    RowAccessor.SetNull(ColumnIndex)
+  else begin
+    Blob := FRowAccessor.GetBlob(ColumnIndex, IsNull);
+    if Blob = nil
+    then Blob := CreateLob(ColumnIndex, lsmWrite)
+    else Blob.Open(lsmWrite);
+    if Blob.QueryInterface(IZCLob, Clob) = S_OK
+    then Clob.SetStream(Value, zCP_UTF16)
+    else Blob.SetStream(Value);
+  end;
 end;
 
 {**
@@ -1940,12 +2042,10 @@ function TZAbstractCachedResultSet.RowInserted: Boolean;
 var
   CurrentRow: PZRowBuffer;
 begin
-  if (RowNo >= 1) and (RowNo <= LastRowNo) then
-  begin
+  if (RowNo >= 1) and (RowNo <= LastRowNo) then begin
     CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
     Result := CurrentRow^.UpdateType = utInserted;
-  end
-  else
+  end else
     Result := False;
 end;
 
@@ -1980,7 +2080,7 @@ procedure TZAbstractCachedResultSet.InsertRow;
 var TempRow: PZRowBuffer;
   Succeeded: Boolean;
 begin
-  CheckClosed;
+  CheckUpdatable;
 
   { Creates a new row. }
   TempRow := FRowAccessor.RowBuffer;
@@ -2031,7 +2131,7 @@ begin
   if FSelectedRow <> FUpdatedRow then
       Exit;
 
-  AppendRow(FRowsList[RowNo - 1]);
+  AppendRow(FRowsList[RowNo - 1]); //move org row to initiallist
 
   FSelectedRow := PZRowBuffer(FRowsList[RowNo - 1]);
   FRowAccessor.CopyBuffer(FUpdatedRow, FSelectedRow);
@@ -2215,6 +2315,7 @@ end;
 }
 function TZCachedResultSet.Fetch: Boolean;
 var TempRow: PZRowBuffer;
+    Succeeded: Boolean;
 begin
   if Assigned(FResultSet)
   then Result := FResultSet.Next
@@ -2223,6 +2324,7 @@ begin
     Exit;
 
   TempRow := RowAccessor.RowBuffer;
+  Succeeded := False;
   try
     RowAccessor.Alloc;
     RowAccessor.RowBuffer.Index := GetNextRowIndex;
@@ -2230,7 +2332,10 @@ begin
     RowAccessor.FillFromFromResultSet(FResultSet, FIndexPairList);
     RowsList.Add(RowAccessor.RowBuffer);
     LastRowNo := RowsList.Count;
+    Succeeded := True;
   finally
+    if not Succeeded then //OutOfMem? FetchError?
+      RowAccessor.Dispose;
     RowAccessor.RowBuffer := TempRow;
   end;
 end;
@@ -2243,16 +2348,12 @@ begin
   while Fetch do;
 end;
 
-{**
-  Opens this recordset.
-}
-procedure TZCachedResultSet.Open;
+procedure TZCachedResultSet.FillColumnsInfo(const ColumnsInfo: TObjectList);
 var
   I: Integer;
+  MetaData: IZResultSetMetaData;
   ColumnInfo: TZColumnInfo;
-  MetaData : IZResultSetMetaData;
 begin
-  ColumnsInfo.Clear;
   MetaData := FResultSet.GetMetadata;
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
     ColumnInfo := TZColumnInfo.Create;
@@ -2268,7 +2369,16 @@ begin
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;
+end;
 
+{**
+  Opens this recordset.
+}
+procedure TZCachedResultSet.Open;
+begin
+  FCachedLobs := StrToBoolEx(DefineStatementParameter(ResultSet.GetStatement, DSProps_CachedLobs, 'false'));
+  ColumnsInfo.Clear;
+  FillColumnsInfo(ColumnsInfo);
   inherited Open;
 end;
 
@@ -2316,8 +2426,13 @@ end;
 procedure TZCachedResultSet.ResetCursor;
 begin
   if not Closed then begin
-    If Assigned(FResultset) then
+    If Assigned(FResultset) then begin
       FResultset.ResetCursor;
+      FCachedLobs := StrToBoolEx(DefineStatementParameter(ResultSet.GetStatement, DSProps_CachedLobs, 'false'));
+      FRowAccessor.CachedLobs := FCachedLobs;
+      FOldRowAccessor.CachedLobs := FCachedLobs;
+      FNewRowAccessor.CachedLobs := FCachedLobs;
+    end;
     inherited ResetCursor;
   end;
 end;
@@ -2439,4 +2554,3 @@ begin
 end;
 
 end.
-

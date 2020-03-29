@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZSysUtils, ZClasses,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
-  ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
+  ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZPlainDriver;
 
 type
   TDBLibProvider = (dpMsSQL, dpSybase);
@@ -123,13 +123,13 @@ type
   public
     procedure BeforeDestruction; override;
   public
-    function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
-      IZCallableStatement; override;
-
     function AbortOperation: Integer; override;
+
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings):
+      IZPreparedStatement;
+    function PrepareCallWithParams(const Name: String; Info: TStrings):
+      IZCallableStatement;
 
     procedure Commit;
     procedure Rollback;
@@ -160,9 +160,9 @@ implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses
-  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZConnProperties, ZDbcProperties,
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZDbcProperties,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
-  ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode, ZCollections,
+  ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser;
 
 var
@@ -587,24 +587,37 @@ begin
 end;
 
 {**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
+  Creates a <code>CallableStatement</code> object for calling
+  database stored procedures.
+  The <code>CallableStatement</code> object provides
+  methods for setting up its IN and OUT parameters, and
+  methods for executing the call to a stored procedure.
 
-  @return a new Statement object
+  <P><B>Note:</B> This method is optimized for handling stored
+  procedure call statements. Some drivers may send the call
+  statement to the database when the method <code>prepareCall</code>
+  is done; others
+  may wait until the <code>CallableStatement</code> object
+  is executed. This has no
+  direct effect on users; however, it does affect which method
+  throws certain SQLExceptions.
+
+  Result sets created using the returned CallableStatement will have
+  forward-only type and read-only concurrency, by default.
+
+  @param Name a procedure or function identifier
+    parameter placeholders. Typically this  statement is a JDBC
+    function call escape string.
+  @param Info a statement parameters.
+  @return a new CallableStatement object containing the
+    pre-compiled SQL statement
 }
-function TZDBLibConnection.CreateRegularStatement(Info: TStrings):
-  IZStatement;
+function TZDBLibConnection.PrepareCallWithParams(const Name: String;
+  Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then
      Open;
-  Result := TZDBLibStatement.Create(Self, Info);
+  Result := TZDBLibCallableStatement.Create(Self, Name, Info);
 end;
 
 {**
@@ -635,8 +648,8 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZDBLibConnection.CreatePreparedStatement(
-  const SQL: string; Info: TStrings): IZPreparedStatement;
+function TZDBLibConnection.PrepareStatementWithParams(const SQL: string;
+  Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then
      Open;
@@ -644,37 +657,25 @@ begin
 end;
 
 {**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures.
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
+  Creates a <code>Statement</code> object for sending
+  SQL statements to the database.
+  SQL statements without parameters are normally
+  executed using Statement objects. If the same SQL statement
+  is executed many times, it is more efficient to use a
+  <code>PreparedStatement</code> object.
+  <P>
+  Result sets created using the returned <code>Statement</code>
+  object will by default have forward-only type and read-only concurrency.
 
-  <P><B>Note:</B> This method is optimized for handling stored
-  procedure call statements. Some drivers may send the call
-  statement to the database when the method <code>prepareCall</code>
-  is done; others
-  may wait until the <code>CallableStatement</code> object
-  is executed. This has no
-  direct effect on users; however, it does affect which method
-  throws certain SQLExceptions.
-
-  Result sets created using the returned CallableStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
   @param Info a statement parameters.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
+  @return a new Statement object
 }
-function TZDBLibConnection.CreateCallableStatement(
-  const SQL: string; Info: TStrings): IZCallableStatement;
+function TZDBLibConnection.CreateStatementWithParams(
+  Info: TStrings): IZStatement;
 begin
   if IsClosed then
      Open;
-  Result := TZDBLibCallableStatement.Create(Self, SQL, Info);
+  Result := TZDBLibStatement.Create(Self, Info);
 end;
 
 {**

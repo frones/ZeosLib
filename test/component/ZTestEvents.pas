@@ -73,7 +73,8 @@ type
       EventName: string;
       EventCount: Integer;
     end;
-    function GetSupportedProtocols: string; override;
+//    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
     procedure ZIBEventAlerterEventAlert(Sender: TObject; EventName: string;
       EventCount: Integer; var CancelAlerts: Boolean);
   published
@@ -85,15 +86,22 @@ implementation
 
 {$IFDEF ENABLE_INTERBASE}
 
+uses ZdbcIntfs;
+
 { TZTestInterbaseEventAlert }
 
 {**
   Gets an array of protocols valid for this test.
   @return an array of valid protocols
 }
-function TZTestInterbaseEventAlert.GetSupportedProtocols: string;
+//function TZTestInterbaseEventAlert.GetSupportedProtocols: string;
+//begin
+//  Result := pl_all_interbase;
+//end;
+
+function TZTestInterbaseEventAlert.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := pl_all_interbase;
+  Result := (Config.Transport = traNative) and (Config.Provider = spIB_FB);
 end;
 
 procedure TZTestInterbaseEventAlert.ZIBEventAlerterEventAlert(Sender: TObject; EventName: string;

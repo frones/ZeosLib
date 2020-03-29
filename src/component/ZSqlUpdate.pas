@@ -227,7 +227,8 @@ implementation
 
 uses FmtBCD,
   ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset, ZAbstractDataset,
-  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZCollections;
+  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZCollections,
+  ZEncoding;
 
 { TZUpdateSQL }
 
@@ -734,9 +735,9 @@ CheckColumnType:
               RefreshRowAccessor.SetGUID(RefreshColumnIndex, UID);
             end;
           stString, stUnicodeString:
-            if RefreshRowAccessor.IsRaw
-            then RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), Len)
-            else RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), Len);
+            if RefreshRowAccessor.GetColumnCodePage(RefreshColumnIndex) = zCP_UTF16
+            then RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), Len)
+            else RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), Len);
           stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I, Len), Len);
           stDate: begin
               RefreshResultSet.GetDate(I, D);
@@ -802,14 +803,18 @@ var
   lUpdateCount : Integer;
 
   function SomethingChanged: Boolean;
-  var I: Integer;
+  var I, J: Integer;
   begin
     Result := False;
+    J := 0;
     for I := 0 to DataSet.Fields.Count -1 do
-      if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
-         NewRowAccessor.RowBuffer, I+FirstDbcIndex, NewRowAccessor.GetCompareFunc(I+FirstDbcIndex, ckEquals))  <> 0 then begin
-        Result := True;
-        Break;
+      if DataSet.Fields[0].FieldKind = fkData then begin
+        if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
+           NewRowAccessor.RowBuffer, I+FirstDbcIndex, NewRowAccessor.GetCompareFunc(J+FirstDbcIndex, ckEquals))  <> 0 then begin
+          Result := True;
+          Break;
+        end;
+        Inc(J);
       end;
   end;
   {$IFDEF WITH_VALIDATE_UPDATE_COUNT}

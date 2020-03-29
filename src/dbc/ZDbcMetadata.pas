@@ -59,7 +59,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBCD,
   ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
-  ZDbcCache, ZCompatibility, ZSelectSchema, ZURL, ZDbcConnection;
+  ZDbcCache, ZCompatibility, ZSelectSchema, ZDbcConnection;
 
 //commented out because we don't use them and because they have different ordinal values than TZProcedureColumnType
 //const
@@ -772,7 +772,7 @@ var
 
 implementation
 
-uses ZFastCode, ZVariant, ZCollections, ZMessages, ZConnProperties;
+uses ZFastCode, ZVariant, ZCollections, ZMessages, ZDbcProperties;
 
 { TZAbstractDatabaseInfo }
 

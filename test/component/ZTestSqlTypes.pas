@@ -131,7 +131,7 @@ begin
 
   Query.FieldByName('d_id').AsInteger := TEST_ROW_ID;
 
-  if (Connection.DbcConnection.GetServerProvider in [spOracle, spASA, spASE]) then begin
+  if (Connection.DbcConnection.GetServerProvider in [spOracle, spASE]) then begin
     //those do not have a native date or time field? Oracle for sure
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_date').DataType));
     CheckEquals(Ord(ftDateTime), Ord(Query.FieldByName('d_time').DataType));

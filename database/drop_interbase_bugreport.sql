@@ -25,3 +25,4 @@ drop table Ticket192;
 DROP TABLE TestTicket363;
 DROP TABLE Ticket376a;
 DROP TABLE Ticket376b;
+DROP TABLE Ticket418;

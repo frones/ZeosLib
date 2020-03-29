@@ -56,7 +56,7 @@ interface
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {Forms, Dialogs,}
-  ZDbcIntfs,ZCompatibility{$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils{$ENDIF};
+  ZDbcIntfs,ZCompatibility{$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils, ZClasses{$ENDIF};
 
 const
   mask = 'æææ#2ææ0#ææ39æ-V„–FFVæææ';  { define your own mask  }
