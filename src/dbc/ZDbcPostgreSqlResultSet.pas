@@ -746,11 +746,16 @@ begin
     MACADDROID: ColumnInfo.Precision := 17; { macaddr }
     INTERVALOID: ColumnInfo.Precision := 32; { interval }
     REGPROCOID: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
-    BYTEAOID:{ bytea }
-      if TypeModifier >= VARHDRSZ then
-        ColumnInfo.Precision := TypeModifier - VARHDRSZ
-      else
-        ColumnInfo.Precision := -1;
+    BYTEAOID: begin{ bytea }
+        if TypeModifier >= VARHDRSZ then begin
+          ColumnInfo.Precision := TypeModifier - VARHDRSZ;
+          ColumnInfo.ColumnType := stBytes;
+        end else begin
+          ColumnInfo.Precision := -1;
+          ColumnInfo.ColumnType := stBinaryStream;
+        end;
+        Exit;
+      end;
     //see: https://www.postgresql.org/message-id/slrnd6hnhn.27a.andrew%2Bnonews%40trinity.supernews.net
     //macro:
     //numeric: this is ugly, the typmod is ((prec << 16) | scale) + VARHDRSZ,
