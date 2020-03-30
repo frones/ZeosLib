@@ -314,11 +314,6 @@ type
     function GetStatement: IZStatement; virtual;
 
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
-
-    {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); overload; // deprecated;
-    {$ENDIF}
   end;
 
   TZAbstractReadOnlyResultSet = class(TZAbstractResultSet)
@@ -3472,22 +3467,6 @@ end;
 procedure TZAbstractResultSet.MoveToCurrentRow;
 begin
 end;
-
-{$IFDEF USE_SYNCOMMONS}
-procedure TZAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
-var JSONComposeOptions: TZJSONComposeOptions;
-begin
-  JSONComposeOptions := [];
-  if EndJSONObject then
-    Include(JSONComposeOptions,jcoEndJSONObject);
-  if With_DATETIME_MAGIC then
-    Include(JSONComposeOptions,jcoDATETIME_MAGIC);
-  if SkipNullFields then
-    Include(JSONComposeOptions,jcsSkipNulls);
-  IZResultSet(FWeakIntfPtrOfSelf).ColumnsToJSON(JSONWriter, JSONComposeOptions);
-end;
-{$ENDIF}
 
 {**
   Compares fields from two row buffers.
