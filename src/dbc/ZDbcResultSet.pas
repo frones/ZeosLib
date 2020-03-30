@@ -5374,7 +5374,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "NewSize" not used} {$ENDIF}
-procedure TZReadOnlyDataRefStream.SetSize(NewSize: Integer);
+procedure TZReadOnlyDataRefStream.SetSize(NewSize: Longint);
 begin
   raise CreateReadOnlyException;
 end;
@@ -5384,7 +5384,7 @@ end;
   {$WARN 5033 off : Function result does not seem to be set}
   {$WARN 5024 off : Parameter "NewSize,Count" not used}
 {$ENDIF}
-function TZReadOnlyDataRefStream.Write(const Buffer; Count: Integer): Longint;
+function TZReadOnlyDataRefStream.Write(const Buffer; Count: Longint): Longint;
 begin
   raise CreateReadOnlyException;
 end;
