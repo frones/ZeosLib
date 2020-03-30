@@ -446,7 +446,6 @@ constructor TZAbstractInterbase6PreparedStatement.Create(const Connection: IZCon
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-
   FIBConnection := Connection as IZInterbase6Connection;
   FPlainDriver := TZInterbasePlainDriver(FIBConnection.GetIZPlainDriver.GetInstance);
   FCodePageArray := FPlainDriver.GetCodePageArray;
@@ -545,7 +544,7 @@ label jmpEB;
   end;
 begin
   if (not Prepared) then begin
-    with Self.FIBConnection do begin
+    with FIBConnection do begin
     { Allocate an sql statement }
     if FStmtHandle = 0 then
       if FPlainDriver.isc_dsql_allocate_statement(@FStatusVector, GetDBHandle, @FStmtHandle) <> 0 then
@@ -570,7 +569,7 @@ begin
         FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE);
         raise EZSQLException.Create(SStatementIsNotAllowed);
       end else if FStatementType in [stSelect, stExecProc, stSelectForUpdate] then begin
-        FResultXSQLDA := TZSQLDA.Create(Connection);
+        FResultXSQLDA := TZSQLDA.Create(Connection, ConSettings);
         { Initialise ouput param and fields }
         if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
           CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, ASQL);
@@ -791,7 +790,7 @@ var
 begin
   With FIBConnection do begin
     {create the parameter bind structure}
-    FParamSQLData := TZParamsSQLDA.Create(Connection);
+    FParamSQLData := TZParamsSQLDA.Create(Connection, ConSettings);
     FParamXSQLDA := FParamSQLData.GetData;
     if FParamXSQLDA.sqln < BindList.Capacity then begin
       FParamXSQLDA.sqld := BindList.Capacity;

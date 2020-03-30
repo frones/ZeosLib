@@ -60,7 +60,7 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZPlainFirebirdDriver, ZCompatibility,
   ZPlainFirebirdInterbaseConstants, ZDbcLogging, ZMessages,
-  ZVariant, ZClasses, FmtBCD;
+  ZVariant, FmtBCD;
 
 type
   { Interbase Statement Type }
@@ -135,7 +135,7 @@ type
   end;
 
   { Base interface for sqlda }
-  IZSQLDA = interface
+  IZSQLDA = interface(IImmediatelyReleasable)
     ['{2D0D6029-B31C-4E39-89DC-D86D20437C35}']
     procedure InitFields(Fixed2VariableSize: Boolean);
     function AllocateSQLDA: PXSQLDA;
@@ -162,7 +162,7 @@ type
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
 
-  TZSQLDA = class (TZCodePagedObject, IZSQLDA, IImmediatelyReleasable)
+  TZSQLDA = class (TZCodePagedObject, IZSQLDA)
   private
     FXSQLDA: PXSQLDA;
     FPlainDriver: TZInterbasePlainDriver;
@@ -170,7 +170,7 @@ type
     procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
   public
-    constructor Create(const Connection: IZConnection);
+    constructor Create(const Connection: IZConnection; ConSettings: PZConSettings);
     destructor Destroy; override;
     procedure InitFields(Fixed2VariableSize: Boolean);
     function AllocateSQLDA: PXSQLDA;
@@ -1479,10 +1479,10 @@ begin
 end;
 
 { TSQLDA }
-constructor TZSQLDA.Create(const Connection: IZConnection);
+constructor TZSQLDA.Create(const Connection: IZConnection; ConSettings: PZConSettings);
 begin
   FConnection := Connection;
-  Self.ConSettings := Connection.GetConSettings;
+  Self.ConSettings := ConSettings;
   FPlainDriver := TZInterbasePlainDriver(Connection.GetIZPlainDriver.GetInstance);
 
   GetMem(FXSQLDA, XSQLDA_LENGTH(0));

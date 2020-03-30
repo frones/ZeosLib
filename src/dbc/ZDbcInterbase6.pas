@@ -58,11 +58,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcCachedResultSet,
-  ZDbcConnection, ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging,
-  ZDbcInterbase6Utils, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser,
-  ZDbcCache, ZURL, ZClasses, ZCollections;
+  ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
+  ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
+  ZTokenizer, ZGenericSqlAnalyser, ZClasses, ZCollections;
 
 type
 
@@ -105,6 +103,7 @@ type
     function GetXSQLDAMaxSize: LongWord;
     function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
+    function GetSubTypeTextCharSetID(const TableName, ColumnName: String): Integer;
     function GetActiveTransaction: IZIBTransaction;
     function IsFirebirdLib: Boolean;
     function IsInterbaseLib: Boolean;
@@ -164,7 +163,7 @@ type
     FPB_CP: Word; //the parameter buffer codepage
     FXSQLDAMaxSize: LongWord;
     FPlainDriver: TZInterbasePlainDriver;
-    FProcedureTypesCache: TStrings;
+    FProcedureTypesCache, FSubTypeTestCharIDCache: TStrings;
     FGUIDProps: TZInterbase6ConnectionGUIDProps;
     FTPBs: array[Boolean,Boolean,TZTransactIsolationLevel] of RawByteString;
     fTransactions: array[Boolean] of IZCollection; //simultan (not nested) readonly/readwrite transaction container
@@ -193,6 +192,7 @@ type
     function GetXSQLDAMaxSize: LongWord;
     function GetGUIDProps: TZInterbase6ConnectionGUIDProps;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
+    function GetSubTypeTextCharSetID(const TableName, ColumnName: String): Integer;
     function GetActiveTransaction: IZIBTransaction;
     function GetPlainDriver: TZInterbasePlainDriver;
   public { IZTransactionManager }
@@ -281,6 +281,8 @@ type
     function GetOwnerTransaction: IZIBTransaction;
   end;
 
+const
+  DS_Props_IsMetadataResultSet = 'IsMetadataResultSet';
 var
   {** The common driver manager object. }
   Interbase6Driver: IZDriver;
@@ -388,6 +390,7 @@ destructor TZInterbase6Connection.Destroy;
 begin
   FreeAndNil(FProcedureTypesCache);
   FreeAndNil(FGUIDProps);
+  FreeAndNil(FSubTypeTestCharIDCache);
   inherited Destroy;
 end;
 
@@ -516,6 +519,7 @@ begin
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;
   FProcedureTypesCache := TStringList.Create;
+  FSubTypeTestCharIDCache := TStringList.Create;
 end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
@@ -697,6 +701,36 @@ end;
 function TZInterbase6Connection.GetServerProvider: TZServerProvider;
 begin
   Result := spIB_FB;
+end;
+
+function TZInterbase6Connection.GetSubTypeTextCharSetID(const TableName,
+  ColumnName: String): Integer;
+var S: String;
+  function GetFromMetaData: Integer;
+  var Stmt: IZStatement;
+    RS: IZResultSet;
+  begin
+    Stmt := CreateStatement;
+    RS := Stmt.ExecuteQuery('SELECT F.RDB$CHARACTER_SET_ID '+LineEnding+
+      'FROM RDB$RELATION_FIELDS R'+LineEnding+
+      'INNER JOIN RDB$FIELDS F on R.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME'+LineEnding+
+      'WHERE R.RDB$RELATION_NAME = '+QuotedStr(TableName)+' and R.RDB$FIELD_NAME = '+QuotedStr(ColumnName));
+    if RS.Next
+    then Result := RS.GetInt(FirstDbcIndex)
+    else Result := ConSettings.ClientCodePage.ID;
+    RS.Close;
+    RS := nil;
+    Stmt.Close;
+    Stmt := Nil;
+  end;
+begin
+  S := TableName+'/'+ColumnName;
+  Result := FSubTypeTestCharIDCache.IndexOf(S);
+  if Result < 0 then begin
+    Result := GetFromMetaData;
+    FSubTypeTestCharIDCache.AddObject(S, TObject(Result));
+  end else
+    Result := Integer(FSubTypeTestCharIDCache.Objects[Result]);
 end;
 
 {**
