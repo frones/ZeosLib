@@ -268,7 +268,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math, SysConst,
   ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
-  ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties,
+  ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties, TypInfo,
   ZVariant;
 
 
@@ -657,7 +657,10 @@ function TZPostgreSQLResultSet.CreatePGConvertError(
   ColumnIndex: Integer; DataType: OID): EZPGConvertError;
 begin
   Result := EZPGConvertError.Create(Format(SErrorConvertionField,
-        [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel, IntToStr(DataType)]));
+        [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel,
+          TypInfo.GetEnumName(TypeInfo(TZSQLType),
+          Ord(TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType))])+
+          '; OID: '+IntToStr(DataType));
 end;
 
 procedure TZPostgreSQLResultSet.AssignColumnsInfo(
