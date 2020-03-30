@@ -1917,7 +1917,7 @@ begin
       case ParamsSQLDA.GetIbSqlType(ParamIndex) and not (1) of
         SQL_VARYING, SQL_TEXT:
           begin
-            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex));
+            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex) and 255);
             AddParam([' VARCHAR(', IntToRaw(ParamsSQLDA.GetIbSqlLen(ParamIndex) div CodePageInfo.CharWidth),
             ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), '=?' ], TypeTokens[ParamIndex]);
           end;
