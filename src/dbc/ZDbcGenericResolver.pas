@@ -374,7 +374,7 @@ label CopyParams;
 begin
   { Use precached values. }
   WhereColumnsLookup.Clear;
-  if FWhereColumns.Count > 0 then
+  if (FWhereColumns.Count > 0) then
     goto CopyParams;
   Table := '';
   { Defines catalog, schema and a table. }
@@ -412,9 +412,10 @@ begin
     end;
   end;
 
-  if FWhereColumns.Count >= 0 then
-    FillWhereAllColumns(IncrementDestIndexBy)
-  else begin
+  if FWhereColumns.Count = 0 then begin
+    WhereAll := True;
+    FillWhereAllColumns(IncrementDestIndexBy);
+  end else begin
 CopyParams:
     WhereColumnsLookup.Capacity := FWhereColumns.Count;
     for I := 0 to FWhereColumns.Count -1 do begin
@@ -477,7 +478,7 @@ procedure TZGenerateSQLCachedResolver.FormWhereClause(
   const SQLWriter: TZSQLStringWriter; const OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
-  I, N, IDX: Integer;
+  I, N, J, IDX: Integer;
   Condition: SQLString;
 begin
   N := 0;
@@ -493,6 +494,8 @@ begin
     if OldRowAccessor.IsNull(IDX) then begin
       SQLWriter.AddText(' IS NULL', Result);
       FCurrentWhereColumns.Delete(N);
+      for IDX := N to FCurrentWhereColumns.Count -1 do
+        Dec(PZIndexPair(FCurrentWhereColumns[IDX]).SrcOrDestIndex);
     end else begin
       SQLWriter.AddText('=?', Result);
       Inc(N);
