@@ -478,7 +478,7 @@ procedure TZGenerateSQLCachedResolver.FormWhereClause(
   const SQLWriter: TZSQLStringWriter; const OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
 var
-  I, N, J, IDX: Integer;
+  I, N, IDX: Integer;
   Condition: SQLString;
 begin
   N := 0;

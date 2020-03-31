@@ -2263,13 +2263,20 @@ begin
 CSFormAndID:
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
-      if ColumnInfo.CharsetForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
-        ColumnInfo.Precision := ColumnInfo.Precision shr 1;
+      if ColumnInfo.CharsetForm = SQLCS_NCHAR then begin//We should determine the NCHAR set on connect
+        if ColumnInfo.ColumnType = stString then begin
+          ColumnInfo.Precision := ColumnInfo.Precision shr 1;
+          ColumnInfo.ColumnType := stUnicodeString;
+          CurrentVar^.value_sz := ColumnInfo.Precision shl 1 + SizeOf(WideChar);
+        end else if ColumnInfo.ColumnType = stAsciiStream then
+          ColumnInfo.ColumnType := stUnicodeStream;
+        ColumnInfo.ColumnCodePage := zCP_UTF16;
+      end else ColumnInfo.ColumnCodePage := FClientCP;
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
     end else if (ColumnInfo.ColumnType = stBytes ) then
       ColumnInfo.Precision := CurrentVar^.value_sz
-    else if (ColumnInfo.ColumnType in [stAsciiStream, stUnicodeStream] ) then
+    else if (ColumnInfo.ColumnType = stAsciiStream) then
       goto CSFormAndID
     else
       ColumnInfo.Precision := CurrentVar^.Precision;
@@ -2287,9 +2294,6 @@ CSFormAndID:
       else //more possible types
         CurrentVar^.ColType := stBinaryStream;
     end;
-    if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]
-    then ColumnInfo.ColumnCodePage := FClientCP
-    else ColumnInfo.ColumnCodePage := High(Word);
     {calc required size of field}
 
     if CurrentVar^.value_sz > 0 then
