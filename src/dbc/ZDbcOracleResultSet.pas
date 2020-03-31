@@ -452,7 +452,11 @@ begin
                           end;
         { the charter types we support }
         SQLT_VCS        : AddJSONEscape(@POCIVary(P).Data[0], POCIVary(P).Len);
-        SQLT_LVC        : AddJSONEscape(@POCILong(P).Data[0], POCILong(P).Len);
+        SQLT_LVC        : if ColType = stUnicodeString then begin
+                            JSONWriter.Add('"');
+                            JSONWriter.AddJSONEscapeW(@POCILong(P).Data[0], POCILong(P).Len);
+                            JSONWriter.Add('"');
+                          end else AddJSONEscape(@POCILong(P).Data[0], POCILong(P).Len);
         SQLT_VST        : AddJSONEscape(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len);
         { fixed char right ' ' padded }
         SQLT_AFC        : AddJSONEscape(P, GetAbsorbedTrailingSpacesLen(P, Value_sz));
@@ -2878,7 +2882,7 @@ end;
 
 { TZOracleInternalLobStream32 }
 
-function TZOracleInternalLobStream32.Write(const Buffer; Count: Integer): Longint;
+function TZOracleInternalLobStream32.Write(const Buffer; Count: LongInt): Longint;
 var
   Status: sword;
   Offset, amtpBytes, amtp: ub4;
@@ -3277,7 +3281,7 @@ begin
   end;
 end;
 
-function TZOracleLobStream64.Read(var Buffer; Count: Integer): Longint;
+function TZOracleLobStream64.Read(var Buffer; Count: LongInt): Longint;
 var
   Status: sword;
   pBuff: PAnsiChar;
@@ -3398,7 +3402,7 @@ end;
 { TZOracleInternalLobStream64 }
 
 function TZOracleInternalLobStream64.Write(const Buffer;
-  Count: Integer): Longint;
+  Count: LongInt): Longint;
 var
   Status: sword;
   byte_amtp, char_amtp, Offset: oraub8;
@@ -3438,7 +3442,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
 function TZOracleExternalLobStream64.Write(const Buffer;
-  Count: Integer): Longint;
+  Count: LongInt): Longint;
 begin
   raise CreateReadOnlyException;
 end;
