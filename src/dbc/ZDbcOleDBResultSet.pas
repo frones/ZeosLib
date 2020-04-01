@@ -344,7 +344,7 @@ begin
   Inc(FPosition, Result);
 end;
 
-function TZOleLobStream.Seek(Offset: Integer; Origin: Word): Longint;
+function TZOleLobStream.Seek(Offset: Longint; Origin: Word): Longint;
 begin
   if Origin = soFromEnd then
     Result := FPosition - OffSet

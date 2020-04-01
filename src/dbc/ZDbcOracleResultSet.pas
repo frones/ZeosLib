@@ -2844,7 +2844,7 @@ begin
   Close;
 end;
 
-function TZOracleLobStream32.Seek(Offset: Integer; Origin: Word): Longint;
+function TZOracleLobStream32.Seek(Offset: Longint; Origin: Word): Longint;
 begin
   if Origin = soFromEnd then
     Result := FPosition - OffSet
@@ -3452,7 +3452,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
 function TZOracleExternalLobStream32.Write(const Buffer;
-  Count: Integer): Longint;
+  Count: LongInt): Longint;
 begin
   raise CreateReadOnlyException;
 end;
