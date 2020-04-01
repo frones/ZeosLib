@@ -80,25 +80,22 @@ type
   TZInterbase6XSQLDAResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet,
     IZInterbaseResultSet)
   private
-    FCachedLobs: boolean;
     FStmtHandle: TISC_STMT_HANDLE;
     FStmtHandleAddr: PISC_STMT_HANDLE;
     FXSQLDA: PXSQLDA;
     FIZSQLDA: IZSQLDA;
     FPISC_DB_HANDLE: PISC_DB_HANDLE;
-    FBlobTemp: IZBlob;
     FPlainDriver: TZInterbasePlainDriver;
     FDialect: Word;
-    FCS_ID2CodePageArray: TWordDynArray;
     FStmtType: TZIbSqlStatementType;
     FGUIDProps: TZInterbase6StatementGUIDProps;
     FISC_TR_HANDLE: TISC_TR_HANDLE;
     FIBConnection: IZInterbase6Connection;
     FIBTransaction: IZIBTransaction;
+    FIsMetadataResultSet: Boolean;
     procedure RegisterCursor;
     procedure DeRegisterCursor;
     function CreateIBConvertError(ColumnIndex: Integer; DataType: ISC_SHORT): EZIBConvertError;
-    function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): Pointer;
   protected
     procedure Open; override;
   public
@@ -330,11 +327,10 @@ constructor TZInterbase6XSQLDAResultSet.Create(const Statement: IZStatement;
   CachedBlob: Boolean; StmtType: TZIbSqlStatementType);
 begin
   inherited Create(Statement, SQL, TZInterbaseResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
-    Statement.GetConnection.GetConSettings);
+    XSQLDA.GetConSettings);
   FIZSQLDA := XSQLDA; //localize the interface to avoid automatic free the object
   FXSQLDA := XSQLDA.GetData; // localize buffer for fast access
 
-  FCachedLobs := CachedBlob;
   FIBConnection := Statement.GetConnection as IZInterbase6Connection;
   FPISC_DB_HANDLE := FIBConnection.GetDBHandle;
   FISC_TR_HANDLE := FIBConnection.GetTrHandle^;
@@ -346,9 +342,9 @@ begin
   FStmtHandle := StmtHandleAddr^;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
+  FIsMetadataResultSet := (ConSettings.ClientCodePage.ID = CS_NONE) and
+    (Statement.GetParameters.Values[DS_Props_IsMetadataResultSet] = 'True');
 
-  FCS_ID2CodePageArray := FPlainDriver.GetCodePageArray;
-  FCS_ID2CodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
   Open;
 end;
 
@@ -399,6 +395,66 @@ var L, H, I: Integer;
   begin
     raise EZIBConvertError.Create(Format(SErrorConvertionField,
       [FIZSQLDA.GetFieldAliasName(C), GetNameSqlType(SQLCode)]));
+  end;
+  procedure ReadUTF8CLob(const BlobId: TISC_QUAD);
+  var Stream: TStream;
+    IbStream: TZInterbaseLobStream;
+    Clob: IZCLob;
+    Buf: PAnsiChar;
+    L, R, Size: LongInt;
+  begin
+    CLob := TZInterbase6Clob.Create(FIBConnection, BlobId, lsmRead, zCP_UTF8, FOpenLobStreams);
+    Stream := Clob.GetStream(zCP_UTF8);
+    IbStream := Stream as TZInterbaseLobStream;
+    Buf := nil;
+    try
+      IbStream.OpenLob;
+      Size := IbStream.BlobInfo.TotalSize;
+      if Size = 0 then Exit;
+      { read chunked as firebird supports it }
+      L := IbStream.BlobInfo.MaxSegmentSize;
+      GetMem(Buf, L);
+      repeat
+        R := Stream.Read(Buf^, L);
+        JSONWriter.AddJSONEscape(Buf, R); //is not #0 terminated
+        Dec(Size, R);
+        if L > Size then
+          L := Size;
+      until (R = 0){should not happen} or
+            (Size = 0){if segmentsize < total};
+    finally
+      Stream.Free;
+      FreeMem(Buf);
+      Clob := nil;
+    end;
+  end;
+  procedure ReadAsWCLob(const BlobId: TISC_QUAD; ColumnCodePage: Word);
+  var Clob: IZCLob;
+    PW: Pointer;
+    L: NativeUInt;
+  begin
+    CLob := TZInterbase6Clob.Create(FIBConnection, BlobId, lsmRead, ColumnCodePage, FOpenLobStreams);
+    try
+      PW := CLob.GetPWideChar(FUniTemp, L);
+      JSONWriter.AddJSONEscapeW(PW, L); //is not #0 terminated
+      FUniTemp := '';
+    finally
+      Clob := nil;
+    end;
+  end;
+  procedure ReadBLob(const BlobId: TISC_QUAD);
+  var Blob: IZBLob;
+    P: Pointer;
+    L: NativeUInt;
+  begin
+    Blob := TZInterbase6Blob.Create(FIBConnection, BlobId, lsmRead, FOpenLobStreams);
+    try
+      P := Blob.GetBuffer(FRawTemp, L); //base 64 can not be added in chunks ):
+      JSONWriter.WrBase64(P, L, True);
+      FRawTemp := '';
+    finally
+      Blob := nil;
+    end;
   end;
 begin
   if JSONWriter.Expand then
@@ -488,24 +544,13 @@ begin
                           end;
           SQL_QUAD,
           SQL_BLOB      : begin
-                            P := nil;
-                            try
-                              if SqlSubType = isc_blob_text then begin
-                                JSONWriter.Add('"');
-                                ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-                                    PISC_QUAD(sqldata), L, P, False, Self);
-                                if ColumnCodePage = zCP_UTF8
-                                then JSONWriter.AddJSONEscape(P, L)
-                                else WConvert(P, L, ColumnCodePage);
-                                JSONWriter.Add('"');
-                              end else begin
-                                ReadBlobBufer(FPlainDriver, FPISC_DB_HANDLE, FIBConnection.GetTrHandle,
-                                  PISC_QUAD(sqldata), L, P, true, Self);
-                                JSONWriter.WrBase64(P, L, True);
-                              end;
-                            finally
-                              FreeMem(P);
-                            end;
+                            if SqlSubType = isc_blob_text then begin
+                              JSONWriter.Add('"');
+                              if ColumnCodePage = zCP_UTF8
+                              then ReadUTF8CLob(PISC_QUAD(sqldata)^)
+                              else ReadAsWCLob(PISC_QUAD(sqldata)^, ColumnCodePage);
+                              JSONWriter.Add('"');
+                            end else ReadBlob(PISC_QUAD(sqldata)^);
                           end;
           //SQL_ARRAY     : JSONWriter.AddShort('"Array"');
           SQL_TYPE_TIME : begin
@@ -560,8 +605,6 @@ function TZInterbase6XSQLDAResultSet.GetAnsiString(
 var XSQLVAR: PXSQLVAR;
   P: Pointer;
   Len: NativeUint;
-  ColCP: Word;
-  CP_ID: ISC_SHORT;
   procedure CPConvert(P: PAnsiChar; Len: NativeUint; ColCP: Word; var Result: AnsiString);
   begin
     FUniTemp := PRawToUnicode(P,Len,ColCP);
@@ -590,30 +633,27 @@ begin
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
     Result := ''
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     LastWasNull := False;
-    CP_ID := XSQLVAR.sqlsubtype and 255;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT      : begin
                         P := XSQLVAR.sqldata;
-                        if (CP_ID = CS_BINARY) then begin
+                        if (ColumnCodePage = CS_BINARY) then begin
                           Len := XSQLVAR.sqllen;
                           goto SetFromPChar;
                         end else begin
-                          ColCP := FCS_ID2CodePageArray[CP_ID];
                           Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
-                          if (ColCP = ZOSCodePage)
+                          if (ColumnCodePage = ZOSCodePage)
                           then goto SetFromPChar
-                          else CPConvert(P, Len, ColCP, Result);
+                          else CPConvert(P, Len, ColumnCodePage, Result);
                         end;
                       end;
       SQL_VARYING   : begin
                         P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
                         Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
-                        ColCP := FCS_ID2CodePageArray[CP_ID];
-                        if (CP_ID = CS_BINARY) or (ColCP = ZOSCodePage)
+                        if (ColumnCodePage = ZOSCodePage)
                         then goto SetFromPChar
-                        else CPConvert(P, Len, ColCP, Result);
+                        else CPConvert(P, Len, ColumnCodePage, Result);
                       end;
       SQL_BLOB:       FromLob(Result);
       else  begin
@@ -702,19 +742,19 @@ begin
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
     Result := nil;
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
-      SQL_QUAD, SQL_BLOB, SQL_ARRAY: BlobId := PISC_QUAD(XSQLVAR.sqldata)^;
-    else raise CreateCanNotAccessBlobRecordException(ColumnIndex,
-       TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType);
-    end;
-    case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType of
-      stBinaryStream: Result := TZInterbase6BLob.Create(FIBConnection, BlobId,
-          lsmRead, FOpenLobStreams);
-      stAsciiStream, stUnicodeStream: Result := TZInterbase6Clob.Create(FIBConnection, BlobId,
-          lsmRead, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnCodePage,
-          FOpenLobStreams);
+      SQL_QUAD,
+      SQL_BLOB: begin
+          BlobId := PISC_QUAD(XSQLVAR.sqldata)^;
+          if ColumnType = stBinaryStream
+          then Result := TZInterbase6BLob.Create(FIBConnection, PISC_QUAD(XSQLVAR.sqldata)^,
+            lsmRead, FOpenLobStreams)
+          else Result := TZInterbase6Clob.Create(FIBConnection, BlobId,
+            lsmRead, ColumnCodePage, FOpenLobStreams);
+        end
+      else raise CreateCanNotAccessBlobRecordException(ColumnIndex, ColumnType);
     end;
   end;
 end;
@@ -1193,13 +1233,6 @@ begin
   end;
 end;
 
-function TZInterbase6XSQLDAResultSet.GetLobBufAndLen(ColumnIndex: Integer;
-  out Len: NativeUInt): Pointer;
-begin
-  FBlobTemp := GetBlob(ColumnIndex);
-  Result := FBlobTemp.GetBuffer(fRawTemp, Len);
-end;
-
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -1407,6 +1440,12 @@ function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len:
 var
   TempDate: TZTimeStamp;
   XSQLVAR: PXSQLVAR;
+  function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): Pointer;
+  var BlobTemp: IZBlob;
+  begin
+    BlobTemp := GetBlob(ColumnIndex);
+    Result := BlobTemp.GetBuffer(fRawTemp, Len);
+  end;
   label set_Results;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1520,6 +1559,20 @@ var
   XSQLVAR: PXSQLVAR;
   P: PAnsiChar;
   label set_Results;
+  function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
+  var BlobTemp: IZBlob;
+  begin
+    BlobTemp := GetBlob(ColumnIndex, lsmRead);
+    if BlobTemp.IsClob then begin
+      Result := BlobTemp.GetPWideChar(FUniTemp, Len);
+    end else begin
+      Result := BlobTemp.GetBuffer(FRawTemp, Len);
+      FUniTemp := Ascii7ToUnicodeString(Pointer(Result), Len);
+      FRawTemp := '';
+      Result := Pointer(FUniTemp);
+      Len := Length(FUniTemp);
+    end;
+  end;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1531,7 +1584,7 @@ begin
     LastWasNull := True;
     Len := 0;
     Result := nil;
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_D_FLOAT,
@@ -1583,26 +1636,15 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
       SQL_TEXT,
       SQL_VARYING   : begin
                         GetPCharFromTextVar(XSQLVAR, P, Len);
-                        if XSQLVAR.sqlsubtype and 255 = CS_BINARY
+                        if ColumnCodePage = CS_BINARY
                         then fUniTemp := Ascii7ToUnicodeString(P, Len)
-                        else fUniTemp := PRawToUnicode(P, Len, FCS_ID2CodePageArray[XSQLVAR.sqlsubtype and 255]);
+                        else fUniTemp := PRawToUnicode(P, Len, ColumnCodePage);
                         Len := Length(fUniTemp);
                         if Len <> 0
                         then Result := Pointer(fUniTemp)
                         else Result := PEmptyUnicodeString;
                       end;
-      SQL_BLOB      : Begin
-                        FBlobTemp := GetBlob(ColumnIndex);  //localize interface to keep pointer alive
-                        if FBlobTemp.IsClob then begin
-                          Result := FBlobTemp.GetPWideChar(FUniTemp, Len);
-                        end else begin
-                          Result := FBlobTemp.GetBuffer(FRawTemp, Len);
-                          FUniTemp := Ascii7ToUnicodeString(Pointer(Result), Len);
-                          FRawTemp := '';
-                          Result := Pointer(FUniTemp);
-                          Len := Length(FUniTemp);
-                        end;
-                      End;
+      SQL_BLOB      : Result := GetLobBufAndLen(ColumnIndex, Len);
       SQL_TIMESTAMP : begin
                         isc_decode_date(PISC_TIMESTAMP(XSQLVAR.sqldata).timestamp_date,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
@@ -1709,8 +1751,6 @@ function TZInterbase6XSQLDAResultSet.GetUTF8String(
 var XSQLVAR: PXSQLVAR;
   P: Pointer;
   Len: NativeUint;
-  ColCP: Word;
-  CP_ID: ISC_SHORT;
   procedure CPConvert(P: PAnsiChar; Len: NativeUint; ColCP: Word; var Result: UTF8String);
   begin
     FUniTemp := PRawToUnicode(P,Len,ColCP);
@@ -1739,30 +1779,27 @@ begin
   if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
     LastWasNull := True;
     Result := ''
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     LastWasNull := False;
-    CP_ID := XSQLVAR.sqlsubtype and 255;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT      : begin
                         P := XSQLVAR.sqldata;
-                        if (CP_ID = CS_BINARY) then begin
+                        if (ColumnCodePage = CS_BINARY) then begin
                           Len := XSQLVAR.sqllen;
                           goto SetFromPChar;
                         end else begin
-                          ColCP := FCS_ID2CodePageArray[CP_ID];
                           Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
-                          if (ColCP = zCP_UTF8)
+                          if (ColumnCodePage = zCP_UTF8)
                           then goto SetFromPChar
-                          else CPConvert(P, Len, ColCP, Result);
+                          else CPConvert(P, Len, ColumnCodePage, Result);
                         end;
                       end;
       SQL_VARYING   : begin
                         P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
                         Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
-                        ColCP := FCS_ID2CodePageArray[CP_ID];
-                        if (CP_ID = CS_BINARY) or (ColCP = zCP_UTF8)
+                        if (ColumnCodePage = CS_BINARY) or (ColumnCodePage = zCP_UTF8)
                         then goto SetFromPChar
-                        else CPConvert(P, Len, ColCP, Result);
+                        else CPConvert(P, Len, ColumnCodePage, Result);
                       end;
       SQL_BLOB:       FromLob(Result);
       else  begin
@@ -1814,7 +1851,6 @@ begin
       LastRowNo := RowNo;
       Result := True;
     end else if Status = 100  then begin
-
       {no error occoured -> notify IsAfterLast and close the recordset}
       RowNo := RowNo + 1;
       if FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
@@ -1841,9 +1877,9 @@ var
   FieldSqlType: TZSQLType;
   ColumnInfo: TZColumnInfo;
   ZCodePageInfo: PZCodePage;
-  CP: Word;
+  CPID: Word;
   XSQLVAR: PXSQLVAR;
-  HasLobs: Boolean;
+label jmpLen;
 begin
   if FStmtHandle=0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -1851,7 +1887,6 @@ begin
   FGUIDProps := TZInterbase6StatementGUIDProps.Create(Statement);
 
   ColumnsInfo.Clear;
-  HasLobs := False;
   if FXSQLDA.sqld > 0 then  //keep track we have a column to avoid range issues see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=10595
     for I := 0 to FXSQLDA.sqld {FieldCount} - 1 do begin
       {$R-}
@@ -1869,38 +1904,41 @@ begin
         ColumnType := FieldSqlType;
 
         case FieldSqlType of
-          stString, stUnicodeString:
-            begin
+          stString, stUnicodeString: begin
               //see test Bug#886194, we retrieve 565 as CP... the modula get returns the FBID of CP
-              CP := XSQLVAR.sqlsubtype and 255;
+              CPID := XSQLVAR.sqlsubtype and 255;
               //see: http://sourceforge.net/p/zeoslib/tickets/97/
-              if (CP = ConSettings^.ClientCodePage^.ID)
+              if (CPID = ConSettings^.ClientCodePage^.ID)
               then ZCodePageInfo := ConSettings^.ClientCodePage
-              else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info}
+              else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CPID); //get column CodePage info}
+              ColumnCodePage := ZCodePageInfo.CP;
               if ConSettings^.ClientCodePage^.ID = CS_NONE then begin
-                ColumnCodePage := ZCodePageInfo.CP;
-                Precision := XSQLVAR.sqllen
+jmpLen:         Precision := XSQLVAR.sqllen;
+                CharOctedLength := Precision;
               end else begin
-                ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+                CharOctedLength := XSQLVAR.sqllen;
                 Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
               end;
-              if XSQLVAR.sqltype and not 1 = SQL_TEXT then
-                Signed := True;
-              if ColumnType = stString
-              then CharOctedLength := Precision * ConSettings^.ClientCodePage^.CharWidth
-              else CharOctedLength := Precision shl 1;
+              Signed := XSQLVAR.sqltype and not 1 = SQL_TEXT;
             end;
-          stAsciiStream, stUnicodeStream: begin
-              HasLobs := True;
-              ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+          stAsciiStream, stUnicodeStream: if ConSettings^.ClientCodePage^.ID = CS_NONE
+            then if FIsMetadataResultSet
+              then ColumnCodePage := zCP_UTF8
+              else begin //connected with CS_NONE no transliterions are made by FB
+                CPID := FIBConnection.GetSubTypeTextCharSetID(TableName,ColumnName);
+                if CPID = CS_NONE
+                then ZCodePageInfo := ConSettings^.ClientCodePage
+                else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CPID);
+                ColumnCodePage := ZCodePageInfo.CP;
+              end else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+          stBytes: begin
+              ColumnCodePage := zCP_Binary;
+              goto jmpLen;
             end;
+          stBinaryStream: ColumnCodePage := zCP_Binary;
           else begin
             ColumnCodePage := zCP_NONE;
             case FieldSqlType of
-                stBytes: begin
-                  Precision := XSQLVAR.sqllen;
-                  Signed := XSQLVAR.sqltype and not 1 = SQL_TEXT;
-                end;
               stShort, stSmall, stInteger, stLong: Signed := True;
               stCurrency, stBigDecimal: begin
                 Signed  := True;
@@ -1913,20 +1951,18 @@ begin
                 end;
               end;
               stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of milli second fractions
-              stBinaryStream: HasLobs := True;
             end;
           end;
         end;
         ReadOnly := (TableName = '') or (ColumnName = '') or
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
-
+        Writable := not ReadOnly;
         Nullable := TZColumnNullableType(Ord(FIZSQLDA.IsNullable(I)));
         Scale := FIZSQLDA.GetFieldScale(I);
         CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;
-  FCachedLobs := FCachedLobs and HasLobs;
   inherited Open;
 end;
 
@@ -1940,7 +1976,6 @@ procedure TZInterbase6XSQLDAResultSet.ResetCursor;
 var StatusVector: TARRAY_ISC_STATUS;
 begin
   if not Closed then begin
-    FBlobTemp := nil; //flush possible uncached lob
     if (FStmtHandle <> 0) then begin
       if (FStmtType <> stExecProc) then begin
          if (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then

@@ -452,7 +452,11 @@ begin
                           end;
         { the charter types we support }
         SQLT_VCS        : AddJSONEscape(@POCIVary(P).Data[0], POCIVary(P).Len);
-        SQLT_LVC        : AddJSONEscape(@POCILong(P).Data[0], POCILong(P).Len);
+        SQLT_LVC        : if ColType = stUnicodeString then begin
+                            JSONWriter.Add('"');
+                            JSONWriter.AddJSONEscapeW(@POCILong(P).Data[0], POCILong(P).Len);
+                            JSONWriter.Add('"');
+                          end else AddJSONEscape(@POCILong(P).Data[0], POCILong(P).Len);
         SQLT_VST        : AddJSONEscape(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len);
         { fixed char right ' ' padded }
         SQLT_AFC        : AddJSONEscape(P, GetAbsorbedTrailingSpacesLen(P, Value_sz));
@@ -2263,13 +2267,20 @@ begin
 CSFormAndID:
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
-      if ColumnInfo.CharsetForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
-        ColumnInfo.Precision := ColumnInfo.Precision shr 1;
+      if ColumnInfo.CharsetForm = SQLCS_NCHAR then begin//We should determine the NCHAR set on connect
+        if ColumnInfo.ColumnType = stString then begin
+          ColumnInfo.Precision := ColumnInfo.Precision shr 1;
+          ColumnInfo.ColumnType := stUnicodeString;
+          CurrentVar^.value_sz := ColumnInfo.Precision shl 1 + SizeOf(WideChar);
+        end else if ColumnInfo.ColumnType = stAsciiStream then
+          ColumnInfo.ColumnType := stUnicodeStream;
+        ColumnInfo.ColumnCodePage := zCP_UTF16;
+      end else ColumnInfo.ColumnCodePage := FClientCP;
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
     end else if (ColumnInfo.ColumnType = stBytes ) then
       ColumnInfo.Precision := CurrentVar^.value_sz
-    else if (ColumnInfo.ColumnType in [stAsciiStream, stUnicodeStream] ) then
+    else if (ColumnInfo.ColumnType = stAsciiStream) then
       goto CSFormAndID
     else
       ColumnInfo.Precision := CurrentVar^.Precision;
@@ -2287,9 +2298,6 @@ CSFormAndID:
       else //more possible types
         CurrentVar^.ColType := stBinaryStream;
     end;
-    if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]
-    then ColumnInfo.ColumnCodePage := FClientCP
-    else ColumnInfo.ColumnCodePage := High(Word);
     {calc required size of field}
 
     if CurrentVar^.value_sz > 0 then
@@ -2836,7 +2844,7 @@ begin
   Close;
 end;
 
-function TZOracleLobStream32.Seek(Offset: Integer; Origin: Word): Longint;
+function TZOracleLobStream32.Seek(Offset: Longint; Origin: Word): Longint;
 begin
   if Origin = soFromEnd then
     Result := FPosition - OffSet
@@ -2874,7 +2882,7 @@ end;
 
 { TZOracleInternalLobStream32 }
 
-function TZOracleInternalLobStream32.Write(const Buffer; Count: Integer): Longint;
+function TZOracleInternalLobStream32.Write(const Buffer; Count: LongInt): Longint;
 var
   Status: sword;
   Offset, amtpBytes, amtp: ub4;
@@ -3273,7 +3281,7 @@ begin
   end;
 end;
 
-function TZOracleLobStream64.Read(var Buffer; Count: Integer): Longint;
+function TZOracleLobStream64.Read(var Buffer; Count: LongInt): Longint;
 var
   Status: sword;
   pBuff: PAnsiChar;
@@ -3394,7 +3402,7 @@ end;
 { TZOracleInternalLobStream64 }
 
 function TZOracleInternalLobStream64.Write(const Buffer;
-  Count: Integer): Longint;
+  Count: LongInt): Longint;
 var
   Status: sword;
   byte_amtp, char_amtp, Offset: oraub8;
@@ -3434,7 +3442,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
 function TZOracleExternalLobStream64.Write(const Buffer;
-  Count: Integer): Longint;
+  Count: LongInt): Longint;
 begin
   raise CreateReadOnlyException;
 end;
@@ -3444,7 +3452,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
 function TZOracleExternalLobStream32.Write(const Buffer;
-  Count: Integer): Longint;
+  Count: LongInt): Longint;
 begin
   raise CreateReadOnlyException;
 end;

@@ -69,9 +69,6 @@ uses
 
 type
   TZPGColumnInfo = class(TZColumnInfo)
-  protected
-    fTableOID, FColOID: OID;
-    fTableColNo: Integer;
   public
     TableOID: OID;
     TableColNo: Integer;
@@ -271,7 +268,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math, SysConst,
   ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
-  ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties,
+  ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties, TypInfo,
   ZVariant;
 
 
@@ -660,7 +657,10 @@ function TZPostgreSQLResultSet.CreatePGConvertError(
   ColumnIndex: Integer; DataType: OID): EZPGConvertError;
 begin
   Result := EZPGConvertError.Create(Format(SErrorConvertionField,
-        [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel, IntToStr(DataType)]));
+        [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel,
+          TypInfo.GetEnumName(TypeInfo(TZSQLType),
+          Ord(TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType))])+
+          '; OID: '+IntToStr(DataType));
 end;
 
 procedure TZPostgreSQLResultSet.AssignColumnsInfo(
@@ -746,11 +746,16 @@ begin
     MACADDROID: ColumnInfo.Precision := 17; { macaddr }
     INTERVALOID: ColumnInfo.Precision := 32; { interval }
     REGPROCOID: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
-    BYTEAOID:{ bytea }
-      if TypeModifier >= VARHDRSZ then
-        ColumnInfo.Precision := TypeModifier - VARHDRSZ
-      else
-        ColumnInfo.Precision := -1;
+    BYTEAOID: begin{ bytea }
+        if TypeModifier >= VARHDRSZ then begin
+          ColumnInfo.Precision := TypeModifier - VARHDRSZ;
+          ColumnInfo.ColumnType := stBytes;
+        end else begin
+          ColumnInfo.Precision := -1;
+          ColumnInfo.ColumnType := stBinaryStream;
+        end;
+        Exit;
+      end;
     //see: https://www.postgresql.org/message-id/slrnd6hnhn.27a.andrew%2Bnonews%40trinity.supernews.net
     //macro:
     //numeric: this is ugly, the typmod is ((prec << 16) | scale) + VARHDRSZ,
@@ -1111,6 +1116,7 @@ var P: PAnsiChar;
   TS: TZTimeStamp absolute BCD;
   UUID: TGUID absolute BCD;
   DT: TDateTime absolute BCD;
+  C: Currency absolute BCD;
   MS: Word;
   ROW_IDX: Integer;
   procedure FromOIDLob(ColumnIndex: Integer);
@@ -1166,7 +1172,8 @@ begin
                       Result := @fTinyBuffer[0];
                     end;
         stCurrency: begin
-                      CurrToUnicode(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), @fTinyBuffer[0], @PEnd);
+                      C := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                      CurrToUnicode(C, @fTinyBuffer[0], @PEnd);
 JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
                       Len := PEnd - Result;
                     end;
@@ -1966,7 +1973,7 @@ jmpZero:                PInt64(@Result.Year)^ := 0
       stCurrency, stBigDecimal:  DecodeDateTimeToDate(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
       stAsciiStream, stUnicodeStream,
       stString, stUnicodeString:    goto from_str;
-      else raise CreatePGConvertError(ColumnIndex, FColOID);
+      else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end;
   end;
 end;
@@ -2038,7 +2045,7 @@ jmpZero:              PCardinal(@Result.Hour)^ := 0;
       stCurrency, stBigDecimal: DecodeDateTimeToTime(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
       stAsciiStream, stUnicodeStream,
       stString, stUnicodeString:    goto from_str;
-      else raise CreatePGConvertError(ColumnIndex, FColOID);
+      else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end
   end;
 end;
@@ -2125,7 +2132,7 @@ jmpZero:              PInt64(@Result.Year)^ := 0;
       stCurrency, stBigDecimal: DecodeDateTimeToTimeStamp(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
       stAsciiStream, stUnicodeStream,
       stString, stUnicodeString:    goto from_str;
-      else raise CreatePGConvertError(ColumnIndex, FColOID);
+      else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end
   end;
 end;
@@ -2181,7 +2188,7 @@ begin
                       end else if FIs_bytea_output_hex
                       then Result := TZPostgreSQLByteaHexBlob.Create(P)
                       else Result := TZPostgreSQLByteaEscapedBlob.Create(FPlainDriver, P)
-        else raise CreatePGConvertError(ColumnIndex, FColOID);
+        else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end;
   end;
 end;

@@ -446,7 +446,6 @@ constructor TZAbstractInterbase6PreparedStatement.Create(const Connection: IZCon
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-
   FIBConnection := Connection as IZInterbase6Connection;
   FPlainDriver := TZInterbasePlainDriver(FIBConnection.GetIZPlainDriver.GetInstance);
   FCodePageArray := FPlainDriver.GetCodePageArray;
@@ -545,7 +544,7 @@ label jmpEB;
   end;
 begin
   if (not Prepared) then begin
-    with Self.FIBConnection do begin
+    with FIBConnection do begin
     { Allocate an sql statement }
     if FStmtHandle = 0 then
       if FPlainDriver.isc_dsql_allocate_statement(@FStatusVector, GetDBHandle, @FStmtHandle) <> 0 then
@@ -570,7 +569,7 @@ begin
         FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE);
         raise EZSQLException.Create(SStatementIsNotAllowed);
       end else if FStatementType in [stSelect, stExecProc, stSelectForUpdate] then begin
-        FResultXSQLDA := TZSQLDA.Create(Connection);
+        FResultXSQLDA := TZSQLDA.Create(Connection, ConSettings);
         { Initialise ouput param and fields }
         if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
           CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, ASQL);
@@ -791,7 +790,7 @@ var
 begin
   With FIBConnection do begin
     {create the parameter bind structure}
-    FParamSQLData := TZParamsSQLDA.Create(Connection);
+    FParamSQLData := TZParamsSQLDA.Create(Connection, ConSettings);
     FParamXSQLDA := FParamSQLData.GetData;
     if FParamXSQLDA.sqln < BindList.Capacity then begin
       FParamXSQLDA.sqld := BindList.Capacity;
@@ -845,18 +844,6 @@ var XSQLVAR: PXSQLVAR;
  CS_ID: ISC_SHORT;
  L: LengthInt;
  P: PAnsiChar;
-  procedure Convert(var P: PAnsiChar; Var L: LengthInt; ToCP: Word);
-  begin
-    FUniTemp := PRawToUnicode(P, L, ZOSCodePage); //localize it
-    FRawTemp := ZUnicodeToRaw(FUniTemp, ToCP);
-    P := Pointer(FRawTemp);
-    if P <> nil then
-      L := Length(FRawTemp)
-    else begin
-      L := 0;
-      P := PEmptyAnsiString;
-    end;
-  end;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -875,20 +862,24 @@ begin
                       if (CS_ID = CS_BINARY) or (FCodePageArray[CS_ID] = ZOSCodePage) then
                         EncodePData(XSQLVAR, P, L)
                       else begin
-                        Convert(P, L, FCodePageArray[CS_ID]);
+                        PRawToRawConvert(P, L, ZOSCodePage, FCodePageArray[CS_ID], FRawTemp);
+                        L := Length(FRawTemp);
+                        P := Pointer(FRawTemp);
                         EncodePData(XSQLVAR, P, L);
                       end;
                     end;
       SQL_BLOB,
       SQL_QUAD      : if XSQLVAR.sqlsubtype = isc_blob_text then
                         if (ClientCP = ZOSCodePage) then
-                          WriteLobBuffer(XSQLVAR, Pointer(Value), L)
+                          WriteLobBuffer(XSQLVAR, P, L)
                         else begin
-                          Convert(P, L, ClientCP);
+                          PRawToRawConvert(P, L, ZOSCodePage, FClientCP, FRawTemp);
+                          L := Length(FRawTemp);
+                          P := Pointer(FRawTemp);
                           WriteLobBuffer(XSQLVAR, P, L)
                         end
                       else WriteLobBuffer(XSQLVAR, P, L);
-      else SetPAnsiChar(Index, Pointer(Value), L);
+      else SetPAnsiChar(Index, P, L);
     end;
   end else
     SetPAnsiChar(Index, PEmptyAnsiString, 0)
@@ -1945,6 +1936,9 @@ end;
 procedure TZInterbase6PreparedStatement.SetUTF8String(Index: Integer;
   const Value: UTF8String);
 var XSQLVAR: PXSQLVAR;
+  P: PAnsiChar;
+  CP_ID: SmallInt;
+  Len: LengthInt;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -1954,33 +1948,37 @@ begin
     {$R-}
     XSQLVAR := @FParamXSQLDA.sqlvar[Index];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    P := Pointer(Value);
+    Len := Length(Value);
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT,
-      SQL_VARYING   : if (ClientCP = zCP_UTF8) or (XSQLVAR.sqlsubtype and 255 = CS_BINARY)
-                        or ((FDB_CP_ID = CS_NONE) and (FCodePageArray[XSQLVAR.sqlsubtype and 255] = zCP_UTF8)) then
-                        EncodePData(XSQLVAR, Pointer(Value), Length(Value))
+      SQL_VARYING   : begin
+                      CP_ID := XSQLVAR.sqlsubtype and 255;
+                      if (CP_ID = CS_UTF8) or (CP_ID = CS_UNICODE_FSS) or (CP_ID = CS_BINARY)
+                      then EncodePData(XSQLVAR, P, Len)
                       else begin
-                        FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8); //localize it
-                        if (FDB_CP_ID = CS_NONE)
-                        then FRawTemp := ZUnicodeToRaw(FUniTemp, FCodePageArray[XSQLVAR.sqlsubtype and 255])
-                        else FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
-                        if FRawTemp <> ''
-                        then EncodePData(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
-                        else EncodePData(XSQLVAR, PEmptyAnsiString, 0);
+                        PRawToRawConvert(P, Len, zCP_UTF8, FCodePageArray[CP_ID], FRawTemp);
+                        Len := Length(FRawTemp);
+                        if Len = 0
+                        then P := PEmptyAnsiString
+                        else P := Pointer(FRawTemp);
+                        EncodePData(XSQLVAR, P, Len);
                       end;
+                    end;
       SQL_BLOB,
       SQL_QUAD      : if XSQLVAR.sqlsubtype = isc_blob_text then
                         if (ClientCP = zCP_UTF8) then
                           WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value))
                         else begin
-                          FUniTemp := PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8); //localize it
-                          FRawTemp := ZUnicodeToRaw(FUniTemp, ClientCP);
-                          if FRawTemp <> ''
-                          then WriteLobBuffer(XSQLVAR, Pointer(FRawTemp), Length(FRawTemp))
-                          else WriteLobBuffer(XSQLVAR, PEmptyAnsiString, 0);
+                          PRawToRawConvert(P, Len, zCP_UTF8, FClientCP, FRawTemp);
+                          Len := Length(FRawTemp);
+                          if Len = 0
+                          then P := PEmptyAnsiString
+                          else P := Pointer(FRawTemp);
+                          WriteLobBuffer(XSQLVAR, P, Len);
                         end
-                      else WriteLobBuffer(XSQLVAR, Pointer(Value), Length(Value));
-      else SetPAnsiChar(Index, Pointer(Value), Length(Value));
+                      else WriteLobBuffer(XSQLVAR, P, Len);
+      else SetPAnsiChar(Index, P, Len);
     end;
   end else
     SetPAnsiChar(Index, PEmptyAnsiString, 0)
@@ -2092,3 +2090,4 @@ end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.
+

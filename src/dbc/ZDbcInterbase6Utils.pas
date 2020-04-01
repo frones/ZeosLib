@@ -60,7 +60,7 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZPlainFirebirdDriver, ZCompatibility,
   ZPlainFirebirdInterbaseConstants, ZDbcLogging, ZMessages,
-  ZVariant, ZClasses, FmtBCD;
+  ZVariant, FmtBCD;
 
 type
   { Interbase Statement Type }
@@ -135,7 +135,7 @@ type
   end;
 
   { Base interface for sqlda }
-  IZSQLDA = interface
+  IZSQLDA = interface(IImmediatelyReleasable)
     ['{2D0D6029-B31C-4E39-89DC-D86D20437C35}']
     procedure InitFields(Fixed2VariableSize: Boolean);
     function AllocateSQLDA: PXSQLDA;
@@ -162,7 +162,7 @@ type
   { Base class contain core functions to work with sqlda structure
     Can allocate memory for sqlda structure get basic information }
 
-  TZSQLDA = class (TZCodePagedObject, IZSQLDA, IImmediatelyReleasable)
+  TZSQLDA = class (TZCodePagedObject, IZSQLDA)
   private
     FXSQLDA: PXSQLDA;
     FPlainDriver: TZInterbasePlainDriver;
@@ -170,7 +170,7 @@ type
     procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
   public
-    constructor Create(const Connection: IZConnection);
+    constructor Create(const Connection: IZConnection; ConSettings: PZConSettings);
     destructor Destroy; override;
     procedure InitFields(Fixed2VariableSize: Boolean);
     function AllocateSQLDA: PXSQLDA;
@@ -248,10 +248,6 @@ function GetNameSqlType(Value: Word): RawByteString;
 procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
   const BlobHandle: TISC_BLOB_HANDLE; out BlobInfo: TIbBlobInfo;
   const ImmediatelyReleasable: IImmediatelyReleasable);
-procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  BlobId: PISC_QUAD; out Size: Integer; out Buffer: Pointer;
-  const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
 
 function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const IsParamIndexArray: TBooleanDynArray;
@@ -1373,68 +1369,6 @@ begin
 end;
 
 {**
-   Read blob field data to stream by it ISC_QUAD value
-   Note: DefaultBlobSegmentSize constant used for limit segment size reading
-   @param Handle the database connection handle
-   @param TransactionHandle the transaction handle
-   @param BlobId the ISC_QUAD structure
-   @param Size the result buffer size
-   @param Buffer the pointer to result buffer
-
-   Note: Buffer must be nill. Function self allocate memory for data
-    and return it size
-}
-procedure ReadBlobBufer(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
-  BlobId: PISC_QUAD; out Size: Integer; out Buffer: Pointer;
-  const Binary: Boolean; const ImmediatelyReleasable: IImmediatelyReleasable);
-var
-  TempBuffer: PAnsiChar;
-  BlobInfo: TIbBlobInfo;
-  CurPos: Integer;
-  BytesRead, SegLen: ISC_USHORT;
-  BlobHandle: TISC_BLOB_HANDLE;
-  StatusVector: TARRAY_ISC_STATUS;
-begin
-  BlobHandle := 0;
-  CurPos := 0;
-//  SegmentLenght := UShort(DefaultBlobSegmentSize);
-
-  { open blob }
-  if PlainDriver.isc_open_blob2(@StatusVector, Handle,
-         TransactionHandle, @BlobHandle, @BlobId, 0 , nil) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-
-  { get blob info }
-  GetBlobInfo(PlainDriver, BlobHandle, BlobInfo, ImmediatelyReleasable);
-  Size := BlobInfo.TotalSize;
-  SegLen := BlobInfo.MaxSegmentSize;
-
-  { Allocates a blob buffer }
-  Buffer := AllocMem(BlobInfo.TotalSize+Ord(not Binary)); //left space for leading #0 terminator
-
-  TempBuffer := Buffer;
-
-  { Copies data to blob buffer }
-  while CurPos < BlobInfo.TotalSize do begin
-    if (CurPos + SegLen > BlobInfo.TotalSize) then
-      SegLen := BlobInfo.TotalSize - CurPos;
-    if not(PlainDriver.isc_get_segment(@StatusVector, @BlobHandle,
-           @BytesRead, SegLen, TempBuffer) = 0) or
-          (StatusVector[1] <> isc_segment) then
-      CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-    Inc(CurPos, BytesRead);
-    Inc(TempBuffer, BytesRead);
-  end;
-  if not Binary then
-    PByte(PAnsiChar(Buffer)+Size)^ := Ord(#0);
-
-  { close blob handle }
-  if PlainDriver.isc_close_blob(@StatusVector, @BlobHandle) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-end;
-
-{**
    Return interbase server version string
    @param PlainDriver a interbase plain driver
    @param Handle the database connection handle
@@ -1545,10 +1479,10 @@ begin
 end;
 
 { TSQLDA }
-constructor TZSQLDA.Create(const Connection: IZConnection);
+constructor TZSQLDA.Create(const Connection: IZConnection; ConSettings: PZConSettings);
 begin
   FConnection := Connection;
-  Self.ConSettings := Connection.GetConSettings;
+  Self.ConSettings := ConSettings;
   FPlainDriver := TZInterbasePlainDriver(Connection.GetIZPlainDriver.GetInstance);
 
   GetMem(FXSQLDA, XSQLDA_LENGTH(0));
@@ -1951,12 +1885,14 @@ var
 
   procedure Put(const Args: array of RawByteString; var Dest: PAnsiChar);
   var I: Integer;
+    L: LengthInt;
   begin
     for I := low(Args) to high(Args) do //Move data
-    begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
-      Inc(Dest, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
-    end;
+      if Pointer(Args[i]) <> nil then begin
+        L := {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^;
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, L);
+        Inc(Dest, L);
+      end;
   end;
   procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
   var I, L: Integer;
@@ -1979,17 +1915,11 @@ begin
     for ParamIndex := 0 to BindCount-1 do
     begin
       case ParamsSQLDA.GetIbSqlType(ParamIndex) and not (1) of
-        SQL_VARYING:
+        SQL_VARYING, SQL_TEXT:
           begin
-            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex));
+            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex) and 255);
             AddParam([' VARCHAR(', IntToRaw(ParamsSQLDA.GetIbSqlLen(ParamIndex) div CodePageInfo.CharWidth),
-            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), ' = ?' ], TypeTokens[ParamIndex]);
-          end;
-        SQL_TEXT:
-          begin
-            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex));
-            AddParam([' CHAR(', IntToRaw(ParamsSQLDA.GetIbSqlLen(ParamIndex) div CodePageInfo.CharWidth),
-            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), ' = ?' ], TypeTokens[ParamIndex]);
+            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), '=?' ], TypeTokens[ParamIndex]);
           end;
         SQL_DOUBLE, SQL_D_FLOAT:
            AddParam([' DOUBLE PRECISION=?'], TypeTokens[ParamIndex]);
@@ -2037,8 +1967,8 @@ begin
         SQL_NULL{FB25}:
            AddParam([' CHAR(1)=?'],TypeTokens[ParamIndex]);
       end;
-      Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
-        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));
+      (*Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
+        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));*)
     end;
     Inc(MemPerRow, XSQLDA_LENGTH(InParamCount));
   end;
@@ -2082,7 +2012,8 @@ begin
     //we run into XSQLDA !update! count limit of 255 see:
     //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
     if (PreparedRowsOfArray = MaxRowsPerBatch-1) or
-       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 255)) then begin
+       ((InitialStatementType = stInsert) and (PreparedRowsOfArray > 255)) or
+       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 125)) then begin
       StmtLength := LastStmLen;
       Dec(FullHeaderLen, HeaderLen);
       Break;

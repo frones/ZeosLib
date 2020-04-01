@@ -421,10 +421,9 @@ begin
     BITOID, VARBITOID: Result := stString; {bit/ bit varying string}
     REGPROCOID: Result := stString; { regproc }
     1034: Result := stAsciiStream; {aclitem[]}
-    BYTEAOID: { bytea }
-        if OidAsBlob
-        then Result := stBytes
-        else Result := stBinaryStream;
+    BYTEAOID: if TypeModifier >= VARHDRSZ
+      then Result := stBytes
+      else Result := stBinaryStream;
     UUIDOID: Result := stGUID; {uuid}
     JSONOID, JSONBOID: Result := stAsciiStream;
     INT2VECTOROID, OIDVECTOROID: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }

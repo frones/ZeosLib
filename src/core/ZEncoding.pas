@@ -1676,15 +1676,12 @@ procedure PRawToRawConvert(Source: PAnsiChar; SourceBytes: LengthInt;
   SrcCP, DestCP: Word; var Result: RawByteString);
 var L, NL: LengthInt;
   Dest: PAnsiChar;
-  {$IFDEF WITH_RAWBYTESTRING}
-  RBS: RawByteString absolute Result;
-  {$ENDIF}
 label Jmp;
 begin
   if (Source = nil) or (SourceBytes = 0) then
     Result := EmptyRaw
   else if SrcCP = DestCP then
-    ZSetString(Source, SourceBytes, Result)
+    ZSetString(Source, SourceBytes, Result {$IFDEF WITH_RAWBYTESTRING},DestCP{$ENDIF})
   else begin
     if IsMBCSCodePage(SrcCP) and not IsMBCSCodePage(DestCP) then
       NL := SourceBytes
@@ -1694,7 +1691,7 @@ begin
       NL := SourceBytes
     else
       NL := SourceBytes shl 1;
-Jmp:ZSetString(nil, NL, {$IFDEF WITH_RAWBYTESTRING}RBS, DestCP{$ELSE}Result{$ENDIF});
+Jmp:ZSetString(nil, NL, Result {$IFDEF WITH_RAWBYTESTRING},DestCP{$ENDIF});
     Dest := Pointer(Result);
     L := PRawToPRawBuf(Source, Dest, SourceBytes, NL, SrcCP, DestCP);
     if L < NL then

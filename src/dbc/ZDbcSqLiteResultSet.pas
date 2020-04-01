@@ -586,16 +586,17 @@ begin
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
         FieldPrecision, FieldDecimals);
 
-      if ColumnType in [stString, stUnicodeString] then begin
+      if ColumnType in [stString, stAsciiStream] then begin
         ColumnCodePage := zCP_UTF8;
-        if ColumnType = stString then begin
+        if ColumnType = stString then
           CharOctedLength := FieldPrecision shl 2;
-          Precision := FieldPrecision;
-        end;
-      end;
+      end else if ColumnType = stBytes then
+        CharOctedLength := FieldPrecision;
       AutoIncrement := False;
       Precision := FieldPrecision;
       Scale := FieldDecimals;
+      Writable := True;
+      DefinitelyWritable := True;
       Signed := True;
       Nullable := ntNullable;  //sqlite just uses affinities .. all columns are nullable
     end;

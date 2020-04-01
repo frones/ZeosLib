@@ -314,11 +314,6 @@ type
     function GetStatement: IZStatement; virtual;
 
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
-
-    {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; EndJSONObject: Boolean = True;
-      With_DATETIME_MAGIC: Boolean = False; SkipNullFields: Boolean = False); overload; // deprecated;
-    {$ENDIF}
   end;
 
   TZAbstractReadOnlyResultSet = class(TZAbstractResultSet)
@@ -3473,22 +3468,6 @@ procedure TZAbstractResultSet.MoveToCurrentRow;
 begin
 end;
 
-{$IFDEF USE_SYNCOMMONS}
-procedure TZAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
-  EndJSONObject: Boolean; With_DATETIME_MAGIC: Boolean; SkipNullFields: Boolean);
-var JSONComposeOptions: TZJSONComposeOptions;
-begin
-  JSONComposeOptions := [];
-  if EndJSONObject then
-    Include(JSONComposeOptions,jcoEndJSONObject);
-  if With_DATETIME_MAGIC then
-    Include(JSONComposeOptions,jcoDATETIME_MAGIC);
-  if SkipNullFields then
-    Include(JSONComposeOptions,jcsSkipNulls);
-  IZResultSet(FWeakIntfPtrOfSelf).ColumnsToJSON(JSONWriter, JSONComposeOptions);
-end;
-{$ENDIF}
-
 {**
   Compares fields from two row buffers.
   @param Row1 the first row buffer to compare.
@@ -5374,7 +5353,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "NewSize" not used} {$ENDIF}
-procedure TZReadOnlyDataRefStream.SetSize(NewSize: Integer);
+procedure TZReadOnlyDataRefStream.SetSize(NewSize: Longint);
 begin
   raise CreateReadOnlyException;
 end;
@@ -5384,7 +5363,7 @@ end;
   {$WARN 5033 off : Function result does not seem to be set}
   {$WARN 5024 off : Parameter "NewSize,Count" not used}
 {$ENDIF}
-function TZReadOnlyDataRefStream.Write(const Buffer; Count: Integer): Longint;
+function TZReadOnlyDataRefStream.Write(const Buffer; Count: Longint): Longint;
 begin
   raise CreateReadOnlyException;
 end;

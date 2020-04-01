@@ -2845,7 +2845,7 @@ begin
   FOffSet := Result;
 end;
 
-function TZMySQLLobStream.Write(const Buffer; Count: Integer): Longint;
+function TZMySQLLobStream.Write(const Buffer; Count: LongInt): Longint;
 var Status: Integer;
 begin
   if FReleased then begin
