@@ -1601,7 +1601,7 @@ end;
 }
 procedure TZDataLink.ActiveChanged;
 begin
-  if FDataset.Active then
+  if FDataset.Active and not (csDestroying in FDataset.Componentstate) then
     FDataset.RefreshParams;
 end;
 
