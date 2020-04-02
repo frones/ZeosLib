@@ -205,7 +205,10 @@ begin
     StrStream1.Free;
     BinStream.LoadFromFile(TestFilePath('images/dogs.jpg'));
     BinStream.Size := 1024;
-    StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+    if ConnectionConfig.Transport = traWEBPROXY then
+      StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+    else
+      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
     StrStream.Size := 1024;
 
     ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES');
