@@ -317,7 +317,10 @@ begin
       Params[5].LoadFromStream(BinStream, ftBlob);
 
       StrStream := TMemoryStream.Create;
-      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+      if ConnectionConfig.Transport = traWEBPROXY then
+        StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+      else
+        StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
 //      Params[6].LoadFromStream(StrStream, {$IFDEF UNICODE}ftWideMemo{$ELSE}ftMemo{$ENDIF});
       Params[6].LoadFromStream(StrStream, ftMemo);
 
@@ -751,7 +754,10 @@ begin
 
       Sql_ := 'SELECT * FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       StrStream := TMemoryStream.Create();
-      StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
+      if ConnectionConfig.Transport = traWEBPROXY then
+        StrStream.LoadFromFile(TestFilePath('text/lgpl without control characters.txt'))
+      else
+        StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
 
       //Modification by EgonHugeist: Different behavior for the Same Field
       //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
@@ -2110,10 +2116,10 @@ var
 
   function GetNonQuotedAlias(const Value: String): String;
   begin
-    case ProtocolType of
-      protPostgre:
+    case ConnectionConfig.Provider of
+      spPostgreSQL:
         Result := LowerCase(Value);
-      protOracle, protFirebird, protInterbase:
+      spOracle, spIB_FB:
         Result := UpperCase(Value);
       else
         Result := Value;

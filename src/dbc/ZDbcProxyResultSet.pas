@@ -528,6 +528,7 @@ begin
   if not LastWasNull then begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FWideBuffer := VarToStrDef(Val, '');
+    Len := Length(FWideBuffer);
     if Len = 0
     then Result := PEmptyUnicodeString
     else Result := Pointer(FWideBuffer);
@@ -1213,7 +1214,6 @@ var
   ColType: TZSQLType;
   Idx: Integer;
   Val: String;
-  AnsiVal: AnsiString;
   Bytes: TBytes;
   ColInfo: TZColumnInfo;
 begin

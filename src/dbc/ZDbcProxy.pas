@@ -265,6 +265,8 @@ begin
   if not Closed then
     Exit;
 
+  FStartTransactionUsed := false;
+
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
   PropList := encodeProperties('autocommit', BoolToStr(GetAutoCommit, True));
