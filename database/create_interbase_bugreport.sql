@@ -139,7 +139,7 @@ CREATE TABLE PLUSA (
    PRIMARY KEY(ID)
 );
 
-CREATE TABLE TestTicket363 (id integer primary key, "value" BLOB SUB_TYPE TEXT);
+CREATE TABLE TestTicket363 (id integer not null primary key, "value" BLOB SUB_TYPE TEXT);
 
 SET TERM !! ;
 CREATE TRIGGER Ticket54_BI FOR Ticket54
@@ -180,7 +180,7 @@ CREATE TABLE TABLE1
 /* Table for Ticket#376 on Sourceforge                          */
 /*==============================================================*/
 create table Ticket376a (
-  id integer primary key, 
+  id integer not null primary key, 
   "value" BLOB SUB_TYPE TEXT
 );
 
@@ -188,6 +188,6 @@ create table Ticket376a (
 /* Table for Ticket#376 on Sourceforge                          */
 /*==============================================================*/
 create table Ticket376b (
-  id varchar(15) primary key, 
+  id varchar(15) not null primary key, 
   "value" BLOB SUB_TYPE TEXT
 );

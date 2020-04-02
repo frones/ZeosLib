@@ -175,7 +175,7 @@ stBoolean             CHAR(1),
 stByte                SMALLINT,
 stShort               SMALLINT,
 stInteger             INTEGER,
-stLong                /*BIGINT*/ NUMERIC(18,0),
+stLong                BIGINT,
 stFloat               FLOAT,
 stDouble              DOUBLE PRECISION,
 stBigDecimal          DECIMAL(18,4),
@@ -220,6 +220,23 @@ create table default_values2
 );
 
 /*==============================================================*/
+/* Table : bcd_values                                           */
+/*==============================================================*/
+create table bcd_values
+(
+   id                             INTEGER NOT NULL,
+   curr18_4                       DECIMAL(18,4),
+   curr15_2                       DECIMAL(15,2),
+   curr10_4                       DECIMAL(10,4),
+   curr4_4                        DECIMAL(4,4),
+   bigd18_1                       DECIMAL(18,1),
+   bigd18_5                       DECIMAL(18,5),
+   bigd12_10                      DECIMAL(12,10),
+   bigd18_18                      DECIMAL(18,18),
+   primary key (id)
+);
+
+/*==============================================================*/
 /* Table : domain_values                                        */
 /*==============================================================*/
 
@@ -249,7 +266,55 @@ alter table equipment2
 alter table people
    add foreign key (p_dep_id) references department (dep_id);
 
+/*==============================================================*/
+/* Table : Guids                                                */
+/*==============================================================*/
+
+CREATE DOMAIN DOM_GUID CHAR(16) CHARACTER SET OCTETS;
+
+CREATE TABLE Guids (
+    ID               INTEGER NOT NULL,
+    GUID_DOM_FIELD   DOM_GUID,
+    GUID_TYPE_FIELD  CHAR(16) CHARACTER SET OCTETS
+);
+
+/*==============================================================*/
+/* Table : insert_returning                                     */
+/*==============================================================*/
+
+create table insert_returning
+(
+   id                INTEGER not null,
+   fld               VARCHAR(10),
+   primary key (id)
+);
+
+/*==============================================================*/
+/* Generator : GEN_ID                                           */
+/*==============================================================*/
+
+CREATE GENERATOR GEN_ID;
+
+/*==============================================================*/
+/* Start PSQL section                                           */
+/*==============================================================*/
+
 SET TERM ^ ;
+
+/*==============================================================*/
+/* Trigger : insert_returning_bi                                */
+/*==============================================================*/
+
+create trigger insert_returning_bi FOR insert_returning
+ACTIVE BEFORE INSERT POSITION 0
+AS
+BEGIN
+  IF (NEW.ID IS NULL OR NEW.ID = 0) THEN
+    select Coalesce(Max(ID), 0)+1 from insert_returning
+      into NEW.ID;
+  NEW.FLD = 'ID' || NEW.ID;
+END
+^
 
 /*==============================================================*/
 /* Stored procedure: procedure1                                 */
@@ -264,7 +329,6 @@ SUSPEND;
 END
 ^
 
-
 /*==============================================================*/
 /* Stored procedure: procedure2                                 */
 /*==============================================================*/
@@ -278,7 +342,6 @@ BEGIN
   SUSPEND;
 END
 ^
-
 
 /*==============================================================*/
 /* Stored procedure: procedure_upd_people_A                     */
@@ -328,7 +391,7 @@ END
 /* Stored procedure: ABTEST                                     */
 /*==============================================================*/
 
-create procedure abtest (
+create or alter procedure abtest (
     P1 integer,
     P2 integer,
     P3 varchar(10))
@@ -341,6 +404,24 @@ begin
   P5 = P3 || P3;
 end
 ^ 
+
+/*==============================================================*/
+/* Stored procedure: GUIDTEST                                   */
+/*==============================================================*/
+CREATE OR ALTER PROCEDURE GUIDTEST (
+    G_IN DOM_GUID)
+RETURNS (
+    G_OUT DOM_GUID)
+AS
+begin
+  G_OUT = :G_IN;
+  suspend;
+end
+^
+
+/*==============================================================*/
+/* Finish PSQL section                                          */
+/*==============================================================*/
 
 SET TERM ; ^
 
