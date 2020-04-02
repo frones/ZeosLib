@@ -2739,8 +2739,8 @@ begin
       stBytes:
         Result := BufferToBytes(Data^, PWord(PAnsiChar(Data)+SizeOf(Pointer))^);
       stBinaryStream, stAsciiStream, stUnicodeStream:
-        if (Data^ <> nil) and not PIZlob(Data^)^.IsEmpty
-          then Result := PIZlob(Data^)^.GetBytes
+        if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty
+          then Result := PIZLob(Data)^.GetBytes
           else Result := nil;
       stString, stUnicodeString:
         if Data^ <> nil then
@@ -3725,20 +3725,20 @@ begin
     stAsciiStream, stUnicodeStream:
       begin
         if (Data^ = nil) then
-          PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(nil, 0, Consettings);
-        if PIZLob(Data^)^.IsClob then
+          PIZLob(Data)^ := TZAbstractCLob.CreateWithData(nil, 0, Consettings);
+        if PIZLob(Data)^.IsClob then
           {$IF defined(DELPHI) or defined(UNICODE)} //EH: assume this is correct? Unicode ok but why delphi in all cases what about MSE-GUI?
-          PIZLob(Data^)^.SetUnicodeString(Value)
+          PIZLob(Data)^.SetUnicodeString(Value)
           {$ELSE} //same here UTF8 is ok for LCL but pure FPC? However this conversion has no data loss but might happen for nothing
-          PIZLob(Data^)^.SetUTF8String(ConSettings^.ConvFuncs.ZStringToUTF8(Value, ConSettings^.CTRL_CP))
+          PIZLob(Data)^.SetUTF8String(ConSettings^.ConvFuncs.ZStringToUTF8(Value, ConSettings^.CTRL_CP))
           {$IFEND}
         else
-          PIZLob(Data^)^.SetBytes(StrToBytes(Value));
+          PIZLob(Data)^.SetBytes(StrToBytes(Value));
       end;
     stBinaryStream: begin
         if (Data^ = nil) then
-          PIZLob(Data^)^ := TZAbstractBLob.Create;
-        PIZLob(Data^)^.SetBytes(StrToBytes(Value));
+          PIZLob(Data)^ := TZAbstractBLob.Create;
+        PIZLob(Data)^.SetBytes(StrToBytes(Value));
       end;
   end;
 end;
@@ -3808,7 +3808,7 @@ begin
     stUnicodeStream, stAsciiStream:
       if (Data^ = nil) then
         PIZLob(Data)^ := TZAbstractCLob.CreateWithData(Value, Len^, FClientCP, ConSettings)
-      else if PIZLob(Data^)^.IsClob then
+      else if PIZLob(Data)^.IsClob then
         PIZLob(Data)^.SetPAnsiChar(Value, FClientCP, Len^)
       else
         PIZLob(Data)^.SetBuffer(Value, Len^);
@@ -3880,7 +3880,7 @@ begin
     stAsciiStream, stUnicodeStream:
       if Data^ = nil then
         PIZLob(Data)^ := TZAbstractCLob.CreateWithData(Value, Len^, ConSettings)
-      else if PIZLob(Data^)^.IsClob then
+      else if PIZLob(Data)^.IsClob then
         PIZLob(Data)^.SetPWideChar(Value, Len^)
       else
         PIZLob(Data)^.SetBuffer(Value, Len^ shl 1);
@@ -4021,16 +4021,16 @@ begin
       Length(Value), ConSettings^.DisplayFormatSettings, Failed);
     stAsciiStream, stUnicodeStream:
       if Data^ = nil then
-        PIZLob(Data^)^ := TZAbstractCLob.CreateWithData(Pointer(Value), Length(Value), FClientCP, ConSettings)
+        PIZLob(Data)^ := TZAbstractCLob.CreateWithData(Pointer(Value), Length(Value), FClientCP, ConSettings)
       else if PIZLob(Data^)^.IsClob then
-        PIZLob(Data^)^.SetPAnsiChar(Pointer(Value), FClientCP, Length(Value))
+        PIZLob(Data)^.SetPAnsiChar(Pointer(Value), FClientCP, Length(Value))
       else
-        PIZLob(Data^)^.SetString(Value);
+        PIZLob(Data)^.SetString(Value);
     stBinaryStream:
       if Data^ = nil then
-        PIZLob(Data^)^ := TZAbstractBLob.CreateWithData(Pointer(Value), Length(Value))
+        PIZLob(Data)^ := TZAbstractBLob.CreateWithData(Pointer(Value), Length(Value))
       else
-        PIZLob(Data^)^.SetString(Value);
+        PIZLob(Data)^.SetString(Value);
   end;
 end;
 
@@ -4075,17 +4075,17 @@ begin
     stAsciiStream, stUnicodeStream:
       begin
         if Data ^ = nil then
-          PIZLob(Data^)^ := TZAbstractClob.CreateWithData(nil, 0, ConSettings);
-        if PIZLob(Data^)^.IsClob then
-          PIZLob(Data^)^.SetUnicodeString(Value)
+          PIZLob(Data)^ := TZAbstractClob.CreateWithData(nil, 0, ConSettings);
+        if PIZLob(Data)^.IsClob then
+          PIZLob(Data)^.SetUnicodeString(Value)
         else
-          PIZLob(Data^)^.SetString(RawByteString(Value));
+          PIZLob(Data)^.SetString(RawByteString(Value));
       end;
     stBinaryStream:
       begin
         if Data ^ = nil then
-          PIZLob(Data^)^ := TZAbstractBlob.CreateWithData(nil, 0);
-        PIZLob(Data^)^.SetString(RawByteString(Value));
+          PIZLob(Data)^ := TZAbstractBlob.CreateWithData(nil, 0);
+        PIZLob(Data)^.SetString(RawByteString(Value));
       end;
     stBytes:
       InternalSetBytes(Data, StrToBytes(Value));

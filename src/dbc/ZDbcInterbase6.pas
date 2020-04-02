@@ -190,7 +190,6 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
-    procedure CreateNewDatabase(const SQL: RawByteString);
     function GetActiveTransaction: IZIBTransaction;
     function GetPlainDriver: IZInterbasePlainDriver;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
@@ -697,6 +696,7 @@ begin
   Result := ConnectionString;
 end;
 
+const sCS_NONE = 'NONE';
 {**
   Opens a connection to database server with specified parameters.
 }
@@ -704,10 +704,13 @@ procedure TZInterbase6Connection.Open;
 var
   DPB: RawByteString;
   DBName: array[0..512] of AnsiChar;
-  NewDB: RawByteString;
-  ConnectionString, CSNoneCP, DBCP: String;
+  ConnectionString, CSNoneCP, DBCP, CreateDB: String;
   ti: IZIBTransaction;
   Statement: IZStatement;
+  I: Integer;
+  P, PEnd: PChar;
+  TrHandle: TISC_TR_HANDLE;
+  DBCreated: Boolean;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -744,30 +747,62 @@ begin
   ConnectionString := ConstructConnectionString;
   CSNoneCP := Info.Values['ResetCodePage'];
 
+  DBCreated := False;
   { Create new db if needed }
   if Info.Values['createNewDatabase'] <> '' then begin
     if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
       if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
         Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-      if Database = '' then begin
-        DataBase := Info.Values['createNewDatabase'];
-        ConnectionString := ConstructConnectionString;
-      end;
+      DBCP := Info.Values['isc_dpb_set_db_charset'];
       PrepareDPB;
       if GetPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(@DBName[0])),
           @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
         CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+          'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"');
     end else begin
-      NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['createNewDatabase'],
-        ConSettings^.CTRL_CP, zOSCodePage);
-      CreateNewDatabase(NewDB);
+      {$IFDEF UNICODE}
+      DPB := ZUnicodeToRaw(CreateDB, zOSCodePage);
+      {$ELSE}
+      DPB := CreateDB;
+      {$ENDIF}
+      CreateDB := UpperCase(CreateDB);
+      I := PosEx('CHARACTER', CreateDB);
+      if I > 0 then begin
+        I := PosEx('SET', CreateDB, I);
+        P := Pointer(CreateDB);
+        Inc(I, 3); Inc(P, I); Inc(I);
+        While P^ = ' ' do begin
+          Inc(I); Inc(P);
+        end;
+        PEnd := P;
+        While ((Ord(PEnd^) >= Ord('A')) and (Ord(PEnd^) <= Ord('Z'))) or
+              ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
+          Inc(PEnd);
+        DBCP :=  Copy(CreateDB, I, (PEnd-P));
+      end else DBCP := sCS_NONE;
+      if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
+          Length(DPB), Pointer(DPB), FDialect, nil) <> 0 then
+        CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcExecute, DPB);
       { Logging connection action }
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-        'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
-      Info.Values['createNewDatabase'] := '';
-      FHandle := 0;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+          DPB+' AS USER "'+ ConSettings^.User+'"');
+      //we did create the db and are connected now.
+      //we have no dpb so we connect with 'NONE' which is not a problem for the UTF8/NONE charsets
+      //because the metainformations are retrieved in UTF8 encoding
+      if (DBCP <> FClientCodePage) or ((DBCP = sCS_NONE) and (FClientCodePage <> '') and
+         ((FClientCodePage <> 'UTF8') and (FClientCodePage <> sCS_NONE))) then begin
+        //we need a reconnect with a valid dpb
+        if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
+          CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcExecute, DPB);
+        TrHandle := 0;
+        FHandle := 0;
+      end;
     end;
     Info.Values['createNewDatabase'] := '';
+    DBCreated := True;
   end;
 reconnect:
   if FHandle = 0 then begin
@@ -789,7 +824,7 @@ reconnect:
 
   FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
   { Start transaction }
-  if DBCP <> '' then
+  if (DBCP <> '') and not DBCreated then
     Exit;
   inherited Open;
 
@@ -803,22 +838,23 @@ reconnect:
   {Check for ClientCodePage: if empty switch to database-defaults
     and/or check for charset 'NONE' which has a different byte-width
     and no convertions where done except the collumns using collations}
-  Statement := CreateRegularStatement(nil);
-  try
-    with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME '+
-      'FROM RDB$DATABASE') do begin
-      if Next then DBCP := GetString(FirstDbcIndex);
-      Close;
+  if not DBCreated then begin
+    Statement := CreateStatementWithParams(nil);
+    try
+      with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME FROM RDB$DATABASE') do begin
+        if Next then DBCP := GetString(FirstDbcIndex);
+        Close;
+      end;
+    finally
+      Statement := nil;
     end;
-  finally
-    Statement := nil;
-  end;
-  ti := GetActiveTransaction;
-  try
-    ti.CloseTransaction;
-    FTransactionManager.RemoveTransactionFromList(TI);
-  finally
-    ti := nil;
+    ti := GetActiveTransaction;
+    try
+      ti.CloseTransaction;
+      FTransactionManager.RemoveTransactionFromList(TI);
+    finally
+      ti := nil;
+    end;
   end;
   if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
     EH: the server makes !NO! charset conversion if CS_NONE.
@@ -855,11 +891,6 @@ reconnect:
       InternalClose;
       goto reconnect; //build new TDB and reopen in SC_NONE mode
     end;
-{        'Deprecated database characterset "NONE" found!'+Lineending+
-        'Either dump your database and recreate it with a "stable" characterset.(recommented)'+LineEnding+
-        'Or set a codepage which represents the encoding of CS_NONE.'+LineEnding+
-        'To avoid reconnect with CS_NONE attachment characterset for the subtypes'+LineEnding+
-        'use parameter: '''+DSProps_ResetCodePage+''' in your Connection.Properties'); }
   end else if FClientCodePage = '' then
     CheckCharEncoding(DBCP);
 end;
@@ -1016,25 +1047,6 @@ begin
   if I = -1
   then Result := AddToCache(ProcName)
   else Result := FProcedureTypesCache.Objects[I] <> nil;
-end;
-
-{**
-  Creates new database
-  @param SQL a sql strinf for creation database
-}
-procedure TZInterbase6Connection.CreateNewDatabase(const SQL: RawByteString);
-var
-  TrHandle: TISC_TR_HANDLE;
-begin
-  TrHandle := 0;
-  if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
-      Length(SQL), Pointer(sql), FDialect, nil) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, ConsEttings, lcExecute, SQL);
-  //disconnect from the newly created database because the connection character set is NONE,
-  //which usually nobody wants
-  if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
-  TrHandle := 0;
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
