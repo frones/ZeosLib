@@ -93,9 +93,13 @@ type
     FConnIntf: IZDbcProxy;
     FDbInfo: ZWideString;
 
-    //shadow properties - the just mirror the values that are set on the server
+    //shadow properties - they just mirror the values that are set on the server
     FCatalog: String;
     FServerProvider: TZServerProvider;
+
+    {$IFDEF ZEOS73UP}
+    FStartTransactionUsed: Boolean;
+    {$ENDIF}
   protected
     procedure InternalCreate; override;
     procedure transferProperties(PropName, PropValue: String);
@@ -108,6 +112,9 @@ type
 
     procedure Commit; override;
     procedure Rollback; override;
+    {$IFDEF ZEOS73UP}
+    function StartTransaction: Integer;
+    {$ENDIF}
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -341,6 +348,10 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Commit;
+      if FStartTransactionUsed then begin
+        SetAutoCommit(True);
+        FStartTransactionUsed := false;
+      end;
     end else
       raise Exception.Create(SInvalidOpInAutoCommit);
 end;
@@ -357,9 +368,26 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Rollback;
+      if FStartTransactionUsed then begin
+        SetAutoCommit(True);
+        FStartTransactionUsed := false;
+      end;
     end else
       raise Exception.Create(SInvalidOpInAutoCommit);
 end;
+
+{$IFDEF ZEOS73UP}
+// for now we don't support nested transactions.
+// Todo: Integrate changes for nested transactions support.
+function TZDbcProxyConnection.StartTransaction: Integer;
+begin
+  if FStartTransactionUsed then
+    raise EZSQLException.Create('The proxy driver does not support nested transactions.');
+  FStartTransactionUsed := True;
+  SetAutoCommit(False);
+  Result := 1;
+end;
+{$ENDIF}
 
 {**
   Releases a Connection's database and JDBC resources

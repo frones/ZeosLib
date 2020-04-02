@@ -528,9 +528,10 @@ begin
   if not LastWasNull then begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FWideBuffer := VarToStrDef(Val, '');
-  end;
-
-  if (FWideBuffer = '') or (LastWasNull) then begin
+    if Len = 0
+    then Result := PEmptyUnicodeString
+    else Result := Pointer(FWideBuffer);
+  end else begin
     Result := nil;
     Len := 0
   end else begin
