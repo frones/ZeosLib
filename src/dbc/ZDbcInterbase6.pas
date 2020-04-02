@@ -994,7 +994,7 @@ var I: Integer;
     DbInfo: IZInterbaseDatabaseInfo;
   begin
     Supports(GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
-
+    Result := False;
     if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 1005000) then begin
       Stmt := CreateRegularStatement(Info);
       RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
@@ -1003,7 +1003,7 @@ var I: Integer;
           Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
           FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
         end else
-          Raise EZUnsupportedException.Create(SUnsupportedOperation);
+          Raise EZSQLException.Create(SUnsupportedOperation);
       finally
         RS.Close;
         RS := nil;
