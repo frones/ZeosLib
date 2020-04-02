@@ -31,3 +31,4 @@ drop table domain_values;
 drop domain tinteger;
 drop domain tfloat;
 drop domain tstring;
+drop generator "GEN_ID";

@@ -283,7 +283,6 @@ constructor TZInterbase6PreparedStatement.Create(const Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-
   FIBConnection := Connection as IZInterbase6Connection;
   FCodePageArray := (FIBConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
@@ -341,7 +340,7 @@ var
   end;
 begin
   if (not Prepared) then begin
-    with Self.FIBConnection do begin
+    with FIBConnection do begin
       FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, FStmtHandle); //allocate handle if required or reuse it
       if FStatementType in [stSelect, stExecProc, stSelectForUpdate] then

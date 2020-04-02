@@ -75,14 +75,15 @@ type
     FXSQLDA: PXSQLDA;
     FIZSQLDA: IZSQLDA;
     FPISC_DB_HANDLE: PISC_DB_HANDLE;
-    FBlobTemp: IZBlob;
     FPlainDriver: IZInterbasePlainDriver;
     FDialect: Word;
     FStmtType: TZIbSqlStatementType;
     FIBConnection: IZInterbase6Connection;
     FIBTransaction: IZIBTransaction;
+    FIsMetadataResultSet: Boolean;
     FClientCP: Word;
     FCodePageArray: TWordDynArray;
+    FBlobTemp: IZBlob;
     function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function GetQuad(ColumnIndex: Integer): TISC_QUAD;
     procedure RegisterCursor;
@@ -259,6 +260,8 @@ begin
   FStmtHandleAddr := StatementHandleAddr;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
+  FIsMetadataResultSet := (ConSettings.ClientCodePage.ID = CS_NONE) and
+    (Statement.GetParameters.Values[DS_Props_IsMetadataResultSet] = 'True');
 
   FCodePageArray := FPlainDriver.GetCodePageArray;
   FClientCP := ConSettings^.ClientCodePage^.CP;
@@ -1652,7 +1655,6 @@ begin
       LastRowNo := RowNo;
       Result := True;
     end else if Status = 100  then begin
-
       {no error occoured -> notify IsAfterLast and close the recordset}
       RowNo := RowNo + 1;
       if FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
@@ -1716,7 +1718,8 @@ var
   FieldSqlType: TZSQLType;
   ColumnInfo: TZColumnInfo;
   ZCodePageInfo: PZCodePage;
-  CP: Word;
+  CPID: Word;
+label jmpLen;
 begin
   if FStmtHandle=0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -1737,35 +1740,47 @@ begin
         ColumnType := FieldSqlType;
 
         case FieldSqlType of
-          stString, stUnicodeString:
-            begin
+          stString, stUnicodeString: begin
               //see test Bug#886194, we retrieve 565 as CP... the modula get returns the FBID of CP
-              CP := FIZSQLDA.GetIbSqlSubType(I) and 255;
+              CPID := FIZSQLDA.GetIbSqlSubType(I) and 255;
                 //see: http://sourceforge.net/p/zeoslib/tickets/97/
-              ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
+              ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CPID); //get column CodePage info
               ColumnCodePage := ZCodePageInfo^.CP;
               if ConSettings^.ClientCodePage^.ID <> CS_NONE 
               then Precision := DataLen div ZCodePageInfo^.CharWidth
               else Precision := DataLen;
               if ColumnType = stString then begin
-                  CharOctedLength := DataLen;
+jmpLen:         CharOctedLength := DataLen;
                 ColumnDisplaySize := Precision;
               end else begin
                 CharOctedLength := Precision shl 1;
                 ColumnDisplaySize := Precision;
               end;
             end;
-          stAsciiStream, stUnicodeStream:
-            ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-          else
-            begin
-              ColumnCodePage := zCP_NONE;
-              case FieldSqlType of
-                stBytes:
-                  Precision := DataLen;
-                stShort, stSmall, stInteger, stLong:
-                  Signed := True;
-                stCurrency, stBigDecimal: begin
+          stAsciiStream, stUnicodeStream: if ConSettings^.ClientCodePage^.ID = CS_NONE
+            then if FIsMetadataResultSet
+              then ColumnCodePage := zCP_UTF8
+              else begin //connected with CS_NONE no transliterions are made by FB
+                CPID := FIBConnection.GetSubTypeTextCharSetID(TableName,ColumnName);
+                if CPID = CS_NONE
+                then ZCodePageInfo := ConSettings^.ClientCodePage
+                else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CPID);
+                ColumnCodePage := ZCodePageInfo.CP;
+              end else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+          stBytes: begin
+              ColumnCodePage := 0;
+              Precision := DataLen;
+              goto jmpLen;
+            end;
+          stBinaryStream: ;
+          else begin
+            ColumnCodePage := zCP_NONE;
+            case FieldSqlType of
+              stBytes:
+                Precision := DataLen;
+              stShort, stSmall, stInteger, stLong:
+                Signed := True;
+              stCurrency, stBigDecimal: begin
                   Signed  := True;
                   Scale   := -FIZSQLDA.GetFieldScale(I);
                   //first digit does not count because of overflow (FB does not allow this)
@@ -1775,12 +1790,13 @@ begin
                     SQL_INT64:  Precision := 18;
                   end;
                 end;
-              end;
+              stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of milli second fractions
             end;
+          end;
         end;
         ReadOnly := (TableName = '') or (ColumnName = '') or
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
-
+        Writable := not ReadOnly;
         Nullable := TZColumnNullableType(Ord(FIZSQLDA.IsNullable(I)));
         Scale := FIZSQLDA.GetFieldScale(I);
         CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
@@ -1801,7 +1817,6 @@ var
   StatusVector: TARRAY_ISC_STATUS;
 begin
   if not Closed then begin
-    FBlobTemp := nil; //flush possible uncached lob
     if (FStmtHandle <> 0) then begin
       if (FStmtType <> stExecProc) then begin
          if (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then

@@ -101,6 +101,7 @@ type
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
     function GetXSQLDAMaxSize: LongWord;
+    function GetSubTypeTextCharSetID(const TableName, ColumnName: String): Integer;
     function GetActiveTransaction: IZIBTransaction;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
   end;
@@ -170,7 +171,7 @@ type
     FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
     FXSQLDAMaxSize: LongWord;
     FPlainDriver: IZInterbasePlainDriver;
-    FProcedureTypesCache: TStrings;
+    FProcedureTypesCache, FSubTypeTestCharIDCache: TStrings;
     FTPBs: array[Boolean,Boolean,TZTransactIsolationLevel] of RawByteString;
     FTEBs: array[Boolean,Boolean,TZTransactIsolationLevel] of TISC_TEB;
     FTransactionManager: TZIBTransactionManager;
@@ -190,6 +191,7 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
+    function GetSubTypeTextCharSetID(const TableName, ColumnName: String): Integer;
     function GetActiveTransaction: IZIBTransaction;
     function GetPlainDriver: IZInterbasePlainDriver;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
@@ -237,6 +239,8 @@ type
   end;
 
 
+const
+  DS_Props_IsMetadataResultSet = 'IsMetadataResultSet';
 var
   {** The common driver manager object. }
   Interbase6Driver: IZDriver;
@@ -344,6 +348,7 @@ end;
 destructor TZInterbase6Connection.Destroy;
 begin
   FreeAndNil(FProcedureTypesCache);
+  FreeAndNil(FSubTypeTestCharIDCache);
   inherited Destroy;
   if FTransactionManager <> nil then begin //test_library would make mem-leaks
     FTransactionManager._Release;
@@ -454,6 +459,7 @@ begin
   FXSQLDAMaxSize := 64*1024; //64KB by default
   FHandle := 0;
   FProcedureTypesCache := TStringList.Create;
+  FSubTypeTestCharIDCache := TStringList.Create;
 end;
 
 procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
@@ -623,6 +629,36 @@ end;
 function TZInterbase6Connection.GetPlainDriver: IZInterbasePlainDriver;
 begin
   Result := FPlainDriver;
+end;
+
+function TZInterbase6Connection.GetSubTypeTextCharSetID(const TableName,
+  ColumnName: String): Integer;
+var S: String;
+  function GetFromMetaData: Integer;
+  var Stmt: IZStatement;
+    RS: IZResultSet;
+  begin
+    Stmt := CreateStatement;
+    RS := Stmt.ExecuteQuery('SELECT F.RDB$CHARACTER_SET_ID '+LineEnding+
+      'FROM RDB$RELATION_FIELDS R'+LineEnding+
+      'INNER JOIN RDB$FIELDS F on R.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME'+LineEnding+
+      'WHERE R.RDB$RELATION_NAME = '+QuotedStr(TableName)+' and R.RDB$FIELD_NAME = '+QuotedStr(ColumnName));
+    if RS.Next
+    then Result := RS.GetInt(FirstDbcIndex)
+    else Result := ConSettings.ClientCodePage.ID;
+    RS.Close;
+    RS := nil;
+    Stmt.Close;
+    Stmt := Nil;
+  end;
+begin
+  S := TableName+'/'+ColumnName;
+  Result := FSubTypeTestCharIDCache.IndexOf(S);
+  if Result < 0 then begin
+    Result := GetFromMetaData;
+    FSubTypeTestCharIDCache.AddObject(S, TObject(Result));
+  end else
+    Result := Integer(FSubTypeTestCharIDCache.Objects[Result]);
 end;
 
 {**

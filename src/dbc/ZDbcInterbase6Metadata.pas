@@ -234,7 +234,7 @@ type
 
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    FMetaConSettings: TZConSettings;
+    FInfo: TStrings;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
     function ConstructNameCondition(Pattern: string; Column: string): string; override;
@@ -278,7 +278,9 @@ type
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
+    function CreateStatement: IZStatement;
     procedure SetUTF8CodePageInfo;
+    procedure BeforeDestruction; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -1265,6 +1267,19 @@ begin
   Result := TZInterbase6DatabaseInfo.Create(Self);
 end;
 
+function TZInterbase6DatabaseMetadata.CreateStatement: IZStatement;
+var Connection: IZConnection;
+begin
+  Connection := GetConnection;
+  Result := Connection.CreateStatementWithParams(FInfo);
+end;
+
+procedure TZInterbase6DatabaseMetadata.BeforeDestruction;
+begin
+  inherited;
+  FreeAndNil(FInfo);
+end;
+
 function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
   Column: string): string;
 begin
@@ -1307,7 +1322,7 @@ begin
     + AppendCondition(LTriggerNamePattern) + AppendCondition(LTableNamePattern);
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(TriggersColumnsDynArray));
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -1365,7 +1380,7 @@ begin
     [Ord(prtNoResult), Ord(prtReturnsResult)]);
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(ProceduresColumnsDynArray));
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -1479,7 +1494,7 @@ begin
       + ' ORDER BY  P.RDB$PROCEDURE_NAME,'
       + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
 
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
     begin
@@ -1582,7 +1597,7 @@ begin
   SQL := SQL + 'ORDER BY RDB$RELATION_NAME';
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(TableColumnsDynArray));
 end;
 
@@ -1740,7 +1755,7 @@ begin
       + ' WHERE 1=1 ' +  AppendCondition(LTableNamePattern) + AppendCondition(LColumnNamePattern)
       + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$FIELD_POSITION';
 
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do begin
+  with CreateStatement.ExecuteQuery(SQL) do begin
     while Next do begin
       BLRSubType := GetInt(FIELD_TYPE_Index);
       // For text fields subtype = 0, we get codepage number instead
@@ -1912,7 +1927,7 @@ begin
     + ' ORDER BY a.RDB$FIELD_NAME, a.RDB$PRIVILEGE';
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
      ConstructVirtualResultSet(TableColPrivColumnsDynArray));
 end;
 
@@ -1968,7 +1983,7 @@ begin
     + ' ORDER BY a.RDB$RELATION_NAME, a.RDB$PRIVILEGE';
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
      ConstructVirtualResultSet(TablePrivColumnsDynArray));
 end;
 
@@ -2059,7 +2074,7 @@ begin
     + ' ORDER BY a.RDB$RELATION_NAME, b.RDB$FIELD_NAME';
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
 end;
 
@@ -2342,7 +2357,7 @@ begin
     AppendCondition(PKTable)+ AppendCondition(FKTable)+
     ' ORDER BY RELC_FK.RDB$RELATION_NAME, IS_FK.RDB$FIELD_POSITION';
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(CrossRefColumnsDynArray));
 end;
 
@@ -2403,7 +2418,7 @@ begin
 
   SQL := 'SELECT RDB$TYPE, RDB$TYPE_NAME FROM RDB$TYPES' +
     ' WHERE RDB$FIELD_NAME = ''RDB$FIELD_TYPE''';
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
     begin
@@ -2510,7 +2525,7 @@ begin
     + ' ISGMT.RDB$FIELD_POSITION, ISGMT.RDB$FIELD_NAME, I.RDB$INDEX_TYPE,'
     + ' I.RDB$SEGMENT_COUNT ORDER BY 1,2,3,4';
 
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
     begin
@@ -2551,22 +2566,16 @@ begin
     + AppendCondition(LSequenceNamePattern);
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(SequenceColumnsDynArray));
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZInterbase6DatabaseMetadata.SetUTF8CodePageInfo;
 begin
-  FMetaConSettings := FConSettings^;
-  FMetaConSettings.ClientCodePage := GetConnection.GetIZPlainDriver.ValidateCharEncoding('UTF8');
-  FMetaConSettings.AutoEncode := False; //Get/Set-String related
-  FConSettings := @FMetaConSettings;
-  {$IFDEF WITH_LCONVENCODING}
-  SetConvertFunctions(FConSettings^.CTRL_CP, FConSettings^.ClientCodePage.CP,
-    FConSettings^.PlainConvertFunc, FConSettings^.DbcConvertFunc);
-  {$ENDIF}
-  ZEncoding.SetConvertFunctions(FConSettings);
+  if FInfo = nil then
+    FInfo := TStringList.Create;
+  FInfo.Values[DS_Props_IsMetadataResultSet] := 'True';
 end;
 
 {**
@@ -2619,7 +2628,7 @@ begin
       + ' where C.RDB$CHARACTER_SET_NAME <> ''NONE'' AND T.RDB$FIELD_NAME=''RDB$FIELD_TYPE'''
       + AppendCondition(LColumnNamePattern)+AppendCondition(LTableNamePattern)
       + ' order by R.RDB$FIELD_POSITION';
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+    with CreateStatement.ExecuteQuery(SQL) do
     begin
       if Next then
       begin
@@ -2645,7 +2654,7 @@ begin
          'FROM RDB$DATABASE D '+
          'LEFT JOIN RDB$CHARACTER_SETS CS on '+
          'D.RDB$CHARACTER_SET_NAME = CS.RDB$CHARACTER_SET_NAME';
-  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with CreateStatement.ExecuteQuery(SQL) do
   begin
     if Next then
     begin
@@ -2675,7 +2684,7 @@ begin
   SQL := 'SELECT RDB$CHARACTER_SET_NAME, RDB$CHARACTER_SET_ID FROM RDB$CHARACTER_SETS';
 
   Result := CopyToVirtualResultSet(
-    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(CharacterSetsColumnsDynArray));
 end;
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
