@@ -440,15 +440,13 @@ begin
   { Sets a client codepage. }
   OCI_CLIENT_CHARSET_ID := ConSettings.ClientCodePage^.ID;
   { Connect to Oracle database. }
-  if ( FHandle = nil ) then
-    try
-      FErrorHandle := nil;
-      Status := FPlainDriver.OCIEnvNlsCreate(FHandle, OCI_OBJECT, nil, nil, nil, nil, 0, nil,
-        OCI_CLIENT_CHARSET_ID, OCI_UTF16ID);
+  if ( FHandle = nil ) then begin
+    FErrorHandle := nil;
+    Status := FPlainDriver.OCIEnvNlsCreate(FHandle, OCI_OBJECT, nil, nil, nil, nil, 0, nil,
+      OCI_CLIENT_CHARSET_ID, {$IF defined(FPC) or defined(UNICODE)}OCI_UTF16ID{$ELSE}OCI_CLIENT_CHARSET_ID{$IFEND});
+    if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', ConSettings);
-    except
-      raise;
-    end;
+  end;
   FErrorHandle := nil;
   FPlainDriver.OCIHandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
