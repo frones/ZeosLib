@@ -4948,7 +4948,7 @@ jmpNotNull: FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 
         if CP = zCP_UTF16 then begin
           P := Value.GetPWideChar(FUniTemp, L);
           if P = nil
-          then goto jmpE
+          then goto jmpNull
           else begin
             InternalSetPWideChar(DataAddr, P, L);
             goto jmpNotNull;

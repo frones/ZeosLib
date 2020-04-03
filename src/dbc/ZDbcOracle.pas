@@ -320,6 +320,7 @@ end;
   Constructs this object and assignes the main properties.
 }
 procedure TZOracleConnection.InternalCreate;
+var S: String;
 begin
   FPlainDriver := TZOraclePlainDriver(PlainDriver.GetInstance);
   FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
@@ -330,15 +331,12 @@ begin
   { Sets a default properties }
   if Self.Port = 0 then
       Self.Port := 1521;
-
-  if Info.Values[ConnProps_ServerCachedStmts] = '' then
-    FStmtMode := OCI_STMT_CACHE //use by default
-  else
-    if StrToBoolEx(Info.Values[ConnProps_ServerCachedStmts], False) then
-      FStmtMode := OCI_STMT_CACHE //use by default
-    else
-      FStmtMode := OCI_DEFAULT;
-  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_StatementCache], 30); //default = 20
+  S := Info.Values[ConnProps_ServerCachedStmts];
+  if (S = '') or StrToBoolEx(S, False)
+  then FStmtMode := OCI_STMT_CACHE //use by default
+  else FStmtMode := OCI_DEFAULT;
+  S := Info.Values[ConnProps_StatementCache];
+  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(S, 30); //default = 20
   FBlobPrefetchSize := FChunkSize;
 end;
 
@@ -446,7 +444,7 @@ begin
     try
       FErrorHandle := nil;
       Status := FPlainDriver.OCIEnvNlsCreate(FHandle, OCI_OBJECT, nil, nil, nil, nil, 0, nil,
-        OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
+        OCI_CLIENT_CHARSET_ID, OCI_UTF16ID);
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', ConSettings);
     except
       raise;
