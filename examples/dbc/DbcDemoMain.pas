@@ -53,7 +53,7 @@ var
 
 implementation
 
-uses ZClasses, ZDbcIntfs, ZCompatibility, 
+uses ZClasses, ZDbcIntfs, ZCompatibility, Types,
 //Only those drivers will be supported for which you load the proper unit, see below
 ZDbcMySql, ZDbcInterbase6, ZDbcPostgreSql, ZDbcDBLib;
 

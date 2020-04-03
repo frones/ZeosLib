@@ -170,10 +170,12 @@ begin
   UpdateSQL.ModifySQL.Add('UPDATE T1 SET ID=:ID, A=:A, B=:B WHERE id=:OLD_ID');
   UpdateSQL.InsertSQL.Add('INSERT INTO T1 (id,a,b) VALUES (:ID,55, 66)');
   UpdateSQL.RefreshSQL.Add('SELECT * FROM T1 WHERE ID=:OLD_ID');
-  UpdateSQL.Refresh_OLD_ID_SEQ:=true;
 
   Dataset.UpdateObject:=UpdateSQL;
 
+  // make sure, we only get supported protocols
+  cbxProtocol.Items.Clear;
+  Connection.GetProtocolNames(cbxProtocol.Items);
 
   PropertiesChange(Self);
 end;

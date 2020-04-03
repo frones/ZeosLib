@@ -151,6 +151,11 @@ begin
   Dataset.ReadOnly := False;
   // Dataset.CachedUpdates := True;
 
+  // make sure, we get the supported protocol names
+  cbxProtocol.Clear;
+  Connection.GetProtocolNames(cbxProtocol.Items);
+  cbxProtocol.Sorted := true;
+
   dsMain.Dataset := Dataset;
   PropertiesChange(Self);
 end;

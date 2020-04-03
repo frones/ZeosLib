@@ -30,7 +30,6 @@ object frmMain: TfrmMain
       Height = 8
       Cursor = crVSplit
       Align = alTop
-      ExplicitWidth = 528
     end
     object splLog: TSplitter
       Left = 0
@@ -39,8 +38,6 @@ object frmMain: TfrmMain
       Height = 8
       Cursor = crVSplit
       Align = alBottom
-      ExplicitTop = 446
-      ExplicitWidth = 528
     end
     object navMain: TDBNavigator
       Left = 0
@@ -94,8 +91,6 @@ object frmMain: TfrmMain
             'SELECT * FROM TSITE;')
           TabOrder = 0
           OnChange = PropertiesChange
-          ExplicitLeft = -2
-          ExplicitTop = -2
         end
       end
       object tshInsert: TTabSheet
