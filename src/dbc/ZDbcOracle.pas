@@ -106,7 +106,7 @@ type
   TZOracleConnection = class(TZAbstractDbcConnection, IZConnection, IZOracleConnection)
   private
     FCatalog: string;
-    FHandle: POCIEnv;
+    FOCIEnv: POCIEnv;
     FContextHandle: POCISvcCtx;
     FErrorHandle: POCIError;
     FServerHandle: POCIServer;
@@ -131,8 +131,6 @@ type
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Transaction: IZTransaction);
     procedure SetActiveTransaction(const Value: IZTransaction);
-  public
-    destructor Destroy; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -345,23 +343,6 @@ begin
   ExecuteImmediat('ALTER SESSION SET CURRENT_SCHEMA = '+Catalog, lcOther);
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZOracleConnection.Destroy;
-begin
-  if not IsClosed then
-     Close;
-
-  if FHandle <> nil then
-  begin
-    FPlainDriver.OCIHandleFree(FHandle, OCI_HTYPE_ENV);
-    FHandle := nil;
-  end;
-
-  inherited Destroy;
-end;
-
 procedure TZOracleConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var Stmt: POCIStmt;
@@ -414,7 +395,8 @@ procedure TZOracleConnection.Open;
 var
   Status: Integer;
   LogMessage: RawByteString;
-  OCI_CLIENT_CHARSET_ID,  OCI_CLIENT_NCHARSET_ID: ub2;
+  charset, ncharset: ub2;
+  Succeeded: Boolean;
   procedure CleanupOnFail;
   begin
     FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
@@ -425,6 +407,8 @@ var
     FErrorHandle := nil;
     FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
     FServerHandle := nil;
+    FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV);
+    FOCIEnv := nil;
   end;
 
 begin
@@ -438,54 +422,57 @@ begin
      Port := 1521;
 
   { Sets a client codepage. }
-  OCI_CLIENT_CHARSET_ID := ConSettings.ClientCodePage^.ID;
-  { Connect to Oracle database. }
-  if ( FHandle = nil ) then begin
-    FErrorHandle := nil;
-    Status := FPlainDriver.OCIEnvNlsCreate(FHandle, OCI_OBJECT, nil, nil, nil, nil, 0, nil,
-      OCI_CLIENT_CHARSET_ID, {$IF defined(FPC) or defined(UNICODE)}OCI_UTF16ID{$ELSE}OCI_CLIENT_CHARSET_ID{$IFEND});
-    if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', ConSettings);
-  end;
-  FErrorHandle := nil;
-  FPlainDriver.OCIHandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
-  FServerHandle := nil;
-  FPlainDriver.OCIHandleAlloc(FHandle, FServerHandle, OCI_HTYPE_SERVER, 0, nil);
-  FContextHandle := nil;
-  FPlainDriver.OCIHandleAlloc(FHandle, FContextHandle, OCI_HTYPE_SVCCTX, 0, nil);
-  FDescibeHandle := nil;
-  FPlainDriver.OCIHandleAlloc(FHandle, FDescibeHandle, OCI_HTYPE_DESCRIBE, 0, nil);
+  charset := ConSettings.ClientCodePage^.ID;
+  //EH: do NOT use OCI_CLIENT_NCHARSET_ID if OCI_CLIENT_CHARSET_ID is zero!!
+  if charset = 0
+  then ncharset := 0
+  else ncharset := OCI_UTF16ID;
 
+  { Connect to Oracle database. }
+  FErrorHandle := nil;
+  Status := FPlainDriver.OCIEnvNlsCreate(FOCIEnv, OCI_OBJECT, nil, nil, nil,
+    nil, 0, nil, charset, ncharset);
+  if Status <> OCI_SUCCESS then
+    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', ConSettings);
+  FErrorHandle := nil;
+  FPlainDriver.OCIHandleAlloc(FOCIEnv, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
+  FServerHandle := nil;
+  FPlainDriver.OCIHandleAlloc(FOCIEnv, FServerHandle, OCI_HTYPE_SERVER, 0, nil);
+  FContextHandle := nil;
+  FPlainDriver.OCIHandleAlloc(FOCIEnv, FContextHandle, OCI_HTYPE_SVCCTX, 0, nil);
+  FDescibeHandle := nil;
+  FPlainDriver.OCIHandleAlloc(FOCIEnv, FDescibeHandle, OCI_HTYPE_DESCRIBE, 0, nil);
+  Succeeded := False;
   Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
       PAnsiChar(ConSettings^.Database), Length(ConSettings^.Database), 0);
-  try
+  if Status <> OCI_SUCCESS then try
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcConnect, LogMessage, ConSettings);
-  except
-    CleanupOnFail;
-    raise;
+    Succeeded := True;
+  finally
+    if not Succeeded then
+      CleanupOnFail;
   end;
 
-  if OCI_CLIENT_CHARSET_ID = 0 then
-  begin
-    OCI_CLIENT_NCHARSET_ID := High(ub2);
-    FPlainDriver.OCIAttrGet(FHandle, OCI_HTYPE_ENV, @OCI_CLIENT_CHARSET_ID,
-      nil, OCI_ATTR_ENV_CHARSET_ID, FErrorHandle); //Get Server default CodePage
-    CheckCharEncoding(PlainDriver.ValidateCharEncoding(OCI_CLIENT_CHARSET_ID)^.Name);
-    if OCI_CLIENT_CHARSET_ID <> OCI_CLIENT_NCHARSET_ID then
-    begin
+  if charset = 0 then begin
+    FPlainDriver.OCIAttrGet(FOCIEnv, OCI_HTYPE_ENV, @charset,
+      nil, OCI_NLS_CHARSET_ID, FErrorHandle); //Get Server default CodePage
+    CheckCharEncoding(PlainDriver.ValidateCharEncoding(charset)^.Name);
+    FPlainDriver.OCIAttrGet(FOCIEnv, OCI_HTYPE_ENV, @ncharset,
+      nil, OCI_NLS_NCHARSET_ID, FErrorHandle);
+    if ncharset <> OCI_UTF16ID then begin
       CleanupOnFail;
-      Open;
+      Open;//recursive call
       Exit;
     end;
   end;
   CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCINlsNumericInfoGet(FHandle, FErrorHandle,
+    FPlainDriver.OCINlsNumericInfoGet(FOCIEnv, FErrorHandle,
       @ConSettings^.ClientCodePage^.CharWidth, OCI_NLS_CHARSET_MAXBYTESZ),
     lcConnect, LogMessage, ConSettings);
 
   FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
     OCI_ATTR_SERVER, FErrorHandle);
-  FPlainDriver.OCIHandleAlloc(FHandle, FSessionHandle, OCI_HTYPE_SESSION, 0, nil);
+  FPlainDriver.OCIHandleAlloc(FOCIEnv, FSessionHandle, OCI_HTYPE_SESSION, 0, nil);
   FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(ConSettings^.User),
     Length(ConSettings^.User), OCI_ATTR_USERNAME, FErrorHandle);
   FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION,
@@ -493,13 +480,15 @@ begin
     Length(Password), OCI_ATTR_PASSWORD, FErrorHandle);
   FPlainDriver.OCIAttrSet(FSessionHandle,OCI_HTYPE_SESSION,@fBlobPrefetchSize,0,
     OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE,FErrorHandle);
+  Succeeded := False;
   Status := FPlainDriver.OCISessionBegin(FContextHandle, FErrorHandle,
     FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
-  try
+  if Status <> OCI_SUCCESS then try
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcConnect, LogMessage, ConSettings);
-  except
-    CleanupOnFail;
-    raise;
+    Succeeded := True;
+  finally
+    if not Succeeded then
+      CleanupOnFail;
   end;
   FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
@@ -714,7 +703,7 @@ begin
           FPlainDriver.OCIServerDetach(FServerHandle, FErrorHandle, OCI_DEFAULT),
           lcDisconnect, LogMessage, ConSettings);
     finally
-      { Frees all handlers }
+      { Frees all handles }
       if FDescibeHandle <> nil then begin
         FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
         FDescibeHandle := nil;
@@ -735,7 +724,11 @@ begin
         FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
         FErrorHandle := nil;
       end;
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+      if FOCIEnv <> nil then
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV),
+           lcDisconnect, LogMessage, ConSettings);
+       DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
     end;
   end;
 end;
@@ -915,7 +908,7 @@ end;
 }
 function TZOracleConnection.GetConnectionHandle: POCIEnv;
 begin
-  Result := FHandle;
+  Result := FOCIEnv;
 end;
 
 {**
@@ -1121,7 +1114,7 @@ begin
   FCoupleMode := CoupleMode;
   fDoLog := True;
   fBranches := TZCollection.Create;
-  FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FHandle, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
+  FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FOCIEnv, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
 end;
 
 constructor TZOracleTransaction.CreateLocal(const Owner: TZOracleConnection);
@@ -1129,7 +1122,7 @@ begin
   inherited Create;
   { alloc transaction handle }
   FOwner := Owner;
-  FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FHandle, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
+  FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FOCIEnv, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
   fSavepoints := TStringList.Create;
   ConSettings := Owner.ConSettings;
   fLocal := True;

@@ -2194,7 +2194,6 @@ var
   RowSize: Integer;
   defn_or_bindpp: POCIHandle;
   acsid: ub2;
-  acsform: ub1 absolute acsid;
   function AttributeToString(var P: PAnsiChar; Len: Integer):
     {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
   begin
@@ -2427,11 +2426,6 @@ begin
            0, OCI_ATTR_CHARSET_ID, FErrorHandle);
       if FStatus <> OCI_SUCCESS then
         CheckOracleError(FPlainDriver, FErrorHandle, FStatus, lcExecute, 'OCIAttrSet(OCI_ATTR_CHARSET_ID)', ConSettings);
-      acsform := SQLCS_NCHAR;
-      FStatus := FplainDriver.OCIAttrSet(defn_or_bindpp, OCI_HTYPE_DEFINE, @acsform,
-           0, OCI_ATTR_CHARSET_FORM, FErrorHandle);
-      if FStatus <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FErrorHandle, FStatus, lcExecute, 'OCIAttrSet(OCI_ATTR_CHARSET_FORM)', ConSettings);
     end else if CurrentVar^.dty=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
