@@ -278,6 +278,7 @@ type
     procedure AddText(const Value: RawByteString; var Result: RawByteString); overload;
     procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: RawByteString); overload;
     procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: RawByteString); overload;
+    procedure AddAscii7UTF16Text(const AsciiValue: UnicodeString; var Result: RawByteString);
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     procedure AddText(const AsciiValue: UnicodeString; var Result: RawByteString); overload;
     {$ENDIF}
@@ -679,6 +680,28 @@ procedure TZRawSQLStringWriter.AddLineFeedIfNotEmpty(var Result: RawByteString);
 begin
   if (Pointer(Result) <> nil) or (FPos > FBuf) then
     AddText(LineEnding, Result);
+end;
+
+procedure TZRawSQLStringWriter.AddAscii7UTF16Text(
+  const AsciiValue: UnicodeString; var Result: RawByteString);
+var PW: PWidechar;
+  PA: PAnsiChar;
+  L: LengthInt;
+begin
+  PW := Pointer(AsciiValue);
+  if PW = nil then Exit;
+  L := Length(AsciiValue);
+  if L < (FEnd-FPos) then begin
+    PA := FPos;
+    Inc(FPos, L);
+  end else
+    PA := FlushBuff(Result, L);
+  while L > 0 do begin
+    PByte(PA)^ := PWord(PW)^;
+    Inc(PA);
+    Inc(PW);
+    Dec(L);
+  end;
 end;
 
 procedure TZRawSQLStringWriter.AddChar(Value: AnsiChar; var Result: RawByteString);
@@ -1161,24 +1184,8 @@ end;
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
 procedure TZRawSQLStringWriter.AddText(const AsciiValue: UnicodeString;
   var Result: RawByteString);
-var PW: PWidechar;
-  PA: PAnsiChar;
-  L: LengthInt;
 begin
-  PW := Pointer(AsciiValue);
-  if PW = nil then Exit;
-  L := Length(AsciiValue);
-  if L < (FEnd-FPos) then begin
-    PA := FPos;
-    Inc(FPos, L);
-  end else
-    PA := FlushBuff(Result, L);
-  while L > 0 do begin
-    PByte(PA)^ := PWord(PW)^;
-    Inc(PA);
-    Inc(PW);
-    Dec(L);
-  end;
+  AddAscii7UTF16Text(AsciiValue, Result);
 end;
 {$ENDIF}
 
