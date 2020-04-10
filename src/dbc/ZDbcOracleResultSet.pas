@@ -217,7 +217,7 @@ type
     FOwnerLob: TZAbstractOracleBlob;
     FPosition: Int64;
     FOpenLobStreams: TZSortedList;
-    procedure CheckError(Status: sword; const Msg: RawByteString);
+    FConSettings: PZConSettings;
     procedure AllocLobLocator;
     procedure BeforeWrite;
   public
@@ -2189,7 +2189,6 @@ var
   TempColumnNameLen: Integer;
   P: PAnsiChar;
   DescriptorColumnCount,SubObjectColumnCount: Integer;
-  //CanBindInt64: Boolean;
   paramdpp: Pointer;
   RowSize: Integer;
   defn_or_bindpp: POCIHandle;
@@ -2198,6 +2197,14 @@ var
     {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
   begin
     if P <> nil then
+      if FClientCP = zCP_UTF16 then begin
+        Len := Len shr 1;
+        {$IFDEF UNICODE}
+        System.SetString(Result, PWideChar(P), Len)
+        {$ELSE}
+        Result := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
+        {$ENDIF}
+      end else
       {$IFDEF UNICODE}
       Result := ZEncoding.PRawToUnicode(P, Len, FClientCP)
       {$ELSE}
@@ -2205,7 +2212,7 @@ var
         Result := BufferToStr(P, Len)
       else begin
         Result := '';
-        PRawToRawConvert(P, Len, FclientCP, ConSettings^.CTRL_CP, Result);
+        PRawToRawConvert(P, Len, FClientCP, ConSettings^.CTRL_CP, Result);
       end
       {$ENDIF}
     else
@@ -2643,18 +2650,13 @@ begin
   FOwnerLob.FIsUpdated := True;
 end;
 
-procedure TZAbstracOracleLobStream.CheckError(Status: sword; const Msg: RawByteString);
-begin
-  CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, msg, GetConSettings);
-end;
-
 procedure TZAbstracOracleLobStream.Close;
 var Status: sword;
 begin
   if IsOpen then begin
     Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobClose');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobClose', FConSettings);
   end;
 end;
 
@@ -2671,16 +2673,18 @@ begin
         Status := FPlainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size8);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
         if Status <> OCI_SUCCESS then
-          CheckError(Status, 'OCILobGetLength2');
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
         Status := FPLainDriver.OCILobCopy2(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size8, 1, 1);
-          CheckError(Status, 'OCILobCopy2');
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCopy2', GetConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       end else begin
         Status := FPlainDriver.OCILobGetLength(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size4);
         if Status <> OCI_SUCCESS then
-          CheckError(Status, 'OCILobGetLength');
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength', FConSettings);
         Status := FPLainDriver.OCILobCopy(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size4, 1, 1);
-          CheckError(Status, 'OCILobCopy');
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCopy', GetConSettings);
       end;
     finally
       { notify the current locator does no longer point to copy of Parent locator }
@@ -2700,7 +2704,7 @@ begin
     { copy locator next fetch may fill the org locator with next lob infos }
     Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FOwnerLob.FParentLocator, @FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobLocatorAssign');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobLocatorAssign', FConSettings);
   end;
 end;
 
@@ -2715,6 +2719,7 @@ begin
   FOCIError := OwnerLob.FOCIError;
   FOwnerLob := OwnerLob;
   FOpenLobStreams := OpenLobStreams;
+  FConSettings := GetConSettings;
   if FOwnerLob.Fdty = SQLT_CLOB
   then {if (FOwnerLob.Fcsid >= OCI_UTF16ID) or (FOwnerlob.FCharsetForm = SQLCS_NCHAR)
     then flobType := OCI_TEMP_NCLOB
@@ -2729,7 +2734,7 @@ begin
   Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv,
     FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType, 0, nil);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCIDescriptorAlloc');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
   FOwnerLob.FLocatorAllocated := True;
 end;
 
@@ -2743,7 +2748,7 @@ begin
         FOwnerLob.FLobLocator, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm, Flobtype,
         False, OCI_DURATION_DEFAULT);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobCreateTemporary');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCreateTemporary', FConSettings);
   end;
 end;
 
@@ -2761,7 +2766,7 @@ begin
   Status := FPlainDriver.OCIDescriptorFree(FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType);
   FOwnerLob.FLobLocator := nil;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCIDescriptorFree');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorFree', FConSettings);
 end;
 
 procedure TZAbstracOracleLobStream.FreeTemporary;
@@ -2770,7 +2775,7 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobFreeTemporary');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobFreeTemporary', FConSettings);
   end;
 end;
 
@@ -2781,7 +2786,7 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, Result);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobIsOpen');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsOpen', FConSettings);
   end else Result := False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -2793,7 +2798,7 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobIsTemporary(FOCIEnv, FOCIError, FOwnerLob.FLobLocator, Result);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobIsTemporary');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsTemporary', FConSettings);
   end else Result := False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -2807,20 +2812,20 @@ begin
     mode := OCIOpenModes[fOwnerLob.FLobStreamMode];
     Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, mode);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobOpen');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobOpen', FConSettings);
     Status := FplainDriver.OCILobCharSetId(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @Fcsid);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobCharSetId');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCharSetId', FConSettings);
     Status := FplainDriver.OCILobCharSetForm(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @FOwnerLob.FCharsetForm);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobCharSetForm');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCharSetForm', FConSettings);
     if FOwnerLob.FDescriptorType <> OCI_DTYPE_FILE then begin
       Status := FplainDriver.OCILobGetChunkSize(FOCISvcCtx, FOCIError,
         FOwnerLob.FLobLocator, FChunk_Size);
       if Status <> OCI_SUCCESS then
-        CheckError(Status, 'OCILobGetChunkSize');
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetChunkSize', FConSettings);
     end;
   end;
 end;
@@ -2841,7 +2846,7 @@ begin
     if (Flobtype = OCI_TEMP_CLOB) and (FOwnerLob.Fcsid = OCI_UTF16ID) then
       Result := Result shl 1;
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobGetLength');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength', FConSettings);
   end;
 end;
 
@@ -2885,7 +2890,7 @@ begin
     Inc(Result, Longint(amtpBytes));
   end;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobRead');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead', FConSettings);
   FPosition := FPosition + Result;
 end;
 
@@ -2909,7 +2914,7 @@ begin
     Inc(pBuff, amtp);
   end;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobRead');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead', FConSettings);
   Result := pBuff - pStart;
   FPosition := Result;
   Close;
@@ -2943,7 +2948,7 @@ begin
         newlen := newlen shr 1;
       Status := FPlainDriver.OCILobTrim(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
       if Status <> OCI_SUCCESS then
-        CheckError(Status, 'OCILobTrim');
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobTrim', FConSettings);
       if FPosition > NewSize then
         FPosition := NewSize;
     end else if NewSize > ASize then
@@ -2980,7 +2985,7 @@ begin
   Status := FPLainDriver.OCILobWrite(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
     amtp, offset, pBuff, amtpBytes, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
   Result := amtpBytes;
   FPosition := FPosition + Result;
 end;
@@ -3016,7 +3021,7 @@ begin
     else piece := OCI_LAST_PIECE
  end;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
 end;
 
 { TZAbstractOracleBlob }
@@ -3068,7 +3073,7 @@ begin
   FLobLocator := nil;
   Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv, FLobLocator, FDescriptorType, 0, nil);
   if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
   FLocatorAllocated := True;
   { copy locator next fetch may fill the org locator with next lob infos }
   Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FParentLocator, @FLobLocator);
@@ -3345,7 +3350,7 @@ begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     Result := lenp;
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobGetLength2');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
     if (FOwnerLob.Fcsid = OCI_UTF16ID) then
       Result := Result shl 1;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3368,7 +3373,7 @@ begin
   { get bytes/(single-byte)character count of lob }
   Status := FplainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, asize);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobGetLength2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   if FOwnerLob.Fcsid = OCI_UTF16ID then begin
     Offset := (FPosition shr 1) +1; //align to char position
@@ -3386,7 +3391,7 @@ begin
     @byte_amtp, @char_amtp, Offset, pBuff, bufl, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   Result := byte_amtp;
   if (Status <> OCI_SUCCESS) then
-    CheckError(Status, 'OCILobRead2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead2', FConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   FPosition := FPosition + Result;
 end;
@@ -3421,7 +3426,7 @@ begin
     piece := OCI_NEXT_PIECE;
   end;
   if (Status <> OCI_SUCCESS) then
-    CheckError(Status, 'OCILobRead2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead2', FConSettings);
   Result := pBuff - pStart;
   FPosition := Result;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3459,7 +3464,7 @@ begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       Status := FPlainDriver.OCILobTrim2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
       if Status <> OCI_SUCCESS then
-        CheckError(Status, 'OCILobTrim2');
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobTrim2', FConSettings);
       if FPosition > NewSize then
         FPosition := NewSize;
       {$IFDEF DEBUG}
@@ -3502,7 +3507,7 @@ begin
   Status := FPLainDriver.OCILobWrite2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
     byte_amtp, char_amtp, offset, pBuff, byte_amtp, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite2', FConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   Result := byte_amtp;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3565,7 +3570,7 @@ begin
  end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
 end;
 
 { TZOracleCachedResultSet }

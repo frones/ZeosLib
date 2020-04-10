@@ -4366,10 +4366,9 @@ end;
 function TZImmediatelyReleasableLobStream.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID;
   out Obj): HResult;
 begin
-  if GetInterface(IID, Obj) then
-    Result := 0
-  else
-    Result := E_NOINTERFACE;
+  if GetInterface(IID, Obj)
+  then Result := S_OK
+  else Result := E_NOINTERFACE;
 end;
 
 procedure TZImmediatelyReleasableLobStream.ReleaseImmediat(
