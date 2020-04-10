@@ -526,7 +526,7 @@ begin
   VariantManager.Assign(Value1, Result);
   if IsUnicodeVar(Value1, VariantManager)
   then Result.VUnicodeString := {$IFDEF UNICODE}AnsiLowerCase{$ELSE}WideLowerCase{$ENDIF}(Result.VUnicodeString)
-  {$IF not defined(WITH_TBYTES_AS_RAWBYTESTRING) or not defined(UNICODE) or defined(WITH_UNITANSISTRINGS)}
+  {$IF not defined(WITH_TBYTES_AS_RAWBYTESTRING) and (not defined(UNICODE) or defined(WITH_UNITANSISTRINGS))}
   else Result.VRawByteString := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowerCase(Result.VRawByteString);
   {$ELSE}
   else Result.VRawByteString := ZSysUtils.LowerCase(Result.VRawByteString);
@@ -551,7 +551,7 @@ begin
   VariantManager.Assign(Value1, Result);
   if IsUnicodeVar(Value1, VariantManager)
   then Result.VUnicodeString := {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(Result.VUnicodeString)
-  {$IF not defined(WITH_TBYTES_AS_RAWBYTESTRING) or not defined(UNICODE) or defined(WITH_UNITANSISTRINGS)}
+  {$IF not defined(WITH_TBYTES_AS_RAWBYTESTRING) and (not defined(UNICODE) or defined(WITH_UNITANSISTRINGS))}
   else Result.VRawByteString := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(Result.VRawByteString);
   {$ELSE}
   else Result.VRawByteString := ZSysUtils.UpperCase(Result.VRawByteString);
