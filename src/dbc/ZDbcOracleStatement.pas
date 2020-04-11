@@ -2774,10 +2774,10 @@ var
     SQLWriter.AddText(' := ', ProcSQL);
     Descriptor.ConcatParentName(True, SQLWriter, ProcSQL, IC);
     {$IFNDEF UNICODE}
-    S := ZUnicodeToRaw(Descriptor.AttributeName, ConSettings.CTRL_CP);
-    S := IC.Quote(S);
-    R := ZRawToUnicode(S, ConSettings.CTRL_CP);
-    SQLWriter.AddText(R, ProcSQL);
+    R := ZUnicodeToRaw(Descriptor.AttributeName, ConSettings.CTRL_CP);
+    R := IC.Quote(R);
+    S := ZRawToUnicode(R, ConSettings.CTRL_CP);
+    SQLWriter.AddText(S, ProcSQL);
     {$ELSE}
     SQLWriter.AddText(IC.Quote(Descriptor.AttributeName), ProcSQL);
     {$ENDIF}
@@ -2792,10 +2792,10 @@ var
   begin
     Descriptor.ConcatParentName(True, SQLWriter, ProcSQL, IC);
     {$IFNDEF UNICODE}
-    S := ZUnicodeToRaw(Descriptor.AttributeName, ConSettings.CTRL_CP);
-    S := IC.Quote(S);
-    R := ZRawToUnicode(S, ConSettings.CTRL_CP);
-    SQLWriter.AddText(R, ProcSQL);
+    R := ZUnicodeToRaw(Descriptor.AttributeName, ConSettings.CTRL_CP);
+    R := IC.Quote(R);
+    S := ZRawToUnicode(R, ConSettings.CTRL_CP);
+    SQLWriter.AddText(S, ProcSQL);
     {$ELSE}
     SQLWriter.AddText(Descriptor.AttributeName, ProcSQL);
     {$ENDIF}
@@ -2859,7 +2859,7 @@ end;
 procedure TZOracleCallableStatement_W.PrepareInParameters;
 var Idx: Integer;
   {$IFNDEF UNICODE}
-  R: RawByteString;
+  S: UnicodeString;
   {$ENDIF}
   procedure RegisterFromDescriptor(ParentDescriptor: TZOraProcDescriptor_W;
     var IDX: Integer);
@@ -2867,9 +2867,6 @@ var Idx: Integer;
     Descriptor: TZOraProcDescriptor_W;
     Tmp: UnicodeString;
     SQLWriter: TZUnicodeSQLStringWriter;
-    {$IFNDEF UNICODE}
-    S: RawByteString;
-    {$ENDIF}
   begin
     SQLWriter := TZUnicodeSQLStringWriter.Create(1024);
     try
@@ -2913,8 +2910,8 @@ begin
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       { describe the object: }
       {$IFNDEF UNICODE}
-      R := ZUnicodeToRaw(StoredProcName, ConSettings.CTRL_CP);
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, R);
+      S := ZRawToUnicode(StoredProcName, ConSettings.CTRL_CP);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, S);
       {$ELSE}
       FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
       {$ENDIF}
