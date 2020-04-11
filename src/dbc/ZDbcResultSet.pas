@@ -4204,6 +4204,7 @@ begin
     case ColumnType of
       stString,stAsciiStream: begin
 jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+          RBS := '';
           if (P <> nil) and (ColumnCodePage <> ZOSCodePage)
           then PRawToRawConvert(P, L, ColumnCodePage, ZOSCodePage, RBS)
           else goto jmpSet;
@@ -4242,6 +4243,7 @@ begin
     case ColumnType of
       stString,stAsciiStream: begin
 jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+          RBS := '';
           if (P <> nil) and (ColumnCodePage <> zCP_UTF8)
           then PRawToRawConvert(P, L, ColumnCodePage, zCP_UTF8, RBS)
           else goto jmpSet;

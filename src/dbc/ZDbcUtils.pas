@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 uses
+  {$IFDEF USE_SYNCOMMONS}SynCommons, {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} TypInfo, FmtBcd,
   ZCompatibility, ZDbcIntfs, ZClasses, ZTokenizer, ZVariant, ZSysUtils,
@@ -353,7 +354,6 @@ const
 implementation
 
 uses ZMessages, ZEncoding, ZFastCode, ZGenericSqlToken, Math;
-  //{$IFNDEF NO_UNIT_CONTNRS}, ZClasses{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -2208,6 +2208,7 @@ begin
     {$IFNDEF UNICODE}vtString,{$ENDIF}
     {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
     {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    {$IF declared(vtSynRawUTF8Array)}vtSynRawUTF8Array,{$IFEND}
     vtRawByteString:  Result := RawToInt64Def(TRawByteStringDynArray(ZArray.VArray)[Index], 0);
     {$IFDEF UNICODE}vtString,{$ENDIF}vtUnicodeString:  Result := UnicodeToInt64Def(TUnicodeStringDynArray(ZArray.VArray)[Index], 0);
     vtCharRec:
@@ -2281,6 +2282,7 @@ begin
     {$IFNDEF UNICODE}vtString,{$ENDIF}
     {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
     {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    {$IF declared(vtSynRawUTF8Array)}vtSynRawUTF8Array,{$IFEND}
     vtRawByteString: begin
         P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
         SQLStrToFloatDef(PAnsiChar(P), 0, Result, Length(TRawByteStringDynArray(ZArray.VArray)[Index]));
@@ -2326,6 +2328,7 @@ begin
     {$IFNDEF UNICODE}vtString,{$ENDIF}
     {$IFNDEF NO_ANSISTRING}vtAnsiString,{$ENDIF}
     {$IFNDEF NO_UTF8STRING}vtUTF8String,{$ENDIF}
+    {$IF declared(vtSynRawUTF8Array)}vtSynRawUTF8Array,{$IFEND}
     vtRawByteString: begin
         P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
         SQLStrToFloatDef(PAnsiChar(P), 0, Result, Length(TRawByteStringDynArray(ZArray.VArray)[Index]));
@@ -2510,6 +2513,16 @@ begin
         L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
         goto Str_Conv;
       end;
+    {$IF declared(vtSynRawUTF8Array)}vtSynRawUTF8Array: begin
+        P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
+        if (P <> nil) and (PByte(P)^ = Byte(#39)) then begin
+          Inc(PAnsiChar(P));
+          Dec(L, 2);
+        end;
+        SynCommons.Iso8601ToDateTimePUTF8CharVar(P, L, Result);
+      end;
+    {$IFEND}
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: begin
         B := True;
