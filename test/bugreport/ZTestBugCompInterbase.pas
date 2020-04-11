@@ -1253,10 +1253,12 @@ begin
     end;
   end;
 end;
-
+type
+  THackField = class(TField);
 procedure ZTestCompInterbaseBugReport.TestSF418;
 var
   Query: TZReadOnlyQuery;
+  Act: String;
 begin
   Query := TZReadOnlyQuery.Create(nil);
   try
@@ -1267,6 +1269,9 @@ begin
 
     Query.First;
     CheckEquals(21, Query.FieldByName('id').AsInteger);
+    Act := '';
+    THackField(Query.FieldByName('num')).GetText(Act, True);
+    CheckEquals('0', Act, 'Schould display a zero value');
     Query.Next;
     CheckEquals(25, Query.FieldByName('id').AsInteger);
     Query.Next;
@@ -1315,6 +1320,16 @@ begin
     CheckEquals(24, Query.FieldByName('id').AsInteger);
     Query.Next;
     CheckEquals(23, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(27, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(29, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(30, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(26, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(28, Query.FieldByName('id').AsInteger);
   finally
     FreeAndNil(Query);
   end;
