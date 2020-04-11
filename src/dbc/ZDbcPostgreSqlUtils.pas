@@ -962,7 +962,8 @@ begin
   TryEncodeDate(Year, Month, Day, date);
   dt2time(Value, Hour, Min, Sec, fsec);
   TryEncodeTime(Hour, Min, Sec, fsec, Result);
-  if date < 0 then
+  if date < 0
+  then Result := date - Result
   else Result := date + Result;
 end;
 
