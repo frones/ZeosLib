@@ -2209,7 +2209,7 @@ begin
       CheckEquals(3, Query.Params.Count, 'Param.Count');
       SL.Text := GetDBTestString(Str2, ConSettings);
       {$IFDEF UNICODE} //the unicode compiler are converting the streams into DefaultSystemCodePage
-      if not ConSettings.AutoEncode and (CP <> DefaultSystemCodePage) then begin
+      if not ConSettings.AutoEncode and (CP <> DefaultSystemCodePage) and (ConSettings.ClientCodePage.Encoding <> ceUTF16) then begin
         DSCCString := ZUnicodeToRaw(SL.Text, CP);
         StrStream1.Write(Pointer(DSCCString)^, Length(DSCCString));
         StrStream1.Position := 0;
