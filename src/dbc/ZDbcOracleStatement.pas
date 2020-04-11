@@ -741,15 +741,15 @@ var
   procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Params: TObjectList);
   var I: Integer;
   begin
-    SQLWriter.AddChar('(', ProcSQL);
+    SQLWriter.AddChar(AnsiChar('('), ProcSQL);
     for I := 0 to Params.Count-1 do
       if TZOraProcDescriptor_A(Params[i]).OrdPos > 0 then begin
-        SQLWriter.AddChar(':', ProcSQL);
+        SQLWriter.AddChar(AnsiChar(':'), ProcSQL);
         TZOraProcDescriptor_A(Params[i]).ConcatParentName(False, SQLWriter, ProcSQL, IC);
         SQLWriter.AddText(TZOraProcDescriptor_A(Params[i]).AttributeName, ProcSQL);
-        SQLWriter.AddChar(',', ProcSQL);
+        SQLWriter.AddChar(AnsiChar(','), ProcSQL);
       end;
-    SQLWriter.ReplaceOrAddLastChar(',',')',ProcSQL);
+    SQLWriter.ReplaceOrAddLastChar(AnsiChar(','),AnsiChar(')'),ProcSQL);
   end;
 
   procedure BuildFunction({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
@@ -758,7 +758,7 @@ var
       S: UnicodeString;
   {$ENDIF}
   begin
-    SQLWriter.AddChar(':', ProcSQL);
+    SQLWriter.AddChar(AnsiChar(':'), ProcSQL);
     TZOraProcDescriptor_A(Descriptor.Args[0]).ConcatParentName(False, SQLWriter, ProcSQL, IC);
     SQLWriter.AddText(TZOraProcDescriptor_A(Descriptor.Args[0]).AttributeName, ProcSQL);
     SQLWriter.AddText(' := ', ProcSQL);
@@ -772,7 +772,7 @@ var
     SQLWriter.AddText(IC.Quote(Descriptor.AttributeName), ProcSQL);
     {$ENDIF}
     AddArgs(Descriptor.Args);
-    SQLWriter.AddChar(';', ProcSQL);
+    SQLWriter.AddChar(AnsiChar(';'), ProcSQL);
   end;
   procedure BuildProcedure({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
   {$IFDEF UNICODE}
@@ -790,7 +790,7 @@ var
     SQLWriter.AddText(IC.Quote(Descriptor.AttributeName), ProcSQL);
     {$ENDIF}
     AddArgs(Descriptor.Args);
-    SQLWriter.AddChar(';', ProcSQL);
+    SQLWriter.AddChar(AnsiChar(';'), ProcSQL);
   end;
   procedure BuildPackage({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
   var I: Integer;
@@ -2638,7 +2638,7 @@ begin
             if (FParamNames <> nil) and (Cardinal(Length(FParamNames)) >= ParamsCnt) and (FParamNames[ParamsCnt-1] <> '')
             then ParamWriter.AddText(FParamNames[ParamsCnt-1], Tmp)
             else begin
-              ParamWriter.AddChar(AnsiChar('P'), Tmp);
+              ParamWriter.AddChar('P', Tmp);
               ParamWriter.AddOrd(ParamsCnt, Tmp);
             end;
             ParamWriter.Finalize(Tmp);

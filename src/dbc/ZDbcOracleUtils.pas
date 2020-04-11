@@ -559,6 +559,7 @@ use the VARNUM external datatype instead of NUMBER
   @return a converted value
 }
 {$R-} {$Q-}
+{$IFDEF FPC} {$PUSH} {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors} {$ENDIF}
 function PosNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): UInt64;
 var i: Byte;
 begin
@@ -573,6 +574,7 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {** EH:
   convert a negative oracle oci number into a signed longlong
@@ -582,6 +584,10 @@ end;
   @return a converted value
 }
 {$R-} {$Q-}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4080 off : Converting the operands to "Int64" before doing the substract could prevent overflow errors}
+  {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors}
+{$ENDIF}
 function NegNvu2Int(num: POCINumber; const vnuInfo: TZvnuInfo): Int64;
 var i: Byte;
 begin
@@ -596,6 +602,7 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {** EH:
   convert a positive oracle oci number into currency value
@@ -625,6 +632,7 @@ end;
   @return a converted value
 }
 {$R-} {$Q-}
+{$IFDEF FPC} {$PUSH} {$WARN 4080 off : Converting the operands to "Int64" before doing the substract could prevent overflow errors} {$ENDIF}
 function NegNvu2Curr(num: POCINumber; const vnuInfo: TZvnuInfo): Currency;
 var I64: Int64 absolute Result;
   i: ShortInt;
@@ -637,6 +645,7 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {** EH:
   converts a currency value to a oracle oci number
@@ -710,6 +719,7 @@ end;
   @return length in bytes
 }
 {$R-} {$Q-}
+{$IFDEF FPC} {$PUSH} {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors} {$ENDIF}
 function PosOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
 var i: Byte;
   PStart: PAnsiChar;
@@ -741,6 +751,7 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {** EH:
   writes a positive unscaled oracle oci number into a buffer
@@ -750,6 +761,7 @@ end;
   @return length in bytes
 }
 {$R-} {$Q-}
+{$IFDEF FPC} {$PUSH} {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors} {$ENDIF}
 function NegOrdNVU2Raw(num: POCINumber; const vnuInfo: TZvnuInfo; Buf: PAnsiChar): Cardinal;
 var i: Byte;
   PStart: PAnsiChar;
@@ -782,6 +794,7 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function nvuKind(num: POCINumber; var vnuInfo: TZvnuInfo): TnvuKind;
 var
@@ -852,8 +865,8 @@ end;
   I would vote for strict left padding like all database are doing that! That
   would push the performance and working with the bcd's would be much easier.
 
-  converts a <code>java.math.BigDecimal</code> value into oracle number format;
-  @param bcd the <code>java.math.BigDecimal</code> value which to be converted
+  converts a <code>BigDecimal</code> value into oracle number format;
+  @param bcd the <code>BigDecimal</code> value which to be converted
   @param num the pointer to a valid oracle number value
   @return the length of used bytes
 }
@@ -1999,11 +2012,11 @@ begin
       {$ELSE}
       SQLWriter.AddText(IC.Quote(FParent.AttributeName), Result);
       {$ENDIF}
-      SQLWriter.AddChar('.', Result);
+      SQLWriter.AddChar(AnsiChar('.'), Result);
     end else if ((ObjType = OCI_PTYPE_ARG) and (FParent.Parent <> nil) and (FParent.Parent.ObjType = OCI_PTYPE_PKG) and (FParent.Parent.Args.Count > 1)) {or
        ((FParent.ObjType = OCI_PTYPE_PKG) and (FParent.Args.Count > 1)) }then begin
       SQLWriter.AddText(FParent.AttributeName, Result);
-      SQLWriter.AddChar('_', Result);
+      SQLWriter.AddChar(AnsiChar('_'), Result);
     end;
   end;
 end;
@@ -2075,6 +2088,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "arg" does not seem to be initialized} {$ENDIF}
 procedure TZOraProcDescriptor_A.InternalDescribeObject(Obj: POCIHandle;
   {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
   ErrorHandle: POCIError; ConSettings: PZConSettings);
@@ -2205,6 +2219,7 @@ begin
       Param.InternalDescribeObject(arg, PLainDriver, ErrorHandle, ConSettings);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOraProcDescriptor_A.Describe(_Type: UB4; const Connection: IZConnection;
   const Name: RawByteString);
@@ -2286,7 +2301,6 @@ begin
     FreeAndNil(Args);
 end;
 
-{$ENDIF ZEOS_DISABLE_ORACLE}
 { TZOraProcDescriptor_W }
 
 procedure TZOraProcDescriptor_W.ConcatParentName(NotArgName: Boolean;
@@ -2333,13 +2347,13 @@ var
   Status, ps, ps2: sword;
   IC: IZIdentifierConvertor;
   ConSettings: PZConSettings;
+  {$IFNDEF UNICODE}
+  S: String;
+  {$ENDIF}
 begin
   OracleConnection := Connection as IZOracleConnection;
   ConSettings := Connection.GetConSettings;
-  {$IFNDEF UNICODE}
-  if ConSettings^.AutoEncode
-  then ProcSQL := ConSettings^.ConvFuncs.ZStringToRaw(Name, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP)
-  else {$ENDIF}ProcSQL := Name;
+  ProcSQL := Name;
 
   IC := Connection.GetMetadata.GetIdentifierConvertor;
   Plain := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
@@ -2347,13 +2361,13 @@ begin
   Status := InternalDescribe(ProcSQL, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
     OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
   if (Status <> OCI_SUCCESS) then begin
-    ps := ZFastCode.Pos('.', ProcSQL);
+    ps := ZFastCode.Pos(UnicodeString('.'), ProcSQL);
     if ps <> 0 then begin //check wether Package or Schema!
       tmp := Copy(ProcSQL, 1, ps-1);
       Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
         OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
       if Status <> OCI_SUCCESS then begin
-        ps2 := ZFastCode.PosEx('.', ProcSQL, ps+1);
+        ps2 := ZFastCode.PosEx(UnicodeString('.'), ProcSQL, ps+1);
         if ps2 <> 0 then //check wether Package or Schema!
           tmp := Copy(ProcSQL, ps+1, ps2-ps-1)
         else begin
@@ -2371,7 +2385,7 @@ begin
           CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
         end;
       end else begin
-        ps2 := ZFastCode.PosEx('.', ProcSQL, ps+1);
+        ps2 := ZFastCode.PosEx(UnicodeString('.'), ProcSQL, ps+1);
         if ps2 <> 0 //check wether Package or Schema!
         then tmp := copy(ProcSQL, Ps2+1, MaxInt)
         else tmp := copy(ProcSQL, Ps+1, MaxInt)
@@ -2379,8 +2393,13 @@ begin
       if (ObjType = OCI_PTYPE_PKG) then begin
         //next stage obj. needs to be compared to package procs
         //strip all other procs we don't need!
-        //if IC.IsQuoted(Tmp) then
-          Tmp := IC.ExtractQuote(Tmp);
+        {$IFNDEF UNICODE}
+        S := ZUnicodeToRaw(Tmp, FRawCP);
+        S := IC.ExtractQuote(S);
+        Tmp := ZRawToUnicode(S, FRawCP);
+        {$ELSE}
+        Tmp := IC.ExtractQuote(Tmp);
+        {$ENDIF}
         for ps := Args.Count -1 downto 0 do begin
           if TZOraProcDescriptor_W(Args[ps]).AttributeName <> tmp then
             Args.Delete(ps);
@@ -2463,9 +2482,10 @@ jmpDescibe:
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "arg" does not seem to be initialized} {$ENDIF}
 procedure TZOraProcDescriptor_W.InternalDescribeObject(Obj: POCIHandle;
-  PlainDriver: TZOraclePlainDriver; ErrorHandle: POCIError;
-  ConSettings: PZConSettings);
+  {$IFDEF AUTOREFCOUNT} const {$ENDIF} PlainDriver: TZOraclePlainDriver;
+  ErrorHandle: POCIError; ConSettings: PZConSettings);
 var
   arglst, arg: POCIHandle;
   i, N: sb4;
@@ -2611,6 +2631,7 @@ begin
       Param.InternalDescribeObject(arg, PLainDriver, ErrorHandle, ConSettings);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZOracleAttribute }
 
@@ -2704,7 +2725,7 @@ begin
     CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
 end;
 
-function TZOracleAttribute.QueryInterface(const IID: TGUID; out Obj): HResult;
+function TZOracleAttribute.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
 begin
   if GetInterface(IID, Obj)
   then Result := S_OK
@@ -2784,4 +2805,6 @@ begin
   Result := -1;
 end;
 
+initialization
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

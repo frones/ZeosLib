@@ -1333,7 +1333,7 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
 var
-  TempProcedureNamePattern, TmpSchemaPattern: String;
+  TempProcedureNamePattern, TmpSchemaPattern: SQLString;
   RS: IZResultSet;
   DescriptorA: TZOraProcDescriptor_A;
   DescriptorW: TZOraProcDescriptor_W;
@@ -1523,7 +1523,7 @@ begin
         S := ZRawToUnicode(TempProcedureNamePattern, ConSettings.CTRL_CP);
         {$ENDIF}
         try
-          DescriptorW.Describe(OCI_PTYPE_UNK, GetConnection, TempProcedureNamePattern);
+          DescriptorW.Describe(OCI_PTYPE_UNK, GetConnection, {$IFNDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});
           if DescriptorW.ObjType = OCI_PTYPE_PKG
           then AddPackageArgsW(DescriptorW, {$IFNDEF UNICODE}SQLWriterW{$ELSE}SQLWriter{$ENDIF})
           else AddArgsW(DescriptorW, {$IFNDEF UNICODE}SQLWriterW{$ELSE}SQLWriter{$ENDIF});

@@ -356,12 +356,13 @@ procedure TZOracleConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var Stmt: POCIStmt;
   Status: sword;
+  {$IFDEF UNICODE}
   S: UnicodeString;
+  {$ENDIF UNICODE}
 begin
-  if ConSettings.ClientCodePage.ID = OCI_UTF16ID then begin
-    S := ZRawToUnicode(SQL, ConSettings.CTRL_CP);
-    ExecuteImmediat(S, Stmt, LoggingCategory);
-  end else begin
+  if ConSettings.ClientCodePage.ID = OCI_UTF16ID
+  then inherited ExecuteImmediat(SQL, LoggingCategory)
+  else begin
     Stmt := nil;
     try
       ExecuteImmediat(SQL, Stmt, LoggingCategory);
@@ -985,6 +986,9 @@ procedure TZOracleConnection.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
 var Stmt: POCIStmt;
   Status: sword;
+  {$IFNDEF UNICODE}
+  R: RawByteString;
+  {$ENDIF}
 begin
   if ConSettings.ClientCodePage.ID <> OCI_UTF16ID
   then inherited ExecuteImmediat(SQL, LoggingCategory)
@@ -995,8 +999,14 @@ begin
     finally
       if Stmt <> nil then begin
         Status := FPlainDriver.OCIHandleFree(Stmt, OCI_HTYPE_STMT);
-        if Status <> OCI_SUCCESS then
+        if Status <> OCI_SUCCESS then begin
+          {$IFNDEF UNICODE}
+          R := ZUnicodeToRaw(SQL, ConSettings.CTRL_CP);
+          CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, R, ConSettings);
+          {$ELSE}
           CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, SQL, ConSettings);
+          {$ENDIF}
+        end;
       end;
     end;
   end;
@@ -1005,9 +1015,15 @@ end;
 procedure TZOracleConnection.ExecuteImmediat(const SQL: UnicodeString;
   var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory);
 var Status: sword;
+  {$IFNDEF UNICODE}
+  R: RawByteString;
+  {$ENDIF}
 begin
   if Pointer(SQL) = nil then
     Exit;
+  {$IFNDEF UNICODE}
+  R := ZUnicodeToRaw(SQL, ConSettings.CTRL_CP);
+  {$ENDIF}
   if Stmt = nil then begin
     Status := FPlainDriver.OCIHandleAlloc(GetConnectionHandle,
       Stmt, OCI_HTYPE_STMT, 0, nil);
@@ -1017,13 +1033,13 @@ begin
     Status := FPlainDriver.OCIStmtPrepare(Stmt, FErrorHandle, Pointer(SQL),
       (Length(SQL)+1) shl 1, OCI_NTV_SYNTAX, OCI_DEFAULT);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, SQL, ConSettings);
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, {$IFNDEF UNICODE}R{$ELSE}SQL{$ENDIF}, ConSettings);
   end;
   try
     Status := FPlainDriver.OCIStmtExecute(FContextHandle,
         Stmt, FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, SQL, ConSettings);
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, {$IFNDEF UNICODE}R{$ELSE}SQL{$ENDIF}, ConSettings);
   finally
     if DriverManager.HasLoggingListener then
       LogW(LoggingCategory, SQL);
