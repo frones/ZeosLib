@@ -86,6 +86,7 @@ type
     procedure TestSF383;
     procedure TestSF391;
     procedure TestSF402;
+    procedure TestSF421;
  end;
 
 implementation
@@ -647,6 +648,43 @@ begin
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator := orgdSep;
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := orgtSep;
     FreeAndNil(Query);
+  end;
+end;
+
+(*
+When you try to read TField.AsBytes value of a binary column the data is missing.
+Windows 10, Microsoft SQL Server 2016, Delphi 10.2 and Zeos 7.3 6427.
+The problem was present in revision 6222 as well.
+*)
+procedure TZTestCompMSSqlBugReport.TestSF421;
+var
+  q: TZQuery;
+begin
+  Q := CreateQuery;
+  try
+    q.Sql.Add('create table #t (b varbinary(128));');
+    q.Sql.Add('insert into #t values (0x6170706c65), (0x62616e616e61), (0x636865727279);');
+    q.ExecSql;
+    q.Sql.Clear;
+    q.Sql.Add('select * from #t');
+    q.Open;
+    while not q.Eof do begin
+      CheckFalse(q.Fields[0].IsNull, 'the field is not null');
+      Check(Length(q.Fields[0].AsBytes) > 0, 'there are some bytes in queue');
+      //Write(Length(q.Fields[0].AsBytes), ' ', q.Fields[0].AsAnsiString, #10);
+      (* expected output:
+      5 apple
+      6 banana
+      6 cherry
+      *)
+      q.Next;
+    end;
+    q.Close;
+    q.Sql.Clear;
+    q.Sql.Add('drop table #t');
+    q.ExecSql;
+  finally
+    q.Free;
   end;
 end;
 
