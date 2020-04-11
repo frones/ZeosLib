@@ -2588,19 +2588,10 @@ const
   CHARACTER_SET_ID_Index      = DEFAULT_COLLATE_NAME_Index + 1;
   BYTES_PER_CHARACTER_Index   = CHARACTER_SET_ID_Index + 1;
 var
-  SQL, LCatalog: string;
+  SQL: string;
   LColumnNamePattern, LTableNamePattern: string;
   Len: NativeUint;
 begin
-  if Catalog = '' then
-  begin
-    if SchemaPattern <> '' then
-      LCatalog := SchemaPattern
-    else
-      LCatalog := FDatabase;
-  end
-  else
-    LCatalog := Catalog;
   LTableNamePattern := ConstructNameCondition(TableNamePattern,'R.RDB$RELATION_NAME');
   LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,'R.RDB$FIELD_NAME');
 
