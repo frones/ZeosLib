@@ -210,6 +210,7 @@ type
     function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
     function IsEmpty: Boolean; override;
     procedure Clear; override;
+  public //obsolate
     function Length: Integer; override;
   public
     constructor Create(const Connection: IZInterbase6Connection; BlobId: TISC_QUAD;
@@ -605,35 +606,34 @@ function TZInterbase6XSQLDAResultSet.GetAnsiString(
 var XSQLVAR: PXSQLVAR;
   P: Pointer;
   Len: NativeUint;
-  procedure CPConvert(P: PAnsiChar; Len: NativeUint; ColCP: Word; var Result: AnsiString);
-  begin
-    FUniTemp := PRawToUnicode(P,Len,ColCP);
-    Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
-  end;
-  procedure FromLob(var Result: AnsiString);
+  RBS: RawByteString absolute Result;
+  procedure FromLob(ColumnIndex: Integer; var Result: AnsiString);
   var Lob: IZBlob;
     P: Pointer;
     Len: NativeUint;
+    RBS: RawByteString absolute Result;
   begin
     Lob := GetBlob(ColumnIndex);
     if Lob.IsClob
-    then P := Lob.GetPAnsiChar(ZOSCodePage, FRawTemp, Len)
-    else P := Lob.GetBuffer(FRawTemp, Len);
-    ZSetString(PAnsiChar(P), Len, Result);
-    FRawTemp := '';
+    then Lob.GetPAnsiChar(ZOSCodePage, RBS, Len)
+    else begin
+      P := Lob.GetBuffer(FRawTemp, Len);
+      ZSetString(PAnsiChar(P), Len, Result);
+      FRawTemp := '';
+    end;
   end;
-label SetFromPChar;
+label SetFromPChar, jmpA2W2A;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
+  Result := '';
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
-    LastWasNull := True;
-    Result := ''
-  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL)
+  then LastWasNull := True
+  else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT      : begin
@@ -645,19 +645,19 @@ begin
                           Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
                           if (ColumnCodePage = ZOSCodePage)
                           then goto SetFromPChar
-                          else CPConvert(P, Len, ColumnCodePage, Result);
+                          else goto jmpA2W2A;
                         end;
                       end;
       SQL_VARYING   : begin
                         P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
                         Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
-                        if (ColumnCodePage = ZOSCodePage)
-                        then goto SetFromPChar
-                        else CPConvert(P, Len, ColumnCodePage, Result);
+                        if (ColumnCodePage = ZOSCodePage) or (ColumnCodePage = zCP_Binary)
+                        then goto SetFromPChar else
+jmpA2W2A:                 PRawToRawConvert(P, Len, ColumnCodePage, ZOSCodePage, RBS);
                       end;
-      SQL_BLOB:       FromLob(Result);
+      SQL_BLOB:       FromLob(ColumnIndex, Result);
       else  begin
-              P := GetPAnsiChar(Columnindex, Len);
+              P := GetPAnsiChar(ColumnIndex, Len);
 SetFromPChar: ZSetString(P, Len, Result);
             end;
     end;
@@ -1744,6 +1744,7 @@ begin
     end;
   end;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {$IFNDEF NO_UTF8STRING}
 function TZInterbase6XSQLDAResultSet.GetUTF8String(
@@ -1751,35 +1752,34 @@ function TZInterbase6XSQLDAResultSet.GetUTF8String(
 var XSQLVAR: PXSQLVAR;
   P: Pointer;
   Len: NativeUint;
-  procedure CPConvert(P: PAnsiChar; Len: NativeUint; ColCP: Word; var Result: UTF8String);
-  begin
-    FUniTemp := PRawToUnicode(P,Len,ColCP);
-    Result := ZUnicodeToRaw(FUniTemp, zCP_UTF8);
-  end;
-  procedure FromLob(var Result: UTF8String);
+  RBS: RawByteString absolute Result;
+  procedure FromLob(ColumnIndex: Integer; var Result: UTF8String);
   var Lob: IZBlob;
     P: Pointer;
     Len: NativeUint;
+    RBS: RawByteString absolute Result;
   begin
     Lob := GetBlob(ColumnIndex);
     if Lob.IsClob
-    then P := Lob.GetPAnsiChar(zCP_UTF8, fRawTemp, Len)
-    else P := Lob.GetBuffer(FRawTemp, Len);
-    ZSetString(PAnsiChar(P), Len, Result);
-    FRawTemp := '';
+    then Lob.GetPAnsiChar(zCP_UTF8, RBS, Len)
+    else begin
+      P := Lob.GetBuffer(FRawTemp, Len);
+      ZSetString(PAnsiChar(P), Len, Result);
+      FRawTemp := '';
+    end;
   end;
-label SetFromPChar;
+label SetFromPChar, jmpA2W2A;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
+  Result := '';
   {$R-}
   XSQLVAR := @FXSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL) then begin
-    LastWasNull := True;
-    Result := ''
-  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+  if (XSQLVAR.sqlind <> nil) and (XSQLVAR.sqlind^ = ISC_NULL)
+  then  LastWasNull := True
+  else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     LastWasNull := False;
     case (XSQLVAR.sqltype and not(1)) of
       SQL_TEXT      : begin
@@ -1791,17 +1791,17 @@ begin
                           Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(XSQLVAR.sqldata), XSQLVAR.sqllen);
                           if (ColumnCodePage = zCP_UTF8)
                           then goto SetFromPChar
-                          else CPConvert(P, Len, ColumnCodePage, Result);
+                          else goto jmpA2W2A;
                         end;
                       end;
       SQL_VARYING   : begin
                         P := @PISC_VARYING(XSQLVAR.sqldata).str[0];
                         Len := PISC_VARYING(XSQLVAR.sqldata).strlen;
-                        if (ColumnCodePage = CS_BINARY) or (ColumnCodePage = zCP_UTF8)
-                        then goto SetFromPChar
-                        else CPConvert(P, Len, ColumnCodePage, Result);
+                        if (ColumnCodePage = zCP_UTF8) or (ColumnCodePage = zCP_Binary)
+                        then goto SetFromPChar else
+jmpA2W2A:                 PRawToRawConvert(P, Len, ColumnCodePage, zCP_UTF8, RBS);
                       end;
-      SQL_BLOB:       FromLob(Result);
+      SQL_BLOB:       FromLob(ColumnIndex, Result);
       else  begin
               P := GetPAnsiChar(Columnindex, Len);
 SetFromPChar: ZSetString(P, Len, Result);
@@ -1810,8 +1810,6 @@ SetFromPChar: ZSetString(P, Len, Result);
   end;
 end;
 {$ENDIF NO_UTF8STRING}
-
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Moves the cursor down one row from its current position.
