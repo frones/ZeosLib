@@ -2866,6 +2866,9 @@ var Idx: Integer;
   var i: Integer;
     Descriptor: TZOraProcDescriptor_W;
     Tmp: UnicodeString;
+    {$IFNDEF UNICODE}
+    S: String;
+    {$ENDIF}
     SQLWriter: TZUnicodeSQLStringWriter;
   begin
     SQLWriter := TZUnicodeSQLStringWriter.Create(1024);
