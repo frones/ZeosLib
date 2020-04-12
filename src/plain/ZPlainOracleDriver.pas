@@ -168,8 +168,11 @@ type
     OCIResultSetToStmt: function(rsetdp: POCIHandle; errhp: POCIError): sword; cdecl;
 
     OCIDescriptorAlloc: function(parenth: POCIEnv; var descpp: POCIDescriptor;
-      htype: ub4; xtramem_sz: integer; usrmempp: Pointer): sword; cdecl;
+      htype: ub4; xtramem_sz: size_t; usrmempp: PPointer): sword; cdecl;
+    OCIArrayDescriptorAlloc: function(parenth: POCIEnv; var descpp: POCIDescriptor;
+      htype: ub4; array_size: ub4; xtramem_sz: size_t; usrmempp: PPointer): sword; cdecl;
     OCIDescriptorFree: function(descp: Pointer; htype: ub4): sword; cdecl;
+    OCIArrayDescriptorFree: function(descp: Pointer; htype: ub4): sword; cdecl;
     { lob methods }
     OCILobCopy: function(svchp: POCISvcCtx; errhp: POCIError;
       dst_locp: POCILobLocator; src_locp: POCILobLocator; amount: ub4;
@@ -424,7 +427,9 @@ begin
     @OCIResultSetToStmt           := GetAddress('OCIResultSetToStmt');
     {descriptors}
     @OCIDescriptorAlloc           := GetAddress('OCIDescriptorAlloc');
+    @OCIArrayDescriptorAlloc      := GetAddress('OCIArrayDescriptorAlloc');
     @OCIDescriptorFree            := GetAddress('OCIDescriptorFree');
+    @OCIArrayDescriptorFree       := GetAddress('OCIArrayDescriptorFree');
     {Lob}
     @OCILobCopy                   := GetAddress('OCILobCopy');
     @OCILobCopy2                  := GetAddress('OCILobCopy2');
