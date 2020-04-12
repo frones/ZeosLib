@@ -287,7 +287,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
-uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
+uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants,
   ZFastCode, ZSelectSchema, Math, ZDbcUtils;
 
 const

@@ -180,9 +180,6 @@ procedure PG2Date(Value: Integer; out Year, Month, Day: Word); overload;
 function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Word(P: Pointer): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Word2PG(Value: Word; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-
 function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -851,6 +848,7 @@ begin
   Result := julian + 7834 * m div 256 + d;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "Int64" before doing the multiply could prevent overflow errors} {$ENDIF}
 procedure j2date(jd: Integer; out AYear, AMonth, ADay: Word);
 var
   julian, quad, extra: Cardinal;
@@ -875,16 +873,22 @@ begin
   ADay := julian - 7834 * quad div 256;
   AMonth := (quad + 10) mod 12{MONTHS_PER_YEAR} + 1;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors} {$ENDIF}
 procedure time2t(Hour, Min, Sec: Word; fsec: Cardinal; out MicroSeconds: Int64);
 begin
   MicroSeconds := (((((Hour * MINS_PER_HOUR) + Min) * SECS_PER_MINUTE) + Sec) * USECS_PER_SEC) + fsec;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors} {$ENDIF}
 procedure time2t(Hour, Min, Sec: Word; fsec: Cardinal; out MicroSeconds: Double);
 begin
   MicroSeconds := (((((Hour * MINS_PER_HOUR) + Min) * SECS_PER_MINUTE) + Sec) * USECS_PER_SEC) + fsec;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 
 {$IFNDEF ENDIAN_BIG}
 procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -924,6 +928,10 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors}
+  {$WARN 4080 off : Converting the operands to "Int64" before doing the substract could prevent overflow errors}
+{$ENDIF}
 procedure DateTime2PG(const Value: TDateTime; out Result: Int64);
 var Year, Month, Day, Hour, Min, Sec, MSec: Word;
   Date: Int64; //overflow save multiply
@@ -938,6 +946,7 @@ begin
   Reverse8Bytes(@Result);
   {$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure DateTime2PG(const Value: TDateTime; out Result: Double);
 var Year, Month, Day, Hour, Min, Sec, MSec: Word;
@@ -978,6 +987,7 @@ begin
   {$ENDIF}
 end;
 
+{$IFDEF FPC} {$PUSH}{$WARN 4080 off : Converting the operands to "Int64" before doing the substract could prevent overflow errors} {$ENDIF}
 procedure TimeStamp2PG(const Value: TZTimeStamp; out MicroSeconds: Int64);
 var Date: Int64; //overflow save multiply
 begin
@@ -1198,58 +1208,20 @@ begin
 end;
 
 function PG2SmallInt(P: Pointer): SmallInt;
+begin
 {$IFNDEF ENDIAN_BIG}
-var W: Word absolute Result;
-begin
-  {$IFOPT R+}
-  W := ((PWord(P)^ and $00FF) shl 8) or ((PWord(P)^ and $FF00) shr 8);
-  {$ELSE}
-  W := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
-  {$ENDIF}
+  Word(Result) := ((PWord(P)^ and $00FF) shl 8) or ((PWord(P)^ and $FF00) shr 8);
 {$ELSE}
-begin
   Result := PSmallInt(P)^;
 {$ENDIF}
 end;
 
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
 {$IFNDEF ENDIAN_BIG}
-var W: Word absolute Value;
-begin
-  {$IFOPT R+}
-  PWord(Buf)^ := ((W and $00FF) shl 8) or ((W and $FF00) shr 8);
-  {$ELSE}
-  PWord(Buf)^ := ((W shl 8) or ((W shr 8)));
-  {$ENDIF}
+  PWord(Buf)^ := ((Word(Value) and $00FF) shl 8) or ((Word(Value) and $FF00) shr 8);
 {$ELSE}
-begin
   PSmallInt(Buf)^ := Value;
-{$ENDIF}
-end;
-
-function PG2Word(P: Pointer): Word;
-begin
-{$IFNDEF ENDIAN_BIG}
-  {$IFOPT R+}
-  Result := ((PWord(P)^ and $00FF) shl 8) or ((PWord(P)^ and $FF00) shr 8);
-  {$ELSE}
-  Result := (PWord(P)^ shl 8) or (PWord(P)^ shr 8);
-  {$ENDIF}
-{$ELSE}
-  Result := PWord(P)^;
-{$ENDIF}
-end;
-
-procedure Word2PG(Value: Word; Buf: Pointer);
-begin
-{$IFNDEF ENDIAN_BIG}
-  {$IFOPT R+}
-  PWord(Buf)^ := ((Value and $00FF) shl 8) or ((Value and $FF00) shr 8);
-  {$ELSE}
-  PWord(Buf)^ := (Value shl 8) or (Value shr 8);
-  {$ENDIF}
-{$ELSE}
-  PWord(Buf)^ := Value;
 {$ENDIF}
 end;
 
@@ -1411,6 +1383,7 @@ end;
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {$R-} {$Q-}
+{$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "Int64" before doing the multiply could prevent overflow errors} {$ENDIF}
 procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Integer);
 var
   U64, U64b: UInt64;
@@ -1426,7 +1399,12 @@ begin
   //https://doxygen.postgresql.org/backend_2utils_2adt_2numeric_8c.html#a3ae98a87bbc2d0dfc9cbe3d5845e0035
   if Value < 0 then begin
     U64 := -PInt64(@Value)^;
-    Word2PG(NUMERIC_NEG, @Numeric_External.sign);
+    {$IFNDEF ENDIAN_BIG}
+    NBASEDigit := NUMERIC_NEG;
+    Numeric_External.sign := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
+    {$ELSE !ENDIAN_BIG}
+    Numeric_External.sign := NUMERIC_NEG;
+    {$ENDIF ENDIAN_BIG}
   end else if Value > 0 then begin
     U64 := PInt64(@Value)^;
     Numeric_External.sign := NUMERIC_POS
@@ -1437,10 +1415,10 @@ begin
   end;
   NBASEDigits := (GetOrdinalDigits(U64) shr 2)+1;
 
-  Numeric_External.NBASEDigits := {$IFNDEF ENDIAN_BIG}NBASEDigits shr 8 or NBASEDigits shl 8{$ELSE}NBASEDigits{$ENDIF};  //write len
+  Numeric_External.NBASEDigits := {$IFNDEF ENDIAN_BIG}(NBASEDigits and $00FF shl 8) or (NBASEDigits and $FF00 shr 8){$ELSE}NBASEDigits{$ENDIF};  //write len
   Size := (4+NBASEDigits) * SizeOf(Word); //give size out
   NBASEDigit := Word(NBASEDigits-2);
-  Word(Numeric_External.weight) := {$IFNDEF ENDIAN_BIG}NBASEDigit shr 8 or NBASEDigit shl 8{$ELSE}NBASEDigit{$ENDIF}; //write weight
+  Word(Numeric_External.weight) := {$IFNDEF ENDIAN_BIG}(NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8){$ELSE}NBASEDigit{$ENDIF}; //write weight
   {$IFNDEF CPU64}
   if Int64Rec(u64).Hi = 0 then begin
     C := Int64Rec(u64).Lo div NBASE;
@@ -1456,9 +1434,9 @@ begin
   {$ENDIF}
   if NBASEDigit = 0
   then Numeric_External.dscale := 0
-  else Word2PG(4{GetOrdinalDigits(Word(NBASEDigit))}, @Numeric_External.dscale);
+  else Numeric_External.dscale := {$IFNDEF ENDIAN_BIG}(Word(4) and $00FF shl 8) or (Word(4) and $FF00 shr 8){$ELSE}4{$ENDIF};
 {$IFNDEF ENDIAN_BIG}
-  NBASEDigit := NBASEDigit shr 8 or NBASEDigit shl 8;
+  NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
 {$ENDIF ENDIAN_BIG}
   Word(Numeric_External.digits[(NBASEDigits-1)]) := NBASEDigit; //set last scale digit
   {$IFDEF CPU64}
@@ -1468,13 +1446,13 @@ begin
       NBASEDigit := Word(u64-(U64b * NBASE)); //dividend mod 10000
       u64 := U64b; //next dividend
       {$IFNDEF ENDIAN_BIG}
-      NBASEDigit := NBASEDigit shr 8 or NBASEDigit shl 8;
+      NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
       {$ENDIF ENDIAN_BIG}
       Word(Numeric_External.digits[I]) := NBASEDigit;
     end;
     NBASEDigit := Word(Int64Rec(u64).Lo);
     {$IFNDEF ENDIAN_BIG}
-    NBASEDigit := NBASEDigit shr 8 or NBASEDigit shl 8;
+    NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
     {$ENDIF ENDIAN_BIG}
     Word(Numeric_External.digits[0]) := NBASEDigit; //set first digit
   end;
@@ -1485,7 +1463,7 @@ begin
           NBASEDigit := Word(u64-(U64b * NBASE)); //dividend mod 10000
           u64 := U64b; //next dividend
           {$IFNDEF ENDIAN_BIG}
-          NBASEDigit := NBASEDigit shr 8 or NBASEDigit shl 8;
+          NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
           {$ENDIF ENDIAN_BIG}
           Word(Numeric_External.digits[3]) := NBASEDigit;
           goto R3BDigit;
@@ -1495,7 +1473,7 @@ R3BDigit: U64b := U64 div NBASE;
           NBASEDigit := Word(u64-(U64b * NBASE)); //dividend mod 10000
           u64 := U64b; //next dividend
           {$IFNDEF ENDIAN_BIG}
-          NBASEDigit := NBASEDigit shr 8 or NBASEDigit shl 8;
+          NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
           {$ENDIF ENDIAN_BIG}
           Word(Numeric_External.digits[2]) := NBASEDigit;
           goto R2BDigit;
@@ -1505,7 +1483,7 @@ R2BDigit: C := Int64Rec(u64).Lo div NBASE;
           NBASEDigit := Word(Int64Rec(u64).Lo-(C* NBASE)); //dividend mod 10000
           u64 := C; //next dividend
           {$IFNDEF ENDIAN_BIG}
-          NBASEDigit := NBASEDigit shr 8 or NBASEDigit shl 8;
+          NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
           {$ENDIF ENDIAN_BIG}
           Word(Numeric_External.digits[1]) := NBASEDigit;
           goto R1BDigit;
@@ -1513,7 +1491,7 @@ R2BDigit: C := Int64Rec(u64).Lo div NBASE;
     1:  begin
 R1BDigit: NBASEDigit := Word(Int64Rec(u64).Lo);
           {$IFNDEF ENDIAN_BIG}
-          NBASEDigit := NBASEDigit shr 8 or NBASEDigit shl 8;
+          NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
           {$ENDIF ENDIAN_BIG}
           Word(Numeric_External.digits[0]) := NBASEDigit;
        end;
@@ -1522,6 +1500,8 @@ R1BDigit: NBASEDigit := Word(Int64Rec(u64).Lo);
 end;
 {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 
 //each postgres num digit is a base 0...9999 digit, so we need to multiply
 const WordFactors: array[0..3] of Word = (1000, 100, 10, 1);
@@ -1533,11 +1513,12 @@ const WordFactors: array[0..3] of Word = (1000, 100, 10, 1);
    @param size return the number of bytes we finally used
 }
 {$R-} {$Q-}
+{$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "Int64" before doing the multiply could prevent overflow errors} {$ENDIF}
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 var
   pNibble, PLastNibble, pWords: PAnsichar;
   FactorIndexOrScale, x, y: Integer;
-  Precision, Scale{$IFNDEF ENDIAN_BIG}, W{$ENDIF}: Word;
+  Precision, Scale, NBASEDigit: Word;
   Weight: SmallInt;
   GetFirstBCDHalfByte: Boolean;
 begin
@@ -1567,8 +1548,8 @@ begin
     GetFirstBCDHalfByte := not GetFirstBCDHalfByte;
     if FactorIndexOrScale = 3 then begin
       {$IFNDEF ENDIAN_BIG}
-      W := PWord(pWords)^;
-      PWord(pWords)^ := W shr 8 or W shl 8;
+      NBASEDigit := PWord(pWords)^;
+      PWord(pWords)^ := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
       {$ENDIF !ENDIAN_BIG}
       FactorIndexOrScale := 0;
       if X < Precision then
@@ -1581,25 +1562,42 @@ begin
   end;
   {$IFNDEF ENDIAN_BIG}
   if (FactorIndexOrScale <> 0) then begin
-    W := PWord(pWords)^;
-    PWord(pWords)^ := W shr 8 or W shl 8;
+    NBASEDigit := PWord(pWords)^;
+    PWord(pWords)^ := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
   end;
   {$ENDIF !ENDIAN_BIG}
   if (Weight >= 0) or (Integer(Scale) - Y = 1) then
     Dec(Weight);
-  Size := (PWords - Dst - 8) shr 1; //calc count of nbase digits
+  NBASEDigit := (PWords - Dst - 8) shr 1; //calc count of nbase digits
+  {$IFNDEF ENDIAN_BIG}
+  NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
+  {$ENDIF ENDIAN_BIG}
   //now fill static varlena values
-  Word2PG(Word(Size), Dst); //NBASEDigit count
+  PWord(Dst)^ := NBASEDigit; //write NBASEDigit count
   //https://www.postgresql.org/message-id/491DC5F3D279CD4EB4B157DDD62237F404E27FE9%40zipwire.esri.com
-  SmallInt2PG(Weight, Dst+2);//weight
-  if Src.SignSpecialPlaces and (1 shl 7) <> 0 //sign
-  then Word2PG(NUMERIC_NEG, Dst+4)
-  else PWord(Dst+4)^ := NUMERIC_POS;
-  Word2PG(Scale, Dst+6); //dscale
+  {$IFNDEF ENDIAN_BIG}
+  NBASEDigit := (Word(Weight) and $00FF shl 8) or (Word(Weight) and $FF00 shr 8);
+  PWord(Dst+2)^ := NBASEDigit; //white weight
+  {$ELSE}
+  PSmallInt(Dst+2)^ := Weight;
+  {$ENDIF}
+  if Src.SignSpecialPlaces and (1 shl 7) <> 0 then begin// write sign
+  {$IFNDEF ENDIAN_BIG}
+    NBASEDigit := NUMERIC_NEG;
+    PWord(Dst+4)^ := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
+  {$ELSE}
+    PWord(Dst+4)^ := NUMERIC_NEG;
+  {$ENDIF}
+  end else PWord(Dst+4)^ := NUMERIC_POS;
+  {$IFNDEF ENDIAN_BIG}
+  Scale := (Scale and $00FF shl 8) or (Scale and $FF00 shr 8);
+  {$ENDIF ENDIAN_BIG}
+  PWord(Dst+6)^ := Scale; //dscale
   Size := (pWords - Dst); //return size in bytes
 end;
 {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {** written by EgonHugeist
   converts a postgres numeric value into a bigdecimal value
@@ -1610,15 +1608,23 @@ end;
 {$Q-} {$R-} //else my shift fail
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 var
-  i, NBASEDigitsCount, Weight, Precision, Scale, Digits: Integer;
+  i, NBASEDigitsCount, Precision, Scale, Digits: Integer;
   NBASEDigit, FirstNibbleDigit: Word;
+  Weight: SmallInt;
   pNibble, pLastNibble: PAnsiChar;
   HalfNibbles: Boolean; //fpc compare fails in all areas if not strict left padded
 label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3;
 begin
   FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
-  NBASEDigitsCount := PG2Word(Src);
-  NBASEDigit := PG2Word(Src+4); //read sign
+  {$IFNDEF ENDIAN_BIG}
+  NBASEDigit := PWord(Src)^;
+  NBASEDigitsCount := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
+  NBASEDigit := PWord(Src+4)^;
+  NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8); //read sign
+  {$ELSE !ENDIAN_BIG}
+  NBASEDigitsCount := PWord(Src)^;
+  NBASEDigit := PWord(Src+4)^; //read sign
+  {$ENDIF ENDIAN_BIG}
 
   if ((NBASEDigitsCount = 0) and (NBASEDigit = NUMERIC_POS)) or      // zero
      ((NBASEDigit <> NUMERIC_POS) and (NBASEDigit <> NUMERIC_NEG)) then begin // NaN or NULL
@@ -1630,7 +1636,8 @@ ZeroBCD:
   then Dst.SignSpecialPlaces := $80
   else Dst.SignSpecialPlaces := 0;
 
-  Weight := PG2SmallInt(Src+2); //weight can be less than zero!
+  Weight := PSmallInt(Src+2)^;
+  {$IFNDEF ENDIAN_BIG}Word(Weight) := (Word(Weight) and $00FF shl 8) or (Word(Weight) and $FF00 shr 8);{$ENDIF} //weight can be less than zero!
   Inc(Src, 8);
   pNibble := @Dst.Fraction[0];
   pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
@@ -1652,7 +1659,7 @@ ZeroBCD:
     Scale := (NBASEDigitsCount-(Weight + 1)) * BASE1000Digits;
   end;
   //process first base-digit -> pack nibbles top most left  i.e. '0001' will be '1'
-  NBASEDigit := PG2Word(Src); //each digit is a base 10000 digit -> 0..9999
+  NBASEDigit := {$IFNDEF ENDIAN_BIG}(PWord(Src)^ and $00FF shl 8) or (PWord(Src)^ and $FF00 shr 8){$ELSE}PWord(Src)^{$ENDIF}; //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
   HalfNibbles := False;
   if FirstNibbleDigit > 0 then begin
@@ -1682,7 +1689,8 @@ Final2: Digits := 2;
   if not HalfNibbles then Inc(pNibble);
   I := 1;
 Loop:
-  NBASEDigit := PG2Word(Src+(i shl 1)); //each digit is a base 10000 digit -> 0..9999
+  NBASEDigit := PWord(Src+(i shl 1))^;  //each digit is a base 10000 digit -> 0..9999
+  {$IFNDEF ENDIAN_BIG}NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8){$ENDIF};
   FirstNibbleDigit := NBASEDigit div 100;
 FourNibbles:
   NBASEDigit := NBASEDigit - (FirstNibbleDigit * 100); //mod 100

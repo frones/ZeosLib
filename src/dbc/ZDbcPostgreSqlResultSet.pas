@@ -352,7 +352,7 @@ var
   RNo, H, I: Integer;
   BCD: TBCD;
   TS: TZTimeStamp absolute BCD;
-  UUID: TGUID absolute BCD;
+  {$IFNDEF ENDIAN_BIG}UUID: TGUID absolute BCD;{$ENDIF}
   DT: TDateTime absolute BCD;
 label ProcBts, jmpDate, jmpTime, jmpTS, jmpOIDBLob;
 begin
@@ -410,11 +410,17 @@ jmpOIDBLob:                   PIZlob(@fTinyBuffer[0])^ := TZPostgreSQLOidBlob.Cr
                             end;
             stGUID        : begin
                               JSONWriter.Add('"');
-                              UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a sh...ttt! swapped digits!
-                              UUID.D2 := PG2Word(@PGUID(P).D2);
-                              UUID.D3 := PG2Word(@PGUID(P).D3);
+                              {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
+                              UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a *beep* swapped digits! but only on reading
+                              UUID.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
+                              UUID.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
                               PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
                               JSONWriter.Add(UUID);//
+                              {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+                              {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+                              {$ELSE}
+                              JSONWriter.Add(PGUID(P)^);
+                              {$ENDIF}
                               JSONWriter.Add('"');
                             end;
             stDate        : begin
@@ -936,7 +942,7 @@ var L: LongWord;
   PEnd: PAnsiChar;
   BCD: TBCD;
   TS: TZTimeStamp absolute BCD;
-  UUID: TGUID absolute BCD;
+  {$IFNDEF ENDIAN_BIG}UUID: TGUID absolute BCD;{$ENDIF}
   DT: TDateTime absolute BCD;
   MS: Word;
   ROW_IDX: Integer;
@@ -1024,11 +1030,17 @@ jmpTS:                Result := @fTinyBuffer[0];
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
                     end;
         stGUID:     begin
-                      UUID.D1 := PG2Cardinal(@PGUID(Result).D1); //what a sh...ttt! swapped digits!
-                      UUID.D2 := PG2Word(@PGUID(Result).D2);
-                      UUID.D3 := PG2Word(@PGUID(Result).D3);
+                      {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
+                      UUID.D1 := PG2Cardinal(@PGUID(Result).D1); //what a *beep* swapped digits! but only on reading
+                      UUID.D2 := (PGUID(Result).D2 and $00FF shl 8) or (PGUID(Result).D2 and $FF00 shr 8);
+                      UUID.D3 := (PGUID(Result).D3 and $00FF shl 8) or (PGUID(Result).D3 and $FF00 shr 8);
                       PInt64(@UUID.D4)^ := PInt64(@PGUID(Result).D4)^;
                       ZSysUtils.GUIDToBuffer(@UUID.D1, PAnsiChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+                      {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+                      {$ELSE}
+                      ZSysUtils.GUIDToBuffer(Result, PAnsiChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      {$ENDIF}
                       for ColumnIndex := 0 to 35 do
                         fTinyBuffer[ColumnIndex] := fTinyBuffer[ColumnIndex] or $20;
                       Result := @fTinyBuffer[0];
@@ -1205,11 +1217,17 @@ jmpTS:                Result := @fTinyBuffer[0];
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
                     end;
         stGUID:     begin
-                      UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a sh...ttt! swapped digits!
-                      UUID.D2 := PG2Word(@PGUID(P).D2);
-                      UUID.D3 := PG2Word(@PGUID(P).D3);
+                      {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
+                      UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a *beep* swapped digits! but only on reading
+                      UUID.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
+                      UUID.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
                       PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
-                      ZSysUtils.GUIDToBuffer(@UUID.D1, PWideChar(@fTinyBuffer[0]), []);
+                      ZSysUtils.GUIDToBuffer(@UUID.D1, PWideChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+                      {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+                      {$ELSE}
+                      ZSysUtils.GUIDToBuffer(P, PWideChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      {$ENDIF}
                       for ColumnIndex := 0 to 35 do //to lowercase
                         PWord(@fTinyBuffer[ColumnIndex shl 1])^ := PWord(@fTinyBuffer[ColumnIndex shl 1])^ or $20;
                       Result := @fTinyBuffer[0];
@@ -1314,8 +1332,8 @@ begin
         stDouble:                     Result := PDouble(P)^ <> 0;
         stCurrency:                   if TypeOID = CASHOID
                                       then Result := PInt64(P)^ <> 0
-                                      else Result := (PG2Word(P) > 0);//read nbasedigit count
-        stBigDecimal:                 Result := PG2Word(P) > 0;//read nbasedigit count
+                                      else Result := (PWord(P)^ <> 0);//read nbasedigit count
+        stBigDecimal:                 Result := PWord(P)^ <> 0;//read nbasedigit count
         stTime, stTimestamp:          if Finteger_datetimes
                                       then Result := PInt64(P)^ <> 0
                                       else Result := PDouble(P)^ <> 0;
@@ -1392,10 +1410,16 @@ begin
       Result := Pointer(FRawTemp);
       Len := SizeOf(TGUID);
       if FBinaryValues then begin
-        ResUUID.D1 := PG2Cardinal(@SrcUUID.D1);
-        ResUUID.D2 := PG2Word(@SrcUUID.D2);
-        ResUUID.D3 := PG2Word(@SrcUUID.D3);
+        {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
+        ResUUID.D1 := PG2Cardinal(@SrcUUID.D1); //what a *beep* swapped digits! but only on reading
+        ResUUID.D2 := (SrcUUID.D2 and $00FF shl 8) or (SrcUUID.D2 and $FF00 shr 8);
+        ResUUID.D3 := (SrcUUID.D3 and $00FF shl 8) or (SrcUUID.D3 and $FF00 shr 8);
         PInt64(@ResUUID.D4)^ := PInt64(@SrcUUID.D4)^;
+        {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+        {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+        {$ELSE}
+        ResUUID^ := SrcUUID^;
+        {$ENDIF}
       end else ValidGUIDToBinary(pgBuff, Pointer(Result));
     end else if TypeOID = OIDOID { oid } then begin
       if FBinaryValues
@@ -1720,10 +1744,16 @@ begin
       end;
     end else if TypeOID = UUIDOID { uuid } then begin
       if FBinaryValues then begin
-        Result.D1 := PG2Cardinal(@SrcUUID.D1);
-        Result.D2 := PG2Word(@SrcUUID.D2);
-        Result.D3 := PG2Word(@SrcUUID.D3);
+        {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
+        Result.D1 := PG2Cardinal(@SrcUUID.D1); //what a *beep* swapped digits! but only on reading
+        Result.D2 := (SrcUUID.D2 and $00FF shl 8) or (SrcUUID.D2 and $FF00 shr 8);
+        Result.D3 := (SrcUUID.D3 and $00FF shl 8) or (SrcUUID.D3 and $FF00 shr 8);
         PInt64(@Result.D4)^ := PInt64(@SrcUUID.D4)^;
+        {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+        {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+        {$ELSE}
+        Result := SrcUUID^;
+        {$ENDIF ENDIAN_BIG}
       end else ValidGUIDToBinary(Buffer, @Result.D1);
     end else case ColumnType of
       stString,
@@ -2409,7 +2439,7 @@ end;
 }
 procedure TZPostgreSQLOidBlob.Clear;
 begin
-  inherited;
+  FBlobOid := 0;
 end;
 
 function TZPostgreSQLOidBlob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
