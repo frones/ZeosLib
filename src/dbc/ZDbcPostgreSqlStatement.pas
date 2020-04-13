@@ -855,7 +855,7 @@ procedure TZAbstractPostgreSQLPreparedStatementV3.CheckError(
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   ResultHandle: TPGresult);
 begin
-  HandlePostgreSQLError(Self, FplainDriver, FconnAddress^, lcExecPrepStmt, LogMessage, ResultHandle);
+  HandlePostgreSQLError(Self, FplainDriver, FconnAddress^, LogCategory, LogMessage, ResultHandle);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.CheckParameterIndex(var Value: Integer);
@@ -1419,6 +1419,7 @@ var
 begin
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
     Result := '';
+    Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZRawSQLStringWriter.Create(C);
@@ -1866,7 +1867,7 @@ begin
       FPQParamOIDs[InParamIdx] := OIDOID;
       BindList.Put(Index, stBinaryStream, P4Bytes(@Lob_OID));
       LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], SizeOf(OID));
-      {$IFNDEF ENDIAN_BIG}Reverse4Bytes(FPQparamValues[Index]);{$ENDIF}
+      {$IFNDEF ENDIAN_BIG}Cardinal2PG(Lob_OID, FPQparamValues[Index]);{$ENDIF}
       WriteTempBlob := nil;
     end else if SQLType = stBinaryStream then begin
       FPQparamFormats[InParamIdx] := ParamFormatBin;
@@ -2080,12 +2081,12 @@ begin
         BindList.SetCount(FplainDriver.PQnparams(res)+FOutParamCount);
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
-          NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
+          NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
           if NewSQLType = stUnknown then //EH: domain types are unknonw for us..
             //pg does not return the underlaying OID grumble...
             if FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID) then begin
               pgOID := tmpOID;
-              NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, tmpOID, -1);
+              NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, tmpOID, -1);
             end else begin
               SetLength(boundOIDs, BindList.Count);
               boundOIDs[i] := FPQParamOIDs[i];
@@ -2106,11 +2107,11 @@ begin
         FPostgreSQLConnection.FillUnknownDomainOIDs;
         for i := 0 to BindList.Count-1 do begin
           pgOID := FPQParamOIDs[i];
-          NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
+          NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
           if NewSQLType = stUnknown then begin//EH: domain types are unknonw for us..
             //pg does not return the underlaying OID grumble...
             Assert(FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID));
-            NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, tmpOID, -1);
+            NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, tmpOID, -1);
             FPQParamOIDs[i] := tmpOID;
             RebindIfRequired(i, NewSQLType, boundOIDs[i], tmpOID);
           end;

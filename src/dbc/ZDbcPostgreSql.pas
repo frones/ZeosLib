@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(DELPHI) and defined(MSWINDOWS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcConnection, ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZClasses, ZSysUtils;
+  ZGenericSqlAnalyser, ZCompatibility, ZClasses, ZSysUtils;
 
 type
 
@@ -405,6 +405,7 @@ end;
   Attempts to kill a long-running operation on the database server
   side
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5091 off : Local variable "ErrRaw" of managed type does not seem to be initialized} {$ENDIF}
 function TZPostgreSQLConnection.AbortOperation: Integer;
 const
   PGCancelBufLen = 256;
@@ -432,6 +433,7 @@ begin
     FPlainDriver.PQfreeCancel(pcancel);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZPostgreSQLConnection.AddDomain2BaseTypeIfNotExists(DomainOID,
   BaseTypeOID: OID);

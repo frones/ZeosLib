@@ -194,7 +194,7 @@ type
   protected
     procedure SetSize(const NewSize: Int64); overload; override;
   public
-    constructor Create(Oid: Oid; const OwnerLob: TZPostgreSQLOidBlob;
+    constructor Create(const OwnerLob: TZPostgreSQLOidBlob;
       LobStreamMode: TZLobStreamMode);
     destructor Destroy; override;
   public
@@ -788,7 +788,7 @@ asignTScaleAndPrec:
     end;
   end;
 
-  SQLType := PostgreSQLToSQLType(ConSettings, Connection.IsOidAsBlob, TypeOid, TypeModifier);
+  SQLType := PostgreSQLToSQLType(Connection.IsOidAsBlob, TypeOid, TypeModifier);
 
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
@@ -2211,7 +2211,7 @@ begin
                         if FBinaryValues
                         then Len := PG2Cardinal(P)
                         else Len := RawToUInt64(P);
-                        Result := TZPostgreSQLOidBlob.Create(FConnection, Len, lsmRead, FOpenLobStreams);
+                        Result := TZPostgreSQLOidBlob.Create(FConnection, Len, LobStreamMode, FOpenLobStreams);
                       end else if FBinaryValues then begin
                         Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
                         Result := TZLocalMemBlob.CreateWithData(P, Len )
@@ -2386,12 +2386,14 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CodePage" not used} {$ENDIF}
 function TZPostgreSQLOidBlob.CreateLobStream(CodePage: Word;
   LobStreamMode: TZLobStreamMode): TStream;
 begin
   FLobStreamMode := LobStreamMode;
-  Result := TZPostgreSQLOidBlobStream.Create(FBlobOid, Self, LobStreamMode);
+  Result := TZPostgreSQLOidBlobStream.Create(Self, LobStreamMode);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the blob handle oid.
@@ -2554,6 +2556,7 @@ end;
 
 { TZPostgreSQLCachedResolverV74up }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "OldRowAccessor" not used} {$ENDIF}
 procedure TZPostgreSQLCachedResolverV74up.FormWhereClause(
   const SQLWriter: TZSQLStringWriter; const OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
@@ -2575,6 +2578,7 @@ begin
     else SQLWriter.AddText('=?', Result);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZPostgreSQLCachedResolverV8up }
 
@@ -2685,8 +2689,8 @@ begin
   end;
 end;
 
-constructor TZPostgreSQLOidBlobStream.Create(Oid: Oid;
-  const OwnerLob: TZPostgreSQLOidBlob; LobStreamMode: TZLobStreamMode);
+constructor TZPostgreSQLOidBlobStream.Create(const OwnerLob: TZPostgreSQLOidBlob;
+  LobStreamMode: TZLobStreamMode);
 begin
   inherited Create(OwnerLob, OwnerLob.FOwner, Ownerlob.FOpenLobStreams);
   FplainDriver := OwnerLob.FPlainDriver;
