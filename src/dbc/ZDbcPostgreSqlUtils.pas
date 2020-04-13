@@ -79,8 +79,8 @@ function PostgreSQLToSQLType(const Connection: IZPostgreSQLConnection;
    @param TypeOid is PostgreSQL type OID
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(ConSettings: PZConSettings;
-  OIDAsBlob: Boolean; TypeOid: OID; TypeModifier: Integer): TZSQLType; overload;
+function PostgreSQLToSQLType(OIDAsBlob: Boolean;
+  TypeOid: OID; TypeModifier: Integer): TZSQLType; overload;
 
 {**
    Return PostgreSQL type name from ZSQLType
@@ -377,8 +377,8 @@ end;
    @param TypeOid is PostgreSQL type OID
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(ConSettings: PZConSettings;
-  OIDAsBlob: Boolean; TypeOid: OID; TypeModifier: Integer): TZSQLType; overload;
+function PostgreSQLToSQLType(OIDAsBlob: Boolean; TypeOid: OID;
+  TypeModifier: Integer): TZSQLType; overload;
 var Scale: Integer;
 begin
   case TypeOid of
@@ -1061,7 +1061,7 @@ begin
   Reverse8Bytes(@Value);
   {$ENDIF}
   date := Value div USECS_PER_DAY;
-  Value := Value mod USECS_PER_DAY;
+  Value := Value - (date * USECS_PER_DAY);
   if Value < 0 then begin
     Value := Value + USECS_PER_DAY;
     date := date - 1;
@@ -1216,7 +1216,7 @@ begin
 {$ENDIF}
 end;
 
-procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure SmallInt2PG(Value: SmallInt; Buf: Pointer);
 begin
 {$IFNDEF ENDIAN_BIG}
   PWord(Buf)^ := ((Word(Value) and $00FF) shl 8) or ((Word(Value) and $FF00) shr 8);
@@ -1362,18 +1362,18 @@ var
   i64: Int64 absolute Result;
 begin
   Sign := Numeric_External.sign;
-  {$IFNDEF ENDIAN_BIG}Sign := Sign shl 8 or Sign shr 8;{$ENDIF ENDIAN_BIG}
+  {$IFNDEF ENDIAN_BIG}Sign := (Sign and $00FF shl 8) or (Sign and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
   NBASEDigits := Numeric_External.NBASEDigits;
-  {$IFNDEF ENDIAN_BIG}NBASEDigits := NBASEDigits shl 8 or NBASEDigits shr 8;{$ENDIF ENDIAN_BIG}
+  {$IFNDEF ENDIAN_BIG}NBASEDigits := (NBASEDigits and $00FF shl 8) or (NBASEDigits and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
   Result := 0;
   if (NBASEDigits = 0) or (Sign = NUMERIC_NAN) or (Sign = NUMERIC_NULL) then
     Exit;
   Weight := Numeric_External.weight;
-  {$IFNDEF ENDIAN_BIG}Word(Weight) := Word(Weight) shl 8 or Word(Weight) shr 8;{$ENDIF ENDIAN_BIG}
+  {$IFNDEF ENDIAN_BIG}Word(Weight) := (Word(Weight) and $00FF shl 8) or (Word(Weight) and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
   Inc(Weight);
   for I := 0 to (NBASEDigits-1) do begin
     NBASEDigit := Word(Numeric_External.digits[i]);
-    {$IFNDEF ENDIAN_BIG}NBASEDigit :=  NBASEDigit shl 8 or NBASEDigit shr 8;{$ENDIF ENDIAN_BIG}
+    {$IFNDEF ENDIAN_BIG}NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
     I64 := I64 + NBASEDigit * CurrMulTbl[weight-i];
   end;
   if Sign <> NUMERIC_POS then
