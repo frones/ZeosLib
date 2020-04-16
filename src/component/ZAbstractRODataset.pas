@@ -1834,7 +1834,7 @@ begin
   if Result then
     PWord(Buffer)^ := Ord(#0)
   else //instead of WStrLCopy
-    PRaw2PUnicode(P, Buffer, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1, FClientCP);
+    PRaw2PUnicode(P, Buffer, FClientCP, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1);
 end;
 {$ENDIF}
 
