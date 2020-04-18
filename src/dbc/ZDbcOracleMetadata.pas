@@ -252,7 +252,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
-  ZFastCode, ZDbcUtils, ZSelectSchema, ZClasses,
+  ZFastCode, ZDbcUtils, ZSelectSchema, ZClasses, ZEncoding,
   ZPlainOracleConstants{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF};
 
 { TZOracleDatabaseInfo }
@@ -1333,13 +1333,21 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedureColumns(const Catalog,
   SchemaPattern, ProcedureNamePattern, ColumnNamePattern: string): IZResultSet;
 var
-  TempProcedureNamePattern, TmpSchemaPattern: {$IFDEF UNICODE}String{$ELSE}RawByteString{$ENDIF};
+  TempProcedureNamePattern, TmpSchemaPattern: SQLString;
   RS: IZResultSet;
-  Descriptor: TZOraProcDescriptor_A;
+  DescriptorA: TZOraProcDescriptor_A;
+  DescriptorW: TZOraProcDescriptor_W;
   SQLWriter: TZSQLStringWriter;
+  {$IFDEF UNICODE}
+  SQLWriterA: TZRawSQLStringWriter;
+  {$ELSE}
+  SQLWriterW: TZUnicodeSQLStringWriter;
+  {$ENDIF}
   SL: TStrings;
   i: Integer;
   SQLType: TZSQLType;
+  S: {$IFDEF UNICODE}RawByteString{$ELSE}UnicodeString{$ENDIF};
+
   function CheckOwner: Boolean;
   begin
     if TmpSchemaPattern = '' then
@@ -1350,10 +1358,10 @@ var
       Close;
     end;
   end;
-  procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}
-    Descriptor: TZOraProcDescriptor_A);
+  procedure AddArgsA({$IFDEF AUTOREFCOUNT}const {$ENDIF}Descriptor: TZOraProcDescriptor_A;
+    {$IFDEF AUTOREFCOUNT}const{$ENDIF} SQLWriter: TZRawSQLStringWriter);
   var I: Integer;
-    ProcName, ParamName: SQLString;
+    ProcName, ParamName: RawByteString;
     Arg: TZOraProcDescriptor_A;
   begin
     ProcName := '';
@@ -1362,20 +1370,15 @@ var
     SQLWriter.Finalize(ProcName);
     for I := 0 to Descriptor.Args.Count-1 do begin
       Result.MoveToInsertRow;
-      Result.UpdateString(SchemaNameIndex, Descriptor.SchemaName);
-      Result.UpdateString(ProcColProcedureNameIndex, ProcName);
+      Result.UpdateRawByteString(SchemaNameIndex, Descriptor.SchemaName);
+      Result.UpdateRawByteString(ProcColProcedureNameIndex, Descriptor.AttributeName);
       ParamName := '';
       Arg := TZOraProcDescriptor_A(Descriptor.Args[i]);
       Arg.ConcatParentName(False, SQLWriter, ParamName, IC);
       SQLWriter.AddText(Arg.AttributeName, ParamName);
       SQLWriter.Finalize(ParamName);
-      {$IFDEF UNICODE}
-      Result.UpdateUnicodeString(ProcColColumnNameIndex, ParamName);
-      Result.UpdateUnicodeString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
-      {$ELSE}
       Result.UpdateRawByteString(ProcColColumnNameIndex, ParamName);
-      Result.UpdateRawByteString(ProcColTypeNameIndex, OCIType2Name(Descriptor.DataType));
-      {$ENDIF}
+      Result.UpdateRawByteString(ProcColTypeNameIndex, Arg.TypeName);
       if Arg.OrdPos = 0
       then Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctReturn))
       else case Arg.IODirection of
@@ -1399,13 +1402,69 @@ var
     end;
   end;
 
-  procedure AddPackageArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A);
+  procedure AddPackageArgsA({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_A;
+    {$IFDEF AUTOREFCOUNT}const{$ENDIF} SQLWriter: TZRawSQLStringWriter);
   var I: Integer;
   begin
     for I := 0 to Descriptor.Args.Count -1 do begin
       if TZOraProcDescriptor_A(Descriptor.Args[I]).ObjType = OCI_PTYPE_PKG
-      then AddPackageArgs(TZOraProcDescriptor_A(Descriptor.Args[I]))
-      else AddArgs(TZOraProcDescriptor_A(Descriptor.Args[i]));
+      then AddPackageArgsA(TZOraProcDescriptor_A(Descriptor.Args[I]), SQLWriter)
+      else AddArgsA(TZOraProcDescriptor_A(Descriptor.Args[i]), SQLWriter);
+    end;
+  end;
+
+  procedure AddArgsW({$IFDEF AUTOREFCOUNT}const {$ENDIF}Descriptor: TZOraProcDescriptor_W;
+    {$IFDEF AUTOREFCOUNT}const{$ENDIF} SQLWriter: TZUnicodeSQLStringWriter);
+  var I: Integer;
+    ProcName, ParamName: UnicodeString;
+    Arg: TZOraProcDescriptor_W;
+  begin
+    ProcName := '';
+    Descriptor.ConcatParentName(True, SQLWriter, ProcName, IC);
+    SQLWriter.AddText(Descriptor.AttributeName, ProcName);
+    SQLWriter.Finalize(ProcName);
+    for I := 0 to Descriptor.Args.Count-1 do begin
+      Result.MoveToInsertRow;
+      Result.UpdateUnicodeString(SchemaNameIndex, Descriptor.SchemaName);
+      Result.UpdateUnicodeString(ProcColProcedureNameIndex, Descriptor.AttributeName);
+      ParamName := '';
+      Arg := TZOraProcDescriptor_W(Descriptor.Args[i]);
+      Arg.ConcatParentName(False, SQLWriter, ParamName, IC);
+      SQLWriter.AddText(Arg.AttributeName, ParamName);
+      SQLWriter.Finalize(ParamName);
+      Result.UpdateUnicodeString(ProcColColumnNameIndex, ParamName);
+      Result.UpdateUnicodeString(ProcColTypeNameIndex, Arg.TypeName);
+      if Arg.OrdPos = 0
+      then Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctReturn))
+      else case Arg.IODirection of
+        OCI_TYPEPARAM_IN    : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctIn));
+        OCI_TYPEPARAM_OUT   : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut));
+        OCI_TYPEPARAM_INOUT : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut));
+      end;
+      SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
+        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings, Descriptor.IODirection);
+      if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
+      then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
+      else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
+      Result.UpdateInt(ProcColLengthIndex, Arg.DataSize);
+      Result.UpdateInt(ProcColDataTypeIndex, Ord(SQLType));
+
+      Result.UpdateInt(ProcColScaleIndex, Arg.Scale);
+      Result.UpdateInt(ProcColRadixIndex, Arg.Radix);
+      Result.UpdateInt(ProcColNullableIndex, Ord(ntNullableUnknown));
+      //ProcColRemarksIndex       = FirstDbcIndex + 12;
+      Result.InsertRow;
+    end;
+  end;
+
+  procedure AddPackageArgsW({$IFDEF AUTOREFCOUNT}const{$ENDIF}Descriptor: TZOraProcDescriptor_W;
+    {$IFDEF AUTOREFCOUNT}const{$ENDIF} SQLWriter: TZUnicodeSQLStringWriter);
+  var I: Integer;
+  begin
+    for I := 0 to Descriptor.Args.Count -1 do begin
+      if TZOraProcDescriptor_W(Descriptor.Args[I]).ObjType = OCI_PTYPE_PKG
+      then AddPackageArgsW(TZOraProcDescriptor_W(Descriptor.Args[I]), SQLWriter)
+      else AddArgsW(TZOraProcDescriptor_W(Descriptor.Args[i]), SQLWriter);
     end;
   end;
 begin
@@ -1457,15 +1516,42 @@ begin
         end;
       SQLWriter.CancelLastCharIfExists('.', TempProcedureNamePattern);
       SQLWriter.Finalize(TempProcedureNamePattern);
-      Descriptor := TZOraProcDescriptor_A.Create(nil);
-      try
-        Descriptor.Describe(OCI_PTYPE_UNK, GetConnection, TempProcedureNamePattern);
-        if Descriptor.ObjType = OCI_PTYPE_PKG
-        then AddPackageArgs(Descriptor)
-        else AddArgs(Descriptor);
-      finally
-        SL.Free;
-        FreeAndNil(Descriptor);
+      if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+        DescriptorW := TZOraProcDescriptor_W.Create(nil, ConSettings.CTRL_CP);
+        {$IFNDEF UNICODE}
+        SQLWriterW := TZUnicodeSQLStringWriter.Create(1024);
+        S := ZRawToUnicode(TempProcedureNamePattern, ConSettings.CTRL_CP);
+        {$ENDIF}
+        try
+          DescriptorW.Describe(OCI_PTYPE_UNK, GetConnection, {$IFNDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});
+          if DescriptorW.ObjType = OCI_PTYPE_PKG
+          then AddPackageArgsW(DescriptorW, {$IFNDEF UNICODE}SQLWriterW{$ELSE}SQLWriter{$ENDIF})
+          else AddArgsW(DescriptorW, {$IFNDEF UNICODE}SQLWriterW{$ELSE}SQLWriter{$ENDIF});
+        finally
+          SL.Free;
+          FreeAndNil(DescriptorW);
+          {$IFNDEF UNICODE}
+          SQLWriterW.Free;
+          {$ENDIF}
+        end;
+      end else begin
+        DescriptorA := TZOraProcDescriptor_A.Create(nil, ConSettings.ClientCodePage.CP);
+        {$IFDEF UNICODE}
+        SQLWriterA := TZRawSQLStringWriter.Create(1024);
+        S := ZUnicodeToRaw(TempProcedureNamePattern, ConSettings.ClientCodePage.CP);
+        {$ENDIF}
+        try
+          DescriptorA.Describe(OCI_PTYPE_UNK, GetConnection, {$IFDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});
+          if DescriptorA.ObjType = OCI_PTYPE_PKG
+          then AddPackageArgsA(DescriptorA, {$IFDEF UNICODE}SQLWriterA{$ELSE}SQLWriter{$ENDIF})
+          else AddArgsA(DescriptorA, {$IFDEF UNICODE}SQLWriterA{$ELSE}SQLWriter{$ENDIF});
+        finally
+          SL.Free;
+          FreeAndNil(DescriptorA);
+          {$IFDEF UNICODE}
+          SQLWriterA.Free;
+          {$ENDIF}
+        end;
       end;
     end;
     RS.Close;

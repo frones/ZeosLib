@@ -341,6 +341,10 @@ begin
   Result := FParams.IndexOf(ParamName);
 end;
 
+const
+  cAssignLeft: array[0..1] of Char = (':','=');
+var //endian save
+  uAssignLeft: {$IFDEF UNICODE}Cardinal{$ELSE}Word{$ENDIF} absolute cAssignLeft;
 {**
   Rebuilds all SQL statements.
 }
@@ -361,7 +365,6 @@ var
     Token := Tokens[TokenIndex];
     Inc(TokenIndex);
   end;
-
 begin
   if not (Assigned(FParams) and Assigned(FStatements)) then exit; //Alexs
 
@@ -394,7 +397,10 @@ begin
       if ParamCheck and (Token.P^ = FParamChar) and (Token.L = 1) then begin
         NextToken;
         if (Token.TokenType <> ttEOF) then begin
-          if not ((Token.P^ = FParamChar) and (Token.L = 1)) then begin //test unescape FParamChar
+          if (Token.TokenType = ttSymbol) and (Token.L = 2) and
+            ({$IFDEF UNICODE}PCardinal{$ELSE}PWord{$ENDIF}(Token.P)^ = uAssignLeft) then
+            SQLStringWriter.AddText(Token.P, Token.L, SQL)
+          else if not ((Token.P^ = FParamChar) and (Token.L = 1)) then begin //test unescape FParamChar
             { Check for correct parameter type. }
             if not (Token.TokenType in [ttWord, ttQuoted, ttQuotedIdentifier, ttKeyWord, ttInteger]) then
               raise EZDatabaseError.Create(SIncorrectToken);

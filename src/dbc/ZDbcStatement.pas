@@ -3594,6 +3594,7 @@ begin
     stString: if not (VariantType in [vtString,
       {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
       {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
+      {$IF declared(vtSynRawUTF8Array)}vtSynRawUTF8Array,{$IFEND}
       vtRawByteString, vtCharRec]) then
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
     stUnicodeString: if not (VariantType in [vtUnicodeString, vtCharRec]) then
@@ -3673,11 +3674,11 @@ end;
   (depending on the argument's
   size relative to the driver's limits on <code>VARCHAR</code> values)
   when it sends it to the database.
-
+  The codepage is equal to the raw codepage of the operating system.
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-{$IFNDEF NEXTGEN}
+{$IFNDEF NO_ANSISTRING}
 procedure TZRawPreparedStatement.SetAnsiString(ParameterIndex: Integer;
   const Value: AnsiString);
 begin
@@ -3691,7 +3692,7 @@ end;
 {$ENDIF}
 
 {**
-  Sets the designated parameter to a Java <code>TZCharRec</code> value.
+  Sets the designated parameter to <code>TZCharRec</code> value.
   The driver converts this
   to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
   (depending on the argument's
@@ -3735,7 +3736,7 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>String</code> value.
+  Sets the designated parameter to a TZCharRec value.
   The driver converts this
   to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
   (depending on the argument's

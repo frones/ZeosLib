@@ -1104,6 +1104,7 @@ function SQLQuotedStr(Src: PChar; Len: LengthInt; QuoteLeft, QuoteRight: Char): 
 function SQLDequotedStr(const S: string; QuoteChar: Char): string; overload;
 function SQLDequotedStr(Src: PChar; Len: LengthInt; QuoteChar: Char): string; overload;
 function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload;
+procedure SQLDequotedStr(pSrc, pDst: PAnsiChar; var Len: LengthInt; QuoteChar: AnsiChar); overload;
 
 function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean; overload;
 function SameText(Val1, Val2: PWideChar; Len: LengthInt): Boolean; overload;
@@ -6111,6 +6112,10 @@ function SQLDequotedStr(Src: PChar; Len: LengthInt; QuoteChar: Char): string;
 var
   EscChars: LengthInt;
   pSrcBegin, pSrcEnd, pSrc, pDest: PChar;
+  function CreateEArgumentException: EArgumentException;
+  begin
+    result := EArgumentException.CreateFmt(SUnescapedChar, [pSrc]);
+  end;
 begin
   pSrcBegin := Pointer(Src);
   // Input must have at least 2 chars, otherwise it is considered unquoted
@@ -6152,14 +6157,14 @@ begin
         Inc(pSrc, 2);
       end
       else
-        raise EArgumentException.CreateFmt(SUnescapedChar, [Src])
+        raise CreateEArgumentException
     else
       Inc(pSrc);
   end;
   // Check last char (pSrc = pSrcEnd is true here only if previous char wasn't
   // quote or was escaped quote)
   if (pSrc = pSrcEnd) and (pSrc^ = QuoteChar) then
-    raise EArgumentException.CreateFmt(SUnescapedCharAtEnd, [Src]);
+    raise CreateEArgumentException;
 
   // Input contains some escaped quotes
   if EscChars > 0 then
@@ -6184,10 +6189,79 @@ begin
   end;
 end;
 
+procedure SQLDequotedStr(pSrc, pDst: PAnsiChar; var Len: LengthInt; QuoteChar: AnsiChar);
+var
+  EscChars: LengthInt;
+  pSrcBegin, pSrcEnd: PAnsiChar;
+  function CreateEArgumentException: EArgumentException;
+  begin
+    result := EArgumentException.CreateFmt(SUnescapedChar, [pSrc]);
+  end;
+begin
+  pSrcBegin := pSrc;
+  // Input must have at least 2 chars, otherwise it is considered unquoted
+  // so return as is
+  if Len <= 1 then begin
+    if Len = 1 then
+      pDst^ := pSrc^;
+    Exit;
+  end;
+  pSrcEnd := pSrcBegin + Len - 1;
+  // Check if input is quoted and return input as is if not
+  if (PByte(pSrc)^ = Byte(QuoteChar)) and (PByte(pSrcEnd)^ = Byte(QuoteChar)) then begin
+    // just quotes
+    if Len = 2 then begin
+      Len := 0;
+      Exit;
+    end;
+    Inc(pSrcBegin);
+    Dec(pSrcEnd);
+  end else Exit;
+
+  // Count chars that should be escaped
+  pSrc := pSrcBegin;
+  EscChars := 0;
+  while pSrc < pSrcEnd do
+    if (PByte(pSrc)^ = Byte(QuoteChar)) then
+      if pSrc^ = (pSrc+1)^ then begin
+        Inc(EscChars);
+        Inc(pSrc, 2);
+      end else
+        raise CreateEArgumentException
+    else
+      Inc(pSrc);
+  // Check last char (pSrc = pSrcEnd is true here only if previous char wasn't
+  // quote or was escaped quote)
+  if (pSrc = pSrcEnd) and (PByte(pSrc)^ = Byte(QuoteChar)) then
+    raise CreateEArgumentException;
+  Len := Len -2;
+  // Input contains some escaped quotes
+  if EscChars > 0 then begin
+    Len := Len - EscChars;
+    pSrc := pSrcBegin;
+    while pSrc <= pSrcEnd do begin
+      if (PByte(pSrc)^ = Byte(QuoteChar)) then
+        Inc(pSrc);
+      pDst^ := pSrc^;
+      Inc(pSrc);
+      Inc(pDst);
+    end;
+  end else  // Input contains no escaped quotes
+    Move(pSrcBegin^, pDst^, Len);
+end;
+
 function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string;
 var
   SrcLen, EscChars: LengthInt;
   pSrcBegin, pSrcEnd, pSrc, pDest: PChar;
+  function CreateEArgumentException: EArgumentException;
+  begin
+    result := EArgumentException.CreateFmt(SUnescapedChar, [pSrc]);
+  end;
+  function CreateEArgumentExceptionAtEnd: EArgumentException;
+  begin
+    result := EArgumentException.CreateFmt(SUnescapedCharAtEnd, [pSrc]);
+  end;
 begin
   SrcLen := Length(S);
   pSrcBegin := Pointer(S);
@@ -6229,15 +6303,14 @@ begin
         Inc(EscChars);
         Inc(pSrc, 2);
       end
-      else
-        raise EArgumentException.CreateFmt(SUnescapedChar, [S])
+      else raise CreateEArgumentException
     else
       Inc(pSrc);
   end;
   // Check last char (pSrc = pSrcEnd is true here only if previous char wasn't
   // quote or was escaped quote)
   if (pSrc = pSrcEnd) and ((pSrc^ = QuoteLeft) or (pSrc^ = QuoteRight)) then
-    raise EArgumentException.CreateFmt(SUnescapedCharAtEnd, [S]);
+    raise CreateEArgumentExceptionAtEnd;
 
   // Input contains some escaped quotes
   if EscChars > 0 then

@@ -4195,20 +4195,30 @@ end;
 {$IFNDEF NO_ANSISTRING}
 function TZAbstractReadOnlyResultSet_A.GetAnsiString(
   ColumnIndex: Integer): AnsiString;
-var
-  P: PAnsichar;
-  L: NativeUInt;
+var P: PAnsichar;
+    L: NativeUInt;
+    RBS: RawByteString absolute Result;
+label jmpA, jmpSet;
 begin
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
-  if P <> nil then
-    With TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
-    if (ColumnType in [stString,stUnicodeString,stAsciiStream,stUnicodeStream]) and
-       (ColumnCodePage <> zOSCodePage) then begin
-      FUniTemp := PRawToUnicode(P, L, ColumnCodePage);
-      Result := ZUnicodeToRaw(FUniTemp, zOSCodePage);
-    end else
-      System.SetString(Result, P, L)
-  else Result := '';
+  with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    case ColumnType of
+      stString,stAsciiStream: begin
+jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+          RBS := '';
+          if (P <> nil) and (ColumnCodePage <> ZOSCodePage)
+          then PRawToRawConvert(P, L, ColumnCodePage, ZOSCodePage, RBS)
+          else goto jmpSet;
+        end;
+      stUnicodeString, stUnicodeStream: {some drivers just tag N-Columns but are raw encoded}
+        if ColumnCodePage = zCP_UTF16 then begin
+          P := Pointer(IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L));
+          Result := PUnicodeToRaw(PWideChar(P), L, ZOSCodePage);
+        end else goto jmpA
+      else begin
+          P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+jmpSet:   System.SetString(Result, P, L)
+        end;
+    end;
 end;
 {$ENDIF}
 
@@ -4224,24 +4234,34 @@ end;
 {$IFNDEF NO_UTF8STRING}
 function TZAbstractReadOnlyResultSet_A.GetUTF8String(
   ColumnIndex: Integer): UTF8String;
-var
-  P: PAnsichar;
-  L: NativeUInt;
+var P: PAnsichar;
+    L: NativeUInt;
+    RBS: RawByteString absolute Result;
+label jmpA, jmpSet;
 begin
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
-  if P <> nil then begin
-    with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
-    if (ColumnType in [stString,stUnicodeString,stAsciiStream,stUnicodeStream]) and
-       (ColumnCodePage <> zCP_UTF8) then begin
-      FUniTemp := PRawToUnicode(P, L, ColumnCodePage);
-      Result := ZUnicodeToRaw(FUniTemp, zCP_UTF8);
-    end else
-      {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-      ZSetString(P, L, result)
-      {$ELSE}
-      System.SetString(Result, P, L)
-      {$ENDIF}
-  end else Result := '';
+  with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    case ColumnType of
+      stString,stAsciiStream: begin
+jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+          RBS := '';
+          if (P <> nil) and (ColumnCodePage <> zCP_UTF8)
+          then PRawToRawConvert(P, L, ColumnCodePage, zCP_UTF8, RBS)
+          else goto jmpSet;
+        end;
+      stUnicodeString, stUnicodeStream: {some drivers just tag N-Columns but are raw encoded}
+        if ColumnCodePage = zCP_UTF16 then begin
+          P := Pointer(IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L));
+          Result := PUnicodeToRaw(PWideChar(P), L, zCP_UTF8);
+        end else goto jmpA
+      else begin
+          P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+jmpSet:   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+          ZSetString(P, L, result)
+          {$ELSE}
+          System.SetString(Result, P, L)
+          {$ENDIF}
+        end;
+    end;
 end;
 {$ENDIF}
 
@@ -4348,10 +4368,9 @@ end;
 function TZImmediatelyReleasableLobStream.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID;
   out Obj): HResult;
 begin
-  if GetInterface(IID, Obj) then
-    Result := 0
-  else
-    Result := E_NOINTERFACE;
+  if GetInterface(IID, Obj)
+  then Result := S_OK
+  else Result := E_NOINTERFACE;
 end;
 
 procedure TZImmediatelyReleasableLobStream.ReleaseImmediat(
@@ -4864,7 +4883,7 @@ begin
   else begin
     Stream := CreateLobStream(zCP_UTF16, lsmWrite);
     try
-      Stream.Write(Buffer^, Len)
+      Stream.Write(Buffer^, Len shl 1)
     finally
       Stream.Free;
     end;

@@ -3234,11 +3234,11 @@ var
 begin
   PostgreSQLConnection := GetConnection as IZPostgreSQLConnection;
 
-  Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, OID, AttTypMod);
+  Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(PostgreSQLConnection.IsOidAsBlob, OID, AttTypMod);
   if Result = stUnknown then begin
     Result := PostgreSQLToSQLType(PostgreSQLConnection, PostgreSQLConnection.GetTypeNameByOid(Oid));
     if Result = stBigDecimal then //Currency range?
-      Result := ZDbcPostgreSQLUtils.PostgreSQLToSQLType(ConSettings, PostgreSQLConnection.IsOidAsBlob, NUMERICOID, AttTypMod);
+      Result := PostgreSQLToSQLType(PostgreSQLConnection.IsOidAsBlob, NUMERICOID, AttTypMod);
   end;
 
 end;

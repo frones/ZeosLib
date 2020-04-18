@@ -541,7 +541,7 @@ implementation
 uses
   {$IF defined(PatchSystemMove) and defined(MSWINDOWS)}Windows,{$IFEND}
   {$IF defined(WITH_STRLEN_DEPRECATED) and defined(WITH_UNITANSISTRINGS)}AnsiStrings, {$IFEND}
-  SysConst{$IFNDEF WITH_PUREPASCAL_INTPOWER}, Math{$ENDIF};
+  SysConst, Math;
 
 {$IF defined(PatchSystemMove) or defined(FAST_MOVE)} //set in Zeos.inc
 var
@@ -5509,6 +5509,23 @@ begin
     inc(Code);
     Neg := (Ch = Ord('-'));
   end;
+  if (Ch or $20 = Byte('n')) and not Neg then //test NAN (overrun safe)
+    if (S[Code+1] or $20 = Byte('a')) and (S[Code+2] or $20 = Byte('n')) and (S[Code+3] = 0) then begin
+      Code := 0;
+      Result := NaN;
+      Exit;
+    end;
+  if (S[code] or $20 = Byte('i')) then //test Infinity (overrun safe)
+    if (S[Code+1] or $20 = Byte('n')) and (S[Code+2] or $20 = Byte('f')) and
+       (S[Code+3] or $20 = Byte('i')) and (S[Code+4] or $20 = Byte('n')) and
+       (S[Code+5] or $20 = Byte('i')) and (S[Code+6] or $20 = Byte('t')) and
+       (S[Code+7] or $20 = Byte('y')) and (S[Code+8] = 0) then begin
+      Code := 0;
+      if Neg
+      then Result := NegInfinity
+      else Result := Infinity;
+      Exit;
+    end;
   while true do begin
     Ch := S[code];
     inc(Code);
@@ -5651,6 +5668,23 @@ begin
     inc(Code);
     Neg := (Ch = Ord('-'));
   end;
+  if (Ch or $20 = Byte('n')) and not Neg then //test NAN (overrun safe)
+    if (S[Code+1] or $20 = Byte('a')) and (S[Code+2] or $20 = Byte('n')) and (S[Code+3] = 0) then begin
+      Code := 0;
+      Result := NaN;
+      Exit;
+    end;
+  if (S[code] or $20 = Byte('i')) then //test Infinity (overrun safe)
+    if (S[Code+1] or $20 = Byte('n')) and (S[Code+2] or $20 = Byte('f')) and
+       (S[Code+3] or $20 = Byte('i')) and (S[Code+4] or $20 = Byte('n')) and
+       (S[Code+5] or $20 = Byte('i')) and (S[Code+6] or $20 = Byte('t')) and
+       (S[Code+7] or $20 = Byte('y')) and (S[Code+8] = 0) then begin
+      Code := 0;
+      if Neg
+      then Result := NegInfinity
+      else Result := Infinity;
+      Exit;
+    end;
   while true do begin
     Ch := S[code];
     inc(Code);
@@ -6432,6 +6466,23 @@ begin
     inc(Code);
     Neg := (W = Ord('-'));
   end;
+  if (W or $0020 = Byte('n')) and not Neg then //test NAN (overrun safe)
+    if (S[Code+1] or $0020 = Byte('a')) and (S[Code+2] or $0020 = Byte('n')) and (S[Code+3] = 0) then begin
+      Code := 0;
+      Result := NaN;
+      Exit;
+    end;
+  if (S[code] or $0020 = Byte('i')) then //test Infinity (overrun safe)
+    if (S[Code+1] or $0020 = Byte('n')) and (S[Code+2] or $0020 = Byte('f')) and
+       (S[Code+3] or $0020 = Byte('i')) and (S[Code+4] or $0020 = Byte('n')) and
+       (S[Code+5] or $0020 = Byte('i')) and (S[Code+6] or $0020 = Byte('t')) and
+       (S[Code+7] or $0020 = Byte('y')) and (S[Code+8] = 0) then begin
+      Code := 0;
+      if Neg
+      then Result := NegInfinity
+      else Result := Infinity;
+      Exit;
+    end;
   while true do begin
     W := S[code];
     inc(Code);
@@ -6521,6 +6572,23 @@ begin
     inc(Code);
     Neg := (W = Ord('-'));
   end;
+  if (W or $0020 = Byte('n')) and not Neg then //test NAN (overrun safe)
+    if (S[Code+1] or $0020 = Byte('a')) and (S[Code+2] or $0020 = Byte('n')) and (S[Code+3] = 0) then begin
+      Code := 0;
+      Result := NaN;
+      Exit;
+    end;
+  if (S[code] or $0020 = Byte('i')) then //test Infinity (overrun safe)
+    if (S[Code+1] or $0020 = Byte('n')) and (S[Code+2] or $0020 = Byte('f')) and
+       (S[Code+3] or $0020 = Byte('i')) and (S[Code+4] or $0020 = Byte('n')) and
+       (S[Code+5] or $0020 = Byte('i')) and (S[Code+6] or $0020 = Byte('t')) and
+       (S[Code+7] or $0020 = Byte('y')) and (S[Code+8] = 0) then begin
+      Code := 0;
+      if Neg
+      then Result := NegInfinity
+      else Result := Infinity;
+      Exit;
+    end;
   while true do begin
     W := S[code];
     inc(Code);

@@ -217,7 +217,7 @@ type
     FOwnerLob: TZAbstractOracleBlob;
     FPosition: Int64;
     FOpenLobStreams: TZSortedList;
-    procedure CheckError(Status: sword; const Msg: RawByteString);
+    FConSettings: PZConSettings;
     procedure AllocLobLocator;
     procedure BeforeWrite;
   public
@@ -370,15 +370,14 @@ uses
 {$IFDEF USE_SYNCOMMONS}
 procedure TZOracleAbstractResultSet_A.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
-var
-    P: PAnsiChar;
-    C, H, I: SmallInt;
+var P: PAnsiChar;
+  C, H, I: SmallInt;
   Month, Day: Byte;
   Hour, Minute, Second: Byte;
   Year: SmallInt;
   L: NativeUInt;
   Millis: Cardinal absolute L;
-  procedure AddJSONEscape(P: PAnsichar; Len: LengthInt);
+  procedure AddJSONEscapeA(P: PAnsichar; Len: LengthInt);
   begin
     JSONWriter.Add('"');
     if FClientCP = zCP_UTF8 then
@@ -387,6 +386,12 @@ var
       FUniTemp := PRawToUnicode(P, Len, FClientCP);
       JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), System.Length(FUniTemp));
     end;
+    JSONWriter.Add('"');
+  end;
+  procedure AddJSONEscapeW(P: PWideChar; Len: LengthInt);
+  begin
+    JSONWriter.Add('"');
+    JSONWriter.AddJSONEscapeW(Pointer(P), Len);
     JSONWriter.Add('"');
   end;
 begin
@@ -451,15 +456,19 @@ begin
                             end;
                           end;
         { the charter types we support }
-        SQLT_VCS        : AddJSONEscape(@POCIVary(P).Data[0], POCIVary(P).Len);
-        SQLT_LVC        : if ColType = stUnicodeString then begin
-                            JSONWriter.Add('"');
-                            JSONWriter.AddJSONEscapeW(@POCILong(P).Data[0], POCILong(P).Len);
-                            JSONWriter.Add('"');
-                          end else AddJSONEscape(@POCILong(P).Data[0], POCILong(P).Len);
-        SQLT_VST        : AddJSONEscape(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len);
+        SQLT_VCS        : if ColType = stUnicodeString
+                          then AddJSONEscapeW(@POCIVary(P).Data[0], POCIVary(P).Len shr 1)
+                          else AddJSONEscapeA(@POCIVary(P).Data[0], POCIVary(P).Len);
+        SQLT_LVC        : if ColType = stUnicodeString
+                          then AddJSONEscapeW(@POCILong(P).Data[0], POCILong(P).Len shr 1)
+                          else AddJSONEscapeA(@POCILong(P).Data[0], POCILong(P).Len);
+        SQLT_VST        : if ColType = stUnicodeString
+                          then AddJSONEscapeW(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len shr 1)
+                          else AddJSONEscapeA(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len);
         { fixed char right ' ' padded }
-        SQLT_AFC        : AddJSONEscape(P, GetAbsorbedTrailingSpacesLen(P, Value_sz));
+        SQLT_AFC        : if ColType = stUnicodeString
+                          then AddJSONEscapeW(PWideChar(P), GetAbsorbedTrailingSpacesLen(PWideChar(P), Value_sz))
+                          else AddJSONEscapeA(P, GetAbsorbedTrailingSpacesLen(P, Value_sz));
         { the binary raw we support }
         SQLT_LVB        : JSONWriter.WrBase64(@POCILong(P).data[0], POCILong(P).Len, True);
         SQLT_BIN        : JSONWriter.WrBase64(P, value_sz, True);
@@ -683,7 +692,7 @@ const rNegInfinity: RawbyteString = '-Infinity';
 function TZOracleAbstractResultSet_A.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 var TS: TZTimeStamp;
   SQLVarHolder: PZSQLVar absolute TS;
-label dbl, sin, set_Result;
+label dbl, sin, set_Result, jmpW2A, jmpTestN;
   procedure RawFromNVU;
   begin
     Nvu2BCD(POCINumber(Result), PBCD(@FTinyBuffer[0])^);
@@ -700,23 +709,36 @@ begin
     LastWasNull := True;
     Result := nil;
     Len := 0;
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     Result := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.Value_sz);
+      SQLT_AFC: if ColumnCodePage = zCP_UTF16 then begin
+                  Len := GetAbsorbedTrailingSpacesLen(PWideChar(Result), SQLVarHolder.Value_sz shr 1);
+                  goto jmpW2A;
+                end else Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.Value_sz);
       SQLT_VST: begin
                   Len := PPOCILong(Result)^.Len;
                   Result := @PPOCILong(Result)^.data[0];
+                  goto jmpTestN;
                 end;
       SQLT_VCS: begin
                   Len := POCIVary(Result).Len;
                   Result := PAnsiChar(@POCIVary(Result).data[0]);
+                  goto jmpTestN;
                 end;
       SQLT_LVC: begin
                   Len := POCILong(Result).Len;
                   Result := PAnsiChar(@POCILong(Result).data[0]);
+jmpTestN:         if ColumnCodePage = zCP_UTF16 then begin
+                    Len := Len shr 1;
+jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSettings.CTRL_CP);
+                    Len := Length(fRawTemp);
+                    if Len = 0
+                    then Result := pEmptyAnsiString
+                    else Result := Pointer(fRawTemp);
+                  end;
                 end;
       { the oracle soft decimal }
       SQLT_VNU:
@@ -845,7 +867,7 @@ function TZOracleAbstractResultSet_A.GetPWideChar(ColumnIndex: Integer;
 var TS: TZTimeStamp;
   SQLVarHolder: PZSQLVar absolute TS;
   P: PAnsiChar;
-label dbl, sin, set_from_tmp, set_Result;
+label dbl, sin, set_from_tmp, set_Result, jmpA2W;
   procedure UniFromNVU;
   begin
     Nvu2BCD(POCINumber(P), PBCD(@FTinyBuffer[0])^);
@@ -862,25 +884,41 @@ begin
     LastWasNull := True;
     Result := nil;
     Len := 0;
-  end else begin
+  end else with TZOracleColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: begin
-                  FUniTemp := PRawToUnicode(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP);
-                  goto set_from_tmp;
+      SQLT_AFC: if ColumnCodePage = zCP_UTF16 then begin
+                  Result := PWideChar(P);
+                  Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.Value_sz shr 1)
+                end else begin
+                  Len := GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz);
+                  goto jmpA2W;
                 end;
-      SQLT_VST: begin
-                  FUniTemp := PRawToUnicode(@PPOCILong(P)^.data[0], PPOCILong(P)^.Len, FClientCP);
-                  goto set_from_tmp;
+      SQLT_VST: if ColumnCodePage = zCP_UTF16 then begin
+                  Result := @PPOCILong(P)^.data[0];
+                  Len := PPOCILong(P)^.Len shr 1;
+                end else begin
+                  Len := PPOCILong(P)^.Len;
+                  P := @PPOCILong(P)^.data[0];
+                  goto jmpA2W;
                 end;
-      SQLT_VCS: begin
-                  FUniTemp := PRawToUnicode(@POCIVary(P)^.data[0], POCIVary(P)^.Len, FClientCP);
-                  goto set_from_tmp;
+      SQLT_VCS: if ColumnCodePage = zCP_UTF16 then begin
+                  Result := @POCIVary(P)^.data[0];
+                  Len := POCIVary(P)^.Len shr 1;
+                end else begin
+                  Len := POCIVary(P)^.Len;
+                  P := @POCIVary(P)^.data[0];
+                  goto jmpA2W;
                 end;
-      SQLT_LVC: begin
-                  FUniTemp := PRawToUnicode(@POCILong(P)^.data[0], POCILong(P)^.Len, FClientCP);
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  Result := @POCILong(P)^.data[0];
+                  Len := POCILong(P)^.Len shr 1;
+                end else begin
+                  Len := POCILong(P)^.Len;
+                  P := @POCILong(P)^.data[0];
+jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
                   goto set_from_tmp;
                 end;
       { the oracle soft decimal }
@@ -1035,15 +1073,19 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
     Result := False
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: Result := StrToBoolEx(P, P+GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), True, False);
-      SQLT_VST: Result := StrToBoolEx(PAnsiChar(@PPOCILong(P)^.data[0]), PAnsiChar(@PPOCILong(P)^.data[0])+PPOCILong(P)^.Len, True, False);
-      SQLT_VCS: Result := StrToBoolEx(PAnsiChar(@POCIVary(P).data[0]), PAnsiChar(@POCIVary(P).data[0])+POCIVary(P)^.Len, True, False);
-      SQLT_LVC: Result := StrToBoolEx(PAnsiChar(@POCILong(P).data[0]), PAnsiChar(@POCILong(P).data[0])+POCILong(P)^.Len, True, False);
+      SQLT_AFC, SQLT_VST, SQLT_VCS,
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, Len));
+                  Result := StrToBoolEx(PWideChar(P), PWideChar(P)+Len, True, False);
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, Len);
+                  Result := StrToBoolEx(P, P+Len, True, False);
+                end;
       { the oracle soft decimal }
       SQLT_VNU: Result := nvuKind(POCINumber(P), FvnuInfo) <> nvu0;
       { the ordinals we yet do support }
@@ -1179,15 +1221,19 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
     Result := 0
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: Result := RawToInt64Def(P, P+GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), 0);
-      SQLT_VST: Result := RawToInt64Def(PAnsiChar(@PPOCILong(P)^.data[0]), PAnsiChar(@PPOCILong(P)^.data[0])+PPOCILong(P)^.Len, 0);
-      SQLT_VCS: Result := RawToInt64Def(PAnsiChar(@POCIVary(P).data[0]), PAnsiChar(@POCIVary(P).data[0])+POCIVary(P)^.Len, 0);
-      SQLT_LVC: Result := RawToInt64Def(PAnsiChar(@POCILong(P).data[0]), PAnsiChar(@POCILong(P).data[0])+POCILong(P)^.Len, 0);
+      SQLT_AFC, SQLT_VST, SQLT_VCS,
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, L));
+                  Result := UnicodeToInt64Def(PWideChar(P), PWideChar(P)+L, 0);
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, L);
+                  Result := RawToInt64Def(P, P+L, 0);
+                end;
       { the oracle soft decimal }
       SQLT_VNU: case nvuKind(POCINumber(P), FvnuInfo) of
                   nvu0,
@@ -1285,15 +1331,20 @@ begin
 {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     LastWasNull := True;
     Result := 0
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: Result := RawToUInt64Def(P, P+GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), 0);
-      SQLT_VST: Result := RawToUInt64Def(PAnsiChar(@PPOCILong(P)^.data[0]), PAnsiChar(@PPOCILong(P)^.data[0])+PPOCILong(P)^.Len, 0);
-      SQLT_VCS: Result := RawToUInt64Def(PAnsiChar(@POCIVary(P).data[0]), PAnsiChar(@POCIVary(P).data[0])+POCIVary(P)^.Len, 0);
-      SQLT_LVC: Result := RawToUInt64Def(PAnsiChar(@POCILong(P).data[0]), PAnsiChar(@POCILong(P).data[0])+POCILong(P)^.Len, 0);
+      { the supported String types we use }
+      SQLT_AFC, SQLT_VST, SQLT_VCS,
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, L));
+                  Result := UnicodeToUInt64Def(PWideChar(P), PWideChar(P)+L, 0);
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, L);
+                  Result := RawToUInt64Def(P, P+L, 0);
+                end;
       { the oracle soft decimal }
       SQLT_VNU: case nvuKind(POCINumber(P), FvnuInfo) of
                   nvu0,
@@ -1369,7 +1420,7 @@ end;
 procedure TZOracleAbstractResultSet_A.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
 var SQLVarHolder: PZSQLVar;
-  Len: LengthInt;
+  L: NativeUint;
   P: PAnsiChar;
 label Fail;
 begin
@@ -1382,14 +1433,20 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
     Fillchar(Result, SizeOf(TGUID), #0);
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported character/binary types we use }
-      SQLT_AFC: begin
-                  Len := GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz);
-                  if (Len = 36) or (Len = 38)
+      SQLT_AFC, SQLT_VST, SQLT_VCS,
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, L));
+                  if (L = 36) or (L = 38)
+                  then ValidGUIDToBinary(PWideChar(P), @Result.D1)
+                  else goto Fail;
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, L);
+                  if (L = 36) or (L = 38)
                   then ValidGUIDToBinary(P, @Result.D1)
                   else goto Fail;
                 end;
@@ -1398,15 +1455,6 @@ begin
                 else goto Fail;
       SQLT_LVB: if POCILong(P).Len = SizeOf(TGUID)
                 then Move(POCILong(P).data[0], Result.D1, SizeOf(TGUID))
-                else goto Fail;
-      SQLT_VST: if PPOCILong(P)^.Len = SizeOf(TGUID)
-                then Move(PPOCILong(P)^.data[0], Result.D1, SizeOf(TGUID))
-                else goto Fail;
-      SQLT_VCS: if (POCIVary(P).Len = 36) or (POCIVary(P).Len = 38)
-                then ValidGUIDToBinary(PAnsiChar(@POCIVary(P).data[0]), @Result.D1)
-                else goto Fail;
-      SQLT_LVC: if (POCILong(P).Len = 36) or (POCILong(P).Len = 38)
-                then ValidGUIDToBinary(PAnsiChar(@POCILong(P).data[0]), @Result.D1)
                 else goto Fail;
       else
 Fail:     raise CreateOCIConvertError(ColumnIndex, SQLVarHolder^.dty);
@@ -1445,10 +1493,14 @@ begin
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC: SqlStrToFloatDef(P,0,Result, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz));
-      SQLT_VST: SqlStrToFloatDef(PAnsiChar(@PPOCILong(P)^.data[0]),0,Result, PPOCILong(P)^.Len);
-      SQLT_VCS: SqlStrToFloatDef(PAnsiChar(@POCIVary(P).data[0]), 0, Result, POCIVary(P)^.Len);
-      SQLT_LVC: SqlStrToFloatDef(PAnsiChar(@POCILong(P).data[0]), 0, Result, POCILong(P)^.Len);
+      SQLT_AFC, SQLT_VST, SQLT_VCS,
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, L));
+                  SqlStrToFloatDef(PWideChar(P), 0, Result, L);
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, L);
+                  SqlStrToFloatDef(P,0,Result, L)
+                end;
       { the oracle soft decimal }
       SQLT_VNU: begin
           Result := 0;
@@ -1531,7 +1583,7 @@ begin
       SQLT_VST,
       SQLT_VCS,
       SQLT_LVC,
-      SQLT_CLOB: if (ColumnCodePage = zCP_UTF16) then begin
+      SQLT_CLOB: if ColumnCodePage = zCP_UTF16 then begin
                   PW := GetPWideChar(ColumnIndex, Len);
                   LastWasNull := not TryUniToBcd(PW, Len, Result, '.');
                 end else begin
@@ -1599,11 +1651,14 @@ begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
-      { the supported String types we use }
-      SQLT_AFC: SqlStrToFloatDef(P,0,Result, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz));
-      SQLT_VST: SqlStrToFloatDef(PAnsiChar(@PPOCILong(P)^.data[0]),0,Result, PPOCILong(P)^.Len);
-      SQLT_VCS: SqlStrToFloatDef(PAnsiChar(@POCIVary(P).data[0]), 0, Result, POCIVary(P)^.Len);
-      SQLT_LVC: SqlStrToFloatDef(PAnsiChar(@POCILong(P).data[0]), 0, Result, POCILong(P)^.Len);
+      SQLT_AFC, SQLT_VST, SQLT_VCS,
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, L));
+                  SqlStrToFloatDef(PWideChar(P), 0, Result, L);
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, L);
+                  SqlStrToFloatDef(P,0,Result, L)
+                end;
       { the oracle soft decimal }
       SQLT_VNU:
           case nvuKind(POCINumber(P), FvnuInfo) of
@@ -1695,16 +1750,16 @@ begin
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True
-  else begin
+  else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC,
-      SQLT_VST,
-      SQLT_VCS,
-      SQLT_LVC,
-      SQLT_CLOB: begin
+      SQLT_AFC, SQLT_VST, SQLT_VCS, SQLT_LVC,
+      SQLT_CLOB: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, Len));
+                  LastWasNull := not TryPCharToDate(PWideChar(P), Len, ConSettings^.ReadFormatSettings, Result);
+                end else begin
                   P := GetPAnsiChar(ColumnIndex, Len);
                   LastWasNull := not TryPCharToDate(P, Len, ConSettings^.ReadFormatSettings, Result);
                 end;
@@ -1793,16 +1848,16 @@ begin
     LastWasNull := True;
 Fill: PCardinal(@Result.Hour)^ := 0;
     PInt64(@Result.Second)^ := 0;
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC,
-      SQLT_VST,
-      SQLT_VCS,
-      SQLT_LVC,
-      SQLT_CLOB: begin
+      SQLT_AFC, SQLT_VST, SQLT_VCS, SQLT_LVC,
+      SQLT_CLOB: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, Len));
+                  LastWasNull := not TryPCharToTime(PWideChar(P), Len, ConSettings^.ReadFormatSettings, Result);
+                end else begin
                   P := GetPAnsiChar(ColumnIndex, Len);
                   LastWasNull := not TryPCharToTime(P, Len, ConSettings^.ReadFormatSettings, Result);
                 end;
@@ -1900,11 +1955,8 @@ Fill: PInt64(@Result.Year)^ := 0;
     LastWasNull := False;
     case SQLVarHolder.dty of
       { the supported String types we use }
-      SQLT_AFC,
-      SQLT_VST,
-      SQLT_VCS,
-      SQLT_LVC,
-      SQLT_CLOB: if (ColumnCodePage = zCP_UTF16) then begin
+      SQLT_AFC, SQLT_VST, SQLT_VCS, SQLT_LVC,
+      SQLT_CLOB: if ColumnCodePage = zCP_UTF16 then begin
                   PW := GetPWideChar(ColumnIndex, Len);
                   LastWasNull := not TryPCharToTimeStamp(PW, Len, ConSettings^.ReadFormatSettings, Result);
                 end else begin
@@ -2079,6 +2131,7 @@ function TZOracleAbstractResultSet_A.GetBlob(ColumnIndex: Integer;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  L: NativeUint;
 begin
   Result := nil ;
   if LobStreamMode <> lsmRead then
@@ -2092,27 +2145,30 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
     Result := nil
-  end else begin
+  end else with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     P := SQLVarHolder.valuep+(FCurrentRowBufIndex*SQLVarHolder.value_sz);
     LastWasNull := False;
     case SQLVarHolder.dty of
+      { the binary raw we support }
+      SQLT_VBI, SQLT_LVB: begin
+                  P := Pointer(GetBytes(ColumnIndex, L));
+                  Result := TZMemoryReferencedBLob.CreateWithData(P, L, FOpenLobStreams);
+                end;
       { the supported String types we use }
-      SQLT_AFC: Result := TZLocalMemCLob.CreateWithData(P, GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz), FClientCP, ConSettings, FOpenLobStreams);
-      SQLT_VST: Result := TZLocalMemCLob.CreateWithData(PAnsiChar(@PPOCILong(P)^.data[0]),
-        PPOCILong(P)^.Len, FClientCP, ConSettings, FOpenLobStreams);
-      SQLT_VCS: Result := TZLocalMemCLob.CreateWithData(PAnsiChar(@POCIVary(P).data[0]),
-        POCIVary(P)^.Len, FClientCP, ConSettings, FOpenLobStreams);
-      SQLT_LVC: Result := TZLocalMemCLob.CreateWithData(PAnsiChar(@POCILong(P).data[0]),
-        POCILong(P)^.Len, FClientCP, ConSettings, FOpenLobStreams);
+      SQLT_AFC, SQLT_VST, SQLT_VCS,
+      SQLT_LVC: if ColumnCodePage = zCP_UTF16 then begin
+                  P := Pointer(GetPWideChar(ColumnIndex, L));
+                  Result := TZMemoryReferencedCLob.CreateWithData(PWideChar(P), L, zCP_UTF16, ConSettings, FOpenLobStreams);
+                end else begin
+                  P := GetPAnsiChar(ColumnIndex, L);
+                  Result := TZMemoryReferencedCLob.CreateWithData(P, L, FClientCP, ConSettings, FOpenLobStreams);
+                end;
       SQLT_BLOB,
       SQLT_BFILEE,
       SQLT_CFILEE: Result := TZOracleBlob.Create(FConnection, PPOCIDescriptor(P)^, SQLVarHolder.dty, FOpenLobStreams);
       SQLT_CLOB: with TZOracleColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
           Result := TZOracleClob.Create(FConnection, PPOCIDescriptor(P)^, CharSetForm, csid, FOpenLobStreams);
-      SQLT_NTY: Result := TZLocalMemBLob.CreateWithStream(nil, FOpenLobStreams);
-      { the binary raw we support }
-      SQLT_VBI: Result := TZLocalMemBLob.CreateWithData(PAnsiChar(@POCIVary(P)^.data[0]), POCIVary(P)^.Len, FOpenLobStreams);
-      SQLT_LVB: Result := TZLocalMemBLob.CreateWithData(PAnsiChar(@POCILong(P)^.data[0]), POCILong(P)^.Len, FOpenLobStreams);
+      SQLT_NTY: ;
       else raise CreateCanNotAccessBlobRecordException(ColumnIndex, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType);
     end;
   end;
@@ -2133,14 +2189,22 @@ var
   TempColumnNameLen: Integer;
   P: PAnsiChar;
   DescriptorColumnCount,SubObjectColumnCount: Integer;
-  //CanBindInt64: Boolean;
   paramdpp: Pointer;
   RowSize: Integer;
-  defn_or_bindpp:     POCIHandle;
+  defn_or_bindpp: POCIHandle;
+  acsid: ub2;
   function AttributeToString(var P: PAnsiChar; Len: Integer):
     {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
   begin
     if P <> nil then
+      if FClientCP = zCP_UTF16 then begin
+        Len := Len shr 1;
+        {$IFDEF UNICODE}
+        System.SetString(Result, PWideChar(P), Len)
+        {$ELSE}
+        Result := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
+        {$ENDIF}
+      end else
       {$IFDEF UNICODE}
       Result := ZEncoding.PRawToUnicode(P, Len, FClientCP)
       {$ELSE}
@@ -2148,14 +2212,13 @@ var
         Result := BufferToStr(P, Len)
       else begin
         Result := '';
-        PRawToRawConvert(P, Len, FclientCP, ConSettings^.CTRL_CP, Result);
+        PRawToRawConvert(P, Len, FClientCP, ConSettings^.CTRL_CP, Result);
       end
       {$ENDIF}
     else
       Result := '';
     P := nil;
   end;
-label CSFormAndID;
 begin
   //CanBindInt64 := FConnection.GetClientVersion >= 11002000;
   if ResultSetConcurrency = rcUpdatable then
@@ -2249,40 +2312,49 @@ begin
 
     ColumnInfo.ColumnType := CurrentVar^.ColType;
     ColumnInfo.Scale := CurrentVar^.Scale;
-    if (ColumnInfo.ColumnType in [stString, stUnicodeString]) then begin
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+    if (ColumnInfo.ColumnType in [stString, stAsciiStream]) then begin
       {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
         and is different to the native db charset
         so we'll increase the buffers to avoid truncation errors
         and we use 8 byte aligned buffers. Here we go:}
-      if Consettings.ClientCodePage.Encoding <> ceUTF16
-      then CurrentVar^.value_sz := ColumnInfo.Precision * ConSettings.ClientCodePage.CharWidth + 1
-      else CurrentVar^.value_sz := ColumnInfo.Precision shl 1 + SizeOf(WideChar);
-      CurrentVar^.value_sz := ((CurrentVar^.value_sz shr 3)+1) shl 3;
-      ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
-      if ColumnInfo.ColumnType = stString
-      then ColumnInfo.CharOctedLength := ColumnInfo.Precision * ConSettings^.ClientCodePage^.CharWidth
-      else ColumnInfo.CharOctedLength := ColumnInfo.Precision shl 1;
-CSFormAndID:
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
-      if ColumnInfo.CharsetForm = SQLCS_NCHAR then begin//We should determine the NCHAR set on connect
-        if ColumnInfo.ColumnType = stString then begin
+      if ColumnInfo.ColumnType = stString then begin
+          FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+            @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+        if ColumnInfo.CharsetForm = SQLCS_NCHAR then begin
+          CurrentVar^.value_sz := ColumnInfo.Precision;
           ColumnInfo.Precision := ColumnInfo.Precision shr 1;
-          ColumnInfo.ColumnType := stUnicodeString;
-          CurrentVar^.value_sz := ColumnInfo.Precision shl 1 + SizeOf(WideChar);
-        end else if ColumnInfo.ColumnType = stAsciiStream then
-          ColumnInfo.ColumnType := stUnicodeStream;
-        ColumnInfo.ColumnCodePage := zCP_UTF16;
-      end else ColumnInfo.ColumnCodePage := FClientCP;
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
-    end else if (ColumnInfo.ColumnType = stBytes ) then
-      ColumnInfo.Precision := CurrentVar^.value_sz
-    else if (ColumnInfo.ColumnType = stAsciiStream) then
-      goto CSFormAndID
-    else
+          CurrentVar.ColType := stUnicodeString;
+          ColumnInfo.ColumnCodePage := zCP_UTF16;
+          ColumnInfo.csid := OCI_UTF16ID;
+        end else begin
+          if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
+            CurrentVar^.value_sz := ColumnInfo.Precision * ConSettings.ClientCodePage.CharWidth;
+            ColumnInfo.ColumnCodePage := FClientCP;
+          end else begin
+            CurrentVar^.value_sz := ColumnInfo.Precision shl 1;
+            ColumnInfo.ColumnCodePage := zCP_UTF16;
+            CurrentVar.ColType := stUnicodeString;
+          end;
+          FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+            @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
+        end;
+        CurrentVar^.value_sz := ((CurrentVar^.value_sz shr 3)+1) shl 3;
+        ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
+      end else begin
+        if (ColumnInfo.CharsetForm = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
+          CurrentVar.ColType := stUnicodeStream;
+          ColumnInfo.ColumnCodePage := zCP_UTF16
+        end else ColumnInfo.ColumnCodePage := FClientCP;
+        FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+          @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
+      end;
+      ColumnInfo.ColumnType := CurrentVar^.ColType;
+    end else if (ColumnInfo.ColumnType = stBytes ) then begin
+      ColumnInfo.Precision := CurrentVar^.value_sz;
+      ColumnInfo.ColumnCodePage := zCP_Binary
+    end else
       ColumnInfo.Precision := CurrentVar^.Precision;
     if CurrentVar.dty = SQLT_NTY  then begin
       Inc(SubObjectColumnCount);
@@ -2355,7 +2427,13 @@ CSFormAndID:
       CurrentVar^.indp, CurrentVar^.alenp, nil, OCI_DEFAULT);
     if FStatus <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FErrorHandle, FStatus, lcExecute, 'OCIDefineByPos', ConSettings);
-    if CurrentVar^.dty=SQLT_NTY then
+    if (CurrentVar^.ColType in [stUnicodeString, stUnicodeStream]) and (ConSettings.ClientCodePage.ID <> OCI_UTF16ID) then begin
+      acsid := OCI_UTF16ID;
+      FStatus := FplainDriver.OCIAttrSet(defn_or_bindpp, OCI_HTYPE_DEFINE, @acsid,
+           0, OCI_ATTR_CHARSET_ID, FErrorHandle);
+      if FStatus <> OCI_SUCCESS then
+        CheckOracleError(FPlainDriver, FErrorHandle, FStatus, lcExecute, 'OCIAttrSet(OCI_ATTR_CHARSET_ID)', ConSettings);
+    end else if CurrentVar^.dty=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.OCIDefineObject(defn_or_bindpp, FErrorHandle, CurrentVar^._Obj.tdo,
@@ -2572,18 +2650,13 @@ begin
   FOwnerLob.FIsUpdated := True;
 end;
 
-procedure TZAbstracOracleLobStream.CheckError(Status: sword; const Msg: RawByteString);
-begin
-  CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, msg, GetConSettings);
-end;
-
 procedure TZAbstracOracleLobStream.Close;
 var Status: sword;
 begin
   if IsOpen then begin
     Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobClose');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobClose', FConSettings);
   end;
 end;
 
@@ -2600,16 +2673,18 @@ begin
         Status := FPlainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size8);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
         if Status <> OCI_SUCCESS then
-          CheckError(Status, 'OCILobGetLength2');
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
         Status := FPLainDriver.OCILobCopy2(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size8, 1, 1);
-          CheckError(Status, 'OCILobCopy2');
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCopy2', GetConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       end else begin
         Status := FPlainDriver.OCILobGetLength(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size4);
         if Status <> OCI_SUCCESS then
-          CheckError(Status, 'OCILobGetLength');
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength', FConSettings);
         Status := FPLainDriver.OCILobCopy(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size4, 1, 1);
-          CheckError(Status, 'OCILobCopy');
+        if Status <> OCI_SUCCESS then
+          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCopy', GetConSettings);
       end;
     finally
       { notify the current locator does no longer point to copy of Parent locator }
@@ -2629,7 +2704,7 @@ begin
     { copy locator next fetch may fill the org locator with next lob infos }
     Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FOwnerLob.FParentLocator, @FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobLocatorAssign');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobLocatorAssign', FConSettings);
   end;
 end;
 
@@ -2644,6 +2719,7 @@ begin
   FOCIError := OwnerLob.FOCIError;
   FOwnerLob := OwnerLob;
   FOpenLobStreams := OpenLobStreams;
+  FConSettings := GetConSettings;
   if FOwnerLob.Fdty = SQLT_CLOB
   then {if (FOwnerLob.Fcsid >= OCI_UTF16ID) or (FOwnerlob.FCharsetForm = SQLCS_NCHAR)
     then flobType := OCI_TEMP_NCLOB
@@ -2658,7 +2734,7 @@ begin
   Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv,
     FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType, 0, nil);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCIDescriptorAlloc');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
   FOwnerLob.FLocatorAllocated := True;
 end;
 
@@ -2672,7 +2748,7 @@ begin
         FOwnerLob.FLobLocator, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm, Flobtype,
         False, OCI_DURATION_DEFAULT);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobCreateTemporary');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCreateTemporary', FConSettings);
   end;
 end;
 
@@ -2690,7 +2766,7 @@ begin
   Status := FPlainDriver.OCIDescriptorFree(FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType);
   FOwnerLob.FLobLocator := nil;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCIDescriptorFree');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorFree', FConSettings);
 end;
 
 procedure TZAbstracOracleLobStream.FreeTemporary;
@@ -2699,7 +2775,7 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobFreeTemporary');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobFreeTemporary', FConSettings);
   end;
 end;
 
@@ -2710,7 +2786,7 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, Result);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobIsOpen');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsOpen', FConSettings);
   end else Result := False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -2722,7 +2798,7 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobIsTemporary(FOCIEnv, FOCIError, FOwnerLob.FLobLocator, Result);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobIsTemporary');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsTemporary', FConSettings);
   end else Result := False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -2736,20 +2812,20 @@ begin
     mode := OCIOpenModes[fOwnerLob.FLobStreamMode];
     Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, mode);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobOpen');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobOpen', FConSettings);
     Status := FplainDriver.OCILobCharSetId(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @Fcsid);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobCharSetId');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCharSetId', FConSettings);
     Status := FplainDriver.OCILobCharSetForm(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @FOwnerLob.FCharsetForm);
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobCharSetForm');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCharSetForm', FConSettings);
     if FOwnerLob.FDescriptorType <> OCI_DTYPE_FILE then begin
       Status := FplainDriver.OCILobGetChunkSize(FOCISvcCtx, FOCIError,
         FOwnerLob.FLobLocator, FChunk_Size);
       if Status <> OCI_SUCCESS then
-        CheckError(Status, 'OCILobGetChunkSize');
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetChunkSize', FConSettings);
     end;
   end;
 end;
@@ -2770,7 +2846,7 @@ begin
     if (Flobtype = OCI_TEMP_CLOB) and (FOwnerLob.Fcsid = OCI_UTF16ID) then
       Result := Result shl 1;
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobGetLength');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength', FConSettings);
   end;
 end;
 
@@ -2814,7 +2890,7 @@ begin
     Inc(Result, Longint(amtpBytes));
   end;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobRead');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead', FConSettings);
   FPosition := FPosition + Result;
 end;
 
@@ -2838,7 +2914,7 @@ begin
     Inc(pBuff, amtp);
   end;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobRead');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead', FConSettings);
   Result := pBuff - pStart;
   FPosition := Result;
   Close;
@@ -2872,7 +2948,7 @@ begin
         newlen := newlen shr 1;
       Status := FPlainDriver.OCILobTrim(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
       if Status <> OCI_SUCCESS then
-        CheckError(Status, 'OCILobTrim');
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobTrim', FConSettings);
       if FPosition > NewSize then
         FPosition := NewSize;
     end else if NewSize > ASize then
@@ -2909,7 +2985,7 @@ begin
   Status := FPLainDriver.OCILobWrite(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
     amtp, offset, pBuff, amtpBytes, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
   Result := amtpBytes;
   FPosition := FPosition + Result;
 end;
@@ -2945,7 +3021,7 @@ begin
     else piece := OCI_LAST_PIECE
  end;
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
 end;
 
 { TZAbstractOracleBlob }
@@ -2997,7 +3073,7 @@ begin
   FLobLocator := nil;
   Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv, FLobLocator, FDescriptorType, 0, nil);
   if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
   FLocatorAllocated := True;
   { copy locator next fetch may fill the org locator with next lob infos }
   Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FParentLocator, @FLobLocator);
@@ -3274,7 +3350,7 @@ begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     Result := lenp;
     if Status <> OCI_SUCCESS then
-      CheckError(Status, 'OCILobGetLength2');
+      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
     if (FOwnerLob.Fcsid = OCI_UTF16ID) then
       Result := Result shl 1;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3297,7 +3373,7 @@ begin
   { get bytes/(single-byte)character count of lob }
   Status := FplainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, asize);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobGetLength2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   if FOwnerLob.Fcsid = OCI_UTF16ID then begin
     Offset := (FPosition shr 1) +1; //align to char position
@@ -3315,7 +3391,7 @@ begin
     @byte_amtp, @char_amtp, Offset, pBuff, bufl, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   Result := byte_amtp;
   if (Status <> OCI_SUCCESS) then
-    CheckError(Status, 'OCILobRead2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead2', FConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   FPosition := FPosition + Result;
 end;
@@ -3350,7 +3426,7 @@ begin
     piece := OCI_NEXT_PIECE;
   end;
   if (Status <> OCI_SUCCESS) then
-    CheckError(Status, 'OCILobRead2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead2', FConSettings);
   Result := pBuff - pStart;
   FPosition := Result;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3388,7 +3464,7 @@ begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       Status := FPlainDriver.OCILobTrim2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
       if Status <> OCI_SUCCESS then
-        CheckError(Status, 'OCILobTrim2');
+        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobTrim2', FConSettings);
       if FPosition > NewSize then
         FPosition := NewSize;
       {$IFDEF DEBUG}
@@ -3431,7 +3507,7 @@ begin
   Status := FPLainDriver.OCILobWrite2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
     byte_amtp, char_amtp, offset, pBuff, byte_amtp, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite2');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite2', FConSettings);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   Result := byte_amtp;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3494,7 +3570,7 @@ begin
  end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   if Status <> OCI_SUCCESS then
-    CheckError(Status, 'OCILobWrite');
+    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
 end;
 
 { TZOracleCachedResultSet }

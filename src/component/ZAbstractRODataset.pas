@@ -1834,7 +1834,7 @@ begin
   if Result then
     PWord(Buffer)^ := Ord(#0)
   else //instead of WStrLCopy
-    PRaw2PUnicode(P, Buffer, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1, FClientCP);
+    PRaw2PUnicode(P, Buffer, FClientCP, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1);
 end;
 {$ENDIF}
 
@@ -10161,12 +10161,15 @@ begin
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
-        if not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP)
+        if (FColumnCP <> zCP_UTF16) and (not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP))
         then CP := FColumnCP
         else CP := FRowAccessor.ConSettings^.CTRL_CP;
         R := '';
         P := Clob.GetPAnsiChar(CP, R, L);
-        System.SetString(Result, PAnsichar(P), L)
+        if (L<>0) and (P <> Pointer(R)) then begin
+          {$IFDEF FPC}Result := '';{$ENDIF}
+          System.SetString(Result, P, L);
+        end else Result := R;
       end else Result := ''
     end
   else Result := '';
@@ -10359,9 +10362,10 @@ begin
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     P := Pointer(Value);
-    if P = nil
-    then L := 0
-    else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
+    if P = nil then begin
+      L := 0;
+      P := PEmptyAnsiString
+    end else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
     if (L > 0) and Connection.AutoEncodeStrings then
       case ZDetectUTF8Encoding(P, L) of
         etUSASCII:  if FColumnCP = zCP_UTF16
@@ -10563,12 +10567,15 @@ begin
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
-        if not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP)
+        if (FColumnCP <> zCP_UTF16) and (not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP))
         then CP := FColumnCP
         else CP := FRowAccessor.ConSettings^.CTRL_CP;
         R := '';
         P := Clob.GetPAnsiChar(CP, R, L);
-        System.SetString(Result, PAnsichar(P), L)
+        if (L<>0) and (P <> Pointer(R)) then begin
+          {$IFDEF FPC}Result := '';{$ENDIF}
+          System.SetString(Result, P, L)
+        end else Result := R;
       end else Result := ''
     end
   else Result := '';
@@ -10755,9 +10762,10 @@ begin
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     P := Pointer(Value);
-    if P = nil
-    then L := 0
-    else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
+    if P = nil then begin
+      L := 0;
+      P := PEmptyAnsiString;
+    end else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
     if (L > 0) and Connection.AutoEncodeStrings then
       case ZDetectUTF8Encoding(P, L) of
         etUSASCII:  if FColumnCP = zCP_UTF16

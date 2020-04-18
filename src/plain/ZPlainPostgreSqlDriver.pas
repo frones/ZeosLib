@@ -523,7 +523,7 @@ type
     weight:       SmallInt; //* weight of first digit */
     sign:         Word; //* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
     dscale:       Word; //* display scale */
-    digits:       array[0..NUMERIC_MAX_PRECISION-1] of SmallInt; //no fix size -> aligned against scale or digits
+    digits:       array[0..NUMERIC_MAX_PRECISION-1] of Word{SmallInt}; //no fix size -> aligned against scale or digits
   end;
 
   PInetRec = ^TInetRec;

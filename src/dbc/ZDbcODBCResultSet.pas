@@ -1576,7 +1576,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   Result := fStrLen_or_Ind = SQL_NULL_DATA;
   fColDataPtr := nil;
-    if (Ord(ColumnType) <= Ord(stUnicodeString)) and (not Result) then
+    if (Ord(ColumnType) <= Ord(stBytes)) and (not Result) then
       fColDataPtr := { Start entry }            ColumnBuffer+Cardinal(CharOctedLength)*(fCurrentBufRowNo-1)
         { increase by size of indicator array } ;
   end;

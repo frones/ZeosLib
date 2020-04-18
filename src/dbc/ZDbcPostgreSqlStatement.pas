@@ -146,7 +146,7 @@ type
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
-    procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
+    procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
 
     procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure InternalBindInt(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
@@ -268,8 +268,11 @@ var
   Native: Boolean;
   DT: TDateTime;
   TS: TZTimeStamp;
-  D: TZDate absolute TS;
+  Dat: TZDate absolute TS;
   T: TZTime absolute TS;
+  Dbl: Double absolute TS;
+  i64: Int64 absolute TS;
+  cur: Currency absolute TS;
   PTS: PZTimeStamp;
   PD: PZDate absolute PTS;
   PT: PZTime absolute PTS;
@@ -413,6 +416,33 @@ LenOfBuf: PA := TempBlob.GetBuffer(FRawTemp, L);
     Dyn := FTempRaws;
     BindRawStrings;
   end;
+  {$if declared(vtSynRawUTF8Array)}
+  procedure BindDequotedStrings;
+  var J: Cardinal;
+    L,N: LengthInt;
+    Src: PAnsiChar;
+  begin
+    N := 0;
+    for j := 0 to DynArrayLen -1 do
+      if (TRawByteStringDynArray(Dyn)[j] <> 'null') then
+        Inc(N, Length(TRawByteStringDynArray(Dyn)[j]));
+    AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
+    for j := 0 to DynArrayLen -1 do
+      if (TRawByteStringDynArray(Dyn)[j] = 'null') then begin
+        Integer2PG(-1, P);
+        Inc(P,SizeOf(int32));
+      end else begin
+        L := Length(TRawByteStringDynArray(Dyn)[j]);
+        N := L;
+        Src := Pointer(TRawByteStringDynArray(Dyn)[j]);
+        ZSysUtils.SQLDequotedStr(Src, (P+SizeOf(int32)), L, AnsiChar(#39));
+        Integer2PG(L, P);
+        Inc(P,SizeOf(int32)+L);
+        N := N-L;
+        Dec(Stmt.FPQparamLengths[Index], N);
+      end;
+  end;
+  {$IFEND}
 begin
   Arr := BindList[Index].Value; //localize -> next steps will free the memory
   SQLType := TZSQLType(Arr.VArrayType);
@@ -529,13 +559,21 @@ begin
     stLong:       begin
                     AllocArray(Index, SizeOf(Int64)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
-                      if IsNullFromArray(Arr, j) then begin
+                      if IsNullFromArray(Arr, j)
+                      {$IF declared(vtSynRawUTF8Array)}
+                      or ((Arr.VArrayVariantType = vtSynRawUTF8Array) and
+                         (TRawByteStringDynArray(Dyn)[j] = 'null')) {$IFEND}then begin
                         Integer2PG(-1, P);
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
                       end else begin
                         Integer2PG(SizeOf(Int64), P);
-                        Int642PG(TInt64DynArray(Dyn)[j],P+SizeOf(int32));
+                        if Native
+                        then Int642PG(TInt64DynArray(Dyn)[j],P+SizeOf(int32))
+                        else begin
+                          i64 := ArrayValueToInt64(Arr, j);
+                          Int642PG(i64, P+SizeOf(int32));
+                        end;
                         Inc(P,SizeOf(int32)+SizeOf(Int64));
                       end;
                   end;
@@ -568,38 +606,62 @@ begin
     stDouble:     begin
                     AllocArray(Index, SizeOf(Double)*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
-                      if IsNullFromArray(Arr, j) then begin
+                      if IsNullFromArray(Arr, j)
+                      {$IF declared(vtSynRawUTF8Array)}
+                      or ((Arr.VArrayVariantType = vtSynRawUTF8Array) and
+                         (TRawByteStringDynArray(Dyn)[j] = 'null')) {$IFEND}then begin
                         Integer2PG(-1, P);
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(Int64));
                       end else begin
                         Integer2PG(SizeOf(Double), P);
-                        Double2PG(TDoubleDynArray(Dyn)[j],P+SizeOf(int32));
+                        if Native
+                        then Double2PG(TDoubleDynArray(Dyn)[j],P+SizeOf(int32))
+                        else begin
+                          Dbl := ArrayValueToDouble(Dyn,J);
+                          Double2PG(Dbl, P+SizeOf(int32));
+                        end;
                         Inc(P,SizeOf(int32)+SizeOf(Double));
                       end;
                   end;
     stCurrency:   if (stmt.FPQParamOIDs[Index] = CASHOID) then begin
                     AllocArray(Index, 8*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
-                      if IsNullFromArray(Arr, j) then begin
+                      if IsNullFromArray(Arr, j)
+                      {$IF declared(vtSynRawUTF8Array)}
+                      or ((Arr.VArrayVariantType = vtSynRawUTF8Array) and
+                         (TRawByteStringDynArray(Dyn)[j] = 'null')) {$IFEND}then begin
                         Integer2PG(-1, P);
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], 8);
                       end else begin
                         Integer2PG(8, P);
-                        Currency2PGCash(TCurrencyDynArray(Dyn)[j],P+SizeOf(int32));
+                        if Native
+                        then Currency2PGCash(TCurrencyDynArray(Dyn)[j],P+SizeOf(int32))
+                        else begin
+                          Cur := ArrayValueToCurrency(Arr, J);
+                          Currency2PGCash(Cur,P+SizeOf(int32))
+                        end;
                         Inc(P,SizeOf(int32)+8);
                       end;
                   end else begin
                     AllocArray(Index, MaxCurr2NumSize*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
-                      if IsNullFromArray(Arr, j) then begin
+                      if IsNullFromArray(Arr, j)
+                        {$IF declared(vtSynRawUTF8Array)}
+                        or ((Arr.VArrayVariantType = vtSynRawUTF8Array) and
+                           (TRawByteStringDynArray(Dyn)[j] = 'null')) {$IFEND}then begin
                         Integer2PG(-1, P);
                         X := SizeOf(int32);
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], MaxCurr2NumSize);
                       end else begin
-                        Currency2PGNumeric(TCurrencyDynArray(Dyn)[j], P+SizeOf(int32), x);
+                        if Native
+                        then Currency2PGNumeric(TCurrencyDynArray(Dyn)[j], P+SizeOf(int32), x)
+                        else begin
+                          Cur := ArrayValueToCurrency(Arr, J);
+                          Currency2PGNumeric(Cur,P+SizeOf(int32), x);
+                        end;
                         Integer2PG(X, P);
                         Inc(P,SizeOf(int32)+X);
                         Dec(Stmt.FPQparamLengths[Index], MaxCurr2NumSize-X);
@@ -630,12 +692,12 @@ begin
                         if Arr.VArrayVariantType = vtDate then
                           PD := @TZDateDynArray(Dyn)[j]
                         else begin
-                          PD := @D;
+                          PD := @Dat;
                           if (Arr.VArrayVariantType in [vtNull, vtDateTime])
-                          then  DecodeDateTimeToDate(TDateTimeDynArray(Dyn)[j], D)
+                          then  DecodeDateTimeToDate(TDateTimeDynArray(Dyn)[j], Dat)
                           else begin
                             DT := ArrayValueToDate(Arr, J, ConSettings^.WriteFormatSettings);
-                            DecodeDateTimeToDate(DT, D);
+                            DecodeDateTimeToDate(DT, Dat);
                           end;
                         end;
                         Date2PG(PD^.Year, PD^.Month, PD^.Day, PInteger(PAnsiChar(P)+SizeOf(int32))^);
@@ -673,7 +735,10 @@ begin
     stTimeStamp:  begin
                     AllocArray(Index, 8*DynArrayLen+(DynArrayLen*SizeOf(int32)), A, P);
                     for j := 0 to DynArrayLen -1 do
-                      if IsNullFromArray(Arr, j) then begin
+                      if IsNullFromArray(Arr, j)
+                      {$IF declared(vtSynRawUTF8Array)}
+                      or ((Arr.VArrayVariantType = vtSynRawUTF8Array) and
+                         (TRawByteStringDynArray(Dyn)[j] = 'null')) {$IFEND}then begin
                         Integer2PG(-1, P);
                         Inc(P,SizeOf(int32));
                         Dec(Stmt.FPQparamLengths[Index], 8);
@@ -731,6 +796,10 @@ begin
     stString, stUnicodeString: begin
         CP := ConSettings^.ClientCodePage.CP;
         case Arr.VArrayVariantType of
+          {$if declared(vtSynRawUTF8Array)}
+          vtSynRawUTF8Array: if (CP = zCP_UTF8)
+                          then BindDequotedStrings;
+          {$IFEND}
           {$IFNDEF UNICODE}
           vtString:       if (not ConSettings^.AutoEncode and (CP = ConSettings^.CTRL_CP))
                           then BindRawStrings
@@ -786,7 +855,7 @@ procedure TZAbstractPostgreSQLPreparedStatementV3.CheckError(
   LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
   ResultHandle: TPGresult);
 begin
-  HandlePostgreSQLError(Self, FplainDriver, FconnAddress^, lcExecPrepStmt, LogMessage, ResultHandle);
+  HandlePostgreSQLError(Self, FplainDriver, FconnAddress^, LogCategory, LogMessage, ResultHandle);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.CheckParameterIndex(var Value: Integer);
@@ -1350,6 +1419,7 @@ var
 begin
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
     Result := '';
+    Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZRawSQLStringWriter.Create(C);
@@ -1797,7 +1867,7 @@ begin
       FPQParamOIDs[InParamIdx] := OIDOID;
       BindList.Put(Index, stBinaryStream, P4Bytes(@Lob_OID));
       LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], SizeOf(OID));
-      {$IFNDEF ENDIAN_BIG}Reverse4Bytes(FPQparamValues[Index]);{$ENDIF}
+      {$IFNDEF ENDIAN_BIG}Cardinal2PG(Lob_OID, FPQparamValues[Index]);{$ENDIF}
       WriteTempBlob := nil;
     end else if SQLType = stBinaryStream then begin
       FPQparamFormats[InParamIdx] := ParamFormatBin;
@@ -2011,12 +2081,12 @@ begin
         BindList.SetCount(FplainDriver.PQnparams(res)+FOutParamCount);
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
-          NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
+          NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
           if NewSQLType = stUnknown then //EH: domain types are unknonw for us..
             //pg does not return the underlaying OID grumble...
             if FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID) then begin
               pgOID := tmpOID;
-              NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, tmpOID, -1);
+              NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, tmpOID, -1);
             end else begin
               SetLength(boundOIDs, BindList.Count);
               boundOIDs[i] := FPQParamOIDs[i];
@@ -2037,11 +2107,11 @@ begin
         FPostgreSQLConnection.FillUnknownDomainOIDs;
         for i := 0 to BindList.Count-1 do begin
           pgOID := FPQParamOIDs[i];
-          NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, pgOID, -1);
+          NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
           if NewSQLType = stUnknown then begin//EH: domain types are unknonw for us..
             //pg does not return the underlaying OID grumble...
             Assert(FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID));
-            NewSQLType := PostgreSQLToSQLType(ConSettings, fOIDAsBlob, tmpOID, -1);
+            NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, tmpOID, -1);
             FPQParamOIDs[i] := tmpOID;
             RebindIfRequired(i, NewSQLType, boundOIDs[i], tmpOID);
           end;

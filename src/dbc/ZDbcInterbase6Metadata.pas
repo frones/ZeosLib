@@ -287,7 +287,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
-uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants, ZClasses,
+uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants,
   ZFastCode, ZSelectSchema, Math, ZDbcUtils;
 
 const
@@ -2581,32 +2581,25 @@ end;
 function TZInterbase6DatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
   TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
 const
-  CHARACTER_SET_NAME_Index   = FirstDbcIndex + 0;
-  DEFAULT_COLLATE_NAME_Index = FirstDbcIndex + 1;
-  CHARACTER_SET_ID_Index     = FirstDbcIndex + 2;
-  BYTES_PER_CHARACTER_Index  = FirstDbcIndex + 3;
+  RELATION_NAME_Index         = FirstDbcIndex;
+  FIELD_NAME_Index            = RELATION_NAME_Index +1;
+  CHARACTER_SET_NAME_Index    = FIELD_NAME_Index + 1;
+  DEFAULT_COLLATE_NAME_Index  = CHARACTER_SET_NAME_Index + 1;
+  CHARACTER_SET_ID_Index      = DEFAULT_COLLATE_NAME_Index + 1;
+  BYTES_PER_CHARACTER_Index   = CHARACTER_SET_ID_Index + 1;
 var
-  SQL, LCatalog: string;
+  SQL: string;
   LColumnNamePattern, LTableNamePattern: string;
+  Len: NativeUint;
 begin
-  if Catalog = '' then
-  begin
-    if SchemaPattern <> '' then
-      LCatalog := SchemaPattern
-    else
-      LCatalog := FDatabase;
-  end
-  else
-    LCatalog := Catalog;
   LTableNamePattern := ConstructNameCondition(TableNamePattern,'R.RDB$RELATION_NAME');
   LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,'R.RDB$FIELD_NAME');
 
   Result := inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  if (LCatalog <> '') and (TableNamePattern <> '') and (ColumnNamePattern <> '') then
-  begin
-    SQL := 'SELECT C.RDB$CHARACTER_SET_NAME, C.RDB$DEFAULT_COLLATE_NAME,'
-      + ' C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER'
+  if (TableNamePattern <> '') or (ColumnNamePattern <> '') then begin
+    SQL := 'SELECT R.RDB$RELATION_NAME, R.RDB$FIELD_NAME, C.RDB$CHARACTER_SET_NAME,'
+      + ' C.RDB$DEFAULT_COLLATE_NAME, C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER'
       + ' FROM RDB$RELATION_FIELDS R'
       + ' right join RDB$FIELDS F on R.RDB$FIELD_SOURCE = F.RDB$FIELD_NAME'
       + ' left join RDB$CHARACTER_SETS C on C.RDB$CHARACTER_SET_ID = F.RDB$CHARACTER_SET_ID'
@@ -2614,28 +2607,24 @@ begin
       + ' where C.RDB$CHARACTER_SET_NAME <> ''NONE'' AND T.RDB$FIELD_NAME=''RDB$FIELD_TYPE'''
       + AppendCondition(LColumnNamePattern)+AppendCondition(LTableNamePattern)
       + ' order by R.RDB$FIELD_POSITION';
-    with CreateStatement.ExecuteQuery(SQL) do
-    begin
-      if Next then
-      begin
+    with CreateStatement.ExecuteQuery(SQL) do begin
+      while Next do begin
         Result.MoveToInsertRow;
-        //Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
-        //Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
-        Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
-        Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
-        Result.UpdateString(CollationNameIndex, GetString(DEFAULT_COLLATE_NAME_Index)); //COLLATION_NAME
-        Result.UpdateString(CharacterSetNameIndex, GetString(CHARACTER_SET_NAME_Index)); //CHARACTER_SET_NAME
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(RELATION_NAME_Index, Len), Len); //COLLATION_TABLE
+        Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(FIELD_NAME_Index, Len), Len);//COLLATION_COLUMN
+        Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiChar(DEFAULT_COLLATE_NAME_Index, Len), Len); //COLLATION_NAME
+        Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiChar(CHARACTER_SET_NAME_Index, Len), Len); //CHARACTER_SET_NAME
         Result.UpdateSmall(CharacterSetIDIndex, GetSmall(CHARACTER_SET_ID_Index)); //CHARACTER_SET_ID
         Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(BYTES_PER_CHARACTER_Index)); //CHARACTER_SET_SIZE
         Result.InsertRow;
-        Close;
-        Exit;
       end;
       Close;
     end;
+    if not Result.IsBeforeFirst then Exit;
   end;
   {Brings Defaults for Table or Database up}
-  SQL := 'SELECT D.RDB$CHARACTER_SET_NAME, CS.RDB$DEFAULT_COLLATE_NAME, '+
+  SQL := 'SELECT NULL AS RDB$RELATION_NAME, NULL AS RDB$FIELD_NAME,'+
+         'D.RDB$CHARACTER_SET_NAME, CS.RDB$DEFAULT_COLLATE_NAME, '+
          'CS.RDB$CHARACTER_SET_ID, CS.RDB$BYTES_PER_CHARACTER '+
          'FROM RDB$DATABASE D '+
          'LEFT JOIN RDB$CHARACTER_SETS CS on '+
@@ -2645,10 +2634,6 @@ begin
     if Next then
     begin
       Result.MoveToInsertRow;
-      Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
-      Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
-      Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
-      Result.UpdateNull(ColumnNameIndex);//COLLATION_COLUMN
       Result.UpdateString(CollationNameIndex, GetString(DEFAULT_COLLATE_NAME_Index)); //COLLATION_NAME
       Result.UpdateString(CharacterSetNameIndex, GetString(CHARACTER_SET_NAME_Index)); //CHARACTER_SET_NAME
       Result.UpdateSmall(CharacterSetIDIndex, GetSmall(CHARACTER_SET_ID_Index)); //CHARACTER_SET_ID

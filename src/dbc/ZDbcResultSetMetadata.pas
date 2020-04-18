@@ -858,14 +858,6 @@ end;
 procedure TZAbstractResultSetMetadata.SetColumnCodePageFromGetColumnsRS(
   {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
 begin
-  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
-    if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-      if FConSettings^.ClientCodePage.Encoding = ceUTF16
-      then ColumnInfo.ColumnCodePage := zCP_UTF16
-      else ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
-    {else keep Resultset info}
-  end else
-    ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

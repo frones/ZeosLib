@@ -79,10 +79,6 @@ type
   {** Implements a driver for Oracle 9i }
   TZOraclePlainDriver = class (TZAbstractPlainDriver, IZPlainDriver,
     IZOraclePlainDriver)
-    {api definitions} //EH: if we would drop the interface overheap we simply
-      //could move the defs up to public section, omit starting 'OCI'
-      //and have native access without addition calls just like inline code
-      //10mio calls loose = 1,5 sec with a fast i7 CPU
   protected
     procedure LoadApi; override;
   public
@@ -172,8 +168,11 @@ type
     OCIResultSetToStmt: function(rsetdp: POCIHandle; errhp: POCIError): sword; cdecl;
 
     OCIDescriptorAlloc: function(parenth: POCIEnv; var descpp: POCIDescriptor;
-      htype: ub4; xtramem_sz: integer; usrmempp: Pointer): sword; cdecl;
+      htype: ub4; xtramem_sz: size_t; usrmempp: PPointer): sword; cdecl;
+    OCIArrayDescriptorAlloc: function(parenth: POCIEnv; var descpp: POCIDescriptor;
+      htype: ub4; array_size: ub4; xtramem_sz: size_t; usrmempp: PPointer): sword; cdecl;
     OCIDescriptorFree: function(descp: Pointer; htype: ub4): sword; cdecl;
+    OCIArrayDescriptorFree: function(descp: Pointer; htype: ub4): sword; cdecl;
     { lob methods }
     OCILobCopy: function(svchp: POCISvcCtx; errhp: POCIError;
       dst_locp: POCILobLocator; src_locp: POCILobLocator; amount: ub4;
@@ -372,7 +371,6 @@ begin
   //https://en.wikipedia.org/wiki/CESU-8
   //https://community.oracle.com/thread/351482
   //UTF8 is aliased to AL32UTF8 to mitigate those rare problems.
-  //AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8);
   AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8, 'AL32UTF8', 4);
   AddCodePage('AL32UTF8', 873, ceUTF8, zCP_UTF8, '', 4);
   AddCodePage('UTF16', OCI_UTF16ID, ceUTF16, zCP_UTF16, '', 2);
@@ -429,7 +427,9 @@ begin
     @OCIResultSetToStmt           := GetAddress('OCIResultSetToStmt');
     {descriptors}
     @OCIDescriptorAlloc           := GetAddress('OCIDescriptorAlloc');
+    @OCIArrayDescriptorAlloc      := GetAddress('OCIArrayDescriptorAlloc');
     @OCIDescriptorFree            := GetAddress('OCIDescriptorFree');
+    @OCIArrayDescriptorFree       := GetAddress('OCIArrayDescriptorFree');
     {Lob}
     @OCILobCopy                   := GetAddress('OCILobCopy');
     @OCILobCopy2                  := GetAddress('OCILobCopy2');

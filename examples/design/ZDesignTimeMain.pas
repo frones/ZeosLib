@@ -58,7 +58,8 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, ZSqlUpdate, DB, ZAbstractRODataset, ZAbstractDataset, ZDataset,
-  ZConnection, Grids, DBGrids, ExtCtrls, DBCtrls, ZDbcMySql, StdCtrls;
+  ZConnection, Grids, DBGrids, ExtCtrls, DBCtrls, ZDbcMySql, StdCtrls,
+  ZAbstractConnection;
 
 type
   TfrmMain = class(TForm)

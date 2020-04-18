@@ -106,6 +106,10 @@ procedure CheckODBCError(RETCODE: SQLRETURN; Handle: SQLHANDLE;
 
 function GetConnectionString(WindowHandle: SQLHWND; const InConnectionString, LibraryLocation: String): String;
 
+{$IFDEF ENDIAN_BIG}
+procedure Reverse8Bytes(P: Pointer);
+{$ENDIF}
+
 const
   LobArrayIndexOffSet = NativeUInt(SizeOf(Pointer));
   LobParameterIndexOffSet = LobArrayIndexOffSet+NativeUInt(SizeOf(Integer));
@@ -121,11 +125,12 @@ const
      SQL_PARAM_OUTPUT_STREAM{pctOut}, SQL_PARAM_OUTPUT{SQL_RETURN_VALUE does not work with mssql}{pctReturn},
      SQL_PARAM_TYPE_UNKNOWN{pctResultSet}));
 
+
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
-uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZURL, ZClasses, ZDbcUtils
+uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZDbcUtils
  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 function SQL_SUCCEDED(RETCODE: SQLRETURN): Boolean;
@@ -162,17 +167,27 @@ const ODBCScaleDivisor: array[0..18] of Int64 = (
 
 {$IFDEF ENDIAN_BIG}
 procedure Reverse8Bytes(P: Pointer);
-var W: LongWord;
+{$IFNDEF CPU64}
+var C1, C2: Cardinal;
+{$ELSE}
+var u64: UInt64;
+{$ENDIF}
 begin
-  W := PLongWord(P)^;
-  PByteArray(P)[0] := PByteArray(P)[7];
-  PByteArray(P)[1] := PByteArray(P)[6];
-  PByteArray(P)[2] := PByteArray(P)[5];
-  PByteArray(P)[3] := PByteArray(P)[4];
-  PByteArray(P)[4] := PByteArray(@W)[3];
-  PByteArray(P)[5] := PByteArray(@W)[2];
-  PByteArray(P)[6] := PByteArray(@W)[1];
-  PByteArray(P)[7] := PByteArray(@W)[0];
+  {$R-}
+  {$IFNDEF CPU64}
+  C1 := ((PCardinal(          P   )^ shl 8) and $FF00FF00) or ((PCardinal(          P   )^ shr 8) and $00FF00FF);
+  C1 :=  (C1 shl 16) or (C1 shr 16);
+  C2 := ((PCardinal(PAnsiChar(P)+4)^ shl 8) and $FF00FF00) or ((PCardinal(PAnsiChar(P)+4)^ shr 8) and $00FF00FF);
+  C2 :=  (C2 shl 16) or (C2 shr 16);
+  PCardinal(          P   )^ := C2;
+  PCardinal(PAnsiChar(P)+4)^ := C1;
+  {$ELSE}
+  u64 := ((PUInt64(p)^ shl 8 ) and $FF00FF00FF00FF00) or ((PUInt64(p)^ shr 8 ) and $00FF00FF00FF00FF);
+  u64 := ((u64 shl 16) and $FFFF0000FFFF0000) or ((u64 shr 16) and $0000FFFF0000FFFF);
+  u64 :=  (u64 shl 32) or ((u64 shr 32));
+  PUInt64(p)^ := u64;
+  {$ENDIF}
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 {$ENDIF}
 

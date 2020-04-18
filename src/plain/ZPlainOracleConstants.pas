@@ -800,8 +800,8 @@ const
   OCI_ATTR_OBJECT_DETECTCHANGE       = $20;
 
   {client side character and national character set ids }
-  OCI_ATTR_ENV_CHARSET_ID       = OCI_ATTR_CHARSET_ID;  // charset id in env
-  OCI_ATTR_ENV_NCHARSET_ID      = OCI_ATTR_NCHARSET_ID; // ncharset id in env
+  OCI_NLS_CHARSET_ID       = OCI_ATTR_CHARSET_ID;  // charset id in env
+  OCI_NLS_NCHARSET_ID      = OCI_ATTR_NCHARSET_ID; // ncharset id in env
 
   { Piece Information }
   OCI_PARAM_IN                       = $01;  // in parameter

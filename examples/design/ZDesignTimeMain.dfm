@@ -52,13 +52,11 @@ object frmMain: TfrmMain
   object qrMain: TZQuery
     Connection = conMain
     OnCalcFields = qrMainCalcFields
-    RequestLive = True
     CachedUpdates = False
     SQL.Strings = (
       'select * from department')
     ParamCheck = True
     Params = <>
-    ShowRecordTypes = [utModified, utInserted, utUnmodified]
     Left = 96
     Top = 72
   end
