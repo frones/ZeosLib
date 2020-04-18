@@ -1290,7 +1290,7 @@ begin
     CheckEquals(21, Query.FieldByName('id').AsInteger);
     Act := '';
     THackField(Query.FieldByName('num')).GetText(Act, True);
-    CheckEquals('0', Act, 'Schould display a zero value');
+    CheckEquals('0', Act, 'Should display a zero value');
     Query.Next;
     CheckEquals(25, Query.FieldByName('id').AsInteger);
     Query.Next;
@@ -1428,7 +1428,7 @@ begin
     CheckEquals(21, Query.FieldByName('id').AsInteger);
     Act := '';
     THackField(Query.FieldByName('num')).GetText(Act, True);
-    CheckEquals('0', Act, 'Schould display a zero value');
+    CheckEquals('0', Act, 'Should display a zero value');
     Query.Next;
     CheckEquals(34, Query.FieldByName('id').AsInteger);
     Query.Next;
