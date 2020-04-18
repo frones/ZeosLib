@@ -683,7 +683,7 @@ end;
   a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the Length of the PAnsiChar String
+  @param Len the Length in bytes of the raw String
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
@@ -854,7 +854,7 @@ end;
   a <code>PWideChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the length of UCS2 string in codepoints
+  @param Len the length of UTF16 string in word count
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }

@@ -211,8 +211,52 @@ end;
 procedure TZSQLAnywhereConnection.HandleError(
   LogginCategory: TZLoggingCategory; const Msg: RawByteString;
   const ImmediatelyReleasable: IImmediatelyReleasable);
+var err_len, st_len: Tsize_t;
+  ErrBuf: RawByteString;
+  State, ErrMsg: String;
+  ErrCode: Tsacapi_i32;
+  StateBuf: array[0..5] of Byte;
+  Exception: EZSQLException;
 begin
+  if Assigned(FPLainDriver.sqlany_error_length)
+  then err_len := FPLainDriver.sqlany_error_length(Fa_sqlany_connection)
+  else err_len := 1025;
+  Assert(err_len > 0, 'wrong call to HandleError');
+  ErrBuf := '';
+  SetLength(ErrBuf, err_len -1);
+  ErrCode := FPLainDriver.sqlany_error(Fa_sqlany_connection, Pointer(ErrBuf), err_len);
+  if not Assigned(FPLainDriver.sqlany_error_length)
+  then err_len := ZFastCode.StrLen(Pointer(ErrBuf))
+  else Dec(err_len);
+  SetLength(ErrBuf, err_len);
 
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogError(LogginCategory, 'sqlany', Msg, ErrCode, ErrBuf);
+
+  st_len := FPLainDriver.sqlany_sqlstate(Fa_sqlany_connection, @StateBuf[0], SizeOf(StateBuf));
+  Dec(st_len);
+  {$IFDEF UNICODE}
+  State := USASCII7ToUnicodeString(@StateBuf[0], st_Len);
+  ErrMsg := PRawToUnicode(Pointer(ErrBuf), err_Len, ImmediatelyReleasable.GetConSettings.ClientCodePage.CP);
+  {$ELSE}
+  {$IFDEF FPC} State := ''; {$ENDIF}
+  System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
+  ErrMsg := ErrBuf + ';
+  {$ENDIF}
+  ErrMsg := ErrMsg + 'The SQL: ';
+  {$IFDEF UNICODE}
+  ErrMsg := ErrMsg + ZRawToUnicode(Msg, ImmediatelyReleasable.GetConSettings.ClientCodePage.CP);
+  {$ELSE}
+  ErrMsg := ErrMsg + Msg;
+  {$ENDIF}
+
+  if Assigned(FplainDriver.sqlany_clear_error) then
+    FplainDriver.sqlany_clear_error(Fa_sqlany_connection);
+  if ErrCode > 0 then //that's a Warning
+  else begin
+    Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
+    raise Exception;
+  end;
 end;
 
 const
@@ -426,6 +470,10 @@ jmpInit:
     S := DetermineASACharSet;
     CheckCharEncoding(S);
   end;
+  //ExecuteImmediat(RawByteString('SET chained=''Off'''), lcTransaction);
+  if not AutoCommit
+  then StartTransaction
+  else ExecuteImmediat(RawByteString('SET TEMPORARY OPTION auto_commit=''On'''), lcTransaction);
 end;
 
 {**
@@ -555,7 +603,7 @@ begin
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      ExecuteImmediat(RawByteString('SET AUTOCOMMIT ON'), lcTransaction);
+      ExecuteImmediat(RawByteString('SET AUTO_COMMIT=ON'), lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
@@ -578,7 +626,7 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    ExecuteImmediat(RawByteString('SET AUTOCOMMIT OFF'), lcTransaction);
+    ExecuteImmediat(RawByteString('SET TEMPORARY OPTION auto_commit=''Off'''), lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin

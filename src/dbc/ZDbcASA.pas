@@ -246,7 +246,7 @@ begin
     FHandle := nil;
     if FPlainDriver.db_fini(@FSQLCA) = 0 then
     begin
-      DriverManager.LogError(lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
+      DriverManager.LogError(lcConnect, ConSettings^.Protocol, 'Finalizing SQLCA',
         0, 'Error closing SQLCA');
       raise EZSQLException.CreateWithCode(0, 'Error closing SQLCA');
     end;

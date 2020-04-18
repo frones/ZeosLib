@@ -1987,7 +1987,7 @@ begin
   if SrcWords = 0 then
     Result := EmptyRaw
   else begin
-    if CP = zCP_NONE then
+    if (CP = zCP_NONE) or (CP = zCP_UTF16) then
       CP := ZOSCodePage; //random success
     ULen := Min(SrcWords shl 2, High(Integer)-1);
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}

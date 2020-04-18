@@ -376,8 +376,7 @@ begin
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
   FStmtNum := StmtNum;
   ResultSetType := rtScrollSensitive;
-  ResultSetConcurrency := rcUpdatable;
-
+  ResultSetConcurrency := rcReadOnly;
   Open;
 end;
 
@@ -1019,10 +1018,10 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>TZAnsiRec</code> in the Delphi programming language.
+  a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the Length of the PAnsiChar String
+  @param Len the Length in bytes of the raw String
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
@@ -1297,19 +1296,18 @@ begin
         if ColumnType = stUnicodeString then begin//ASA calcutates the n column different
           CharOctedLength := GetFieldLength(I);
           Precision := CharOctedLength shr 2; //default UTF8 has 3 bytes only whereas n-cols have 4 bytes
-          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_FIXCHAR;
+          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_NFIXCHAR;
         end;
       end else if FieldSqlType in [stString, stAsciiStream] then begin
         ColumnCodePage := ConSettings^.ClientCodePage^.CP;
         if ColumnType = stString then begin
           CharOctedLength := GetFieldLength(I);
           Precision := CharOctedLength div ConSettings^.ClientCodePage^.CharWidth;
-          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_NFIXCHAR;
+          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_FIXCHAR;
         end;
       end else if FieldSqlType = stBytes then begin
         Precision := GetFieldLength(I);
         CharOctedLength := Precision;
-        //asa has no varbinary has it?
       end else if FieldSqlType = stBigDecimal then begin
         Precision := GetFieldLength(I);
         Scale := GetFieldScale(I);

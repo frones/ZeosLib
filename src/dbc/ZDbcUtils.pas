@@ -323,7 +323,6 @@ function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType
 
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
-  i4SpaceUni: Int64 = 9007336695791648;  //integer representation of the four wide space chars
   sAlignCurrencyScale2Precision: array[0..4] of Integer = (
     15, 16, 17, 18, 19);
   ZSQLTypeToBuffSize: array[TZSQLType] of Integer = (0,//stUnknown,
@@ -350,6 +349,9 @@ const
     [vtNull, vtInterface], [vtNull, vtInterface], [vtNull, vtInterface],
     //finally the object types
     [], []);
+  W4SpaceUni: array[0..3] of Word = (Word(#32),Word(#32),Word(#32),Word(#32));
+var
+  i4SpaceUni: Int64 absolute W4SpaceUni;  //integer representation of the four wide space chars
 
 implementation
 

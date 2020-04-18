@@ -7385,11 +7385,12 @@ end;
 function ZBCDCompare(var Value1, Value2: TBCD): Integer;
 var PNibble1, PNibble2, PLastNibble1, PLastNibble2, PNibble, PLastNibble: PAnsiChar;
     Prec1, Prec2, Scale1, Scale2: Word;
-    GetFB1, GetFB2: Boolean;
+    GetFB1, GetFB2, Negative: Boolean;
     s1, s2: Integer;
 begin
-  Result := Ord(Value1.SignSpecialPlaces and (1 shl 7) <> 0) - Ord(Value2.SignSpecialPlaces and (1 shl 7) <> 0);
-  if Result = 0 then begin
+  Result := Ord(Value2.SignSpecialPlaces and (1 shl 7) <> 0) - Ord(Value1.SignSpecialPlaces and (1 shl 7) <> 0);
+  if Result = 0 then begin //both positve or negative
+    Negative := Value1.SignSpecialPlaces and (1 shl 7) <> 0;
     if GetPacketBCDOffSets(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
       ZPackBCDToLeft(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
     if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
@@ -7397,7 +7398,9 @@ begin
     {determine digits before fractions start: }
     s1 := Integer(Prec1)-Scale1;
     s2 := Integer(Prec2)-Scale2;
-    Result := Ord(s1 > s2) - Ord(s1 < s2);
+    if Negative
+    then Result := Ord(s1 < s2) - Ord(s1 > s2)
+    else Result := Ord(s1 > s2) - Ord(s1 < s2);
     GetFB1 := Result = 0;
     s1 := S1 + Ord(Prec1=Scale1);
     s2 := s2 + Ord(Prec2=Scale2);
@@ -7424,7 +7427,9 @@ begin
             s2 := (PByte(PNibble2)^ shr 4);
           end;
         end;
-        Result := Ord(s1 > s2) - Ord(s1 < s2);
+        if Negative
+        then Result := Ord(s1 < s2) - Ord(s1 > s2)
+        else Result := Ord(s1 > s2) - Ord(s1 < s2);
         if Result <> 0 then
           Exit;
         Inc(PNibble);

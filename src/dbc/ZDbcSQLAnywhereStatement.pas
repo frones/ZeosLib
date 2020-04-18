@@ -70,6 +70,7 @@ type
     FHasOutParams: Boolean;
     Fa_sqlany_stmt: Pa_sqlany_stmt;
     FCallResultCache: TZCollection;
+    Fapi_version: Tsacapi_u32;
     procedure ClearCallResultCache;
   private
     function CreateResultSet: IZResultSet;
@@ -102,8 +103,10 @@ type
     procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
+    function InitDataValue(Index: Integer; SQLType: TZSQLType; Length: Tsize_t): Pa_sqlany_data_value;
   protected
     procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure CheckParameterIndex(var Value: Integer); override;
@@ -168,6 +171,7 @@ begin
   FSQLAnyConnection := Connection as IZSQLAnywhereConnection;
   FPlainDriver := FSQLAnyConnection.GetPlainDriver;
   ResultSetType := rtScrollSensitive;
+  Fapi_version := FSQLAnyConnection.Get_api_version;
 end;
 
 destructor TZAbstractSQLAnywhereStatement.Destroy;
@@ -281,8 +285,9 @@ begin
     num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
     if num_cols < 0
     then FSQLAnyConnection.HandleError(lcExecute, fASQL, Self)
-    else if num_cols > 0 then
-      LastResultSet := CreateResultSet;
+    else if num_cols > 0
+    then LastResultSet := CreateResultSet
+    else LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
   end;
   Result := Assigned(FLastResultSet);
   { Logging SQL Command and values}
@@ -339,20 +344,50 @@ begin
     FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
   Result := -1;
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
-  if num_cols > 0 then
-    while GetMoreResults and (FLastResultSet <> nil) do
-      Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
+  if num_cols = 0
+  then Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt)
+  else while GetMoreResults and (FLastResultSet <> nil) do
+    Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
   { Logging SQL Command and values }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
+  LastUpdateCount := Result;
 end;
 
 { TZSQLAnywherePreparedStatement }
 
+procedure TZSQLAnywherePreparedStatement.BindInParameters;
+var I: Integer;
+begin
+  for i := 0 to BindList.Count -1 do
+    {$R-}
+    if FPlainDriver.sqlany_bind_param(Fa_sqlany_stmt, Cardinal(I), @Fa_sqlany_bind_paramArray[i]) <> 1 then
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      FSQLAnyConnection.HandleError(lcExecute, 'sqlany_bind_param', Self);
+  inherited BindInParameters;
+end;
+
 procedure TZSQLAnywherePreparedStatement.BindLob(Index: Integer; SQLType: TZSQLType;
   const Value: IZBlob);
+var data_value: Pa_sqlany_data_value;
+  Stream: TStream;
 begin
   inherited BindLob(Index, SQLType, Value); //else FPC raises tons of memleaks
+  data_value := InitDataValue(Index, SQLType, 0);
+  if (Value = nil) or Value.IsEmpty
+  then data_value.is_null^ := 1
+  else begin
+    data_value.is_null^ := 0;
+    Stream := Value.GetStream;
+    try
+      data_value.length^ := Stream.Size;
+      data_value.buffer_size := data_value.length^;
+      ReallocMem(data_value.buffer, data_value.length^);
+      Stream.Read(data_value.buffer^, data_value.length^);
+    finally
+      Stream.Free;
+    end;
+  end;
 end;
 
 procedure TZSQLAnywherePreparedStatement.BindRawStr(Index: Integer;
@@ -365,8 +400,14 @@ end;
 
 procedure TZSQLAnywherePreparedStatement.BindRawStr(Index: Integer; Buf: PAnsiChar;
   Len: LengthInt);
+var data_value: Pa_sqlany_data_value;
 begin
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stString, Len);
+  data_value.is_null^ := 0;
+  data_value.length^ := Len;
+  if Len > 0 then
+    Move(Buf^, data_value.buffer^, Len);
 end;
 
 procedure TZSQLAnywherePreparedStatement.CheckParameterIndex(
@@ -381,6 +422,101 @@ begin
     for I := 0 to Value do
       if Ord(BindList[I].ParamType) > Ord(pctInOut) then
         Dec(Value);
+end;
+
+function TZSQLAnywherePreparedStatement.InitDataValue(Index: Integer;
+  SQLType: TZSQLType; Length: Tsize_t): Pa_sqlany_data_value;
+label jmpVarLen;
+var ActSize: Tsize_t;
+    Bind: Pa_sqlany_bind_param;
+begin
+  {$R-}
+  Bind := @Fa_sqlany_bind_paramArray[Index];
+  Result := @Bind.value;
+  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  ActSize := Result.buffer_size;
+  case SQLType of
+    stBoolean, stByte: begin
+       Result.buffer_size := SizeOf(Byte);
+       Result._type := A_UVAL8;
+      end;
+    stShort: begin
+       Result.buffer_size := SizeOf(ShortInt);
+       Result._type := A_VAL8;
+      end;
+    stWord: begin
+       Result.buffer_size := SizeOf(Word);
+       Result._type := A_UVAL16;
+      end;
+    stSmall: begin
+       Result.buffer_size := SizeOf(Word);
+       Result._type := A_VAL16;
+      end;
+    stLongWord: begin
+       Result.buffer_size := SizeOf(Cardinal);
+       Result._type := A_UVAL32;
+      end;
+    stInteger: begin
+       Result.buffer_size := SizeOf(Integer);
+       Result._type := A_VAL32;
+      end;
+    stULong: begin
+       Result.buffer_size := SizeOf(Uint64);
+       Result._type := A_UVAL64;
+      end;
+    stLong: begin
+       Result.buffer_size := SizeOf(Int64);
+       Result._type := A_VAL64;
+      end;
+    stFloat, stDouble: begin
+       Result.buffer_size := SizeOf(Double);
+       Result._type := A_DOUBLE;
+      end;
+    stCurrency,
+    stBigDecimal: begin
+       Result.buffer_size := 44;
+       Result._type := A_STRING;
+      end;
+    stDate: begin
+       Result.buffer_size := 16;
+       Result._type := A_STRING;
+      end;
+    stTime: begin
+       Result.buffer_size := 24;
+       Result._type := A_STRING;
+      end;
+    stTimestamp: begin
+       Result.buffer_size := 32;
+       Result._type := A_STRING;
+      end;
+    stGUID: begin
+       Result.buffer_size := 44;
+       Result._type := A_STRING;
+      end;
+    stString, stUnicodeString: begin
+        Result._type := A_STRING;
+        goto jmpVarLen;
+      end;
+    stBytes: begin
+        Result._type := A_BINARY;
+jmpVarLen:
+        if Result.buffer_size < length then
+          length := ((length shr 3)+1) shl 3; //8 Byte aligned incl. space for zero term
+        Result.buffer_size := length;
+      end;
+    stAsciiStream,
+    stUnicodeStream: begin
+       Result.buffer_size := 0;
+       Result._type := A_STRING;
+      end;
+    stBinaryStream: begin
+       Result.buffer_size := 0;
+       Result._type := A_BINARY;
+      end;
+    else raise EZSQLException.Create(SUnsupportedParameterType);
+  end;
+  if ActSize <> Result.buffer_size then
+    ReallocMem(Result.buffer, Result.buffer_size);
 end;
 
 {**
@@ -398,9 +534,9 @@ begin
   for i := 0 to num_params -1 do begin
     {$R-}
     Bind := @Fa_sqlany_bind_paramArray[I];
+    { in V2 just IO is descibed }
     if FPlainDriver.sqlany_describe_bind_param(Fa_sqlany_stmt, I, Bind) <> 1 then
       FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
-    ReallocMem(Bind.value.buffer, Bind.value.buffer_size);
     Bind.value.length :=  @FLengthArray[i];
     Bind.value.is_null := @FIsNullArray[i];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
@@ -409,8 +545,15 @@ end;
 
 procedure TZSQLAnywherePreparedStatement.SetBigDecimal(Index: Integer;
   const Value: TBCD);
+var data_value: Pa_sqlany_data_value;
 begin
-  SetRawByteString(Index, BCDToSQLRaw(Value));
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stBigDecimal, 0);
+  data_value.is_null^ := 0;
+  data_value.length^ := BcdToRaw(Value, data_value.buffer, '.');
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetBindCapacity(Capacity: Integer);
@@ -431,24 +574,34 @@ begin
         FreeMem(Bind^.value.buffer);
     end;
     ReallocMem(Fa_sqlany_bind_paramArray, Capacity*SizeOf(Ta_sqlany_bind_param));
+    FillChar((PAnsichar(Fa_sqlany_bind_paramArray)+OldCapacity*SizeOf(Ta_sqlany_bind_param))^,
+      (Capacity-OldCapacity)*SizeOf(Ta_sqlany_bind_param), #0);
   end;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetBoolean(Index: Integer;
   Value: Boolean);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stBoolean, 0);
+  data_value.is_null^ := 0;
+  PByte(data_value.buffer)^ := Byte(Value);
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetByte(Index: Integer; Value: Byte);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stByte, 0);
+  data_value.is_null^ := 0;
+  PByte(data_value.buffer)^ := Value;
 end;
 
 {**
@@ -464,6 +617,7 @@ end;
 }
 procedure TZSQLAnywherePreparedStatement.SetBytes(Index: Integer; Value: PByte;
   Len: NativeUInt);
+var data_value: Pa_sqlany_data_value;
 begin
   if (Len = 0) or (Value = nil) then
     SetNull(Index, stBytes)
@@ -472,6 +626,10 @@ begin
     Index := Index -1;
     {$ENDIF}
     CheckParameterIndex(Index);
+    data_value := InitDataValue(Index, stBytes, Len);
+    data_value.is_null^ := 0;
+    Move(Value^, data_value.buffer^, Len);
+    data_value.length^ := Len;
   end;
 end;
 
@@ -489,54 +647,71 @@ procedure TZSQLAnywherePreparedStatement.SetBytes(Index: Integer;
 var Len: LengthInt;
 begin
   Len := Length(Value);
-  if Len = 0 then
-    SetNull(Index, stBytes)
-  else begin
-    {$IFNDEF GENERIC_INDEX}
-    Index := Index -1;
-    {$ENDIF}
-    CheckParameterIndex(Index);
-  end;
+  if Len = 0
+  then SetNull(Index, stBytes)
+  else SetBytes(Index, Pointer(Value), Len);
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetCurrency(Index: Integer;
   const Value: Currency);
-begin
-  SetRawByteString(Index, CurrToRaw(Value));
-end;
-
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
-procedure TZSQLAnywherePreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
-begin
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-
-procedure TZSQLAnywherePreparedStatement.SetDouble(Index: Integer;
-  const Value: Double);
+var data_value: Pa_sqlany_data_value;
+  P: PAnsiChar;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stCurrency, 0);
+  data_value.is_null^ := 0;
+  CurrToRaw(Value, data_value.buffer, @P);
+  data_value.length^ := P - data_value.buffer;
+end;
+
+procedure TZSQLAnywherePreparedStatement.SetDate(Index: Integer;
+  const Value: TZDate);
+var data_value: Pa_sqlany_data_value;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stDate, 0);
+  data_value.is_null^ := 0;
+  data_value.length^ := ZSysUtils.DateToRaw(Value.Year, Value.Month, Value.Day,
+    data_value.buffer, ConSettings.WriteFormatSettings.DateFormat, False, Value.IsNegative)
+end;
+
+procedure TZSQLAnywherePreparedStatement.SetDouble(Index: Integer;
+  const Value: Double);
+var data_value: Pa_sqlany_data_value;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stDouble, 0);
+  data_value.is_null^ := 0;
+  PDouble(data_value.buffer)^ := Value;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetFloat(Index: Integer;
   Value: Single);
 begin
-  {$IFNDEF GENERIC_INDEX}
-  Index := Index -1;
-  {$ENDIF}
-  CheckParameterIndex(Index);
+  SetDouble(Index, Value);
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetGuid(Index: Integer;
   const Value: TGUID);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stGUID, 0);
+  data_value.is_null^ := 0;
+  ZSysUtils.GUIDToBuffer(@Value.D1, data_value.buffer, [guidWithBrackets]);
+  data_value.length^ := 38;
 end;
 
 procedure TZSQLAnywherePreparedStatement.AddParamLogValue(ParamIndex: Integer;
@@ -594,84 +769,135 @@ begin
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetInt(Index, Value: Integer);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stInteger, 0);
+  data_value.is_null^ := 0;
+  PInteger(data_value.buffer)^ := Value;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetLong(Index: Integer;
   const Value: Int64);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stLong, 0);
+  data_value.is_null^ := 0;
+  PInt64(data_value.buffer)^ := Value;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, SQLType, 0);
+  data_value.is_null^ := 1;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetShort(Index: Integer;
   Value: ShortInt);
+var data_value: Pa_sqlany_data_value;
 begin
-  SetSmall(Index, Value);
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stShort, 0);
+  data_value.is_null^ := 0;
+  PShortInt(data_value.buffer)^ := Value;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetSmall(Index: Integer;
   Value: SmallInt);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stSmall, 0);
+  data_value.is_null^ := 0;
+  PSmallInt(data_value.buffer)^ := Value;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZSQLAnywherePreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
+var data_value: Pa_sqlany_data_value;
 begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stTime, 0);
+  data_value.is_null^ := 0;
+  data_value.length^ := ZSysUtils.TimeToRaw(Value.Hour, Value.Minute, Value.Second,
+    Value.Fractions, data_value.buffer, ConSettings.WriteFormatSettings.TimeFormat,
+    False, Value.IsNegative)
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZSQLAnywherePreparedStatement.SetTimestamp(Index: Integer;
   const Value: TZTimeStamp);
+var data_value: Pa_sqlany_data_value;
 begin
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stTimeStamp, 0);
+  data_value.is_null^ := 0;
+  data_value.length^ := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+    Value.Hour, Value.Minute, Value.Second, Value.Fractions, data_value.buffer,
+    ConSettings.
+    WriteFormatSettings.DateTimeFormat, False, Value.IsNegative)
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZSQLAnywherePreparedStatement.SetUInt(Index: Integer;
   Value: Cardinal);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stLongWord, 0);
+  data_value.is_null^ := 0;
+  PCardinal(data_value.buffer)^ := Value;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetULong(Index: Integer;
   const Value: UInt64);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stULong, 0);
+  data_value.is_null^ := 0;
+  PUInt64(data_value.buffer)^ := Value;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetWord(Index: Integer; Value: Word);
+var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
   CheckParameterIndex(Index);
+  data_value := InitDataValue(Index, stWord, 0);
+  data_value.is_null^ := 0;
+  PWord(data_value.buffer)^ := Value;
 end;
 
 { TZSQLAnywhereStatement }

@@ -688,12 +688,6 @@ type
     MESSAGE_TYPE_PROGRESS
   );
 
-  PZSQLAnyString = ^TZSQLAnyString;
-  TZSQLAnyString = record
-    length : Word;
-    data: array[0..0] of AnsiChar;
-  end;
-
   PZSQLAnyDateTime = ^TZSQLAnyDateTime;
   TZSQLAnyDateTime = packed record
     Year             : SmallInt;  //* e.g. 1992
@@ -1117,7 +1111,7 @@ type
     ///  1 on success or 0 on unsuccessful.
     /// </returns>
     sqlany_bind_column: function(sqlany_stmt: Pa_sqlany_stmt; index: Tsacapi_u32;
-      value: Pa_sqlany_data_value): Tsacapi_bool;
+      value: Pa_sqlany_data_valueV4up): Tsacapi_bool;
       {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     /// <summary>
     ///  Removes all column bindings defined using sqlany_bind_column().
@@ -1128,7 +1122,7 @@ type
     /// <returns>
     ///  1 on success or 0 on failure.
     /// </returns>
-    sqlany_clear_column_bindings: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool;
+    sqlany_clear_column_bindings: function(sqlany_stmt: Pa_sqlany_data_valueV4up): Tsacapi_bool;
       {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
     /// <summary>
     ///  Returns the number of rows fetched.
