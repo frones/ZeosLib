@@ -320,15 +320,18 @@
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
                               {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead							  
                               {$IF CompilerVersion >= 29} //Delphi XE8+
-                                {$IF CompilerVersion >= 30} //Delphi Seattle+
-                                  {$IF CompilerVersion >= 31} //Delphi Berlin+
-                                    {$IF CompilerVersion >= 32} //Delphi Tokyo+
+                                {$IF CompilerVersion >= 30} //Delphi XE10 Seattle+
+                                  {$IF CompilerVersion >= 31} //Delphi XE10.1 Berlin+
+                                    {$IF CompilerVersion >= 32} //Delphi XE10.2 Tokyo+
+                                      {$DEFINE WITH_TRYFINALLY_RESULT_EXCEPTION_CHECK} //the compiler is able to see through try finally block, which have nothing todo initializing the result
                                       {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField has now a virtual GetAsGUID function 
                                       {$DEFINE WITH_IProviderSupportNG}   //TDataset now supports IProviderSupportNG
                                       {$DEFINE WITH_InternalGotoBookmark_TBookmark}
                                       {$DEFINE HAVE_TFIELD_32BIT_ASINTEGER} //TField.AsInteger setter and getter use 32Bit integer
                                       {$DEFINE HAVE_TFIELD_32BIT_ASLONGWORD} //TField.AsLongWord setter and getter use 32Bit unsigned integer
                                       {$DEFINE WITH_VIRTUAL_ASGUID} //TGUIDfield AsGUID has virtual setter and getter
+                                      {$IF CompilerVersion >= 33} //Delphi XE10.3 Rio+
+                                      {$IFEND CompilerVersion >= 333}
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+
