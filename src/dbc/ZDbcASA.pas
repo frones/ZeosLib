@@ -275,12 +275,11 @@ begin
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    ExecuteImmediat('COMMIT', lcTransaction);
-//    FPlainDriver.dbpp_commit(FHandle, 0);
-  //  CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);}
+    FPlainDriver.dbpp_commit(FHandle, 0);
+    CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, 'TRANSACTION COMMIT');
-    SetOption(1, nil, 'CHAINED', 'ON');
+    //SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -419,15 +418,16 @@ begin
   end;
 
   inherited Open;
-
-  if TransactIsolationLevel <> tiReadUnCommitted then
-    SetOption(1, nil, 'ISOLATION_LEVEL', ASATIL[TransactIsolationLevel]);
-  if not AutoCommit then begin
+  if FClientCodePage = ''  then
+    CheckCharEncoding(DetermineASACharSet);
+  SetOption(1, nil, 'CHAINED', 'Off');
+  { Sets an auto commit mode. }
+  if AutoCommit
+  then ExecuteImmediat(RawByteString('SET TEMPORARY OPTION auto_commit=''On'''), lcTransaction)
+  else begin
     AutoCommit := True;
     SetAutoCommit(False);
   end;
-  if FClientCodePage = ''  then
-    CheckCharEncoding(DetermineASACharSet);
 end;
 
 {**
@@ -517,7 +517,6 @@ begin
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    //InternalExecute('ROLLBACK', lcTransaction);
     FPlainDriver.dbpp_rollback(FHandle, 0);
     CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
     DriverManager.LogMessage(lcTransaction,
@@ -614,8 +613,7 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    SetOption(1, nil, 'CHAINED', 'OFF');
-//    InternalExecute('BEGIN TRANSACTION', lcTransaction);
+    ExecuteImmediat('SET AUTOCOMMIT=''Off''', lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin
@@ -623,16 +621,6 @@ begin
     ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S) +2;
   end;
-
-(*   if AutoCommit then
-    SetOption(1, nil, 'CHAINED', 'OFF')
-  else
-    SetOption(1, nil, 'CHAINED', 'ON');
-  ASATL := Ord(TransactIsolationLevel);
-  if ASATL > 1 then
-    ASATL := ASATL - 1;
-  SetOption(1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr(ASATL));
-*)
 end;
 
 destructor TZASAConnection.Destroy;
