@@ -238,8 +238,9 @@ function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse4Bytes(P: Pointer); {$IFDEF FPC}assembler;{$ENDIF}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
+procedure Reverse8Bytes(P: Pointer); {$IFDEF FPC}assembler;{$ENDIF}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
+
 {$ENDIF}
 
 //ported macros from array.h
@@ -889,9 +890,25 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$asmmode intel} {$ENDIF}
 
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse4Bytes(P: Pointer); {$IFDEF FPC}nostackframe; assembler;{$ENDIF}
+{$IF defined(FPC) or defined(MSWINDOWS)}
+asm
+  {$IFNDEF CPU64}
+  mov edx, [eax]
+  {$ELSE !CPU64}
+  mov edx, [rcx]
+  {$ENDIF CPU64}
+  bswap edx
+  {$IFNDEF CPU64}
+  mov [eax], edx
+  {$ELSE !CPU64}
+  mov [rcx], edx
+  {$ENDIF CPU64}
+end;
+{$ELSE}
 var C: Cardinal;
 begin
   {$R-}
@@ -900,10 +917,28 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   PCardinal(P)^ := C;
 end;
-{$ENDIF}
+{$IFEND}
+{$ENDIF ENDIAN_BIG}
+
 
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse8Bytes(P: Pointer); {$IF defined(FPC) and defined(MSWINDOWS)}nostackframe; assembler;{$IFEND}
+{$IF defined(FPC) or defined(MSWINDOWS)}
+asm
+  {$IFNDEF CPU64}
+  mov edx, [eax]
+  mov ecx, [eax+$04]
+  bswap edx
+  bswap ecx
+  mov [eax], ecx;
+  mov [eax+$04], edx;
+  {$ELSE CPU64}
+  mov rdx, [rcx]
+  bswap rdx
+  mov [rcx], rdx;
+  {$ENDIF CPU64}
+end;
+{$ELSE}
 {$IFNDEF CPU64}
 var C1, C2: Cardinal;
 {$ELSE}
@@ -926,6 +961,7 @@ begin
   {$ENDIF}
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
+{$IFEND}
 {$ENDIF}
 
 {$IFDEF FPC} {$PUSH}
