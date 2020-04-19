@@ -670,7 +670,11 @@ begin
     q.Open;
     while not q.Eof do begin
       CheckFalse(q.Fields[0].IsNull, 'the field is not null');
+      {$IFDEF TFIELD_HAS_ASBYTES}
       Check(Length(q.Fields[0].AsBytes) > 0, 'there are some bytes in queue');
+      {$ELSE}
+      Check(Length(q.Fields[0].AsString) > 0, 'there are some bytes in queue');
+      {$ENDIF}
       //Write(Length(q.Fields[0].AsBytes), ' ', q.Fields[0].AsAnsiString, #10);
       (* expected output:
       5 apple
