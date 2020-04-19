@@ -1649,7 +1649,7 @@ var
   Weight: SmallInt;
   pNibble, pLastNibble: PAnsiChar;
   HalfNibbles: Boolean; //fpc compare fails in all areas if not strict left padded
-label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3;
+label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3, jmpScale;
 begin
   FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
   {$IFNDEF ENDIAN_BIG}
@@ -1679,7 +1679,7 @@ ZeroBCD:
   pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
   if Weight < 0 then begin {save absolute Weight value to I }
     I := -Weight;
-    Inc(pNibble, (I - 1) * 2); //set new bcd nibble offset
+    Inc(pNibble, (I - 1) shl 1); //set new bcd nibble offset
     if pNibble > pLastNibble then //overflow -> raise AV ?
       goto ZeroBCD;
   end else
@@ -1714,6 +1714,9 @@ Final3: Digits := 3;
   end else if NBASEDigit > 9 then begin
     PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
 Final2: Digits := 2;
+  end else if (Weight = -1) and (NBASEDigitsCount = 1) then begin
+    PByte(pNibble+1)^ := Byte(NBASEDigit);
+    goto jmpScale;
   end else begin
     HalfNibbles := True;
     PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
@@ -1761,6 +1764,7 @@ Done:
       if (i and 1 = 0) then
         Dec(PLastNibble)
     end;
+jmpScale:
     if Scale > 0 then
       if Dst.SignSpecialPlaces = $80
       then Dst.SignSpecialPlaces := Scale or $80
