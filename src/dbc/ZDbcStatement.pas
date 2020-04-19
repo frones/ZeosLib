@@ -1546,6 +1546,7 @@ function TZAbstractStatement.ExecuteBatch: TIntegerDynArray;
 var
   I: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, FBatchQueries.Count);
   for I := 0 to FBatchQueries.Count -1 do
     Result[I] := ExecuteUpdate(FBatchQueries[I]);

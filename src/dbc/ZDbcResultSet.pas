@@ -1973,6 +1973,7 @@ var P: PByte;
 begin
   P := IZResultSet(FWeakIntfPtrOfSelf).GetBytes(ColumnIndex, L);
   if (P <> nil) and (L > 0) then begin
+    {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
     SetLength(Result, L);
     Move(P^, Pointer(Result)^, L);
   end else
@@ -3506,6 +3507,7 @@ function TZAbstractResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArr
   const CompareKinds: TComparisonKindArray): TCompareFuncs;
 var I: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(ColumnIndices));
   for i := low(ColumnIndices) to high(ColumnIndices) do
     case CompareKinds[i] of
@@ -4785,10 +4787,13 @@ end;
 function TZAbstractStreamedLob.GetBytes: TBytes;
 var Stream: TStream;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   Stream := CreateLobStream(FColumnCodePage, lsmRead);
   try
-    SetLength(Result, Stream.Size);
-    Stream.Read(Pointer(Result)^, Stream.Size);
+    if Stream.Size > 0 then begin
+      SetLength(Result, Stream.Size);
+      Stream.Read(Pointer(Result)^, Stream.Size);
+    end;
   finally
     Stream.Free;
   end;

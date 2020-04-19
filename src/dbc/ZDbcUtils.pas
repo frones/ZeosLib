@@ -1611,6 +1611,7 @@ begin
     Result := EmptyRaw
   else
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}Bytes := nil;{$ENDIF}
     SetLength(Bytes, Size +2);
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.move(Buffer^, Pointer(Bytes)^, Size);
     Encoding := TestEncoding(Bytes, Size);
@@ -2109,6 +2110,7 @@ function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray;
   var MaxLen: LengthInt): TUnicodeStringDynArray;
 var i: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(Value));
   MaxLen := 0;
   for I := 0 to High(Value) do
@@ -2124,6 +2126,7 @@ end;
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeStringDynArray;
 var i: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(Value));
   for I := 0 to High(Value) do
     if Value[i].CP = zCP_UTF16

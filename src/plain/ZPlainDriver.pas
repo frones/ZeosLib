@@ -249,6 +249,7 @@ function TZAbstractPlainDriver.GetClientCodePages: TStringDynArray;
 var
   I: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(FCodePages));
   for i := low(FCodePages) to high(FCodePages) do
     Result[i] := FCodePages[i].Name;

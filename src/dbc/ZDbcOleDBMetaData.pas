@@ -2853,6 +2853,7 @@ begin
   if SchemaID = -1 then Exit;
   try
     (GetConnection as IZOleDBConnection).GetSession.QueryInterface(IID_IDBSchemaRowset, FSchemaRS);
+    {$IFDEF WITH_VAR_INIT_WARNING}OleArgs := nil;{$ENDIF}
     SetLength(OleArgs, Length(Args));
     for I := 0 to High(Args) do
       if (FSupportedSchemas[SchemaID].SupportedRestrictions and (1 shl I)) <> 0 then

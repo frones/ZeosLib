@@ -80,6 +80,7 @@ uses
 {$ENDIF}
 {$IFDEF ENABLE_ASA}
   ZDbcASA,
+  //ZDbcSQLAnywhere,
 {$ENDIF}
 {$IFDEF ENABLE_POOLED}
   ZDbcPooled,
