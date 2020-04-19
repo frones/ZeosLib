@@ -1831,10 +1831,9 @@ begin
     Result := (P = nil) or ResultSet.WasNull;
   end else
     P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if Result then
-    PWord(Buffer)^ := Ord(#0)
-  else //instead of WStrLCopy
-    PRaw2PUnicode(P, Buffer, FClientCP, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1);
+  if not Result then //instead of WStrLCopy
+    L := PRaw2PUnicode(P, Buffer, FClientCP, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1);
+  PWord(Buffer+L)^ := Word(#0);
 end;
 {$ENDIF}
 
