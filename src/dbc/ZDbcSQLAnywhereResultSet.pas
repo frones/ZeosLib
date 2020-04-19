@@ -1015,7 +1015,7 @@ end;
   Opens this recordset.
 }
 procedure TZSQLAnywhereResultSet.Open;
-var i, info_size: Tsacapi_i32;
+var i: Tsacapi_i32;
   RowSize: Tsize_t;
   sqlany_column_info: Pa_sqlany_column_info;
   ColumnInfo: TZSQLAnywhereColumnInfo;
@@ -1045,7 +1045,7 @@ begin
     RowSize := SizeOf(Ta_sqlany_column_info);
     P := @FDataValues;
   end;
-  RowSize := RowSize * Fnum_cols;
+  RowSize := RowSize * Cardinal(Fnum_cols);
   GetMem(PPointer(P)^, RowSize);
   FillChar(PPointer(P)^^, RowSize, 0);
   sqlany_column_info := @FTinyBuffer[0];

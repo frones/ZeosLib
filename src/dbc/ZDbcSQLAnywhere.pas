@@ -241,7 +241,6 @@ begin
   {$ELSE}
   {$IFDEF FPC} State := ''; {$ENDIF}
   System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
-  ErrMsg := ErrBuf + ';
   {$ENDIF}
   ErrMsg := ErrMsg + 'The SQL: ';
   {$IFDEF UNICODE}
@@ -470,7 +469,6 @@ jmpInit:
     S := DetermineASACharSet;
     CheckCharEncoding(S);
   end;
-  //ExecuteImmediat(RawByteString('SET chained=''Off'''), lcTransaction);
   if not AutoCommit
   then StartTransaction
   else ExecuteImmediat(RawByteString('SET TEMPORARY OPTION auto_commit=''On'''), lcTransaction);
