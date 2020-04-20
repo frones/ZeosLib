@@ -2335,7 +2335,7 @@ constructor TZOraProcDescriptor_W.Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}
   Parent: TZOraProcDescriptor_W; RawCP: Word);
 begin
   fParent := Parent;
-  FRawCP := FRawCP;
+  FRawCP := RawCP;
 end;
 
 procedure TZOraProcDescriptor_W.Describe(_Type: UB4;

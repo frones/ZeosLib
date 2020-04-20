@@ -494,13 +494,13 @@ begin
   if Stmt = nil then begin
     Status := FPlainDriver.sqlite3_prepare_v2(FHandle,
       Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Stmt, pZTail);
-    if not Status in [SQLITE_OK, SQLITE_DONE] then
+    if (Status <> SQLITE_OK) and (Status <> SQLITE_DONE) then
       CheckSQLiteError(FPlainDriver, FHandle, Status, lcPrepStmt,
         SQL, ConSettings)
   end;
   Status := FPlainDriver.sqlite3_step(Stmt);
   try
-    if not Status in [SQLITE_OK, SQLITE_DONE] then
+    if (Status <> SQLITE_OK) and (Status <> SQLITE_DONE) then
       CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings)
   finally
     FPlainDriver.sqlite3_reset(Stmt);

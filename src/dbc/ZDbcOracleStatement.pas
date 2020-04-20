@@ -214,7 +214,6 @@ uses
   ZSelectSchema;
 
 const
-  CommitMode: array[Boolean] of ub4 = (OCI_DEFAULT, OCI_COMMIT_ON_SUCCESS);
   StrGUIDLen = 36;
   SQLType2OCIType: array[stUnknown..stBinaryStream] of ub2 = (SQLT_INT,
     SQLT_UIN, SQLT_UIN, SQLT_INT, SQLT_UIN, SQLT_INT, SQLT_UIN, SQLT_INT, SQLT_UIN, SQLT_INT,  //ordinals
@@ -359,7 +358,7 @@ begin
   if FOpenResultSet = nil then begin
     if FStatementType = OCI_STMT_SELECT
     then NativeResultSet := TZOracleResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize)
-    else NativeResultSet := TZOracleCallableResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FOraVariables, BindList);
+    else NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, FOraVariables, BindList);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
       CachedResultSet := TZOracleCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
