@@ -166,7 +166,7 @@ function TZAbstractPlainDriver.ValidateCharEncoding(const CharacterSetName: Stri
 begin
   Result := GetClientCodePageInformations(CharacterSetName);
   if (DoArrange) and (Result^.ZAlias <> '' ) then
-    ValidateCharEncoding(Result^.ZAlias); //recalls em selves
+    Result := ValidateCharEncoding(Result^.ZAlias); //recalls em selves
 end;
 
 {**
