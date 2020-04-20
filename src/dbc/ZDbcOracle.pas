@@ -451,7 +451,7 @@ var
     With CreateStatement.ExecuteQuery('select VALUE from nls_database_parameters where parameter=''NLS_CHARACTERSET''') do begin
       if Next then begin
         {$IFDEF UNICODE}LogMessage{$ELSE}US{$ENDIF} := GetUnicodeString(FirstDbcIndex);
-        {$IFNDEF UNICODE}LogMessage := UnicodeStringToUSACII7(US);{$ENDIF}
+        {$IFNDEF UNICODE}LogMessage := UnicodeStringToASCII7(US);{$ENDIF}
         ResetCurrentClientCodePage(LogMessage, True);
         { keep the w-encoding infos alive, just identify the raw CP}
         ConSettings.ClientCodePage.Encoding := ceUTF16;
