@@ -186,7 +186,7 @@ var
   CachedResultSet: TZSQLAnywhereCachedResultSet;
 begin
   With FSQLAnyConnection do begin
-    NativeResultSet := TZSQLAnywhereResultSet.Create(Self, SQL, Fa_sqlany_stmt);
+    NativeResultSet := TZSQLAnywhereResultSet.Create(Self, SQL, @Fa_sqlany_stmt);
     if ResultSetConcurrency = rcUpdatable then begin
       CachedResultSet := TZSQLAnywhereCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
       CachedResultSet.SetResolver(TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetadata));
@@ -215,11 +215,11 @@ procedure TZAbstractSQLAnywhereStatement.Unprepare;
 begin
   if FCallResultCache <> nil then
     ClearCallResultCache;
+  inherited Unprepare;
   if Fa_sqlany_stmt <> nil then begin
     FPLainDriver.sqlany_free_stmt(Fa_sqlany_stmt);
     Fa_sqlany_stmt := nil;
   end;
-  inherited Unprepare;
 end;
 
 procedure TZAbstractSQLAnywhereStatement.AfterClose;
@@ -500,7 +500,9 @@ begin
     stBytes: begin
         Result._type := A_BINARY;
 jmpVarLen:
-        if Result.buffer_size < length then
+        if length = 0 then
+          length := 8
+        else if Result.buffer_size < length then
           length := ((length shr 3)+1) shl 3; //8 Byte aligned incl. space for zero term
         Result.buffer_size := length;
       end;

@@ -45,6 +45,10 @@
 {$DEFINE ZEOS72UP}
 {$DEFINE ZEOS73UP}
 
+{$IF (defined(FPC) and (defined(CPU386) or defined(CPUX86_64))) or defined(MSWINDOWS)}
+  {$DEFINE INTEL_ASM} //allow intel syntax assembler
+{$IFEND}
+
 // Uncomment these defines to disable some DB drivers (reduce binary size)
 {.$DEFINE ZEOS_DISABLE_MYSQL}
 {.$DEFINE ZEOS_DISABLE_POSTGRESQL}

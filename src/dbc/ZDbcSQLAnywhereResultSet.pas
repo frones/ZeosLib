@@ -78,7 +78,7 @@ type
   {** Implements SQL Anywhere ResultSet. }
   TZSQLAnywhereResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
   private
-    Fa_sqlany_stmt: Pa_sqlany_stmt;
+    Fa_sqlany_stmt: PPa_sqlany_stmt;
     FPLainDriver: TZSQLAnywherePlainDriver;
     FSQLAnyConnection: IZSQLAnywhereConnection;
     FClientCP, FRawStrCP: Word;
@@ -96,8 +96,9 @@ type
     function CreateConversionError(Index: Integer): EZSQLException;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      a_sqlany_stmt: Pa_sqlany_stmt);
+      a_sqlany_stmt: PPa_sqlany_stmt);
 
+    procedure BeforeClose; override;
     procedure AfterClose; override;
     procedure ResetCursor; override;
   protected
@@ -207,6 +208,8 @@ uses SysUtils, TypInfo,
 procedure TZSQLAnywhereResultSet.AfterClose;
 begin
   inherited;
+  PPointer(@fTinyBuffer[0])^ := nil;
+  Fa_sqlany_stmt := @fTinyBuffer[0];
   if (FColumnData <> nil) then begin
     FreeMem(FColumnData);
     FColumnData := nil;
@@ -225,8 +228,15 @@ begin
   end;
 end;
 
+procedure TZSQLAnywhereResultSet.BeforeClose;
+begin
+  inherited;
+  if (FDataValuesV4up <> nil) and (Fa_sqlany_stmt^ <> nil) then
+    FplainDriver.sqlany_clear_column_bindings(Fa_sqlany_stmt^);
+end;
+
 constructor TZSQLAnywhereResultSet.Create(const Statement: IZStatement;
-  const SQL: string; a_sqlany_stmt: Pa_sqlany_stmt);
+  const SQL: string; a_sqlany_stmt: PPa_sqlany_stmt);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConSettings);
   Fa_sqlany_stmt := a_sqlany_stmt;
@@ -258,7 +268,9 @@ begin
   {$IFDEF DEBUG}
   Assert((Index >= 0) and (Index < Fnum_cols), 'Out of Range.');
   {$ENDIF}
-  with TZSQLAnywhereColumnInfo(ColumnsInfo[Index]) do begin
+  if Fa_sqlany_stmt^ = nil then
+    Result := False
+  else with TZSQLAnywhereColumnInfo(ColumnsInfo[Index]) do begin
     native_type := NativeType;
     ABind := Pa_sqlany_data_value(Bind);
     if IsBound then begin
@@ -268,11 +280,11 @@ begin
       FDataLen := Bind.length[FCurrentRowOffset];
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end else if (Ord(ColumnType) >= Ord(stAsciiStream)) then begin
-      if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt, Index, Fdata_info) = 0 then
+      if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt^, Index, Fdata_info) = 0 then
         FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data_info', Self);
       Result := (Fdata_info.is_null = 0);
     end else begin
-      if FplainDriver.sqlany_get_column(Fa_sqlany_stmt, Index, Pointer(ABind)) = 0 then
+      if FplainDriver.sqlany_get_column(Fa_sqlany_stmt^, Index, Pointer(ABind)) = 0 then
         FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_column', Self);
       Result := (ABind.is_null^ = 0);
       FData :=  ABind.buffer;
@@ -290,6 +302,14 @@ begin
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
   if FillData(ColumnIndex, native_type) then case native_type of
+    DT_TINYINT     : ScaledOrdinal2BCD(SmallInt(PShortInt(FData)^), 0, Result);
+    //DT_BIT         : Result := PByte(FData)^ <> 0;
+    DT_SMALLINT    : ScaledOrdinal2BCD(PSmallInt(FData)^, 0, Result);
+    DT_UNSSMALLINT : ScaledOrdinal2BCD(PWord(FData)^, 0, Result, False);
+    DT_INT         : ScaledOrdinal2BCD(PInteger(FData)^, 0, Result);
+    DT_UNSINT      : ScaledOrdinal2BCD(PCardinal(FData)^, 0, Result, False);
+    DT_BIGINT      : ScaledOrdinal2BCD(PInt64(FData)^, 0, Result);
+    DT_UNSBIGINT   : ScaledOrdinal2BCD(PUInt64(FData)^, 0, Result, False);
     DT_FLOAT       : Double2BCD(PSingle(FData)^, Result);
     DT_DOUBLE      : Double2BCD(PDouble(FData)^, Result);
     DT_NFIXCHAR,
@@ -298,7 +318,7 @@ begin
     DT_VARCHAR,
     DT_DECIMAL     : if not TryRawToBcd(FData, FDataLen, Result, '.') then
                         PCardinal(@Result.Precision)^ := 0;
-    else Double2BCD(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
+    else raise CreateConversionError(ColumnIndex);
   end else
     PCardinal(@Result.Precision)^ := 0;
 end;
@@ -312,10 +332,10 @@ begin
     raise CreateReadOnlyException;
   if FillData(ColumnIndex, native_type) then with TZSQLAnywhereColumnInfo(ColumnsInfo[ColumnIndex]) do
     case native_type of
-      DT_LONGBINARY: Result := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt,
+      DT_LONGBINARY: Result := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
         ColumnIndex, lsmRead, zCP_Binary, FOpenLobStreams, @FRowNo);
       DT_LONGVARCHAR,
-      DT_LONGNVARCHAR: Result := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt,
+      DT_LONGNVARCHAR: Result := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
         ColumnIndex, lsmRead, ColumnCodePage, FOpenLobStreams, @FRowNo);
       else raise CreateConversionError(ColumnIndex);
     end;
@@ -418,6 +438,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZSQLAnywhereResultSet.GetDate(ColumnIndex: Integer;
   var Result: TZDate);
 label jmpFail;
@@ -448,6 +469,7 @@ jmpFail:
     LastWasNull := True;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZSQLAnywhereResultSet.GetDouble(ColumnIndex: Integer): Double;
 var native_type: Ta_sqlany_native_type;
@@ -506,9 +528,27 @@ end;
 procedure TZSQLAnywhereResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
 var native_type: Ta_sqlany_native_type;
+label fail;
 begin
-  {if FillData(ColumnIndex, native_type) then case native_type of
-  end else}
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stGUID);
+{$ENDIF}
+  if FillData(ColumnIndex, native_type) then case native_type of
+    DT_BINARY       : if FDataLen = SizeOf(TGUID)
+                      then Result := PGUID(FData)^
+                      else goto fail;
+    DT_FIXCHAR,
+    DT_NFIXCHAR,
+    DT_NVARCHAR,
+    DT_VARCHAR      : if (FDataLen = 36) or (FDataLen = 38)
+                      then ValidGUIDToBinary(PAnsiChar(FData), @Result.D1)
+                      else goto fail;
+    else
+fail: raise CreateConversionError(ColumnIndex);
+  end else begin
+    PInt64(@Result.D1)^ := 0;
+    PInt64(@Result.D4)^ := 0;
+  end;
 end;
 
 function TZSQLAnywhereResultSet.GetInt(ColumnIndex: Integer): Integer;
@@ -649,7 +689,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
     DT_LONGNVARCHAR,
     DT_LONGVARCHAR: if Fdata_info.data_size < SizeOf(FTinyBuffer) then begin
                       Result := @FTinyBuffer[0];
-                      ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt, ColumnIndex,
+                      ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt^, ColumnIndex,
                         0, Result, SizeOf(FTinyBuffer));
                       if ColumnIndex < 0 then
                         FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data', Self);
@@ -771,7 +811,7 @@ set_from_uni:         Len := Length(FUniTemp);
     DT_LONGNVARCHAR,
     DT_LONGVARCHAR: if Fdata_info.data_size < SizeOf(FTinyBuffer) then begin
                       Result := @FTinyBuffer[0];
-                      ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt, ColumnIndex,
+                      ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt^, ColumnIndex,
                         0, Result, SizeOf(FTinyBuffer));
                       if ColumnIndex < 0 then
                         FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data', Self);
@@ -807,6 +847,7 @@ set_from_uni:         Len := Length(FUniTemp);
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZSQLAnywhereResultSet.GetTime(ColumnIndex: Integer;
   var Result: TZTime);
 label jmpFail, jmpFill;
@@ -840,7 +881,10 @@ jmpFill:
     PInt64(PAnsiChar(@Result.Fractions)-2)^ := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TM" does not seem to be initialized} {$ENDIF}
 procedure TZSQLAnywhereResultSet.GetTimestamp(ColumnIndex: Integer;
   var Result: TZTimeStamp);
 var TM: TZTime;
@@ -884,6 +928,7 @@ jmpFill:
     PInt64(PAnsiChar(@Result.Fractions)-2)^ := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZSQLAnywhereResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 var native_type: Ta_sqlany_native_type;
@@ -954,12 +999,12 @@ begin
   {$ENDIF}
   Assert((ColumnIndex >= 0) and (ColumnIndex < Fnum_cols), 'Out of Range.');
   with TZSQLAnywhereColumnInfo(ColumnsInfo[ColumnIndex]) do begin
-    if (Bind <> nil) then
+    if (Bind <> nil) and IsBound then
       {$R-}
       Result := Bind.is_null[FCurrentRowOffset] <> 0
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     else begin
-      if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt, ColumnIndex, Fdata_info) = 0 then
+      if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt^, ColumnIndex, Fdata_info) = 0 then
         FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data_info', Self);
       Result := Fdata_info.is_null <> 0;
     end
@@ -986,15 +1031,15 @@ var fetched_rows: Tsacapi_i32;
 begin
   { Checks for maximum row. }
   Result := False;
-  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (Fa_sqlany_stmt = nil) then
+  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (Fa_sqlany_stmt^ = nil) then
     Exit;
   if (FIteration > 1) then begin
     Inc(FCurrentRowOffset, Cardinal(RowNo > 0));
     if (FCurrentRowOffset = FIteration) or (RowNo = 0)  then begin
       FCurrentRowOffset := 0;
-      Result := FPlainDriver.sqlany_fetch_next(Fa_sqlany_stmt) = 1;
+      Result := FPlainDriver.sqlany_fetch_next(Fa_sqlany_stmt^) = 1;
       if Result then begin
-        fetched_rows := FPlainDriver.sqlany_fetched_rows(Fa_sqlany_stmt);
+        fetched_rows := FPlainDriver.sqlany_fetched_rows(Fa_sqlany_stmt^);
         if fetched_rows < 0
         then FSQLAnyConnection.HandleError(lcOther, 'sqlany_fetched_rows', Self)
         else if Cardinal(fetched_rows) < FIteration then begin
@@ -1005,7 +1050,7 @@ begin
       end;
     end;
   end else
-    Result := FPlainDriver.sqlany_fetch_next(Fa_sqlany_stmt) = 1;
+    Result := FPlainDriver.sqlany_fetch_next(Fa_sqlany_stmt^) = 1;
   RowNo := RowNo + 1;
   if Result then
     LastRowNo := RowNo;
@@ -1034,7 +1079,7 @@ var i: Tsacapi_i32;
     end;
   end;
 begin
-  Fnum_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
+  Fnum_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt^);
   if Fnum_cols < 1 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   ColumnsInfo.Capacity := Fnum_cols;
@@ -1047,13 +1092,13 @@ begin
   end;
   RowSize := RowSize * Cardinal(Fnum_cols);
   GetMem(PPointer(P)^, RowSize);
-  FillChar(PPointer(P)^^, RowSize, 0);
+ // FillChar(PPointer(P)^^, RowSize, 0);
   sqlany_column_info := @FTinyBuffer[0];
   RowSize := 0;
   for i := 0 to Fnum_cols -1 do begin
     ColumnInfo := TZSQLAnywhereColumnInfo.Create;
     ColumnsInfo.Add(ColumnInfo);
-    if FPlainDriver.sqlany_get_column_info(Fa_sqlany_stmt, I, sqlany_column_info) <> 1 then
+    if FPlainDriver.sqlany_get_column_info(Fa_sqlany_stmt^, I, sqlany_column_info) <> 1 then
       FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_column_info', Self);
     ColumnInfo.NativeType := sqlany_column_info.native_type;
     ColumnInfo.Nullable := TZColumnNullableType(sqlany_column_info.nullable <> 0);
@@ -1062,7 +1107,7 @@ begin
     if Ord(ColumnInfo.ColumnType) < Ord(stAsciiStream) then begin
       if ColumnInfo.ColumnType = stString then begin
         ColumnInfo.Precision := sqlany_column_info.max_size;
-        sqlany_column_info.max_size := sqlany_column_info.max_size * Byte(ConSettings.ClientCodePage^.CharWidth);
+        sqlany_column_info.max_size := (sqlany_column_info.max_size + 2) * Byte(ConSettings.ClientCodePage^.CharWidth);
         ColumnInfo.CharOctedLength := sqlany_column_info.max_size;
         ColumnInfo.ColumnCodePage := FClientCP;
         ColumnInfo.Signed := ColumnInfo.NativeType = DT_FIXCHAR;
@@ -1121,7 +1166,7 @@ begin
   end;
   FIteration := 1;
   if FIteration > 1 then
-    if FplainDriver.sqlany_set_rowset_size(Fa_sqlany_stmt, FIteration) <> 1 then
+    if FplainDriver.sqlany_set_rowset_size(Fa_sqlany_stmt^, FIteration) <> 1 then
       FSQLAnyConnection.HandleError(lcOther, 'sqlany_set_rowset_size', Self);
 
   { allocate just one blocks for the data buffers }
@@ -1137,12 +1182,14 @@ begin
       Inc(PAnsiChar(FColumnData), Bind.buffer_size*FIteration);
     end else
       Bind.buffer := nil;
-    if (FIteration > 1) or (FDataValuesV4up <> nil) then begin
+    {if (FIteration > 1) or (FDataValuesV4up <> nil) then begin
       Bind.is_address := 0;
-      if FplainDriver.sqlany_bind_column(Fa_sqlany_stmt, Cardinal(I), Bind) <> 1 then
+      if FplainDriver.sqlany_bind_column(Fa_sqlany_stmt^, Cardinal(I), Bind) <> 1 then
         FSQLAnyConnection.HandleError(lcOther, 'sqlany_bind_column', Self);
       IsBound := True;
-    end;
+    end;}
+    if not IsBound and (Fdata_info = nil) then
+      GetMem(Fdata_info, SizeOf(Ta_sqlany_data_info));
   end;
   FColumnData := P;
   inherited Open;

@@ -50,6 +50,10 @@
 //{$WARN 5090 off : Variable "$1" of a managed type does not seem to be initialized}
 //{$WARN 5091 off : Local variable "$1" of a managed type does not seem to be initialized}
 
+{$IFDEF INTEL_ASM} //just used for PG actually
+{$asmmode intel}
+{$ENDIF}
+
 {$DEFINE PUREPASCAL}
 
 {$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values

@@ -238,9 +238,8 @@ function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse4Bytes(P: Pointer); {$IFDEF FPC}assembler;{$ENDIF}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
-procedure Reverse8Bytes(P: Pointer); {$IFDEF FPC}assembler;{$ENDIF}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
-
+procedure Reverse4Bytes(P: Pointer); {$IF defined (FPC) and defined(INTEL_ASM)}assembler;{$IFEND}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
+procedure Reverse8Bytes(P: Pointer); {$IF defined (FPC) and defined(INTEL_ASM)}assembler;{$IFEND}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
 {$ENDIF}
 
 //ported macros from array.h
@@ -890,11 +889,9 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{$IFDEF FPC} {$asmmode intel} {$ENDIF}
-
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse4Bytes(P: Pointer); {$IFDEF FPC}nostackframe; assembler;{$ENDIF}
-{$IF defined(FPC) or defined(MSWINDOWS)}
+procedure Reverse4Bytes(P: Pointer); {$IF defined(FPC) and defined(INTEL_ASM)}nostackframe; assembler;{$IFEND}
+{$IFDEF INTEL_ASM}
 asm
   {$IFNDEF CPU64}
   mov edx, [eax]
@@ -908,7 +905,7 @@ asm
   mov [rcx], edx
   {$ENDIF CPU64}
 end;
-{$ELSE}
+{$ELSE INTEL_ASM}
 var C: Cardinal;
 begin
   {$R-}
@@ -917,13 +914,13 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   PCardinal(P)^ := C;
 end;
-{$IFEND}
+{$ENDIF INTEL_ASM}
 {$ENDIF ENDIAN_BIG}
 
 
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse8Bytes(P: Pointer); {$IF defined(FPC) and defined(MSWINDOWS)}nostackframe; assembler;{$IFEND}
-{$IF defined(FPC) or defined(MSWINDOWS)}
+procedure Reverse8Bytes(P: Pointer); {$IF defined(FPC) and defined(INTEL_ASM)}nostackframe; assembler;{$IFEND}
+{$IFDEF INTEL_ASM}
 asm
   {$IFNDEF CPU64}
   mov edx, [eax]
@@ -938,7 +935,7 @@ asm
   mov [rcx], rdx;
   {$ENDIF CPU64}
 end;
-{$ELSE}
+{$ELSE INTEL_ASM}
 {$IFNDEF CPU64}
 var C1, C2: Cardinal;
 {$ELSE}
@@ -961,7 +958,7 @@ begin
   {$ENDIF}
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
-{$IFEND}
+{$ENDIF INTEL_ASM}
 {$ENDIF}
 
 {$IFDEF FPC} {$PUSH}

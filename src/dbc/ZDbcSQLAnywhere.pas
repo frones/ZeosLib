@@ -76,7 +76,7 @@ type
     ['{6464E444-68E8-4233-ABF0-3B820D40883F}']
     function Get_a_sqlany_connection: Pa_sqlany_connection;
     function Get_api_version: Tsacapi_u32;
-    procedure HandleError(LogginCategory: TZLoggingCategory;
+    procedure HandleError(LoggingCategory: TZLoggingCategory;
       const Msg: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
     function GetPlainDriver: TZSQLAnywherePlainDriver;
   End;
@@ -98,7 +98,7 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
     function Get_a_sqlany_connection: Pa_sqlany_connection;
-    procedure HandleError(LogginCategory: TZLoggingCategory;
+    procedure HandleError(LoggingCategory: TZLoggingCategory;
       const Msg: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
     function GetPlainDriver: TZSQLAnywherePlainDriver;
     function Get_api_version: Tsacapi_u32;
@@ -130,6 +130,13 @@ implementation
 uses ZDbcASAMetadata, ZSybaseAnalyser, ZSybaseToken, ZDbcSQLAnywhereStatement,
   ZDbcProperties, ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZClasses;
 
+const
+  SQLAnyTIL: array[TZTransactIsolationLevel] of RawByteString = (
+    'SET OPTION isolation_level = 1', //tiNone
+    'SET OPTION isolation_level = 0',
+    'SET OPTION isolation_level = 1',
+    'SET OPTION isolation_level = 2',
+    'SET OPTION isolation_level = 3');
 var
   ConParams: array of array of String;
 { TZSQLAnywhereDriver }
@@ -209,7 +216,7 @@ end;
   is expected
 }
 procedure TZSQLAnywhereConnection.HandleError(
-  LogginCategory: TZLoggingCategory; const Msg: RawByteString;
+  LoggingCategory: TZLoggingCategory; const Msg: RawByteString;
   const ImmediatelyReleasable: IImmediatelyReleasable);
 var err_len, st_len: Tsize_t;
   ErrBuf: RawByteString;
@@ -217,21 +224,25 @@ var err_len, st_len: Tsize_t;
   ErrCode: Tsacapi_i32;
   StateBuf: array[0..5] of Byte;
   Exception: EZSQLException;
+  P: PAnsiChar;
 begin
   if Assigned(FPLainDriver.sqlany_error_length)
   then err_len := FPLainDriver.sqlany_error_length(Fa_sqlany_connection)
   else err_len := 1025;
-  Assert(err_len > 0, 'wrong call to HandleError');
   ErrBuf := '';
   SetLength(ErrBuf, err_len -1);
+  P := Pointer(ErrBuf);
+  PByte(P)^ := 0;
   ErrCode := FPLainDriver.sqlany_error(Fa_sqlany_connection, Pointer(ErrBuf), err_len);
+  if ErrCode = 0 then Exit;
+
   if not Assigned(FPLainDriver.sqlany_error_length)
   then err_len := ZFastCode.StrLen(Pointer(ErrBuf))
   else Dec(err_len);
   SetLength(ErrBuf, err_len);
 
   if DriverManager.HasLoggingListener then
-    DriverManager.LogError(LogginCategory, 'sqlany', Msg, ErrCode, ErrBuf);
+    DriverManager.LogError(LoggingCategory, 'sqlany', Msg, ErrCode, ErrBuf);
 
   st_len := FPLainDriver.sqlany_sqlstate(Fa_sqlany_connection, @StateBuf[0], SizeOf(StateBuf));
   Dec(st_len);
@@ -242,7 +253,7 @@ begin
   {$IFDEF FPC} State := ''; {$ENDIF}
   System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
   {$ENDIF}
-  ErrMsg := ErrMsg + 'The SQL: ';
+  ErrMsg := ErrMsg + ' The SQL: ';
   {$IFDEF UNICODE}
   ErrMsg := ErrMsg + ZRawToUnicode(Msg, ImmediatelyReleasable.GetConSettings.ClientCodePage.CP);
   {$ELSE}
@@ -252,7 +263,9 @@ begin
   if Assigned(FplainDriver.sqlany_clear_error) then
     FplainDriver.sqlany_clear_error(Fa_sqlany_connection);
   if ErrCode > 0 then //that's a Warning
+
   else begin
+    DriverManager.LogError(LoggingCategory, ConSettings^.Protocol, ErrBuf, ErrCode, Msg);
     Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
     raise Exception;
   end;
@@ -428,8 +441,9 @@ jmpInit:
     AddToInfoIfNotExists(ConnProps_UID, URL.UserName);
     AddToInfoIfNotExists(ConnProps_PWD, URL.Password);
     if FileExists(URL.Database)
-    then AddToInfoIfNotExists(ConnProps_DBF,  URL.Database)
-    else AddToInfoIfNotExists(ConnProps_DBN,  URL.Database);
+    then S := ConnProps_DBF
+    else S := ConnProps_DBN;
+    AddToInfoIfNotExists(S, URL.Database);
     AddToInfoIfNotExists(ConnProps_Host, URL.HostName);
     for i := low(ConParams) to high(ConParams) do
       for J := 0 to high(ConParams[i]) do begin
@@ -465,13 +479,16 @@ jmpInit:
       Fa_sqlany_interface_context := nil;
     end;
   end;
+  ExecuteImmediat(RawByteString('SET CHAINED OFF'), lcTransaction);
   if FClientCodePage = ''  then begin
     S := DetermineASACharSet;
     CheckCharEncoding(S);
   end;
+  if Ord(TransactIsolationLevel) > Ord(tiReadUncommitted) then
+    ExecuteImmediat(SQLAnyTIL[TransactIsolationLevel], lcTransaction);
   if not AutoCommit
   then StartTransaction
-  else ExecuteImmediat(RawByteString('SET TEMPORARY OPTION auto_commit=''On'''), lcTransaction);
+  else ExecuteImmediat(RawByteString('SET AUTOCOMMIT ON'), lcTransaction);
 end;
 
 {**
@@ -601,18 +618,35 @@ begin
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      ExecuteImmediat(RawByteString('SET AUTO_COMMIT=ON'), lcTransaction);
+      ExecuteImmediat(RawByteString('SET AUTOCOMMIT ON'), lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
   end;
 end;
 
+{**
+  Attempts to change the transaction isolation level to the one given.
+  The constants defined in the interface <code>Connection</code>
+  are the possible transaction isolation levels.
+
+  <P><B>Note:</B> This method cannot be called while
+  in the middle of a transaction.
+
+  @param level one of the TRANSACTION_* isolation values with the
+    exception of TRANSACTION_NONE; some databases may not support other values
+  @see DatabaseMetaData#supportsTransactionIsolationLevel
+}
 procedure TZSQLAnywhereConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
-  inherited;
-
+  if (Level = tiNone) then
+    Level := tiReadUnCommitted;
+  if Level <>  TransactIsolationLevel then begin
+    if not IsClosed then
+      ExecuteImmediat(SQLAnyTIL[Level], lcTransaction);
+    TransactIsolationLevel := Level;
+  end;
 end;
 
 {**
@@ -624,7 +658,7 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    ExecuteImmediat(RawByteString('SET TEMPORARY OPTION auto_commit=''Off'''), lcTransaction);
+    ExecuteImmediat(RawByteString('SET AUTOCOMMIT OFF'), lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin

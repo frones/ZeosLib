@@ -447,11 +447,20 @@ var
     FOCIEnv := nil;
   end;
   procedure GetRawCharacterSet;
+  {$IFNDEF UNICODE}
+  var P: PWidechar;
+      L: NativeUInt;
+  {$ENDIF}
   begin
     With CreateStatement.ExecuteQuery('select VALUE from nls_database_parameters where parameter=''NLS_CHARACTERSET''') do begin
+
       if Next then begin
-        {$IFDEF UNICODE}LogMessage{$ELSE}US{$ENDIF} := GetUnicodeString(FirstDbcIndex);
-        {$IFNDEF UNICODE}LogMessage := UnicodeStringToASCII7(US);{$ENDIF}
+        {$IFDEF UNICODE}
+        LogMessage := GetUnicodeString(FirstDbcIndex);
+        {$ELSE}
+        P := GetPWideChar(FirstDbcIndex, L);
+        LogMessage := UnicodeStringToASCII7(P, L);
+        {$ENDIF UNICODE}
         ResetCurrentClientCodePage(LogMessage, True);
         { keep the w-encoding infos alive, just identify the raw CP}
         ConSettings.ClientCodePage.Encoding := ceUTF16;
