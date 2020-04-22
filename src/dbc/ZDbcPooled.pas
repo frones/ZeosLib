@@ -55,7 +55,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} DateUtils, SysUtils,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, DateUtils, SysUtils,
   ZCompatibility, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
   ZMessages, ZVariant, ZDbcLogging;
 

@@ -365,7 +365,7 @@ end;
 procedure TZSQLAnywherePreparedStatement.AfterConstruction;
 begin
   inherited;
-  if Fapi_version >= 4
+  if Fapi_version >= SQLANY_API_VERSION_4
   then FBindParamSize := SizeOf(Ta_sqlany_bind_paramV4up)
   else FBindParamSize := SizeOf(Ta_sqlany_bind_param)
 end;
