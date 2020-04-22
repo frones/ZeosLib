@@ -126,6 +126,8 @@ type
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF USE_SYNCOMMONS}
     function Next: Boolean; reintroduce;
+
+    function MoveAbsolute(Row: Integer): Boolean; override;
   end;
 
   { TZSQLAnywhereCachedResultSet }
@@ -335,12 +337,21 @@ begin
       DT_LONGBINARY: Result := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
         ColumnIndex, lsmRead, zCP_Binary, FOpenLobStreams, @FRowNo);
       DT_LONGVARCHAR,
-      DT_LONGNVARCHAR: Result := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
+      DT_LONGNVARCHAR: Result := TZSQLAnyCLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
         ColumnIndex, lsmRead, ColumnCodePage, FOpenLobStreams, @FRowNo);
       else raise CreateConversionError(ColumnIndex);
     end;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>boolean</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>false</code>
+}
 function TZSQLAnywhereResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var native_type: Ta_sqlany_native_type;
 begin
@@ -370,6 +381,16 @@ end;
 function TZSQLAnywhereResultSet.GetBytes(ColumnIndex: Integer;
   out Len: NativeUInt): PByte;
 var native_type: Ta_sqlany_native_type;
+  function FromLob(ColumnCodePage: Word; out Len: NativeUint): PByte;
+  var Lob: IZBlob;
+  begin
+    if native_type = DT_LONGBINARY then
+      Lob := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
+        ColumnIndex, lsmRead, zCP_Binary, FOpenLobStreams, @FRowNo)
+    else Lob := TZSQLAnyBLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
+        ColumnIndex, lsmRead, ColumnCodePage, FOpenLobStreams, @FRowNo);
+    Result := Lob.GetBuffer(fRawTemp, Len);
+  end;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -393,6 +414,9 @@ begin
       DT_NVARCHAR,
       DT_VARCHAR,
       DT_BINARY     : Len := FDataLen;
+      DT_LONGBINARY,
+      DT_LONGVARCHAR,
+      DT_LONGNVARCHAR: Result := FromLob(ColumnCodePage, Len);
       else raise CreateConversionError(ColumnIndex);
     end;
   end else begin
@@ -551,6 +575,15 @@ fail: raise CreateConversionError(ColumnIndex);
   end;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  an <code>signed 32bit integer</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
 function TZSQLAnywhereResultSet.GetInt(ColumnIndex: Integer): Integer;
 var native_type: Ta_sqlany_native_type;
 begin
@@ -578,6 +611,15 @@ begin
     Result := 0;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>signed 64bit integer</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
 function TZSQLAnywhereResultSet.GetLong(ColumnIndex: Integer): Int64;
 var native_type: Ta_sqlany_native_type;
 begin
@@ -930,6 +972,15 @@ jmpFill:
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  an <code>unsigned 32bit integer</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
 function TZSQLAnywhereResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 var native_type: Ta_sqlany_native_type;
 begin
@@ -944,19 +995,33 @@ begin
     DT_INT         : Result := PInteger(FData)^;
     DT_UNSINT      : Result := PCardinal(FData)^;
     DT_BIGINT      : Result := PInt64(FData)^;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     DT_UNSBIGINT   : Result := PUInt64(FData)^;
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FData)^);
     DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FData)^);
     DT_FIXCHAR,
     DT_NFIXCHAR,
     DT_NVARCHAR,
     DT_VARCHAR,
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     DT_DECIMAL     : Result := RawToUInt64Def(PAnsiChar(FData), PAnsiChar(FData)+FDataLen, 0);
+    {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     else raise CreateConversionError(ColumnIndex);
   end else
     Result := 0;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>unsigned 64bit integer</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZSQLAnywhereResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var native_type: Ta_sqlany_native_type;
 begin
@@ -983,6 +1048,7 @@ begin
   end else
     Result := 0;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Indicates if the value of the designated column in the current row
@@ -1009,6 +1075,47 @@ begin
       Result := Fdata_info.is_null <> 0;
     end
   end;
+end;
+
+{**
+  Moves the cursor to the given row number in
+  this <code>ResultSet</code> object.
+
+  <p>If the row number is positive, the cursor moves to
+  the given row number with respect to the
+  beginning of the result set.  The first row is row 1, the second
+  is row 2, and so on.
+
+  <p>If the given row number is negative, the cursor moves to
+  an absolute row position with respect to
+  the end of the result set.  For example, calling the method
+  <code>absolute(-1)</code> positions the
+  cursor on the last row; calling the method <code>absolute(-2)</code>
+  moves the cursor to the next-to-last row, and so on.
+
+  <p>An attempt to position the cursor beyond the first/last row in
+  the result set leaves the cursor before the first row or after
+  the last row.
+
+  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
+  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
+  is the same as calling <code>last()</code>.
+
+  @return <code>true</code> if the cursor is on the result set;
+    <code>false</code> otherwise
+}
+function TZSQLAnywhereResultSet.MoveAbsolute(Row: Integer): Boolean;
+begin
+  Result := False;
+  if Closed or ((Row < 1) or ((MaxRows > 0) and (Row >= MaxRows))) then
+    Exit;
+  Result := FPlainDriver.sqlany_fetch_absolute(Fa_sqlany_stmt^, Row) = 1;
+  if Result then begin
+    RowNo := Row;
+    if Row > LastRowNo then
+      LastRowNo := Row;
+  end else
+    FSQLAnyConnection.HandleError(lcExecute, 'sqlany_fetch_absolute', Self)
 end;
 
 {**
@@ -1061,6 +1168,7 @@ end;
 }
 procedure TZSQLAnywhereResultSet.Open;
 var i: Tsacapi_i32;
+  ApiVersion: Tsacapi_u32;
   RowSize: Tsize_t;
   sqlany_column_info: Pa_sqlany_column_info;
   ColumnInfo: TZSQLAnywhereColumnInfo;
@@ -1083,7 +1191,8 @@ begin
   if Fnum_cols < 1 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   ColumnsInfo.Capacity := Fnum_cols;
-  if FSQLAnyConnection.Get_api_version >= SQLANY_API_VERSION_4 then begin
+  ApiVersion := FSQLAnyConnection.Get_api_version;
+  if ApiVersion >= SQLANY_API_VERSION_4 then begin
     RowSize := SizeOf(Ta_sqlany_data_valueV4up);
     P := @FDataValuesV4up;
   end else begin
@@ -1092,7 +1201,7 @@ begin
   end;
   RowSize := RowSize * Cardinal(Fnum_cols);
   GetMem(PPointer(P)^, RowSize);
- // FillChar(PPointer(P)^^, RowSize, 0);
+  FillChar(PPointer(P)^^, RowSize, #0);
   sqlany_column_info := @FTinyBuffer[0];
   RowSize := 0;
   for i := 0 to Fnum_cols -1 do begin
@@ -1133,8 +1242,14 @@ begin
       end else if ColumnInfo.ColumnType in [stTime, stTimeStamp] then begin
         ColumnInfo.Precision := sqlany_column_info.precision;
         ColumnInfo.Scale := sqlany_column_info.scale;
-      end else
-        ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stCurrency, stBigDecimal];
+      end else begin
+        ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble];
+        if (ColumnInfo.ColumnType = stFloat) {and (ApiVersion < SQLANY_API_VERSION_4) }then begin
+          { sybase overruns our buffer even if maxsize is SizeOf(Single) }
+          sqlany_column_info.max_size := SizeOf(Double);
+          ColumnInfo.NativeType := DT_DOUBLE;
+        end;
+      end;
     end else begin
       sqlany_column_info.max_size := 0;
       if ColumnInfo.ColumnType = stUnicodeStream then
@@ -1169,7 +1284,7 @@ begin
     if FplainDriver.sqlany_set_rowset_size(Fa_sqlany_stmt^, FIteration) <> 1 then
       FSQLAnyConnection.HandleError(lcOther, 'sqlany_set_rowset_size', Self);
 
-  { allocate just one blocks for the data buffers }
+  { allocate just one block of memory for the data buffers }
   GetMem(FColumnData, (RowSize * FIteration));
   P := FColumnData;
   for i := 0 to Fnum_cols -1 do with TZSQLAnywhereColumnInfo(ColumnsInfo[i]) do begin
@@ -1188,7 +1303,7 @@ begin
         FSQLAnyConnection.HandleError(lcOther, 'sqlany_bind_column', Self);
       IsBound := True;
     end;}
-    if not IsBound and (Fdata_info = nil) then
+    if not IsBound and (Fdata_info = nil) then //need that for IsNull()
       GetMem(Fdata_info, SizeOf(Ta_sqlany_data_info));
   end;
   FColumnData := P;

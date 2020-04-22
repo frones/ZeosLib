@@ -99,6 +99,9 @@ type
     Fa_sqlany_bind_paramArray: Pa_sqlany_bind_paramArray;
     FIsNullArray: Psacapi_i32Array;
     FLengthArray: Psize_tArray;
+    FBindParamSize: NativeInt;
+    FParamsDescribed: Boolean; //SQLAynwhere just describes SP's by now those params we do not change, they might be bidirectional
+    FBindAgain: Boolean;
   protected
     procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
@@ -106,10 +109,13 @@ type
     function InitDataValue(Index: Integer; SQLType: TZSQLType; Length: Tsize_t): Pa_sqlany_data_value;
   protected
     procedure PrepareInParameters; override;
+    procedure UnPrepareInParameters; override;
     procedure BindInParameters; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure CheckParameterIndex(var Value: Integer); override;
+  public
+    procedure AfterConstruction; override;
   public
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(Index: Integer; Value: Boolean);
@@ -356,14 +362,26 @@ end;
 
 { TZSQLAnywherePreparedStatement }
 
+procedure TZSQLAnywherePreparedStatement.AfterConstruction;
+begin
+  inherited;
+  if Fapi_version >= 4
+  then FBindParamSize := SizeOf(Ta_sqlany_bind_paramV4up)
+  else FBindParamSize := SizeOf(Ta_sqlany_bind_param)
+end;
+
 procedure TZSQLAnywherePreparedStatement.BindInParameters;
 var I: Integer;
 begin
-  for i := 0 to BindList.Count -1 do
-    {$R-}
-    if FPlainDriver.sqlany_bind_param(Fa_sqlany_stmt, Cardinal(I), @Fa_sqlany_bind_paramArray[i]) <> 1 then
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      FSQLAnyConnection.HandleError(lcExecute, 'sqlany_bind_param', Self);
+  if FBindAgain then begin
+    for i := 0 to BindList.Count -1 do
+      {$R-}
+      if FPlainDriver.sqlany_bind_param(Fa_sqlany_stmt, Cardinal(I),
+        Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * i))) <> 1 then
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        FSQLAnyConnection.HandleError(lcExecute, 'sqlany_bind_param', Self);
+    FBindAgain := False;
+  end;
   inherited BindInParameters;
 end;
 
@@ -381,8 +399,8 @@ begin
     Stream := Value.GetStream;
     try
       data_value.length^ := Stream.Size;
-      data_value.buffer_size := data_value.length^;
-      ReallocMem(data_value.buffer, data_value.length^);
+      data_value.buffer_size := ((data_value.length^ shr 3)+1) shl 3;
+      ReallocMem(data_value.buffer, data_value.buffer_size);
       Stream.Read(data_value.buffer^, data_value.length^);
     finally
       Stream.Free;
@@ -428,13 +446,13 @@ function TZSQLAnywherePreparedStatement.InitDataValue(Index: Integer;
   SQLType: TZSQLType; Length: Tsize_t): Pa_sqlany_data_value;
 label jmpVarLen;
 var ActSize: Tsize_t;
+    ActType: Ta_sqlany_data_type;
     Bind: Pa_sqlany_bind_param;
 begin
-  {$R-}
-  Bind := @Fa_sqlany_bind_paramArray[Index];
+  Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * Index));
   Result := @Bind.value;
-  {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   ActSize := Result.buffer_size;
+  ActType := Result._type;
   case SQLType of
     stBoolean, stByte: begin
        Result.buffer_size := SizeOf(Byte);
@@ -517,8 +535,11 @@ jmpVarLen:
       end;
     else raise EZSQLException.Create(SUnsupportedParameterType);
   end;
-  if ActSize <> Result.buffer_size then
+  if (ActSize <> Result.buffer_size) then begin
+    FBindAgain := True;
     ReallocMem(Result.buffer, Result.buffer_size);
+  end;
+  FBindAgain := FBindAgain or (ActType <> Result._type);
 end;
 
 {**
@@ -528,6 +549,7 @@ procedure TZSQLAnywherePreparedStatement.PrepareInParameters;
 var num_params, I: Tsacapi_i32;
   Bind: Pa_sqlany_bind_param;
 begin
+  FBindAgain := True;
   inherited PrepareInParameters;
   num_params := FPlainDriver.sqlany_num_params(Fa_sqlany_stmt);
   if num_params = -1 then
@@ -535,12 +557,16 @@ begin
   SetBindCapacity(num_params);
   for i := 0 to num_params -1 do begin
     {$R-}
-    Bind := @Fa_sqlany_bind_paramArray[I];
+    Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * I));
     { in V2 just IO is descibed }
     if FPlainDriver.sqlany_describe_bind_param(Fa_sqlany_stmt, I, Bind) <> 1 then
       FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
+    FParamsDescribed := FParamsDescribed or (Bind.value._type <> A_INVALID_TYPE);
     Bind.value.length :=  @FLengthArray[i];
     Bind.value.is_null := @FIsNullArray[i];
+    if Bind.value.buffer_size > 0 then
+      GetMem(Bind.value.buffer, Bind.value.buffer_size);
+
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   end;
 end;
@@ -563,21 +589,24 @@ var OldCapacity, I: Integer;
   Bind: Pa_sqlany_bind_param;
 begin
   OldCapacity := Bindlist.Capacity;
+  if (Fa_sqlany_stmt <> nil) and (BindList.Count > 0) then
+    for i := OldCapacity -1 downto Capacity do
+      FplainDriver.sqlany_bind_param(Fa_sqlany_stmt, Cardinal(I), nil);
+
   inherited SetBindCapacity(Capacity);
   if OldCapacity <> Capacity then begin
     BindList.SetCount(Capacity);
     ReallocMem(FIsNullArray, Capacity * SizeOf(Tsacapi_i32));
     ReallocMem(FLengthArray, Capacity * SizeOf(Tsize_t));
     for i := OldCapacity-1 downto Capacity do begin
-      {$R-}
-      Bind := @Fa_sqlany_bind_paramArray[I];
-      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * i));
       if Bind^.value.buffer <> nil then
         FreeMem(Bind^.value.buffer);
     end;
-    ReallocMem(Fa_sqlany_bind_paramArray, Capacity*SizeOf(Ta_sqlany_bind_param));
-    FillChar((PAnsichar(Fa_sqlany_bind_paramArray)+OldCapacity*SizeOf(Ta_sqlany_bind_param))^,
-      (Capacity-OldCapacity)*SizeOf(Ta_sqlany_bind_param), #0);
+    ReallocMem(Fa_sqlany_bind_paramArray, Capacity*FBindParamSize);
+    if Capacity > 0 then
+      FillChar((PAnsichar(Fa_sqlany_bind_paramArray)+OldCapacity*SizeOf(FBindParamSize))^,
+        (Capacity-OldCapacity)*FBindParamSize, #0);
   end;
 end;
 
@@ -718,56 +747,35 @@ end;
 
 procedure TZSQLAnywherePreparedStatement.AddParamLogValue(ParamIndex: Integer;
   SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var Bind: Pa_sqlany_bind_param;
 begin
   CheckParameterIndex(ParamIndex);
-  (*
-  if (SQLVar.sqlInd <> nil) and (SQLVar.sqlInd^ = -1) then
+  Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * ParamIndex));
+  if (Bind.value.is_null <> nil) and (Bind.value.is_null^ <> 0) then
     SQLWriter.AddText('(NULL)', Result)
-  else case SQLVar.sqlType and $FFFE of
-    (*
-    DT_SMALLINT         : SQLWriter.AddOrd(PSmallInt(SQLVAR.sqlData)^, Result);
-    DT_INT              : SQLWriter.AddOrd(PInteger(SQLVAR.sqlData)^, Result);
-    //DT_DECIMAL          : ;
-    DT_FLOAT            : SQLWriter.AddFloat(PSingle(SQLVAR.sqldata)^, Result);
-    DT_DOUBLE           : SQLWriter.AddFloat(PDouble(SQLVAR.sqldata)^, Result);
-    DT_VARCHAR          : SQLWriter.AddTextQuoted(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39), Result);
-    DT_LONGVARCHAR      : SQLWriter.AddText('(CLOB)', Result);
-    DT_TIMESTAMP_STRUCT : case PSmallInt(PAnsiChar(SQLVAR.sqlData)+SizeOf(TZASASQLDateTime))^ of
-                            DT_DATE: begin
-                                DT := EncodeDate(PZASASQLDateTime(SQLVAR.sqlData).Year,
-                                  PZASASQLDateTime(SQLVAR.sqlData).Month +1, PZASASQLDateTime(SQLVAR.sqlData).Day);
-                                SQLWriter.AddDate(DT, ConSettings.WriteFormatSettings.DateFormat, Result);
-                              end;
-                            DT_TIME: begin
-                                DT := EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
-                                  PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000);
-                                SQLWriter.AddTime(DT, ConSettings.WriteFormatSettings.TimeFormat, Result);
-                              end
-                            else {DT_TIMESTAMP} begin
-                              DT := EncodeDate(PZASASQLDateTime(SQLVAR.sqlData).Year,
-                                PZASASQLDateTime(SQLVAR.sqlData).Month +1, PZASASQLDateTime(SQLVAR.sqlData).Day);
-                              if DT < 0
-                              then DT := DT-EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
-                                PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000)
-                              else DT := DT+EncodeTime(PZASASQLDateTime(SQLVAR.sqlData).Hour,
-                                PZASASQLDateTime(SQLVAR.sqlData).Minute, PZASASQLDateTime(SQLVAR.sqlData).Second, PZASASQLDateTime(SQLVAR.sqlData).MicroSecond div 1000);
-                              SQLWriter.AddDateTime(DT, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
-                            end;
-                          end;
-    DT_BINARY           : SQLWriter.AddHexBinary(@PZASASQLSTRING(SQLVAR.sqldata).data[0], PZASASQLSTRING(SQLVAR.sqldata).length, True, Result);
-    DT_LONGBINARY       : SQLWriter.AddText('(BLOB)', Result);
-    DT_TINYINT          : SQLWriter.AddOrd(PByte(SQLVAR.sqlData)^, Result);
-    DT_BIGINT           : SQLWriter.AddOrd(PInt64(SQLVAR.sqlData)^, Result);
-    DT_UNSINT           : SQLWriter.AddOrd(PCardinal(SQLVAR.sqlData)^, Result);
-    DT_UNSSMALLINT      : SQLWriter.AddOrd(PWord(SQLVAR.sqlData)^, Result);
-    DT_UNSBIGINT        : SQLWriter.AddOrd(PUInt64(SQLVAR.sqlData)^, Result);
-    DT_BIT              : If PByte(SQLVAR.sqlData)^ = 0
-                          then SQLWriter.AddText('(FALSE)', Result)
-                          else SQLWriter.AddText('(TRUE)', Result);
-    DT_NVARCHAR         : Result := SQLQuotedStr(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39));
-    DT_LONGNVARCHAR     : SQLWriter.AddText('(NCLOB)', Result);
-    else                  SQLWriter.AddText('(UNKNOWN)', Result);
-  end;*)
+  else case Bind.value._type of
+    A_BINARY: if BindList[ParamIndex].SQLType = stBinaryStream
+              then SQLWriter.AddText('(BLOB)', Result)
+              else SQLWriter.AddHexBinary(PByte(Bind.value.buffer), Bind.value.length^, True, Result);
+    A_STRING: case BindList[ParamIndex].SQLType of
+                stAsciiStream: SQLWriter.AddText('(CLOB)', Result);
+                stUnicodeStream: SQLWriter.AddText('(NCLOB)', Result);
+                stCurrency, stBigDecimal: SQLWriter.AddText(Bind.value.buffer, Bind.value.length^, Result);
+                else SQLWriter.AddTextQuoted(Bind.value.buffer, Bind.value.length^, #39, Result);
+              end;
+    A_DOUBLE: if Bind.value.buffer_size = SizeOf(Double)
+              then SQLWriter.AddFloat(PDouble(Bind.value.buffer)^, Result)
+              else SQLWriter.AddFloat(PSingle(Bind.value.buffer)^, Result);
+    A_VAL64:  SQLWriter.AddOrd(PInt64(Bind.value.buffer)^, Result);
+    A_UVAL64: SQLWriter.AddOrd(PUInt64(Bind.value.buffer)^, Result);
+    A_VAL32:  SQLWriter.AddOrd(PInteger(Bind.value.buffer)^, Result);
+    A_UVAL32: SQLWriter.AddOrd(PCardinal(Bind.value.buffer)^, Result);
+    A_VAL16:  SQLWriter.AddOrd(PSmallInt(Bind.value.buffer)^, Result);
+    A_UVAL16: SQLWriter.AddOrd(PWord(Bind.value.buffer)^, Result);
+    A_VAL8:   SQLWriter.AddOrd(PShortInt(Bind.value.buffer)^, Result);
+    A_UVAL8:  SQLWriter.AddOrd(PByte(Bind.value.buffer)^, Result);
+    else SQLWriter.AddText('(UNKNOWN)', Result);
+  end;
 end;
 
 procedure TZSQLAnywherePreparedStatement.SetInt(Index, Value: Integer);
@@ -900,6 +908,16 @@ begin
   data_value := InitDataValue(Index, stWord, 0);
   data_value.is_null^ := 0;
   PWord(data_value.buffer)^ := Value;
+end;
+
+{**
+  Removes eventual structures for binding input parameters.
+}
+procedure TZSQLAnywherePreparedStatement.UnPrepareInParameters;
+begin
+  SetBindCapacity(0);
+  FParamsDescribed := False;
+  FBindAgain := True;
 end;
 
 { TZSQLAnywhereStatement }

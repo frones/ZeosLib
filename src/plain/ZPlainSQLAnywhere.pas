@@ -97,9 +97,16 @@ type
   Ta_sqlany_connection = record end;
 
   /// <summary>
-  ///  A handle to a statement object
+  ///  An address of address to a handle of a statement object
+  /// </summary>
+  PPa_sqlany_stmt = ^Pa_sqlany_stmt;
+  /// <summary>
+  ///  An address to a handle of a statement object
   /// </summary>
   Pa_sqlany_stmt = ^Ta_sqlany_stmt;
+  /// <summary>
+  ///  A handle to a statement object
+  /// </summary>
   Ta_sqlany_stmt = record end;
 
   /// <summary>
@@ -126,8 +133,7 @@ type
   Psacapi_i32Array = ^Tsacapi_i32Array;
   Tsacapi_i32Array = array[Byte] of Tsacapi_i32;
 
-  TSQLANY_CALLBACK = procedure()
-    {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+  TSQLANY_CALLBACK = procedure() {$IFDEF MSWINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
 
 {$Z+} //delphi byte enum size to dword size
   /// <summary>
@@ -226,7 +232,7 @@ type
   /// <summary>
   /// Returns a description of the attributes of a data value. min version is V4
   /// </summary>
-  Ta_sqlany_data_valueV4up = record
+  Ta_sqlany_data_valueV4up = packed record
     /// <summary>
     /// A pointer to user supplied buffer of data.
     /// </summary>
@@ -304,6 +310,31 @@ type
 
   Pa_sqlany_bind_paramArray = ^Ta_sqlany_bind_paramArray;
   Ta_sqlany_bind_paramArray = array[Byte] of Ta_sqlany_bind_param;
+
+  /// <summary>
+  /// A bind parameter structure used to bind parameter and prepared statements.
+  /// </summary>
+  Ta_sqlany_bind_paramV4Up = record
+    /// <summary>
+    /// The direction of the data. (input, output, input_output)
+    /// </summary>
+    direction: Ta_sqlany_data_direction;
+    /// <summary>
+    /// The actual value of the data.
+    /// </summary>
+    value: Ta_sqlany_data_valueV4Up;
+    /// <summary>
+    /// Name of the bind parameter. This is only used by sqlany_describe_bind_param()
+    /// </summary>
+    name: PAnsiChar;
+  end;
+  /// <summary>
+  /// A pointer to a bind parameter structure used to bind parameter and prepared statements.
+  /// </summary>
+  Pa_sqlany_bind_paramV4Up = ^Ta_sqlany_bind_paramV4Up;
+
+  Pa_sqlany_bind_paramV4UpArray = ^Ta_sqlany_bind_paramV4UpArray;
+  Ta_sqlany_bind_paramV4UpArray = array[Byte] of Ta_sqlany_bind_paramV4up;
 
 
   /// <summary>
@@ -438,7 +469,7 @@ type
   ///  Returns column metadata information.
   ///  sqlany_get_column_info() can be used to populate this structure.
   /// </summary>
-  Ta_sqlany_column_info = record
+  Ta_sqlany_column_info = packed record
     /// <summary>
     ///  The name of the column (null-terminated).
     ///  The string can be referenced as long as the result set object is not freed.
@@ -478,7 +509,7 @@ type
   ///  Returns column metadata information. min Version is V4
   ///  sqlany_get_column_info() can be used to populate this structure.
   /// </summary>
-  Ta_sqlany_column_infoV4up = record
+  Ta_sqlany_column_infoV4up = packed record
     /// <summary>
     ///  The name of the column (null-terminated).
     ///  The string can be referenced as long as the result set object is not freed.
@@ -536,7 +567,7 @@ type
   ///  Gets information about the currently bound parameters.
   ///  sqlany_get_bind_param_info() can be used to populate this structure.
   /// </summary>
-  Ta_sqlany_bind_param_info = record
+  Ta_sqlany_bind_param_info = packed record
     /// <summary>
     ///  A pointer to the name of the parameter.
     /// </summary>
@@ -556,7 +587,7 @@ type
   end;
   Pa_sqlany_bind_param_info = ^Ta_sqlany_bind_param_info;
 
-  Ta_sqlany_bind_param_infoV4up = record
+  Ta_sqlany_bind_param_infoV4up = packed record
     /// <summary>
     ///  A pointer to the name of the parameter.
     /// </summary>
@@ -597,7 +628,7 @@ type
   ///  sqlany_get_data_info() can be used to populate this structure with
   ///  information about what was last retrieved by a fetch operation.
   /// </summary>
-  Ta_sqlany_data_info = record
+  Ta_sqlany_data_info = packed record
     /// <summary>
     ///  The type of the data in the column.
     /// </summary>
@@ -718,8 +749,8 @@ type
     /// <returns>
     ///  1 on success, 0 otherwise.
     /// </returns>
-    sqlany_init: function(app_name: PAnsiChar; api_version: Tsacapi_u32; version_available: Psacapi_u32): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_init: function(app_name: PAnsiChar; api_version: Tsacapi_u32;
+      version_available: Psacapi_u32): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Initializes the interface.
     /// </summary>
@@ -736,14 +767,13 @@ type
     /// <returns>
     ///  a context object on success and NULL on failure.
     /// </returns>
-    sqlany_init_ex: function(app_name: PAnsiChar; api_version: Tsacapi_u32; version_available: Psacapi_u32): Pa_sqlany_interface_context;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_init_ex: function(app_name: PAnsiChar; api_version: Tsacapi_u32;
+      version_available: Psacapi_u32): Pa_sqlany_interface_context; cdecl;
     /// <summary>
     ///  Finalizes the interface.
     ///  Frees any resources allocated by the API.
     /// </summary>
-    sqlany_fini: procedure();
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_fini: procedure(); cdecl;
     /// <summary>
     ///  Finalize the interface that was created using the specified context.
     ///  Frees any resources allocated by the API.
@@ -751,8 +781,7 @@ type
     /// <param name="context">
     ///  A context object that was returned from sqlany_init_ex().
     /// </param>
-    sqlany_fini_ex: procedure(context: Pa_sqlany_interface_context);
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_fini_ex: procedure(context: Pa_sqlany_interface_context); cdecl;
     /// <summary>
     ///  Creates a connection object.
     ///  You must create an API connection object before establishing a database connection. Errors can be retrieved
@@ -763,8 +792,7 @@ type
     /// <returns>
     ///  A connection object.
     /// </returns>
-    sqlany_new_connection: function: Pa_sqlany_connection;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_new_connection: function: Pa_sqlany_connection; cdecl;
     /// <summary>
     ///  Creates a connection object using a context.
     ///  An API connection object needs to be created before a database connection is established. Errors can be retrieved
@@ -778,16 +806,14 @@ type
     /// <returns>
     ///  A connection object.
     /// </returns>
-    sqlany_new_connection_ex: function(context: Pa_sqlany_interface_context): Pa_sqlany_connection;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_new_connection_ex: function(context: Pa_sqlany_interface_context): Pa_sqlany_connection; cdecl;
     /// <summary>
     ///  Frees the resources associated with a connection object.
     /// </summary>
     /// <param name="sqlany_conn">
     ///  A connection object created with sqlany_new_connection().
     /// </param>
-    sqlany_free_connection: procedure(sqlany_conn: Pa_sqlany_connection);
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_free_connection: procedure(sqlany_conn: Pa_sqlany_connection); cdecl;
     /// <summary>
     ///  Creates a connection object based on a supplied DBLIB SQLCA pointer.
     /// </summary>
@@ -797,8 +823,7 @@ type
     /// <returns>
     ///  A connection object.
     /// </returns>
-    sqlany_make_connection: function(arg: Pointer): Pa_sqlany_connection;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_make_connection: function(arg: Pointer): Pa_sqlany_connection; cdecl;
     /// <summary>
     ///  Creates a connection object based on a supplied DBLIB SQLCA pointer.
     /// </summary>
@@ -812,7 +837,7 @@ type
     ///  A connection object.
     /// </returns>
     sqlany_make_connection_ex: function(constext: Pa_sqlany_interface_context;
-      arg: Pointer): Pa_sqlany_connection; {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      arg: Pointer): Pa_sqlany_connection; cdecl;
     /// <summary>
     ///  Creates a connection to a SQL Anywhere database server using the supplied connection object and connection string.
     ///  The supplied connection object must first be allocated using sqlany_new_connection().
@@ -827,8 +852,7 @@ type
     ///  1 if the connection is established successfully or 0 when the connection fails.
     ///  Use sqlany_error() to retrieve the error code and message.
     /// </returns>
-    sqlany_connect: function(sqlany_conn: Pa_sqlany_connection; str: PAnsichar): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_connect: function(sqlany_conn: Pa_sqlany_connection; str: PAnsichar): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Disconnects an already established SQL Anywhere connection.
     ///  All uncommitted transactions are rolled back.
@@ -839,8 +863,7 @@ type
     /// <returns>
     ///  1 when successful or 0 when unsuccessful.
     /// </returns>
-    sqlany_disconnect: function(sqlany_conn: Pa_sqlany_connection): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_disconnect: function(sqlany_conn: Pa_sqlany_connection): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Cancel an outstanding request on a connection.
     ///  This function can be used to cancel an outstanding request on a specific connection.
@@ -848,8 +871,7 @@ type
     /// <param name="sqlany_conn">
     ///  A connection object with a connection established using sqlany_connect().
     /// </param>
-    sqlany_cancel: procedure(sqlany_conn: Pa_sqlany_connection);
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_cancel: procedure(sqlany_conn: Pa_sqlany_connection); cdecl;
     /// <summary>
     ///  Executes the supplied SQL statement immediately without returning a result set.
     ///  This function is useful for SQL statements that do not return a result set.
@@ -864,8 +886,7 @@ type
     /// 1 on success or 0 on failure.
     /// </returns>
     sqlany_execute_immediate: function(sqlany_conn: Pa_sqlany_connection;
-      sql: PAnsiChar): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      sql: PAnsiChar): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Prepares a supplied SQL string
     ///  Execution does not happen until sqlany_execute() is
@@ -881,16 +902,14 @@ type
     ///  The statement object can be used by sqlany_execute() to execute the statement.
     /// </returns>
     sqlany_prepare: function(sqlany_conn: Pa_sqlany_connection;
-      sql: PAnsiChar): Pa_sqlany_stmt;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      sql: PAnsiChar): Pa_sqlany_stmt; cdecl;
     /// <summary>
     ///  Frees resources associated with a prepared statement object
     /// </summary>
     /// <param name="sqlany_stmt">
     ///  A statement object returned by the successful execution of sqlany_prepare() or sqlany_execute_direct().
     /// </param>
-    sqlany_free_stmt: procedure(sqlany_stmt: Pa_sqlany_stmt);
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_free_stmt: procedure(sqlany_stmt: Pa_sqlany_stmt); cdecl;
     /// <summary>
     ///  Returns the number of parameters expected for a prepared statement
     /// </summary>
@@ -900,8 +919,7 @@ type
     /// <returns>
     ///  The expected number of parameters, or -1 if the statement object is not valid.
     /// </returns>
-    sqlany_num_params: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_num_params: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32; cdecl;
     /// <summary>
     ///   Describes the bind parameters of a prepared statement
     ///  This function allows the caller to determine information about prepared statement parameters.  The type of prepared
@@ -920,8 +938,7 @@ type
     ///  1 when successful or 0 when unsuccessful.
     /// </returns>
     sqlany_describe_bind_param: function(sqlany_stmt: Pa_sqlany_stmt;
-      index: Tsacapi_u32; param: Pa_sqlany_bind_param): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      index: Tsacapi_u32; param: Pa_sqlany_bind_param): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Bind a user-supplied buffer as a parameter to the prepared statement.
     /// </summary>
@@ -937,8 +954,7 @@ type
     ///  1 when successful or 0 when unsuccessful.
     /// </returns>
     sqlany_bind_param: function(sqlany_stmt: Pa_sqlany_stmt;
-      index: Tsacapi_u32; param: Pa_sqlany_bind_param): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      index: Tsacapi_u32; param: Pa_sqlany_bind_param): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Sends data as part of a bound parameter.
     ///  This method can be used to send a large amount of data for a bound parameter in chunks^.
@@ -960,8 +976,7 @@ type
     ///  1 on success or 0 on failure.
     /// </returns>
     sqlany_send_param_data: function(sqlany_stmt: Pa_sqlany_stmt;
-      index: Tsacapi_u32; buffer: PAnsiChar; size: Tsize_t): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      index: Tsacapi_u32; buffer: PAnsiChar; size: Tsize_t): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Clears param data that was previously been set using \sa sqlany_send_param_data().
     ///  This method can be used to clear data that was previously been sent using sqlany_send_param_data()
@@ -983,8 +998,7 @@ type
     ///  1 on success or 0 on failure.
     /// </returns>
     sqlany_reset_param_data: function(sqlany_stmt: Pa_sqlany_stmt;
-      index: Tsacapi_u32): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      index: Tsacapi_u32): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Retrieves the length of the last error message stored in the connection object
     ///  including the NULL terminator. If there is no error, 0 is returned.
@@ -995,8 +1009,7 @@ type
     /// <returns>
     ///  The length of the last error message including the NULL terminator.
     /// </returns>
-    sqlany_error_length: function(sqlany_conn: Pa_sqlany_connection): Tsize_t;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_error_length: function(sqlany_conn: Pa_sqlany_connection): Tsize_t; cdecl;
     /// <summary>
     ///  Sets the size of the row array for a batch execute
     ///  The batch size is used only for an INSERT statement. The default batch size is 1.
@@ -1012,7 +1025,7 @@ type
     ///  return 1 on success or 0 on failure.
     /// </returns>
     sqlany_set_batch_size: function(sqlany_stmt: Pa_sqlany_stmt;
-      num_rows: Tsacapi_u32): Tsacapi_bool; {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      num_rows: Tsacapi_u32): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Sets the bind type of parameters.
     ///  The default value is 0, which indicates column-wise binding. A non-zero value indicates
@@ -1032,8 +1045,7 @@ type
     /// <returns>
     ///  return 1 on success or 0 on failure.
     /// </returns>
-    sqlany_set_param_bind_type: function(sqlany_stmt: Pa_sqlany_stmt; row_size: Tsize_t): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_set_param_bind_type: function(sqlany_stmt: Pa_sqlany_stmt; row_size: Tsize_t): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Retrieves the size of the row array for a batch execute.
     /// </summary>
@@ -1043,8 +1055,7 @@ type
     /// <returns>
     ///  The size of the row array.
     /// </returns>
-    sqlany_get_batch_size: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_u32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_get_batch_size: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_u32; cdecl;
     /// <summary>
     ///  Sets the size of the row set to be fetched by the sqlany_fetch_absolute() and sqlany_fetch_next() functions.
     ///  The default size of the row set is 1. Specifying num_rows to be a value greater than 1 indicates a wide fetch.
@@ -1058,8 +1069,8 @@ type
     /// <returns>
     ///  return 1 on success or 0 on failure.
     /// </returns>
-    sqlany_set_rowset_size: function(sqlany_stmt: Pa_sqlany_stmt; num_rows: Tsacapi_u32): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_set_rowset_size: function(sqlany_stmt: Pa_sqlany_stmt;
+      num_rows: Tsacapi_u32): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Retrieves the size of the row set to be fetched by the sqlany_fetch_absolute() and sqlany_fetch_next() functions.
     /// </summary>
@@ -1069,8 +1080,7 @@ type
     /// <returns>
     ///  The size of the row set, or 0 if the statement does not return a result set.
     /// </returns>
-    sqlany_get_rowset_size: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_u32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_get_rowset_size: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_u32; cdecl;
     /// <summary>
     ///  Sets the bind type of columns.
     ///  The default value is 0, which indicates column-wise binding. A non-zero value indicates
@@ -1090,8 +1100,7 @@ type
     /// <returns>
     ///  1 on success or 0 on failure.
     /// </returns>
-    sqlany_set_column_bind_type: function(sqlany_stmt: Pa_sqlany_stmt; row_size: Tsacapi_u32): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_set_column_bind_type: function(sqlany_stmt: Pa_sqlany_stmt; row_size: Tsacapi_u32): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Binds a user-supplied buffer as a result set column to the prepared statement.
     ///  If the size of the fetched row set is greater than 1, the buffer must be large enough to
@@ -1111,8 +1120,7 @@ type
     ///  1 on success or 0 on unsuccessful.
     /// </returns>
     sqlany_bind_column: function(sqlany_stmt: Pa_sqlany_stmt; index: Tsacapi_u32;
-      value: Pa_sqlany_data_valueV4up): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      value: Pa_sqlany_data_valueV4up): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Removes all column bindings defined using sqlany_bind_column().
     /// </summary>
@@ -1122,8 +1130,7 @@ type
     /// <returns>
     ///  1 on success or 0 on failure.
     /// </returns>
-    sqlany_clear_column_bindings: function(sqlany_stmt: Pa_sqlany_data_valueV4up): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_clear_column_bindings: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Returns the number of rows fetched.
     ///  In general, the number of rows fetched is equal to the size specified by the sqlany_set_rowset_size() function. The
@@ -1138,8 +1145,7 @@ type
     /// <returns>
     ///  The number of rows fetched or -1 on failure
     /// </returns>
-    sqlany_fetched_rows: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_fetched_rows: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32; cdecl;
     /// <summary>
     ///  Sets the current row in the fetched row set.
     ///  When a sqlany_fetch_absolute() or sqlany_fetch_next() function is executed, a row set
@@ -1156,8 +1162,7 @@ type
     /// <returns>
     ///  1 on success or 0 on failure
     /// </returns>
-    sqlany_set_rowset_pos: function(sqlany_stmt: Pa_sqlany_stmt; row_num: Tsacapi_u32): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_set_rowset_pos: function(sqlany_stmt: Pa_sqlany_stmt; row_num: Tsacapi_u32): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Resets a statement to its prepared state condition.
     /// </summary>
@@ -1167,8 +1172,7 @@ type
     /// <returns>
     ///  1 on success or 0 on failure
     /// </returns>
-    sqlany_reset: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_reset: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Retrieves information about the parameters that were bound using sqlany_bind_param().
     /// </summary>
@@ -1182,8 +1186,7 @@ type
     ///  1 on success or 0 on failure
     /// </returns>
     sqlany_get_bind_param_info: function(sqlany_stmt: Pa_sqlany_stmt;
-      index: Tsacapi_u32; info: Pa_sqlany_bind_param_info): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      index: Tsacapi_u32; info: Pa_sqlany_bind_param_info): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Executes a prepared statement.
     ///  You can use sqlany_num_cols() to verify if the executed statement returned a result set.
@@ -1194,8 +1197,7 @@ type
     /// <returns>
     ///   1 if the statement is executed successfully or 0 on failure.
     /// </returns>
-    sqlany_execute: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_execute: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Executes the SQL statement specified by the string argument and possibly returns a result set.
     ///  Use this method to prepare and execute a statement.
@@ -1211,8 +1213,8 @@ type
     /// <returns>
     ///   A statement handle if the function executes successfully, NULL when the function executes unsuccessfully.
     /// </returns>
-    sqlany_execute_direct: function(sqlany_conn: Pa_sqlany_connection; sql_str: PAnsiChar): Pa_sqlany_stmt;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_execute_direct: function(sqlany_conn: Pa_sqlany_connection;
+      sql_str: PAnsiChar): Pa_sqlany_stmt; cdecl;
     /// <summary>
     ///  Moves the current row in the result set to the specified row number and then fetches
     ///  rows of data starting from the current row.
@@ -1227,8 +1229,8 @@ type
     /// <returns>
     ///   1 if the fetch was successfully, 0 when the fetch is unsuccessful.
     /// </returns>
-    sqlany_fetch_absolute: function(sqlany_stmt: Pa_sqlany_stmt; row_num: Tsacapi_i32): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_fetch_absolute: function(sqlany_stmt: Pa_sqlany_stmt;
+      row_num: Tsacapi_i32): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Returns the next set of rows from the result set.
     ///  When the result object is first created, the current row
@@ -1244,8 +1246,7 @@ type
     /// <returns>
     ///   1 if the fetch was successfully, 0 when the fetch is unsuccessful.
     /// </returns>
-    sqlany_fetch_next: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_fetch_next: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Advances to the next result set in a multiple result set query.
     ///  If a query (such as a call to a stored procedure) returns multiple result sets, then this function
@@ -1257,8 +1258,7 @@ type
     /// <returns>
     ///   1 if the statement successfully advances to the next result set, 0 otherwise.
     /// </returns>
-    sqlany_get_next_result: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_get_next_result: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Returns the number of rows affected by execution of the prepared statement.
     /// </summary>
@@ -1268,8 +1268,7 @@ type
     /// <returns>
     ///   The number of rows affected or -1 on failure.
     /// </returns>
-    sqlany_affected_rows: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_affected_rows: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32; cdecl;
     /// <summary>
     ///  Returns number of columns in the result set.
     /// </summary>
@@ -1279,8 +1278,7 @@ type
     /// <returns>
     ///  The number of columns in the result set or -1 on a failure.
     /// </returns>
-    sqlany_num_cols: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_num_cols: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32; cdecl;
     /// <summary>
     ///  By default this function only returns an estimate. To return an exact count, set the row_counts option
     ///  on the connection.
@@ -1293,8 +1291,7 @@ type
     ///  negative and the estimate is the absolute value of the returned integer. The value returned is positive
     ///  if the number of rows is exact.
     /// </returns>
-    sqlany_num_rows: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_num_rows: function(sqlany_stmt: Pa_sqlany_stmt): Tsacapi_i32; cdecl;
     /// <summary>
     ///  When a sqlany_fetch_absolute() or sqlany_fetch_next() function is executed, a row set
     ///  is created and the current row is set to be the first row in the row set. The current
@@ -1326,7 +1323,7 @@ type
     ///  if the number of rows is exact.
     /// </returns>
     sqlany_get_column: function(sqlany_stmt: Pa_sqlany_stmt; col_index: Tsacapi_u32;
-      buffer: Pa_sqlany_data_value): Tsacapi_bool; {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      buffer: Pa_sqlany_data_value): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Retrieves the data fetched for the specified column at the current row into the supplied buffer memory
     ///  When a sqlany_fetch_absolute() or sqlany_fetch_next() function is executed, a row set
@@ -1356,8 +1353,7 @@ type
     ///  if the number of rows is exact.
     /// </returns>
     sqlany_get_data: function(sqlany_stmt: Pa_sqlany_stmt; col_index: Tsacapi_u32;
-      offset: Tsize_t; Buffer: Pointer; size: Tsize_t): Tsacapi_i32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      offset: Tsize_t; Buffer: Pointer; size: Tsize_t): Tsacapi_i32; cdecl;
     /// <summary>
     ///  Retrieves information about the fetched data at the current row
     ///  When a sqlany_fetch_absolute() or sqlany_fetch_next() function is executed, a row set
@@ -1377,8 +1373,7 @@ type
     ///   1 on success, and 0 on failure. Failure is returned when any of the supplied parameters are invalid.
     /// </returns>
     sqlany_get_data_info: function(sqlany_stmt: Pa_sqlany_stmt; col_index: Tsacapi_u32;
-      buffer: Pa_sqlany_data_info): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      buffer: Pa_sqlany_data_info): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Retrieves column metadata information and fills the a_sqlany_column_info structure with information about the column.
     /// </summary>
@@ -1395,8 +1390,7 @@ type
     ///   1 on success or 0 if the column index is out of range, or if the statement does not return a result set.
     /// </returns>
     sqlany_get_column_info: function(sqlany_stmt: Pa_sqlany_stmt; col_index: Tsacapi_u32;
-      buffer: Pa_sqlany_column_info): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      buffer: Pa_sqlany_column_info): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Commits the current transaction.
     /// </summary>
@@ -1405,8 +1399,7 @@ type
     /// <returns>
     ///   return 1 when successful or 0 when unsuccessful.
     /// </returns>
-    sqlany_commit: function(sqlany_conn: Pa_sqlany_connection): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_commit: function(sqlany_conn: Pa_sqlany_connection): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Rolls back the current transaction.
     /// </summary>
@@ -1416,8 +1409,7 @@ type
     /// <returns>
     ///   return 1 when successful or 0 when unsuccessful.
     /// </returns>
-    sqlany_rollback: function(sqlany_conn: Pa_sqlany_connection): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_rollback: function(sqlany_conn: Pa_sqlany_connection): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Returns the current client version.
     ///  This method fills the buffer passed with the major, minor, patch, and build number of the client library.
@@ -1432,8 +1424,7 @@ type
     /// <returns>
     ///   1 when successful or 0 when unsuccessful.
     /// </returns>
-    sqlany_client_version: function(buffer: PAnsiChar; len: Tsize_t): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_client_version: function(buffer: PAnsiChar; len: Tsize_t): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Returns the current client version.
     ///  This method fills the buffer passed with the major, minor, patch, and build number of the client library.
@@ -1452,8 +1443,7 @@ type
     ///   1 when successful or 0 when unsuccessful.
     /// </returns>
     sqlany_client_version_ex: function(context: Pa_sqlany_interface_context;
-      buffer: PAnsiChar; len: Tsize_t): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      buffer: PAnsiChar; len: Tsize_t): Tsacapi_bool; cdecl;
     /// <summary>
     ///  Retrieves the last error code and message stored in the connection object.
     /// </summary>
@@ -1470,8 +1460,7 @@ type
     ///   The last error code. Positive values are warnings, negative values are errors, and 0 indicates success.
     /// </returns>
     sqlany_error: function(sqlany_conn: Pa_sqlany_connection;
-      buffer: PAnsiChar; size: Tsize_t): Tsacapi_i32;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      buffer: PAnsiChar; size: Tsize_t): Tsacapi_i32; cdecl;
     /// <summary>
     ///  Retrieves the current SQLSTATE.
     /// </summary>
@@ -1488,16 +1477,14 @@ type
     ///   The number of bytes copied into the buffer.
     /// </returns>
     sqlany_sqlstate: function(sqlany_conn: Pa_sqlany_connection;
-      buffer: PAnsiChar; size: Tsize_t): Tsize_t;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      buffer: PAnsiChar; size: Tsize_t): Tsize_t; cdecl;
     /// <summary>
     ///   Clears the last stored error code
     /// </summary>
     /// <param name="sqlany_conn">
     ///  A connection object returned from sqlany_new_connection().
     /// </param>
-    sqlany_clear_error: procedure(sqlany_conn: Pa_sqlany_connection);
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+    sqlany_clear_error: procedure(sqlany_conn: Pa_sqlany_connection); cdecl;
     /// <summary>
     ///  Register a callback routine.
     ///  This function can be used to register callback functions.
@@ -1515,8 +1502,7 @@ type
     ///   1 when successful or 0 when unsuccessful.
     /// </returns>
     sqlany_register_callback: function(sqlany_conn: Pa_sqlany_connection;
-      index: Ta_sqlany_callback_type; callback: TSQLANY_CALLBACK): Tsacapi_bool;
-      {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
+      index: Ta_sqlany_callback_type; callback: TSQLANY_CALLBACK): Tsacapi_bool; cdecl;
   protected
     procedure LoadApi; override;
   public

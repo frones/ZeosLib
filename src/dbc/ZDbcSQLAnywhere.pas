@@ -59,7 +59,7 @@ interface
 uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils,
-  ZDbcIntfs, ZDbcConnection, ZPlainSQLAnywhere, ZTokenizer, ZDbcGenericResolver,
+  ZDbcIntfs, ZDbcConnection, ZPlainSQLAnywhere, ZTokenizer,
   ZGenericSqlAnalyser, ZDbcLogging;
 
 type
@@ -234,7 +234,11 @@ begin
   P := Pointer(ErrBuf);
   PByte(P)^ := 0;
   ErrCode := FPLainDriver.sqlany_error(Fa_sqlany_connection, Pointer(ErrBuf), err_len);
-  if ErrCode = 0 then Exit;
+  if ErrCode = 0 then begin
+    if Assigned(FplainDriver.sqlany_clear_error) then
+      FplainDriver.sqlany_clear_error(Fa_sqlany_connection);
+    Exit;
+  end;
 
   if not Assigned(FPLainDriver.sqlany_error_length)
   then err_len := ZFastCode.StrLen(Pointer(ErrBuf))
@@ -248,7 +252,7 @@ begin
   Dec(st_len);
   {$IFDEF UNICODE}
   State := USASCII7ToUnicodeString(@StateBuf[0], st_Len);
-  ErrMsg := PRawToUnicode(Pointer(ErrBuf), err_Len, ImmediatelyReleasable.GetConSettings.ClientCodePage.CP);
+  ErrMsg := PRawToUnicode(Pointer(ErrBuf), err_Len, ZOSCodePage);
   {$ELSE}
   {$IFDEF FPC} State := ''; {$ENDIF}
   System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
@@ -350,7 +354,7 @@ end;
 procedure TZSQLAnywhereConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
-  if FPlainDriver.sqlany_execute_immediate(Fa_sqlany_connection, Pointer(SQL)) <> 0 then
+  if FPlainDriver.sqlany_execute_immediate(Fa_sqlany_connection, Pointer(SQL)) <> 1 then
     HandleError(lcExecute, SQL, Self);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
@@ -479,16 +483,19 @@ jmpInit:
       Fa_sqlany_interface_context := nil;
     end;
   end;
-  ExecuteImmediat(RawByteString('SET CHAINED OFF'), lcTransaction);
+  ExecuteImmediat(RawByteString('SET OPTION chained=''On'''), lcTransaction);
   if FClientCodePage = ''  then begin
     S := DetermineASACharSet;
     CheckCharEncoding(S);
   end;
   if Ord(TransactIsolationLevel) > Ord(tiReadUncommitted) then
     ExecuteImmediat(SQLAnyTIL[TransactIsolationLevel], lcTransaction);
-  if not AutoCommit
-  then StartTransaction
-  else ExecuteImmediat(RawByteString('SET AUTOCOMMIT ON'), lcTransaction);
+  if AutoCommit
+  then ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''On'''), lcTransaction)
+  else begin
+    AutoCommit := True;
+    StartTransaction;
+  end;
 end;
 
 {**
@@ -576,7 +583,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    S := 'ROLLBACK TO SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
@@ -618,7 +625,7 @@ begin
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      ExecuteImmediat(RawByteString('SET AUTOCOMMIT ON'), lcTransaction);
+      ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''On'''), lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
@@ -658,11 +665,11 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    ExecuteImmediat(RawByteString('SET AUTOCOMMIT OFF'), lcTransaction);
+    ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''Off'''), lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    S := '"SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count)+'"';
     ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S) +2;
   end;

@@ -101,7 +101,6 @@ type
     destructor Destroy; override;
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: TZASAPlainDriver;
-//    procedure CreateNewDatabase(const SQL: String);
 
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):

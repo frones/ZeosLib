@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Types, Classes, SysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZDbcASA;
+  ZDbcConnection;
 
 type
 
