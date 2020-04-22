@@ -55,9 +55,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} DateUtils, SysUtils,
-  ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
-  ZMessages, ZVariant;
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, DateUtils, SysUtils,
+  ZCompatibility, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
+  ZMessages, ZVariant, ZDbcLogging;
 
 type
   TConnectionPool = class;
@@ -125,6 +125,8 @@ type
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload;
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     procedure DeregisterStatement(const Value: IZStatement);
     procedure RegisterStatement(const Value: IZStatement);
@@ -543,9 +545,21 @@ begin
   Result := GetConnection.EscapeString(Value);
 end;
 
+procedure TZDbcPooledConnection.ExecuteImmediat(const SQL: RawByteString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  GetConnection.ExecuteImmediat(SQL, LoggingCategory);
+end;
+
+procedure TZDbcPooledConnection.ExecuteImmediat(const SQL: UnicodeString;
+  LoggingCategory: TZLoggingCategory);
+begin
+  GetConnection.ExecuteImmediat(SQL, LoggingCategory);
+end;
+
 function TZDbcPooledConnection.GetAutoCommit: Boolean;
 begin
-  Result := GetConnection.GetAutoCommit;  
+  Result := GetConnection.GetAutoCommit;
 end;
 
 function TZDbcPooledConnection.GetCatalog: string;

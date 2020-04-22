@@ -99,7 +99,7 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
-uses ZSysUtils, ZEncoding, ZDbcUtils, ZClasses, ZFastCode
+uses ZSysUtils, ZEncoding, ZDbcUtils, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -193,7 +193,6 @@ end;
 }
 function ConvertSqlTypeToDBLibTypeName(FieldType: TZSQLType): string;
 begin
-  Result := '';
   case FieldType of
     stBoolean: Result := 'bit';
     stByte: Result := 'tinyint';
@@ -211,6 +210,7 @@ begin
     stAsciiStream: Result := 'text';
     stUnicodeStream: Result := 'ntext';
     stBinaryStream: Result := 'image';
+    else Result := '';
   end;
 end;
 
@@ -221,7 +221,6 @@ end;
 }
 function ConvertSqlTypeToTDSType(FieldType: TZSQLType): TTDSType;
 begin
-  Result := tdsVoid;
   case FieldType of
     stBoolean: Result := tdsBit;
     stByte, stShort: Result := tdsInt1;
@@ -236,6 +235,7 @@ begin
     stDate, stTime, stTimestamp: Result := tdsDateTime;
     stAsciiStream, stUnicodeStream: Result := tdsText;
     stBinaryStream: Result := tdsImage;
+    else Result := tdsVoid;
   end;
 end;
 
@@ -246,7 +246,6 @@ end;
 }
 function ConvertSqlTypeToFreeTDSTypeName(FieldType: TZSQLType): string;
 begin
-  Result := '';
   case FieldType of
     stBoolean: Result := 'bit';
     stByte: Result := 'tinyint';
@@ -265,6 +264,7 @@ begin
     stAsciiStream: Result := 'text';
     stUnicodeStream: Result := 'ntext';
     stBinaryStream: Result := 'image';
+    else Result := '';
   end;
 end;
 

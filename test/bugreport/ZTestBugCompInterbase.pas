@@ -98,7 +98,8 @@ type
     procedure TestExecutBlockReturning_WithParamCheck;
     procedure TestProcAbtest_WithParamCheck;
     procedure TestProcAbtest_WithoutParamCheck;
-    procedure TestSF418;
+    procedure TestSF418_DESC;
+    procedure TestSF418_ASC;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1255,7 +1256,7 @@ begin
 end;
 type
   THackField = class(TField);
-procedure ZTestCompInterbaseBugReport.TestSF418;
+procedure ZTestCompInterbaseBugReport.TestSF418_ASC;
 var
   Query: TZReadOnlyQuery;
   Act: String;
@@ -1263,15 +1264,33 @@ begin
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
-    Query.SQL.Text := 'select * from Ticket418 order by id desc';
+    Query.SQL.Text := 'select * from Ticket418';
     Query.Open;
-    Query.SortedFields := 'num';
+    Query.SortedFields := 'num asc';
 
     Query.First;
+    CheckEquals(37, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(35, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(39, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(38, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(36, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(32, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(33, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(31, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(34, Query.FieldByName('id').AsInteger);
+    Query.Next;
     CheckEquals(21, Query.FieldByName('id').AsInteger);
     Act := '';
     THackField(Query.FieldByName('num')).GetText(Act, True);
-    CheckEquals('0', Act, 'Schould display a zero value');
+    CheckEquals('0', Act, 'Should display a zero value');
     Query.Next;
     CheckEquals(25, Query.FieldByName('id').AsInteger);
     Query.Next;
@@ -1330,6 +1349,105 @@ begin
     CheckEquals(26, Query.FieldByName('id').AsInteger);
     Query.Next;
     CheckEquals(28, Query.FieldByName('id').AsInteger);
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestSF418_DESC;
+var
+  Query: TZReadOnlyQuery;
+  Act: String;
+begin
+  Query := TZReadOnlyQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.SQL.Text := 'select * from Ticket418';
+    Query.Open;
+    Query.SortedFields := 'num desc';
+
+    Query.First;
+    CheckEquals(28, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(26, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(30, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(29, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(27, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(23, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(24, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(22, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(20, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(19, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(18, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(17, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(16, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(15, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(14, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(13, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(12, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(11, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(10, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(9, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(8, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(7, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(6, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(5, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(4, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(3, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(2, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(1, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(25, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(21, Query.FieldByName('id').AsInteger);
+    Act := '';
+    THackField(Query.FieldByName('num')).GetText(Act, True);
+    CheckEquals('0', Act, 'Should display a zero value');
+    Query.Next;
+    CheckEquals(34, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(31, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(33, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(32, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(36, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(38, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(39, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(35, Query.FieldByName('id').AsInteger);
+    Query.Next;
+    CheckEquals(37, Query.FieldByName('id').AsInteger);
+    Query.Next;
   finally
     FreeAndNil(Query);
   end;

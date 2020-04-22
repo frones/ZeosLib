@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZClasses;
+  ZGenericSqlAnalyser, ZCompatibility;
 
 type
 
@@ -154,7 +154,7 @@ implementation
 uses
   ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode, ZDbcProperties,
   ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser, ZEncoding, ZMessages,
-  ZCollections, ZDbcUtils
+  ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteDriver }
@@ -484,6 +484,7 @@ begin
   Result := FPlainDriver.sqlite3_enable_load_extension(FHandle, OnOff);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "PZTail" does not seem to be initialized} {$ENDIF}
 procedure TZSQLiteConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt);
 var PZTail: PAnsiChar;
@@ -494,13 +495,13 @@ begin
   if Stmt = nil then begin
     Status := FPlainDriver.sqlite3_prepare_v2(FHandle,
       Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Stmt, pZTail);
-    if not Status in [SQLITE_OK, SQLITE_DONE] then
+    if (Status <> SQLITE_OK) and (Status <> SQLITE_DONE) then
       CheckSQLiteError(FPlainDriver, FHandle, Status, lcPrepStmt,
         SQL, ConSettings)
   end;
   Status := FPlainDriver.sqlite3_step(Stmt);
   try
-    if not Status in [SQLITE_OK, SQLITE_DONE] then
+    if (Status <> SQLITE_OK) and (Status <> SQLITE_DONE) then
       CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings)
   finally
     FPlainDriver.sqlite3_reset(Stmt);
@@ -508,6 +509,7 @@ begin
       DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZSQLiteConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);

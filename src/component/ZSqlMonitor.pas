@@ -292,7 +292,7 @@ begin
     else
       Stream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareDenyWrite);
     try
-      Stream.Seek({$IFDEF CPU64}Int64{$ELSE}LongInt{$ENDIF}(0), soFromEnd); //handle an Android64_Delphi compile issue
+      Stream.Seek(NativeInt(0), {$IFDEF CPU64}soEnd{$ELSE}soFromEnd{$ENDIF}); //handle an Android64_Delphi compile issue
       Temp := Event.AsString(FLoggingFormatter) + LineEnding;
       Stream.Write(PAnsiChar(Temp)^, Length(Temp));
     finally

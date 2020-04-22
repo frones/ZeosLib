@@ -126,6 +126,12 @@ type
       Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
       LongNames: Word; UnknownUint2: Longword)
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    {ASA16 dbpp_prepare_describe_16, SQLCA *,char *,char *,short int *,char *,struct sqlda *,struct sqlda *,unsigned int, unsigned short int, a_sql_uint32 )))}
+    dbpp_prepare_describe_16: procedure (SQLCA: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+      Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
+      LongNames: Word; UnknownUint2: Longword)
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     dbpp_select: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
       ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor1,
@@ -169,8 +175,7 @@ type
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     dbpp_execute_imm: procedure(sqlca: PZASASQLCA; SqlRecordStatement:
-      PAnsiChar;
-      UnKnown1: Word);
+      PAnsiChar; UnKnown1: Word);
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     dbpp_put_into: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
@@ -253,8 +258,8 @@ procedure TZASAPlainDriver.LoadApi;
 begin
   with FLoader do
   begin
-    @sqlerror_message       := GetAddress('sqlerror_message');
-    @db_init                := GetAddress('db_init');
+    @sqlerror_message       := GetAddress('sqlerror_message', True);
+    @db_init                := GetAddress('db_init', True);
     @db_fini                := GetAddress('db_fini');
     @db_string_connect      := GetAddress('db_string_connect');
     @db_string_disconnect   := GetAddress('db_string_disconnect');
@@ -273,10 +278,11 @@ begin
     @dbpp_disconnect        := GetAddress('dbpp_disconnect');
     @dbpp_prepare_into      := GetAddress('dbpp_prepare_into');
     @dbpp_describe_cursor   := GetAddress('dbpp_describe_cursor');
-    @dbpp_prepare_describe  := GetAddress('dbpp_prepare_describe');
+    @dbpp_prepare_describe_16  := GetAddress('dbpp_prepare_describe_16');
     @dbpp_prepare_describe_12  := GetAddress('dbpp_prepare_describe_12');
+    @dbpp_prepare_describe  := GetAddress('dbpp_prepare_describe', not Assigned(dbpp_prepare_describe_16) or not not Assigned(dbpp_prepare_describe_12));
     @dbpp_select            := GetAddress('dbpp_select');
-    @dbpp_open              := GetAddress('dbpp_open');
+    @dbpp_open              := GetAddress('dbpp_open', True);
     @dbpp_close             := GetAddress('dbpp_close');
     @dbpp_fetch             := GetAddress('dbpp_fetch');
     @dbpp_declare           := GetAddress('dbpp_declare');

@@ -56,6 +56,7 @@ interface
 {$I ZBugReport.inc}
 
 uses
+  {$IF not defined(FPC) and defined(MSWINDOWS)}Windows,{$IFEND}//inlineWarning
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
@@ -75,6 +76,8 @@ type
   published
     procedure TestUndefined_Varchar_AsString_Length;
     procedure TestCompTicket386;
+    procedure TestAttachAndDetach;
+    procedure TestTicket405;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -88,13 +91,55 @@ type
 implementation
 
 uses
-  Variants, DB, ZDatasetUtils;
+  Variants, DB, ZDatasetUtils, ZSqlProcessor;
 
 { ZTestCompSQLiteBugReport }
 
 function ZTestCompSQLiteBugReport.GetSupportedProtocols: string;
 begin
   Result := pl_all_sqlite;
+end;
+
+{ https://zeoslib.sourceforge.io/viewtopic.php?f=40&t=117755
+I just migrated from ZeosDbo 7.0.6-stable to 7.2.6-stable.
+My program uses SQlite3 and attaches and detaches the bases with:
+TZConnection.ExecuteDirect ('Attach database "myBasefile.db3" as XXX ’)
+TZConnection.ExecuteDirect ('Detach database XXX')
+
+This has been working well for several years with ZeosDb 7.0 but with 7.2 I have the SQLITE_ERROR error when the line TZConnection.ExecuteDirect ('Detach database XXX') is executed.
+Do you have an idea to solve this problem?
+
+I noticed in ZeosDbo sources that in V7.2 it was the sqlite3_step command while in V7.0 it was sqlite3_exec.
+sqlite3_exec is used in TZSQLiteBaseDriver.Execute but this function is not used afterwards and is not accessible from TZConnection now.
+}
+procedure ZTestCompSQLiteBugReport.TestAttachAndDetach;
+var con2: IZConnection;
+  URL: TZURL;
+  DBName: String;
+begin
+  Connection.Connect;
+  Check(Connection.Connected);
+  URL := TZURL.Create;
+  URL.URL := Connection.DbcConnection.GetURL;
+  DBName := ExtractFilePAth(ParamStr(0))+'TestAttachAndDetach.db';
+  URL.DataBase := 'TestAttachAndDetach.db';
+  Con2 := nil;
+  try
+    Con2 := DriverManager.GetConnection(URL.URL); //Create new dbfile;
+    Con2.Open;
+    Con2.Close;
+    Con2 := nil;
+    Connection.ExecuteDirect('ATTACH '+QuotedStr(DBName)+' AS ''TEST''');
+    Check(Connection.Connected);
+    Connection.ExecuteDirect('DETACH DATABASE ''TEST''');
+  finally
+    FreeAndNil(URL);
+    if Con2 <> nil then
+      Con2.Close;
+    Con2 := nil;
+    if FileExists(DBName) then
+      DeleteFile(DBName);
+  end;
 end;
 
 procedure ZTestCompSQLiteBugReport.TestCompTicket386;
@@ -123,6 +168,46 @@ begin
   end;
 end;
 
+{ See: https://sourceforge.net/p/zeoslib/tickets/405/
+  when executing a certain SQL script and committing the work,
+  Zeos will get an errror in SQLite when starting the next transaction. }
+procedure ZTestCompSQLiteBugReport.TestTicket405;
+var SQLProcessor: TZSQLProcessor;
+begin
+  SQLProcessor := TZSQLProcessor.Create(nil);
+  SQLProcessor.Connection := Connection;
+  SQLProcessor.Delimiter := ';';
+  Connection.Connect;
+  Check(Connection.Connected);
+  try
+    SQLProcessor.Script.Text :=
+      'CREATE  TABLE IF NOT EXISTS `station` ('+LineEnding+
+      '  `sindex` INTEGER PRIMARY KEY,'+LineEnding+
+      '  `station_name` VARCHAR(50) NOT NULL,'+LineEnding+
+      '  `station_code` VARCHAR(50) UNIQUE NULL,'+LineEnding+
+      '  `sea_height` INT,'+LineEnding+
+      '  `time_shift` INT'+LineEnding+
+      ');'+LineEnding+
+      'CREATE TEMPORARY TABLE IF NOT EXISTS `bufer` ('+LineEnding+
+      '  `rowid` INTEGER PRIMARY KEY AUTOINCREMENT,'+LineEnding+
+      '  `station` INT NOT NULL,'+LineEnding+
+      '  `place` INT,'+LineEnding+
+      '  `lat` REAL,'+LineEnding+
+      '  `lon` REAL'+LineEnding+
+      ');';
+    // start transaction
+    Connection.StartTransaction;
+    // execute script
+    SQLProcessor.Execute;
+    // commit
+    Connection.Commit; //thows an exception ?
+    Check(Connection.Connected);
+  finally
+    SQLProcessor.Free;
+    Connection.ExecuteDirect('DROP TABLE IF EXISTS `station`')
+  end;
+end;
+
 procedure ZTestCompSQLiteBugReport.TestUndefined_Varchar_AsString_Length;
 var
   Query: TZQuery;
@@ -146,7 +231,28 @@ end;
 { ZTestCompSQLiteBugReportMBCs }
 const
   // some dull text in Russian
-  Str2: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435#$0020#$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447#$002C#$0020#$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438#$0020#$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432#$002C#$0020#$044F#$0432#$043B#$044F#$0435#$0442#$0441#$044F#$0020#$043F#$043E#$0441#$0442#$0440#$043E#$0435#$043D#$0438#$0435#$0020#$0438#$043D#$0444#$043E#$0440#$043C#$0430#$0446#$0438#$043E#$043D#$043D#$043E#$0439#$0020#$0441#$0438#$0441#$0442#$0435#$043C#$044B#$0020#$0434#$043B#$044F#$0020#$0430#$0432#$0442#$043E#$043C#$0430#$0442#$0438#$0437#$0430#$0446#$0438#$0438#$0020#$0431#$0438#$0437#$043D#$0435#$0441#$002D#$0434#$0435#$044F#$0442#$0435#$043B#$044C#$043D#$043E#$0441#$0442#$0438#$0020#$043F#$0440#$0435#$0434#$043F#$0440#$0438#$044F#$0442#$0438#$044F#$002E#$0020#$0412#$0441#$0435#$0020#$0430#$0440#$0445#$0438#$0442#$0435#$043A#$0442#$0443#$0440#$043D#$044B#$0435#$0020#$043A#$043E#$043C#$043F#$043E#$043D#$0435#$043D#$0442#$044B#$0020#$0028#$0431#$0430#$0437#$044B#$0020#$0434#$0430#$043D#$043D#$044B#$0445#$002C#$0020#$0441#$0435#$0440#$0432#$0435#$0440#$0430#$0020#$043F#$0440#$0438#$043B#$043E#$0436#$0435#$043D#$0438#$0439#$002C#$0020#$043A#$043B#$0438#$0435#$043D#$0442#$0441#$043A#$043E#$0435#$0020#$002E#$002E#$002E;
+  Str2: ZWideString =
+    #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438+
+    #$0431#$043E#$043B#$0435#$0435#$0020#$0442#$0440#$0438#$0432#$0438#$0430+
+    #$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447#$002C+
+    #$0020#$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D+
+    #$043E#$0433#$0438#$043C#$0438#$0020#$043A#$043E#$043B#$043B#$0435#$043A+
+    #$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440+
+    #$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432#$002C#$0020#$044F#$0432+
+    #$043B#$044F#$0435#$0442#$0441#$044F#$0020#$043F#$043E#$0441#$0442#$0440+
+    #$043E#$0435#$043D#$0438#$0435#$0020#$0438#$043D#$0444#$043E#$0440#$043C+
+    #$0430#$0446#$0438#$043E#$043D#$043D#$043E#$0439#$0020#$0441#$0438#$0441+
+    #$0442#$0435#$043C#$044B#$0020#$0434#$043B#$044F#$0020#$0430#$0432#$0442+
+    #$043E#$043C#$0430#$0442#$0438#$0437#$0430#$0446#$0438#$0438#$0020#$0431+
+    #$0438#$0437#$043D#$0435#$0441#$002D#$0434#$0435#$044F#$0442#$0435#$043B+
+    #$044C#$043D#$043E#$0441#$0442#$0438#$0020#$043F#$0440#$0435#$0434#$043F+
+    #$0440#$0438#$044F#$0442#$0438#$044F#$002E#$0020#$0412#$0441#$0435#$0020+
+    #$0430#$0440#$0445#$0438#$0442#$0435#$043A#$0442#$0443#$0440#$043D#$044B+
+    #$0435#$0020#$043A#$043E#$043C#$043F#$043E#$043D#$0435#$043D#$0442#$044B+
+    #$0020#$0028#$0431#$0430#$0437#$044B#$0020#$0434#$0430#$043D#$043D#$044B+
+    #$0445#$002C#$0020#$0441#$0435#$0440#$0432#$0435#$0440#$0430#$0020#$043F+
+    #$0440#$0438#$043B#$043E#$0436#$0435#$043D#$0438#$0439#$002C#$0020#$043A+
+    #$043B#$0438#$0435#$043D#$0442#$0441#$043A#$043E#$0435#$0020#$002E#$002E#$002E;
   Str3: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
   Str4: ZWideString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
   Str5: ZWideString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;

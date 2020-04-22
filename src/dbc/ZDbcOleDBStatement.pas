@@ -1292,6 +1292,7 @@ var
   NewArr: TZArray;
 label SetUniArray;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}W_Dyn := nil;{$ENDIF}
   SetLength(W_Dyn, Len);
   CP := zCP_NONE;
   case TZSQLType(Arr.VArrayType) of
@@ -2122,6 +2123,7 @@ begin
   if (ParameterIndex = FirstDbcIndex) and (BindList.ParamTypes[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] <> pctResultSet) then
     FDBParams.cParamSets := 0;
   if (SQLType = stGUID) and not (VariantType in [vtNull, vtBytes]) then begin
+    {$IFDEF WITH_VAR_INIT_WARNING}GUID_Dyn := nil;{$ENDIF}
     SetLength(GUID_Dyn, Length(TRawByteStringDynArray(Value)));
     Arr := PZArray(BindList[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value)^;
     for I := 0 to High(GUID_Dyn) do

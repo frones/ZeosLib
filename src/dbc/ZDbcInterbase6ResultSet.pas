@@ -1680,7 +1680,7 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  an <code>uint</code> in the Java programming language.
+  an <code>usigned 32bit integer</code>.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the

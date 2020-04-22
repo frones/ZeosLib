@@ -323,7 +323,6 @@ function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType
 
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
-  i4SpaceUni: Int64 = 9007336695791648;  //integer representation of the four wide space chars
   sAlignCurrencyScale2Precision: array[0..4] of Integer = (
     15, 16, 17, 18, 19);
   ZSQLTypeToBuffSize: array[TZSQLType] of Integer = (0,//stUnknown,
@@ -350,6 +349,9 @@ const
     [vtNull, vtInterface], [vtNull, vtInterface], [vtNull, vtInterface],
     //finally the object types
     [], []);
+  W4SpaceUni: array[0..3] of Word = (Word(#32),Word(#32),Word(#32),Word(#32));
+var
+  i4SpaceUni: Int64 absolute W4SpaceUni;  //integer representation of the four wide space chars
 
 implementation
 
@@ -1609,6 +1611,7 @@ begin
     Result := EmptyRaw
   else
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}Bytes := nil;{$ENDIF}
     SetLength(Bytes, Size +2);
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.move(Buffer^, Pointer(Bytes)^, Size);
     Encoding := TestEncoding(Bytes, Size);
@@ -2107,6 +2110,7 @@ function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray;
   var MaxLen: LengthInt): TUnicodeStringDynArray;
 var i: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(Value));
   MaxLen := 0;
   for I := 0 to High(Value) do
@@ -2122,6 +2126,7 @@ end;
 function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeStringDynArray;
 var i: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(Value));
   for I := 0 to High(Value) do
     if Value[i].CP = zCP_UTF16

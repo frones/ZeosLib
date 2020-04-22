@@ -536,9 +536,92 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
 {$IFDEF ENABLE_ASA}
   { Parameters used for constructing ConnectionString.
     Refer to ASA manual for types and acceptable values of these parameters }
+    //see: http://infocenter.sybase.com/help/topic/com.sybase.help.sqlanywhere.12.0.1/dbadmin/how-introduction-connect.html
+  ConnProps_APP = 'APP';
+  ConnProps_AppInfo = 'AppInfo';
+  ConnProps_AutoStart = 'AutoStart';
+  ConnProps_ASTART = 'ASTART';
+  ConnProps_AutoStop = 'AutoStop';
+  ConnProps_ASTOP = 'ASTOP';
+  {$IFNDEF ENABLE_ODBC}
+  ConnProps_CharSet = 'CharSet';
+  {$ENDIF}
+  ConnProps_CS = 'CS';
+  ConnProps_CommBufferSize = 'CommBufferSize';
+  ConnProps_CBSIZE = 'CBSIZE';
   ConnProps_CommLinks = 'CommLinks';
-  ConnProps_Links = 'LINKS';
-
+  ConnProps_LINKS = 'LINKS';
+  {$IFNDEF ENABLE_MYSQL}
+  ConnProps_Compress = 'Compress';
+  {$ENDIF}
+  ConnProps_COMP = 'COMP';
+  ConnProps_CompressionThreshold = 'CompressionThreshold';
+  ConnProps_COMPTH = 'COMPTH';
+  ConnProps_ConnectionName = 'ConnectionName';
+  ConnProps_CON = 'CON';
+  ConnProps_ConnectionPool = 'ConnectionPool';
+  ConnProps_CPOOL = 'CPOOL';
+  ConnProps_DatabaseFile = 'DatabaseFile';
+  ConnProps_DBF = 'DBF';
+  ConnProps_DatabaseKey = 'DatabaseKey';
+  ConnProps_DBKEY = 'DBKEY';
+  ConnProps_DatabaseName = 'DatabaseName';
+  ConnProps_DBN = 'DBN';
+  ConnProps_DatabaseSwitches = 'DatabaseSwitches';
+  ConnProps_DBS = 'DBS';
+  ConnProps_DataSourceName = 'DataSourceName';
+  ConnProps_DSN = 'DSN';
+  ConnProps_DisableMultiRowFetch = 'DisableMultiRowFetch';
+  ConnProps_DMRF = 'DMRF';
+  ConnProps_Elevate = 'Elevate';
+  ConnProps_EncryptedPassword = 'EncryptedPassword';
+  ConnProps_ENP = 'ENP';
+  ConnProps_Encryption = 'Encryption';
+  ConnProps_ENC = 'ENC';
+  ConnProps_EngineName = 'EngineName';
+  ConnProps_ENG = 'ENG';
+  ConnProps_FileDataSourceName = 'FileDataSourceName';
+  ConnProps_FILEDSN = 'FILEDSN';
+  ConnProps_ForceStart = 'ForceStart';
+  ConnProps_FORCE = 'FORCE';
+  ConnProps_Host = 'Host';
+  ConnProps_Idle = 'Idle';
+  ConnProps_Integrated = 'Integrated';
+  ConnProps_INT = 'INT';
+  ConnProps_Kerberos = 'Kerberos';
+  ConnProps_KRB = 'KRB';
+  {$IFNDEF ENABLE_DBLIB}
+  ConnProps_Language = 'Language';
+  {$ENDIF}
+  ConnProps_LANG = 'LANG';
+  ConnProps_LazyClose = 'LazyClose';
+  ConnProps_LCLOSE = 'LCLOSE';
+  ConnProps_LivenessTimeout = 'LivenessTimeout';
+  ConnProps_LTO = 'LTO';
+  {$IFNDEF ENABLE_DBLIB}
+  ConnProps_LogFile = 'LogFile';
+  ConnProps_LOG = 'LOG';
+  {$ENDIF ENABLE_DBLIB}
+  ConnProps_NewPassword = 'NewPassword';
+  ConnProps_NEWPWD = 'NEWPWD';
+  ConnProps_MatView = 'MatView';
+  ConnProps_NodeType = 'NodeType';
+  ConnProps_NODE = 'NODE';
+  //ConnProps_Password  = 'Password';
+  //ConnProps_PWD = 'PWD';
+  ConnProps_PrefetchBuffer = 'PrefetchBuffer';
+  ConnProps_PBUF = 'PBUF';
+  ConnProps_PrefetchOnOpen = 'PrefetchOnOpen';
+  ConnProps_PrefetchRows = 'PrefetchRows';
+  ConnProps_PROWS = 'PROWS';
+  ConnProps_RetryConnectionTimeout = 'RetryConnectionTimeout';
+  ConnProps_RetryConnTO = 'RetryConnTO';
+  ConnProps_ServerName = 'ServerName';
+  ConnProps_Server = 'Server';
+  ConnProps_StartLine = 'StartLine';
+  ConnProps_START = 'START';
+  ConnProps_Unconditional = 'Unconditional';
+  ConnProps_UNC = 'UNC';
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 

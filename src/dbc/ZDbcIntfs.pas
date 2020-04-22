@@ -562,6 +562,9 @@ type
   /// </summary>
   IZConnection = interface(IImmediatelyReleasable)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
+    procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload;
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload;
+
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
   //  procedure SetOnAfterOpen(Handler: TOnConnect);
     procedure RegisterStatement(const Value: IZStatement);
@@ -2072,6 +2075,9 @@ function TZDriverManager.GetClientVersion(const Url: string): Integer;
 var
   Driver: IZDriver;
 begin
+  {$IFNDEF WITH_TRYFINALLY_RESULT_EXCEPTION_CHECK}
+  Result := -1;
+  {$ENDIF}
   FDriversCS.Enter;
   try
     Driver := InternalGetDriver(URL);

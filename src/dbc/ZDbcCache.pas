@@ -1251,6 +1251,7 @@ begin
         L := PWideChar(Data) - PWideChar(@TinyBuffer[0]);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stInteger)
   end;
 end;
 
@@ -1287,6 +1288,7 @@ begin
         L := PWideChar(Data) - PWideChar(@TinyBuffer[0]);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stULong)
   end;
 end;
 
@@ -2012,6 +2014,7 @@ function TZRowAccessor.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
   const CompareKinds: TComparisonKindArray): TCompareFuncs;
 var I: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(ColumnIndices));
   for i := low(ColumnIndices) to high(ColumnIndices) do
     Result[i] := GetCompareFunc(ColumnIndices[I], CompareKinds[i]);
@@ -2491,7 +2494,10 @@ jmpNull:
   end;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized}
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}
+{$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
 var P: {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF};
   Len: NativeUInt;
@@ -2607,7 +2613,10 @@ end;
     value returned is <code>null</code>
 }
 {$IFNDEF NO_UTF8STRING}
-{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized}
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}
+{$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
 var P: Pointer;
   L: NativeUInt;
@@ -2648,7 +2657,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} {$ENDIF} // ZSetString does the job even if NOT required
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized}
+  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}
+{$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
 var P: PAnsichar;
   L: NativeUInt;
@@ -3886,6 +3898,7 @@ begin
           System.FreeMem(Data^);
           Data^ := nil;
         end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
     end;
   end;
 end;
@@ -3927,6 +3940,7 @@ begin
     stCurrency: PCurrency(Data)^ := Ord(Value);
     stBigDecimal: ScaledOrdinal2BCD(Word(Value), 0, PBCD(Data)^);
     stString, stUnicodeString: SetString(ColumnIndex, BoolStrs[Value]);
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stBoolean)
   end;
 end;
 

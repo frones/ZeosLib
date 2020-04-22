@@ -225,6 +225,9 @@ type
     procedure BeforeDestruction; override;
   end;
 
+const
+  CommitMode: array[Boolean] of ub4 = (OCI_DEFAULT, OCI_COMMIT_ON_SUCCESS);
+
 var
   {** The common driver manager object. }
   OracleDriver: IZDriver;
@@ -407,7 +410,7 @@ begin
   end;
   try
     Status := FPlainDriver.OCIStmtExecute(FContextHandle,
-        Stmt, FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
+        Stmt, FErrorHandle, 1, 0, nil, nil, CommitMode[AutoCommit]);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, {$IFDEF UNICODE}S{$ELSE}SQL{$ENDIF}, ConSettings);
   finally
@@ -443,6 +446,29 @@ var
     FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV);
     FOCIEnv := nil;
   end;
+  procedure GetRawCharacterSet;
+  {$IFNDEF UNICODE}
+  var P: PWidechar;
+      L: NativeUInt;
+  {$ENDIF}
+  begin
+    With CreateStatement.ExecuteQuery('select VALUE from nls_database_parameters where parameter=''NLS_CHARACTERSET''') do begin
+
+      if Next then begin
+        {$IFDEF UNICODE}
+        LogMessage := GetUnicodeString(FirstDbcIndex);
+        {$ELSE}
+        P := GetPWideChar(FirstDbcIndex, L);
+        LogMessage := UnicodeStringToASCII7(P, L);
+        {$ENDIF UNICODE}
+        ResetCurrentClientCodePage(LogMessage, True);
+        { keep the w-encoding infos alive, just identify the raw CP}
+        ConSettings.ClientCodePage.Encoding := ceUTF16;
+        ConSettings.ClientCodePage.ID := OCI_UTF16ID;
+      end;
+      Close;
+    end;
+  end;
 begin
   if not Closed then
      Exit;
@@ -454,7 +480,14 @@ begin
      Port := 1521;
 
   { Sets a client codepage. }
-  fcharset := ConSettings.ClientCodePage^.ID;
+  if ConSettings.ClientCodePage = nil then begin
+    FClientCodePage := Info.Values[ConnProps_CodePage];
+    if FClientCodePage <> '' then
+      CheckCharEncoding(FClientCodePage, True);
+  end;
+  if ConSettings.ClientCodePage = nil
+  then fcharset := 0
+  else fcharset := ConSettings.ClientCodePage^.ID;
   //EH: do NOT use OCI_CLIENT_NCHARSET_ID if OCI_CLIENT_CHARSET_ID is zero!!
   if fcharset = 0
   then ncharset := 0
@@ -566,6 +599,8 @@ begin
   inherited Open;
   if FCatalog <> '' then
     InternalSetCatalog(FCatalog);
+  if ConSettings.ClientCodePage.ID = OCI_UTF16ID then
+    GetRawCharacterSet;
 end;
 
 {**
@@ -1037,7 +1072,7 @@ begin
   end;
   try
     Status := FPlainDriver.OCIStmtExecute(FContextHandle,
-        Stmt, FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
+        Stmt, FErrorHandle, 1, 0, nil, nil, CommitMode[AutoCommit]);
     if Status <> OCI_SUCCESS then
       CheckOracleError(FPlainDriver, FErrorHandle, Status, LoggingCategory, {$IFNDEF UNICODE}R{$ELSE}SQL{$ENDIF}, ConSettings);
   finally

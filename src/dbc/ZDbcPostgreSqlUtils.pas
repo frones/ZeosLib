@@ -238,8 +238,8 @@ function PGMacAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 function PGInetAddr2Uni(Src: PAnsiChar; Dest: PWideChar): LengthInt;
 
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse4Bytes(P: Pointer); {$IF defined (FPC) and defined(INTEL_ASM)}assembler;{$IFEND}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
+procedure Reverse8Bytes(P: Pointer); {$IF defined (FPC) and defined(INTEL_ASM)}assembler;{$IFEND}{$IF defined(WITH_INLINE) and (defined(FPC) or not defined(MSWINDOWS))}inline;{$IFEND}
 {$ENDIF}
 
 //ported macros from array.h
@@ -889,9 +889,23 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse4Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse4Bytes(P: Pointer); {$IF defined(FPC) and defined(INTEL_ASM)}nostackframe; assembler;{$IFEND}
+{$IFDEF INTEL_ASM}
+asm
+  {$IFNDEF CPU64}
+  mov edx, [eax]
+  {$ELSE !CPU64}
+  mov edx, [rcx]
+  {$ENDIF CPU64}
+  bswap edx
+  {$IFNDEF CPU64}
+  mov [eax], edx
+  {$ELSE !CPU64}
+  mov [rcx], edx
+  {$ENDIF CPU64}
+end;
+{$ELSE INTEL_ASM}
 var C: Cardinal;
 begin
   {$R-}
@@ -900,10 +914,28 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   PCardinal(P)^ := C;
 end;
-{$ENDIF}
+{$ENDIF INTEL_ASM}
+{$ENDIF ENDIAN_BIG}
+
 
 {$IFNDEF ENDIAN_BIG}
-procedure Reverse8Bytes(P: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Reverse8Bytes(P: Pointer); {$IF defined(FPC) and defined(INTEL_ASM)}nostackframe; assembler;{$IFEND}
+{$IFDEF INTEL_ASM}
+asm
+  {$IFNDEF CPU64}
+  mov edx, [eax]
+  mov ecx, [eax+$04]
+  bswap edx
+  bswap ecx
+  mov [eax], ecx;
+  mov [eax+$04], edx;
+  {$ELSE CPU64}
+  mov rdx, [rcx]
+  bswap rdx
+  mov [rcx], rdx;
+  {$ENDIF CPU64}
+end;
+{$ELSE INTEL_ASM}
 {$IFNDEF CPU64}
 var C1, C2: Cardinal;
 {$ELSE}
@@ -926,6 +958,7 @@ begin
   {$ENDIF}
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
+{$ENDIF INTEL_ASM}
 {$ENDIF}
 
 {$IFDEF FPC} {$PUSH}
@@ -1613,7 +1646,7 @@ var
   Weight: SmallInt;
   pNibble, pLastNibble: PAnsiChar;
   HalfNibbles: Boolean; //fpc compare fails in all areas if not strict left padded
-label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3;
+label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3, jmpScale;
 begin
   FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
   {$IFNDEF ENDIAN_BIG}
@@ -1643,7 +1676,7 @@ ZeroBCD:
   pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
   if Weight < 0 then begin {save absolute Weight value to I }
     I := -Weight;
-    Inc(pNibble, (I - 1) * 2); //set new bcd nibble offset
+    Inc(pNibble, (I - 1) shl 1); //set new bcd nibble offset
     if pNibble > pLastNibble then //overflow -> raise AV ?
       goto ZeroBCD;
   end else
@@ -1678,6 +1711,9 @@ Final3: Digits := 3;
   end else if NBASEDigit > 9 then begin
     PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
 Final2: Digits := 2;
+  end else if (Weight = -1) and (NBASEDigitsCount = 1) then begin
+    PByte(pNibble+1)^ := Byte(NBASEDigit);
+    goto jmpScale;
   end else begin
     HalfNibbles := True;
     PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
@@ -1725,6 +1761,7 @@ Done:
       if (i and 1 = 0) then
         Dec(PLastNibble)
     end;
+jmpScale:
     if Scale > 0 then
       if Dst.SignSpecialPlaces = $80
       then Dst.SignSpecialPlaces := Scale or $80

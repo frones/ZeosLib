@@ -223,7 +223,11 @@ begin
         the first descriptor field is ignored
         also the ParamSQL MUST be given because we wanted to describe the inputparams (even if no types nor names are done)
         else the FMoreResuls indicator does not work properly }
-    if Assigned(FPlainDriver.dbpp_prepare_describe_12) then
+    if Assigned(FPlainDriver.dbpp_prepare_describe_16) then
+      FPlainDriver.dbpp_prepare_describe_16(DBHandle, nil, nil, @FStmtNum, Pointer(ASQL),
+        FResultSQLDA, FInParamSQLDA, SQL_PREPARE_DESCRIBE_STMTNUM +
+          SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0, 0)
+    else if Assigned(FPlainDriver.dbpp_prepare_describe_12) then
       FPlainDriver.dbpp_prepare_describe_12(DBHandle, nil, nil, @FStmtNum, Pointer(ASQL),
         FResultSQLDA, FInParamSQLDA, SQL_PREPARE_DESCRIBE_STMTNUM +
           SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0, 0)

@@ -147,7 +147,7 @@ type
     function Next: Boolean; reintroduce;
   end;
 
-  TZOracleCallableResultSet_A = Class(TZOracleAbstractResultSet_A, IZResultSet)
+  TZOracleCallableResultSet = Class(TZOracleAbstractResultSet_A, IZResultSet)
   private
     FFieldNames: TStringDynArray;
   public
@@ -683,7 +683,7 @@ end;
   a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the Length of the PAnsiChar String
+  @param Len the Length in bytes of the raw String
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
@@ -854,7 +854,7 @@ end;
   a <code>PWideChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the length of UCS2 string in codepoints
+  @param Len the length of UTF16 string in word count
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
@@ -2197,7 +2197,7 @@ var
     {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
   begin
     if P <> nil then
-      if FClientCP = zCP_UTF16 then begin
+      if ConSettings^.ClientCodePage.Encoding = ceUTF16 then begin
         Len := Len shr 1;
         {$IFDEF UNICODE}
         System.SetString(Result, PWideChar(P), Len)
@@ -2544,9 +2544,9 @@ Success:
   end;
 end;
 
-{ TZOracleCallableResultSet_A }
+{ TZOracleCallableResultSet }
 
-constructor TZOracleCallableResultSet_A.Create(const Statement: IZStatement;
+constructor TZOracleCallableResultSet.Create(const Statement: IZStatement;
   const SQL: string; StmtHandle: POCIStmt; ErrorHandle: POCIError;
   OraVariables: PZOCIParamBinds; {$IFDEF AUTOREFCOUNT}const{$ENDIF} BindList: TZBindList);
 var I, N: Integer;
@@ -2583,7 +2583,7 @@ begin
   LastRowNo := 1;
 end;
 
-function TZOracleCallableResultSet_A.Next: Boolean;
+function TZOracleCallableResultSet.Next: Boolean;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -2593,7 +2593,7 @@ begin
   Result := True;
 end;
 
-procedure TZOracleCallableResultSet_A.Open;
+procedure TZOracleCallableResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZOracleColumnInfo;
@@ -2622,10 +2622,12 @@ begin
       ColumnInfo.dty := CurrentVar^.dty;
       {Reset the column type which can be changed by user before}
       if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      begin
-        ColumnInfo.ColumnCodePage := FClientCP;
-      end else
-        ColumnInfo.ColumnCodePage := High(Word);
+        if ConSettings.ClientCodePage.Encoding = ceUTF16
+        then ColumnInfo.ColumnCodePage := zCP_UTF16
+        else ColumnInfo.ColumnCodePage := FClientCP
+      else if CurrentVar^.ColType in [stBytes, stBinaryStream]
+      then ColumnInfo.ColumnCodePage := zCP_Binary
+      else ColumnInfo.ColumnCodePage := High(Word);
 
       Precision := CurrentVar.Precision;
     end;

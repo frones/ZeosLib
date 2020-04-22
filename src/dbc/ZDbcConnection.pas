@@ -378,6 +378,7 @@ const
   cEmpty = '';
   cRollbackTran = 'ROLLBACK TRANSACTION ';
   cRollbackTo = 'ROLLBACK TO ';
+  cRollbackToSP = 'ROLLBACK TO SAVEPOINT ';
   cUnknown = '';
   //(*
   cSavePointSyntaxW: array[TZServerProvider, TZSavePointQueryType] of UnicodeString =
@@ -386,7 +387,7 @@ const
       ({spMSJet}      cUnknown,   cUnknown,   cUnknown),
       ({spOracle}     cSavePoint, cEmpty,     cRollbackTo),
       ({spASE}        cSaveTrans, cEmpty,     cRollbackTran),
-      ({spASA}        cSavePoint, cReleaseSP, cRollbackTo),
+      ({spASA}        cSavePoint, cReleaseSP, cRollbackToSP),
       ({spPostgreSQL} cSavePoint, cReleaseSP, cRollbackTo),
       ({spIB_FB}      cSavePoint, cReleaseSP, cRollbackTo),
       ({spMySQL}      cSavePoint, cReleaseSP, cRollbackTo),
@@ -404,7 +405,7 @@ const
       ({spMSJet}      cUnknown,   cUnknown,   cUnknown),
       ({spOracle}     cSavePoint, cEmpty,     cRollbackTo),
       ({spASE}        cSaveTrans, cEmpty,     cRollbackTran),
-      ({spASA}        cSavePoint, cReleaseSP, cRollbackTo),
+      ({spASA}        cSavePoint, cReleaseSP, cRollbackToSP),
       ({spPostgreSQL} cSavePoint, cReleaseSP, cRollbackTo),
       ({spIB_FB}      cSavePoint, cReleaseSP, cRollbackTo),
       ({spMySQL}      cSavePoint, cReleaseSP, cRollbackTo),

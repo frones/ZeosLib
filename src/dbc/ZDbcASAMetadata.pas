@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Types, Classes, SysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZDbcASA;
+  ZDbcConnection;
 
 type
 
@@ -206,7 +206,6 @@ type
   {** Implements ASA Database Metadata. }
   TZASADatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    FASAConnection: TZASAConnection;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
     function ConvertEscapes(const Pattern: String): String;
@@ -1238,7 +1237,6 @@ constructor TZASADatabaseMetadata.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL);
 begin
   inherited Create(Connection, Url);
-  FASAConnection := Connection as TZASAConnection;
 end;
 
 {**
