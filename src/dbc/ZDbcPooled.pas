@@ -56,7 +56,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} DateUtils, SysUtils,
-  ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
+  ZCompatibility, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
   ZMessages, ZVariant, ZDbcLogging;
 
 type

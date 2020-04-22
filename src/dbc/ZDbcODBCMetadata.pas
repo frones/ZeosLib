@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZDbcIntfs, ZDbcMetadata, ZURL,
+  ZDbcIntfs, ZDbcMetadata,
   ZCompatibility, ZDbcConnection, ZPlainODBCDriver, ZDbcODBCCon;
 
 type

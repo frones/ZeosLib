@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZTokenizer, ZGenericSqlAnalyser, ZDbcLogging,
-  ZURL, ZCompatibility, ZPlainODBCDriver, ZClasses;
+  ZCompatibility, ZPlainODBCDriver;
 
 
 type
@@ -181,7 +181,7 @@ uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
   ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZDbcProperties,
-  ZMessages, ZCollections {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  ZMessages {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 { TZODBCDriver }
 
@@ -459,6 +459,7 @@ end;
 {**
   Opens a connection to database server with specified parameters.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinal and pointers is not portable} {$ENDIF}
 procedure TZAbstractODBCConnection.Open;
 type
   TDriverNameAndServerProvider = record
@@ -588,6 +589,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Drops all changes made since the previous
