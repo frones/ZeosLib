@@ -117,9 +117,9 @@
   {$IFEND}
 
       {$IF FPC_FULLVERSION>=30200}
-	    {.$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //FPC has added QWord version in past but they can't determine the overload for our NativeUInt
-		{$DEFINE WITH_VAR_INIT_WARNING}
-		{§DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
+	{$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} 
+	{$DEFINE WITH_VAR_INIT_WARNING}
+	{§DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
       {$ENDIF}
 
   {$IFDEF LCL}
