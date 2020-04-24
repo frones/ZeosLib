@@ -7047,7 +7047,7 @@ end;
 
 function TryUniToBcd(const Value: ZWideString; var Bcd: TBcd; DecimalSep: Char): Boolean;
 begin
-  if Value <> ''
+  if Value = ''
   then Result := False
   else Result := TryUniToBcd(Pointer(Value), Length(Value), BCD, DecimalSep);
 end;
@@ -7166,7 +7166,7 @@ end;
 
 function TryRawToBcd(const Value: RawByteString; var Bcd: TBcd; DecimalSep: Char): Boolean; overload;
 begin
-  if Value <> EmptyRaw
+  if Value = EmptyRaw
   then Result := False
   else Result := TryRawToBcd(Pointer(Value), Length(Value), BCD, DecimalSep);
 end;
