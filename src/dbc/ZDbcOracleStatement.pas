@@ -590,8 +590,7 @@ end;
 {$IFDEF NEXTGEN}{$HINTS ON}{$ENDIF}//wrong hint OldSize assigned value is never used
 
 {**
-  prepares the statement on the server if minimum execution
-  count have been reached
+  prepares the statement on the server
 }
 procedure TZAbstractOracleStatement.Prepare;
 var
@@ -879,14 +878,14 @@ var Idx: Integer;
           if FExecStatement = nil then
             RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale)
           else begin
-            RegisterParameter(IDX,
+            Self.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
             FExecStatement.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
           end;
           Inc(IDX);
         end;
@@ -1358,6 +1357,7 @@ label bind_direct;
     Arr: TZArray;
   label write_lob;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}OraLobs := nil;{$ENDIF}
     SetLength(OraLobs, ArrayLen);
     Arr := PZArray(BindList[ParameterIndex].Value)^;
     Arr.VArray := Pointer(OraLobs);
@@ -1487,6 +1487,7 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
   var ClientStrings: TRawByteStringDynArray;
     var I: Integer;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}ClientStrings := nil;{$ENDIF}
     SetLength(ClientStrings, ArrayLen);
       for i := 0 to ArrayLen -1 do
          if (Pointer(TStringDynArray(Value)[I]) <> nil) then
@@ -2600,6 +2601,7 @@ var
 begin
   if (Length(FCachedQueryUni) = 0) and (SQL <> '') then begin
     Result := '';
+    {$IFDEF WITH_VAR_INIT_WARNING}Tmp := '';{$ENDIF}
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZUnicodeSQLStringWriter.Create(C);
@@ -2887,14 +2889,14 @@ var Idx: Integer;
           if FExecStatement = nil then
             RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale)
           else begin
             RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
             FExecStatement.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
           end;
           Inc(IDX);
         end;
@@ -2937,6 +2939,9 @@ initialization
 
 { RealPrepared stmts:
   http://www.postgresql.org/docs/9.1/static/sql-prepare.html }
+{$IFDEF WITH_VAR_INIT_WARNING}
+OraPreparableTokens := nil;
+{$ENDIF}
 SetLength(OraPreparableTokens, OCI_STMT_DECLARE);
 OraPreparableTokens[OCI_STMT_SELECT-1].MatchingGroup  := 'SELECT';
 OraPreparableTokens[OCI_STMT_UPDATE-1].MatchingGroup  := 'UPDATE';

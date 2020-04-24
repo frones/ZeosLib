@@ -78,6 +78,7 @@ type
     procedure TestCompTicket386;
     procedure TestAttachAndDetach;
     procedure TestTicket405;
+    procedure TestTicket405_Memory;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -202,9 +203,62 @@ begin
     // commit
     Connection.Commit; //thows an exception ?
     Check(Connection.Connected);
+    // start transaction again
+    CheckEquals(1, Connection.StartTransaction, 'the txn-level');
+    Connection.Commit; //thows an exception ?
   finally
     SQLProcessor.Free;
     Connection.ExecuteDirect('DROP TABLE IF EXISTS `station`')
+  end;
+end;
+
+{ See: https://sourceforge.net/p/zeoslib/tickets/405/
+  when executing a certain SQL script and committing the work,
+  Zeos will get an errror in SQLite when starting the next transaction. }
+procedure ZTestCompSQLiteBugReport.TestTicket405_Memory;
+var SQLProcessor: TZSQLProcessor;
+  DataBase: String;
+begin
+  DataBase := Connection.Database;
+  try
+    Connection.Database := ':memory:';
+    SQLProcessor := TZSQLProcessor.Create(nil);
+    SQLProcessor.Connection := Connection;
+    SQLProcessor.Delimiter := ';';
+    Connection.Connect;
+    Check(Connection.Connected);
+    try
+      SQLProcessor.Script.Text :=
+        'CREATE  TABLE IF NOT EXISTS `station` ('+LineEnding+
+        '  `sindex` INTEGER PRIMARY KEY,'+LineEnding+
+        '  `station_name` VARCHAR(50) NOT NULL,'+LineEnding+
+        '  `station_code` VARCHAR(50) UNIQUE NULL,'+LineEnding+
+        '  `sea_height` INT,'+LineEnding+
+        '  `time_shift` INT'+LineEnding+
+        ');'+LineEnding+
+        'CREATE TEMPORARY TABLE IF NOT EXISTS `bufer` ('+LineEnding+
+        '  `rowid` INTEGER PRIMARY KEY AUTOINCREMENT,'+LineEnding+
+        '  `station` INT NOT NULL,'+LineEnding+
+        '  `place` INT,'+LineEnding+
+        '  `lat` REAL,'+LineEnding+
+        '  `lon` REAL'+LineEnding+
+        ');';
+      // start transaction
+      Connection.StartTransaction;
+      // execute script
+      SQLProcessor.Execute;
+      // commit
+      Connection.Commit; //thows an exception ?
+      Check(Connection.Connected);
+      // start transaction again
+      CheckEquals(1, Connection.StartTransaction, 'the txn-level');
+      Connection.Commit; //thows an exception ?
+    finally
+      SQLProcessor.Free;
+      Connection.ExecuteDirect('DROP TABLE IF EXISTS `station`')
+    end;
+  finally
+    Connection.Database := DataBase;
   end;
 end;
 

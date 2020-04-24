@@ -807,13 +807,15 @@ begin
 end;
 
 {**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Blob</code> object
-  in the Java programming language.
+  Gets the address of value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> array in the Java programming language.
+  The bytes represent the raw values returned by the driver.
 
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
-    the specified column
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len return the length of the addressed buffer
+  @return the adressed column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
 }
 function TZInterbase6XSQLDAResultSet.GetBytes(ColumnIndex: Integer;
   out Len: NativeUInt): PByte;
@@ -996,6 +998,15 @@ begin
   Result := FIBConnection;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>currency</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
 function TZInterbase6XSQLDAResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 var
   P: PAnsiChar;

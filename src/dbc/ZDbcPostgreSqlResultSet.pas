@@ -1881,20 +1881,20 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>currency</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZPostgreSQLResultSet.GetConnection: IZPostgreSQLConnection;
 begin
   Result := FConnection;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>currency</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
 function TZPostgreSQLResultSet.GetCurrency(
   ColumnIndex: Integer): Currency;
 var P: PAnsiChar;

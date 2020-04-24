@@ -1701,6 +1701,10 @@ begin
     FPlainDriver.PQclear(Res);
 end;
 
+{**
+  prepares the statement on the server if minimum execution
+  count have been reached
+}
 procedure TZAbstractPostgreSQLPreparedStatementV3.Prepare;
 begin
   if fAsyncQueries then

@@ -1606,7 +1606,8 @@ begin
       if Len < BufSize then
         BufSize := Len;
     end;
-    PByte(Buf)^ := 0;
+    if AsStreamedType = stAsciiStream then
+      PByte(Buf)^ := 0;
   finally
     Stream.Free;
     Lob := nil;

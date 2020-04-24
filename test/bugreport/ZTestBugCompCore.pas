@@ -2340,7 +2340,7 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
-    if ProtocolType = protASA then //ASA has a limitation of 125chars for like statements
+    if ProtocolType in [protASA, protASACAPI] then //ASA has a limitation of 125chars for like statements
       Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ConSettings , 125),'%'''])
     else
       Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ConSettings),'%''']);

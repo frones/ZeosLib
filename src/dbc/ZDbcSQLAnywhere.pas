@@ -278,6 +278,9 @@ end;
 const
   cCommit: RawByteString = 'TRANSACTION COMMIT';
   cRollback: RawByteString = 'TRANSACTION ROLLBACK';
+  cAutoCommit: array[Boolean, Boolean] of RawByteString =(
+    ('SET OPTION chained=''On''', 'SET OPTION chained=''Off'''),
+    ('SET TEMPORARY OPTION AUTO_COMMIT=''Off''', 'SET TEMPORARY OPTION AUTO_COMMIT=''On'''));
 {**
   Makes all changes made since the previous
   commit/rollback permanent and releases any database locks
@@ -483,7 +486,8 @@ jmpInit:
       Fa_sqlany_interface_context := nil;
     end;
   end;
-  ExecuteImmediat(RawByteString('SET OPTION chained=''On'''), lcTransaction);
+  if Fapi_version>=SQLANY_API_VERSION_4 then
+    ExecuteImmediat(cAutoCommit[False][True], lcTransaction);
   if FClientCodePage = ''  then begin
     S := DetermineASACharSet;
     CheckCharEncoding(S);
@@ -491,7 +495,7 @@ jmpInit:
   if Ord(TransactIsolationLevel) > Ord(tiReadUncommitted) then
     ExecuteImmediat(SQLAnyTIL[TransactIsolationLevel], lcTransaction);
   if AutoCommit
-  then ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''On'''), lcTransaction)
+  then ExecuteImmediat(cAutoCommit[Fapi_version>=SQLANY_API_VERSION_4][True], lcTransaction)
   else begin
     AutoCommit := True;
     StartTransaction;
@@ -625,7 +629,7 @@ begin
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''On'''), lcTransaction);
+      ExecuteImmediat(cAutoCommit[Fapi_version>=SQLANY_API_VERSION_4][True], lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
@@ -665,7 +669,7 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''Off'''), lcTransaction);
+    ExecuteImmediat(RawByteString(cAutoCommit[Fapi_version>=SQLANY_API_VERSION_4][False]), lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin

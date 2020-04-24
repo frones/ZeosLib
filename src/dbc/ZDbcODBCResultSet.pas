@@ -1321,6 +1321,16 @@ begin
   end;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>TZTime</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+  value returned is <code>zero padded</code>
+  @exception SQLException if a database access error occurs
+}
 procedure TAbstractODBCResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
 var L: LengthInt;
 label Fill;
@@ -1379,6 +1389,16 @@ begin
 Fill: FillChar(Result, SizeOf(TZTime), #0);
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>TZTimestamp</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+  value returned is <code>zero</code>
+  @exception SQLException if a database access error occurs
+}
 procedure TAbstractODBCResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 var L: LengthInt;
 label Fill;

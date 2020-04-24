@@ -2512,7 +2512,7 @@ var
     Query.Fields[i].AsInteger := Value;
     // This has nothing to do with the test - Sybase and MSSQL just don't allow
     // setting bit fields to null. see create skripts
-    if ProtocolType in [protFreeTDS, protSybase, protMSSQL, protASA, protADO, protODBC, protOleDB]
+    if ProtocolType in [protASACAPI, protSybase, protMSSQL, protASA, protADO, protODBC, protOleDB]
     then Query.FieldByName('stBoolean').AsBoolean := true;
     Query.Post;
     CheckEquals(Value, Query.Fields[i].AsInteger);
@@ -2526,7 +2526,7 @@ var
     Query.Fields[i].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Value;
     // This has nothing to do with the test - Sybase and MSSQL just don't allow
     // setting bit fields to null. see create skripts
-    if ProtocolType in [protFreeTDS, protSybase, protMSSQL, protASA, protADO, protODBC, protOleDB]
+    if ProtocolType in [protSybase, protMSSQL, protASA, protASACAPI, protADO, protODBC, protOleDB]
     then Query.FieldByName('stBoolean').AsBoolean := true;
     Query.Post;
     // D7 calls _VarToInteger instead of _VarToInt64 if used directly in CheckEquals so we need temp variable

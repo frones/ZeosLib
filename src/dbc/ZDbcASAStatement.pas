@@ -259,8 +259,6 @@ begin
         ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
         { test if Outparams are available: }
         FHasOutParams := FResultSQLDA.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = DT_PROCEDURE_OUT;
-        //if FHasOutParams then
-          //FSQLData.InitFields;
       end;
     end;
     inherited Prepare

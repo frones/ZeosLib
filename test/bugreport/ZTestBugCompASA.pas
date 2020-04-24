@@ -85,7 +85,7 @@ uses
 
 function ZTestCompASABugReport.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9,ASA12';
+  Result := 'ASA,sqlany';
 end;
 
 procedure ZTestCompASABugReport.EmptyTest;

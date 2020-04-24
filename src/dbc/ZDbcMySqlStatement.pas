@@ -369,6 +369,10 @@ begin
   FResultSetIndex := -1;
 end;
 
+{**
+  prepares the statement on the server if minimum execution
+  count have been reached
+}
 procedure TZAbstractMySQLPreparedStatement.Prepare;
 begin
   FlushPendingResults;
@@ -378,6 +382,9 @@ begin
     InternalRealPrepare;
 end;
 
+{**
+  unprepares the statement, deallocates all bindings and handles
+}
 procedure TZAbstractMySQLPreparedStatement.Unprepare;
 var status: Integer;
   ParamCount: Integer;

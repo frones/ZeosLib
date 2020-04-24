@@ -675,7 +675,6 @@ begin
       {$ELSE}
       Check(Length(q.Fields[0].AsString) > 0, 'there are some bytes in queue');
       {$ENDIF}
-      //Write(Length(q.Fields[0].AsBytes), ' ', q.Fields[0].AsAnsiString, #10);
       (* expected output:
       5 apple
       6 banana

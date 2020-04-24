@@ -232,7 +232,7 @@ type
   /// <summary>
   /// Returns a description of the attributes of a data value. min version is V4
   /// </summary>
-  Ta_sqlany_data_valueV4up = packed record
+  Ta_sqlany_data_valueV4up = record
     /// <summary>
     /// A pointer to user supplied buffer of data.
     /// </summary>
@@ -469,7 +469,7 @@ type
   ///  Returns column metadata information.
   ///  sqlany_get_column_info() can be used to populate this structure.
   /// </summary>
-  Ta_sqlany_column_info = packed record
+  Ta_sqlany_column_info = record
     /// <summary>
     ///  The name of the column (null-terminated).
     ///  The string can be referenced as long as the result set object is not freed.
@@ -509,7 +509,7 @@ type
   ///  Returns column metadata information. min Version is V4
   ///  sqlany_get_column_info() can be used to populate this structure.
   /// </summary>
-  Ta_sqlany_column_infoV4up = packed record
+  Ta_sqlany_column_infoV4up = record
     /// <summary>
     ///  The name of the column (null-terminated).
     ///  The string can be referenced as long as the result set object is not freed.
@@ -567,7 +567,7 @@ type
   ///  Gets information about the currently bound parameters.
   ///  sqlany_get_bind_param_info() can be used to populate this structure.
   /// </summary>
-  Ta_sqlany_bind_param_info = packed record
+  Ta_sqlany_bind_param_info = record
     /// <summary>
     ///  A pointer to the name of the parameter.
     /// </summary>
@@ -587,7 +587,7 @@ type
   end;
   Pa_sqlany_bind_param_info = ^Ta_sqlany_bind_param_info;
 
-  Ta_sqlany_bind_param_infoV4up = packed record
+  Ta_sqlany_bind_param_infoV4up = record
     /// <summary>
     ///  A pointer to the name of the parameter.
     /// </summary>
@@ -628,7 +628,7 @@ type
   ///  sqlany_get_data_info() can be used to populate this structure with
   ///  information about what was last retrieved by a fetch operation.
   /// </summary>
-  Ta_sqlany_data_info = packed record
+  Ta_sqlany_data_info = record
     /// <summary>
     ///  The type of the data in the column.
     /// </summary>
@@ -1542,7 +1542,7 @@ end;
 
 function TZSQLAnywherePlainDriver.GetProtocol: string;
 begin
-  Result := 'sqlany';
+  Result := 'asa_capi';
 end;
 
 procedure TZSQLAnywherePlainDriver.LoadApi;

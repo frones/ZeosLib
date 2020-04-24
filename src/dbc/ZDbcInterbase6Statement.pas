@@ -512,6 +512,7 @@ var
   TypeItem: AnsiChar;
   Buffer: array[0..7] of AnsiChar;
   FinalChunkSize: Integer;
+  L: LengthInt;
 label jmpEB;
 
   procedure PrepareArrayStmt(var Slot: TZIBStmt);
@@ -550,8 +551,11 @@ begin
       if FPlainDriver.isc_dsql_allocate_statement(@FStatusVector, GetDBHandle, @FStmtHandle) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, ASQL);
       { Prepare an sql statement }
+      L := Length(ASQL);
+      if L > High(Word) then //test overflow
+        L := 0; //fall back to C-String behavior
       if FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
-          Length(ASQL), Pointer(ASQL), GetDialect, nil) <> 0 then
+          L, Pointer(ASQL), GetDialect, nil) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcPrepStmt, ASQL); //Check for disconnect AVZ
       { Set Statement Type }
       TypeItem := AnsiChar(isc_info_sql_stmt_type);

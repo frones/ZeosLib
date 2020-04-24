@@ -382,7 +382,7 @@ end;
 
 function TZASATestDbcMetadata.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9,ASA10,ASA11,ASA12';
+  Result := 'ASA,asa_capi';
 end;
 
 initialization
