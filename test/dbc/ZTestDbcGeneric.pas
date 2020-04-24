@@ -478,7 +478,7 @@ var RS: IZResultSet;
   C: Currency;
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
-    BCD_A, BCD_E: TBCD;
+    {BCD_A, BCD_E,} BCD: TBCD;
   begin
     S := RS.GetMetadata.GetColumnLabel(ColumnIndex);
     //firbird can't pass this tests -> missing precision in native RS but with metainformation it should be able to
