@@ -430,10 +430,10 @@ begin
     { Autocommit statement.
       EH: we've a chained mode only(deprecated by sybase)
       no idea if that's correct, it's alltime code}
-    if GetAutoCommit then begin
+    {if GetAutoCommit then begin
       FPlainDriver.dbpp_commit(Handle, 0);
       CheckASAError(FPlainDriver, Handle, lcTransaction, ConSettings);
-    end;
+    end;}
   end;
   { Logging SQL Command and values }
   inherited ExecuteUpdatePrepared;

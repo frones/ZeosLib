@@ -1253,7 +1253,7 @@ begin
         FFetchedMaxRowNo := Row+fetched_rows-1;
         if LastRowNo < FFetchedMaxRowNo then
           LastRowNo := FFetchedMaxRowNo;
-      end;
+      end else goto jmpErr;
     end else begin //align to buffer offsets
       Result := True;
       fetched_rows := Row-FFetchedMinRowNo;

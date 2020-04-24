@@ -1427,7 +1427,7 @@ end;
 }
 function TZAbstractDbcConnection.GetClientVersion: Integer;
 begin
- Result := 0;
+  Result := 0;
 end;
 
 {**
@@ -1440,7 +1440,7 @@ end;
 }
 function TZAbstractDbcConnection.GetHostVersion: Integer;
 begin
- Result := 0;
+  Result := 0;
 end;
 
 function TZAbstractDbcConnection.GetDescription: String;

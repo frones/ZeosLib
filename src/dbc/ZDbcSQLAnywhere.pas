@@ -487,7 +487,7 @@ jmpInit:
     end;
   end;
   if Fapi_version>=SQLANY_API_VERSION_4 then
-    ExecuteImmediat(cAutoCommit[False][True], lcTransaction);
+    ExecuteImmediat(cAutoCommit[False][False], lcTransaction);
   if FClientCodePage = ''  then begin
     S := DetermineASACharSet;
     CheckCharEncoding(S);
