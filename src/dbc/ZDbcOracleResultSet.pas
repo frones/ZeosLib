@@ -2492,28 +2492,32 @@ function TZOracleResultSet_A.Next: Boolean;
 var
   Status: Integer;
   FetchedRows: LongWord;
-label Success, dofetch;  //ugly but faster and no double code
+label Success;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
   Result := False;
   if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (FStmtHandle = nil) then
     Exit;
 
-  if RowNo = 0 then
-    goto dofetch
-  else if Integer(FCurrentRowBufIndex) < FMaxBufIndex then begin
+  if RowNo = 0 then begin//fetch Iteration count of rows
+    Status := FPlainDriver.OCIStmtExecute(FOCISvcCtx, FStmtHandle,
+      FErrorHandle, FIteration, 0, nil, nil, OCI_DEFAULT);
+    if Status = OCI_SUCCESS then begin
+      FMaxBufIndex := FIteration -1; //FFetchedRows is an index [0...?] / FIteration is Count 1...?
+      goto success; //skip next if's
+    end;
+  end else if Integer(FCurrentRowBufIndex) < FMaxBufIndex then begin
     Inc(FCurrentRowBufIndex);
     goto Success; //skip next if's
   end else if FMaxBufIndex+1 < FIteration then begin
     RowNo := RowNo + 1;
     Exit;
   end else begin //fetch Iteration count of rows
-dofetch:
     Status := FPlainDriver.OCIStmtFetch2(FStmtHandle, FErrorHandle,
       FIteration, OCI_FETCH_NEXT, 0, OCI_DEFAULT);
     FCurrentRowBufIndex := 0; //reset
     if Status = OCI_SUCCESS then begin
-      FMaxBufIndex := FIteration -1;  //FFetchedRows is an index [0...?] / FIteration is Count 1...?
+      FMaxBufIndex := FIteration -1;
       goto success;
     end;
   end;

@@ -988,8 +988,6 @@ begin
   if ConSettings.ClientCodePage.ID = OCI_UTF16ID
   then Result := TZOracleStatement_W.Create(Self, Info)
   else Result := TZOracleStatement_A.Create(Self, Info);
-
-  Result := TZOracleStatement_A.Create(Self, Info);
 end;
 
 function ZDbc2OCITxnMode(ReadOnly: Boolean; TIL: TZTransactIsolationLevel): TZOCITxnMode;
