@@ -837,7 +837,7 @@ var
     {$ELSE}
     R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
     {$ENDIF}
-    DPB := GenerateDPB(FPlainDriver, Info, ConSettings, CP);
+    DPB := GenerateDPB(Info, ConSettings, CP);
     P := Pointer(R);
     L := Min(SizeOf(DBName)-1, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
     if P <> nil then
@@ -1352,7 +1352,7 @@ begin
     if OverwritableParams[parAutoCommit] <> '' then
       Params.Insert(0, OverwritableParams[parAutoCommit]);
 
-    Result := BuildPB(FPlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams, ConSettings, FPB_CP);
+    Result := BuildPB(Params, isc_tpb_version3, TPBPrefix, TransactionParams, ConSettings, FPB_CP);
   finally
     FreeAndNil(Params);
   end;
