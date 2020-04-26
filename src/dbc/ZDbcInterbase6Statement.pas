@@ -551,11 +551,14 @@ begin
       if FPlainDriver.isc_dsql_allocate_statement(@FStatusVector, GetDBHandle, @FStmtHandle) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, ASQL);
       { Prepare an sql statement }
+      //get overlong string running:
+      //see request https://zeoslib.sourceforge.io/viewtopic.php?f=40&p=147689#p147689
+      //http://tracker.firebirdsql.org/browse/CORE-1117?focusedCommentId=31493&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_31493
       L := Length(ASQL);
-      if L > High(Word) then //test overflow
+      if L > High(Word) then //test word range overflow
         L := 0; //fall back to C-String behavior
       if FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
-          L, Pointer(ASQL), GetDialect, nil) <> 0 then
+          Word(L), Pointer(ASQL), GetDialect, nil) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcPrepStmt, ASQL); //Check for disconnect AVZ
       { Set Statement Type }
       TypeItem := AnsiChar(isc_info_sql_stmt_type);
