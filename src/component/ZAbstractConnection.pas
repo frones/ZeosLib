@@ -49,6 +49,14 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+(*
+ Constributors:
+  cipto,
+  mdeams (Mark Deams)
+  miab3
+  EgonHugeist and many others i'm not aware about
+*)
+
 unit ZAbstractConnection;
 
 interface
@@ -124,7 +132,6 @@ type
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FConnection: IZConnection;
     FDatasets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
-    // Modified by cipto 8/1/2007 1:44:22 PM
     FSequences: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
 
     FLoginPrompt: Boolean;
@@ -196,9 +203,7 @@ type
     procedure CloseAllDataSets;
     procedure UnregisterAllDataSets;
 
-    // Modified by cipto 8/1/2007 1:48:17 PM
     procedure CloseAllSequences;
-    ////////////////////////////////////////
 
     procedure Notification(AComponent: TComponent;
       Operation: TOperation); override;
@@ -206,7 +211,7 @@ type
 
     property StreamedConnected: Boolean read FStreamedConnected write FStreamedConnected;
 
-    procedure SetClientCodePage(Const Value: String); //Egonhugeist
+    procedure SetClientCodePage(Const Value: String);
     procedure ConnectionLost(var AError: EZSQLConnectionLost);
   public
     constructor Create(AOwner: TComponent); override;
@@ -231,10 +236,8 @@ type
     procedure UnregisterDataSet(DataSet: TDataset);
     function ExecuteDirect(const SQL: string): boolean; overload;
     function ExecuteDirect(const SQL: string; out RowsAffected: integer): boolean; overload;
-    // Modified by cipto 8/2/2007 10:16:50 AM
     procedure RegisterSequence(Sequence: TComponent);
     procedure UnregisterSequence(Sequence: TComponent);
-    ///////////////////////////////////////////////////
 
     procedure GetProtocolNames(List: TStrings);
     procedure GetCatalogNames(List: TStrings);
@@ -247,10 +250,6 @@ type
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
 
-    //EgonHugeist
-    function GetBinaryEscapeStringFromString(const BinaryString: RawByteString): String; overload;
-    function GetBinaryEscapeStringFromStream(const Stream: TStream): String; overload;
-    function GetBinaryEscapeStringFromFile(const FileName: String): String; overload;
     function GetURL: String;
 
     property InTransaction: Boolean read GetInTransaction;
@@ -323,9 +322,9 @@ type
 implementation
 
 uses ZMessages, ZAbstractRODataset, ZSysUtils,
-  {$IFNDEF TLIST_IS_DEPRECATED}ZClasses, {$ENDIF}ZDbcProperties,
-      // Modified by cipto 8/2/2007 10:00:22 AM
-      ZSequence, ZAbstractDataset, ZEncoding;
+  {$IFNDEF TLIST_IS_DEPRECATED}ZClasses, {$ENDIF}
+  ZDbcProperties, ZDbcLogging,
+  ZSequence, ZAbstractDataset, ZEncoding;
 
 var
   SqlHourGlassLock: Integer;
@@ -357,7 +356,6 @@ begin
   FConnection := nil;
   FUseMetadata := True;
   FDatasets := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  // Modified by cipto 8/1/2007 1:45:56 PM
   FSequences:= {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
@@ -372,10 +370,8 @@ begin
   UnregisterAllDataSets;
   FDatasets.Free;
   FURL.Free;
-  // Modified by cipto 8/1/2007 1:47:37 PM
   FSequences.Clear;
   FSequences.Free;
-  ////////////////////////////////////////
   inherited Destroy;
 end;
 
@@ -543,7 +539,7 @@ begin
   { check autoencodestrings }
   FAutoEncode := StrToBoolEx(Value.Values[ConnProps_AutoEncodeStrings]);
   if Connected then
-    DbcConnection.AutoEncodeStrings := FAutoEncode;
+    DbcConnection.GetConSettings.AutoEncode := FAutoEncode;
   if Value.Values[ConnProps_ControlsCP] <> '' then begin
     S := Value.Values[ConnProps_ControlsCP];
     if S = 'CP_UTF16' then
@@ -883,7 +879,6 @@ begin
           SetAutoCommit(FAutoCommit);
           SetReadOnly(FReadOnly);
           SetCatalog(FCatalog);
-         // SetAutoEncodeStrings(FAutoEncode);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
           Open;
@@ -938,7 +933,6 @@ begin
     try
       FConnection.SetOnConnectionLostErrorHandler(nil);
       CloseAllDataSets;
-      // Modified by cipto 8/2/2007 10:11:02 AM
       CloseAllSequences;
       FConnection.Close;
     finally
@@ -1441,84 +1435,6 @@ begin
   end;
 end;
 
-{**
-  EgonHugeist: Returns a EscapeState detectable String to inform the Tokenizer
-    to do no UTF8Encoding if neccessary
-  @param BinaryString Represents the BinaryString wich has to prepered
-  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Bytes)''~<|1023|<~
-}
-function TZAbstractConnection.GetBinaryEscapeStringFromString(const BinaryString: RawByteString): String;
-begin
-  CheckConnected;
-
-  if Assigned(FConnection) then
-    Result := FConnection.GetBinaryEscapeString(BinaryString);
-end;
-
-{**
-  EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
-    to do no UTF8Encoding if neccessary
-  @param Strem Represents the Stream wich has to prepered
-  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
-}
-function TZAbstractConnection.GetBinaryEscapeStringFromStream(const Stream: TStream): String;
-var
-  FBlobSize: Integer;
-  FBlobData: Pointer;
-  TempAnsi: RawByteString;
-begin
-  CheckConnected;
-
-  if Assigned(FConnection) then
-  begin
-    if Assigned(Stream) then
-    begin
-      FBlobSize := Stream.Size;
-      if FBlobSize > 0 then
-      begin
-        GetMem(FBlobData, FBlobSize);
-        Stream.Position := 0;
-        Stream.ReadBuffer(FBlobData^, FBlobSize);
-      end
-      else
-        FBlobData := nil;
-    end
-    else
-    begin
-      FBlobSize := -1;
-      FBlobData := nil;
-    end;
-    if (FBlobSize > 0) and Assigned(FBlobData) then
-      System.SetString(TempAnsi, PAnsiChar(FBlobData), FBlobSize)
-    else
-      TempAnsi := '';
-    if Assigned(FBlobData) then
-      FreeMem(FBlobData);
-
-    Result := FConnection.GetBinaryEscapeString(TempAnsi);
-  end;
-end;
-
-{**
-  EgonHugeist: Returns a BinaryState detectable String to inform the Tokenizer
-    to do no UTF8Encoding if neccessary
-  @param FileNaem Represents the File wich has to prepered
-  @Result: A Prepared String like '~<|1023|<~''Binary-data-string(1023 Char's)''~<|1023|<~
-}
-function TZAbstractConnection.GetBinaryEscapeStringFromFile(const FileName: String): String;
-var
-  FStream: TFileStream;
-begin
-  CheckConnected;
-
-  if FileExists(FileName) then
-  begin
-    FStream := TFileStream.Create(FileName, fmOpenRead);
-    Result := GetBinaryEscapeStringFromStream(FStream);
-    FreeAndNil(FStream);
-  end;
-end;
-
 function TZAbstractConnection.GetURL: String;
 begin
   Result := ConstructURL(FURL.UserName, FURL.Password);
@@ -1649,10 +1565,10 @@ end;
   Returns an indication if execution was succesfull.
 }
 function TZAbstractConnection.ExecuteDirect(const SQL: String): boolean;
-var
-  dummy : Integer;
 begin
-  result:= ExecuteDirect(SQL, dummy{%H-});
+  CheckConnected;
+  DbcConnection.ExecuteImmediat(SQL, lcExecute);
+  Result := True;
 end;
 
 {**

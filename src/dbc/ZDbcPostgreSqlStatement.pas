@@ -1175,27 +1175,27 @@ var
               end;
             end;
           zbtRawString, zbtUTF8String {$IFNDEF NEXTGEN}, zbtAnsiString{$ENDIF}: begin
-              Connection.GetEscapeString(PAnsiChar(BindValue.Value), Length(RawByteString(BindValue.Value)), Tmp);
+              FPostgreSQLConnection.GetEscapeString(PAnsiChar(BindValue.Value), Length(RawByteString(BindValue.Value)), Tmp);
               SQLWriter.AddText(Tmp, TmpSQL);
             end;
           zbtCharByRef: begin
-                          Connection.GetEscapeString(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, Tmp);
+                          FPostgreSQLConnection.GetEscapeString(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, Tmp);
                           SQLWriter.AddText(Tmp, TmpSQL);
                         end;
           zbtBinByRef:  begin
-                          Connection.GetBinaryEscapeString(PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len, Tmp);
+                          FPostgreSQLConnection.GetBinaryEscapeString(PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len, Tmp);
                           SQLWriter.AddText(Tmp, TmpSQL);
                         end;
           zbtGUID:      SQLWriter.AddGUID(PGUID(BindValue.Value)^, [guidWithBrackets, guidQuoted], TmpSQL);
           zbtBytes:     begin
-                          Connection.GetBinaryEscapeString(BindValue.Value, Length(TBytes(BindValue.Value)), Tmp);
+                          FPostgreSQLConnection.GetBinaryEscapeString(BindValue.Value, Length(TBytes(BindValue.Value)), Tmp);
                           SQLWriter.AddText(Tmp, TmpSQL);
                         end;
           zbtLob: begin
                     PA := IZBlob(BindValue.Value).GetBuffer(FrawTemp, L);
                     if BindValue.SQLType = stBinaryStream
-                    then Connection.GetBinaryEscapeString(PA, L, Tmp)
-                    else Connection.GetEscapeString(PA, L, Tmp);
+                    then FPostgreSQLConnection.GetBinaryEscapeString(PA, L, Tmp)
+                    else FPostgreSQLConnection.GetEscapeString(PA, L, Tmp);
                     SQLWriter.AddText(Tmp, TmpSQL);
                   end;
           zbtPointer: SQLWriter.AddOrd(Ord(BindValue.Value <> nil), TmpSQL);

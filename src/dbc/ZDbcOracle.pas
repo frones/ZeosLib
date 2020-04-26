@@ -169,8 +169,7 @@ type
   public
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
-    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
+    function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -1175,20 +1174,6 @@ begin
 end;
 
 function TZOracleConnection.GetBinaryEscapeString(const Value: TBytes): String;
-var
-  L: Integer;
-  P: PChar;
-begin
-  L := Length(Value);
-  SetLength(Result, L*2+2);
-  P := PChar(Result);
-  P^ := #39;
-  Inc(p);
-  ZBinToHex(PAnsiChar(Value), P, L);
-  (P+L)^ := #39;
-end;
-
-function TZOracleConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 var
   L: Integer;
   P: PChar;

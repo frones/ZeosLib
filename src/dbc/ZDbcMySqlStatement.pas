@@ -1191,7 +1191,7 @@ begin
     if FTokenMatchIndex <> -1
     then inherited BindBinary(Index, SQLType, Buf, Len)
     else CheckParameterIndex(Index);
-    Connection.GetBinaryEscapeString(Buf, Len, FEmulatedValues[Index])
+    FEmulatedValues[Index] := ZDbcUtils.GetSQLHexAnsiString(PAnsiChar(Buf), Len, False);
   end else begin
     CheckParameterIndex(Index);
     {$R-}
@@ -1424,8 +1424,8 @@ begin
   else if FEmulatedParams then begin
     P := Value.GetBuffer(FRawTemp, L);
     if SQLType = stBinaryStream
-    then Connection.GetBinaryEscapeString(P, L, FEmulatedValues[Index])
-    else Connection.GetEscapeString(P, L, FEmulatedValues[Index])
+    then FEmulatedValues[Index] := ZDbcUtils.GetSQLHexAnsiString(P, L, False)
+    else FMySQLConnection.GetEscapeString(P, L, FEmulatedValues[Index])
   end else begin
     FChunkedData := True;
     {$R-}
@@ -1454,7 +1454,7 @@ begin
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
     BindList.Put(Index, SQLType, Value, FClientCP); //localize
-    Connection.GetEscapeString(Pointer(Value), Len, FEmulatedValues[Index]);
+    FMySQLConnection.GetEscapeString(Pointer(Value), Len, FEmulatedValues[Index]);
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
@@ -1552,7 +1552,7 @@ begin
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
     BindList.Put(Index, SQLType, Buf, Len, FClientCP); //localize
-    Connection.GetEscapeString(Buf, Len, FEmulatedValues[Index]);
+    FMySQLConnection.GetEscapeString(Buf, Len, FEmulatedValues[Index]);
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
@@ -1690,7 +1690,7 @@ begin
     if FTokenMatchIndex <> -1
     then BindList.Put(Index, stBytes, Value, Len)
     else CheckParameterIndex(Index);
-    Connection.GetBinaryEscapeString(Value, Len, FEmulatedValues[Index])
+    FEmulatedValues[Index] := ZDbcUtils.GetSQLHexAnsiString(PAnsiChar(Value), Len, False);
   end else begin
     CheckParameterIndex(Index);
     {$R-}

@@ -120,22 +120,19 @@ type
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
-    FAutoEncodeStrings: Boolean;
     FUseMetadata: Boolean;
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload;
+
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     procedure DeregisterStatement(const Value: IZStatement);
     procedure RegisterStatement(const Value: IZStatement);
     procedure CheckCharEncoding(const CharSet: String;
       const DoArrange: Boolean = False);
-    function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetClientVariantManager: IZClientVariantManager;
-    function GetAutoEncodeStrings: Boolean; //EgonHugeist
-    procedure SetAutoEncodeStrings(const Value: Boolean);
     function CreateStatement: IZStatement;
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
@@ -183,17 +180,10 @@ type
 
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
 
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload;
-    function GetBinaryEscapeString(const Value: TBytes): String; overload;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload; virtual;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: ZWideString); overload; virtual;
+    function GetBinaryEscapeString(const Value: TBytes): String;
 
-    function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
-    function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: ZWideString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; out Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: ZWideString); overload;
+    function GetEscapeString(const Value: ZWideString): ZWideString; overload;
+    function GetEscapeString(const Value: RawByteString): RawByteString; overload;
 
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
@@ -735,29 +725,6 @@ begin
   FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
 end;
 
-
-{**
-  EgonHugeist: this is a compatibility-Option for exiting Applictions.
-    Zeos is now able to preprepare direct insered SQL-Statements.
-    Means do the UTF8-preparation if the CharacterSet was choosen.
-    So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
-  @result True if coAutoEncodeStrings was choosen in the TZAbstractConnection
-}
-function TZDbcPooledConnection.GetAutoEncodeStrings: Boolean;
-begin
-  Result := FAutoEncodeStrings;
-end;
-
-procedure TZDbcPooledConnection.SetAutoEncodeStrings(const Value: Boolean);
-begin
-  FAutoEncodeStrings := Value;
-end;
-
-function TZDbcPooledConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  Result := GetConnection.GetBinaryEscapeString(Value);
-end;
-
 function TZDbcPooledConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   Result := GetConnection.GetBinaryEscapeString(Value);
@@ -783,58 +750,9 @@ begin
   Result := @ConSettings;
 end;
 
-{**
-  Result 100% Compiler-Compatible
-  And sets it Result to ClientCodePage by calling the
-    PlainDriver.GetClientCodePageInformations function
-
-  @param ClientCharacterSet the CharacterSet which has to be checked
-  @result PZCodePage see ZCompatible.pas
-}
-function TZDbcPooledConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
-begin
-  Result := ConSettings^.ClientCodePage
-end;
-
 function TZDbcPooledConnection.GetClientVariantManager: IZClientVariantManager;
 begin
   Result := GetConnection.GetClientVariantManager;
-end;
-
-procedure TZDbcPooledConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; out Result: RawByteString);
-begin
-  GetConnection.GetBinaryEscapeString(Buf, Len, Result)
-end;
-
-procedure TZDbcPooledConnection.GetBinaryEscapeString(Buf: Pointer;
-  Len: LengthInt; out Result: ZWideString);
-begin
-  GetConnection.GetBinaryEscapeString(Buf, Len, Result)
-end;
-
-procedure TZDbcPooledConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  RawCP: Word; out Result: ZWideString);
-begin
-  GetConnection.GetEscapeString(Buf, Len, RawCP, Result)
-end;
-
-procedure TZDbcPooledConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;
-  out Result: RawByteString);
-begin
-  GetConnection.GetEscapeString(Buf, Len, Result)
-end;
-
-procedure TZDbcPooledConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  out Result: ZWideString);
-begin
-  GetConnection.GetEscapeString(Buf, Len, Result)
-end;
-
-procedure TZDbcPooledConnection.GetEscapeString(Buf: PWideChar; Len: LengthInt;
-  RawCP: Word; out Result: RawByteString);
-begin
-  GetConnection.GetEscapeString(Buf, Len, RawCP, Result)
 end;
 
 { TZDbcPooledConnectionDriver }

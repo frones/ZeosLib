@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -223,7 +223,6 @@ type
     function ConstructConnectionString: String;
     procedure Open; override;
 
-    function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetServerProvider: TZServerProvider; override;
 
@@ -489,7 +488,11 @@ begin
 end;
 
 {**
-   Commit current transaction
+  Makes all changes made since the previous
+  commit/rollback permanent and releases any database locks
+  currently held by the Connection. This method should be
+  used only when auto-commit mode has been disabled.
+  @see #setAutoCommit
 }
 procedure TZInterbase6Connection.Commit;
 begin
@@ -1241,16 +1244,6 @@ begin
   end;
 end;
 
-function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
-    if (Length(Value)*2+3) < 32*1024
-    then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
-    else raise Exception.Create('Binary data out of range! Use parameters!')
-  else raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
-end;
-
 const
   Tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
   tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
@@ -1382,10 +1375,8 @@ end;
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
-  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL then
-    if (Length(Value)*2+3) < 32*1024
-    then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
-    else raise Exception.Create('Binary data out of range! Use parameters!')
+  if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL
+  then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
   else raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
