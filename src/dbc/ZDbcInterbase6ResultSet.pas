@@ -2686,7 +2686,7 @@ begin
     Current := TZColumnInfo(TempColumns[i]);
     if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
       Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-1); // no streams 4 sqlite
-    if Current.ColumnType in [stBytes, stUnicodeStream] then
+    if Current.ColumnType in [stBytes, stBinaryStream] then
       Current.ColumnCodePage := zCP_Binary;
   end;
   inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
