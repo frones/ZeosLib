@@ -181,7 +181,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
 uses Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet,
+  ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet, ZDbcInterbase6Metadata,
   ZDbcResultSet, ZTokenizer;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -513,6 +513,7 @@ var
   Buffer: array[0..7] of AnsiChar;
   FinalChunkSize: Integer;
   L: LengthInt;
+  MaxLen: Integer;
 label jmpEB;
 
   procedure PrepareArrayStmt(var Slot: TZIBStmt);
@@ -555,8 +556,14 @@ begin
       //see request https://zeoslib.sourceforge.io/viewtopic.php?f=40&p=147689#p147689
       //http://tracker.firebirdsql.org/browse/CORE-1117?focusedCommentId=31493&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_31493
       L := Length(ASQL);
-      if L > High(Word) then //test word range overflow
+      if L > High(Word) then begin//test word range overflow
+        if ZFastCode.Pos(#0, ASQL) > 0 then
+          raise EZSQLException.Create('Statements longer than 64KB may not contain the #0 character.');
+        MaxLen := GetConnection.GetMetadata.GetDatabaseInfo.GetMaxStatementLength;
+        if L > MaxLen then
+          raise Exception.Create('Statements longer than ' + ZFastCode.IntToStr(MaxLen) + ' bytes are not supported by your database.');
         L := 0; //fall back to C-String behavior
+      end;
       if FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
           Word(L), Pointer(ASQL), GetDialect, nil) <> 0 then
         CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcPrepStmt, ASQL); //Check for disconnect AVZ

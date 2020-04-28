@@ -620,11 +620,26 @@ end;
 
 procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
   ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory);
+var
+  SqlLen: Word;
+  MaxLen: Integer;
 begin
   if SQL = '' then
     Exit;
+
+  // support for statements longer than 64KB
+  SqlLen := Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  if SqlLen > High(Word) then begin//test word range overflow
+    if ZFastCode.Pos(#0, SQL) > 0 then
+      raise EZSQLException.Create('Statements longer than 64KB may not contain the #0 character.');
+    MaxLen := GetMetadata.GetDatabaseInfo.GetMaxStatementLength;
+    if SqlLen > MaxLen then
+      raise Exception.Create('Statements longer than ' + ZFastCode.IntToStr(MaxLen) + ' bytes are not supported by your database.');
+    SqlLen := 0; //fall back to C-String behavior
+  end;
+
   if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle,
-      ISC_TR_HANDLE, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF},
+      ISC_TR_HANDLE, SqlLen,
       Pointer(SQL), GetDialect, nil) <> 0 then
     CheckInterbase6Error(FPlainDriver, FStatusVector, Self, LoggingCategory);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
