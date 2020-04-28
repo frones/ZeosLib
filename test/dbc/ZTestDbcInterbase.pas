@@ -883,8 +883,10 @@ var
 
   SQL: String;
   Ctr: Integer;
+  MinLen: Integer;
 begin
-  if Connection.GetMetadata.GetDatabaseInfo.GetMaxStatementLength > High(Word) then begin
+  MinLen := Integer(High(Word)) + 1;
+  if Connection.GetMetadata.GetDatabaseInfo.GetMaxStatementLength > MinLen then begin
     Statement := Connection.CreateStatement;
     CheckNotNull(Statement, 'Couldn''t get a valid statement.');
     Statement.SetResultSetType(rtScrollInsensitive);
@@ -893,7 +895,7 @@ begin
     //Build SQL:
     Ctr := FirstDbcIndex + 1;
     SQL := 'select cast(' + IntToStr(FirstDbcIndex) + ' as integer) as Field' + IntToStr(FirstDbcIndex);
-    while Length(SQL) < High(Word) do begin
+    while Length(SQL) < MinLen do begin
       SQL := SQL + ', cast(' + IntToStr(Ctr) + ' as integer) as Field' + IntToStr(Ctr);
       Inc(Ctr);
     end;
