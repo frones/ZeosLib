@@ -120,6 +120,7 @@ type
     procedure TestProcAbtest_WithParamCheck;
     procedure TestProcAbtest_WithoutParamCheck;
     procedure TestTicket304;
+    procedure TestBigIntError;
   end;
 
 implementation
@@ -2123,6 +2124,30 @@ begin
     CheckEquals('xxxxxxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
   finally
     Query.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestBigIntError;
+var
+  Query: TZQuery;
+  SQL: String;
+begin
+  Query := CreateQuery;
+  try
+    Query.Connection.Connect;
+    Query.Connection.ExecuteDirect('insert into biginterror values (18446744073709551615)');
+
+    Query.SQL.Text := 'SELECT * FROM biginterror';
+    Query.Open;
+    try
+      writeln(Query.Fields[0].AsString);
+      Query.Refresh; // Range check error pops up here
+    Finally
+      Query.Connection.Disconnect;
+      Query.Close;
+    End;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
