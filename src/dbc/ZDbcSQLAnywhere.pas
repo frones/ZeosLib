@@ -461,14 +461,14 @@ jmpInit:
           {$ELSE UNICODE}
           SQLStringWriter.AddText(ConParams[i][0], ConStr);
           {$ENDIF UNICODE}
-          SQLStringWriter.AddChar('=', ConStr);
+          SQLStringWriter.AddChar(AnsiChar('='), ConStr);
           {$IFDEF UNICODE}
           R := ZUnicodeToRaw(S, ZOSCodePage);
           SQLStringWriter.AddText(R, ConStr);
           {$ELSE}
           SQLStringWriter.AddText(S, ConStr);
           {$ENDIF}
-          SQLStringWriter.AddChar(';', ConStr);
+          SQLStringWriter.AddChar(AnsiChar(';'), ConStr);
           Break;
         end;
       end;

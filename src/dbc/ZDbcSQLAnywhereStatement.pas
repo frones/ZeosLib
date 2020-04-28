@@ -873,7 +873,7 @@ begin
                 stAsciiStream: SQLWriter.AddText('(CLOB)', Result);
                 stUnicodeStream: SQLWriter.AddText('(NCLOB)', Result);
                 stCurrency, stBigDecimal: SQLWriter.AddText(Bind.value.buffer, Bind.value.length^, Result);
-                else SQLWriter.AddTextQuoted(Bind.value.buffer, Bind.value.length^, #39, Result);
+                else SQLWriter.AddTextQuoted(Bind.value.buffer, Bind.value.length^, AnsiChar(#39), Result);
               end;
     A_DOUBLE: if Bind.value.buffer_size = SizeOf(Double)
               then SQLWriter.AddFloat(PDouble(Bind.value.buffer)^, Result)

@@ -116,8 +116,6 @@ type
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
 
-    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-
     procedure Open; override;
     procedure Commit;
     procedure Rollback;
@@ -501,11 +499,6 @@ begin
   finally
     DBProperties := nil;
   end;
-end;
-
-function TZOleDBConnection.GetBinaryEscapeString(const Value: TBytes): String;
-begin
-  Result := GetSQLHexString(Pointer(Value), Length(Value), True);
 end;
 
 {**

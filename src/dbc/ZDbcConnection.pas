@@ -113,7 +113,6 @@ type
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
     fRegisteredStatements: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //weak reference to pending stmts
-    fWeakReferenceOfSelfInterface: Pointer;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -126,6 +125,7 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    fWeakReferenceOfSelfInterface: Pointer;
     FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
     FChunkSize: Integer; //indicates reading / writing lobs in Chunks of x Byte
@@ -134,6 +134,7 @@ type
     {$IFDEF ZEOS_TEST_ONLY}
     FTestMode: Byte;
     {$ENDIF}
+    procedure BeforeUrlAssign; virtual;
     procedure InternalCreate; virtual; abstract;
     procedure InternalClose; virtual; abstract;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; virtual;
@@ -907,6 +908,16 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+procedure TZAbstractDbcConnection.AfterConstruction;
+var iCon: IZConnection;
+begin
+  if QueryInterface(IZConnection, ICon) = S_OK then begin
+    fWeakReferenceOfSelfInterface := Pointer(iCon);
+    iCon := nil;
+  end;
+  inherited AfterConstruction;
+end;
+
 {**
   EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
     Not supported means if there is a possible String-DataLoss.
@@ -918,16 +929,6 @@ end;
     default. This means it ignores the choosen Client-CharacterSet and sets a
     "more" Zeos-Compatible Client-CharacterSet if known.
 }
-procedure TZAbstractDbcConnection.AfterConstruction;
-var iCon: IZConnection;
-begin
-  if QueryInterface(IZConnection, ICon) = S_OK then begin
-    fWeakReferenceOfSelfInterface := Pointer(iCon);
-    iCon := nil;
-  end;
-  inherited AfterConstruction;
-end;
-
 procedure TZAbstractDbcConnection.CheckCharEncoding(const CharSet: String;
   const DoArrange: Boolean = False);
 begin
@@ -987,6 +988,7 @@ begin
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
   fRegisteredStatements := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  BeforeUrlAssign;
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
@@ -1298,6 +1300,11 @@ begin
       IZStatement(fRegisteredStatements[i]).Close;
     //except end;
   end;
+end;
+
+procedure TZAbstractDbcConnection.BeforeUrlAssign;
+begin
+  //dummy
 end;
 
 {**
