@@ -46,7 +46,7 @@
 {$DEFINE ZEOS73UP}
 
 {$IF (defined(FPC) and (defined(CPU386) or defined(CPUX86_64))) or defined(MSWINDOWS)}
-  {$DEFINE INTEL_ASM} //allow intel syntax assembler
+  {.$DEFINE INTEL_ASM} //allow intel syntax assembler
 {$IFEND}
 
 // Uncomment these defines to disable some DB drivers (reduce binary size)
@@ -55,6 +55,7 @@
 {.$DEFINE ZEOS_DISABLE_DBLIB}
 {.$DEFINE ZEOS_DISABLE_ADO}
 {.$DEFINE ZEOS_DISABLE_INTERBASE}
+{.$DEFINE ZEOS_DISABLE_FIREBIRD}
 {.$DEFINE ZEOS_DISABLE_SQLITE}
 {.$DEFINE ZEOS_DISABLE_ORACLE}
 {.$DEFINE ZEOS_DISABLE_ASA}
@@ -467,6 +468,16 @@
 {$IFNDEF ZEOS_DISABLE_INTERBASE}
 {$DEFINE ENABLE_INTERBASE}
 {$ENDIF}
+
+// Enables Firebird support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_FIREBIRD}
+{$DEFINE ENABLE_FIREBIRD}
+{$ENDIF}
+
+{$IF defined(ZEOS_DISABLE_FIREBIRD) and defined(ZEOS_DISABLE_INTERBASE)}
+{$DEFINE DISABLE_INTERBASE_AND_FIREBIRD}
+{$IFEND}
+
 
 // Enables SQLite support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_SQLITE}
