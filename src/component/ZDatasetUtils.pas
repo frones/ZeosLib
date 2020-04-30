@@ -664,12 +664,13 @@ procedure RetrieveDataFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   const ResultSet: IZResultSet; const ResultValues: TZVariantDynArray);
 var
   I, ColumnIndex: Integer;
+  Metadata: IZResultSetMetaData;
 begin
+  Metadata := ResultSet.GetMetadata;
   for I := 0 to High(FieldRefs) do
   begin
     ColumnIndex := TField(FieldRefs[I]).FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
-    if ColumnIndex >= 0 then
-    begin
+    if ColumnIndex >= 0 then begin
       case TField(FieldRefs[I]).DataType of
         ftString:
           ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
@@ -686,8 +687,12 @@ begin
                     InitializeVariant(ResultValues[I], vtBigDecimal);
                     ResultSet.GetBigDecimal(ColumnIndex, ResultValues[I].VBigDecimal);
                   end;
-        {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
-          ResultValues[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
+        {$IFDEF WITH_FTLONGWORD}ftLongword:
+          ResultValues[I] := EncodeUInteger(ResultSet.GetULong(ColumnIndex));
+        {$ENDIF}
+        ftLargeInt: if Metadata.GetColumnType(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) = stULong
+          then ResultValues[I] := EncodeUInteger(ResultSet.GetULong(ColumnIndex))
+          else ResultValues[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftDate, ftTime, ftDateTime:
           ResultValues[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
         ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
