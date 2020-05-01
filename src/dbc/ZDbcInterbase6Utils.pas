@@ -114,7 +114,7 @@ type
     pvtString    // raw byte string
   );
 
-  { Paparameter string name and it value}
+  { Paparameter string name and it's value}
   TZIbParam = record
     Name: String;
     ValueType: TZIbParamValueType;
@@ -1880,7 +1880,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   InitialStatementType: TZIbSqlStatementType;
   const XSQLDAMaxSize: Cardinal): RawByteString;
 var
-  IndexName, ArrayName: RawByteString;
+  IndexName, ArrayName, Tmp: RawByteString;
   ParamIndex, J: Cardinal;
   I, BindCount, ParamNameLen, SingleStmtLength, LastStmLen,
   HeaderLen, FullHeaderLen, StmtLength:  Integer;
@@ -1933,19 +1933,23 @@ begin
         SQL_LONG:
           if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
             AddParam([' INTEGER=?'],TypeTokens[ParamIndex])
-          else
+          else begin
+            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
             if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(9,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'], TypeTokens[ParamIndex])
+              AddParam([' NUMERIC(9,', Tmp,')=?'], TypeTokens[ParamIndex])
             else
-              AddParam([' DECIMAL(9', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)), ',', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex]);
+              AddParam([' DECIMAL(9,', Tmp,')=?'],TypeTokens[ParamIndex]);
+          end;
         SQL_SHORT:
           if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
             AddParam([' SMALLINT=?'],TypeTokens[ParamIndex])
-          else
+          else begin
+            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
             if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(4,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex])
+              AddParam([' NUMERIC(4,', Tmp,')=?'],TypeTokens[ParamIndex])
             else
-              AddParam([' DECIMAL(4', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)), ',', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex]);
+              AddParam([' DECIMAL(4,', Tmp,')=?'],TypeTokens[ParamIndex]);
+          end;
         SQL_TIMESTAMP:
            AddParam([' TIMESTAMP=?'],TypeTokens[ParamIndex]);
         SQL_BLOB:
@@ -1962,11 +1966,13 @@ begin
         SQL_INT64: // IB7
           if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
             AddParam([' BIGINT=?'],TypeTokens[ParamIndex])
-          else
+          else begin
+            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
             if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(18,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex])
+              AddParam([' NUMERIC(18,', Tmp,')=?'],TypeTokens[ParamIndex])
             else
-              AddParam([' DECIMAL(18,', IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex)),')=?'],TypeTokens[ParamIndex]);
+              AddParam([' DECIMAL(18,', Tmp,')=?'],TypeTokens[ParamIndex]);
+          end;
         SQL_BOOLEAN, SQL_BOOLEAN_FB{FB30}:
            AddParam([' BOOLEAN=?'],TypeTokens[ParamIndex]);
         SQL_NULL{FB25}:
@@ -2181,5 +2187,6 @@ finalize:
   end;
 end;
 
-{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
+initialization
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 end.
