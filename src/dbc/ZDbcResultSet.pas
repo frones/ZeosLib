@@ -83,10 +83,10 @@ type
     FColumnsInfo: TObjectList;
     FMetadata: TContainedObject;
     FStatement: IZStatement;
+  protected
     FWeakIntfPtrOfSelf: Pointer; //EH: Remainder for dereferencing on stmt
     //note: while in destruction IZResultSet(Self) has no longer the same pointer address!
     //so we mark the address in constructor
-  protected
     FRowNo: Integer;
     FRawTemp: RawByteString;
     FUniTemp: UnicodeString;
