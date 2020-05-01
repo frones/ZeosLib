@@ -280,7 +280,7 @@ begin
     @dbpp_describe_cursor   := GetAddress('dbpp_describe_cursor');
     @dbpp_prepare_describe_16  := GetAddress('dbpp_prepare_describe_16');
     @dbpp_prepare_describe_12  := GetAddress('dbpp_prepare_describe_12');
-    @dbpp_prepare_describe  := GetAddress('dbpp_prepare_describe', not Assigned(dbpp_prepare_describe_16) or not not Assigned(dbpp_prepare_describe_12));
+    @dbpp_prepare_describe  := GetAddress('dbpp_prepare_describe', not Assigned(dbpp_prepare_describe_16) and not Assigned(dbpp_prepare_describe_12));
     @dbpp_select            := GetAddress('dbpp_select');
     @dbpp_open              := GetAddress('dbpp_open', True);
     @dbpp_close             := GetAddress('dbpp_close');

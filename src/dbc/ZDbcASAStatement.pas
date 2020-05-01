@@ -909,6 +909,9 @@ begin
   PWord(SQLVAR.sqlData)^ := Value;
 end;
 
+{**
+  Removes eventual structures for binding input parameters.
+}
 procedure TZASAPreparedStatement.UnPrepareInParameters;
 begin
   inherited;
