@@ -2781,7 +2781,7 @@ begin
             end;
           ftDate: begin
                     FResultSet.GetDate(ColumnIndex, D);
-                    FResultSet.WasNull;
+                    Result := FResultSet.WasNull;
                     goto jmpMovDate;
                   end;
           { Processes DateTime fields. }
