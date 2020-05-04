@@ -53,12 +53,14 @@ unit ZDbcFirebird;
 
 interface
 
+{$I ZDbc.inc}
+
 {$IFNDEF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
-  ZTokenizer, ZGenericSqlAnalyser, ZClasses, ZCollections, ZDbcFirebirdInterbase,
+  ZGenericSqlAnalyser, ZClasses, ZDbcFirebirdInterbase,
   Firebird;
 
 type
@@ -91,6 +93,7 @@ type
     FTransaction: ITransaction;
   protected
     function TxnIsStarted: Boolean; override;
+    function TestCachedResultsAndForceFetchAll: Boolean; override;
   public { implement ITransaction}
     procedure Commit;
     procedure Rollback;
@@ -146,7 +149,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 
 uses ZFastCode, ZDbcFirebirdStatement, ZDbcInterbaseFirebirdMetadata, ZEncoding,
-  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata, ZMessages,
+  ZDbcMetadata, ZMessages,
   ZDbcProperties, Math
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES},System.Types{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -680,6 +683,23 @@ begin
     Result := FSavePoints.Add(S)+2;
   end;
   FExplicitTransactionCounter := Result;
+end;
+
+function TZFireBirdTransaction.TestCachedResultsAndForceFetchAll: Boolean;
+var I, RowNo: Integer;
+  P: Pointer;
+begin
+  Result := False;
+  for I := 0 to FOpenCursors.Count -1 do
+    if IZResultSet(FOpenCursors[i]).GetConcurrency <> rcUpdatable then
+      Exit;
+  Result := True;
+  while FOpenCursors.Count > 0 do begin
+    P := FOpenCursors[FOpenCursors.Count-1];
+    RowNo := IZResultSet(P).GetRow;
+    IZResultSet(P).Last; //now the pointer will be removed from the open cursor list
+    IZResultSet(P).MoveAbsolute(RowNo); //restore current position
+  end;
 end;
 
 function TZFireBirdTransaction.TxnIsStarted: Boolean;

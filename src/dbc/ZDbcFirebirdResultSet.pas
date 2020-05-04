@@ -133,7 +133,7 @@ type
 
   TZFirebirdLob = class;
 
-  {** EH: implements a sequential Firebird large object stream }
+  {** EH: implements a Firebird large object stream }
   TZFirebirdLobStream = class(TZImmediatelyReleasableLobStream, IImmediatelyReleasable)
   private
     FPlainDriver: TZInterbaseFirebirdPlainDriver;
@@ -364,7 +364,7 @@ end;
   Opens this recordset.
 }
 procedure TZAbstractFirebirdResultSet.Open;
-var I, Len: Cardinal;
+var I, Len, OffSet: Cardinal;
   CP_ID: Word;
   ColumnInfo: TZInterbaseFirebirdColumnInfo;
   P: PAnsiChar;
@@ -377,6 +377,7 @@ begin
   if FDataBuffer = nil then begin
     Len := FMessageMetadata.getMessageLength(FStatus);
     GetMem(FDataBuffer, Len);
+    FillChar(FDataBuffer^, Len, #0);
   end;
   ColumnsInfo.Capacity := I;
   for i := 0 to I -1 do begin
@@ -387,9 +388,6 @@ begin
     ColumnInfo := TZInterbaseFirebirdColumnInfo.Create;
     ColumnsInfo.Add(ColumnInfo);
     with ColumnInfo do begin
-      sqltype := FMessageMetadata.getType(FStatus, I);
-      sqlsubtype := FMessageMetadata.getSubType(FStatus, I);
-      sqlscale := FMessageMetadata.getScale(FStatus, I);
       P := FMessageMetadata.getRelation(FStatus, I);
       Len := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
@@ -419,14 +417,22 @@ begin
       Len := FMessageMetadata.getLength(FStatus, I);
       sqlscale := FMessageMetadata.getScale(FStatus, I);
       Scale := -sqlscale;
-      ColumnType := ConvertIB_FBType2SQLType(sqltype, sqlsubtype, sqlscale);
+      if (sqltype = SQL_TEXT) or (sqltype = SQL_VARYING) then begin //SQL_BLOB
+        CP_ID := Word(FMessageMetadata.getCharSet(FStatus, I)) and 255;
+        ColumnType := ConvertIB_FBType2SQLType(sqltype, CP_ID, sqlscale);
+      end else
+        ColumnType := ConvertIB_FBType2SQLType(sqltype, sqlsubtype, sqlscale);
       if FGUIDProps.ColumnIsGUID(ColumnType, len, ColumnName) then
         ColumnType := stGUID;
       if FMessageMetadata.isNullable(FStatus, I) then begin
-        sqlind := PISC_SHORT(PAnsiChar(FDataBuffer)+FMessageMetadata.getNullOffset(FStatus, I));
+        OffSet := FMessageMetadata.getNullOffset(FStatus, I);
+        sqlind := PISC_SHORT(PAnsiChar(FDataBuffer)+OffSet);
         Nullable := ntNullable;
       end;
-      sqldata := PAnsiChar(FDataBuffer)+FMessageMetadata.getOffset(FStatus, I);
+      OffSet := FMessageMetadata.getOffset(FStatus, I);
+      sqldata := PAnsiChar(FDataBuffer)+OffSet;
+      if sqlind = sqldata then
+        sqlind := nil;
       case ColumnType of
         stString: begin
             //see test Bug#886194, we retrieve 565 as CP... the modula returns the FBID of CP
@@ -455,7 +461,7 @@ begin
               else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP_ID);
               ColumnCodePage := ZCodePageInfo.CP;
             end else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-        stBytes: begin
+        stBytes, stGUID: begin
             ColumnCodePage := zCP_Binary;
             goto jmpLen;
           end;
@@ -744,6 +750,15 @@ begin
         if LastRowNo < RowNo then
           LastRowNo := RowNo;
         RowNo := RowNo +1; //set AfterLast
+        if GetType = rtForwardOnly then begin
+          FResultSet.Close(FStatus); //dereister cursor from Txn
+          if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+            FFBConnection.HandleError(FStatus, 'IResultSet.close', Self, lcOther);
+          FResultSet.release;
+          FResultSet := nil;
+          if (FFBTransaction <> nil) then
+            DeRegisterCursor;
+        end;
       end else
         FFBConnection.HandleError(FStatus, 'IResultSet.fetchNext', Self, lcExecute);
     end else begin
@@ -1052,12 +1067,12 @@ begin
         FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
       case Status of
         IStatus.RESULT_OK, IStatus.RESULT_SEGMENT: begin
-            Inc(Result, BytesRead);
+            Inc(Result, Integer(BytesRead));
             Dec(Count, BytesRead);
             Inc(PBuf, BytesRead);
           end;
         IStatus.RESULT_NO_DATA: begin
-           Inc(Result, BytesRead);
+           Inc(Result, Integer(BytesRead));
            Break;
           end
         else FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.getSegment', Self, lcOther);

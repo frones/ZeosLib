@@ -53,6 +53,8 @@ unit ZDbcFirebirdInterbase;
 
 interface
 
+{$I ZDbc.inc}
+
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses
@@ -66,8 +68,9 @@ uses
   ZDbcGenericResolver, ZDbcResultSetMetadata, ZDbcCachedResultSet,
   ZPlainFirebirdInterbaseConstants, ZPlainFirebirdInterbaseDriver,
   ZDbcResultSet;
+
 type
-  {** Implements Interbase or Firebird Database Driver. }
+  {** Implements Interbase or Firebird Database Driver }
   TZInterbaseFirebirdDriver = class(TZAbstractDriver)
   public
     function GetTokenizer: IZTokenizer; override;
@@ -176,9 +179,9 @@ type
     FTPB: RawByteString;
     FExplicitTransactionCounter: Integer;
     {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZInterbaseFirebirdConnection;
-    function TestCachedResultsAndForceFetchAll: Boolean;
   protected
     function TxnIsStarted: Boolean; virtual; abstract;
+    function TestCachedResultsAndForceFetchAll: Boolean; virtual; abstract;
   public { IZInterbaseFirebirdTransaction }
     procedure CloseTransaction;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
@@ -1064,23 +1067,6 @@ begin
     if Supports(IZBlob(FOpenUncachedLobs[i]), IImmediatelyReleasable, ImmediatelyReleasable) and
        (Sender <> ImmediatelyReleasable) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
-end;
-
-function TZInterbaseFirebirdTransaction.TestCachedResultsAndForceFetchAll: Boolean;
-var I, RowNo: Integer;
-  P: Pointer;
-begin
-  Result := False;
-  for I := 0 to FOpenCursors.Count -1 do
-    if IZResultSet(FOpenCursors[i]).GetType = rtForwardOnly then
-      Exit;
-  Result := True;
-  while FOpenCursors.Count > 0 do begin
-    P := FOpenCursors[FOpenCursors.Count-1];
-    RowNo := IZResultSet(P).GetRow;
-    IZResultSet(P).Last; //now the pointer will be removed from the open cursor list
-    IZResultSet(P).MoveAbsolute(RowNo); //restore current position
-  end;
 end;
 
 { TZInterbaseFirebirdSequence }

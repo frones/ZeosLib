@@ -318,7 +318,7 @@ begin
         SQL_VARYING, SQL_TEXT:
           begin
             CodePageInfo := Stmt.FPlainDriver.ValidateCharEncoding(Word(Stmt.FInMessageMetadata.GetCharSet(Stmt.FStatus, ParamIndex)) and 255);
-            AddParam([' VARCHAR(', IntToRaw(Stmt.FInMessageMetadata.GetLength(Stmt.FStatus, ParamIndex) div CodePageInfo.CharWidth),
+            AddParam([' VARCHAR(', IntToRaw(Stmt.FInMessageMetadata.GetLength(Stmt.FStatus, ParamIndex) div Cardinal(CodePageInfo.CharWidth)),
             ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), '=?' ], TypeTokens[ParamIndex]);
           end;
         SQL_DOUBLE, SQL_D_FLOAT:
@@ -487,7 +487,8 @@ begin
     if FResultSet <> nil
     then NativeResultSet := TZFirebirdResultSet.Create(Self, SQL, FFBStatement, FOutMessageMetadata, FStatus, @FResultSet)
     else NativeResultSet := TZFirebirdOutParamResultSet.Create(Self, SQL, FFBStatement, FOutMessageMetadata, FStatus, FOutData);
-    if (GetResultSetConcurrency = rcUpdatable) then begin
+    if (GetResultSetConcurrency = rcUpdatable) and (FResultSet <> nil) then begin
+      NativeResultSet.SetType(rtForwardOnly);
       CachedResolver := TZInterbaseFirebirdCachedResolver.Create(Self, NativeResultSet.GetMetadata);
       CachedResultSet := TZFirebirdCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(rcUpdatable);
@@ -858,6 +859,10 @@ end;
 procedure TZAbstractFirebirdStatement.Unprepare;
 begin
   inherited Unprepare;
+  if FOutData <> nil then begin
+    FreeMem(FOutData);
+    FOutData := nil;
+  end;
   if FInMessageMetadata <> nil then begin
     FInMessageMetadata.release;
     FInMessageMetadata := nil;
@@ -871,6 +876,7 @@ begin
     FFBStatement.release;
     FFBStatement := nil;
   end;
+
 end;
 
 { TZFirebirdStatement }
@@ -966,7 +972,11 @@ begin
   MessageMetadata := FFBStatement.getInputMetadata(FStatus);
   try
     Tmp := MessageMetadata.getCount(FStatus);
-    BindList.SetCount(Tmp);
+    //alloc space for lobs, arrays, param-types
+    if ((FStatementType = stExecProc) and (FOutMessageMetadata.getCount(FStatus) > 0)) or
+       ((FStatementType = stSelect) and (BindList.HasOutOrInOutOrResultParam))
+    then BindList.SetCount(Tmp + FOutMessageMetadata.getCount(FStatus))
+    else BindList.SetCount(Tmp);
     if Tmp > 0 then begin
       MetadataBuilder := MessageMetadata.getBuilder(FStatus);
       try
@@ -1050,6 +1060,7 @@ begin
                           Len := LengthInt(ASubType);
                         Move(P^, PISC_VARYING(Data).str[0], Len);
                         PISC_VARYING(Data).strlen := Len;
+                        PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
                       end;
       SQL_BLOB      : begin
                       AType := FInMessageMetadata.getSubType(FStatus, Index);
@@ -1510,6 +1521,7 @@ begin
                         L := AType;
                       Move(P^, PISC_VARYING(Data).str[0], L);
                       PISC_VARYING(Data).strlen := L;
+                      PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
                     end;
     SQL_BLOB,
     SQL_QUAD      : if CS_ID = CS_BINARY then
@@ -1623,9 +1635,9 @@ begin
     SQL_VARYING   : begin
                       Scale := FInMessageMetadata.getLength(FStatus, Index);
                       Digits := GetOrdinalDigits(Value, U, IsNegative);
-                      if Digits+Byte(IsNegative) > Scale then begin
+                      if Integer(Digits+Byte(IsNegative)) > Scale then begin
                         PISC_VARYING(Data).strlen := Scale;
-                        Digits := Scale - Byte(IsNegative);
+                        Digits := Byte(Scale - Byte(IsNegative));
                       end;
                       P := @PISC_VARYING(Data).str[0];
                       if IsNegative then begin
@@ -1869,9 +1881,9 @@ begin
     SQL_VARYING   : begin
                       Scale := FInMessageMetadata.getLength(FStatus, Index);
                       Digits := GetOrdinalDigits(Value, W, IsNegative);
-                      if Digits+Byte(IsNegative) > Scale then begin
+                      if Integer(Digits+Byte(IsNegative)) > Scale then begin
                         PISC_VARYING(Data).strlen := Scale;
-                        Digits := Scale - Byte(IsNegative);
+                        Digits := Byte(Scale - Ord(IsNegative));
                       end;
                       P := @PISC_VARYING(Data).str[0];
                       if IsNegative then begin
@@ -1900,7 +1912,13 @@ procedure TZFirebirdPreparedStatement.SetString(Index: Integer;
   const Value: String);
 {$IFDEF UNICODE}
 begin
-  SetUnicodeString(Index, Value);
+  {$IFNDEF GENERIC_INDEX}
+  Index := Index -1;
+  {$ENDIF}
+  CheckParameterIndex(Index);
+  if Value <> ''
+  then SetPWideChar(Index, Pointer(Value), Length(Value))
+  else SetPAnsiChar(Index, PEmptyAnsiString, 0);
 {$ELSE}
 var CS_ID, AType, ASubType: Cardinal;
     Data: Pointer;
@@ -1922,6 +1940,7 @@ begin
                           L := LengthInt(ASubType);
                         Move(Pointer(Value)^, PISC_VARYING(Data).str[0], L);
                         PISC_VARYING(Data).strlen := L;
+                        PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
                       end else
                         SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
                           ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, FCodePageArray[CS_ID]));
@@ -1931,6 +1950,8 @@ begin
                         then WriteLobBuffer(Index, Pointer(Value), L)
                         else SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
                           ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, ClientCP));
+
+                      end;
       else SetPAnsiChar(Index, Pointer(Value), L);
     end;
   end else
@@ -2100,7 +2121,7 @@ var CS_ID, AType, ASubType: Cardinal;
     Data: Pointer;
     Len: LengthInt;
     P: PAnsiChar;
-label jmpWriteLob, jmpMov;
+label jmpWriteLob;
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -2125,6 +2146,7 @@ begin
                           Len := LengthInt(ASubType);
                         Move(P^, PISC_VARYING(Data).str[0], Len);
                         PISC_VARYING(Data).strlen := Len;
+                        PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
                       end;
       SQL_BLOB      : begin
                       AType := FInMessageMetadata.getSubType(FStatus, Index);
@@ -2226,8 +2248,7 @@ begin
   { close blob handle }
   Blob.close(FStatus);
   PISC_QUAD(PAnsiChar(FInData)+FInMessageMetadata.getOffset(FStatus, Index))^ := BlobId;
-  if FInMessageMetadata.isNullable(FStatus, Index) then
-     PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
+  PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
 end;
 
 { TZFirebirdCallableStatement }
