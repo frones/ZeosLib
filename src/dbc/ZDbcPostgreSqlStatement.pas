@@ -2036,7 +2036,7 @@ var
     then NewSQLType := TZSQLType(Ord(NewSQLType) -1)
     else if (NewSQLType = stBigDecimal) and (BindList.SQLTypes[i] = stCurrency)
       then NewSQLType := stCurrency;
-    if (NewSQLType <> BindList.SQLTypes[i]) and (FPQparamValues[I] <> nil) or ((oldoid <> newoid) and (Ord(NewSQLType) <= Ord(stTimestamp))) then
+    if (NewSQLType <> BindList.SQLTypes[i]) and (FPQparamValues[I] <> nil) and ((oldoid <> newoid) and (Ord(NewSQLType) <= Ord(stTimestamp))) then
       case BindList.SQLTypes[i] of
         stBoolean:  SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Boolean(PByte(FPQparamValues[i])^));
         stSmall:    SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2SmallInt(FPQparamValues[i]));
