@@ -907,7 +907,7 @@ begin
 
     Check(ResultSet.Next, 'Couldn''t move to the first result row.');
 
-    for Ctr := FirstDbcIndex to ResultSet.GetMetadata.GetColumnCount - FirstDbcIndex do begin
+    for Ctr := FirstDbcIndex to ResultSet.GetMetadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
       CheckEquals(Ctr, ResultSet.GetInt(Ctr), 'Expected the field to have its index number as its value.');
     end;
 

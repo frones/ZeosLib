@@ -25,9 +25,9 @@ uses
   {$IFDEF ENABLE_DBLIB}
   ZTestDbcMsSql,
   {$ENDIF}
-  {$IFDEF ENABLE_INTERBASE}
+  {$IF defined(ENABLE_INTERBASE) or defined(ENABLE_FIREBIRD)}
   ZTestDbcInterbaseMetadata, ZTestDbcInterbase,
-  {$ENDIF}
+  {$IFEND}
   {$IFDEF ENABLE_ASA}
   ZTestDbcASA, ZTestDbcASAMetadata,
   {$ENDIF}

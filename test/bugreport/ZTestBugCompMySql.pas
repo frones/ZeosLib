@@ -2130,7 +2130,6 @@ end;
 procedure TZTestCompMySQLBugReport.TestBigIntError;
 var
   Query: TZQuery;
-  SQL: String;
 begin
   Query := CreateQuery;
   try

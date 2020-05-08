@@ -70,7 +70,7 @@ const
   pl_all_mysql = 'mysql,mariadb';
   pl_all_postgresql = 'postgresql';
   pl_all_sqlite = 'sqlite';
-  pl_all_interbase = 'firebird,interbase';
+  pl_all_interbase = 'firebird,interbase,firebird3up';
   pl_all_oracle = 'oracle';
   pl_all_dblib = 'mssql,sybase';
   pl_all_asa = 'asa,asa_capi';
@@ -905,7 +905,7 @@ end;
 }
 procedure TZAbstractSQLTestCase.Fail(Msg: string; ErrorAddr: Pointer = nil);
 begin
-  {$IFDEF FPC2_6DOWN}
+  {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
   inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]));
   {$ELSE}
   inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]),
