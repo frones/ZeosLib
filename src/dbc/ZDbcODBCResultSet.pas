@@ -1846,8 +1846,7 @@ begin
           //DefaultExpression -> not implemented
           DESC_CONCISE_TYPE := ColNumAttribute(ColumnNumber, SQL_DESC_CONCISE_TYPE);
           if DESC_CONCISE_TYPE = SQL_TYPE_VARIANT then begin//SQL Server type
-            DESC_CONCISE_TYPE := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), fSigned);
-            Signed := fSigned;
+            DESC_CONCISE_TYPE := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), Signed);
           end;
           case DESC_CONCISE_TYPE of
             SQL_DATETIME, SQL_TIMESTAMP, SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP,

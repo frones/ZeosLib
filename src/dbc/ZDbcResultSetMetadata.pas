@@ -67,58 +67,32 @@ type
   {** Implements a column information structure. }
   PZColumnInfo = ^TZColumnInfo;
   TZColumnInfo = class(TObject)
-  protected
-    FAutoIncrement: Boolean;
-    FCaseSensitive: Boolean;
-    FSearchable: Boolean;
-    FCurrency: Boolean; //note we'll map all fixed numbers to stCurrency(ftBCD)
+  public
+    AutoIncrement: Boolean;
+    CaseSensitive: Boolean;
+    Searchable: Boolean;
+    Currency: Boolean; //note we'll map all fixed numbers to stCurrency(ftBCD)
                         //if Scale&Precision allows it. But if a field is a true
                         //currency field like MS/PG-Money should be indicated here
-    FNullable: TZColumnNullableType;
-    FSigned: Boolean; //signed ordinals or fixed with datatype?
-    FCharOctedLength: Integer;
-    FColumnLabel: string;
-    FColumnName: string;
-    FSchemaName: string;
-    FPrecision: Integer;
-    FScale: Integer;
-    FTableName: string;
-    FCatalogName: string;
-    FColumnType: TZSQLType;
-    FReadOnly: Boolean;
-    FWritable: Boolean;
-    FDefinitelyWritable: Boolean;
-    FDefaultValue: string;
-    FDefaultExpression : string;
-    FColumnCodePage: Word;
-  public
+    Nullable: TZColumnNullableType;
+    Signed: Boolean; //signed ordinals or fixed with datatype?
+    CharOctedLength: Integer;
+    ColumnLabel: string;
+    ColumnName: string;
+    SchemaName: string;
+    Precision: Integer;
+    Scale: Integer;
+    TableName: string;
+    CatalogName: string;
+    ColumnType: TZSQLType;
+    ReadOnly: Boolean;
+    Writable: Boolean;
+    DefinitelyWritable: Boolean;
+    DefaultValue: string;
+    DefaultExpression : string;
+    ColumnCodePage: Word;
     constructor Create;
     function GetColumnTypeName: string;
-
-    property AutoIncrement: Boolean read FAutoIncrement write FAutoIncrement;
-    property CaseSensitive: Boolean read FCaseSensitive write FCaseSensitive;
-    property Searchable: Boolean read FSearchable write FSearchable;
-    property Currency: Boolean read FCurrency write FCurrency;
-    property Nullable: TZColumnNullableType read FNullable write FNullable;
-
-    property Signed: Boolean read FSigned write FSigned;
-    property CharOctedLength: Integer read FCharOctedLength
-      write FCharOctedLength;
-    property ColumnLabel: string read FColumnLabel write FColumnLabel;
-    property ColumnName: string read FColumnName write FColumnName;
-    property SchemaName: string read FSchemaName write FSchemaName;
-    property Precision: Integer read FPrecision write FPrecision;
-    property Scale: Integer read FScale write FScale;
-    property TableName: string read FTableName write FTableName;
-    property CatalogName: string read FCatalogName write FCatalogName;
-    property ColumnType: TZSQLType read FColumnType write FColumnType;
-    property ReadOnly: Boolean read FReadOnly write FReadOnly;
-    property Writable: Boolean read FWritable write FWritable;
-    property DefinitelyWritable: Boolean read FDefinitelyWritable
-      write FDefinitelyWritable;
-    property DefaultValue: string read FDefaultValue write FDefaultValue;
-    property DefaultExpression: string read FDefaultExpression write FDefaultExpression;
-    property ColumnCodePage: Word read FColumnCodePage write FColumnCodePage;
   end;
 
   {** Implements Abstract ResultSet Metadata. }
@@ -223,10 +197,10 @@ uses ZFastCode, ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils, ZEncoding;
 }
 constructor TZColumnInfo.Create;
 begin
-  FAutoIncrement := False;
-  FNullable := ntNullableUnknown;
-  FReadOnly := True;
-  FColumnCodePage := zCP_NONE;
+  AutoIncrement := False;
+  Nullable := ntNullableUnknown;
+  ReadOnly := True;
+  ColumnCodePage := zCP_NONE;
 end;
 
 {**
@@ -236,7 +210,7 @@ end;
 }
 function TZColumnInfo.GetColumnTypeName: string;
 begin
-  Result := DefineColumnTypeName(FColumnType);
+  Result := DefineColumnTypeName(ColumnType);
 end;
 
 { TZAbstractResultSetMetadata }
@@ -630,7 +604,7 @@ end;
 function TZAbstractResultSetMetadata.GetOrgColumnLabel(
   ColumnIndex: Integer): string;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).FColumnLabel;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnLabel;
 end;
 
 {**
