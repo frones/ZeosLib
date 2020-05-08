@@ -720,14 +720,17 @@ end;
 procedure TZODBCConnectionW.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
 var STMT: SQLHSTMT;
+    Ret: SQLRETURN;
 begin
   if SQL = '' then
     Exit;
   STMT := nil;
   CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
   try
-    CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(STMT,
-      Pointer(SQL), Length(SQL)));
+    Ret := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(STMT,
+      Pointer(SQL), Length(SQL));
+    if (Ret <> SQL_NO_DATA) and (Ret <> SQL_SUCCESS) then
+      CheckDbcError(Ret);
   finally
     if STMT <> nil then
       CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));
