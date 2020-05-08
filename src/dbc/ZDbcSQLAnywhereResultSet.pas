@@ -58,6 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
   System.Types, System.Contnrs
   {$ELSE}
