@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD, Types, SysUtils,
-  ZCompatibility, Firebird, ZDbcIntfs, ZClasses, ZDbcStatement, ZDbcFirebird,
+  ZCompatibility, ZPlainFirebird, ZDbcIntfs, ZClasses, ZDbcStatement, ZDbcFirebird,
   ZDbcInterbase6Utils, ZPlainFirebirdDriver;
 
 type
@@ -186,7 +186,7 @@ implementation
 
 uses Math,
   ZMessages, ZSysUtils, ZFastCode, ZEncoding, ZVariant, ZTokenizer,
-  ZPlainFirebirdInterbaseConstants,
+  ZPlainFirebirdInterbaseDriver,
   ZDbcLogging, ZDbcFirebirdResultSet, ZDbcFirebirdInterbase, ZDbcResultSet,
   ZDbcUtils;
 
@@ -306,12 +306,12 @@ var
     Put(Args, P);
   end;
 begin
+  BindCount := Stmt.FInMessageMetadata.GetCount(Stmt.FStatus);
+  MemPerRow := XSQLDA_LENGTH(BindCount);
   if Pointer(TypeTokens) = nil then
   begin
-    BindCount := Stmt.FInMessageMetadata.GetCount(Stmt.FStatus);
     Assert(InParamCount=BindCount, 'ParamCount missmatch');
     SetLength(TypeTokens, BindCount);
-    MemPerRow := XSQLDA_LENGTH(BindCount);
     for ParamIndex := 0 to BindCount-1 do
     begin
       case Stmt.FInMessageMetadata.GetType(Stmt.FStatus, ParamIndex) and not (1) of
@@ -373,8 +373,6 @@ begin
         SQL_NULL{FB25}:
            AddParam([' CHAR(1)=?'],TypeTokens[ParamIndex]);
       end;
-      (*Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
-        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));*)
     end;
   end;
   {now let's calc length of stmt to know if we can bound all array data or if we need some more calls}
@@ -410,8 +408,8 @@ begin
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := Min((XSQLDAMaxSize div Int64(MemPerRow)),     {memory limit of XSQLDA structs}
-        (((32*1024)-LBlockLen) div Int64(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
+      MaxRowsPerBatch := Min(Integer(XSQLDAMaxSize div MemPerRow),     {memory limit of XSQLDA structs}
+        Integer(((32*1024)-LBlockLen) div (HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     //we run into XSQLDA !update! count limit of 255 see:
@@ -485,8 +483,8 @@ begin
     Result := IZResultSet(FOpenResultSet)
   else begin
     if FResultSet <> nil
-    then NativeResultSet := TZFirebirdResultSet.Create(Self, SQL, FFBStatement, FOutMessageMetadata, FStatus, @FResultSet)
-    else NativeResultSet := TZFirebirdOutParamResultSet.Create(Self, SQL, FFBStatement, FOutMessageMetadata, FStatus, FOutData);
+    then NativeResultSet := TZFirebirdResultSet.Create(Self, SQL, FOutMessageMetadata, FStatus, FOutData, @FResultSet)
+    else NativeResultSet := TZFirebirdOutParamResultSet.Create(Self, SQL, FOutMessageMetadata, FStatus, FOutData);
     if (GetResultSetConcurrency = rcUpdatable) and (FResultSet <> nil) then begin
       NativeResultSet.SetType(rtForwardOnly);
       CachedResolver := TZInterbaseFirebirdCachedResolver.Create(Self, NativeResultSet.GetMetadata);
@@ -503,7 +501,7 @@ end;
 
 destructor TZAbstractFirebirdStatement.Destroy;
 begin
-  inherited;
+  inherited Destroy;
   FAttachment.release;
 end;
 
@@ -540,13 +538,13 @@ begin
     FFBTransaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FStatementType in [stSelect, stSelectForUpdate] then begin
       if (GetResultSetType <> rtForwardOnly) and (GetResultSetConcurrency = rcReadOnly)
-      then flags := IStatement.CURSOR_TYPE_SCROLLABLE
+      then flags := {$IFDEF WITH_CLASS_CONST}IStatement.CURSOR_TYPE_SCROLLABLE{$ELSE}IStatement_CURSOR_TYPE_SCROLLABLE{$ENDIF}
       else flags := 0;
       FResultSet := FFBStatement.openCursor(FStatus, FFBTransaction,
         FInMessageMetadata, FInData, FOutMessageMetadata, flags)
     end else FFBTransaction := FFBStatement.execute(FStatus, FFBTransaction,
       FInMessageMetadata, FInData, FOutMessageMetadata, FOutData);
-    if (FStatus.getState and IStatus.STATE_ERRORS) <> 0 then
+    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
       FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
   end else ExceuteBatch;
 end;
@@ -567,7 +565,7 @@ begin
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   { Create ResultSet if possible else free Statement Handle }
-  if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FOutMessageMetadata.getCount(FStatus) <> 0) then begin
+  if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FOutMessageMetadata <> nil) then begin
     if not Assigned(LastResultSet) then
       LastResultSet := CreateResultSet;
     if (FStatementType = stExecProc) or BindList.HasOutOrInOutOrResultParam then
@@ -594,7 +592,7 @@ begin
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
 
-  if (FOutMessageMetadata <> nil) and (FOutMessageMetadata.getCount(FStatus) <> 0) then begin
+  if (FOutMessageMetadata <> nil) then begin
     if (FStatementType = stSelect) and Assigned(FOpenResultSet) and not BindList.HasOutOrInOutOrResultParam
     then Result := IZResultSet(FOpenResultSet)
     else Result := CreateResultSet;
@@ -635,12 +633,12 @@ begin
           FOpenResultSet := nil;
         end else if FResultSet <> nil then begin
           FResultSet.Close(FStatus);
-          if (FStatus.getState and IStatus.STATE_ERRORS) <> 0 then
+          if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
             FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
           FResultSet.Release;
         end;
       stExecProc: begin{ Create ResultSet if possible }
-          if FOutMessageMetadata.getCount(FStatus) <> 0 then
+          if FOutMessageMetadata <> nil then
             FOutParamResultSet := CreateResultSet;
           Result := FFBStatement.getAffectedRecords(FStatus)
         end;
@@ -714,17 +712,27 @@ begin
   if not Prepared then begin
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FWeakIntfPtrOfIPrepStmt <> nil
+    {$IFDEF WITH_CLASS_CONST}
     then flags := IStatement.PREPARE_PREFETCH_METADATA
     else flags := IStatement.PREPARE_PREFETCH_TYPE or IStatement.PREPARE_PREFETCH_OUTPUT_PARAMETERS;
+    {$ELSE}
+    then flags := IStatement_PREPARE_PREFETCH_METADATA
+    else flags := IStatement_PREPARE_PREFETCH_TYPE or IStatement_PREPARE_PREFETCH_OUTPUT_PARAMETERS;
+    {$ENDIF}
     FFBStatement := FAttachment.prepare(FStatus, Transaction, Length(fASQL),
       Pointer(fASQL), FDialect, flags);
-    if (FStatus.getState and IStatus.STATE_ERRORS) <> 0 then
+    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
       FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
     FStatementType := TZIbSqlStatementType(FFBStatement.getType(FStatus));
     FOutMessageMetadata := FFBStatement.getOutputMetadata(FStatus);
-    if (FStatementType = stExecProc) and (FOutMessageMetadata <> nil) then
-      GetMem(FOutData, FOutMessageMetadata.getMessageLength(FStatus));
-    //FFBStatement.addRef;
+    if FOutMessageMetadata.getCount(FStatus) = 0 then begin
+      FOutMessageMetadata.release;
+      FOutMessageMetadata := nil;
+    end else begin
+      flags := FOutMessageMetadata.getMessageLength(FStatus);
+      GetMem(FOutData, flags);
+      FillChar(FOutData^, flags, #0);
+    end;
     inherited Prepare;
   end;
   if BatchDMLArrayCount > 0 then begin
@@ -859,10 +867,6 @@ end;
 procedure TZAbstractFirebirdStatement.Unprepare;
 begin
   inherited Unprepare;
-  if FOutData <> nil then begin
-    FreeMem(FOutData);
-    FOutData := nil;
-  end;
   if FInMessageMetadata <> nil then begin
     FInMessageMetadata.release;
     FInMessageMetadata := nil;
@@ -873,10 +877,21 @@ begin
   end;
   if FFBStatement <> nil then begin
     FFBStatement.free(FStatus);
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
     FFBStatement.release;
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
     FFBStatement := nil;
   end;
-
+  if FInData <> nil then begin
+    FreeMem(FInData);
+    FInData := nil;
+  end;
+  if FOutData <> nil then begin
+    FreeMem(FOutData);
+    FOutData := nil;
+  end;
 end;
 
 { TZFirebirdStatement }
@@ -973,8 +988,8 @@ begin
   try
     Tmp := MessageMetadata.getCount(FStatus);
     //alloc space for lobs, arrays, param-types
-    if ((FStatementType = stExecProc) and (FOutMessageMetadata.getCount(FStatus) > 0)) or
-       ((FStatementType = stSelect) and (BindList.HasOutOrInOutOrResultParam))
+    if (FOutMessageMetadata <> nil) and ((FStatementType = stExecProc) or
+       ((FStatementType = stSelect) and BindList.HasOutOrInOutOrResultParam))
     then BindList.SetCount(Tmp + FOutMessageMetadata.getCount(FStatus))
     else BindList.SetCount(Tmp);
     if Tmp > 0 then begin
@@ -988,8 +1003,8 @@ begin
           Tmp := MessageMetadata.getSubType(FStatus, Index);
           MetadataBuilder.setSubType(FStatus, Index, Tmp);
           Tmp := MessageMetadata.getLength(FStatus, Index);
-          if Tmp = SQL_VARYING then
-            Tmp := ((Tmp shr 2) + 1) shl 1; //4Byte align incluing 2 bytes reserved for overlongs {let fb raise the Exception}
+          if AType = SQL_VARYING then
+            Tmp := ((Tmp shr 2) + 1) shl 2; //4Byte align incluing 4 bytes reserved for overlongs {let fb raise the Exception}
           MetadataBuilder.setLength(FStatus, Index, Tmp);
           Integer(Tmp) := MessageMetadata.getScale(FStatus, Index);
           MetadataBuilder.setScale(FStatus, Index, Integer(Tmp));
@@ -1002,6 +1017,7 @@ begin
       end;
       Tmp := FInMessageMetadata.getMessageLength(FStatus);
       GetMem(FInData, Tmp);
+      FillChar(FInData^, Tmp, #0);
     end;
   finally
     MessageMetadata.release;
@@ -1127,7 +1143,8 @@ procedure TZFirebirdPreparedStatement.SetBlob(Index: Integer;
   SQLType: TZSQLType; const Value: IZBlob);
 var Data: Pointer;
   P: PAnsiChar;
-  AType, CS_ID, L: Cardinal;
+  AType, CS_ID: Cardinal;
+  L: NativeUInt;
   IBLob: IZFirebirdLob;
 label jmpNotNull;
 begin
@@ -1576,9 +1593,9 @@ begin
     SQL_VARYING   : begin
                       Scale := FInMessageMetadata.getLength(FStatus, Index);
                       Digits := GetOrdinalDigits(Value, AType, IsNegative);
-                      if Digits+Byte(IsNegative) > Scale then begin
-                        PISC_VARYING(Data).strlen := Scale;
-                        Digits := Scale - Byte(IsNegative);
+                      if Integer(Digits+Byte(IsNegative)) > Scale then begin
+                        PISC_VARYING(Data).strlen := Word(Scale);
+                        Digits := Byte(Scale - Ord(IsNegative));
                       end;
                       P := @PISC_VARYING(Data).str[0];
                       if IsNegative then begin
@@ -1798,8 +1815,7 @@ begin
     else
 Fail:   raise CreateConversionError(Index, stUnicodeString);
   end;
-  if FInMessageMetadata.isNullable(FStatus, Index) then
-     PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
+  PISC_SHORT(PAnsiChar(FInData)+FInMessageMetadata.getNullOffset(FStatus, Index))^ := ISC_NOTNULL;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2210,14 +2226,6 @@ end;
 }
 procedure TZFirebirdPreparedStatement.UnPrepareInParameters;
 begin
-  if (FInMessageMetadata <> nil) then begin
-    FInMessageMetadata.Release;
-    FInMessageMetadata := nil;
-  end;
-  if FInData <> nil then begin
-    FreeMem(FInData);
-    FInData := nil;
-  end;
   inherited;
 end;
 

@@ -287,9 +287,9 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
-uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants,
+uses ZMessages, ZDbcInterbase6Utils,
   ZFastCode, ZSelectSchema, Math, ZDbcUtils, ZPlainFirebirdInterbaseDriver,
-  ZDbcFirebirdInterbase, Firebird, ZDbcFirebird, ZDbcLogging;
+  ZDbcFirebirdInterbase, ZPlainFirebird, ZDbcFirebird, ZDbcLogging;
 
 const
   DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');
@@ -321,7 +321,7 @@ begin
       Attachment := FBConnection.GetAttachment;
       Status := FBConnection.GetStatus;
       Attachment.getInfo(Status, 1, @isc_info, SizeOf(Buffer), @Buffer[0]);
-      if (Status.getState and Status.STATE_ERRORS) <> 0 then
+      if (Status.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
         FBConnection.HandleError(Status, 'IAttachment.getInfo', FBConnection, lcOther);
     end else begin
       IBConnection := Connection as IZInterbase6Connection;
@@ -1135,7 +1135,13 @@ end;
 }
 function TZInterbase6DatabaseInfo.GetMaxStatementLength: Integer;
 begin
-  Result := 640;
+  // Increased size for FB 3.0+
+  // See release notes. Can be used by the legacy API too, if Karol Bieniaszewski
+  // is right at http://tracker.firebirdsql.org/browse/CORE-1117?focusedCommentId=31493&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_31493
+  if FIsFireBird and (FHostVersion >= 3000000) {and Client Library Version >= 3000000} then
+    Result := 10*1024*1024 //Release notes say there is an hard coded limit at 10MB
+  else
+    Result := 32*1024; //32KB by default
 end;
 
 {**

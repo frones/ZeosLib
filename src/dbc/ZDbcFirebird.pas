@@ -59,9 +59,9 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
+  ZPlainFirebirdInterbaseDriver, ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
   ZGenericSqlAnalyser, ZClasses, ZDbcFirebirdInterbase,
-  Firebird;
+  ZPlainFirebird;
 
 type
 
@@ -307,7 +307,7 @@ procedure TZFirebirdConnection.HandleError(Status: IStatus;
 var
 	statusVector: PARRAY_ISC_STATUS;
 begin
-	if ((status.getState and status.STATE_ERRORS) = 0) then
+	if ((status.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) = 0) then
 		Exit;
   statusVector := PARRAY_ISC_STATUS(Status.getErrors);
   try
@@ -414,6 +414,8 @@ reconnect:
   then P := Pointer(ConSettings.Database)
   else P := nil;
   FAttachment := FProvider.attachDatabase(FStatus, P, Length(DPB), Pointer(DPB));
+  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    HandleError(FStatus, 'IProvider.attachDatabase', Self, lcConnect);
   inherited Open;
   with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
   begin
@@ -584,7 +586,7 @@ begin
       ReleaseTransaction(Self);
     end;
     FExplicitTransactionCounter := 0;
-	  if ((Fstatus.getState and IStatus.STATE_ERRORS) <> 0) then
+	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleError(FStatus, sCommitMsg, self, lcTransaction);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
@@ -647,7 +649,7 @@ begin
       ReleaseTransaction(Self);
     end;
     FExplicitTransactionCounter := 0;
-	  if ((Fstatus.getState and IStatus.STATE_ERRORS) <> 0) then
+	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleError(FStatus, sRollbackMsg, self, lcTransaction);
   finally
     if fDoLog and DriverManager.HasLoggingListener then

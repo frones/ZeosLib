@@ -57,13 +57,17 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 
-uses FmtBCD, {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+uses
+{$IFDEF USE_SYNCOMMONS}
+  SynCommons, SynTable,
+{$ENDIF USE_SYNCOMMONS}
+  FmtBCD, {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  Firebird, ZCompatibility, ZClasses,
-  ZDbcIntfs, ZDbcResultSet, ZDbcFirebirdStatement, ZDbcInterbase6Utils,
+  ZPlainFirebird, ZCompatibility, ZClasses,
+  ZDbcResultSet, ZDbcInterbase6Utils,
   ZDbcFirebird, ZDbcCachedResultSet, ZDbcCache, ZDbcResultSetMetadata,
-  ZPlainFirebirdInterbaseConstants, ZPlainFirebirdInterbaseDriver,
-  ZPlainFirebirdDriver, ZDbcFirebirdInterbase, ZDbcLogging;
+  ZPlainFirebirdInterbaseDriver,
+  ZPlainFirebirdDriver, ZDbcFirebirdInterbase, ZDbcLogging, ZDbcIntfs;
 
 type
   IZFirebirdResultSet = Interface(IZResultSet)
@@ -76,9 +80,7 @@ type
   TZAbstractFirebirdResultSet = Class(TZAbstractInterbaseFirebirdResultSet,
     IZResultSet, IZFirebirdResultSet)
   private
-    FFBStatement: IStatement;
     FStatus: IStatus;
-    FMessageMetadata: IMessageMetadata;
     FDataBuffer: Pointer;
     FFBConnection: IZFirebirdConnection;
     FFBTransaction: IZFirebirdTransaction;
@@ -89,14 +91,15 @@ type
     function GetConnection: IZFirebirdConnection;
   public
     procedure RegisterCursor;
-  protected
-    procedure Open; override;
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      FBStmt: IStatement; MessageMetadata: IMessageMetadata; Status: IStatus);
-    procedure AfterClose; override;
+      MessageMetadata: IMessageMetadata; Status: IStatus;
+      DataBuffer: Pointer);
   public
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+    {$IFDEF USE_SYNCOMMONS}
+    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
+    {$ENDIF USE_SYNCOMMONS}
   end;
 
   TZFirebirdResultSet = class(TZAbstractFirebirdResultSet)
@@ -105,9 +108,8 @@ type
     FResultSetAddr: PIResultSet;
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      FBStmt: IStatement; MessageMetadata: IMessageMetadata; Status: IStatus;
-      ResultSet: PIResultSet);
-    procedure AfterClose; override;
+      MessageMetadata: IMessageMetadata; Status: IStatus;
+      DataBuffer: Pointer; ResultSet: PIResultSet);
     procedure ResetCursor; override;
 
   public { Traversal/Positioning }
@@ -124,7 +126,7 @@ type
   TZFirebirdOutParamResultSet = class(TZAbstractFirebirdResultSet)
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      FBStmt: IStatement; MessageMetadata: IMessageMetadata; Status: IStatus;
+      MessageMetadata: IMessageMetadata; Status: IStatus;
       DataBuffer: Pointer);
   public { Traversal/Positioning }
     function Next: Boolean; override;
@@ -197,7 +199,7 @@ type
   public //obsolate
     function Length: Integer; override;
   public
-    constructor Create(const Connection: IZFirebirdConnection; BlobId: TISC_QUAD;
+    constructor Create(const Connection: IZFirebirdConnection; const BlobId: TISC_QUAD;
       LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
       const OpenLobStreams: TZSortedList);
     procedure AfterConstruction; override;
@@ -290,37 +292,358 @@ begin
         then Result := stAsciiStream
         else Result := stBinaryStream;
     SQL_ARRAY: Result := stArray;
-    else  Result := TZSQLType.stUnknown;
+    else  Result := stUnknown;
   end;
 end;
 { TZAbstractFirebirdResultSet }
 
-procedure TZAbstractFirebirdResultSet.AfterClose;
-begin
-  inherited;
-  if FMessageMetadata <> nil then begin
-    FMessageMetadata.release;
-    FMessageMetadata := nil;
+{$IFDEF USE_SYNCOMMONS}
+procedure TZAbstractFirebirdResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+  JSONComposeOptions: TZJSONComposeOptions);
+var L, H, I: Integer;
+    P: Pointer;
+    C, SQLCode: ISC_SHORT;
+    TempDate: TZTimeStamp;//TCTimeStructure;
+  procedure WConvert(P: PAnsiChar; L: ISC_SHORT; CP: word); //no _UStrClr in method
+  begin
+    FUniTemp := PRawToUnicode(P, L, CP);
+    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp))
   end;
-  if FFBStatement <> nil then begin
-    FFBStatement.release;
-    FFBStatement := nil;
+  procedure ReadUTF8CLob(const BlobId: TISC_QUAD);
+  var Stream: TStream;
+    IbStream: TZFirebirdLobStream;
+    Clob: IZCLob;
+    Buf: PAnsiChar;
+    L, R, Size: LongInt;
+  begin
+    CLob := TZFirebirdClob.Create(FFBConnection, BlobId, lsmRead, zCP_UTF8, FOpenLobStreams);
+    Stream := Clob.GetStream(zCP_UTF8);
+    IbStream := Stream as TZFirebirdLobStream;
+    Buf := nil;
+    try
+      IbStream.OpenLob;
+      Size := IbStream.BlobInfo.TotalSize;
+      if Size = 0 then Exit;
+      { read chunked as firebird supports it }
+      L := IbStream.BlobInfo.MaxSegmentSize;
+      GetMem(Buf, L);
+      repeat
+        R := Stream.Read(Buf^, L);
+        JSONWriter.AddJSONEscape(Buf, R); //is not #0 terminated
+        Dec(Size, R);
+        if L > Size then
+          L := Size;
+      until (R = 0){should not happen} or
+            (Size = 0){if segmentsize < total};
+    finally
+      Stream.Free;
+      FreeMem(Buf);
+      Clob := nil;
+    end;
+  end;
+  procedure ReadAsWCLob(const BlobId: TISC_QUAD; ColumnCodePage: Word);
+  var Clob: IZCLob;
+    PW: Pointer;
+    L: NativeUInt;
+  begin
+    CLob := TZFirebirdClob.Create(FFBConnection, BlobId, lsmRead, ColumnCodePage, FOpenLobStreams);
+    try
+      PW := CLob.GetPWideChar(FUniTemp, L);
+      JSONWriter.AddJSONEscapeW(PW, L); //is not #0 terminated
+      FUniTemp := '';
+    finally
+      Clob := nil;
+    end;
+  end;
+  procedure ReadBLob(const BlobId: TISC_QUAD);
+  var Blob: IZBLob;
+    P: Pointer;
+    L: NativeUInt;
+  begin
+    Blob := TZFirebirdBlob.Create(FFBConnection, BlobId, lsmRead, FOpenLobStreams);
+    try
+      P := Blob.GetBuffer(FRawTemp, L); //base 64 can not be added in chunks ):
+      JSONWriter.WrBase64(P, L, True);
+      FRawTemp := '';
+    finally
+      Blob := nil;
+    end;
+  end;
+begin
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
+    {$R-}
+    with TZInterbaseFirebirdColumnInfo(ColumnsInfo[c]) do
+      if (sqlind <> nil) and (sqlind^ = ISC_NULL) then
+        if JSONWriter.Expand then begin
+          if not (jcsSkipNulls in JSONComposeOptions) then begin
+            JSONWriter.AddString(JSONWriter.ColNames[I]);
+            JSONWriter.AddShort('null,')
+          end;
+        end else
+          JSONWriter.AddShort('null,')
+      else begin
+        if JSONWriter.Expand then
+          JSONWriter.AddString(JSONWriter.ColNames[I]);
+        SQLCode := (sqltype and not(1));
+        case SQLCode of
+          SQL_VARYING   : if sqlsubtype = CS_BINARY {octets} then
+                            JSONWriter.WrBase64(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, True)
+                          else begin
+                            JSONWriter.Add('"');
+                            if ColumnCodePage = zCP_UTF8
+                            then JSONWriter.AddJSONEscape(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen)
+                            else WConvert(@PISC_VARYING(sqldata).str[0], PISC_VARYING(sqldata).strlen, ColumnCodePage);
+                            JSONWriter.Add('"');
+                          end;
+          SQL_TEXT      : if sqlsubtype = CS_BINARY then
+                            JSONWriter.WrBase64(sqldata, CharOctedLength, True)
+                          else begin
+                            JSONWriter.Add('"');
+                            L := GetAbsorbedTrailingSpacesLen(PAnsiChar(sqldata), CharOctedLength);
+                            if ColumnCodePage = zCP_UTF8
+                            then JSONWriter.AddJSONEscape(sqldata, L)
+                            else WConvert(sqldata, L, ColumnCodePage);
+                            JSONWriter.Add('"');
+                          end;
+          SQL_D_FLOAT,
+          SQL_DOUBLE    : JSONWriter.AddDouble(PDouble(sqldata)^);
+          SQL_FLOAT     : JSONWriter.AddSingle(PSingle(sqldata)^);
+          SQL_SHORT     : if sqlscale = 0 then
+                            JSONWriter.Add(PISC_SHORT(sqldata)^)
+                          else begin
+                            ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), @FTinyBuffer, @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                          end;
+          SQL_LONG      : if sqlscale = 0 then
+                            JSONWriter.Add(PISC_LONG(sqldata)^)
+                          else begin
+                            ScaledOrdinal2Raw(PISC_LONG(sqldata)^, @FTinyBuffer, @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                          end;
+          SQL_INT64     : if (sqlscale = 0) then
+                            JSONWriter.Add(PISC_INT64(sqldata)^)
+                          else if sqlScale = -4 then
+                            JSONWriter.AddCurr64(PISC_INT64(sqldata)^)
+                          else begin
+                            ScaledOrdinal2Raw(PISC_INT64(sqldata)^, @FTinyBuffer, @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                          end;
+          SQL_TIMESTAMP : begin
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else
+                              JSONWriter.Add('"');
+                            isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
+                              TempDate.Year, TempDate.Month, Tempdate.Day);
+                            DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, TempDate.Day);
+                            isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
+                              TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+                            TimeToIso8601PChar(@FTinyBuffer[10], True, TempDate.Hour, TempDate.Minute,
+                              TempDate.Second, TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z")')
+                            else JSONWriter.Add('"');
+                          end;
+          SQL_QUAD,
+          SQL_BLOB      : begin
+                            if SqlSubType = isc_blob_text then begin
+                              JSONWriter.Add('"');
+                              if ColumnCodePage = zCP_UTF8
+                              then ReadUTF8CLob(PISC_QUAD(sqldata)^)
+                              else ReadAsWCLob(PISC_QUAD(sqldata)^, ColumnCodePage);
+                              JSONWriter.Add('"');
+                            end else ReadBlob(PISC_QUAD(sqldata)^);
+                          end;
+          //SQL_ARRAY     : JSONWriter.AddShort('"Array"');
+          SQL_TYPE_TIME : begin
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("0000-00-00')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            end else
+                              JSONWriter.Add('"');
+                            isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
+                              TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
+                            TimeToIso8601PChar(@FTinyBuffer[0], True, TempDate.Hour, TempDate.Minute,
+                              TempDate.Second,  TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z)"')
+                            else JSONWriter.Add('"');
+                          end;
+          SQL_TYPE_DATE : begin
+                            if jcoMongoISODate in JSONComposeOptions then
+                              JSONWriter.AddShort('ISODate("')
+                            else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            else
+                              JSONWriter.Add('"');
+                            isc_decode_date(PISC_DATE(sqldata)^, TempDate.Year, TempDate.Month, Tempdate.Day);
+                            DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, Tempdate.Day);
+                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            if jcoMongoISODate in JSONComposeOptions
+                            then JSONWriter.AddShort('Z")')
+                            else JSONWriter.Add('"');
+                          end;
+          SQL_BOOLEAN   : JSONWriter.AddShort(JSONBool[PISC_BOOLEAN(sqldata)^ <> 0]);
+          SQL_BOOLEAN_FB: JSONWriter.AddShort(JSONBool[PISC_BOOLEAN_FB(sqldata)^ <> 0]);
+          else          raise ZDbcUtils.CreateConversionError(C, ColumnType, stString);
+        end;
+        JSONWriter.Add(',');
+      end;
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  end;
+  if jcoEndJSONObject in JSONComposeOptions then begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
   end;
 end;
+{$ENDIF USE_SYNCOMMONS}
 
 constructor TZAbstractFirebirdResultSet.Create(const Statement: IZStatement;
-  const SQL: String; FBStmt: IStatement; MessageMetadata: IMessageMetadata;
-  Status: IStatus);
+  const SQL: String; MessageMetadata: IMessageMetadata;
+  Status: IStatus; DataBuffer: Pointer);
+var I, Len, OffSet: Cardinal;
+  CP_ID: Word;
+  ColumnInfo: TZInterbaseFirebirdColumnInfo;
+  P: PAnsiChar;
+  ZCodePageInfo: PZCodePage;
+label jmpLen;
 begin
   inherited Create(Statement, SQL);
-  FFBStatement := FBStmt;
-  FFBStatement.addRef;
-  FMessageMetadata := MessageMetadata;
-  FMessageMetadata.addRef;
   FStatus := Status;
   FFBConnection := Statement.GetConnection as IZFirebirdConnection;
   FPlainDriver := FFBConnection.GetPlainDriver;
   FFirstRow := True;
+  FDataBuffer := DataBuffer;
+
+  I := MessageMetadata.getCount(FStatus);
+  if i = 0 then
+    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+  ColumnsInfo.Capacity := I;
+  for i := 0 to I -1 do begin
+    {$IFDEF UNICODE}
+    if ConSettings.ClientCodePage.ID = CS_NONE
+    then CP_ID := zCP_UTF8
+    else CP_ID := ConSettings.ClientCodePage.CP;
+    {$ENDIF UNICODE}
+    ColumnInfo := TZInterbaseFirebirdColumnInfo.Create;
+    ColumnsInfo.Add(ColumnInfo);
+    with ColumnInfo do begin
+      P := MessageMetadata.getRelation(FStatus, I);
+      Len := ZFastCode.StrLen(P);
+      {$IFDEF UNICODE}
+      TableName := PRawToUnicode(P, Len, CP_ID);
+      {$ELSE}
+      System.SetString(TableName, P, Len);
+      {$ENDIF}
+      if TableName <> '' then begin //firebird does not corectly clear the name
+        //see TestColumnTypeAndTableDetermination we get a 'ADD' in buffer back
+        P := MessageMetadata.getField(FStatus, I);
+        Len := ZFastCode.StrLen(P);
+        {$IFDEF UNICODE}
+        ColumnName := PRawToUnicode(P, Len, CP_ID);
+        {$ELSE}
+        System.SetString(ColumnName, P, Len);
+        {$ENDIF}
+      end;
+      P := MessageMetadata.getAlias(FStatus, I);
+      Len := ZFastCode.StrLen(P);
+      {$IFDEF UNICODE}
+      ColumnLabel := PRawToUnicode(P, Len, CP_ID);
+      {$ELSE}
+      System.SetString(ColumnLabel, P, Len);
+      {$ENDIF}
+      sqltype := MessageMetadata.getType(FStatus, I);
+      sqlsubType := MessageMetadata.getSubType(FStatus, I);
+      Len := MessageMetadata.getLength(FStatus, I);
+      sqlscale := MessageMetadata.getScale(FStatus, I);
+      Scale := -sqlscale;
+      if (sqltype = SQL_TEXT) or (sqltype = SQL_VARYING) then begin //SQL_BLOB
+        CP_ID := Word(MessageMetadata.getCharSet(FStatus, I)) and 255;
+        ColumnType := ConvertIB_FBType2SQLType(sqltype, CP_ID, sqlscale);
+      end else
+        ColumnType := ConvertIB_FBType2SQLType(sqltype, sqlsubtype, sqlscale);
+      if FGUIDProps.ColumnIsGUID(ColumnType, len, ColumnName) then
+        ColumnType := stGUID;
+      if MessageMetadata.isNullable(FStatus, I) then begin
+        OffSet := MessageMetadata.getNullOffset(FStatus, I);
+        sqlind := PISC_SHORT(PAnsiChar(FDataBuffer)+OffSet);
+        Nullable := ntNullable;
+      end;
+      OffSet := MessageMetadata.getOffset(FStatus, I);
+      sqldata := PAnsiChar(FDataBuffer)+OffSet;
+      if sqlind = sqldata then
+        sqlind := nil;
+      case ColumnType of
+        stString, stGUID: begin
+            //see test Bug#886194, we retrieve 565 as CP... the modula returns the FBID of CP
+            CP_ID := Word(MessageMetadata.getCharSet(FStatus, I)) and 255;
+            //see: http://sourceforge.net/p/zeoslib/tickets/97/
+            if (CP_ID = ConSettings^.ClientCodePage^.ID)
+            then ZCodePageInfo := ConSettings^.ClientCodePage
+            else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP_ID); //get column CodePage info}
+            ColumnCodePage := ZCodePageInfo.CP;
+            if (ColumnType = stGUID) or (ConSettings^.ClientCodePage^.ID = CS_NONE) then begin
+  jmpLen:     Precision := Len;
+              CharOctedLength := Precision;
+            end else begin
+              CharOctedLength := len;
+              Precision := len div Cardinal(ZCodePageInfo^.CharWidth);
+            end;
+            Signed := sqltype = SQL_TEXT;
+          end;
+        stAsciiStream, stUnicodeStream: if ConSettings^.ClientCodePage^.ID = CS_NONE
+          then if FIsMetadataResultSet
+            then ColumnCodePage := zCP_UTF8
+            else begin //connected with CS_NONE no transliterations are made by FB
+              CP_ID := FFBConnection.GetSubTypeTextCharSetID(TableName,ColumnName);
+              if CP_ID = CS_NONE
+              then ZCodePageInfo := ConSettings^.ClientCodePage
+              else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP_ID);
+              ColumnCodePage := ZCodePageInfo.CP;
+            end else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+        stBytes: begin
+            ColumnCodePage := zCP_Binary;
+            goto jmpLen;
+          end;
+        stBinaryStream: ColumnCodePage := zCP_Binary;
+        else begin
+          ColumnCodePage := zCP_NONE;
+          case ColumnType of
+            stShort, stSmall, stInteger, stLong: Signed := True;
+            stCurrency, stBigDecimal: begin
+              Signed  := True;
+              Scale   := Scale;
+              //first digit does not count because of overflow (FB does not allow this)
+              case sqltype of
+                SQL_SHORT:  Precision := 4;
+                SQL_LONG:   Precision := 9;
+                SQL_INT64:  Precision := 18;
+              end;
+            end;
+            stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of millisecond fractions
+          end;
+        end;
+      end;
+      ReadOnly := (TableName = '') or (ColumnName = '') or
+        (ColumnName = 'RDB$DB_KEY') or (ColumnType = ZDbcIntfs.stUnknown);
+      Writable := not ReadOnly;
+      CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
+    end;
+  end;
   Open;
 end;
 
@@ -360,139 +683,6 @@ begin
   Result := FFBConnection;
 end;
 
-{**
-  Opens this recordset.
-}
-procedure TZAbstractFirebirdResultSet.Open;
-var I, Len, OffSet: Cardinal;
-  CP_ID: Word;
-  ColumnInfo: TZInterbaseFirebirdColumnInfo;
-  P: PAnsiChar;
-  ZCodePageInfo: PZCodePage;
-label jmpLen;
-begin
-  I := FMessageMetadata.getCount(FStatus);
-  if i = 0 then
-    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-  if FDataBuffer = nil then begin
-    Len := FMessageMetadata.getMessageLength(FStatus);
-    GetMem(FDataBuffer, Len);
-    FillChar(FDataBuffer^, Len, #0);
-  end;
-  ColumnsInfo.Capacity := I;
-  for i := 0 to I -1 do begin
-    if ConSettings.ClientCodePage.ID = CS_NONE
-    then CP_ID := zCP_UTF8
-    else CP_ID := ConSettings.ClientCodePage.CP;
-
-    ColumnInfo := TZInterbaseFirebirdColumnInfo.Create;
-    ColumnsInfo.Add(ColumnInfo);
-    with ColumnInfo do begin
-      P := FMessageMetadata.getRelation(FStatus, I);
-      Len := ZFastCode.StrLen(P);
-      {$IFDEF UNICODE}
-      TableName := PRawToUnicode(P, Len, CP_ID);
-      {$ELSE}
-      System.SetString(TableName, P, Len);
-      {$ENDIF}
-      if TableName <> '' then begin //firebird does not corectly clear the name
-        //see TestColumnTypeAndTableDetermination we get a 'ADD' in buffer back
-        P := FMessageMetadata.getField(FStatus, I);
-        Len := ZFastCode.StrLen(P);
-        {$IFDEF UNICODE}
-        ColumnName := PRawToUnicode(P, Len, CP_ID);
-        {$ELSE}
-        System.SetString(ColumnName, P, Len);
-        {$ENDIF}
-      end;
-      P := FMessageMetadata.getAlias(FStatus, I);
-      Len := ZFastCode.StrLen(P);
-      {$IFDEF UNICODE}
-      ColumnLabel := PRawToUnicode(P, Len, CP_ID);
-      {$ELSE}
-      System.SetString(ColumnLabel, P, Len);
-      {$ENDIF}
-      sqltype := FMessageMetadata.getType(FStatus, I);
-      sqlsubType := FMessageMetadata.getSubType(FStatus, I);
-      Len := FMessageMetadata.getLength(FStatus, I);
-      sqlscale := FMessageMetadata.getScale(FStatus, I);
-      Scale := -sqlscale;
-      if (sqltype = SQL_TEXT) or (sqltype = SQL_VARYING) then begin //SQL_BLOB
-        CP_ID := Word(FMessageMetadata.getCharSet(FStatus, I)) and 255;
-        ColumnType := ConvertIB_FBType2SQLType(sqltype, CP_ID, sqlscale);
-      end else
-        ColumnType := ConvertIB_FBType2SQLType(sqltype, sqlsubtype, sqlscale);
-      if FGUIDProps.ColumnIsGUID(ColumnType, len, ColumnName) then
-        ColumnType := stGUID;
-      if FMessageMetadata.isNullable(FStatus, I) then begin
-        OffSet := FMessageMetadata.getNullOffset(FStatus, I);
-        sqlind := PISC_SHORT(PAnsiChar(FDataBuffer)+OffSet);
-        Nullable := ntNullable;
-      end;
-      OffSet := FMessageMetadata.getOffset(FStatus, I);
-      sqldata := PAnsiChar(FDataBuffer)+OffSet;
-      if sqlind = sqldata then
-        sqlind := nil;
-      case ColumnType of
-        stString: begin
-            //see test Bug#886194, we retrieve 565 as CP... the modula returns the FBID of CP
-            CP_ID := Word(FMessageMetadata.getCharSet(FStatus, I)) and 255;
-            //see: http://sourceforge.net/p/zeoslib/tickets/97/
-            if (CP_ID = ConSettings^.ClientCodePage^.ID)
-            then ZCodePageInfo := ConSettings^.ClientCodePage
-            else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP_ID); //get column CodePage info}
-            ColumnCodePage := ZCodePageInfo.CP;
-            if ConSettings^.ClientCodePage^.ID = CS_NONE then begin
-  jmpLen:     Precision := Len;
-              CharOctedLength := Precision;
-            end else begin
-              CharOctedLength := len;
-              Precision := len div Cardinal(ZCodePageInfo^.CharWidth);
-            end;
-            Signed := sqltype = SQL_TEXT;
-          end;
-        stAsciiStream, stUnicodeStream: if ConSettings^.ClientCodePage^.ID = CS_NONE
-          then if FIsMetadataResultSet
-            then ColumnCodePage := zCP_UTF8
-            else begin //connected with CS_NONE no transliterions are made by FB
-              CP_ID := FFBConnection.GetSubTypeTextCharSetID(TableName,ColumnName);
-              if CP_ID = CS_NONE
-              then ZCodePageInfo := ConSettings^.ClientCodePage
-              else ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP_ID);
-              ColumnCodePage := ZCodePageInfo.CP;
-            end else ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-        stBytes, stGUID: begin
-            ColumnCodePage := zCP_Binary;
-            goto jmpLen;
-          end;
-        stBinaryStream: ColumnCodePage := zCP_Binary;
-        else begin
-          ColumnCodePage := zCP_NONE;
-          case ColumnType of
-            stShort, stSmall, stInteger, stLong: Signed := True;
-            stCurrency, stBigDecimal: begin
-              Signed  := True;
-              Scale   := Scale;
-              //first digit does not count because of overflow (FB does not allow this)
-              case sqltype of
-                SQL_SHORT:  Precision := 4;
-                SQL_LONG:   Precision := 9;
-                SQL_INT64:  Precision := 18;
-              end;
-            end;
-            stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of milli second fractions
-          end;
-        end;
-      end;
-      ReadOnly := (TableName = '') or (ColumnName = '') or
-        (ColumnName = 'RDB$DB_KEY') or (ColumnType = ZDbcIntfs.stUnknown);
-      Writable := not ReadOnly;
-      CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
-    end;
-  end;
-  inherited Open;
-end;
-
 procedure TZAbstractFirebirdResultSet.RegisterCursor;
 begin
   FFBTransaction := FFBConnection.GetActiveTransaction;
@@ -501,24 +691,11 @@ end;
 
 { TZFirebirdResultSet }
 
-procedure TZFirebirdResultSet.AfterClose;
-begin
-  if FResultset <> nil then begin
-    FResultset.release;
-    FResultset := nil;
-  end;
-  if FDataBuffer <> nil then begin
-    FreeMem(FDataBuffer);
-    FDataBuffer := nil;
-  end;
-  inherited AfterClose;
-end;
-
 constructor TZFirebirdResultSet.Create(const Statement: IZStatement;
-  const SQL: String; FBStmt: IStatement; MessageMetadata: IMessageMetadata;
-  Status: IStatus; ResultSet: PIResultSet);
+  const SQL: String; MessageMetadata: IMessageMetadata;
+  Status: IStatus; DataBuffer: Pointer; ResultSet: PIResultSet);
 begin
-  inherited Create(Statement, SQL, FBStmt, MessageMetadata, Status);
+  inherited Create(Statement, SQL, MessageMetadata, Status, DataBuffer);
   FResultset := ResultSet^;
   FResultSetAddr := ResultSet;
 end;
@@ -539,9 +716,9 @@ begin
       RegisterCursor;
     end;
     Status := FResultSet.fetchFirst(FStatus, FDataBuffer);
-    Result := Status = IStatus.RESULT_OK;
+    Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
     if not Result then begin
-      if Status = IStatus.RESULT_NO_DATA then begin
+      if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
         LastRowNo := 0;
         RowNo := 1; //set AfterLast
       end else
@@ -608,9 +785,9 @@ begin
       RegisterCursor;
     end;
     Status := FResultSet.fetchLast(FStatus, FDataBuffer);
-    Result := Status = IStatus.RESULT_OK;
+    Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
     if not Result then begin
-      if Status = IStatus.RESULT_NO_DATA then begin
+      if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
         if RowNo = 0 then
           RowNo := 1; //else ?? which row do we have now?
       end else
@@ -657,9 +834,9 @@ begin
       RegisterCursor;
     end;
     Status := FResultSet.fetchAbsolute(FStatus, Row, FDataBuffer);
-    Result := Status = IStatus.RESULT_OK;
+    Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
     if not Result then begin
-      if Status = IStatus.RESULT_NO_DATA then begin
+      if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
         RowNo := Row;
         if LastRowNo >= Row then
           LastRowNo := Row -1;
@@ -701,9 +878,9 @@ begin
     end;
     Status := FResultSet.fetchRelative(FStatus, Rows, FDataBuffer);
     RowNo := RowNo + Rows;
-    Result := Status = IStatus.RESULT_OK;
+    Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
     if not Result then begin
-      if Status = IStatus.RESULT_NO_DATA then begin
+      if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
         if LastRowNo >= RowNo then
           LastRowNo := RowNo -1;
       end else
@@ -744,15 +921,15 @@ begin
       RegisterCursor;
     end;
     Status := FResultSet.fetchNext(FStatus, FDataBuffer);
-    Result := Status = IStatus.RESULT_OK;
+    Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
     if not Result then begin
-      if Status = IStatus.RESULT_NO_DATA then begin
+      if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
         if LastRowNo < RowNo then
           LastRowNo := RowNo;
         RowNo := RowNo +1; //set AfterLast
         if GetType = rtForwardOnly then begin
           FResultSet.Close(FStatus); //dereister cursor from Txn
-          if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+          if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
             FFBConnection.HandleError(FStatus, 'IResultSet.close', Self, lcOther);
           FResultSet.release;
           FResultSet := nil;
@@ -789,10 +966,10 @@ begin
       RegisterCursor;
     end;
     Status := FResultSet.fetchPrior(FStatus, FDataBuffer);
-    Result := Status = IStatus.RESULT_OK;
+    Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
     RowNo := RowNo -1;
     if not Result then begin
-      if Status = IStatus.RESULT_NO_DATA then begin
+      if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
         if LastRowNo < RowNo then
           LastRowNo := RowNo;
       end else
@@ -806,7 +983,7 @@ begin
   inherited;
   if FResultSet <> nil then begin
     FResultSet.close(FStatus);
-    if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
       FFBConnection.HandleError(FStatus, 'IResultSet.close', Self, lcOther);
     FResultSet.release;
     FResultSet := nil;
@@ -818,11 +995,10 @@ end;
 { TZFirebirdOutParamResultSet }
 
 constructor TZFirebirdOutParamResultSet.Create(const Statement: IZStatement;
-  const SQL: String; FBStmt: IStatement; MessageMetadata: IMessageMetadata;
+  const SQL: String; MessageMetadata: IMessageMetadata;
   Status: IStatus; DataBuffer: Pointer);
 begin
-  FDataBuffer := DataBuffer;
-  inherited Create(Statement, SQL, FBStmt, MessageMetadata, Status);
+  inherited Create(Statement, SQL, MessageMetadata, Status, DataBuffer);
   LastRowNo := 1;
 end;
 
@@ -892,7 +1068,7 @@ begin
     Assert(FLobIsOpen);
     try
       FBlob.cancel(FStatus);
-      if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
         FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
       FOwnerLob.FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(FOwnerLob);
     finally
@@ -910,7 +1086,7 @@ procedure TZFirebirdLobStream.CloseLob;
 begin
   Assert(FLobIsOpen);
   FBlob.close(FStatus);
-  if ((Fstatus.getState and IStatus.STATE_ERRORS) <> 0) then
+  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
     FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.close', Self, lcOther);
   FLobIsOpen := False;
   FPosition := 0;
@@ -938,7 +1114,7 @@ begin
   WasRegistered := Int64(BlobId) <> 0;
   { create blob handle }
   FBlob := FAttachment.createBlob(Fstatus, FFBTransaction, @BlobId, 0, nil);
-  if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+  if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
     FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
   if not WasRegistered then
     FOwnerLob.FFBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(FOwnerLob);
@@ -960,10 +1136,10 @@ begin
       if (FBlob <> nil) then begin
         if FLobIsOpen then { close blob handle }
           FBlob.close(FStatus);
-        if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+        if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
           FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.close', Self, lcOther);
         FBlob.release;
-        if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+        if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
           FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.release', Self, lcOther);
         FBlob := nil;
       end;
@@ -990,7 +1166,7 @@ begin
   Items[3] := isc_info_blob_type;
 
   FBlob.getInfo(FStatus, 4, @Items[0], SizeOf(Results), @Results[0]);
-  if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+  if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
      FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
   pBufStart := @Results[0];
   pBuf := pBufStart;
@@ -1035,7 +1211,7 @@ begin
   if not FLobIsOpen then begin
     if (Int64(BlobID) <> 0) then begin
       FBlob := FAttachment.openBlob(FStatus, FFBTransaction, @BlobID, 0, nil);
-      if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
         FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
       FillBlobInfo;
     end else
@@ -1063,15 +1239,23 @@ begin
       then SegLen := FOwnerLob.FBlobInfo.MaxSegmentSize
       else SegLen := Word(Count);
       Status := FBlob.getSegment(FStatus, SegLen, PBuf, @BytesRead);
-      if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
         FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
       case Status of
-        IStatus.RESULT_OK, IStatus.RESULT_SEGMENT: begin
+        {$IFDEF WITH_CLASS_CONST}
+        IStatus.RESULT_OK, IStatus.RESULT_SEGMENT
+        {$ELSE}
+        IStatus_RESULT_OK, IStatus_RESULT_SEGMENT
+        {$ENDIF}: begin
             Inc(Result, Integer(BytesRead));
             Dec(Count, BytesRead);
             Inc(PBuf, BytesRead);
           end;
-        IStatus.RESULT_NO_DATA: begin
+        {$IFDEF WITH_CLASS_CONST}
+        IStatus.RESULT_NO_DATA
+        {$ELSE}
+        IStatus_RESULT_NO_DATA
+        {$ENDIF}: begin
            Inc(Result, Integer(BytesRead));
            Break;
           end
@@ -1092,8 +1276,8 @@ begin
     Result := OffSet;
   if (Result <> 0) then begin
     Result := FBlob.seek(FStatus, Origin, Offset);
-    if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
-      FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
+    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.seek', Self, lcOther);
   end;
   FPosition := Result;
 end;
@@ -1121,8 +1305,8 @@ begin
     then SegLen := BlobInfo.MaxSegmentSize
     else SegLen := Count;
     FBlob.putSegment(FStatus, SegLen, TempBuffer);
-    if (FStatus.getState and FStatus.STATE_ERRORS) <> 0 then
-      FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
+    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.putSegment', Self, lcOther);
     Inc(Result, SegLen);
     Inc(TempBuffer, SegLen);
     Dec(Count, SegLen);
@@ -1214,15 +1398,13 @@ end;
 
 procedure TZFirebirdLob.AfterConstruction;
 begin
-  if Int64(FBlobID) <> 0 then
-    FFBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(Self);
+  FFBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(Self);
   inherited;
 end;
 
 procedure TZFirebirdLob.BeforeDestruction;
 begin
-  if Int64(FBlobID) <> 0 then
-    FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+  FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
   inherited;
 end;
 
@@ -1281,7 +1463,7 @@ begin
 end;
 
 constructor TZFirebirdLob.Create(const Connection: IZFirebirdConnection;
-  BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
+  const BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
   const OpenLobStreams: TZSortedList);
 begin
   inherited Create(ColumnCodePage, OpenLobStreams);
