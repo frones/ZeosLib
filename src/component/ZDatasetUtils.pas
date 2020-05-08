@@ -226,10 +226,13 @@ procedure DefineSortedFields(DataSet: TDataset;
 {**
   Creates a fields lookup table to define fixed position
   of the field in dataset.
+  @param FieldDefs a collection of TDataset fielddefss in initial order.
   @param Fields a collection of TDataset fields in initial order.
+  @param IndexPairList creates a collection of index pairs.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
+function CreateFieldsLookupTable(FieldDefs: TFieldDefs; Fields: TFields;
+  out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
 
 {**
   Defines an original field index in the dataset.
@@ -1420,27 +1423,44 @@ end;
 {**
   Creates a fields lookup table to define fixed position
   of the field in dataset.
+  @param FieldDefs a collection of TDataset fielddefss in initial order.
   @param Fields a collection of TDataset fields in initial order.
+  @param IndexPairList creates a collection of index pairs.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(Fields: TFields;
+function CreateFieldsLookupTable(FieldDefs: TFieldDefs; Fields: TFields;
   out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
-var I: Integer;
+var I, j: Integer;
   r, a: Integer;
+  Found: Boolean;
+label jmpAccessor;
 begin
-  r := FirstDbcIndex;
-  a := FirstDbcIndex;
   SetLength(Result, Fields.Count);
   IndexPairList := TZIndexPairList.Create;
   IndexPairList.Capacity := Fields.Count;
+  r := FirstDbcIndex;
+  a := FirstDbcIndex;
   for I := 0 to Fields.Count - 1 do begin
     Result[i].Field := Fields[I];
-    if Fields[I].FieldKind = fkData then begin
-      Result[i].DataSource := dltResultSet;
-      Result[i].Index := r;
-      IndexPairList.Add(r, i);
-      Inc(R);
-    end else begin
+    Found := False;
+    { locate the field in the FieldDefs }
+    for J := 0 to FieldDefs.Count -1 do
+      if FieldDefs[j].Name = Fields[i].FieldName then begin
+        Found := True;
+        if FieldDefs[j].InternalCalcField
+        then goto jmpAccessor //break loop and adjust to accessor
+        else begin
+          Result[i].DataSource := dltResultSet;
+          Result[i].Index := r;
+          IndexPairList.Add(r, i);
+          Inc(R);
+          break;
+        end;
+      end;
+    { this case happens if the user adds a colculted field without adding it to the fieldrefs
+      see test ZTestCompCoreBugReport.Test804323 }
+    if not Found then begin
+jmpAccessor:
       Result[i].DataSource := dltAccessor;
       Result[i].Index := a;
       Inc(a);

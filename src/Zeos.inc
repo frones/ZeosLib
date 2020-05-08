@@ -184,6 +184,7 @@
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
             {$IF CompilerVersion >= 20} //Delphi 2009+
+              {$DEFINE WITH_CLASS_CONST} //compiler supports contants in class type declarations 
               {$DEFINE FIELD_ASWIDESTRING_IS_UNICODESTRING} //TField.AsWideString is type UnicodeString not WideString
               {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
               {$DEFINE HAVE_CS_TRYENTER} //TCriticalSection has method TryEnter
@@ -215,7 +216,7 @@
               {$DEFINE WITH_VARIANT_UINT64}             // System.TVariant supports UInt64 Values
               {$DEFINE WITH_VARIANT_UNICODESTRING}      // System.TVariant supports UnicodeString Values
               {$DEFINE WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD} // TDataSet has the GetFieldClass(TFieldDef) overload
-
+              {$DEFINE WITH_VIRTUAL_BINDFIELDS} //TDataSet has virtual protected method BindFields
               {$IF CompilerVersion >= 21} //Delphi 2010+
                 {$WEAKLINKRTTI ON}                    //suppress extended RTTI
                 {.$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI for some unknown reason we've compilation issues. So enable this define manually!
