@@ -1514,7 +1514,7 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
       Inc(P, Bind.value_sz);
     end;
   end;
-  procedure UTF2UTF16Strings;
+  procedure UTF8ToUTF16Strings;
   var BufferSize, I: Integer;
     r: PAnsiChar;
   begin
@@ -1535,7 +1535,7 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
       if r = nil
       then POCILong(P).Len := 0
       else POCILong(P).Len := ZEncoding.UTF8ToWideChar(r,
-        Length(TRawByteStringDynArray(Value)[I]), @POCILong(P).data[0]);
+        Length(TRawByteStringDynArray(Value)[I]), @POCILong(P).data[0]) shl 1;
       Inc(P, Bind.value_sz);
     end;
   end;
@@ -1684,7 +1684,7 @@ bind_direct:
         {$IFNDEF NO_UTF8STRING}
         vtUTF8String: {if (ClientCP = zCP_UTF8)
             then BindRawStrings(TRawByteStringDynArray(Value))
-            else }UTF2UTF16Strings;
+            else }UTF8ToUTF16Strings;
         {$ENDIF}
         vtRawByteString: BindRawStrings(TRawByteStringDynArray(Value));
         vtCharRec: BindRawFromCharRec;
@@ -2438,6 +2438,7 @@ var
 begin
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
     Result := '';
+    Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZRawSQLStringWriter.Create(C);
@@ -2601,7 +2602,7 @@ var
 begin
   if (Length(FCachedQueryUni) = 0) and (SQL <> '') then begin
     Result := '';
-    {$IFDEF WITH_VAR_INIT_WARNING}Tmp := '';{$ENDIF}
+    Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZUnicodeSQLStringWriter.Create(C);
