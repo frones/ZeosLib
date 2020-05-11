@@ -231,8 +231,8 @@ procedure DefineSortedFields(DataSet: TDataset;
   @param IndexPairList creates a collection of index pairs.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(FieldDefs: TFieldDefs; Fields: TFields;
-  out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
+function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
+  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
 
 {**
   Defines an original field index in the dataset.
@@ -1428,12 +1428,10 @@ end;
   @param IndexPairList creates a collection of index pairs.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(FieldDefs: TFieldDefs; Fields: TFields;
-  out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
-var I, j: Integer;
+function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
+  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
+var I, Idx: Integer;
   a: Integer;
-  Found: Boolean;
-label jmpAccessor;
 begin
   SetLength(Result, Fields.Count);
   IndexPairList := TZIndexPairList.Create;
@@ -1441,27 +1439,15 @@ begin
   a := FirstDbcIndex;
   for I := 0 to Fields.Count - 1 do begin
     Result[i].Field := Fields[I];
-    Found := False;
-    { locate the field in the FieldDefs }
-    for J := 0 to FieldDefs.Count -1 do
-      if FieldDefs[j].Name = Fields[i].FieldName then begin
-        Found := True;
-        if FieldDefs[j].InternalCalcField
-        then goto jmpAccessor //break loop and adjust to accessor
-        else begin
-          Result[i].DataSource := dltResultSet;
-          Result[i].Index := J{$IFNDEF GENERIC_INDEX}+1{$ENDIF};
-          IndexPairList.Add(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, i);
-          break;
-        end;
-      end;
-    { this case happens if the user adds a colculted field without adding it to the fieldrefs
-      see test ZTestCompCoreBugReport.Test804323 }
-    if not Found then begin
-jmpAccessor:
+    Idx := Metadata.FindColumn(Fields[I].FieldName);
+    if Idx = InvalidDbcIndex then begin
       Result[i].DataSource := dltAccessor;
       Result[i].Index := a;
       Inc(a);
+    end else begin
+      Result[i].DataSource := dltResultSet;
+      Result[i].Index := Idx;
+      IndexPairList.Add(Idx, i);
     end;
   end;
 end;

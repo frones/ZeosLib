@@ -2822,7 +2822,8 @@ end;
 function TZAbstractRODataset.GetFieldIndex(AField: TField): Integer;
 begin
   if FFieldsLookupTable = nil then
-    FFieldsLookupTable := CreateFieldsLookupTable(FieldDefs, Fields, FResultSet2AccessorIndexList);
+    FFieldsLookupTable := CreateFieldsLookupTable(FResultSetMetadata,
+      Fields, FResultSet2AccessorIndexList);
   Result := DefineFieldIndex(FieldsLookupTable, AField);
 end;
 
@@ -4473,7 +4474,8 @@ begin
   if Binding then begin
     if FResultSet2AccessorIndexList <> nil then
       FreeAndNil(FResultSet2AccessorIndexList);
-    FieldsLookupTable := CreateFieldsLookupTable(FieldDefs, Fields, FResultSet2AccessorIndexList);
+    FFieldsLookupTable := CreateFieldsLookupTable(FResultSetMetadata,
+      Fields, FResultSet2AccessorIndexList);
   end;
   inherited BindFields(Binding);
 end;
