@@ -64,7 +64,6 @@ uses
   ZSqlTestCase,
   ZTestExpression in '..\..\test\core\ZTestExpression.pas',
   ZTestExprToken in '..\..\test\core\ZTestExprToken.pas',
-  ZTestFastCode in '..\..\test\core\ZTestFastCode.pas',
   ZTestFramework in '..\..\test\core\ZTestFramework.pas',
   ZTestList in '..\..\test\core\ZTestList.pas',
   ZTestSysUtils in '..\..\test\core\ZTestSysUtils.pas',

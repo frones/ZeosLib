@@ -4470,7 +4470,7 @@ end;
 }
 procedure TZAbstractRODataset.BindFields(Binding: Boolean);
 begin
-  if Binding and not FRefreshInProgress then begin
+  if Binding then begin
     if FResultSet2AccessorIndexList <> nil then
       FreeAndNil(FResultSet2AccessorIndexList);
     FieldsLookupTable := CreateFieldsLookupTable(FieldDefs, Fields, FResultSet2AccessorIndexList);

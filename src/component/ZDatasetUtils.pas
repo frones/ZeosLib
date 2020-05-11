@@ -1431,14 +1431,13 @@ end;
 function CreateFieldsLookupTable(FieldDefs: TFieldDefs; Fields: TFields;
   out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
 var I, j: Integer;
-  r, a: Integer;
+  a: Integer;
   Found: Boolean;
 label jmpAccessor;
 begin
   SetLength(Result, Fields.Count);
   IndexPairList := TZIndexPairList.Create;
   IndexPairList.Capacity := Fields.Count;
-  r := FirstDbcIndex;
   a := FirstDbcIndex;
   for I := 0 to Fields.Count - 1 do begin
     Result[i].Field := Fields[I];
@@ -1451,9 +1450,8 @@ begin
         then goto jmpAccessor //break loop and adjust to accessor
         else begin
           Result[i].DataSource := dltResultSet;
-          Result[i].Index := r;
-          IndexPairList.Add(r, i);
-          Inc(R);
+          Result[i].Index := J{$IFNDEF GENERIC_INDEX}+1{$ENDIF};
+          IndexPairList.Add(J{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, i);
           break;
         end;
       end;

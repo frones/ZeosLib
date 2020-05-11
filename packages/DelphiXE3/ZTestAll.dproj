@@ -143,7 +143,6 @@
 			</DelphiCompile>
 	<DCCReference Include="..\..\test\core\ZTestExpression.pas"/>
 	<DCCReference Include="..\..\test\core\ZTestExprToken.pas"/>
-	<DCCReference Include="..\..\test\core\ZTestFastCode.pas"/>
 	<DCCReference Include="..\..\test\core\ZTestFramework.pas"/>
 	<DCCReference Include="..\..\test\core\ZTestList.pas"/>
 	<DCCReference Include="..\..\test\core\ZTestSysUtils.pas"/>
