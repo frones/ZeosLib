@@ -59,8 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainOracleDriver,
-  ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZGenericSqlAnalyser, ZDbcCache,
-  ZPlainOracleConstants;
+  ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZGenericSqlAnalyser, ZDbcCache;
 
 type
 
@@ -1004,6 +1003,7 @@ begin
   else Result := tmDefault;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "AutoCommit,Params" not used} {$ENDIF}
 function TZOracleConnection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
   TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
@@ -1013,6 +1013,7 @@ begin
   TxnMode := ZDbc2OCITxnMode(ReadOnly, TransactIsolationLevel);
   Result := TZOracleTransaction.CreateGlobal(Self, TxnMode, smNew, cmLoosely);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOracleConnection.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
@@ -1260,6 +1261,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Owner" not used} {$ENDIF}
 constructor TZOracleTransaction.CreateGlobal(const Owner: TZOracleConnection;
   TxnMode: TZOCITxnMode; SpawnMode: TZOCITxnSpawnMode;
   CoupleMode: TZOCITxnCoupleMode);
@@ -1272,6 +1274,7 @@ begin
   fBranches := TZCollection.Create;
   FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FOCIEnv, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 constructor TZOracleTransaction.CreateLocal(const Owner: TZOracleConnection);
 begin

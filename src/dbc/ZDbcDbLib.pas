@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZSysUtils, ZClasses,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
-  ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZPlainDriver;
+  ZTokenizer, ZGenericSqlAnalyser, ZPlainDriver;
 
 type
   TDBLibProvider = (dpMsSQL, dpSybase);

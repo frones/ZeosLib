@@ -45,8 +45,6 @@ contains
   ZVariables in '..\..\src\core\ZVariables.pas',
   ZClasses in '..\..\src\core\ZClasses.pas',
   ZMessages in '..\..\src\core\ZMessages.pas',
-  ZURL in '..\..\src\core\ZURL.pas',
-  ZConnProperties in '..\..\src\core\ZConnProperties.pas',
   ZFunctions in '..\..\src\core\ZFunctions.pas',
   ZFunctionsConvert in '..\..\src\core\ZFunctionsConvert.pas',
   ZFunctionsDateTime in '..\..\src\core\ZFunctionsDateTime.pas',

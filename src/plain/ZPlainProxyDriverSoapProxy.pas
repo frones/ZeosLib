@@ -64,6 +64,10 @@ unit ZPlainProxyDriverSoapProxy;
 
 interface
 
+{$I ZPlain.inc}
+
+{$IFNDEF ZEOS_DISABLE_PROXY}
+
 uses Soap.InvokeRegistry, Soap.SOAPHTTPClient, System.Types, Soap.XSBuiltIns;
 
 type
@@ -217,8 +221,11 @@ type
 function GetIZeosProxy(UseWSDL: Boolean=System.False; Addr: string=''; HTTPRIO: THTTPRIO = nil): IZeosProxy;
 
 
+{$ENDIF ZEOS_DISABLE_PROXY}
 implementation
-  uses System.SysUtils;
+{$IFNDEF ZEOS_DISABLE_PROXY}
+
+uses System.SysUtils;
 
 function GetIZeosProxy(UseWSDL: Boolean; Addr: string; HTTPRIO: THTTPRIO): IZeosProxy;
 const
@@ -263,4 +270,5 @@ initialization
   InvRegistry.RegisterDefaultSOAPAction(TypeInfo(IZeosProxy), 'zproxy/IZeosProxy%operationName%');
   InvRegistry.RegisterInvokeOptions(TypeInfo(IZeosProxy), ioLiteral);
 
+{$ENDIF ZEOS_DISABLE_PROXY}
 end.

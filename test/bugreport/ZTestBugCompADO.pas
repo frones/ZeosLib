@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataSet, DB, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
@@ -71,7 +72,9 @@ type
     procedure TestADQA_All_types;
   end;
 
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 implementation
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 
 uses SysUtils, ZTestCase;
 
@@ -190,6 +193,7 @@ end;
 
 initialization
   RegisterTest('bugreport',ZTestCompADOBugReport.Suite);
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 end.
 
 

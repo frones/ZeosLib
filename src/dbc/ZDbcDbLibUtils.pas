@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses Classes, SysUtils,
-  ZVariant, ZDbcIntfs, ZPlainDBLibDriver, ZCompatibility, ZPlainDbLibConstants;
+  ZVariant, ZDbcIntfs, ZPlainDBLibDriver, ZCompatibility;
 
 {**
   Converts an ODBC native types into ZDBC SQL types.

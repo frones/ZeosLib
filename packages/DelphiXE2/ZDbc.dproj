@@ -132,10 +132,8 @@
 			<DelphiCompile Include="$(MainSource)">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="ZCore.dcp"/>
-			<DCCReference Include="ZPlain.dcp"/>
 			<DCCReference Include="ZParseSql.dcp"/>
-			<DCCReference Include="rtl.dcp"/>
+			<DCCReference Include="ZPlain.dcp"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcAdo.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcAdoMetadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcAdoResultSet.pas"/>
@@ -154,12 +152,16 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcDbLibResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcDbLibStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcDbLibUtils.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebird.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebirdInterbase.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebirdResultSet.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebirdStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcGenericResolver.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6.pas"/>
-			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6Metadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6ResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6Statement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6Utils.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcInterbaseFirebirdMetadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcIntfs.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcLogging.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcMetadata.pas"/>
@@ -190,8 +192,17 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcPostgreSqlUtils.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcProperties.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcProxy.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcProxyMetadata.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcProxyResultSet.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcProxyStatement.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcProxyUtils.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcResultSetMetadata.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhere.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhereResultSet.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhereStatement.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhereUtils.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcSqLite.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcSqLiteMetadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcSqLiteResultSet.pas"/>

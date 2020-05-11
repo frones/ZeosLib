@@ -144,12 +144,11 @@
 			<DelphiCompile Include="$(MainSource)">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="dbrtl.dcp"/>
 			<DCCReference Include="rtl.dcp"/>
+			<DCCReference Include="dbrtl.dcp"/>
 			<DCCReference Include="..\..\src\core\ZClasses.pas"/>
 			<DCCReference Include="..\..\src\core\ZCollections.pas"/>
 			<DCCReference Include="..\..\src\core\ZCompatibility.pas"/>
-			<DCCReference Include="..\..\src\core\ZConnProperties.pas"/>
 			<DCCReference Include="..\..\src\core\ZEncoding.pas"/>
 			<DCCReference Include="..\..\src\core\ZExpression.pas"/>
 			<DCCReference Include="..\..\src\core\ZExprParser.pas"/>
@@ -165,7 +164,6 @@
 			<DCCReference Include="..\..\src\core\ZMessages.pas"/>
 			<DCCReference Include="..\..\src\core\ZSysUtils.pas"/>
 			<DCCReference Include="..\..\src\core\ZTokenizer.pas"/>
-			<DCCReference Include="..\..\src\core\ZURL.pas"/>
 			<DCCReference Include="..\..\src\core\ZVariables.pas"/>
 			<DCCReference Include="..\..\src\core\ZVariant.pas"/>
 			<BuildConfiguration Include="Debug">

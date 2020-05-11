@@ -520,6 +520,7 @@ begin
   end else Result := NullBCD;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TAbstractODBCResultSet.GetBlob(ColumnIndex: Integer;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
@@ -531,6 +532,7 @@ begin
     else raise CreateCanNotAccessBlobRecordException(ColumnIndex, ColumnType);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TAbstractODBCResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var L: LengthInt;
@@ -2330,6 +2332,7 @@ end;
 
 { TZODBCRowAccessorW }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZODBCRowAccessorW.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -2351,9 +2354,11 @@ begin
   inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZODBCRowAccessorA }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZODBCRowAccessorA.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -2375,6 +2380,7 @@ begin
   inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZODBCachedResultSetA }
 

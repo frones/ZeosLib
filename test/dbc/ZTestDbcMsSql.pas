@@ -54,7 +54,11 @@
 unit ZTestDbcMsSql;
 
 interface
+
 {$I ZDbc.inc}
+
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
+
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcIntfs, ZDbcDbLib, ZSqlTestCase, ZCompatibility;
@@ -76,7 +80,9 @@ type
     procedure TestStoredprocedures;
   end;
 
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 implementation
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 
 uses ZTestConsts;
 
@@ -88,7 +94,7 @@ uses ZTestConsts;
 }
 function TZTestDbcMSSqlCase.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,ado,odbc_w,odbc_a,OleDB';
+  Result := 'mssql,sybase,ado,odbc_w,odbc_a,OleDB';
 end;
 
 {**
@@ -325,6 +331,7 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcMSSqlCase.Suite);
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 end.
 
 

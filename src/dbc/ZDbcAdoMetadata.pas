@@ -64,7 +64,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection,
-  ZOleDB, ActiveX, ZDbcOleDBMetadata;
+  ZPlainOleDBDriver, ActiveX, ZDbcOleDBMetadata;
 
 type
   {** Implements Ado Metadata. }
@@ -619,6 +619,7 @@ begin
             stBytes: SQLType := stBinaryStream;
             stString: SQLType := stAsciiStream;
             stUnicodeString: SQLType := stUnicodeStream;
+            {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
           end;
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
         if SQLType in [stCurrency, stBigDecimal] then begin

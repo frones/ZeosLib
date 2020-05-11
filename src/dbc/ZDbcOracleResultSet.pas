@@ -66,7 +66,7 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver, ZDbcCache,
   ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils, ZClasses,
-  ZPlainOracleConstants, ZPlainDriver, ZDbcStatement, ZDbcCachedResultSet;
+  ZPlainDriver, ZDbcStatement, ZDbcCachedResultSet;
 
 type
   { Oracle Error Class}

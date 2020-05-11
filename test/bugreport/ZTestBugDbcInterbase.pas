@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcIntfs, ZCompatibility, ZSqlTestCase;
@@ -81,7 +82,9 @@ type
     procedure TestTicket376_B;
   end;
 
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 implementation
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses ZTestCase, ZTestConsts, ZDbcMetadata, ZFastCode;
 
@@ -670,4 +673,5 @@ end;
 
 initialization
   RegisterTest('bugreport',TZTestDbcInterbaseBugReport.Suite);
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.

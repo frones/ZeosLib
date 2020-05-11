@@ -406,7 +406,10 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5024 off : Parameter "Name,Info" not used}
+  {$WARN 5033 off : Function result does not seem to be set}
+{$ENDIF}
 function TZSQLiteConnection.PrepareCallWithParams(const Name: String;
   Info: TStrings): IZCallableStatement;
 begin

@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
   ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts, ZDbcProperties;
@@ -91,7 +92,9 @@ type
     procedure Test739514;
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
 uses SysUtils, ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils, ZEncoding;
 
@@ -776,4 +779,5 @@ end;
 initialization
   RegisterTest('bugreport',TZTestDbcPostgreSQLBugReport.Suite);
   RegisterTest('bugreport',TZTestDbcPostgreSQLBugReportMBCs.Suite);
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.

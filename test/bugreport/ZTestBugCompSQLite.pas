@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 uses
   {$IF not defined(FPC) and defined(MSWINDOWS)}Windows,{$IFEND}//inlineWarning
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
@@ -89,7 +90,9 @@ type
     procedure Mantis248_TestNonASCIICharSelect;
   end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE}
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 
 uses
   Variants, DB, ZDatasetUtils, ZSqlProcessor;
@@ -438,4 +441,5 @@ end;
 initialization
   RegisterTest('bugreport',ZTestCompSQLiteBugReport.Suite);
   RegisterTest('bugreport',ZTestCompSQLiteBugReportMBCs.Suite);
+{$ENDIF ZEOS_DISABLE_SQLITE}
 end.

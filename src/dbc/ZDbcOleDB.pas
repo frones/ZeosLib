@@ -61,7 +61,7 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
   ZGenericSqlAnalyser, ZCompatibility, ZDbcOleDBUtils,
-  ZOleDB, ZPlainOleDBDriver, ZOleDBToken;
+  ZPlainOleDBDriver, ZOleDBToken;
 
 type
   {** Implements OleDB Database Driver. }
@@ -583,7 +583,7 @@ procedure TZOleDBConnection.CheckError(Status: HResult; LoggingCateGory: TZLoggi
   const LogMsg: RawByteString);
 begin
   if (Pointer(LogMsg) <> nil) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMsg);
+    DriverManager.LogMessage(LoggingCateGory, ConSettings^.Protocol, LogMsg);
   if Status <> S_OK then
     OleDbCheck(Status, '', Self, nil);
 end;

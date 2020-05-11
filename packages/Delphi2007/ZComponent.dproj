@@ -71,6 +71,5 @@
       <DCCReference Include="..\..\src\component\ZSqlStrings.pas"/>
       <DCCReference Include="..\..\src\component\ZSqlUpdate.pas"/>
       <DCCReference Include="..\..\src\component\ZStoredProcedure.pas"/>
-      <DCCReference Include="..\..\src\component\ZStreamBlob.pas"/>
   </ItemGroup>
 </Project>

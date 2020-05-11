@@ -54,7 +54,10 @@
 unit ZTestDbcInterbase;
 
 interface
+
 {$I ZDbc.inc}
+
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcInterbase6, ZSqlTestCase,
   ZCompatibility, DateUtils;
@@ -89,10 +92,12 @@ type
     procedure TestLongStatements;
   end;
 
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 implementation
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses SysUtils, ZTestConsts, ZTestCase, ZVariant, ZMessages,
-  ZDbcInterbase6Metadata;
+  ZDbcInterbaseFirebirdMetadata, ZDbcFirebirdInterbase;
 
 { TZTestDbcInterbaseCase }
 
@@ -215,7 +220,7 @@ begin
   CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
 
   if ConnectionConfig.Transport = traNative then
-    CheckEquals(3, (Connection as IZInterbase6Connection).GetDialect);
+    CheckEquals(3, (Connection as IZInterbaseFirebirdConnection).GetDialect);
 
   { Checks without transactions. }
   Connection.CreateStatement;
@@ -920,4 +925,5 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcInterbaseCase.Suite);
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.

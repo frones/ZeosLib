@@ -79,13 +79,13 @@
 			<DCCReference Include="..\..\src\core\ZExpression.pas"/>
 			<DCCReference Include="..\..\src\core\ZExprParser.pas"/>
 			<DCCReference Include="..\..\src\core\ZExprToken.pas"/>
+			<DCCReference Include="..\..\src\core\ZFastCode.pas"/>
 			<DCCReference Include="..\..\src\core\ZMatchPattern.pas"/>
 			<DCCReference Include="..\..\src\core\ZSysUtils.pas"/>
 			<DCCReference Include="..\..\src\core\ZTokenizer.pas"/>
 			<DCCReference Include="..\..\src\core\ZVariables.pas"/>
 			<DCCReference Include="..\..\src\core\ZClasses.pas"/>
 			<DCCReference Include="..\..\src\core\ZMessages.pas"/>
-			<DCCReference Include="..\..\src\core\ZURL.pas"/>
 			<DCCReference Include="..\..\src\core\ZFunctions.pas"/>
 			<DCCReference Include="..\..\src\core\ZFunctionsConvert.pas"/>
 			<DCCReference Include="..\..\src\core\ZFunctionsDateTime.pas"/>
@@ -136,7 +136,7 @@
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">7.2.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">7.3.0.0</VersionInfoKeys>
 					</VersionInfoKeys>
 					<Source>
 						<Source Name="MainSource">ZCore.dpk</Source>

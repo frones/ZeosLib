@@ -3164,10 +3164,7 @@ begin
   IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(GetColumnIndex(ColumnName), Value);
 end;
 
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
-{$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "D" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractResultSet.UpdateDate(ColumnIndex: Integer;
   const Value: TDateTime);
 var D: TZDate;

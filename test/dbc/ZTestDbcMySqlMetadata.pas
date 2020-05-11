@@ -54,7 +54,10 @@
 unit ZTestDbcMySqlMetadata;
 
 interface
+
 {$I ZDbc.inc}
+
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 
 uses SysUtils, ZDbcIntfs, ZCompatibility, ZSqlTestCase,
  ZDbcMySql,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
@@ -84,7 +87,10 @@ type
     procedure TestGetBestRowIdentifier;
   end;
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 implementation
+{$ENDIF ZEOS_DISABLE_MYSQL}
+
 uses
   ZTestCase, ZDbcMetadata;
 
@@ -426,4 +432,6 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestMySqlMetadataCase.Suite);
+{$ENDIF ZEOS_DISABLE_MYSQL}
+
 end.

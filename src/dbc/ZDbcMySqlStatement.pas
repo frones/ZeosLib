@@ -60,8 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
-  ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils,
-  ZCollections;
+  ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils, ZCollections;
                                                                                    
 type
   TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, mySet, myCall);
@@ -1282,6 +1281,7 @@ begin
                             Bind^.Length[0] := 1;
                             PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
                           end;
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stLongWord, SQLType);
     end;
     Bind^.is_null_address^ := 0;
   end;
@@ -1633,6 +1633,7 @@ begin
                             Bind^.Length[0] := BcdToRaw(Value, Bind.buffer, '.');
                             PByte(PAnsiChar(Bind.buffer)+Bind^.Length[0])^ := Ord(#0);
                           end;
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBigDecimal, BindList.SQLTypes[Index]);
     end;
     Bind^.is_null_address^ := 0;
   end;
@@ -1761,6 +1762,7 @@ begin
                             Bind^.Length[0] := PEnd-PAnsiChar(Bind.buffer);
                             PByte(PEnd)^ := 0;
                           end;
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stCurrency, BindList.SQLTypes[Index]);
     end;
     Bind^.is_null_address^ := 0;
   end;

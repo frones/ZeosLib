@@ -55,6 +55,8 @@ unit ZTestInterbaseToken;
 
 interface
 {$I ZParseSql.inc}
+
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZTokenizer,
   ZInterbaseToken, ZTestTokenizer;
@@ -73,8 +75,9 @@ type
     procedure TestWordState;
     procedure TestNumberState;
   end;
-
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 implementation
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 
 { TZTestInterbaseTokenizer }
 
@@ -115,7 +118,7 @@ procedure TZTestInterbaseTokenizer.TestQuoteState;
 const
   TokenString1: string = '"a""aa" ''cc''''c''';
   TokenTypes1: array[0..1] of TZTokenType = (
-    ttWord, ttQuoted);
+    ttQuotedIdentifier, ttQuoted);
   TokenValues1: array[0..1] of string = (
     '"a""aa"', '''cc''''c''');
 begin
@@ -185,5 +188,6 @@ end;
 
 initialization
   RegisterTest('parsesql',TZTestInterbaseTokenizer.Suite);
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.
 

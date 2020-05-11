@@ -253,7 +253,7 @@ implementation
 
 uses
   ZFastCode, ZDbcUtils, ZSelectSchema, ZClasses, ZEncoding,
-  ZPlainOracleConstants{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF};
+  ZPlainOracleDriver {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF};
 
 { TZOracleDatabaseInfo }
 

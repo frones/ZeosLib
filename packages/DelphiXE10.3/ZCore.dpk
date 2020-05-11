@@ -38,7 +38,6 @@ contains
   ZClasses in '..\..\src\core\ZClasses.pas',
   ZCollections in '..\..\src\core\ZCollections.pas',
   ZCompatibility in '..\..\src\core\ZCompatibility.pas',
-  ZConnProperties in '..\..\src\core\ZConnProperties.pas',
   ZEncoding in '..\..\src\core\ZEncoding.pas',
   ZExpression in '..\..\src\core\ZExpression.pas',
   ZExprParser in '..\..\src\core\ZExprParser.pas',
@@ -54,7 +53,6 @@ contains
   ZMessages in '..\..\src\core\ZMessages.pas',
   ZSysUtils in '..\..\src\core\ZSysUtils.pas',
   ZTokenizer in '..\..\src\core\ZTokenizer.pas',
-  ZURL in '..\..\src\core\ZURL.pas',
   ZVariables in '..\..\src\core\ZVariables.pas',
   ZVariant in '..\..\src\core\ZVariant.pas';
 

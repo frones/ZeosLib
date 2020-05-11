@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZCompatibility,
   ZDbcOracle, ZSqlTestCase;
@@ -70,7 +71,9 @@ type
     procedure TestBlobValues;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses ZTestCase;
 
@@ -127,4 +130,5 @@ end;
 
 initialization
   RegisterTest('bugreport',TZTestDbcOracleBugReport.Suite);
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

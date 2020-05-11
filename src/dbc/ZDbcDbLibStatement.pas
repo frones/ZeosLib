@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   ZCompatibility, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs, ZDbcStatement,
-  ZDbcDbLib, ZPlainDbLibConstants, ZPlainDbLibDriver;
+  ZDbcDbLib, ZPlainDbLibDriver;
 
 type
   {** Implements Prepared SQL Statement for DBLib. With emulation}

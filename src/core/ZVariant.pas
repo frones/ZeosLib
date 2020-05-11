@@ -424,8 +424,6 @@ type
     function ToString: string; override;
   end;
 
-  {$MESSAGE 'Object TZClientVariantManager moved to ZDbcConnection.pas'}
-
 {**
   Initializes a custom variant value.
   @param Value a custom variant value to be initialized.

@@ -79,6 +79,7 @@ uses
 {$ENDIF}
 {$IFDEF ENABLE_INTERBASE}
   ZDbcInterbase6,
+  ZDbcFirebird,
 {$ENDIF}
 {$IFDEF ENABLE_SQLITE}
   ZDbcSqLite,
@@ -88,7 +89,7 @@ uses
 {$ENDIF}
 {$IFDEF ENABLE_ASA}
   ZDbcASA,
-  //ZDbcSQLAnywhere,
+  ZDbcSQLAnywhere,
 {$ENDIF}
 {$IFDEF ENABLE_POOLED}
   ZDbcPooled,

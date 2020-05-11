@@ -112,6 +112,7 @@ begin
   Add('<>');
   Add('!=');
   Add('||');
+  //Add(':=');
 end;
 
 { TZOracleWordState }

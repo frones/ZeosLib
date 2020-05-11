@@ -60,7 +60,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZPlainMySqlConstants;
+  ZDbcConnection, ZPlainMySqlDriver;
 
 type
 
@@ -299,7 +299,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZCollections,
-  ZDbcProperties, ZPlainMySqlDriver;
+  ZDbcProperties;
 
 { TZMySQLDatabaseInfo }
 
@@ -1330,8 +1330,8 @@ begin
           Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), Len);
 
           TypeName := GetRawByteString(ColumnIndexes[2]);
-          ConvertMySQLColumnInfoFromString(TypeName, ConSettings,
-            TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals, fMySQL_FieldType_Bit_1_IsBoolean);
+          ConvertMySQLColumnInfoFromString(TypeName, TypeInfoSecond, MySQLType,
+            ColumnSize, ColumnDecimals, fMySQL_FieldType_Bit_1_IsBoolean);
           if TypeName = 'enum'
           then AddToBoolCache := AddToBoolCache or ((TypeInfoSecond = '''Y'',''N''') or (TypeInfoSecond = '''N'',''Y'''))
           else if TypeName = 'bit'
@@ -2713,7 +2713,7 @@ begin
           Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_index, Len), Len); //PROCEDURE_SCHEM
           Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), Len); //PROCEDURE_NAME
           TypeName := ConSettings^.ConvFuncs.ZStringToRaw(Params[2], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-          ConvertMySQLColumnInfoFromString(TypeName, ConSettings, Temp, FieldType, ColumnSize, Scale,
+          ConvertMySQLColumnInfoFromString(TypeName, Temp, FieldType, ColumnSize, Scale,
             fMySQL_FieldType_Bit_1_IsBoolean);
           { process COLUMN_NAME }
           if Params[1] = '' then

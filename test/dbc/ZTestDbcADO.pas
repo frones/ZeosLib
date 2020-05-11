@@ -57,6 +57,8 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ADO}
+
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase;
 
@@ -70,9 +72,9 @@ type
   published
     procedure TestFetchSequenceValue;
   end;
-
+{$ENDIF ZEOS_DISABLE_ADO}
 implementation
-
+{$IFNDEF ZEOS_DISABLE_ADO}
 { TZTestDbcADOCase }
 
 {**
@@ -102,4 +104,5 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcADOCase.Suite);
+{$ENDIF ZEOS_DISABLE_ADO}
 end.

@@ -54,7 +54,10 @@
 unit ZTestDbcInterbaseMetadata;
 
 interface
+
 {$I ZDbc.inc}
+
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses
 {$IFNDEF VER130BELOW}
   Types,
@@ -93,7 +96,9 @@ type
     procedure TestMetadataGetTypeInfo;
   end;
 
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 implementation
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses ZDbcMetadata;
 
@@ -419,4 +424,5 @@ end;
 
 initialization
   RegisterTest('dbc',TZInterbaseTestDbcMetadata.Suite);
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.

@@ -57,13 +57,13 @@ interface
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}ZClasses, ZDbcUtils, ZSelectSchema,
-  ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
-  ZCompatibility, ZPlainOracleConstants, FmtBCD;
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}ZClasses, ZSysUtils, ZVariant,
+  ZCompatibility, ZPlainOracleDriver,
+  ZDbcIntfs, ZDbcUtils, ZSelectSchema, ZDbcLogging;
 
 const
   MAX_SQLVAR_LIMIT = 1024;

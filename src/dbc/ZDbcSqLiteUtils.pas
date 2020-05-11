@@ -97,7 +97,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZMessages, ZFastCode, ZClasses, ZDbcUtils;
+  ZMessages, ZFastCode, ZDbcUtils;
 
 {**
   Convert string SQLite field type to SQLType

@@ -126,7 +126,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, ActiveX, ZOleDB,
+  Variants, ActiveX, ZPlainOleDBDriver,
   ZDbcUtils, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties, ZDbcAdoStatement,
   ZDbcAdoMetaData, ZEncoding, ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
 

@@ -59,8 +59,8 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
-  ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging, ZCompatibility, ZDbcASA,
-  ZVariant, ZPlainASAConstants;
+  ZSysUtils, ZVariant, ZCompatibility,
+  ZPlainASADriver, ZDbcIntfs, ZDbcLogging, ZDbcASA;
 
 const
   StdVars = 20;

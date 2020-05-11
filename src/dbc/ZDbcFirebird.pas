@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
+  ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainFirebirdInterbaseDriver, ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
   ZGenericSqlAnalyser, ZClasses, ZDbcFirebirdInterbase,
   ZPlainFirebird;
@@ -252,7 +252,7 @@ function TZFirebirdConnection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
   Params: TStrings): IZTransaction;
 begin
   if FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] = EmptyRaw then
-    FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
+    FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Params);
   Result := TZFirebirdTransaction.Create(Self, AutoCommit, ReadOnly, FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel]);
 end;
 
@@ -270,6 +270,8 @@ begin
   FBTrans := ZTrans.GetTransaction;
   FAttachment.execute(FStatus, FBTrans, Length(SQL), Pointer(SQL),
     FDialect, nil, nil, nil, nil);
+  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    HandleError(FStatus, SQL, Self, LoggingCategory);
 end;
 
 function TZFirebirdConnection.GetActiveTransaction: IZFirebirdTransaction;
@@ -307,8 +309,8 @@ procedure TZFirebirdConnection.HandleError(Status: IStatus;
 var
 	statusVector: PARRAY_ISC_STATUS;
 begin
-	if ((status.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) = 0) then
-		Exit;
+  if ((status.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) = 0) then
+    Exit;
   statusVector := PARRAY_ISC_STATUS(Status.getErrors);
   try
     CheckInterbase6Error(FPlainDriver, statusVector^, Sender, LoggingCategory, Msg);

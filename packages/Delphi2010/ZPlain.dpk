@@ -27,32 +27,27 @@ package ZPlain;
 {$IMPLICITBUILD OFF}
 
 requires
-  ZCore,
-  rtl,
-  vcl;
+  ZCore;
 
 contains
-  ZOleDB in '..\..\src\plain\ZOleDB.pas',
   ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
   ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
-  ZPlainASAConstants in '..\..\src\plain\ZPlainASAConstants.pas',
   ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
-  ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
   ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
   ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
-  ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
-  ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
+  ZPlainFirebird in '..\..\src\plain\ZPlainFirebird.pas',
+  ZPlainFirebirdInterbaseDriver in '..\..\src\plain\ZPlainFirebirdInterbaseDriver.pas',
   ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas',
-  ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
   ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
   ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
   ZPlainOleDBDriver in '..\..\src\plain\ZPlainOleDBDriver.pas',
-  ZPlainOracleConstants in '..\..\src\plain\ZPlainOracleConstants.pas',
   ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
   ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
-  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
   ZPlainProxyDriver in '..\..\src\plain\ZPlainProxyDriver.pas',
   ZPlainProxyDriverInternalProxy in '..\..\src\plain\ZPlainProxyDriverInternalProxy.pas',
-  ZPlainProxyDriverIntf in '..\..\src\plain\ZPlainProxyDriverIntf.pas';
+  ZPlainProxyDriverIntf in '..\..\src\plain\ZPlainProxyDriverIntf.pas',
+  ZPlainProxyDriverSoapProxy in '..\..\src\plain\ZPlainProxyDriverSoapProxy.pas',
+  ZPlainSQLAnywhere in '..\..\src\plain\ZPlainSQLAnywhere.pas',
+  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas';
 
 end.

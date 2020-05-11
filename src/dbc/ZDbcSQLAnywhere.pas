@@ -254,8 +254,11 @@ begin
   State := USASCII7ToUnicodeString(@StateBuf[0], st_Len);
   ErrMsg := PRawToUnicode(Pointer(ErrBuf), err_Len, ZOSCodePage);
   {$ELSE}
-  {$IFDEF FPC} State := ''; {$ENDIF}
+  {$IFDEF WITH_VAR_INIT_WARNING} State := ''; {$ENDIF}
   System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
+  {$IFDEF WITH_VAR_INIT_WARNING} ErrMsg := ''; {$ENDIF}
+  P := Pointer(ErrBuf);
+  System.SetString(ErrMsg, P, err_Len);
   {$ENDIF}
   ErrMsg := ErrMsg + ' The SQL: ';
   {$IFDEF UNICODE}

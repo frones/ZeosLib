@@ -62,7 +62,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_OLEDB_UTILS} //if set we have an empty unit
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD,
-  ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement, Variants;
+  ZCompatibility, ZDbcIntfs, ZPlainOleDBDriver, ZVariant, ZDbcStatement, Variants;
 
 type
   TInterfacesDynArray = array of TInterfaceDynArray;
@@ -355,7 +355,7 @@ begin
     // retrieve binding information from Status[]
     s := '';
     for i := 0 to high(aStatus) do
-      if aStatus[i]<>ZOleDB.DBBINDSTATUS_OK then
+      if aStatus[i]<>ZPlainOleDBDriver.DBBINDSTATUS_OK then
         if aStatus[i]<=cardinal(high(TOleDBBindStatus)) then
           s := Format('%s Status[%d]="%s"',[s,i,GetEnumName(TypeInfo(TOleDBBindStatus),aStatus[i])])
         else

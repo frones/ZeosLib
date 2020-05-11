@@ -6,7 +6,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDataSetUtils, ZDbcIntfs, ZSqlTestCase,
@@ -82,7 +83,9 @@ type
     procedure TestOutParam2;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
 {$IFNDEF VER130BELOW}
@@ -94,7 +97,7 @@ uses
 
 function ZTestCompOracleBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'oracle,oracle-9i';
+  Result := 'oracle';
 end;
 
 {**
@@ -333,4 +336,5 @@ end;
 
 initialization
   RegisterTest('bugreport', ZTestCompOracleBugReport.Suite);
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

@@ -57,6 +57,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 uses
 {$IFNDEF VER130BELOW}
   Types,
@@ -85,7 +86,9 @@ type
   end;
 
 
+{$IFNDEF ZEOS_DISABLE_SQLITE}
 implementation
+{$ENDIF ZEOS_DISABLE_SQLITE}
 
 uses ZTestConsts;
 
@@ -524,4 +527,5 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcSQLiteCase.Suite);
+{$ENDIF ZEOS_DISABLE_SQLITE}
 end.

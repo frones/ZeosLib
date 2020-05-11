@@ -54,8 +54,10 @@
 unit ZTestDbcMySql;
 
 interface
+
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcIntfs, ZSqlTestCase, ZDbcMySql, ZDbcProperties, ZCompatibility, ZSysUtils;
 
@@ -92,8 +94,9 @@ type
     procedure Test_time_fraction_values;
   end;
 
-
+{$ENDIF ZEOS_DISABLE_MYSQL}
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 
 uses ZTestConsts, ZDbcResultSet;
 
@@ -844,4 +847,6 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcMySQLCase.Suite);
+{$ENDIF ZEOS_DISABLE_MYSQL}
+
 end.

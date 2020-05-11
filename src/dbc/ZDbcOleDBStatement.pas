@@ -66,8 +66,9 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  ZCompatibility, ZSysUtils, ZOleDB, ZDbcLogging, ZDbcStatement, ZCollections,
-  ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties, ZDbcUtils, ZClasses;
+  ZCompatibility, ZSysUtils, ZPlainOleDBDriver, ZDbcLogging, ZDbcStatement,
+  ZCollections, ZDbcOleDBUtils, ZDbcIntfs, ZVariant, ZDbcProperties, ZDbcUtils,
+  ZClasses;
 
 type
   IZOleDBPreparedStatement = Interface(IZStatement)
@@ -796,6 +797,7 @@ begin
         vtAnsiString: W1 := ZOSCodePage;
         vtUTF8String: W1 := zCP_UTF8;
         vtRawByteString: W1 := FClientCP;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
     end else if (wType = DBTYPE_BYTES) or (wType = DBTYPE_STR) then
       MaxL := fDBBindingArray[i].cbMaxLen - Byte(Ord(wType = DBTYPE_STR))
@@ -1309,7 +1311,9 @@ begin
                     W_Dyn := CharRecArray2UnicodeStrArray(TZCharRecDynArray(Arr.VArray));
                     goto SetUniArray;
                    end;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
+    {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
   end;
   for I := 0 to High(W_Dyn) do
     W_Dyn[i] := ZRawToUnicode(TRawByteStringDynArray(Arr.VArray)[i], CP);
@@ -1707,6 +1711,7 @@ begin
                            Bind.dwFlags := (Bind.dwFlags and not DBPARAMFLAGS_ISINPUT) or DBPARAMFLAGS_ISOUTPUT;
       pctIn, pctInOut: if Bind.dwFlags and DBPARAMFLAGS_ISINPUT = 0 then
                            Bind.dwFlags := Bind.dwFlags or DBPARAMFLAGS_ISINPUT;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
     end;
   end else begin
     Bind.wType := SQLType2OleDBTypeEnum[SQLType];
@@ -2150,6 +2155,7 @@ begin
               vtCharRec:                                    L := Max(L, TZCharRecDynArray(P)[I].Len);
               {$IFDEF UNICODE}vtString,{$ENDIF}
               vtUnicodeString:                              L := Max(L, Length(TUnicodeStringDynArray(P)[I]));
+              {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
             end;
           InitVaryBind(ParameterIndex, (L+1) shl 1, DBTYPE_WSTR);
         end;

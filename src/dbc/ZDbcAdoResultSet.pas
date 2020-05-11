@@ -165,7 +165,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ActiveX,
+  Variants, {$IFDEF FPC}ZPlainOleDBDriver{$ELSE}OleDB{$ENDIF}, ActiveX,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZDbcUtils;
 
@@ -408,6 +408,7 @@ begin
     case ColumnInfo.ColumnType of
       stString: ColumnInfo.ColumnType := stAsciiStream;
       stUnicodeString: ColumnInfo.ColumnType := stUnicodeStream;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
     end;
 
     ColumnInfo.ADOColumnType := ColType;

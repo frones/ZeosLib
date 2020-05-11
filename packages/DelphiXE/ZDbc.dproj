@@ -93,7 +93,7 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcDbLibUtils.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcGenericResolver.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6.pas"/>
-			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6Metadata.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcInterbaseFirebirdMetadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6ResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6Statement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcInterbase6Utils.pas"/>
@@ -136,6 +136,14 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcSqLiteUtils.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcUtils.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhere.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhereStatement.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhereUtils.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcSQLAnywhereResultSet.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebird.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebirdStatement.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebirdResultSet.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcFirebirdInterbase.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
@@ -180,7 +188,7 @@
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">7.2.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">7.3.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Source>

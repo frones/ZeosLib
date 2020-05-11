@@ -6,7 +6,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 uses
 {$IFNDEF VER130BELOW}
   Variants,
@@ -123,7 +124,9 @@ type
     procedure TestBigIntError;
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL}
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 
 uses ZTestCase, ZDbcMySQL, ZSysUtils, ZDbcProperties;
 
@@ -2152,4 +2155,5 @@ end;
 
 initialization
   RegisterTest('bugreport',TZTestCompMySQLBugReport.Suite);
+{$ENDIF ZEOS_DISABLE_MYSQL}
 end.

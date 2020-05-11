@@ -2528,6 +2528,7 @@ begin
           begin
             TempBlob := Statement.GetValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).VInterface as IZBlob;
             if not TempBlob.IsEmpty then begin
+              R := '';
               P := TempBlob.GetBuffer(R, L);
               {$IFDEF WITH_TVALUEBUFFER}
               SetLength(VB, L);
@@ -5707,6 +5708,7 @@ begin
   AscCount := 0;
   DescCount := 0;
   s := UpperCase(ReplaceChar(';', ',', FIndexFieldNames));
+  Fragment := '';
   while s <> '' do
   begin
     BreakString(s, ',', Fragment, s);

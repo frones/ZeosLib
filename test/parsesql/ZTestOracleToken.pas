@@ -54,7 +54,10 @@
 unit ZTestOracleToken;
 
 interface
+
 {$I ZParseSql.inc}
+
+{$IFNDEF ZEOS_DISABLE_ORACLE} //if set we have an empty unit
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZTokenizer, ZOracleToken,
   ZTestTokenizer,sysutils;
@@ -74,7 +77,9 @@ type
     procedure TestNumberState;
   end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE} //if set we have an empty unit
 
 { TZTestOracleTokenizer }
 
@@ -186,5 +191,6 @@ end;
 
 initialization
   RegisterTest('parsesql',TZTestOracleTokenizer.Suite);
+{$ENDIF ZEOS_DISABLE_ORACLE} //if set we have an empty unit
 end.
 

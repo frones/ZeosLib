@@ -54,7 +54,10 @@
 unit ZTestSqLiteToken;
 
 interface
+
 {$I ZParseSql.inc}
+
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZTokenizer, ZSqLiteToken,
   ZTestTokenizer;
@@ -74,7 +77,9 @@ type
     procedure TestNumberState;
   end;
 
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 { TZTestSQLiteTokenizer }
 
@@ -179,5 +184,6 @@ end;
 
 initialization
   RegisterTest('parsesql',TZTestSQLiteTokenizer.Suite);
+{$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 end.
 

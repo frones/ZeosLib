@@ -58,7 +58,7 @@ uses
   ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZDbcConnection
   {$IFDEF ENABLE_ASA}        , ZDbcASAMetadata {$ENDIF}
   {$IFDEF ENABLE_DBLIB}      , ZDbcDbLibMetadata {$ENDIF}
-  {$IFDEF ENABLE_INTERBASE}  , ZDbcInterbase6Metadata {$ENDIF}
+  {$IFDEF ENABLE_INTERBASE}  , ZDbcInterbaseFirebirdMetadata {$ENDIF}
   {$IFDEF ENABLE_MYSQL}      , ZDbcMySqlMetadata {$ENDIF}
   {$IFDEF ENABLE_OLEDB}      , ZDbcOleDBMetadata {$ENDIF}
   {$IFDEF ENABLE_ORACLE}     , ZDbcOracleMetadata {$ENDIF}

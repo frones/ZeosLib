@@ -54,8 +54,10 @@
 unit ZTestDbcPostgreSql;
 
 interface
+
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZSqlTestCase,
   ZCompatibility, ZDbcProperties;
@@ -78,7 +80,9 @@ type
     procedure TestGUIDs;
   end;
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 implementation
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 
 uses SysUtils, ZTestConsts, ZSysUtils, ZVariant;
 
@@ -400,4 +404,5 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.

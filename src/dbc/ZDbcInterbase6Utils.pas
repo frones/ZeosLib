@@ -54,12 +54,12 @@ unit ZDbcInterbase6Utils;
 interface
 
 {$I ZDbc.inc}
-{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZDbcIntfs, ZPlainFirebirdDriver, ZCompatibility,
-  ZPlainFirebirdInterbaseConstants, ZDbcLogging, ZMessages,
+  ZDbcIntfs, ZPlainFirebirdInterbaseDriver, ZCompatibility,
+  ZDbcLogging, ZMessages,
   ZVariant, FmtBCD;
 
 type
@@ -67,6 +67,18 @@ type
   TZIbSqlStatementType = (stUnknown, stSelect, stInsert, stUpdate, stDelete,
     stDDL, stGetSegment, stPutSegment, stExecProc, stStartTrans, stCommit,
     stRollback, stSelectForUpdate, stSetGenerator, stDisconnect);
+
+  PZInterbaseFirerbirdParam = ^TZInterbaseFirerbirdParam;
+  TZInterbaseFirerbirdParam = record
+    sqltype:            Cardinal;      { datatype of field (normalized) }
+    sqlscale:           Integer;       { scale factor }
+    codepage:           word;          { the codepage of the field }
+    sqllen:             Cardinal;      { length of data area }
+    sqldata:            PAnsiChar;     { address of data }
+    sqlind:             PISC_SHORT;    { address of indicator }
+  end;
+  PZInterbaseFirerbirdParamArray = ^TZInterbaseFirerbirdParamArray;
+  TZInterbaseFirerbirdParamArray = array[byte] of TZInterbaseFirerbirdParam;
 
   { Interbase Error Class}
   EZIBConvertError = class(Exception);
@@ -137,12 +149,9 @@ type
   { Base interface for sqlda }
   IZSQLDA = interface(IImmediatelyReleasable)
     ['{2D0D6029-B31C-4E39-89DC-D86D20437C35}']
-    procedure InitFields(Fixed2VariableSize: Boolean);
     function AllocateSQLDA: PXSQLDA;
-    procedure FreeParamtersValues;
 
     function GetData: PXSQLDA;
-    function IsBlob(const Index: Word): boolean;
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
@@ -150,7 +159,6 @@ type
     function GetFieldRelationName(const Index: Word): String;
     function GetFieldOwnerName(const Index: Word): String;
     function GetFieldAliasName(const Index: Word): String;
-    function GetFieldIndex(const Name: String): Word;
     function GetFieldScale(const Index: Word): integer;
     function GetFieldSqlType(Index: Word): TZSQLType;
     function GetFieldLength(const Index: Word): SmallInt;
@@ -172,11 +180,8 @@ type
   public
     constructor Create(const Connection: IZConnection; ConSettings: PZConSettings);
     destructor Destroy; override;
-    procedure InitFields(Fixed2VariableSize: Boolean);
     function AllocateSQLDA: PXSQLDA;
-    procedure FreeParamtersValues;
 
-    function IsBlob(const Index: Word): boolean;
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
@@ -184,7 +189,6 @@ type
     function GetFieldOwnerName(const Index: Word): String;
     function GetFieldRelationName(const Index: Word): String;
     function GetFieldAliasName(const Index: Word): String;
-    function GetFieldIndex(const Name: String): Word;
     function GetFieldScale(const Index: Word): integer;
     function GetFieldSqlType(Index: Word): TZSQLType;
     function GetFieldLength(const Index: Word): SmallInt;
@@ -220,10 +224,10 @@ function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
 function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
+function InterpretInterbaseStatus(const PlainDriver: TZInterbaseFirebirdPlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
-procedure CheckInterbase6Error(const PlainDriver: TZInterbasePlainDriver;
+procedure CheckInterbase6Error(const PlainDriver: TZInterbaseFirebirdPlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ImmediatelyReleasable: IImmediatelyReleasable;
   const LoggingCategory: TZLoggingCategory = lcOther;
   const SQL: RawByteString = '');
@@ -257,7 +261,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray, MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: Cardinal): RawByteString;
+  const XSQLDAMaxSize: Integer): RawByteString;
 
 const
   { Default Interbase blob size for reading }
@@ -434,7 +438,7 @@ procedure isc_encode_date(out nday: ISC_DATE; year, month, day: Word);
   @param pBuf - pointer to a buffer returned by driver. After the function it points to the next block.
   @return - a number read
 }
-function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbasePlainDriver; var pBuf: PAnsiChar): Integer;
+function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbaseFirebirdPlainDriver; var pBuf: PAnsiChar): Integer;
 
 {**
   Read Interbase number (1..4 bytes) from buffer in standard format: [Len * 2 bytes][Number * Len bytes].
@@ -457,13 +461,24 @@ procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideCh
 
 procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
 
-{$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
+function XSQLDA_LENGTH(Value: LongInt): LongInt;
+
+{**
+   Convert pointer to raw database string to compiler-native string
+}
+function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string; overload;
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 implementation
-{$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 
 uses
   ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+
+function XSQLDA_LENGTH(Value: LongInt): LongInt;
+begin
+  Result := SizeOf(TXSQLDA) + ((Value - 1) * SizeOf(TXSQLVAR));
+end;
 
 function FindPBParam(const ParamName: string; const ParamArr: array of TZIbParam): PZIbParam;
 var
@@ -682,7 +697,7 @@ end;
   @param pBuf - pointer to a buffer returned by driver. After the function it points to the next block.
   @return - a number read
 }
-function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbasePlainDriver; var pBuf: PAnsiChar): Integer;
+function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbaseFirebirdPlainDriver; var pBuf: PAnsiChar): Integer;
 var
   Len: Integer;
 begin
@@ -1079,6 +1094,7 @@ var
   RawStr: RawByteString;
 begin
   // TODO: having ZPRawToString we could convert the string directly without SetString
+  {$IFDEF WITH_VAR_INIT_WARNING}RawStr := '';{$ENDIF}
   ZSetString(PAnsiChar(Buffer), BufLen, RawStr);
   if ConSettings <> nil then
     Result := ConSettings^.ConvFuncs.ZRawToString(RawStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
@@ -1121,7 +1137,8 @@ end;
 
   @return array of TInterbaseStatus records
 }
-function InterpretInterbaseStatus(const PlainDriver: TZInterbasePlainDriver;
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+function InterpretInterbaseStatus(const PlainDriver: TZInterbaseFirebirdPlainDriver;
   const StatusVector: TARRAY_ISC_STATUS;
   const ConSettings: PZConSettings) : TZIBStatusVector;
 var
@@ -1188,6 +1205,7 @@ begin
     pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, @Buffer);
   until False;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Checks for possible sql errors.
@@ -1197,7 +1215,7 @@ end;
 
   @Param Integer Return is the ErrorCode that happened - for disconnecting the database
 }
-procedure CheckInterbase6Error(const PlainDriver: TZInterbasePlainDriver;
+procedure CheckInterbase6Error(const PlainDriver: TZInterbaseFirebirdPlainDriver;
   const StatusVector: TARRAY_ISC_STATUS; const ImmediatelyReleasable: IImmediatelyReleasable;
   const LoggingCategory: TZLoggingCategory = lcOther;
   const SQL: RawByteString = '');
@@ -1503,63 +1521,8 @@ end;
 }
 destructor TZSQLDA.Destroy;
 begin
-  FreeParamtersValues;
   FreeMem(FXSQLDA);
   inherited Destroy;
-end;
-{**
-   Allocate memory for SQLVar in SQLDA structure for every
-   fields by it length.
-}
-procedure TZSQLDA.InitFields(Fixed2VariableSize: Boolean);
-var
-  I,m: Integer;
-  SqlVar: PXSQLVAR;
-begin
-  {$R-}
-  for I := 0 to FXSQLDA.sqld - 1 do begin
-    SqlVar := @FXSQLDA.SqlVar[I];
-    M := SqlVar.sqllen;
-    if SqlVar.sqltype and (not 1) = SQL_VARYING then
-      Inc(M, 2);
-    if SqlVar.sqldata <> nil then
-      FreeMem(SqlVar.sqldata, M);
-    if (SqlVar.sqltype and (not 1) = SQL_TEXT) and Fixed2VariableSize then begin
-      SqlVar.sqltype := (SQL_VARYING or 1);
-      Inc(M, 2);
-    end;
-    GetMem(SqlVar.sqldata, m);
-    if Fixed2VariableSize then begin {Paraemeters}
-      //This code used when allocated sqlind parameter for Param SQLDA
-      SqlVar.sqltype := SqlVar.sqltype or 1;
-      IbReAlloc(SqlVar.sqlind, 0, SizeOf(Short));
-    end else
-      //This code used when allocated sqlind parameter for Result SQLDA
-      if (SqlVar.sqltype and 1) <> 0
-      then ReallocMem(SqlVar.sqlind, SizeOf(Short))
-      else SqlVar.sqlind := nil;
-  end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-{**
-   Clear allocated data for SQLDA paramters
-}
-procedure TZSQLDA.FreeParamtersValues;
-var
-  I: Integer;
-  SqlVar: PXSQLVAR;
-begin
-  {$R-}
-  for I := 0 to FXSQLDA.sqln - 1 do
-  begin
-    SqlVar := @FXSQLDA.SqlVar[I];
-    FreeMem(SqlVar.sqldata);
-    FreeMem(SqlVar.sqlind);
-    SqlVar.sqldata := nil;
-    SqlVar.sqlind := nil;
-  end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1615,31 +1578,6 @@ end;
 function TZSQLDA.GetFieldCount: Integer;
 begin
   Result := FXSQLDA.sqld;
-end;
-
-{**
-   Return field index by it name
-   @param Index the index fields
-   @return the index field
-}
-function TZSQLDA.GetFieldIndex(const Name: String): Word;
-var S: String;
-  P1, P2: PChar;
-begin
-  {$R-}
-  for Result := 0 to GetFieldCount - 1 do
-  begin
-    S := ConvertConnRawToString(ConSettings, @FXSQLDA.sqlvar[Result].aliasname[0], FXSQLDA.sqlvar[Result].aliasname_length);
-    if Length(S) = Length(name) then
-    begin
-      P1 := Pointer(Name);
-      P2 := Pointer(S);
-      if StrLIComp(P1, P2, Length(S)) = 0 then
-        Exit;
-    end;
-  end;
-  raise Exception.Create(Format(SFieldNotFound1, [name]));
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
@@ -1821,19 +1759,6 @@ end;
 {**
    Indicate blob field
    @param Index the index fields
-   @return true if blob field overwise false
-}
-function TZSQLDA.IsBlob(const Index: Word): boolean;
-begin
-  CheckRange(Index);
-  {$R-}
-  Result := ((FXSQLDA.sqlvar[Index].sqltype and not(1)) = SQL_BLOB);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-{**
-   Indicate blob field
-   @param Index the index fields
    @return true if field nullable overwise false
 }
 function TZSQLDA.IsNullable(const Index: Word): boolean;
@@ -1878,7 +1803,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   var MemPerRow, PreparedRowsOfArray,MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: Cardinal): RawByteString;
+  const XSQLDAMaxSize: Integer): RawByteString;
 var
   IndexName, ArrayName, Tmp: RawByteString;
   ParamIndex, J: Cardinal;
@@ -2016,8 +1941,8 @@ begin
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := Min((XSQLDAMaxSize div Int64(MemPerRow)),     {memory limit of XSQLDA structs}
-        (((32*1024)-LBlockLen) div Int64(HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
+      MaxRowsPerBatch := Min(Integer(XSQLDAMaxSize div MemPerRow),     {memory limit of XSQLDA structs}
+        Integer(((32*1024)-LBlockLen) div (HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     //we run into XSQLDA !update! count limit of 255 see:
@@ -2073,7 +1998,7 @@ end;
 {$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.} {$ENDIF} // overflow means error so just disable hint
 procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
 begin
-  ntime := ((hours * MinsPerHour + minutes) * SecsPerMin + seconds) * ISC_TIME_SECONDS_PRECISION + fractions;
+  ntime := ((hours * Word(MinsPerHour) + minutes) * Word(SecsPerMin) + seconds) * Word(ISC_TIME_SECONDS_PRECISION) + fractions;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2089,7 +2014,10 @@ const
 
 //This formula is taken from the 1939 edition of Funk & Wagnall's College Standard Dictionary (entry for the word "calendar").
 //so there is no IB/FB "hokuspokus" to play with encode/decode
-{$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.} {$ENDIF} // overflow means error so just disable hint
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4080 off : Converting the operands to "$1" before doing the substract could prevent overflow errors.}
+  {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.}
+{$ENDIF} // overflow means error so just disable hint
 procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
 var century: integer;
 begin

@@ -768,13 +768,18 @@ var P: PAnsiChar;
   Len: NativeUint;
 begin
   P := GetPAnsiChar(ColumnIndex, Len);
+  {$IFDEF WITH_VAR_INIT_WARNING}
+  Result = '';
+  {$ENDIF}
   if P <> nil
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   then ZSetString(P, Len, result)
   {$ELSE}
   then System.SetString(Result, P, Len)
   {$ENDIF}
+  {$IFNDEF WITH_VAR_INIT_WARNING}
   else Result := '';
+  {$ENDIF}
 end;
 {$ENDIF}
 

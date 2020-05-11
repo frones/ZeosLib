@@ -20,259 +20,295 @@
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="63">
+    <Files Count="72">
       <Item1>
-        <Filename Value="..\..\src\dbc\ZDbcAdo.pas"/>
-        <UnitName Value="ZDbcAdo"/>
+        <Filename Value="..\..\src\dbc\ZDbc.inc"/>
+        <Type Value="Include"/>
       </Item1>
       <Item2>
-        <Filename Value="..\..\src\dbc\ZDbcAdoMetadata.pas"/>
-        <UnitName Value="ZDbcAdoMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcAdo.pas"/>
+        <UnitName Value="ZDbcAdo"/>
       </Item2>
       <Item3>
-        <Filename Value="..\..\src\dbc\ZDbcAdoResultSet.pas"/>
-        <UnitName Value="ZDbcAdoResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcAdoMetadata.pas"/>
+        <UnitName Value="ZDbcAdoMetadata"/>
       </Item3>
       <Item4>
-        <Filename Value="..\..\src\dbc\ZDbcAdoStatement.pas"/>
-        <UnitName Value="ZDbcAdoStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcAdoResultSet.pas"/>
+        <UnitName Value="ZDbcAdoResultSet"/>
       </Item4>
       <Item5>
-        <Filename Value="..\..\src\dbc\ZDbcAdoUtils.pas"/>
-        <UnitName Value="ZDbcAdoUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcAdoStatement.pas"/>
+        <UnitName Value="ZDbcAdoStatement"/>
       </Item5>
       <Item6>
-        <Filename Value="..\..\src\dbc\ZDbcASA.pas"/>
-        <UnitName Value="ZDbcASA"/>
+        <Filename Value="..\..\src\dbc\ZDbcAdoUtils.pas"/>
+        <UnitName Value="ZDbcAdoUtils"/>
       </Item6>
       <Item7>
-        <Filename Value="..\..\src\dbc\ZDbcASAMetadata.pas"/>
-        <UnitName Value="ZDbcASAMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcASA.pas"/>
+        <UnitName Value="ZDbcASA"/>
       </Item7>
       <Item8>
-        <Filename Value="..\..\src\dbc\ZDbcASAResultSet.pas"/>
-        <UnitName Value="ZDbcASAResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcASAMetadata.pas"/>
+        <UnitName Value="ZDbcASAMetadata"/>
       </Item8>
       <Item9>
-        <Filename Value="..\..\src\dbc\ZDbcASAStatement.pas"/>
-        <UnitName Value="ZDbcASAStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcASAResultSet.pas"/>
+        <UnitName Value="ZDbcASAResultSet"/>
       </Item9>
       <Item10>
-        <Filename Value="..\..\src\dbc\ZDbcASAUtils.pas"/>
-        <UnitName Value="ZDbcASAUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcASAStatement.pas"/>
+        <UnitName Value="ZDbcASAStatement"/>
       </Item10>
       <Item11>
-        <Filename Value="..\..\src\dbc\ZDbcCache.pas"/>
-        <UnitName Value="ZDbcCache"/>
+        <Filename Value="..\..\src\dbc\ZDbcASAUtils.pas"/>
+        <UnitName Value="ZDbcASAUtils"/>
       </Item11>
       <Item12>
-        <Filename Value="..\..\src\dbc\ZDbcCachedResultSet.pas"/>
-        <UnitName Value="ZDbcCachedResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcCache.pas"/>
+        <UnitName Value="ZDbcCache"/>
       </Item12>
       <Item13>
-        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
-        <UnitName Value="ZDbcConnection"/>
+        <Filename Value="..\..\src\dbc\ZDbcCachedResultSet.pas"/>
+        <UnitName Value="ZDbcCachedResultSet"/>
       </Item13>
       <Item14>
-        <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>
-        <UnitName Value="ZDbcDbLib"/>
+        <Filename Value="..\..\src\dbc\ZDbcConnection.pas"/>
+        <UnitName Value="ZDbcConnection"/>
       </Item14>
       <Item15>
-        <Filename Value="..\..\src\dbc\ZDbcDbLibMetadata.pas"/>
-        <UnitName Value="ZDbcDbLibMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>
+        <UnitName Value="ZDbcDbLib"/>
       </Item15>
       <Item16>
-        <Filename Value="..\..\src\dbc\ZDbcDbLibResultSet.pas"/>
-        <UnitName Value="ZDbcDbLibResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcDbLibMetadata.pas"/>
+        <UnitName Value="ZDbcDbLibMetadata"/>
       </Item16>
       <Item17>
-        <Filename Value="..\..\src\dbc\ZDbcDbLibStatement.pas"/>
-        <UnitName Value="ZDbcDbLibStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcDbLibResultSet.pas"/>
+        <UnitName Value="ZDbcDbLibResultSet"/>
       </Item17>
       <Item18>
-        <Filename Value="..\..\src\dbc\ZDbcDbLibUtils.pas"/>
-        <UnitName Value="ZDbcDbLibUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcDbLibStatement.pas"/>
+        <UnitName Value="ZDbcDbLibStatement"/>
       </Item18>
       <Item19>
-        <Filename Value="..\..\src\dbc\ZDbcGenericResolver.pas"/>
-        <UnitName Value="ZDbcGenericResolver"/>
+        <Filename Value="..\..\src\dbc\ZDbcDbLibUtils.pas"/>
+        <UnitName Value="ZDbcDbLibUtils"/>
       </Item19>
       <Item20>
-        <Filename Value="..\..\src\dbc\ZDbcInterbase6.pas"/>
-        <UnitName Value="ZDbcInterbase6"/>
+        <Filename Value="..\..\src\dbc\ZDbcFirebird.pas"/>
+        <UnitName Value="ZDbcFirebird"/>
       </Item20>
       <Item21>
-        <Filename Value="..\..\src\dbc\ZDbcInterbase6Metadata.pas"/>
-        <UnitName Value="ZDbcInterbase6Metadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcFirebirdInterbase.pas"/>
+        <UnitName Value="ZDbcFirebirdInterbase"/>
       </Item21>
       <Item22>
-        <Filename Value="..\..\src\dbc\ZDbcInterbase6ResultSet.pas"/>
-        <UnitName Value="ZDbcInterbase6ResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcFirebirdResultSet.pas"/>
+        <UnitName Value="ZDbcFirebirdResultSet"/>
       </Item22>
       <Item23>
-        <Filename Value="..\..\src\dbc\ZDbcInterbase6Statement.pas"/>
-        <UnitName Value="ZDbcInterbase6Statement"/>
+        <Filename Value="..\..\src\dbc\ZDbcFirebirdStatement.pas"/>
+        <UnitName Value="ZDbcFirebirdStatement"/>
       </Item23>
       <Item24>
-        <Filename Value="..\..\src\dbc\ZDbcInterbase6Utils.pas"/>
-        <UnitName Value="ZDbcInterbase6Utils"/>
+        <Filename Value="..\..\src\dbc\ZDbcGenericResolver.pas"/>
+        <UnitName Value="ZDbcGenericResolver"/>
       </Item24>
       <Item25>
-        <Filename Value="..\..\src\dbc\ZDbcIntfs.pas"/>
-        <UnitName Value="ZDbcIntfs"/>
+        <Filename Value="..\..\src\dbc\ZDbcInterbase6.pas"/>
+        <UnitName Value="ZDbcInterbase6"/>
       </Item25>
       <Item26>
-        <Filename Value="..\..\src\dbc\ZDbcLogging.pas"/>
-        <UnitName Value="ZDbcLogging"/>
+        <Filename Value="..\..\src\dbc\ZDbcInterbase6ResultSet.pas"/>
+        <UnitName Value="ZDbcInterbase6ResultSet"/>
       </Item26>
       <Item27>
-        <Filename Value="..\..\src\dbc\ZDbcMetadata.pas"/>
-        <UnitName Value="ZDbcMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcInterbase6Statement.pas"/>
+        <UnitName Value="ZDbcInterbase6Statement"/>
       </Item27>
       <Item28>
-        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
-        <UnitName Value="ZDbcMySql"/>
+        <Filename Value="..\..\src\dbc\ZDbcInterbase6Utils.pas"/>
+        <UnitName Value="ZDbcInterbase6Utils"/>
       </Item28>
       <Item29>
-        <Filename Value="..\..\src\dbc\ZDbcMySqlMetadata.pas"/>
-        <UnitName Value="ZDbcMySqlMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcInterbaseFirebirdMetadata.pas"/>
+        <UnitName Value="ZDbcInterbaseFirebirdMetadata"/>
       </Item29>
       <Item30>
-        <Filename Value="..\..\src\dbc\ZDbcMySqlResultSet.pas"/>
-        <UnitName Value="ZDbcMySqlResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcIntfs.pas"/>
+        <UnitName Value="ZDbcIntfs"/>
       </Item30>
       <Item31>
-        <Filename Value="..\..\src\dbc\ZDbcMySqlStatement.pas"/>
-        <UnitName Value="ZDbcMySqlStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcLogging.pas"/>
+        <UnitName Value="ZDbcLogging"/>
       </Item31>
       <Item32>
-        <Filename Value="..\..\src\dbc\ZDbcMySqlUtils.pas"/>
-        <UnitName Value="ZDbcMySqlUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcMetadata.pas"/>
+        <UnitName Value="ZDbcMetadata"/>
       </Item32>
       <Item33>
-        <Filename Value="..\..\src\dbc\ZDbcODBCCon.pas"/>
-        <UnitName Value="ZDbcODBCCon"/>
+        <Filename Value="..\..\src\dbc\ZDbcMySql.pas"/>
+        <UnitName Value="ZDbcMySql"/>
       </Item33>
       <Item34>
-        <Filename Value="..\..\src\dbc\ZDbcODBCMetadata.pas"/>
-        <UnitName Value="ZDbcODBCMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcMySqlMetadata.pas"/>
+        <UnitName Value="ZDbcMySqlMetadata"/>
       </Item34>
       <Item35>
-        <Filename Value="..\..\src\dbc\ZDbcODBCResultSet.pas"/>
-        <UnitName Value="ZDbcODBCResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcMySqlResultSet.pas"/>
+        <UnitName Value="ZDbcMySqlResultSet"/>
       </Item35>
       <Item36>
-        <Filename Value="..\..\src\dbc\ZDbcODBCStatement.pas"/>
-        <UnitName Value="ZDbcODBCStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcMySqlStatement.pas"/>
+        <UnitName Value="ZDbcMySqlStatement"/>
       </Item36>
       <Item37>
-        <Filename Value="..\..\src\dbc\ZDbcODBCUtils.pas"/>
-        <UnitName Value="ZDbcODBCUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcMySqlUtils.pas"/>
+        <UnitName Value="ZDbcMySqlUtils"/>
       </Item37>
       <Item38>
-        <Filename Value="..\..\src\dbc\ZDbcOleDB.pas"/>
-        <UnitName Value="ZDbcOleDB"/>
+        <Filename Value="..\..\src\dbc\ZDbcODBCCon.pas"/>
+        <UnitName Value="ZDbcODBCCon"/>
       </Item38>
       <Item39>
-        <Filename Value="..\..\src\dbc\ZDbcOleDBMetaData.pas"/>
-        <UnitName Value="ZDbcOleDBMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcODBCMetadata.pas"/>
+        <UnitName Value="ZDbcODBCMetadata"/>
       </Item39>
       <Item40>
-        <Filename Value="..\..\src\dbc\ZDbcOleDBResultSet.pas"/>
-        <UnitName Value="ZDbcOleDBResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcODBCResultSet.pas"/>
+        <UnitName Value="ZDbcODBCResultSet"/>
       </Item40>
       <Item41>
-        <Filename Value="..\..\src\dbc\ZDbcOleDBStatement.pas"/>
-        <UnitName Value="ZDbcOleDBStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcODBCStatement.pas"/>
+        <UnitName Value="ZDbcODBCStatement"/>
       </Item41>
       <Item42>
-        <Filename Value="..\..\src\dbc\ZDbcOleDBUtils.pas"/>
-        <UnitName Value="ZDbcOleDBUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcODBCUtils.pas"/>
+        <UnitName Value="ZDbcODBCUtils"/>
       </Item42>
       <Item43>
-        <Filename Value="..\..\src\dbc\ZDbcOracle.pas"/>
-        <UnitName Value="ZDbcOracle"/>
+        <Filename Value="..\..\src\dbc\ZDbcOleDB.pas"/>
+        <UnitName Value="ZDbcOleDB"/>
       </Item43>
       <Item44>
-        <Filename Value="..\..\src\dbc\ZDbcOracleMetadata.pas"/>
-        <UnitName Value="ZDbcOracleMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBMetaData.pas"/>
+        <UnitName Value="ZDbcOleDBMetadata"/>
       </Item44>
       <Item45>
-        <Filename Value="..\..\src\dbc\ZDbcOracleResultSet.pas"/>
-        <UnitName Value="ZDbcOracleResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBResultSet.pas"/>
+        <UnitName Value="ZDbcOleDBResultSet"/>
       </Item45>
       <Item46>
-        <Filename Value="..\..\src\dbc\ZDbcOracleStatement.pas"/>
-        <UnitName Value="ZDbcOracleStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBStatement.pas"/>
+        <UnitName Value="ZDbcOleDBStatement"/>
       </Item46>
       <Item47>
-        <Filename Value="..\..\src\dbc\ZDbcOracleUtils.pas"/>
-        <UnitName Value="ZDbcOracleUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBUtils.pas"/>
+        <UnitName Value="ZDbcOleDBUtils"/>
       </Item47>
       <Item48>
-        <Filename Value="..\..\src\dbc\ZDbcPooled.pas"/>
-        <UnitName Value="ZDbcPooled"/>
+        <Filename Value="..\..\src\dbc\ZDbcOracle.pas"/>
+        <UnitName Value="ZDbcOracle"/>
       </Item48>
       <Item49>
-        <Filename Value="..\..\src\dbc\ZDbcPostgreSql.pas"/>
-        <UnitName Value="ZDbcPostgreSql"/>
+        <Filename Value="..\..\src\dbc\ZDbcOracleMetadata.pas"/>
+        <UnitName Value="ZDbcOracleMetadata"/>
       </Item49>
       <Item50>
-        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlMetadata.pas"/>
-        <UnitName Value="ZDbcPostgreSqlMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcOracleResultSet.pas"/>
+        <UnitName Value="ZDbcOracleResultSet"/>
       </Item50>
       <Item51>
-        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlResultSet.pas"/>
-        <UnitName Value="ZDbcPostgreSqlResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcOracleStatement.pas"/>
+        <UnitName Value="ZDbcOracleStatement"/>
       </Item51>
       <Item52>
-        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlStatement.pas"/>
-        <UnitName Value="ZDbcPostgreSqlStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcOracleUtils.pas"/>
+        <UnitName Value="ZDbcOracleUtils"/>
       </Item52>
       <Item53>
-        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlUtils.pas"/>
-        <UnitName Value="ZDbcPostgreSqlUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcPooled.pas"/>
+        <UnitName Value="ZDbcPooled"/>
       </Item53>
       <Item54>
-        <Filename Value="..\..\src\dbc\ZDbcProperties.pas"/>
-        <UnitName Value="ZDbcProperties"/>
+        <Filename Value="..\..\src\dbc\ZDbcPostgreSql.pas"/>
+        <UnitName Value="ZDbcPostgreSql"/>
       </Item54>
       <Item55>
-        <Filename Value="..\..\src\dbc\ZDbcResultSet.pas"/>
-        <UnitName Value="ZDbcResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlMetadata.pas"/>
+        <UnitName Value="ZDbcPostgreSqlMetadata"/>
       </Item55>
       <Item56>
-        <Filename Value="..\..\src\dbc\ZDbcResultSetMetadata.pas"/>
-        <UnitName Value="ZDbcResultSetMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlResultSet.pas"/>
+        <UnitName Value="ZDbcPostgreSqlResultSet"/>
       </Item56>
       <Item57>
-        <Filename Value="..\..\src\dbc\ZDbcSqLite.pas"/>
-        <UnitName Value="ZDbcSqLite"/>
+        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlStatement.pas"/>
+        <UnitName Value="ZDbcPostgreSqlStatement"/>
       </Item57>
       <Item58>
-        <Filename Value="..\..\src\dbc\ZDbcSqLiteMetadata.pas"/>
-        <UnitName Value="ZDbcSqLiteMetadata"/>
+        <Filename Value="..\..\src\dbc\ZDbcPostgreSqlUtils.pas"/>
+        <UnitName Value="ZDbcPostgreSqlUtils"/>
       </Item58>
       <Item59>
-        <Filename Value="..\..\src\dbc\ZDbcSqLiteResultSet.pas"/>
-        <UnitName Value="ZDbcSqLiteResultSet"/>
+        <Filename Value="..\..\src\dbc\ZDbcProperties.pas"/>
+        <UnitName Value="ZDbcProperties"/>
       </Item59>
       <Item60>
-        <Filename Value="..\..\src\dbc\ZDbcSqLiteStatement.pas"/>
-        <UnitName Value="ZDbcSqLiteStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcResultSet.pas"/>
+        <UnitName Value="ZDbcResultSet"/>
       </Item60>
       <Item61>
-        <Filename Value="..\..\src\dbc\ZDbcSqLiteUtils.pas"/>
-        <UnitName Value="ZDbcSqLiteUtils"/>
+        <Filename Value="..\..\src\dbc\ZDbcResultSetMetadata.pas"/>
+        <UnitName Value="ZDbcResultSetMetadata"/>
       </Item61>
       <Item62>
-        <Filename Value="..\..\src\dbc\ZDbcStatement.pas"/>
-        <UnitName Value="ZDbcStatement"/>
+        <Filename Value="..\..\src\dbc\ZDbcSQLAnywhere.pas"/>
+        <UnitName Value="ZDbcSQLAnywhere"/>
       </Item62>
       <Item63>
+        <Filename Value="..\..\src\dbc\ZDbcSQLAnywhereResultSet.pas"/>
+        <UnitName Value="ZDbcSQLAnywhereResultSet"/>
+      </Item63>
+      <Item64>
+        <Filename Value="..\..\src\dbc\ZDbcSQLAnywhereStatement.pas"/>
+        <UnitName Value="ZDbcSQLAnywhereStatement"/>
+      </Item64>
+      <Item65>
+        <Filename Value="..\..\src\dbc\ZDbcSQLAnywhereUtils.pas"/>
+        <UnitName Value="ZDbcSQLAnywhereUtils"/>
+      </Item65>
+      <Item66>
+        <Filename Value="..\..\src\dbc\ZDbcSqLite.pas"/>
+        <UnitName Value="ZDbcSqLite"/>
+      </Item66>
+      <Item67>
+        <Filename Value="..\..\src\dbc\ZDbcSqLiteMetadata.pas"/>
+        <UnitName Value="ZDbcSqLiteMetadata"/>
+      </Item67>
+      <Item68>
+        <Filename Value="..\..\src\dbc\ZDbcSqLiteResultSet.pas"/>
+        <UnitName Value="ZDbcSqLiteResultSet"/>
+      </Item68>
+      <Item69>
+        <Filename Value="..\..\src\dbc\ZDbcSqLiteStatement.pas"/>
+        <UnitName Value="ZDbcSqLiteStatement"/>
+      </Item69>
+      <Item70>
+        <Filename Value="..\..\src\dbc\ZDbcSqLiteUtils.pas"/>
+        <UnitName Value="ZDbcSqLiteUtils"/>
+      </Item70>
+      <Item71>
+        <Filename Value="..\..\src\dbc\ZDbcStatement.pas"/>
+        <UnitName Value="ZDbcStatement"/>
+      </Item71>
+      <Item72>
         <Filename Value="..\..\src\dbc\ZDbcUtils.pas"/>
         <UnitName Value="ZDbcUtils"/>
-      </Item63>
+      </Item72>
     </Files>
     <RequiredPkgs Count="4">
       <Item1>

@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZCompatibility, ZDbcLogging, ZVariant, ZClasses,
-  ZDbcASA, ZDbcASAUtils, ZPlainASADriver, ZPlainASAConstants;
+  ZDbcASA, ZDbcASAUtils, ZPlainASADriver;
 
 type
   {** Implements Prepared SQL Statement. }

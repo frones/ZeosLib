@@ -100,7 +100,7 @@
        {$IF FPC_FULLVERSION>=30200}
          {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} 
          {$DEFINE WITH_VAR_INIT_WARNING}
-         {§DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
+         {$DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
        {$IFEND}
      {$IFEND}
   {$IFEND}
@@ -152,7 +152,7 @@
         {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
         {$IF FPC_FULLVERSION>=30100}
           {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
-          {.$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
+          {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
 
           {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
           {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings

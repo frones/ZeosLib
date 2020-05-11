@@ -1466,6 +1466,7 @@ end;
 
 { TZSQLAnywhereRowAccessor }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZSQLAnywhereRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -1487,6 +1488,7 @@ begin
   inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZSQLAnywhereRowAccessor.FetchLongData(AsStreamedType: TZSQLType;
   const ResultSet: IZResultSet; ColumnIndex: Integer; Data: PPZVarLenData);
@@ -1571,7 +1573,10 @@ begin
     FPosition := Result;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "Buffer/Count" not used}
+{$ENDIF}
 function TZSQLAnyStream.Write(const Buffer; Count: Longint): Longint;
 begin
   raise CreateReadOnlyException;
@@ -1585,10 +1590,12 @@ begin
   raise CreateReadOnlyException;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TZSQLAnyLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 begin
   Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 constructor TZSQLAnyLob.Create(const Connection: IZSQLAnywhereConnection;
   a_sqlany_data_info: Pa_sqlany_data_info; a_sqlany_stmt: Pa_sqlany_stmt;
@@ -1613,6 +1620,8 @@ begin
   if FReleased
   then Result := nil
   else begin
+    if LobStreamMode <> lsmRead then
+      raise CreateReadOnlyException;
     if FCurrentRowAddr^ <> FLobRowNo then begin
     end;
     Result := TZSQLAnyStream.Create(Self);
