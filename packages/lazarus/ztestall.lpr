@@ -14,18 +14,12 @@ uses
   ZTestConfig,
   ZSqlTestCase,
   zxmltestreport,
-  //core
-  ZTestCore,
-  //parsesql
-  ZTestParseSql,
-  //dbc
-  ZTestDbc,
-  //component
-  ZTestComponents,
-  //bugreport
-  ZTestBugReports,
   //performance
-  ZTestPerformance
+  ZTestPerformance, ZTestSysUtils, ZTestDbcCachedResultSet, ZTestDbcGeneric,
+  ZTestDbcInterbase, ZTestDataSetGeneric, ZTestMasterDetail,
+  ZTestStoredProcedure, ZTestBugCompCore, ZTestBugCompDbLib,
+  ZTestBugCompInterbase, ZTestBugCompMSSql, ZTestBugCompOracle,
+  ZTestBugCompPostgreSql, ZTestBugCompSQLite, ZTestBugDbcPostgreSql
   ;
 
 type

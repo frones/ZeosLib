@@ -54,7 +54,9 @@
 unit ZTestDbcASA;
 
 interface
+
 {$I ZDbc.inc}
+{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
   ZDbcASA, ZSqlTestCase, ZCompatibility;
@@ -77,7 +79,9 @@ type
     procedure TestStoredprocedures;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses SysUtils, ZTestConsts, ZTestCase;
 
@@ -89,7 +93,7 @@ uses SysUtils, ZTestConsts, ZTestCase;
 }
 function TZTestDbcASACase.GetSupportedProtocols: string;
 begin
-  Result := 'ASA';
+  Result := 'ASA,asa_capi';
 end;
 
 procedure TZTestDbcASACase.TestConnection;
@@ -384,5 +388,6 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcASACase.Suite);
+{$ENDIF ZEOS_DISABLE_ASA}
 end.
 

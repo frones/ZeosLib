@@ -54,7 +54,10 @@
 unit ZTestPostgreSqlToken;
 
 interface
+
 {$I ZParseSql.inc}
+
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTokenizer, ZPostgreSqlToken,
   ZTestTokenizer;
 
@@ -73,7 +76,9 @@ type
     procedure TestNumberState;
   end;
 
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 { TZTestPostgreSQLTokenizer }
 
@@ -218,5 +223,6 @@ end;
 
 initialization
   RegisterTest('parsesql',TZTestPostgreSQLTokenizer.Suite);
+{$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.
 

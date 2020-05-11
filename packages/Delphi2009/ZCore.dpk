@@ -31,7 +31,7 @@ requires
   dbrtl;
 
 contains
-  ZVariant in '..\..\src\core\ZVariant.pas',
+  ZClasses in '..\..\src\core\ZClasses.pas',
   ZCollections in '..\..\src\core\ZCollections.pas',
   ZCompatibility in '..\..\src\core\ZCompatibility.pas',
   ZEncoding in '..\..\src\core\ZEncoding.pas',
@@ -39,19 +39,17 @@ contains
   ZExprParser in '..\..\src\core\ZExprParser.pas',
   ZExprToken in '..\..\src\core\ZExprToken.pas',
   ZFastCode in '..\..\src\core\ZFastCode.pas',
-  ZMatchPattern in '..\..\src\core\ZMatchPattern.pas',
-  ZSysUtils in '..\..\src\core\ZSysUtils.pas',
-  ZTokenizer in '..\..\src\core\ZTokenizer.pas',
-  ZVariables in '..\..\src\core\ZVariables.pas',
-  ZClasses in '..\..\src\core\ZClasses.pas',
-  ZMessages in '..\..\src\core\ZMessages.pas',
-  ZURL in '..\..\src\core\ZURL.pas',
-  ZConnProperties in '..\..\src\core\ZConnProperties.pas',
   ZFunctions in '..\..\src\core\ZFunctions.pas',
   ZFunctionsConvert in '..\..\src\core\ZFunctionsConvert.pas',
   ZFunctionsDateTime in '..\..\src\core\ZFunctionsDateTime.pas',
   ZFunctionsMath in '..\..\src\core\ZFunctionsMath.pas',
   ZFunctionsOther in '..\..\src\core\ZFunctionsOther.pas',
-  ZFunctionsStrings in '..\..\src\core\ZFunctionsStrings.pas';
+  ZFunctionsStrings in '..\..\src\core\ZFunctionsStrings.pas',
+  ZMatchPattern in '..\..\src\core\ZMatchPattern.pas',
+  ZMessages in '..\..\src\core\ZMessages.pas',
+  ZSysUtils in '..\..\src\core\ZSysUtils.pas',
+  ZTokenizer in '..\..\src\core\ZTokenizer.pas',
+  ZVariables in '..\..\src\core\ZVariables.pas',
+  ZVariant in '..\..\src\core\ZVariant.pas';
 
 end.

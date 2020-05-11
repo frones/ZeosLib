@@ -46,7 +46,7 @@
 {$DEFINE ZEOS73UP}
 
 {$IF (defined(FPC) and (defined(CPU386) or defined(CPUX86_64))) or defined(MSWINDOWS)}
-  {$DEFINE INTEL_ASM} //allow intel syntax assembler
+  {.$DEFINE INTEL_ASM} //allow intel syntax assembler
 {$IFEND}
 
 // Uncomment these defines to disable some DB drivers (reduce binary size)
@@ -55,6 +55,7 @@
 {.$DEFINE ZEOS_DISABLE_DBLIB}
 {.$DEFINE ZEOS_DISABLE_ADO}
 {.$DEFINE ZEOS_DISABLE_INTERBASE}
+{.$DEFINE ZEOS_DISABLE_FIREBIRD}
 {.$DEFINE ZEOS_DISABLE_SQLITE}
 {.$DEFINE ZEOS_DISABLE_ORACLE}
 {.$DEFINE ZEOS_DISABLE_ASA}
@@ -68,7 +69,6 @@
 {.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
 {.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
-{.$DEFINE WITH_ZSTRINGFIELDS}
 
 {.$DEFINE DO_NOT_DERIVE_FROM_EDATABASEERROR} //don't derive Zeos Exceptions from EDatabaseError
 
@@ -183,6 +183,7 @@
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
             {$IF CompilerVersion >= 20} //Delphi 2009+
+              {$DEFINE WITH_CLASS_CONST} //compiler supports contants in class type declarations 
               {$DEFINE FIELD_ASWIDESTRING_IS_UNICODESTRING} //TField.AsWideString is type UnicodeString not WideString
               {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
               {$DEFINE HAVE_CS_TRYENTER} //TCriticalSection has method TryEnter
@@ -214,7 +215,7 @@
               {$DEFINE WITH_VARIANT_UINT64}             // System.TVariant supports UInt64 Values
               {$DEFINE WITH_VARIANT_UNICODESTRING}      // System.TVariant supports UnicodeString Values
               {$DEFINE WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD} // TDataSet has the GetFieldClass(TFieldDef) overload
-
+              {$DEFINE WITH_VIRTUAL_BINDFIELDS} //TDataSet has virtual protected method BindFields
               {$IF CompilerVersion >= 21} //Delphi 2010+
                 {$WEAKLINKRTTI ON}                    //suppress extended RTTI
                 {.$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI for some unknown reason we've compilation issues. So enable this define manually!
@@ -467,6 +468,20 @@
 {$IFNDEF ZEOS_DISABLE_INTERBASE}
 {$DEFINE ENABLE_INTERBASE}
 {$ENDIF}
+
+// Enables Firebird support in TZConnection/TZDataset
+{$IFNDEF ZEOS_DISABLE_FIREBIRD}
+{$DEFINE ENABLE_FIREBIRD}
+{$ENDIF}
+
+{$IF defined(ZEOS_DISABLE_FIREBIRD) and defined(ZEOS_DISABLE_INTERBASE)}
+{$DEFINE DISABLE_INTERBASE_AND_FIREBIRD}
+{$IFEND}
+
+{$IF defined(ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_DBLIB) and
+     defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_OLEDB)}
+  {$DEFINE ZEOS_DISABLE_MSSQL_SYBASE}
+{$IFEND}
 
 // Enables SQLite support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_SQLITE}

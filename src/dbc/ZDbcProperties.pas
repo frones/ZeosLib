@@ -220,7 +220,7 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
 
   { Parameters common for several drivers }
 
-{$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_INTERBASE)}
+{$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
@@ -229,7 +229,7 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
   DSProps_ResetCodePage = 'ResetCodePage';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
@@ -248,7 +248,7 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
   DSProps_UndefVarcharAsStringLength = 'Undefined_Varchar_AsString_Length';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_POSTGRESQL) OR DEFINED(ENABLE_INTERBASE)}
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_POSTGRESQL) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   // Type: STR, like Field1[, Field2, ...] (separators: "," or ";")
   // List of fields which will get their values on INSERT
   // (by INSERT...RETURNING) construction.
@@ -420,7 +420,7 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
   DSProps_BinaryWireResultMode = 'BinaryWireResultMode';
 {$ENDIF}
 
-{$IFDEF ENABLE_INTERBASE}
+{$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   // Type: BOOLEAN
   // If not enabled: all commits are 'soft' (retaining), i.e. transaction isn't closed
   ConnProps_HardCommit = 'hard_commit';
@@ -483,7 +483,7 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
 
   { Some of the isc_tpb_* parameters are added internally according to
     Connection.TransactIsolationLevel property }
-{$ENDIF}
+{$IFEND}
 
 {$IFDEF ENABLE_SQLITE}
   // Type: BOOLEAN

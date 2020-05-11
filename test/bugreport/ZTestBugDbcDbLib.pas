@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcIntfs, ZCompatibility, ZSqlTestCase;
@@ -69,13 +70,15 @@ type
     procedure Mantis54Dbc;
   end;
 
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 implementation
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 
 { ZTestDbcDbLibBugReport }
 
 function ZTestDbcDbLibBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
+  Result := 'mssql,sybase,ado,OleDB,odbc_a,odbcw';
 end;
 
 { Mantis #54 }
@@ -115,4 +118,5 @@ end;
 
 initialization
   RegisterTest('bugreport',ZTestDbcDbLibBugReport.Suite);
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 end.

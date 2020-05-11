@@ -60,9 +60,8 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainOracleDriver,
-  ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants, ZClasses,
-  ZDbcUtils, ZDbcOracle;
+  ZSysUtils, ZClasses, ZCompatibility, ZVariant, ZPlainOracleDriver,
+  ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZDbcOracleUtils, ZDbcUtils, ZDbcOracle;
 
 type
 
@@ -590,8 +589,7 @@ end;
 {$IFDEF NEXTGEN}{$HINTS ON}{$ENDIF}//wrong hint OldSize assigned value is never used
 
 {**
-  prepares the statement on the server if minimum execution
-  count have been reached
+  prepares the statement on the server
 }
 procedure TZAbstractOracleStatement.Prepare;
 var
@@ -879,14 +877,14 @@ var Idx: Integer;
           if FExecStatement = nil then
             RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale)
           else begin
-            RegisterParameter(IDX,
+            Self.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
             FExecStatement.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
           end;
           Inc(IDX);
         end;
@@ -1358,6 +1356,7 @@ label bind_direct;
     Arr: TZArray;
   label write_lob;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}OraLobs := nil;{$ENDIF}
     SetLength(OraLobs, ArrayLen);
     Arr := PZArray(BindList[ParameterIndex].Value)^;
     Arr.VArray := Pointer(OraLobs);
@@ -1433,15 +1432,31 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       BufferSize := Max(BufferSize, Length(TUnicodeStringDynArray(Value)[I]));
+    BufferSize := (BufferSize shl 2);
+    if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
+      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+    P := Bind.valuep;
+    for i := 0 to ArrayLen -1 do begin
+      POCILong(P).Len := Length(TUnicodeStringDynArray(Value)[I]);
+      if POCILong(P).Len > 0 then
+        POCILong(P).Len := PUnicode2PRawBuf(Pointer(TUnicodeStringDynArray(Value)[I]), @POCILong(P).data[0], POCILong(P).Len, BufferSize, ClientCP);
+      Inc(P, Bind.value_sz);
+    end;
+  end;
+  procedure MoveUnicodeStrings;
+  var BufferSize, I: Integer;
+  begin
+    BufferSize := 0;
+    for i := 0 to ArrayLen -1 do
+      BufferSize := Max(BufferSize, Length(TUnicodeStringDynArray(Value)[I]));
     BufferSize := (BufferSize shl 1);
     if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
       InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
     P := Bind.valuep;
     for i := 0 to ArrayLen -1 do begin
-      Move(Pointer(TUnicodeStringDynArray(Value)[I])^, POCILong(P).data[0], Length(TUnicodeStringDynArray(Value)[I]));
-      POCILong(P).Len := Length(TUnicodeStringDynArray(Value)[I]);
+      POCILong(P).Len := Length(TUnicodeStringDynArray(Value)[I]) shl 1;
       if POCILong(P).Len > 0 then
-        Move(Pointer(TUnicodeStringDynArray(Value)[I])^, POCILong(P).data[0], POCILong(P).Len shl 1);
+        Move(Pointer(TUnicodeStringDynArray(Value)[I])^, POCILong(P).data[0], POCILong(P).Len);
       Inc(P, Bind.value_sz);
     end;
   end;
@@ -1487,6 +1502,7 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
   var ClientStrings: TRawByteStringDynArray;
     var I: Integer;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}ClientStrings := nil;{$ENDIF}
     SetLength(ClientStrings, ArrayLen);
       for i := 0 to ArrayLen -1 do
          if (Pointer(TStringDynArray(Value)[I]) <> nil) then
@@ -1513,7 +1529,7 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
       Inc(P, Bind.value_sz);
     end;
   end;
-  procedure UTF2UTF16Strings;
+  procedure UTF8ToUTF16Strings;
   var BufferSize, I: Integer;
     r: PAnsiChar;
   begin
@@ -1534,7 +1550,7 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
       if r = nil
       then POCILong(P).Len := 0
       else POCILong(P).Len := ZEncoding.UTF8ToWideChar(r,
-        Length(TRawByteStringDynArray(Value)[I]), @POCILong(P).data[0]);
+        Length(TRawByteStringDynArray(Value)[I]), @POCILong(P).data[0]) shl 1;
       Inc(P, Bind.value_sz);
     end;
   end;
@@ -1681,14 +1697,16 @@ bind_direct:
             else BindConvertedRaw2RawStrings(ZOSCodePage);
         {$ENDIF}
         {$IFNDEF NO_UTF8STRING}
-        vtUTF8String: {if (ClientCP = zCP_UTF8)
-            then BindRawStrings(TRawByteStringDynArray(Value))
-            else }UTF2UTF16Strings;
+        vtUTF8String: if FCharSetID  = OCI_UTF16ID
+            then UTF8ToUTF16Strings
+            else BindRawStrings(TRawByteStringDynArray(Value));
         {$ENDIF}
         vtRawByteString: BindRawStrings(TRawByteStringDynArray(Value));
         vtCharRec: BindRawFromCharRec;
         {$IFDEF UNICODE}vtString,{$ENDIF}
-        vtUnicodeString: BindRawFromUnicodeStrings;
+        vtUnicodeString: if FCharSetID  = OCI_UTF16ID
+          then MoveUnicodeStrings
+          else BindRawFromUnicodeStrings;
         else raise Exception.Create('Unsupported String Variant');
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream: begin
@@ -2437,6 +2455,7 @@ var
 begin
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
     Result := '';
+    Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZRawSQLStringWriter.Create(C);
@@ -2600,6 +2619,7 @@ var
 begin
   if (Length(FCachedQueryUni) = 0) and (SQL <> '') then begin
     Result := '';
+    Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZUnicodeSQLStringWriter.Create(C);
@@ -2887,14 +2907,14 @@ var Idx: Integer;
           if FExecStatement = nil then
             RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale)
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale)
           else begin
             RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
             FExecStatement.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(Descriptor.DataSize, Descriptor.Precision), Descriptor.Scale);
+                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
           end;
           Inc(IDX);
         end;
@@ -2937,6 +2957,9 @@ initialization
 
 { RealPrepared stmts:
   http://www.postgresql.org/docs/9.1/static/sql-prepare.html }
+{$IFDEF WITH_VAR_INIT_WARNING}
+OraPreparableTokens := nil;
+{$ENDIF}
 SetLength(OraPreparableTokens, OCI_STMT_DECLARE);
 OraPreparableTokens[OCI_STMT_SELECT-1].MatchingGroup  := 'SELECT';
 OraPreparableTokens[OCI_STMT_UPDATE-1].MatchingGroup  := 'UPDATE';

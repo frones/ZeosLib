@@ -8,11 +8,12 @@ unit zplain;
 interface
 
 uses
-  ZOleDB, ZPlainAdo, ZPlainAdoDriver, ZPlainASAConstants, ZPlainASADriver, 
-  ZPlainDbLibConstants, ZPlainDbLibDriver, ZPlainDriver, ZPlainFirebirdDriver, 
-  ZPlainFirebirdInterbaseConstants, ZPlainLoader, ZPlainMySqlConstants, 
-  ZPlainMySqlDriver, ZPlainODBCDriver, ZPlainOleDBDriver, 
-  ZPlainOracleConstants, ZPlainOracleDriver, ZPlainPostgreSqlDriver, 
+  ZPlainAdo, ZPlainAdoDriver, ZPlainASADriver, ZPlainDbLibDriver, 
+  ZPlainDriver, ZPlainFirebird, ZPlainFirebirdDriver, 
+  ZPlainFirebirdInterbaseDriver, ZPlainLoader, ZPlainMySqlDriver, 
+  ZPlainODBCDriver, ZPlainOleDBDriver, ZPlainOracleDriver, 
+  ZPlainPostgreSqlDriver, ZPlainProxyDriver, ZPlainProxyDriverInternalProxy, 
+  ZPlainProxyDriverIntf, ZPlainProxyDriverSoapProxy, ZPlainSQLAnywhere, 
   ZPlainSqLiteDriver;
 
 implementation

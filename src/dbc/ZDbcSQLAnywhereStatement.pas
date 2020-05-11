@@ -64,24 +64,24 @@ type
   {** Implements Prepared SQL Statement. }
   TZAbstractSQLAnywhereStatement = class(TZRawPreparedStatement)
   private
+    Fa_sqlany_bind_paramArray: Pa_sqlany_bind_paramArray;
+    fMoreResultsIndicator: TZMoreResultsIndicator;
     FSQLAnyConnection: IZSQLAnywhereConnection;
     FPlainDriver: TZSQLAnywherePlainDriver;
-    FMoreResults: Boolean;
     FHasOutParams: Boolean;
     Fa_sqlany_stmt: Pa_sqlany_stmt;
     FCallResultCache: TZCollection;
     Fapi_version: Tsacapi_u32;
+    FParamsDescribed: Boolean; //SQLAynwhere just describes SP's by now those params we do not change, they might be bidirectional
     procedure ClearCallResultCache;
   private
     function CreateResultSet: IZResultSet;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; Info: TStrings);
-    destructor Destroy; override;
 
     procedure Prepare; override;
     procedure Unprepare; override;
 
-    procedure AfterClose; override;
     function GetMoreResults: Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -96,11 +96,9 @@ type
 
   TZSQLAnywherePreparedStatement = class(TZAbstractSQLAnywhereStatement, IZPreparedStatement)
   private
-    Fa_sqlany_bind_paramArray: Pa_sqlany_bind_paramArray;
     FIsNullArray: Psacapi_i32Array;
     FLengthArray: Psize_tArray;
     FBindParamSize: NativeInt;
-    FParamsDescribed: Boolean; //SQLAynwhere just describes SP's by now those params we do not change, they might be bidirectional
     FBindAgain: Boolean;
   protected
     procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
@@ -180,18 +178,18 @@ begin
   Fapi_version := FSQLAnyConnection.Get_api_version;
 end;
 
-destructor TZAbstractSQLAnywhereStatement.Destroy;
-begin
-  inherited Destroy;
-  FSQLAnyConnection := nil;
-end;
-
+{**
+  Creates as resultset.
+  @return the resultset.
+}
 function TZAbstractSQLAnywhereStatement.CreateResultSet: IZResultSet;
 var
   NativeResultSet: TZSQLAnywhereResultSet;
   CachedResultSet: TZSQLAnywhereCachedResultSet;
 begin
-  With FSQLAnyConnection do begin
+  if (fMoreResultsIndicator = mriHasNoMoreResults) and (FOpenResultSet <> nil) then
+    Result := IZResultSet(FOpenResultSet)
+  else begin
     NativeResultSet := TZSQLAnywhereResultSet.Create(Self, SQL, @Fa_sqlany_stmt);
     if ResultSetConcurrency = rcUpdatable then begin
       CachedResultSet := TZSQLAnywhereCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
@@ -204,6 +202,9 @@ begin
   end;
 end;
 
+{**
+  prepares the statement on the server
+}
 procedure TZAbstractSQLAnywhereStatement.Prepare;
 begin
   if FCallResultCache <> nil then
@@ -214,22 +215,25 @@ begin
     if Fa_sqlany_stmt = nil then
       FSQLAnyConnection.HandleError(lcPrepStmt, fASQL, Self);
     inherited Prepare;
-  end;
+  end else if fMoreResultsIndicator <> mriHasNoMoreResults then
+    while GetMoreResults do ;
 end;
 
+{**
+  unprepares the statement, deallocates all bindings and handles
+}
 procedure TZAbstractSQLAnywhereStatement.Unprepare;
 begin
   if FCallResultCache <> nil then
     ClearCallResultCache;
+  if fMoreResultsIndicator <> mriHasNoMoreResults then
+    while GetMoreResults do ;
+  fMoreResultsIndicator := mriUnknown;
   inherited Unprepare;
   if Fa_sqlany_stmt <> nil then begin
     FPLainDriver.sqlany_free_stmt(Fa_sqlany_stmt);
     Fa_sqlany_stmt := nil;
   end;
-end;
-
-procedure TZAbstractSQLAnywhereStatement.AfterClose;
-begin
 end;
 
 {**
@@ -248,9 +252,38 @@ end;
  @see #execute
 }
 function TZAbstractSQLAnywhereStatement.GetMoreResults: Boolean;
+var num_cols: Tsacapi_i32;
+  procedure FromCache;
+  var AnyValue: IZAnyValue;
+  begin
+    Result := FCallResultCache.Count > 0;
+    if Result then begin
+      if Supports(FCallResultCache[0], IZResultSet, FlastResultSet)
+      then LastUpdateCount := -1
+      else begin
+        FCallResultCache[0].QueryInterface(IZAnyValue, AnyValue);
+        LastUpdateCount := AnyValue.GetInteger;
+      end;
+      FCallResultCache.Delete(0);
+    end;
+  end;
 begin
-  Result := FPlainDriver.sqlany_get_next_result(Fa_sqlany_stmt) = 1;
-  if Result then begin
+  if (FOpenResultSet <> nil)
+  then IZResultSet(FOpenResultSet).Close;
+  if FCallResultCache <> nil
+  then FromCache
+  else begin
+    Result := FPlainDriver.sqlany_get_next_result(Fa_sqlany_stmt) = 1;
+    if Result then begin
+      num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
+      if num_cols < 0
+      then FSQLAnyConnection.HandleError(lcExecute, fASQL, Self)
+      else if num_cols > 0
+        then LastResultSet := CreateResultSet
+        else LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
+    end;
+    if fMoreResultsIndicator = mriUnknown then
+       fMoreResultsIndicator := TZMoreResultsIndicator(Ord(mriHasNoMoreResults)+Ord(Result));
   end;
 end;
 
@@ -283,18 +316,21 @@ begin
   Prepare;
   if FWeakIntfPtrOfIPrepStmt <> nil then
     BindInParameters;
-  if FMoreResults or FHasOutParams
-  then LastResultSet := ExecuteQueryPrepared
-  else begin
-    if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
-      FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
-    num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
-    if num_cols < 0
-    then FSQLAnyConnection.HandleError(lcExecute, fASQL, Self)
-    else if num_cols > 0
+  if FHasOutParams and (FOutParamResultSet = nil) then
+    FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
+      Fa_sqlany_bind_paramArray, BindList);
+  if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
+    FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
+  num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
+  if num_cols < 0
+  then FSQLAnyConnection.HandleError(lcExecute, fASQL, Self)
+  else if num_cols > 0
     then LastResultSet := CreateResultSet
-    else LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
-  end;
+    else begin
+      LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
+      if FHasOutParams then
+        FLastResultSet := FOutParamResultSet;
+    end;
   Result := Assigned(FLastResultSet);
   { Logging SQL Command and values}
   if DriverManager.HasLoggingListener then
@@ -315,13 +351,19 @@ begin
   Prepare;
   if FWeakIntfPtrOfIPrepStmt <> nil then
     BindInParameters;
+  if FHasOutParams and (FOutParamResultSet = nil) then
+    FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
+      Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
     FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
   Result := nil;
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols > 0
   then Result := CreateResultSet
-  else begin
+  else if FHasOutParams then begin
+    Result := FOutParamResultSet;
+    FOpenResultSet := Pointer(Result);
+  end else begin
     while GetMoreResults and (FLastResultSet = nil) do ;
     Result := GetResultSet;
   end;
@@ -346,14 +388,18 @@ begin
   Prepare;
   if FWeakIntfPtrOfIPrepStmt <> nil then
     BindInParameters;
+  if FHasOutParams and (FOutParamResultSet = nil) then
+    FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
+      Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
     FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
   Result := -1;
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols = 0
   then Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt)
-  else while GetMoreResults and (FLastResultSet <> nil) do
-    Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
+  else while GetMoreResults do
+    if FLastResultSet = nil then
+      Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
   { Logging SQL Command and values }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
@@ -372,14 +418,17 @@ end;
 
 procedure TZSQLAnywherePreparedStatement.BindInParameters;
 var I: Integer;
+  J: Tsacapi_u32;
 begin
   if FBindAgain then begin
+    J := 0;
     for i := 0 to BindList.Count -1 do
-      {$R-}
-      if FPlainDriver.sqlany_bind_param(Fa_sqlany_stmt, Cardinal(I),
-        Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * i))) <> 1 then
-      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-        FSQLAnyConnection.HandleError(lcExecute, 'sqlany_bind_param', Self);
+      if BindList[i].ParamType <> pctResultSet then begin
+        if FPlainDriver.sqlany_bind_param(Fa_sqlany_stmt, J,
+           Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * i))) <> 1 then
+          FSQLAnyConnection.HandleError(lcExecute, 'sqlany_bind_param', Self);
+        Inc(J);
+      end;
     FBindAgain := False;
   end;
   inherited BindInParameters;
@@ -558,10 +607,10 @@ begin
   for i := 0 to num_params -1 do begin
     {$R-}
     Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * I));
-    { in V2 just IO is descibed }
     if FPlainDriver.sqlany_describe_bind_param(Fa_sqlany_stmt, I, Bind) <> 1 then
       FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
     FParamsDescribed := FParamsDescribed or (Bind.value._type <> A_INVALID_TYPE);
+    FHasOutParams := FHasOutParams or (Ord(Bind.direction) >= Ord(DD_OUTPUT));
     Bind.value.length :=  @FLengthArray[i];
     Bind.value.is_null := @FIsNullArray[i];
     if Bind.value.buffer_size > 0 then
@@ -571,6 +620,14 @@ begin
   end;
 end;
 
+{**
+  Sets the designated parameter to a <code>BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetBigDecimal(Index: Integer;
   const Value: TBCD);
 var data_value: Pa_sqlany_data_value;
@@ -589,14 +646,16 @@ var OldCapacity, I: Integer;
   Bind: Pa_sqlany_bind_param;
 begin
   OldCapacity := Bindlist.Capacity;
+{ that's crashing sqlany 12
   if (Fa_sqlany_stmt <> nil) and (BindList.Count > 0) then
     for i := OldCapacity -1 downto Capacity do
-      FplainDriver.sqlany_bind_param(Fa_sqlany_stmt, Cardinal(I), nil);
+      FplainDriver.sqlany_bind_param(Fa_sqlany_stmt, Cardinal(I), nil);}
 
   inherited SetBindCapacity(Capacity);
   if OldCapacity <> Capacity then begin
     BindList.SetCount(Capacity);
     ReallocMem(FIsNullArray, Capacity * SizeOf(Tsacapi_i32));
+    FillChar(FIsNullArray^, Capacity * SizeOf(Tsacapi_i32), #0);
     ReallocMem(FLengthArray, Capacity * SizeOf(Tsize_t));
     for i := OldCapacity-1 downto Capacity do begin
       Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * i));
@@ -610,6 +669,14 @@ begin
   end;
 end;
 
+{**
+  Sets the designated parameter to a <code>boolean</code> value.
+  The driver converts this
+  to an SQL <code>BIT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetBoolean(Index: Integer;
   Value: Boolean);
 var data_value: Pa_sqlany_data_value;
@@ -623,6 +690,14 @@ begin
   PByte(data_value.buffer)^ := Byte(Value);
 end;
 
+{**
+  Sets the designated parameter to a <code>unsigned 8Bit int</code> value.
+  The driver converts this
+  to an SQL <code>BYTE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetByte(Index: Integer; Value: Byte);
 var data_value: Pa_sqlany_data_value;
 begin
@@ -683,6 +758,14 @@ begin
   else SetBytes(Index, Pointer(Value), Len);
 end;
 
+{**
+  Sets the designated parameter to a Java <code>currency</code> value.
+  The driver converts this
+  to an SQL <code>CURRENCY</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetCurrency(Index: Integer;
   const Value: Currency);
 var data_value: Pa_sqlany_data_value;
@@ -698,6 +781,14 @@ begin
   data_value.length^ := P - data_value.buffer;
 end;
 
+{**
+  Sets the designated parameter to a <code<java.sql.Date</code> value.
+  The driver converts this to an SQL <code>DATE</code>
+  value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetDate(Index: Integer;
   const Value: TZDate);
 var data_value: Pa_sqlany_data_value;
@@ -712,6 +803,14 @@ begin
     data_value.buffer, ConSettings.WriteFormatSettings.DateFormat, False, Value.IsNegative)
 end;
 
+{**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetDouble(Index: Integer;
   const Value: Double);
 var data_value: Pa_sqlany_data_value;
@@ -725,12 +824,25 @@ begin
   PDouble(data_value.buffer)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>float</code> value.
+  The driver converts this
+  to an SQL <code>FLOAT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetFloat(Index: Integer;
   Value: Single);
 begin
   SetDouble(Index, Value);
 end;
 
+{**
+  Sets the designated parameter to a GUID.
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetGuid(Index: Integer;
   const Value: TGUID);
 var data_value: Pa_sqlany_data_value;
@@ -761,7 +873,7 @@ begin
                 stAsciiStream: SQLWriter.AddText('(CLOB)', Result);
                 stUnicodeStream: SQLWriter.AddText('(NCLOB)', Result);
                 stCurrency, stBigDecimal: SQLWriter.AddText(Bind.value.buffer, Bind.value.length^, Result);
-                else SQLWriter.AddTextQuoted(Bind.value.buffer, Bind.value.length^, #39, Result);
+                else SQLWriter.AddTextQuoted(Bind.value.buffer, Bind.value.length^, AnsiChar(#39), Result);
               end;
     A_DOUBLE: if Bind.value.buffer_size = SizeOf(Double)
               then SQLWriter.AddFloat(PDouble(Bind.value.buffer)^, Result)
@@ -778,6 +890,14 @@ begin
   end;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetInt(Index, Value: Integer);
 var data_value: Pa_sqlany_data_value;
 begin
@@ -790,6 +910,14 @@ begin
   PInteger(data_value.buffer)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetLong(Index: Integer;
   const Value: Int64);
 var data_value: Pa_sqlany_data_value;
@@ -803,6 +931,13 @@ begin
   PInt64(data_value.buffer)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to SQL <code>NULL</code>.
+  <P><B>Note:</B> You must specify the parameter's SQL type.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param sqlType the SQL type code defined in <code>java.sql.Types</code>
+}
 procedure TZSQLAnywherePreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
 var data_value: Pa_sqlany_data_value;
@@ -815,6 +950,14 @@ begin
   data_value.is_null^ := 1;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>ShortInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetShort(Index: Integer;
   Value: ShortInt);
 var data_value: Pa_sqlany_data_value;
@@ -828,6 +971,14 @@ begin
   PShortInt(data_value.buffer)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetSmall(Index: Integer;
   Value: SmallInt);
 var data_value: Pa_sqlany_data_value;
@@ -841,6 +992,14 @@ begin
   PSmallInt(data_value.buffer)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to a <code>java.sql.Time</code> value.
+  The driver converts this to an SQL <code>TIME</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetTime(Index: Integer;
   const Value: TZTime);
 var data_value: Pa_sqlany_data_value;
@@ -856,6 +1015,14 @@ begin
     False, Value.IsNegative)
 end;
 
+{**
+  Sets the designated parameter to a <code>java.sql.Timestamp</code> value.
+  The driver converts this to an SQL <code>TIMESTAMP</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetTimestamp(Index: Integer;
   const Value: TZTimeStamp);
 var data_value: Pa_sqlany_data_value;
@@ -872,6 +1039,14 @@ begin
     WriteFormatSettings.DateTimeFormat, False, Value.IsNegative)
 end;
 
+{**
+  Sets the designated parameter to a Java <code>usigned 32bit int</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetUInt(Index: Integer;
   Value: Cardinal);
 var data_value: Pa_sqlany_data_value;
@@ -885,6 +1060,14 @@ begin
   PCardinal(data_value.buffer)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to a Java <code>unsigned long long</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetULong(Index: Integer;
   const Value: UInt64);
 var data_value: Pa_sqlany_data_value;
@@ -898,6 +1081,14 @@ begin
   PUInt64(data_value.buffer)^ := Value;
 end;
 
+{**
+  Sets the designated parameter to <code>unsigned 16bit int</code> value.
+  The driver converts this
+  to an SQL <code>WORD</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZSQLAnywherePreparedStatement.SetWord(Index: Integer; Value: Word);
 var data_value: Pa_sqlany_data_value;
 begin

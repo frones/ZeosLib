@@ -254,8 +254,11 @@ begin
   State := USASCII7ToUnicodeString(@StateBuf[0], st_Len);
   ErrMsg := PRawToUnicode(Pointer(ErrBuf), err_Len, ZOSCodePage);
   {$ELSE}
-  {$IFDEF FPC} State := ''; {$ENDIF}
+  {$IFDEF WITH_VAR_INIT_WARNING} State := ''; {$ENDIF}
   System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
+  {$IFDEF WITH_VAR_INIT_WARNING} ErrMsg := ''; {$ENDIF}
+  P := Pointer(ErrBuf);
+  System.SetString(ErrMsg, P, err_Len);
   {$ENDIF}
   ErrMsg := ErrMsg + ' The SQL: ';
   {$IFDEF UNICODE}
@@ -278,6 +281,9 @@ end;
 const
   cCommit: RawByteString = 'TRANSACTION COMMIT';
   cRollback: RawByteString = 'TRANSACTION ROLLBACK';
+  cAutoCommit: array[Boolean, Boolean] of RawByteString =(
+    ('SET OPTION chained=''On''', 'SET OPTION chained=''Off'''),
+    ('SET TEMPORARY OPTION AUTO_COMMIT=''Off''', 'SET TEMPORARY OPTION AUTO_COMMIT=''On'''));
 {**
   Makes all changes made since the previous
   commit/rollback permanent and releases any database locks
@@ -458,14 +464,14 @@ jmpInit:
           {$ELSE UNICODE}
           SQLStringWriter.AddText(ConParams[i][0], ConStr);
           {$ENDIF UNICODE}
-          SQLStringWriter.AddChar('=', ConStr);
+          SQLStringWriter.AddChar(AnsiChar('='), ConStr);
           {$IFDEF UNICODE}
           R := ZUnicodeToRaw(S, ZOSCodePage);
           SQLStringWriter.AddText(R, ConStr);
           {$ELSE}
           SQLStringWriter.AddText(S, ConStr);
           {$ENDIF}
-          SQLStringWriter.AddChar(';', ConStr);
+          SQLStringWriter.AddChar(AnsiChar(';'), ConStr);
           Break;
         end;
       end;
@@ -483,7 +489,8 @@ jmpInit:
       Fa_sqlany_interface_context := nil;
     end;
   end;
-  ExecuteImmediat(RawByteString('SET OPTION chained=''On'''), lcTransaction);
+  if Fapi_version>=SQLANY_API_VERSION_4 then
+    ExecuteImmediat(cAutoCommit[False][False], lcTransaction);
   if FClientCodePage = ''  then begin
     S := DetermineASACharSet;
     CheckCharEncoding(S);
@@ -491,7 +498,7 @@ jmpInit:
   if Ord(TransactIsolationLevel) > Ord(tiReadUncommitted) then
     ExecuteImmediat(SQLAnyTIL[TransactIsolationLevel], lcTransaction);
   if AutoCommit
-  then ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''On'''), lcTransaction)
+  then ExecuteImmediat(cAutoCommit[Fapi_version>=SQLANY_API_VERSION_4][True], lcTransaction)
   else begin
     AutoCommit := True;
     StartTransaction;
@@ -625,7 +632,7 @@ begin
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''On'''), lcTransaction);
+      ExecuteImmediat(cAutoCommit[Fapi_version>=SQLANY_API_VERSION_4][True], lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
@@ -665,7 +672,7 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    ExecuteImmediat(RawByteString('SET TEMPORARY OPTION AUTO_COMMIT=''Off'''), lcTransaction);
+    ExecuteImmediat(RawByteString(cAutoCommit[Fapi_version>=SQLANY_API_VERSION_4][False]), lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin

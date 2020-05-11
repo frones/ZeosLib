@@ -271,75 +271,6 @@ uses
   ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties, TypInfo,
   ZVariant;
 
-
-// added for suporting Infinity, -Infinity and NaN.
-// See https://sourceforge.net/p/zeoslib/tickets/173/
-// maybe this should be pushed into ZSysUtils.SQLStrToFloatDef?
-{$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
-procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
-  var Result: Extended); overload;
-begin
-  if Value = 'Infinity' then
-    Result := Infinity
-  else if Value = '-Infinity' then
-    Result := NegInfinity
-  else if Value = 'NaN' then
-    Result := NaN
-  else
-    ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
-end;
-{$IFEND}
-
-procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Single;
-  var Result: Single); overload;
-begin
-  {$IFDEF FPC2_6DOWN}
-  {$R-}
-  {$Q-}
-  {$ENDIF}
-  if Value = 'Infinity' then
-    Result := Infinity
-  else if Value = '-Infinity' then
-    Result := NegInfinity
-  else if Value = 'NaN' then
-    Result := NaN
-  else
-    ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
-  {$IFDEF FPC2_6DOWN}
-    {$ifdef RangeCheckEnabled}
-      {$R+}
-    {$endif}
-    {$ifdef OverFlowCheckEnabled}
-      {$Q+}
-    {$endif}
-  {$ENDIF}
-end;
-
-procedure pgSQLStrToFloatDef(Value: PAnsiChar; const Def: Double;
-  var Result: Double); overload;
-begin
-  {$IFDEF FPC2_6DOWN}
-    {$R-}
-    {$Q-}
-  {$ENDIF}
-  if Value = 'Infinity' then
-    Result := Infinity
-  else if Value = '-Infinity' then
-    Result := NegInfinity
-  else if Value = 'NaN' then
-    Result := NaN
-  else
-    ZSysUtils.SQLStrToFloatDef(Value, Def, Result);
-  {$IFDEF FPC2_6DOWN}
-    {$ifdef RangeCheckEnabled}
-      {$R+}
-    {$endif}
-    {$ifdef OverFlowCheckEnabled}
-      {$Q+}
-    {$endif}
-  {$ENDIF}
-end;
-
 { TZPostgreSQLResultSet }
 
 {$IFDEF USE_SYNCOMMONS}
@@ -1677,7 +1608,7 @@ begin
                         else Result := 0;
         else raise CreatePGConvertError(ColumnIndex, TypeOID);
       end
-    else pgSQLStrToFloatDef(P, 0, Result);
+    else SQLStrToFloatDef(P, 0, Result);
   end;
 end;
 
@@ -1828,7 +1759,7 @@ begin
                         else Result := 0;
         else raise CreatePGConvertError(ColumnIndex, TypeOID);
       end
-    else pgSQLStrToFloatDef(P, 0, Result);
+    else SQLStrToFloatDef(P, 0, Result);
   end;
 end;
 
@@ -1881,20 +1812,20 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>currency</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZPostgreSQLResultSet.GetConnection: IZPostgreSQLConnection;
 begin
   Result := FConnection;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>currency</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
 function TZPostgreSQLResultSet.GetCurrency(
   ColumnIndex: Integer): Currency;
 var P: PAnsiChar;

@@ -62,7 +62,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   FmtBCD,
-  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZVariant, ZOleDB;
+  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZVariant, ZPlainOleDBDriver;
 
 type
   PDirectionTypes = ^TDirectionTypes;
@@ -341,9 +341,7 @@ begin
   case ResultSetType of
     rtForwardOnly: Result := adOpenForwardOnly;
     rtScrollInsensitive: Result := adOpenStatic;
-    rtScrollSensitive: Result := adOpenDynamic;
-  else
-    Result := -1;//adOpenUnspecified;
+    else {rtScrollSensitive:} Result := adOpenDynamic;
   end
 end;
 
@@ -354,12 +352,9 @@ end;
 }
 function ConvertResultSetConcurrencyToAdo(ResultSetConcurrency: TZResultSetConcurrency): Integer;
 begin
-  case ResultSetConcurrency of
-    rcReadOnly: Result := adLockReadOnly;
-    rcUpdatable: Result := adLockOptimistic;
-  else
-    Result := -1;//adLockUnspecified;
-  end
+  if ResultSetConcurrency = rcReadOnly
+  then Result := adLockReadOnly
+  else Result := adLockOptimistic;
 end;
 
 {**

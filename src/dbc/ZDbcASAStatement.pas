@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZCompatibility, ZDbcLogging, ZVariant, ZClasses,
-  ZDbcASA, ZDbcASAUtils, ZPlainASADriver, ZPlainASAConstants;
+  ZDbcASA, ZDbcASAUtils, ZPlainASADriver;
 
 type
   {** Implements Prepared SQL Statement. }
@@ -259,8 +259,6 @@ begin
         ZDbcASAUtils.CheckASAError(FPlainDriver, DBHandle, lcExecute, GetConSettings, ASQL);
         { test if Outparams are available: }
         FHasOutParams := FResultSQLDA.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = DT_PROCEDURE_OUT;
-        //if FHasOutParams then
-          //FSQLData.InitFields;
       end;
     end;
     inherited Prepare
@@ -432,10 +430,10 @@ begin
     { Autocommit statement.
       EH: we've a chained mode only(deprecated by sybase)
       no idea if that's correct, it's alltime code}
-    if GetAutoCommit then begin
+    {if GetAutoCommit then begin
       FPlainDriver.dbpp_commit(Handle, 0);
       CheckASAError(FPlainDriver, Handle, lcTransaction, ConSettings);
-    end;
+    end;}
   end;
   { Logging SQL Command and values }
   inherited ExecuteUpdatePrepared;
@@ -911,6 +909,9 @@ begin
   PWord(SQLVAR.sqlData)^ := Value;
 end;
 
+{**
+  Removes eventual structures for binding input parameters.
+}
 procedure TZASAPreparedStatement.UnPrepareInParameters;
 begin
   inherited;

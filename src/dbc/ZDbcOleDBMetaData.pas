@@ -63,7 +63,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZOleDB, ZDbcConnection, ActiveX;
+  ZCompatibility, ZPlainOleDBDriver, ZDbcConnection, ActiveX;
 
 type
   TSuppSchemaRec = record

@@ -453,3 +453,11 @@ CREATE TABLE TableTicked389 (
   int_field BIGINT DEFAULT NULL,
   PRIMARY KEY (id_test)
 );
+
+/*================================================================*/
+/* A table for an error concerning bigints. See                   */
+/* See https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=118430 */
+/*================================================================*/
+CREATE TABLE biginterror (
+  f bigint(20) unsigned DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf16;

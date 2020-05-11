@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZSysUtils, ZClasses,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
-  ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZPlainDriver;
+  ZTokenizer, ZGenericSqlAnalyser, ZPlainDriver;
 
 type
   TDBLibProvider = (dpMsSQL, dpSybase);
@@ -144,8 +144,6 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetServerAnsiCodePage: Word;
 
     function GetServerProvider: TZServerProvider; override;
@@ -1056,16 +1054,6 @@ function TZDBLibConnection.GetCatalog: string;
 begin
   Result := String(FPlainDriver.dbName(FHandle));
   CheckDBLibError(lcOther, 'GETCATALOG');
-end;
-
-function TZDBLibConnection.GetBinaryEscapeString(const Value: TBytes): String;
-begin
-  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
-end;
-
-function TZDBLibConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
 end;
 
 function TZDBLibConnection.GetServerAnsiCodePage: Word;

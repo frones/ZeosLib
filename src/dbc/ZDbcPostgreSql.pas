@@ -100,6 +100,9 @@ type
     procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
     function FindDomainBaseType(DomainOID: OID; out BaseTypeOID: OID): Boolean;
     procedure FillUnknownDomainOIDs;
+
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString);
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
   end;
 
   PZPGDomain2BaseTypeMap = ^TZPGDomain2BaseTypeMap;
@@ -216,11 +219,10 @@ type
     function PingServer: Integer; override;
 
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); override;
+    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); override;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetServerSetting(const AName: RawByteString): string;
     procedure SetServerSetting(const AName, AValue: RawbyteString);
@@ -1048,7 +1050,7 @@ end;
 procedure TZPostgreSQLConnection.GetBinaryEscapeString(Buf: Pointer;
   Len: LengthInt; out Result: RawByteString);
 begin
-  Result := Self.EncodeBinary(Buf, Len, True)
+  Result := EncodeBinary(Buf, Len, True)
 end;
 
 {**
@@ -1356,32 +1358,15 @@ begin
   Result := FDomain2BaseTypMap.GetOrAddBaseTypeOID(DomainOID, BaseTypeOID);
 end;
 
-{**
-  EgonHugeist:
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to predetect it Result = BinaryString
-  @param Value represents the Binary-String
-  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
-  @result the detectable Binary String
-}
-function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  Result := String(EncodeBinary(Value, True));
-end;
-
-{**
-  EgonHugeist:
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to predetect it Result = BinaryString
-  @param Value represents the Binary-String
-  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
-  @result the detectable Binary String
-}
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: TBytes): String;
+{$IFDEF UNICODE}
 var Tmp: RawByteString;
+{$ENDIF UNICODE}
 begin
-  ZSetString(PAnsiChar(Value), Length(Value), Tmp{%H-});
-  Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(EncodeBinary(Tmp, True));
+  {$IFDEF UNICODE}Tmp{$ELSE}Result{$ENDIF} := EncodeBinary(Pointer(Value), Length(Value), True);
+  {$IFDEF UNICODE}
+  Result := ASCII7ToUnicodeString(Tmp);
+  {$ENDIF}
 end;
 
 {**

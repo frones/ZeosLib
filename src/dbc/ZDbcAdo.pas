@@ -97,9 +97,6 @@ type
   public
     destructor Destroy; override;
 
-    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
-
     procedure Commit;
     procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
@@ -129,7 +126,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, ActiveX, ZOleDB,
+  Variants, ActiveX, ZPlainOleDBDriver,
   ZDbcUtils, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties, ZDbcAdoStatement,
   ZDbcAdoMetaData, ZEncoding, ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
 
@@ -367,16 +364,6 @@ function TZAdoConnection.PrepareStatementWithParams(const SQL: string;
 begin
   if IsClosed then Open;
   Result := TZAdoPreparedStatement.Create(Self, SQL, Info)
-end;
-
-function TZAdoConnection.GetBinaryEscapeString(const Value: TBytes): String;
-begin
-  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
-end;
-
-function TZAdoConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
 end;
 
 {**

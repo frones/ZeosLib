@@ -520,6 +520,7 @@ begin
   end else Result := NullBCD;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TAbstractODBCResultSet.GetBlob(ColumnIndex: Integer;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
@@ -531,6 +532,7 @@ begin
     else raise CreateCanNotAccessBlobRecordException(ColumnIndex, ColumnType);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TAbstractODBCResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var L: LengthInt;
@@ -1321,6 +1323,16 @@ begin
   end;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>TZTime</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+  value returned is <code>zero padded</code>
+  @exception SQLException if a database access error occurs
+}
 procedure TAbstractODBCResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
 var L: LengthInt;
 label Fill;
@@ -1379,6 +1391,16 @@ begin
 Fill: FillChar(Result, SizeOf(TZTime), #0);
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>TZTimestamp</code>.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+  value returned is <code>zero</code>
+  @exception SQLException if a database access error occurs
+}
 procedure TAbstractODBCResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 var L: LengthInt;
 label Fill;
@@ -1665,6 +1687,21 @@ begin
   Connection.CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
 end;
 
+{**
+  Moves the cursor down one row from its current position.
+  A <code>ResultSet</code> cursor is initially positioned
+  before the first row; the first call to the method
+  <code>next</code> makes the first row the current row; the
+  second call makes the second row the current row, and so on.
+
+  <P>If an input stream is open for the current row, a call
+  to the method <code>next</code> will
+  implicitly close it. A <code>ResultSet</code> object's
+  warning chain is cleared when a new row is read.
+
+  @return <code>true</code> if the new current row is valid;
+    <code>false</code> if there are no more rows
+}
 function TAbstractColumnODBCResultSet.Next: Boolean;
 //const FetchOrientation: array[Boolean] of SQLSMALLINT = (SQL_FETCH_FIRST, SQL_FETCH_NEXT); //using FetchScroll or ExtendedFetch??
 var RETCODE: SQLRETURN;
@@ -1811,8 +1848,7 @@ begin
           //DefaultExpression -> not implemented
           DESC_CONCISE_TYPE := ColNumAttribute(ColumnNumber, SQL_DESC_CONCISE_TYPE);
           if DESC_CONCISE_TYPE = SQL_TYPE_VARIANT then begin//SQL Server type
-            DESC_CONCISE_TYPE := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), fSigned);
-            Signed := fSigned;
+            DESC_CONCISE_TYPE := ConvertODBC_CTypeToODBCType(ColNumAttribute(ColumnNumber, SQL_CA_SS_VARIANT_TYPE), Signed);
           end;
           case DESC_CONCISE_TYPE of
             SQL_DATETIME, SQL_TIMESTAMP, SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP,
@@ -2296,6 +2332,7 @@ end;
 
 { TZODBCRowAccessorW }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZODBCRowAccessorW.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -2317,9 +2354,11 @@ begin
   inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZODBCRowAccessorA }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZODBCRowAccessorA.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -2341,6 +2380,7 @@ begin
   inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZODBCachedResultSetA }
 

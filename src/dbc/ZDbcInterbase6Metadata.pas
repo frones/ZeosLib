@@ -1104,9 +1104,14 @@ end;
 }
 function TZInterbase6DatabaseInfo.GetMaxStatementLength: Integer;
 begin
-  Result := 640;
+  // Increased size for FB 3.0+
+  // See release notes. Can be used by the legacy API too, if Karol Bieniaszewski
+  // is right at http://tracker.firebirdsql.org/browse/CORE-1117?focusedCommentId=31493&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_31493
+  if FIsFireBird and (FHostVersion >= 3000000) {and Client Library Version >= 3000000} then
+    Result := 10*1024*1024 //Release notes say there is an hard coded limit at 10MB
+  else
+    Result := 64*1024; //64KB by default
 end;
-
 {**
   How many active statements can we have open at one time to this
   database?

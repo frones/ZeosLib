@@ -163,26 +163,25 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="ZDbc.dcp"/>
-        <DCCReference Include="..\..\src\component\ZAbstractConnection.pas"/>
-        <DCCReference Include="..\..\src\component\ZAbstractDataset.pas"/>
-        <DCCReference Include="..\..\src\component\ZAbstractRODataset.pas"/>
-        <DCCReference Include="..\..\src\component\ZAbstractTable.pas"/>
-        <DCCReference Include="..\..\src\component\ZConnection.pas"/>
-        <DCCReference Include="..\..\src\component\ZConnectionGroup.pas"/>
-        <DCCReference Include="..\..\src\component\ZDataset.pas"/>
-        <DCCReference Include="..\..\src\component\ZDatasetUtils.pas"/>
-        <DCCReference Include="..\..\src\component\ZGroupedConnection.pas"/>
-        <DCCReference Include="..\..\src\component\ZIBEventAlerter.pas"/>
-        <DCCReference Include="..\..\src\component\ZPgEventAlerter.pas"/>
-        <DCCReference Include="..\..\src\component\ZSequence.pas"/>
-        <DCCReference Include="..\..\src\component\ZSqlMetadata.pas"/>
-        <DCCReference Include="..\..\src\component\ZSqlMonitor.pas"/>
-        <DCCReference Include="..\..\src\component\ZSqlProcessor.pas"/>
-        <DCCReference Include="..\..\src\component\ZSqlStrings.pas"/>
-        <DCCReference Include="..\..\src\component\ZSqlUpdate.pas"/>
-        <DCCReference Include="..\..\src\component\ZStoredProcedure.pas"/>
-        <DCCReference Include="..\..\src\component\ZStreamBlob.pas"/>
+	<DCCReference Include="ZDbc.dcp"/>
+	<DCCReference Include="..\..\src\component\ZAbstractConnection.pas"/>
+	<DCCReference Include="..\..\src\component\ZAbstractDataset.pas"/>
+	<DCCReference Include="..\..\src\component\ZAbstractRODataset.pas"/>
+	<DCCReference Include="..\..\src\component\ZAbstractTable.pas"/>
+	<DCCReference Include="..\..\src\component\ZConnection.pas"/>
+	<DCCReference Include="..\..\src\component\ZConnectionGroup.pas"/>
+	<DCCReference Include="..\..\src\component\ZDataset.pas"/>
+	<DCCReference Include="..\..\src\component\ZDatasetUtils.pas"/>
+	<DCCReference Include="..\..\src\component\ZGroupedConnection.pas"/>
+	<DCCReference Include="..\..\src\component\ZIBEventAlerter.pas"/>
+	<DCCReference Include="..\..\src\component\ZPgEventAlerter.pas"/>
+	<DCCReference Include="..\..\src\component\ZSequence.pas"/>
+	<DCCReference Include="..\..\src\component\ZSqlMetadata.pas"/>
+	<DCCReference Include="..\..\src\component\ZSqlMonitor.pas"/>
+	<DCCReference Include="..\..\src\component\ZSqlProcessor.pas"/>
+	<DCCReference Include="..\..\src\component\ZSqlStrings.pas"/>
+	<DCCReference Include="..\..\src\component\ZSqlUpdate.pas"/>
+	<DCCReference Include="..\..\src\component\ZStoredProcedure.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

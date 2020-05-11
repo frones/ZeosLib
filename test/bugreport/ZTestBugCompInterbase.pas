@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDataSetUtils, ZDbcIntfs, ZSqlTestCase, ZCompatibility
@@ -111,7 +112,10 @@ type
     procedure Test_Param_LoadFromStream_StringStream_ftMemo;
     procedure Test_Mantis214;
   end;
+
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 implementation
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses
 {$IFNDEF VER130BELOW}
@@ -1717,4 +1721,5 @@ end;
 initialization
   RegisterTest('bugreport',ZTestCompInterbaseBugReport.Suite);
   RegisterTest('bugreport',ZTestCompInterbaseBugReportMBCs.Suite);
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.

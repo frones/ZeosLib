@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 uses
 {$IFNDEF VER130BELOW}
   Variants,
@@ -89,7 +90,9 @@ type
     procedure TestSF421;
  end;
 
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 implementation
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 
 uses SysUtils, Types, FmtBCD, DateUtils,
   ZTestConsts, ZSysUtils, ZTestCase, ZStoredProcedure, ZAbstractRODataset,
@@ -99,7 +102,7 @@ uses SysUtils, Types, FmtBCD, DateUtils,
 
 function TZTestCompMSSqlBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,OleDB,odbc_a,odbc_w,ado';
+  Result := 'mssql,sybase,OleDB,odbc_a,odbc_w,ado';
 end;
 
 {**
@@ -675,7 +678,6 @@ begin
       {$ELSE}
       Check(Length(q.Fields[0].AsString) > 0, 'there are some bytes in queue');
       {$ENDIF}
-      //Write(Length(q.Fields[0].AsBytes), ' ', q.Fields[0].AsAnsiString, #10);
       (* expected output:
       5 apple
       6 banana
@@ -850,4 +852,5 @@ end;
 
 initialization
   RegisterTest('bugreport',TZTestCompMSSqlBugReport.Suite);
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 end.

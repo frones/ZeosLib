@@ -51,7 +51,7 @@ contains
   ZDbcDbLibUtils in '..\..\src\dbc\ZDbcDbLibUtils.pas',
   ZDbcGenericResolver in '..\..\src\dbc\ZDbcGenericResolver.pas',
   ZDbcInterbase6 in '..\..\src\dbc\ZDbcInterbase6.pas',
-  ZDbcInterbase6Metadata in '..\..\src\dbc\ZDbcInterbase6Metadata.pas',
+  ZDbcInterbaseFirebirdMetadata in '..\..\src\dbc\ZDbcInterbaseFirebirdMetadata.pas',
   ZDbcInterbase6ResultSet in '..\..\src\dbc\ZDbcInterbase6ResultSet.pas',
   ZDbcInterbase6Statement in '..\..\src\dbc\ZDbcInterbase6Statement.pas',
   ZDbcInterbase6Utils in '..\..\src\dbc\ZDbcInterbase6Utils.pas',
@@ -94,10 +94,14 @@ contains
   ZDbcSqLiteUtils in '..\..\src\dbc\ZDbcSqLiteUtils.pas',
   ZDbcStatement in '..\..\src\dbc\ZDbcStatement.pas',
   ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
-  ZDbcProxy in '..\..\src\dbc\ZDbcProxy.pas',
-  ZDbcProxyMetadata in '..\..\src\dbc\ZDbcProxyMetadata.pas',
-  ZDbcProxyResultSet in '..\..\src\dbc\ZDbcProxyResultSet.pas',
-  ZDbcProxyStatement in '..\..\src\dbc\ZDbcProxyStatement.pas',
-  ZDbcProxyUtils in '..\..\src\dbc\ZDbcProxyUtils.pas';
+  ZDbcSQLAnywhere in '..\..\src\dbc\ZDbcSQLAnywhere.pas',
+  ZDbcSQLAnywhereStatement in '..\..\src\dbc\ZDbcSQLAnywhereStatement.pas',
+  ZDbcSQLAnywhereUtils in '..\..\src\dbc\ZDbcSQLAnywhereUtils.pas',
+  ZDbcSQLAnywhereResultSet in '..\..\src\dbc\ZDbcSQLAnywhereResultSet.pas',
+  ZDbcFirebird in '..\..\src\dbc\ZDbcFirebird.pas',
+  ZDbcFirebirdStatement in '..\..\src\dbc\ZDbcFirebirdStatement.pas',
+  ZDbcFirebirdResultSet in '..\..\src\dbc\ZDbcFirebirdResultSet.pas',
+  ZDbcFirebirdInterbase in '..\..\src\dbc\ZDbcFirebirdInterbase.pas';
 
 end.
+

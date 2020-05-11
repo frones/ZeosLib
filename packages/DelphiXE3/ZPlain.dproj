@@ -140,11 +140,26 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="ZCore.dcp"/>
-        <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="vcl.dcp"/>
-        <DCCReference Include="..\..\src\plain\ZPlainDriver.pas"/>
-        <DCCReference Include="..\..\src\plain\ZPlainLoader.pas"/>
+	<DCCReference Include="ZCore.dcp"/>
+	<DCCReference Include="..\..\src\plain\ZPlainAdo.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainAdoDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainASADriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainDbLibDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainFirebird.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainFirebirdInterbaseDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainLoader.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainMySqlDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainODBCDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainOleDBDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainOracleDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainPostgreSqlDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainProxyDriver.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainProxyDriverInternalProxy.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainProxyDriverIntf.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainProxyDriverSoapProxy.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainSQLAnywhere.pas"/>
+	<DCCReference Include="..\..\src\plain\ZPlainSqLiteDriver.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

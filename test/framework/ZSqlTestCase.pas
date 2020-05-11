@@ -70,10 +70,10 @@ const
   pl_all_mysql = 'mysql,mariadb';
   pl_all_postgresql = 'postgresql';
   pl_all_sqlite = 'sqlite';
-  pl_all_interbase = 'firebird,interbase';
+  pl_all_interbase = 'firebird,interbase,firebird3up';
   pl_all_oracle = 'oracle';
   pl_all_dblib = 'mssql,sybase';
-  pl_all_asa = 'asa';
+  pl_all_asa = 'asa,asa_capi';
   pl_all_transports = 'ado,odbc_a,odbc_w,oledb,webserviceproxy';
   pl_all = pl_all_mysql + ',' + pl_all_postgresql + ',' + pl_all_sqlite + ','
          + pl_all_interbase + ',' + pl_all_oracle + ',' + pl_all_dblib + ',' + pl_all_asa;
@@ -92,7 +92,7 @@ type
   // Protocol type is determined by StartsWith(Protocol, ProtocolPrefixes[drv]),
   // so one prefix means exactly one protocol type!
   TProtocolType = (protUnknown, protMySQL, protPostgre, protSQLite, protFirebird, protInterbase,
-    protOracle, protASA, protFreeTDS, protMSSQL, protOleDB, protADO, protSybase,
+    protOracle, protASA, protASACAPI, protMSSQL, protOleDB, protADO, protSybase,
     protODBC, protWebServiceProxy);
 
   TZTransport = (traUnknown, traNative, traADO, traODBC, traOLEDB, traWEBPROXY);
@@ -101,7 +101,7 @@ const
   // Strictly in lower-case
   ProtocolPrefixes: array[TProtocolType] of string =
     ('unknown', 'mysql', 'postgresql', 'sqlite', 'firebird', 'interbase',
-     'oracle', 'asa', 'freetds', 'mssql', 'oledb', 'ado', 'sybase',
+     'oracle', 'asa', 'asa_capi', 'mssql', 'oledb', 'ado', 'sybase',
      'odbc', 'webserviceproxy');
 
 type
@@ -509,8 +509,9 @@ begin
       protSQLite: FProvider :=spSQLite;
       protFirebird, protInterbase: FProvider := spIB_FB;
       protOracle: FProvider := spOracle;
-      protASA: FProvider := spASA;
-      protMSSQL, protOleDB, protADO, protFreeTDS, protODBC, protSybase: begin
+      protASA,
+      protASACAPI: FProvider := spASA;
+      protMSSQL, protOleDB, protADO, protODBC, protSybase: begin
           Connection := CreateDbcConnection;
           Connection.Open;
           FProvider := Connection.GetServerProvider;
@@ -525,7 +526,7 @@ begin
   if FTransport <> traUnknown then begin
     Result := FTransport;
   end else case GetProtocolType of
-    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protFreeTDS, protMSSQL, protSybase: Result := traNative;
+    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protASACAPI, protMSSQL, protSybase: Result := traNative;
     protOleDB: Result := traOLEDB;
     protADO: Result := traADO;
     protODBC: Result := traODBC;
@@ -796,7 +797,7 @@ begin
       protFirebird, protInterbase: FProvider := spIB_FB;
       protOracle: FProvider := spOracle;
       protASA: FProvider := spASA;
-      protMSSQL, protOleDB, protADO, protFreeTDS, protODBC, protSybase: begin
+      protMSSQL, protOleDB, protADO, protASACAPI, protODBC, protSybase: begin
           Connection := CreateDbcConnection;
           Connection.Open;
           FProvider := Connection.GetServerProvider;
@@ -811,7 +812,7 @@ begin
   if FTransport <> traUnknown then begin
     Result := FTransport;
   end else case GetProtocolType of
-    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protFreeTDS, protMSSQL, protSybase: Result := traNative;
+    protMySQL, protPostgre, protSQLite, protFirebird, protInterbase, protOracle, protASA, protASACAPI, protMSSQL, protSybase: Result := traNative;
     protOleDB: Result := traOLEDB;
     protADO: Result := traADO;
     protODBC: Result := traODBC;
@@ -904,7 +905,7 @@ end;
 }
 procedure TZAbstractSQLTestCase.Fail(Msg: string; ErrorAddr: Pointer = nil);
 begin
-  {$IFDEF FPC2_6DOWN}
+  {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
   inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]));
   {$ELSE}
   inherited Fail(Format('%s/%s: %s', [ConnectionName, Protocol, Msg]),

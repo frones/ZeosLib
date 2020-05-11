@@ -315,7 +315,7 @@ end;
 procedure TZAbstractTestCase.CheckEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string);
 begin
   if not CompareMem(expected, actual, size) then
-    {$IFDEF FPC2_6DOWN}
+    {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
     Fail(GetMemDiffStr(expected, actual, size, msg))
     {$ELSE}
     Fail(GetMemDiffStr(expected, actual, size, msg), CallerAddr)
@@ -327,7 +327,7 @@ end;
 procedure TZAbstractTestCase.CheckNotEqualsMem(Expected, Actual: Pointer; Size: Longword; const Msg: string);
 begin
   if CompareMem(expected, actual, size) then
-    {$IFDEF FPC2_6DOWN}
+    {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
     Fail(AddToMsg(Msg, sIdenticalContent))
     {$ELSE}
     Fail(AddToMsg(Msg, sIdenticalContent), CallerAddr)
@@ -552,7 +552,7 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: WideString;
   const Msg: string);
 begin
-  {$IFDEF FPC2_6DOWN}
+  {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
   AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
   {$ELSE}
   AssertTrue(ComparisonMsg(Msg, String(Expected), String(Actual)), Expected = Actual, CallerAddr);
@@ -562,7 +562,7 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected: UnicodeString; Actual: WideString;
   const Msg: string);
 begin
-  {$IFDEF FPC2_6DOWN}
+  {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
   AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
   {$ELSE}
   AssertTrue(ComparisonMsg(Msg, Expected, Actual), Expected = Actual, CallerAddr);
@@ -581,7 +581,7 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
   const Msg: string);
 begin
-  {$IFDEF FPC2_6DOWN}
+  {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
   AssertTrue(ComparisonMsg(IntToStr(Expected), IntToStr(Actual)), Expected = Actual);
   {$ELSE}
   AssertTrue(ComparisonMsg(Msg, IntToStr(Expected), IntToStr(Actual)), Expected = Actual, CallerAddr);
@@ -684,7 +684,7 @@ procedure TZAbstractTestCase.CheckException(AMethod: TTestMethod;
   AExceptionClass: ExceptClass; const ExpectExcMsg, Msg: string);
 begin
   {$IFDEF FPC}
-    {$IFDEF FPC2_6DOWN}
+    {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
     // Note: actually this call won't check exception message
     AssertException(Msg, AExceptionClass, AMethod);
     {$ELSE}

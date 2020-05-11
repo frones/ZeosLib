@@ -32,9 +32,7 @@ requires
   ZPlain,
   ZDbc,
   ZCore,
-  ZParseSql,
-  vclactnband,
-  vcl;
+  ZParseSql;
 
 contains
   {$I ZPackages.inc} //after simplify Zeos.Inc by using {$IF CompilerVersion > x} i need to move this include AFTER contains!
@@ -42,7 +40,6 @@ contains
   ZSqlUpdate in '..\..\src\component\ZSqlUpdate.pas',
   ZAbstractDataset in '..\..\src\component\ZAbstractDataset.pas',
   ZAbstractRODataset in '..\..\src\component\ZAbstractRODataset.pas',
-  ZStreamBlob in '..\..\src\component\ZStreamBlob.pas',
   ZAbstractConnection in '..\..\src\component\ZAbstractConnection.pas',
   ZGroupedConnection in '..\..\src\component\ZGroupedConnection.pas',
   ZConnectionGroup in '..\..\src\component\ZConnectionGroup.pas',

@@ -1790,6 +1790,14 @@ begin
 end;
 {$ENDIF}
 
+{**
+  Sets the designated parameter to a <code>BigDecimal</code> value.
+  The driver converts this to an SQL <code>NUMERIC</code> value when
+  it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
 procedure TZAbstractODBCPreparedStatement.SetBigDecimal(Index: Integer;
   const Value: TBCD);
 var Bind: PZODBCParamBind;
@@ -1824,14 +1832,6 @@ begin
     BindList.Put(Index, Value);
 end;
 
-{**
-  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
-  The driver converts this to an SQL <code>NUMERIC</code> value when
-  it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZAbstractODBCPreparedStatement.SetBindCapacity(Capacity: Integer);
 var OldCap: Integer;
 begin
@@ -1893,7 +1893,7 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>boolean</code> value.
+  Sets the designated parameter to a <code>boolean</code> value.
   The driver converts this
   to an SQL <code>BIT</code> value when it sends it to the database.
 
@@ -1910,7 +1910,7 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
+  Sets the designated parameter to a <code>unsigned 8Bit int</code> value.
   The driver converts this
   to an SQL <code>BYTE</code> value when it sends it to the database.
 
@@ -2808,7 +2808,7 @@ end;
 {$ENDIF}
 
 {**
-  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
+  Sets the designated parameter to <code>unsigned 16bit int</code> value.
   The driver converts this
   to an SQL <code>WORD</code> value when it sends it to the database.
 

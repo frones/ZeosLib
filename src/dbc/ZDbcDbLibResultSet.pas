@@ -71,7 +71,7 @@ uses
   FmtBCD,
   ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
-  ZPlainDbLibConstants, ZPlainDBLibDriver;
+  ZPlainDBLibDriver;
 
 type
   TZAbstractDblibDataProvider = class
@@ -196,7 +196,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode,
-  ZClasses, ZDbcUtils, ZDbcMetadata
+  ZDbcUtils, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZAbstractDblibDataProvider.Create(Connection: IZDBLibConnection);
@@ -399,6 +399,7 @@ label AssignGeneric;
     {$IFDEF UNICODE}
     Result := PRawToUnicode(P, ZFastCode.StrLen(P), FClientCP);
     {$ELSE}
+    {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}//done by ZSetString already
     ZSetString(P, ZFastCode.StrLen(P), Result);
     Result := ConSettings^.ConvFuncs.ZRawToString(Result,
           FClientCP, ConSettings^.CTRL_CP);
@@ -931,12 +932,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZDBLibResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
 var TS: TZTimeStamp;
 begin
   GetTimestamp(ColumnIndex, TS);
   ZSysUtils.DateFromTimeStamp(TS, Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -947,12 +950,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZDBLibResultSet.GetTime(ColumnIndex: Integer; var Result: TZTime);
 var TS: TZTimeStamp;
 begin
   GetTimestamp(ColumnIndex, TS);
   ZSysUtils.TimeFromTimeStamp(TS, Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the value of the designated column in the current row

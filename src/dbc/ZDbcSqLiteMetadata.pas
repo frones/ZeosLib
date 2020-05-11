@@ -247,7 +247,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
-  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema, ZClasses, ZMatchPattern,
+  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema, ZMatchPattern,
   ZEncoding;
 
 { TZSQLiteDatabaseInfo }
@@ -1449,9 +1449,9 @@ begin
       TempTableNamePattern := StripEscape(TableNamePattern);
       TempTableNamePattern := NormalizePatternCase(TempTableNamePattern);
       TblTmp := ConSettings.ConvFuncs.ZStringToRaw(TempTableNamePattern, ConSettings^.CTRL_CP, 65001);
-      ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'table_info('''+TblTmp+''')');
       Temp_scheme := StripEscape(SchemaPattern);
       SchemaTmp := ConSettings.ConvFuncs.ZStringToRaw(Temp_scheme, ConSettings^.CTRL_CP, 65001);
+      ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'table_info('''+TblTmp+''')');
       FillResult(ResSet, UndefinedVarcharAsStringLength, ColumnNamePattern, SchemaTmp, TblTmp);
     end else begin
       SetLength(TableTypes, 1);

@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver, ZPlainDriver,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants,
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser,
   ZClasses;
 type
 
@@ -91,6 +91,7 @@ type
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
     function GetPlainDriver: TZMySQLPlainDriver;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
   end;
 
   {** Implements MySQL Database Connection. }
@@ -137,7 +138,9 @@ type
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
     function GetConnectionHandle: PPMYSQL;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); override;
+    function EscapeString(const Value: RawByteString): RawByteString; overload; override;
+    function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
+    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
 
     function GetDatabaseName: String;
     function GetServerProvider: TZServerProvider; override;
@@ -703,6 +706,12 @@ begin
   FSavePoints.Free;
 end;
 
+function TZMySQLConnection.EscapeString(
+  const Value: RawByteString): RawByteString;
+begin
+  GetEscapeString(Pointer(Value), Length(Value), Result);
+end;
+
 procedure TZMySQLConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
@@ -1000,6 +1009,15 @@ begin
     ResultSet := nil;
   end;
   Result := FDatabaseName;
+end;
+
+function TZMySQLConnection.GetEscapeString(
+  const Value: ZWideString): ZWideString;
+var tmp: RawByteString;
+begin
+  tmp := ZUnicodeToRaw(Value, ConSettings.ClientcodePage.CP);
+  GetEscapeString(Pointer(tmp), Length(Tmp), tmp);
+  Result := ZRawToUnicode(tmp, ConSettings.ClientcodePage.CP);
 end;
 
 procedure TZMySQLConnection.GetEscapeString(Buf: PAnsichar; Len: LengthInt;

@@ -566,7 +566,7 @@ type
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload;
 
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
-  //  procedure SetOnAfterOpen(Handler: TOnConnect);
+
     procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Statement: IZStatement);
 
@@ -609,7 +609,6 @@ type
     procedure CommitPrepared(const transactionid: string);
     procedure RollbackPrepared(const transactionid: string);
 
-
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
@@ -642,24 +641,11 @@ type
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
 
-    {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload;
-    {$ENDIF}
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload;
-    procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: UnicodeString); overload;
 
     function GetEscapeString(const Value: UnicodeString): UnicodeString; overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; RawCP: Word; out Result: UnicodeString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; RawCP: Word; out Result: RawByteString); overload;
-    procedure GetEscapeString(Buf: PWideChar; Len: LengthInt; out Result: UnicodeString); overload;
 
-    function GetClientCodePageInformations: PZCodePage;
-    function GetAutoEncodeStrings: Boolean;
-    procedure SetAutoEncodeStrings(const Value: Boolean);
-    property AutoEncodeStrings: Boolean read GetAutoEncodeStrings write SetAutoEncodeStrings;
     function GetEncoding: TZCharEncoding;
     function GetClientVariantManager: IZClientVariantManager;
     function GetURL: String;
@@ -1752,11 +1738,6 @@ type
     procedure CancelRowUpdates;
     procedure MoveToInsertRow;
     procedure MoveToCurrentRow;
-//    procedure MoveToSearchRow;
-
-//    function Search(CaseInsensitive, PartialKey: Boolean): Boolean;
-//    function Compare(Row: Integer; CaseInsensitive, PartialKey: Boolean):
-//      Boolean;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
       const CompareFuncs: TCompareFuncs): Integer;
@@ -1814,6 +1795,9 @@ type
   end;
 
   TOnLobUpdate = procedure(Field: NativeInt) of object;
+  /// <summary>
+  ///   External or internal blob wrapper object.
+  /// </summary>
   IZLob = interface(IZInterface)
     ['{DCF816A4-F21C-4FBB-837B-A12DCF886A6F}']
     function IsEmpty: Boolean;
@@ -1824,9 +1808,6 @@ type
     procedure Clear;
     procedure SetOnUpdateHandler(Handler: TOnLobUpdate; AField: NativeInt);  //this is for the datasets only
   end;
-  /// <summary>
-  ///   External or internal blob wrapper object.
-  /// </summary>
 
   { IZBlob }
 

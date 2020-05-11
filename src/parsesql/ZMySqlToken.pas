@@ -145,7 +145,7 @@ begin
     else
       LastChar := SPos^;
   end;
-   Result.L := SPos-Result.P+1;
+  Result.L := SPos-Result.P+1;
 end;
 
 {**

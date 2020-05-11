@@ -54,7 +54,10 @@
 unit ZTestSybaseToken;
 
 interface
+
 {$I ZParseSql.inc}
+
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTokenizer,
   ZSybaseToken, ZTestTokenizer;
 
@@ -73,7 +76,9 @@ type
     procedure TestNumberState;
   end;
 
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 implementation
+{$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 
 { TZTestSybaseTokenizer }
 
@@ -181,5 +186,6 @@ end;
 
 initialization
   RegisterTest('parsesql',TZTestSybaseTokenizer.Suite);
+{$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 end.
 

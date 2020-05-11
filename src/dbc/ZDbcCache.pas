@@ -1560,6 +1560,7 @@ var
         stBinaryStream:
            Statement.SetBlob(StatementIndex, stBinaryStream,
              GetBlob(ColumnIndex, WasNull));
+        else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stUnknown)
       end;
   end;
 begin
@@ -3015,12 +3016,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  {$R-}
   Result := 0;
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    {$R-}
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    {$Q-}
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stBoolean: if PWordBool(Data)^ then Result := 1;
       stByte: Result := PByte(Data)^;
@@ -3047,7 +3047,6 @@ begin
         end;
       else raise CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stLong);
     end;
-    {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
     IsNull := False;
   end else
     IsNull := True;
@@ -4122,6 +4121,7 @@ begin
         L := PWideChar(Data) - PWideChar(@TinyBuffer[0]);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stLong)
   end;
 end;
 
@@ -4162,6 +4162,7 @@ begin
         L := FloatToSQLUnicode(Value, @TinyBuffer[0]);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stFloat)
   end;
 end;
 
@@ -4234,6 +4235,7 @@ begin
         L := FloatToSQLUnicode(Value, @TinyBuffer[0]);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stDouble)
   end;
 end;
 
@@ -4277,6 +4279,7 @@ begin
         L := PWideChar(Data)-PWideChar(@TinyBuffer[0]);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stCurrency)
   end;
 end;
 
@@ -4326,6 +4329,7 @@ begin
         L := ZSysUtils.BcdToUni(Value, @TinyBuffer[0], '.');
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stBigDecimal)
   end;
 end;
 
@@ -4436,6 +4440,7 @@ begin
       if (Data^ = nil)
       then PIZLob(Data)^ := TZLocalMemBLob.CreateWithData(Value, Len, FOpenLobStreams)
       else PIZLob(Data)^.SetBuffer(Value, Len);
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stString)
   end;
 end;
 
@@ -5051,6 +5056,7 @@ begin
         SetPAnsiChar(ColumnIndex, Value.VCharRec.P, Len)
       end else
         SetUnicodeString(ColumnIndex, PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP));
+    else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stUnknown)
   end;
 end;
 

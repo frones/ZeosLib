@@ -1636,7 +1636,7 @@ begin
                     stLongWord: IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetUInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PCardinal(@BindValue.Value)^);
                     stInteger:  IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PInteger(@BindValue.Value)^);
                     stFloat:    IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PSingle(@BindValue.Value)^);
-                    //else raise Exception.Create('Fehlermeldung');
+                    else raise ZDbcUtils.CreateUnsupportedParameterTypeException(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType);
                   end;
         zbt8Byte: case BindValue.SQLType of
                     stBoolean:  IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PUInt64({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^ <> 0);
@@ -1658,7 +1658,7 @@ begin
                                     ZSysUtils.Double2BCD(PDouble({$IFDEF CPU64}@{$ENDIF}BindValue.Value)^, BCD{%H-});
                                     IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD)
                                   end;
-                    //else raise Exception.Create('Fehlermeldung');
+                    else raise ZDbcUtils.CreateUnsupportedParameterTypeException(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType);
                   end;
         zbtRawString: IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetRawByteString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RawByteString(BindValue.Value));
         {$IFNDEF NO_UTF8STRING}
@@ -1686,6 +1686,7 @@ begin
         zbtDate:      IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZDate(BindValue.Value)^);
         zbtTime:      IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZTime(BindValue.Value)^);
         zbtTimeStamp: IZPreparedStatement(Stmt.FWeakIntfPtrOfIPrepStmt).SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZTimeStamp(BindValue.Value)^);
+        else raise ZDbcUtils.CreateUnsupportedParameterTypeException(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType);
       end;
     end;
   end;
@@ -1927,6 +1928,7 @@ begin
                   then Result := EncodeBoolean(BindValue.Value <> nil)
                   else Result := EncodePointer(BindValue.Value);
     zbtNull:      Result := NullVariant;
+    else raise ZDbcUtils.CreateUnsupportedParameterTypeException(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindValue.SQLType);
   end;
 end;
 
@@ -2135,6 +2137,7 @@ begin
     zbtPointer:   AquireBuffer(Index, Value.SQLType, Value.BindType).Value := Value.Value;
     zbtBCD:       Put(Index, PBCD(Value.Value)^);
     zbtTimeStamp: Put(Index, PZTimeStamp(Value.Value)^)
+    else raise ZDbcUtils.CreateUnsupportedParameterTypeException(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnknown);
   end;
 end;
 
@@ -2243,6 +2246,7 @@ var BindValue: PZBindValue;
             Dest := VariantManager.Convert(Src, vtGUID);
             Put(Index, Dest.VGUID);
           end;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
     finally
       VariantManager := nil;
@@ -2260,6 +2264,7 @@ begin
     pctOut:   HasOutParam := True;
     pctReturn: HasReturnParam := True;
     pctResultSet: HasResultSetParam := True;
+    {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
   end;
   BindValue.SQLType := SQLType;
 end;
@@ -3041,7 +3046,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.Prepare;
 begin
-  DriverManager.LogMessage(lcPrepStmt,Self);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcPrepStmt,Self);
   PrepareInParameters;
   FPrepared := True;
   FClosed := False;
@@ -3602,6 +3608,7 @@ begin
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
     stArray, stDataSet:
           raise EZUnsupportedException.Create(sUnsupportedOperation);
+    {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
   end;
   Len := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
   if (BindList.ParamTypes[ParamIndex] <> pctResultSet) then

@@ -60,7 +60,7 @@ uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainASADriver, ZTokenizer, ZDbcGenericResolver,
-  ZGenericSqlAnalyser, ZPlainASAConstants, ZDbcLogging;
+  ZGenericSqlAnalyser, ZDbcLogging;
 
 type
   {** Implements a ASA Database Driver. }
@@ -90,8 +90,10 @@ type
     FHandle: PZASASQLCA;
     FPlainDriver: TZASAPlainDriver;
     FSavePoints: TStrings;
+    FHostVersion: Integer;
   private
     function DetermineASACharSet: String;
+    procedure DetermineHostVersion;
     procedure SetOption(Temporary: Integer; User: PAnsiChar; const Option, Value: RawByteString);
   protected
     procedure InternalCreate; override;
@@ -117,6 +119,7 @@ type
     procedure Open; override;
 
     function GetServerProvider: TZServerProvider; override;
+    function GetHostVersion: Integer; override;
   end;
 
   {** Implements a specialized cached resolver for ASA. }
@@ -324,6 +327,19 @@ begin
   Result := FHandle;
 end;
 
+{**
+  Gets the host's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this server's full version number
+}
+function TZASAConnection.GetHostVersion: Integer;
+begin
+  Result := FHostVersion;
+end;
+
 function TZASAConnection.GetPlainDriver: TZASAPlainDriver;
 begin
   Result := FPlainDriver;
@@ -419,14 +435,12 @@ begin
   inherited Open;
   if FClientCodePage = ''  then
     CheckCharEncoding(DetermineASACharSet);
-  SetOption(1, nil, 'CHAINED', 'Off');
+  DetermineHostVersion;
+  if FHostVersion >= 17000000 then
+    SetOption(1, nil, 'chained', 'On'); //chained is deprecated On is comparable with AutoCommit=off
   { Sets an auto commit mode. }
-  if AutoCommit
-  then ExecuteImmediat(RawByteString('SET TEMPORARY OPTION auto_commit=''On'''), lcTransaction)
-  else begin
-    AutoCommit := True;
-    SetAutoCommit(False);
-  end;
+  AutoCommit := not AutoCommit;
+  SetAutoCommit(not AutoCommit);
 end;
 
 {**
@@ -512,7 +526,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    S := 'ROLLBACK TO SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
@@ -520,7 +534,7 @@ begin
     CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
-    SetOption(1, nil, 'CHAINED', 'ON');
+   // SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -555,7 +569,9 @@ begin
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      SetOption(1, nil, 'CHAINED', 'OFF');
+      if FHostVersion >= 17000000
+      then SetOption(1, nil, 'AUTO_COMMIT', 'On')
+      else SetOption(1, nil, 'chained', 'Off');
       AutoCommit := True;
     end else
       StartTransaction;
@@ -612,11 +628,13 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    ExecuteImmediat('SET AUTOCOMMIT=''Off''', lcTransaction);
+    if FHostVersion >= 17000000
+    then SetOption(1, nil, 'AUTO_COMMIT', 'Off')
+    else SetOption(1, nil, 'chained', 'On');
     AutoCommit := False;
     Result := 1;
   end else begin
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    S := '"SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count)+'"';
     ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S) +2;
   end;
@@ -644,10 +662,36 @@ begin
   Stmt := nil;
 end;
 
+procedure TZASAConnection.DetermineHostVersion;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+  P: PAnsiChar;
+  L: NativeUint;
+  Code, Major, Minior, Sub: Integer;
+begin
+  Stmt := CreateStatementWithParams(Info);
+  RS := Stmt.ExecuteQuery('SELECT PROPERTY(''ProductVersion'')');
+  if RS.Next
+  then P := RS.GetPAnsiChar(FirstDbcIndex, L)
+  else P := nil;
+  if P <> nil then begin
+    Major := ValRawInt(P, Code);
+    Inc(P, Code);
+    Minior := ValRawInt(P, Code);
+    Inc(P, Code);
+    Sub := ValRawInt(P, Code);
+    FHostVersion := ZSysUtils.EncodeSQLVersioning(Major, Minior, Sub);
+  end;
+  RS := nil;
+  Stmt.Close;
+  Stmt := nil;
+end;
+
 procedure TZASAConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
-  FPlainDriver.dbpp_execute_imm(nil, Pointer(SQL), 0);
+  FPlainDriver.dbpp_execute_imm(FHandle, Pointer(SQL), 0);
   CheckASAError(FPlainDriver, FHandle, LoggingCategory, ConSettings);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;

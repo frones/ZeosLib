@@ -61,7 +61,7 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
   ZGenericSqlAnalyser, ZCompatibility, ZDbcOleDBUtils,
-  ZOleDB, ZPlainOleDBDriver, ZOleDBToken;
+  ZPlainOleDBDriver, ZOleDBToken;
 
 type
   {** Implements OleDB Database Driver. }
@@ -115,9 +115,6 @@ type
       IZCallableStatement;
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
-
-    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
 
     procedure Open; override;
     procedure Commit;
@@ -505,28 +502,6 @@ begin
 end;
 
 {**
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to pre-detect it Result = BinaryString
-  @param Value represents the Byte-Array
-  @result the detectable Binary String
-}
-function TZOleDBConnection.GetBinaryEscapeString(const Value: TBytes): String;
-begin
-  Result := GetSQLHexString(Pointer(Value), Length(Value), True);
-end;
-
-{**
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to pre-detect it Result = BinaryString
-  @param Value represents the Binary-String
-  @result the detectable Binary String
-}
-function TZOleDBConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  Result := GetSQLHexString(Pointer(Value), Length(Value), True);
-end;
-
-{**
   Returns the Connection's current catalog name.
   @return the current catalog name or null
 }
@@ -608,7 +583,7 @@ procedure TZOleDBConnection.CheckError(Status: HResult; LoggingCateGory: TZLoggi
   const LogMsg: RawByteString);
 begin
   if (Pointer(LogMsg) <> nil) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMsg);
+    DriverManager.LogMessage(LoggingCateGory, ConSettings^.Protocol, LogMsg);
   if Status <> S_OK then
     OleDbCheck(Status, '', Self, nil);
 end;

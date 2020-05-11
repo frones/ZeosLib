@@ -41,15 +41,6 @@
 {********************************************************@}
 // Compilation directives for Lazarus
 
-// Suppress some FPC hints that are known to be false
-//{$WARN 4055 off : Conversion between ordinals and pointers is not portable} //suppress compiler buggy warning -> our Native(U)Int is Pointer size aligned
-//{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
-//{$WARN 5093 off : function result variable of a managed type does not seem to be initialized} //suppress warning - we suppose all managed types are init'd as empty
-//{$WARN 5094 off : function result variable of a managed type does not seem to be initialized}
-//{$WARN 5089 off : Local variable "$1" of a managed type does not seem to be initialized}
-//{$WARN 5090 off : Variable "$1" of a managed type does not seem to be initialized}
-//{$WARN 5091 off : Local variable "$1" of a managed type does not seem to be initialized}
-
 {$IFDEF INTEL_ASM} //just used for PG actually
 {$asmmode intel}
 {$ENDIF}
@@ -83,20 +74,17 @@
   
 {$INTERFACES COM}
 {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
-  {$IF FPC_FULLVERSION<=20204}
-    {$DEFINE OLDFPC}
-  {$IFEND}
 
-  {$DEFINE WITH_PARAM_ASLARGEINT} //supportet since FPC 2.0.4 -> see http://zeoslib.sourceforge.net/viewtopic.php?p=68484#p68484
-  {$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
+{$DEFINE WITH_PARAM_ASLARGEINT} //supportet since FPC 2.0.4 -> see http://zeoslib.sourceforge.net/viewtopic.php?p=68484#p68484
+{$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
 
-  {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
-    {$DEFINE FPC2_5UP} // Used in code
-    {$DEFINE WITH_NEWTOBJECT}
-    {$DEFINE WITH_IPROVIDER}
-    {$DEFINE HAVE_UNICODESTRING}
-  {$IFEND}
+{$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
+  {$DEFINE FPC2_5UP} // Used in code
+  {$DEFINE WITH_NEWTOBJECT}
+  {$DEFINE WITH_IPROVIDER}
+  {$DEFINE HAVE_UNICODESTRING}
   {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
+     {$DEFINE WITH_CLASS_CONST} //compiler supports contants in class type declarations 
      {$DEFINE WITH_INC_PBYTE_SUPPORT}  // Compiler supports incrementing PByte-Pointer
      {$DEFINE WITH_WIDEMEMO}
      {$DEFINE WITH_ASLARGEINT}      // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
@@ -106,21 +94,22 @@
      {$DEFINE WITH_WIDEFIELDS}      // Wide-fields are supported (common define for ftWideString/ftWideMemo)
      {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
      {$DEFINE WITH_FTGUID} //TStringField descendant TGuidField is supported
-     {$DEFINE FPC2_6UP}
      {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+     {$IF FPC_FULLVERSION>=30000}
+       {$DEFINE WITH_TESTCASE_ERROR_ADDRESS} //testcase methods like Fail() have error address pointer
+       {$IF FPC_FULLVERSION>=30200}
+         {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} 
+         {$DEFINE WITH_VAR_INIT_WARNING}
+         {$DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
+       {$IFEND}
+     {$IFEND}
   {$IFEND}
-
-  {$IF FPC_FULLVERSION>=30000}
-       {$DEFINE FPC3_0UP}
-  {$ELSE}
-    {$DEFINE FPC2_6DOWN}
+{$ELSE}
+  {$IF FPC_FULLVERSION<=20204}
+    {$DEFINE OLDFPC}
   {$IFEND}
+{$IFEND}
 
-      {$IF FPC_FULLVERSION>=30200}
-	    {.$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //FPC has added QWord version in past but they can't determine the overload for our NativeUInt
-		{$DEFINE WITH_VAR_INIT_WARNING}
-		{§DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
-      {$ENDIF}
 
   {$IFDEF LCL}
     {$DEFINE WITH_LCONVENCODING} //Only available for Lazarus
@@ -163,7 +152,7 @@
         {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
         {$IF FPC_FULLVERSION>=30100}
           {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
-          {.$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
+          {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
 
           {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
           {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings

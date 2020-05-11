@@ -226,10 +226,13 @@ procedure DefineSortedFields(DataSet: TDataset;
 {**
   Creates a fields lookup table to define fixed position
   of the field in dataset.
+  @param FieldDefs a collection of TDataset fielddefss in initial order.
   @param Fields a collection of TDataset fields in initial order.
+  @param IndexPairList creates a collection of index pairs.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
+function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
+  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
 
 {**
   Defines an original field index in the dataset.
@@ -664,12 +667,13 @@ procedure RetrieveDataFieldsFromResultSet(const FieldRefs: TObjectDynArray;
   const ResultSet: IZResultSet; const ResultValues: TZVariantDynArray);
 var
   I, ColumnIndex: Integer;
+  Metadata: IZResultSetMetaData;
 begin
+  Metadata := ResultSet.GetMetadata;
   for I := 0 to High(FieldRefs) do
   begin
     ColumnIndex := TField(FieldRefs[I]).FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
-    if ColumnIndex >= 0 then
-    begin
+    if ColumnIndex >= 0 then begin
       case TField(FieldRefs[I]).DataType of
         ftString:
           ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
@@ -686,8 +690,12 @@ begin
                     InitializeVariant(ResultValues[I], vtBigDecimal);
                     ResultSet.GetBigDecimal(ColumnIndex, ResultValues[I].VBigDecimal);
                   end;
-        {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
-          ResultValues[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
+        {$IFDEF WITH_FTLONGWORD}ftLongword:
+          ResultValues[I] := EncodeUInteger(ResultSet.GetULong(ColumnIndex));
+        {$ENDIF}
+        ftLargeInt: if Metadata.GetColumnType(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) = stULong
+          then ResultValues[I] := EncodeUInteger(ResultSet.GetULong(ColumnIndex))
+          else ResultValues[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftDate, ftTime, ftDateTime:
           ResultValues[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
         ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
@@ -1415,30 +1423,31 @@ end;
 {**
   Creates a fields lookup table to define fixed position
   of the field in dataset.
+  @param FieldDefs a collection of TDataset fielddefss in initial order.
   @param Fields a collection of TDataset fields in initial order.
+  @param IndexPairList creates a collection of index pairs.
   @returns a fields lookup table.
 }
-function CreateFieldsLookupTable(Fields: TFields;
-  out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
-var I: Integer;
-  r, a: Integer;
+function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
+  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
+var I, Idx: Integer;
+  a: Integer;
 begin
-  r := FirstDbcIndex;
-  a := FirstDbcIndex;
   SetLength(Result, Fields.Count);
   IndexPairList := TZIndexPairList.Create;
   IndexPairList.Capacity := Fields.Count;
+  a := FirstDbcIndex;
   for I := 0 to Fields.Count - 1 do begin
     Result[i].Field := Fields[I];
-    if Fields[I].FieldKind = fkData then begin
-      Result[i].DataSource := dltResultSet;
-      Result[i].Index := r;
-      IndexPairList.Add(r, i);
-      Inc(R);
-    end else begin
+    Idx := Metadata.FindColumn(Fields[I].FieldName);
+    if Idx = InvalidDbcIndex then begin
       Result[i].DataSource := dltAccessor;
       Result[i].Index := a;
       Inc(a);
+    end else begin
+      Result[i].DataSource := dltResultSet;
+      Result[i].Index := Idx;
+      IndexPairList.Add(Idx, i);
     end;
   end;
 end;

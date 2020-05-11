@@ -6,7 +6,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 uses
   {$IFNDEF LINUX}
     {$IFDEF WITH_VCL_PREFIX}
@@ -127,7 +128,10 @@ type
     procedure TestStandartConfirmingStringsOn;
     procedure TestStandartConfirmingStringsOff;
   end;
+
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 implementation
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
 uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
   ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils,
@@ -1480,4 +1484,5 @@ end;
 initialization
   RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);
   RegisterTest('bugreport',TZTestCompPostgreSQLBugReportMBCs.Suite);
+{$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.

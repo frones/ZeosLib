@@ -62,9 +62,9 @@ uses
   {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Contnrs, Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
-  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZOleDB, ZDbcOleDBUtils, ZDbcCache,
-  ZDbcCachedResultSet, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility,
-  ZClasses, ZDbcOleDB;
+  ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZPlainOleDBDriver, ZDbcOleDBUtils,
+  ZDbcCache, ZDbcCachedResultSet, ZDbcResultSet, ZDbcResultsetMetadata,
+  ZCompatibility, ZClasses, ZDbcOleDB;
 
 type
   { Interbase Error Class}
@@ -263,6 +263,7 @@ var
 
 { TZOleDBLob }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TZOleDBLob.CreateLobStream(CodePage: Word;
   LobStreamMode: TZLobStreamMode): TStream;
 begin
@@ -270,6 +271,7 @@ begin
   if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
     Result := TZCodePageConversionStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 destructor TZOleDBLob.Destroy;
 var
@@ -613,7 +615,7 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>AnsiString</code> in the Java programming language.
+  a <code>AnsiString</code> in operating system encoding.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
@@ -1912,6 +1914,7 @@ begin
                                           stAsciiStream, stUnicodeStream, stBinaryStream,
                                           //finally the object types
                                           stArray, stDataSet}
+                                          {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
                                         end;
           //DBTYPE_IUNKNOWN = 13;
           //DBTYPE_DECIMAL = 14;
@@ -2327,6 +2330,7 @@ jmpFixedAndSize:          ColumnInfo.Precision := FieldSize;
                           ColumnInfo.Precision := -1;
                           ColumnInfo.ColumnCodePage := zCP_UTF16
                         end;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
       ColumnInfo.Currency := prgInfo.wType = DBTYPE_CY;
       ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID;
@@ -2369,6 +2373,7 @@ end;
 
 { TZOleDBBLob }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TZOleDBBLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 var P: Pointer;
   R: RawByteString;
@@ -2378,9 +2383,11 @@ begin
   P := GetBuffer(R, L);
   Result := TZLocalMemBLob.CreateWithData(P, L, FOpenLobStreams);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZOleDBCLob }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TZOleDBCLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 var P: Pointer;
   R: RawByteString;
@@ -2401,9 +2408,11 @@ begin
     Result := TZLocalMemCLob.CreateWithData(P, L, CP, ConSettings, FOpenLobStreams);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZOleDbRowAccessor }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZOleDbRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -2433,6 +2442,7 @@ begin
   inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 initialization
   {init some reusable records (: }

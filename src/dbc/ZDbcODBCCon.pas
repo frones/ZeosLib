@@ -114,9 +114,6 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
 
-    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
-
     procedure SetReadOnly(Value: Boolean); override;
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
@@ -364,17 +361,6 @@ fail:
     else CheckCharEncoding('CP_ACP');
 end;
 
-{**
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to pre-detect it Result = BinaryString
-  @param Value represents the Byte-Array
-  @result the detectable Binary String
-}
-function TZAbstractODBCConnection.GetBinaryEscapeString(const Value: TBytes): String;
-begin
-  Result := GetSQLHexString(Pointer(Value), Length(Value), True);
-end;
-
 function TZAbstractODBCConnection.GetArrayRowSupported: Boolean;
 begin
   Result := fArrayRowSupported;
@@ -383,18 +369,6 @@ end;
 function TZAbstractODBCConnection.GetArraySelectSupported: Boolean;
 begin
   Result := fArraySelectSupported;
-end;
-
-{**
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to pre-detect it Result = BinaryString
-  @param Value represents the Binary-String
-  @result the detectable Binary String
-}
-function TZAbstractODBCConnection.GetBinaryEscapeString(
-  const Value: RawByteString): String;
-begin
-  Result := GetSQLHexString(Pointer(Value), Length(Value), True);
 end;
 
 {**
@@ -746,14 +720,17 @@ end;
 procedure TZODBCConnectionW.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
 var STMT: SQLHSTMT;
+    Ret: SQLRETURN;
 begin
   if SQL = '' then
     Exit;
   STMT := nil;
   CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
   try
-    CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(STMT,
-      Pointer(SQL), Length(SQL)));
+    Ret := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(STMT,
+      Pointer(SQL), Length(SQL));
+    if (Ret <> SQL_NO_DATA) and (Ret <> SQL_SUCCESS) then
+      CheckDbcError(Ret);
   finally
     if STMT <> nil then
       CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));

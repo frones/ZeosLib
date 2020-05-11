@@ -253,7 +253,7 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if ProtocolType in [protMySQL, protSQLite, protFreeTDS, protMSSQL,
+  if ProtocolType in [protMySQL, protSQLite, protASACAPI, protMSSQL,
                       protADO, protSyBase, protASA, protOleDB, protODBC] then begin
     BlankCheck;
     Exit; //not in build sripts because they depend to locale settings
@@ -463,7 +463,7 @@ const
   BigD12_10_Index = FirstDbcIndex+7;
   BigD18_18_Index = FirstDbcIndex+8;
 
-  id_Value        = 1;
+  //id_Value        = 1;
   Curr18_4_Value  = '12345678901234.5678';
   Curr15_2_Value  = '1234567890123.45';
   Curr10_4_Value  = '123456.7890';
@@ -478,7 +478,7 @@ var RS: IZResultSet;
   C: Currency;
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
-    BCD: TBCD;
+    {BCD_A, BCD_E,} BCD: TBCD;
   begin
     S := RS.GetMetadata.GetColumnLabel(ColumnIndex);
     //firbird can't pass this tests -> missing precision in native RS but with metainformation it should be able to

@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDbcIntfs, ZCompatibility, ZDbcMySql, ZSqlTestCase, ZDbcProperties;
@@ -78,9 +79,11 @@ type
     procedure TestTicket284;
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL}
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL}
 
-uses ZTestCase, ZSysUtils, ZPlainMySqlConstants, FmtBCD;
+uses ZTestCase, ZSysUtils, ZPlainMySqlDriver, FmtBCD;
 
 { TZTestDbcMySQLBugReport }
 
@@ -497,4 +500,5 @@ end;
 
 initialization
   RegisterTest('bugreport',TZTestDbcMySQLBugReport.Suite);
+{$ENDIF ZEOS_DISABLE_MYSQL}
 end.

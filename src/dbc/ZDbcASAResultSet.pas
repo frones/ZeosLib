@@ -68,8 +68,8 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility, ZDbcCache,
-  ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASAConstants,
-  ZDbcCachedResultSet, ZPLainASADriver, ZClasses;
+  ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZPlainASADriver,
+  ZDbcCachedResultSet, ZClasses;
 
 type
 
@@ -1555,6 +1555,7 @@ end;
 
 { TZASARowAccessor }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZASARowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -1576,6 +1577,7 @@ begin
   inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZASARowAccessor.FetchLongData(AsStreamedType: TZSQLType;
   const ResultSet: IZResultSet; ColumnIndex: Integer; Data: PPZVarLenData);
@@ -1606,7 +1608,8 @@ begin
       if Len < BufSize then
         BufSize := Len;
     end;
-    PByte(Buf)^ := 0;
+    if AsStreamedType = stAsciiStream then
+      PByte(Buf)^ := 0;
   finally
     Stream.Free;
     Lob := nil;
@@ -1694,7 +1697,10 @@ begin
     FPosition := Result;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "Buffer/Count" not used}
+{$ENDIF}
 function TZASAStream.Write(const Buffer; Count: Longint): Longint;
 begin
   raise CreateReadOnlyException;
@@ -1708,10 +1714,12 @@ begin
   raise CreateReadOnlyException;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TZASALob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 begin
   Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 constructor TZASALob.Create(const Connection: IZASAConnection;
   ASASQLDA: PASASQLDA; const CursorName: RawByteString; ColumnIndex: Integer;
@@ -1736,6 +1744,8 @@ begin
   if FReleased
   then Result := nil
   else begin
+    if LobStreamMode <> lsmRead then
+      raise CreateReadOnlyException;
     if FCurrentRowAddr^ <> FLobRowNo then begin
       FPlainDriver.dbpp_fetch(FConnection.GetDBHandle,
         Pointer(FCursorName), CUR_ABSOLUTE, FLobRowNo, FASASQLDA, BlockSize, CUR_FORREGULAR);

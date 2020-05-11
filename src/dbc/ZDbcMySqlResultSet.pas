@@ -67,7 +67,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZClasses,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement, ZDbcMySqlUtils,
-  ZPlainMySqlDriver, ZPlainMySqlConstants, ZSelectSchema, ZVariant, ZdbcMySql;
+  ZPlainMySqlDriver, ZSelectSchema, ZVariant, ZdbcMySql;
 
 type
   {** Implements MySQL ResultSet Metadata. }
@@ -1424,6 +1424,7 @@ begin
             ColBind^.buffer_Length_address^ := 0;
             Result := StrToBoolEx(PAnsiChar(@FTinyBuffer[0]), @FTinyBuffer[ColBind^.Length[0]]);
           end;
+        else raise CreateConversionError(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType, stBoolean);
       end
   end else begin
     {$R-}
@@ -2627,6 +2628,7 @@ end;
   @param Columns a collection of key columns.
   @param OldRowAccessor an accessor object to old column values.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "OldRowAccessor" not used} {$ENDIF}
 procedure TZMySQLCachedResolver.FormWhereClause(
   const SQLWriter: TZSQLStringWriter;
   const OldRowAccessor: TZRowAccessor; var Result: SQLString);
@@ -2648,6 +2650,8 @@ begin
     else SQLWriter.AddText('=?', Result);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 {**
   Posts updates to database.
   @param Sender a cached result set object.
@@ -2692,6 +2696,7 @@ begin
   FBind.is_null_address^ := 1;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TZMySQLPreparedLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 var Stream: TStream;
 begin
@@ -2701,6 +2706,7 @@ begin
   then Result := TZLocalMemBLob.CreateWithStream(TZImmediatelyReleasableLobStream(Stream), True, FOpenLobStreams)
   else Result := TZLocalMemCLob.CreateWithStream(TZImmediatelyReleasableLobStream(Stream), FColumnCodePage, True, FOpenLobStreams);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 constructor TZMySQLPreparedLob.Create(const Connection: IZMySQLConnection;
   Bind: PMYSQL_aligned_BIND; StmtHandle: PMYSQL_STMT; Index: Cardinal;
@@ -2719,6 +2725,7 @@ begin
   FLobRow := FCurrentRowAddr^ -1;
 End;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobStreamMode" not used} {$ENDIF}
 function TZMySQLPreparedLob.CreateLobStream(CodePage: Word;
   LobStreamMode: TZLobStreamMode): TStream;
 var Status: Integer;
@@ -2740,6 +2747,7 @@ begin
   end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZMySQLPreparedLob.GetConSettings: PZConSettings;
 begin

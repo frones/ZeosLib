@@ -44,3 +44,7 @@ drop table IF EXISTS table989474;
 drop table IF EXISTS table1045286;
 drop table IF EXISTS TableTicket240;
 drop table IF EXISTS TableTicked389;
+
+drop TRIGGER IF EXISTS TR_UPD_TableTicket304;
+drop table if EXISTS TableTicket304;
+drop table if exists biginterror;

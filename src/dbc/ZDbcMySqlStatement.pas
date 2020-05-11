@@ -60,8 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
-  ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils,
-  ZCollections;
+  ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils, ZCollections;
                                                                                    
 type
   TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, mySet, myCall);
@@ -369,6 +368,10 @@ begin
   FResultSetIndex := -1;
 end;
 
+{**
+  prepares the statement on the server if minimum execution
+  count have been reached
+}
 procedure TZAbstractMySQLPreparedStatement.Prepare;
 begin
   FlushPendingResults;
@@ -378,6 +381,9 @@ begin
     InternalRealPrepare;
 end;
 
+{**
+  unprepares the statement, deallocates all bindings and handles
+}
 procedure TZAbstractMySQLPreparedStatement.Unprepare;
 var status: Integer;
   ParamCount: Integer;
@@ -1184,7 +1190,7 @@ begin
     if FTokenMatchIndex <> -1
     then inherited BindBinary(Index, SQLType, Buf, Len)
     else CheckParameterIndex(Index);
-    Connection.GetBinaryEscapeString(Buf, Len, FEmulatedValues[Index])
+    FEmulatedValues[Index] := ZDbcUtils.GetSQLHexAnsiString(PAnsiChar(Buf), Len, False);
   end else begin
     CheckParameterIndex(Index);
     {$R-}
@@ -1275,6 +1281,7 @@ begin
                             Bind^.Length[0] := 1;
                             PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
                           end;
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stLongWord, SQLType);
     end;
     Bind^.is_null_address^ := 0;
   end;
@@ -1417,8 +1424,8 @@ begin
   else if FEmulatedParams then begin
     P := Value.GetBuffer(FRawTemp, L);
     if SQLType = stBinaryStream
-    then Connection.GetBinaryEscapeString(P, L, FEmulatedValues[Index])
-    else Connection.GetEscapeString(P, L, FEmulatedValues[Index])
+    then FEmulatedValues[Index] := ZDbcUtils.GetSQLHexAnsiString(P, L, False)
+    else FMySQLConnection.GetEscapeString(P, L, FEmulatedValues[Index])
   end else begin
     FChunkedData := True;
     {$R-}
@@ -1447,7 +1454,7 @@ begin
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
     BindList.Put(Index, SQLType, Value, FClientCP); //localize
-    Connection.GetEscapeString(Pointer(Value), Len, FEmulatedValues[Index]);
+    FMySQLConnection.GetEscapeString(Pointer(Value), Len, FEmulatedValues[Index]);
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
@@ -1545,7 +1552,7 @@ begin
   else SQLType := BindValue.SQLType;
   if FEmulatedParams then begin
     BindList.Put(Index, SQLType, Buf, Len, FClientCP); //localize
-    Connection.GetEscapeString(Buf, Len, FEmulatedValues[Index]);
+    FMySQLConnection.GetEscapeString(Buf, Len, FEmulatedValues[Index]);
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
@@ -1626,6 +1633,7 @@ begin
                             Bind^.Length[0] := BcdToRaw(Value, Bind.buffer, '.');
                             PByte(PAnsiChar(Bind.buffer)+Bind^.Length[0])^ := Ord(#0);
                           end;
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBigDecimal, BindList.SQLTypes[Index]);
     end;
     Bind^.is_null_address^ := 0;
   end;
@@ -1683,7 +1691,7 @@ begin
     if FTokenMatchIndex <> -1
     then BindList.Put(Index, stBytes, Value, Len)
     else CheckParameterIndex(Index);
-    Connection.GetBinaryEscapeString(Value, Len, FEmulatedValues[Index])
+    FEmulatedValues[Index] := ZDbcUtils.GetSQLHexAnsiString(PAnsiChar(Value), Len, False);
   end else begin
     CheckParameterIndex(Index);
     {$R-}
@@ -1754,6 +1762,7 @@ begin
                             Bind^.Length[0] := PEnd-PAnsiChar(Bind.buffer);
                             PByte(PEnd)^ := 0;
                           end;
+      else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stCurrency, BindList.SQLTypes[Index]);
     end;
     Bind^.is_null_address^ := 0;
   end;

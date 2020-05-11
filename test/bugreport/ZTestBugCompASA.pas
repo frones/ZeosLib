@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcIntfs, ZSqlTestCase,
@@ -76,7 +77,9 @@ type
     procedure EmptyTest;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses
   Variants;
@@ -85,7 +88,7 @@ uses
 
 function ZTestCompASABugReport.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9,ASA12';
+  Result := 'ASA,asa_capi';
 end;
 
 procedure ZTestCompASABugReport.EmptyTest;
@@ -96,4 +99,5 @@ end;
 
 initialization
   RegisterTest('bugreport',ZTestCompASABugReport.Suite);
+{$ENDIF ZEOS_DISABLE_ASA}
 end.

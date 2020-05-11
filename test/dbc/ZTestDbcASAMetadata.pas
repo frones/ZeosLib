@@ -57,6 +57,8 @@ interface
 
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ASA}
+
 uses
 {$IFNDEF VER130BELOW}
   Types,
@@ -93,7 +95,9 @@ type
     procedure TestMetadataGetTypeInfo;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
 implementation
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 uses ZSysUtils, ZDbcMetadata;
 
@@ -382,9 +386,10 @@ end;
 
 function TZASATestDbcMetadata.GetSupportedProtocols: string;
 begin
-  Result := 'ASA7,ASA8,ASA9,ASA10,ASA11,ASA12';
+  Result := 'ASA,asa_capi';
 end;
 
 initialization
   RegisterTest('dbc',TZASATestDbcMetadata.Suite);
+{$ENDIF ZEOS_DISABLE_ASA}
 end.

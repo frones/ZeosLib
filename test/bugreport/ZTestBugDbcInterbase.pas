@@ -55,6 +55,7 @@ interface
 
 {$I ZBugReport.inc}
 
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDbcIntfs, ZCompatibility, ZSqlTestCase;
@@ -79,9 +80,12 @@ type
     procedure TestTicket363;
     procedure TestTicket376_A;
     procedure TestTicket376_B;
+    procedure TestTicket426;
   end;
 
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 implementation
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses ZTestCase, ZTestConsts, ZDbcMetadata, ZFastCode;
 
@@ -644,6 +648,30 @@ begin
   end;
 end;
 
+{
+    This is a valid query in Firebird/Flame Robin (and some other databases/managers) but Zeos reports an error:
+    select id, '' as ERROR_WITH_ZEOS from some_table
+    SQL Error: Incorrect values within SQLDA structure; empty pointer to data; at SQLVAR index 1.
+    (Firebird 3, Zeos 7.3 latest, Delphi 2009)
+}
+procedure TZTestDbcInterbaseBugReport.TestTicket426;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+begin
+  Stmt := Connection.CreateStatement;
+  RS := nil;
+  CheckFalse(Connection.IsClosed, 'Could not establish a connection');
+  try
+    RS:= Stmt.ExecuteQuery('select '+QuotedStr('')+' as ERROR_WITH_ZEOS from RDB$DATABASE');
+    Check(RS.Next, 'there is a row and we should not get and exception');
+  finally
+    if RS <> nil then
+      RS.Close;
+    Stmt := nil;
+  end;
+end;
+
 procedure TZTestDbcInterbaseBugReport.Test_SourceForge192;
 var
   DbcCols: IZResultSet;
@@ -670,4 +698,5 @@ end;
 
 initialization
   RegisterTest('bugreport',TZTestDbcInterbaseBugReport.Suite);
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.

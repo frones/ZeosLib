@@ -59,8 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainOracleDriver,
-  ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZGenericSqlAnalyser, ZDbcCache,
-  ZPlainOracleConstants;
+  ZDbcLogging, ZTokenizer, ZDbcGenericResolver, ZGenericSqlAnalyser, ZDbcCache;
 
 type
 
@@ -169,8 +168,7 @@ type
   public
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
-    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
+    function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -988,8 +986,6 @@ begin
   if ConSettings.ClientCodePage.ID = OCI_UTF16ID
   then Result := TZOracleStatement_W.Create(Self, Info)
   else Result := TZOracleStatement_A.Create(Self, Info);
-
-  Result := TZOracleStatement_A.Create(Self, Info);
 end;
 
 function ZDbc2OCITxnMode(ReadOnly: Boolean; TIL: TZTransactIsolationLevel): TZOCITxnMode;
@@ -1007,6 +1003,7 @@ begin
   else Result := tmDefault;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "AutoCommit,Params" not used} {$ENDIF}
 function TZOracleConnection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
   TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
@@ -1016,6 +1013,7 @@ begin
   TxnMode := ZDbc2OCITxnMode(ReadOnly, TransactIsolationLevel);
   Result := TZOracleTransaction.CreateGlobal(Self, TxnMode, smNew, cmLoosely);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZOracleConnection.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
@@ -1190,20 +1188,6 @@ begin
   (P+L)^ := #39;
 end;
 
-function TZOracleConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-var
-  L: Integer;
-  P: PChar;
-begin
-  L := Length(Value);
-  SetLength(Result, L*2+2);
-  P := PChar(Result);
-  P^ := #39;
-  Inc(p);
-  ZBinToHex(PAnsiChar(Value), P, L);
-  (P+L)^ := #39;
-end;
-
 { TZOracleCachedResolver }
 
 {**
@@ -1277,6 +1261,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Owner" not used} {$ENDIF}
 constructor TZOracleTransaction.CreateGlobal(const Owner: TZOracleConnection;
   TxnMode: TZOCITxnMode; SpawnMode: TZOCITxnSpawnMode;
   CoupleMode: TZOCITxnCoupleMode);
@@ -1289,6 +1274,7 @@ begin
   fBranches := TZCollection.Create;
   FOwner.FPlainDriver.OCIHandleAlloc(FOwner.FOCIEnv, FOCITrans, OCI_HTYPE_TRANS, 0, nil);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 constructor TZOracleTransaction.CreateLocal(const Owner: TZOracleConnection);
 begin

@@ -772,7 +772,7 @@ var
 
 implementation
 
-uses ZFastCode, ZVariant, ZCollections, ZMessages, ZDbcProperties;
+uses ZFastCode, ZVariant, ZCollections, ZMessages, ZDbcProperties, ZDbcUtils;
 
 { TZAbstractDatabaseInfo }
 
@@ -2145,6 +2145,7 @@ var
 begin
   PreviousChar := #0;
   L := Length(Pattern);
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
   SetLength(Result, L);
   pRes := Pointer(GetDatabaseInfo.GetSearchStringEscape);
   if (L = 0) or (pRes = nil) then Exit;
@@ -2415,6 +2416,7 @@ var
   Len: NativeUInt;
   Buff: array[Byte] of Byte;
   IsUTF16: Boolean;
+  SQLType: TZSQLType;
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
@@ -2428,7 +2430,8 @@ begin
     DestResultSet.MoveToInsertRow;
     for I := FirstDbcIndex to Metadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}do
     if not SrcResultSet.IsNull(I) then begin
-      case Metadata.GetColumnType(I) of
+      SQLType := Metadata.GetColumnType(I);
+      case SQLType of
         stBoolean:
           DestResultSet.UpdateBoolean(I, SrcResultSet.GetBoolean(I));
         stByte:
@@ -2468,6 +2471,7 @@ begin
           DestResultSet.UpdateTime(I, SrcResultSet.GetTime(I));
         stTimestamp:
           DestResultSet.UpdateTimestamp(I, SrcResultSet.GetTimestamp(I));
+        else raise ZDbcUtils.CreateConversionError(I, SQLType, SQLType)
       end;
       if SrcResultSet.WasNull then
         DestResultSet.UpdateNull(I);
@@ -4713,6 +4717,7 @@ begin
                     Result := UpperCase(Pattern)
                   else
                     Result := LowerCase(Pattern);
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end
     end else
       Result := ExtractQuote(Pattern);
@@ -5257,6 +5262,7 @@ begin
         Result := UpperCase(Result);
       icUpper: if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
         Result := LowerCase(Result);
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
     end;
   end;
 end;

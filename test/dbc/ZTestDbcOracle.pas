@@ -54,8 +54,10 @@
 unit ZTestDbcOracle;
 
 interface
+
 {$I ZDbc.inc}
 
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase, ZDbcOracle,
   ZCompatibility;
 
@@ -83,8 +85,9 @@ type
 *)
   end;
 
-
+{$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils,FmtBCD;
 
@@ -96,7 +99,7 @@ uses ZTestConsts, ZTestCase, ZVariant, ZSysUtils,FmtBCD;
 }
 function TZTestDbcOracleCase.GetSupportedProtocols: string;
 begin
-  Result := 'oracle,oracle-9i';
+  Result := 'oracle';
 end;
 
 {**
@@ -735,4 +738,5 @@ end;
 
 initialization
   RegisterTest('dbc',TZTestDbcOracleCase.Suite);
+{$ENDIF ZEOS_DISABLE_ORACLE}
 end.

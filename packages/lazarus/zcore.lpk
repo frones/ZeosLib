@@ -18,7 +18,7 @@
     </CompilerOptions>
     <Description Value="Zeos Core Classes and Interfaces"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="17">
+    <Files Count="15">
       <Item1>
         <Filename Value="../../src/core/ZClasses.pas"/>
         <UnitName Value="ZClasses"/>
@@ -32,61 +32,53 @@
         <UnitName Value="ZCompatibility"/>
       </Item3>
       <Item4>
-        <Filename Value="../../src/core/ZExpression.pas"/>
-        <UnitName Value="ZExpression"/>
-      </Item4>
-      <Item5>
-        <Filename Value="../../src/core/ZExprParser.pas"/>
-        <UnitName Value="ZExprParser"/>
-      </Item5>
-      <Item6>
-        <Filename Value="../../src/core/ZExprToken.pas"/>
-        <UnitName Value="ZExprToken"/>
-      </Item6>
-      <Item7>
-        <Filename Value="../../src/core/ZFunctions.pas"/>
-        <UnitName Value="ZFunctions"/>
-      </Item7>
-      <Item8>
-        <Filename Value="../../src/core/ZMatchPattern.pas"/>
-        <UnitName Value="ZMatchPattern"/>
-      </Item8>
-      <Item9>
-        <Filename Value="../../src/core/ZMessages.pas"/>
-        <UnitName Value="ZMessages"/>
-      </Item9>
-      <Item10>
-        <Filename Value="../../src/core/ZSysUtils.pas"/>
-        <UnitName Value="ZSysUtils"/>
-      </Item10>
-      <Item11>
-        <Filename Value="../../src/core/ZTokenizer.pas"/>
-        <UnitName Value="ZTokenizer"/>
-      </Item11>
-      <Item12>
-        <Filename Value="../../src/core/ZVariables.pas"/>
-        <UnitName Value="ZVariables"/>
-      </Item12>
-      <Item13>
-        <Filename Value="../../src/core/ZVariant.pas"/>
-        <UnitName Value="ZVariant"/>
-      </Item13>
-      <Item14>
-        <Filename Value="../../src/core/ZURL.pas"/>
-        <UnitName Value="ZURL"/>
-      </Item14>
-      <Item15>
         <Filename Value="../../src/core/ZEncoding.pas"/>
         <UnitName Value="ZEncoding"/>
-      </Item15>
-      <Item16>
+      </Item4>
+      <Item5>
+        <Filename Value="../../src/core/ZExpression.pas"/>
+        <UnitName Value="ZExpression"/>
+      </Item5>
+      <Item6>
+        <Filename Value="../../src/core/ZExprParser.pas"/>
+        <UnitName Value="ZExprParser"/>
+      </Item6>
+      <Item7>
+        <Filename Value="../../src/core/ZExprToken.pas"/>
+        <UnitName Value="ZExprToken"/>
+      </Item7>
+      <Item8>
         <Filename Value="../../src/core/ZFastCode.pas"/>
         <UnitName Value="ZFastCode"/>
-      </Item16>
-      <Item17>
-        <Filename Value="../../src/core/ZConnProperties.pas"/>
-        <UnitName Value="ZConnProperties"/>
-      </Item17>
+      </Item8>
+      <Item9>
+        <Filename Value="../../src/core/ZFunctions.pas"/>
+        <UnitName Value="ZFunctions"/>
+      </Item9>
+      <Item10>
+        <Filename Value="../../src/core/ZMatchPattern.pas"/>
+        <UnitName Value="ZMatchPattern"/>
+      </Item10>
+      <Item11>
+        <Filename Value="../../src/core/ZMessages.pas"/>
+        <UnitName Value="ZMessages"/>
+      </Item11>
+      <Item12>
+        <Filename Value="../../src/core/ZSysUtils.pas"/>
+        <UnitName Value="ZSysUtils"/>
+      </Item12>
+      <Item13>
+        <Filename Value="../../src/core/ZTokenizer.pas"/>
+        <UnitName Value="ZTokenizer"/>
+      </Item13>
+      <Item14>
+        <Filename Value="../../src/core/ZVariables.pas"/>
+        <UnitName Value="ZVariables"/>
+      </Item14>
+      <Item15>
+        <Filename Value="../../src/core/ZVariant.pas"/>
+        <UnitName Value="ZVariant"/>
+      </Item15>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>

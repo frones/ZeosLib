@@ -126,7 +126,7 @@ type
 
 implementation
 
-uses ZMessages, ZAbstractRODataset, ZDatasetUtils, ZSqlProcessor;
+uses ZMessages, ZAbstractRODataset, ZSqlProcessor;
 
 { TZSQLStatement }
 

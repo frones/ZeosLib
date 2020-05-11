@@ -55,6 +55,9 @@ unit ZTestMySqlToken;
 
 interface
 {$I ZParseSql.inc}
+
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
+
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZTokenizer, ZMySqlToken,
   ZTestTokenizer;
 
@@ -73,7 +76,9 @@ type
     procedure TestNumberState;
   end;
 
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
+{$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 
 uses SysUtils;
 
@@ -191,5 +196,6 @@ end;
 
 initialization
   RegisterTest('parsesql',TZTestMySQLTokenizer.Suite);
+{$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.
 

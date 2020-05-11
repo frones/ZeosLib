@@ -55,7 +55,7 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_INTERBASE}
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses
   Classes, ZTokenizer, ZGenericSqlToken;
 
@@ -65,7 +65,11 @@ type
   TZInterbaseNumberState = TZGenericSQLNoHexNumberState;
 
   {** Implements a Interbase-specific quote string state object. }
-  TZInterbaseQuoteState = TZGenericSQLQuoteState;
+  TZInterbaseQuoteState = class(TZGenericSQLQuoteState)
+  public
+    function NextToken(var SPos: PChar; const NTerm: PChar;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
+  end;
 
   {**
     This state will either delegate to a comment-handling
@@ -91,11 +95,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_INTERBASE}
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_INTERBASE}
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 { TZInterbaseSymbolState }
 
@@ -111,6 +115,7 @@ begin
   Add('!=');
   Add('!<');
   Add('!>');
+ // Add(':=');
 end;
 
 { TZInterbaseWordState }
@@ -159,7 +164,23 @@ begin
   SetCharacterState('-', '-', CommentState);
 end;
 
-{$ENDIF ZEOS_DISABLE_INTERBASE}
+{ TZInterbaseQuoteState }
 
+{**
+  Return a quoted string token from a reader. This method
+  will collect characters until it sees a match to the
+  character that the tokenizer used to switch to this state.
+
+  @return a quoted string token from a reader
+}
+function TZInterbaseQuoteState.NextToken(var SPos: PChar; const NTerm: PChar;
+  Tokenizer: TZTokenizer): TZToken;
+begin
+  Result := inherited NextToken(SPos, NTerm, Tokenizer);
+  If (Result.TokenType = ttWord) and (Result.P^ = '"') and (SPos^ = '"') then
+    Result.TokenType := ttQuotedIdentifier;
+end;
+
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.
 

@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -224,10 +224,14 @@ type
     {$IFNDEF WITH_OBJECTVIEW}
     FObjectView: Boolean;
     {$ENDIF WITH_OBJECTVIEW}
+    {$IFNDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+    FCurrentFieldRefIndex: Integer;
+    {$ENDIF}
     {$IFNDEF WITH_SPARSEARRAYS}
     FSparseArrays: Boolean;
     procedure SetSparseArrays(Value: Boolean);
     {$ENDIF WITH_SPARSEARRAYS}
+
     {$IFNDEF WITH_NESTEDDATASETS}
     function GetNestedDataSets: TList;
     {$ENDIF}
@@ -245,6 +249,8 @@ type
     function WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer; Buffer: PWideChar; UseResultSet: Boolean): Boolean;
     function WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer; Buffer: PWideChar; UseResultSet: Boolean): Boolean;
     procedure OnBlobUpdate(AField: NativeInt);
+    function GetFieldIndex(AField: TField): Integer;
+    procedure SetDisableZFields(Value: Boolean);
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -410,9 +416,15 @@ type
     procedure CloseBlob(Field: TField); override;
 
     procedure CheckFieldCompatibility(Field: TField; AFieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
-    procedure CreateFields; override;
+    //procedure CreateFields; override;
 
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
+    {$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+    function GetFieldClass(FieldDef: TFieldDef): TFieldClass; override;
+    {$ELSE}
+    function GetFieldClass(FieldType: TFieldType): TFieldClass; override;
+    {$ENDIF}
+    procedure BindFields(Binding: Boolean); {$IFDEF WITH_VIRTUAL_BINDFIELDS}override;{$ENDIF}
     procedure InternalInitFieldDefs; override;
     procedure InternalOpen; override;
     procedure InternalClose; override;
@@ -564,7 +576,7 @@ type
     property SortedFields: string read FSortedFields write SetSortedFields;
     property SortType : TSortType read FSortType write SetSortType
       default stAscending; {bangfauzan addition}
-    property DisableZFields: Boolean read FDisableZFields write FDisableZFields default False;
+    property DisableZFields: Boolean read FDisableZFields write SetDisableZFields default False;
 
     property AutoCalcFields;
     property BeforeOpen;
@@ -1515,8 +1527,8 @@ type
     function GetChildDefs: TFieldDefs;
     procedure SetChildDefs(Value: TFieldDefs);
     {$ENDIF}
-    function CreateFieldComponent(Owner: TComponent;
-      ParentField: TObjectField = nil; FieldName: string = ''): TField;
+    (*function CreateFieldComponent(Owner: TComponent;
+      ParentField: TObjectField = nil; FieldName: string = ''): TField;*)
     {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
     function GetChildDefsClass: TFieldDefsClass; virtual;
     {$ENDIF}
@@ -1527,8 +1539,8 @@ type
     destructor Destroy; override;
     function HasChildDefs: Boolean;
     {$ENDIF}
-    function CreateField(Owner: TComponent; ParentField: TObjectField = nil;
-      const FieldName: string = ''; CreateChildren: Boolean = True): TField;
+    (*function CreateField(Owner: TComponent; ParentField: TObjectField = nil;
+      const FieldName: string = ''; CreateChildren: Boolean = True): TField;*)
   {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
   published
     property ChildDefs: TFieldDefs read GetChildDefs write SetChildDefs stored HasChildDefs;
@@ -2516,6 +2528,7 @@ begin
           begin
             TempBlob := Statement.GetValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).VInterface as IZBlob;
             if not TempBlob.IsEmpty then begin
+              R := '';
               P := TempBlob.GetBuffer(R, L);
               {$IFDEF WITH_TVALUEBUFFER}
               SetLength(VB, L);
@@ -2720,6 +2733,79 @@ begin
   Result := RowBuffer <> nil;
 end;
 
+{$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+function TZAbstractRODataset.GetFieldClass(FieldDef: TFieldDef): TFieldClass;
+begin
+{$ELSE}
+function TZAbstractRODataset.GetFieldClass(FieldType: TFieldType): TFieldClass;
+var FieldDef: TFieldDef;
+begin
+  if FCurrentFieldRefIndex >= FieldDefs.Count then begin
+    { propably a user defined field added to FieldList but not TFieldDefs }
+    Result := inherited GetFieldClass(FieldType);
+    Exit;
+  end;
+  FieldDef := FieldDefs[FCurrentFieldRefIndex];
+  Inc(FCurrentFieldRefIndex);
+{$ENDIF}
+  if not FieldDef.InternalCalcField and (FieldDef is TZFieldDef) then begin
+    case {$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}FieldDef.DataType{$ELSE}FieldType{$ENDIF} of
+      ftBoolean: Result := TZBooleanField;
+      {$IFDEF WITH_FTBYTE}
+      ftByte: Result := TZByteField;
+      {$ENDIF WITH_FTBYTE}
+      {$IFDEF WITH_FTSHORTINT}
+      ftShortInt: Result := TZShortIntField;
+      {$ENDIF WITH_FTSHORTINT}
+      ftSmallInt: {$IFNDEF WITH_FTSHORTINT}
+          if TZFieldDef(FieldDef).FSQLType = stShort
+          then Result := TZShortIntField
+          else {$ENDIF WITH_FTSHORTINT} Result := TZSmallIntField;
+      ftWord: {$IFNDEF WITH_FTSHORTINT}
+          if TZFieldDef(FieldDef).FSQLType = stByte
+          then Result := TZByteField
+          else {$ENDIF WITH_FTSHORTINT} Result := TZWordField;
+      ftInteger: Result := TZIntegerField;
+      {$IFDEF WITH_FTLONGWORD}
+      ftLongWord: Result := TZCardinalField;
+      {$ENDIF WITH_FTLONGWORD}
+      ftTime: Result := TZTimeField;
+      ftDate: Result := TZDateField;
+      ftDateTime: Result := TZDateTimeField;
+      ftLargeInt: if TZFieldDef(FieldDef).FSQLType = stLong
+          then Result := TZInt64Field
+          else {$IFNDEF WITH_FTLONGWORD}if TZFieldDef(FieldDef).FSQLType = stLongWord
+            then Result := TZCardinalField
+            else {$ENDIF WITH_FTLONGWORD}Result := TZUInt64Field;
+      {$IFDEF WITH_FTSINGLE}
+      ftSingle: Result := TZSingleField;
+      {$ENDIF WITH_FTSINGLE}
+      ftFloat: {$IFNDEF WITH_FTSINGLE} if TZFieldDef(FieldDef).FSQLType = stFloat
+          then Result := TZSingleField
+          else {$ENDIF WITH_FTSINGLE}Result := TZDoubleField;
+      ftBCD: Result := TZBCDField;
+      ftFmtBCD: Result := TZFMTBcdField;
+      ftGUID: Result := TZGUIDField;
+      ftString: Result := TZRawStringField;
+      ftWideString: Result := TZUnicodeStringField;
+      ftBytes: Result := TZBytesField;
+      ftVarBytes: Result := TZVarBytesField;
+      ftMemo: {$IFNDEF WITH_WIDEMEMO} if TZFieldDef(FieldDef).FSQLType = stUnicodeStream
+        then Result := TZUnicodeCLobField
+        else {$ENDIF WITH_WIDEMEMO}Result := TZRawCLobField;
+      {$IFDEF WITH_WIDEMEMO}
+      ftWideMemo: Result := TZUnicodeCLobField;
+      {$ENDIF WITH_WIDEMEMO}
+      else {ftBlob} Result := TZBLobField;
+    end;
+  end else
+    {$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+    Result := inherited GetFieldClass(FieldDef);
+    {$ELSE}
+    Result := inherited GetFieldClass(FieldType);
+    {$ENDIF}
+end;
+
 function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
   {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
@@ -2731,6 +2817,14 @@ begin
       FNativeFormatOverloadCalled[Field.DataType] := True;
   end;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
+end;
+
+function TZAbstractRODataset.GetFieldIndex(AField: TField): Integer;
+begin
+  if FFieldsLookupTable = nil then
+    FFieldsLookupTable := CreateFieldsLookupTable(FResultSetMetadata,
+      Fields, FResultSet2AccessorIndexList);
+  Result := DefineFieldIndex(FieldsLookupTable, AField);
 end;
 
 var D1M1Y1: TDateTime;
@@ -2781,7 +2875,7 @@ begin
             end;
           ftDate: begin
                     FResultSet.GetDate(ColumnIndex, D);
-                    FResultSet.WasNull;
+                    Result := FResultSet.WasNull;
                     goto jmpMovDate;
                   end;
           { Processes DateTime fields. }
@@ -3502,7 +3596,9 @@ begin
         end;
       end;
     end;
-
+    {$IFNDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+    FCurrentFieldRefIndex := 0;
+    {$ENDIF}
   finally
     { Closes localy opened resultset. }
     if AutoInit then
@@ -3672,7 +3768,7 @@ begin
 
       SetStringFieldSetterAndSetter;
 
-      FieldsLookupTable := CreateFieldsLookupTable(Fields, FResultSet2AccessorIndexList);
+      //FieldsLookupTable := CreateFieldsLookupTable(FieldDefs, Fields, FResultSet2AccessorIndexList);
 
       InitFilterFields := False;
 
@@ -3734,7 +3830,9 @@ begin
 
     FieldsLookupTable := nil;
   end;
-
+  {$IFNDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
+  FCurrentFieldRefIndex := 0;
+  {$ENDIF}
   CurrentRows.Clear;
 end;
 
@@ -3902,6 +4000,15 @@ begin
   {$ENDIF}
     raise EZDatabaseError.Create(SCircularLink);
   DataLink.DataSource := Value;
+end;
+
+procedure TZAbstractRODataset.SetDisableZFields(Value: Boolean);
+begin
+  if Value <> FDisableZFields then begin
+    CheckInactive;
+    unprepare;
+    FDisableZFields := Value;
+  end;
 end;
 
 {**
@@ -4359,6 +4466,21 @@ begin
 end;
 
 {**
+  Binds or unbinds the fields of the dataset.
+  @param Binding decides if the field is bound or not.
+}
+procedure TZAbstractRODataset.BindFields(Binding: Boolean);
+begin
+  if Binding then begin
+    if FResultSet2AccessorIndexList <> nil then
+      FreeAndNil(FResultSet2AccessorIndexList);
+    FFieldsLookupTable := CreateFieldsLookupTable(FResultSetMetadata,
+      Fields, FResultSet2AccessorIndexList);
+  end;
+  inherited BindFields(Binding);
+end;
+
+{**
   Checks is the specified bookmark valid.
   @param Bookmark a bookmark object.
   @return <code>True</code> if the bookmark is valid.
@@ -4366,12 +4488,8 @@ end;
 function TZAbstractRODataset.BookmarkValid(Bookmark: TBookmark): Boolean;
 begin
   Result := False;
-  if Active and Assigned(Bookmark) and (FResultSet <> nil) then
-    try
-      Result := CurrentRows.IndexOf(Pointer(PInteger(Bookmark)^)) >= 0;
-    except
-      Result := False;
-    end;
+  if Active and Assigned(Bookmark) and (FResultSet <> nil) and (CurrentRows <> nil) then
+    Result := CurrentRows.IndexOf(Pointer(PInteger(Bookmark)^)) >= 0;
 end;
 
 {**
@@ -5510,7 +5628,7 @@ end;
 type
   IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)}IProviderSupportNG{$ELSE} IProviderSupport {$IFEND};
 {$ENDIF}
-
+(*
 procedure TZAbstractRODataset.CreateFields;
 var
   I: Integer;
@@ -5564,9 +5682,10 @@ begin
   {$IFNDEF FPC}
   SetKeyFields;
   {$ENDIF}
-  //else inherited CreateFields;
+  //else
+  inherited CreateFields;
 end;
-
+*)
 {**
   Reset the calculated (includes fkLookup) fields
   @param Buffer
@@ -5591,6 +5710,7 @@ begin
   AscCount := 0;
   DescCount := 0;
   s := UpperCase(ReplaceChar(';', ',', FIndexFieldNames));
+  Fragment := '';
   while s <> '' do
   begin
     BreakString(s, ',', Fragment, s);
@@ -5745,8 +5865,11 @@ end;
 procedure TZInt64Field.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -6015,8 +6138,11 @@ end;
 procedure TZByteField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 {$ENDIF WITH_FTBYTE}
@@ -6143,8 +6269,11 @@ end;
 procedure TZShortIntField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 {$ENDIF WITH_FTSHORTINT}
@@ -6282,7 +6411,7 @@ begin
 end;
 
 {$ENDIF TFIELDDEF_HAS_CHILDEFS}
-
+(*
 type
   THackObjectField = Class(TObjectField);
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter ParentField not used} {$ENDIF}
@@ -6455,6 +6584,7 @@ JmpDefField:
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+*)
 
 {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
 function TZFieldDef.GetChildDefsClass: TFieldDefsClass;
@@ -6485,7 +6615,7 @@ begin
   Result := (FChildDefs <> nil) and (FChildDefs.Count > 0);
 end;
 {$ENDIF}
-
+(*
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF}
 function TZFieldDef.CreateField(Owner: TComponent; ParentField: TObjectField = nil;
   const FieldName: string = ''; CreateChildren: Boolean = True): TField;
@@ -6512,7 +6642,7 @@ begin
   end;
   {$ENDIF TFIELDDEF_HAS_CHILDEFS}
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}*)
 
 {$IFNDEF WITH_TOBJECTFIELD}
 { TObjectField }
@@ -6901,8 +7031,11 @@ end;
 procedure TZDateField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -7113,8 +7246,9 @@ procedure TZTimeField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
   if Binding then begin
-    if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     fScale := TZAbstractRODataset(DataSet).FResultSetMetadata.GetScale(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   end;
   inherited Bind(Binding);
@@ -7375,8 +7509,9 @@ procedure TZDateTimeField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
   if Binding then begin
-    if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     fScale := TZAbstractRODataset(DataSet).FResultSetMetadata.GetScale(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   end;
   inherited Bind(Binding);
@@ -7666,8 +7801,11 @@ end;
 procedure TZSmallIntField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -7779,8 +7917,11 @@ end;
 procedure TZWordField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -7891,8 +8032,11 @@ end;
 procedure TZIntegerField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -8041,8 +8185,11 @@ end;
 procedure TZCardinalField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -8329,8 +8476,11 @@ end;
 procedure TZSingleField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 {$ENDIF WITH_FTSINGLE}
@@ -8463,8 +8613,11 @@ end;
 procedure TZDoubleField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -8629,8 +8782,11 @@ end;
 procedure TZBCDField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -8823,8 +8979,11 @@ end;
 procedure TZFMTBCDField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -8920,8 +9079,8 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZFMTBCDField.GetText(var Text: string; DisplayText: Boolean);
-var {$IFNDEF FPC}Format: TFloatFormat;
-    Digits: Integer;{$ENDIF}
+var Format: TFloatFormat;
+    Digits: Integer;
     FmtStr: string;
     Bcd: TBcd;
 begin
@@ -8932,15 +9091,6 @@ begin
     then FmtStr := DisplayFormat
     else FmtStr := EditFormat;
     if FmtStr = '' then begin
-      {$IFDEF FPC}
-      if Currency then begin
-        if DisplayText then
-          Text := BcdToStrF(bcd, ffCurrency, Precision, 2)
-        else
-          Text := BcdToStrF(bcd, ffFixed, Precision, 2);
-      end else
-        Text := BcdToStrF(bcd, ffGeneral, Precision, Size);
-      {$ELSE}
       if Currency then begin
         if DisplayText
         then Format := ffCurrency
@@ -8948,10 +9098,9 @@ begin
         Digits := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}CurrencyDecimals;
       end else begin
         Format := ffGeneral;
-        Digits := 0;
+        Digits := {$IFDEF FPC}Size{$ELSE}0{$ENDIF};
       end;
       Text := BcdToStrF(Bcd, Format, Precision, Digits);
-      {$ENDIF}
     end else
       Text := FormatBcd(FmtStr, Bcd);
   end;
@@ -8994,8 +9143,11 @@ end;
 procedure TZBooleanField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -9128,8 +9280,11 @@ end;
 procedure TZGuidField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -9254,6 +9409,7 @@ begin
   if Binding then begin
     if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
       raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     with TZAbstractRODataset(DataSet) do begin
       FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if Connection.ControlsCodePage = cCP_UTF8
@@ -9595,8 +9751,9 @@ procedure TZUnicodeStringField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
   if Binding then begin
-    if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
   end;
   inherited Bind(Binding);
@@ -9856,8 +10013,11 @@ end;
 procedure TZBytesField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -9930,8 +10090,11 @@ end;
 procedure TZVarBytesField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 
@@ -10035,8 +10198,9 @@ procedure TZRawCLobField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
   if Binding then begin
-    if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
   end;
   inherited Bind(Binding);
@@ -10453,8 +10617,9 @@ procedure TZUnicodeCLobField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
   if Binding then begin
-    if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
   end;
   inherited Bind(Binding);
@@ -10846,8 +11011,11 @@ end;
 procedure TZBLobField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
-  if Binding and (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
-    raise CreateUnBoundError;
+  if Binding then begin
+    if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
+      raise CreateUnBoundError;
+    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+  end;
   inherited Bind(Binding);
 end;
 

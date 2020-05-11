@@ -66,7 +66,7 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver, ZDbcCache,
   ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils, ZClasses,
-  ZPlainOracleConstants, ZPlainDriver, ZDbcStatement, ZDbcCachedResultSet;
+  ZPlainDriver, ZDbcStatement, ZDbcCachedResultSet;
 
 type
   { Oracle Error Class}
@@ -231,7 +231,7 @@ type
     procedure Close;
     procedure CopyLob;
   public
-    constructor Create(LobLocator: POCILobLocator; const OwnerLob: TZAbstractOracleBlob;
+    constructor Create(const OwnerLob: TZAbstractOracleBlob;
       const Owner: IImmediatelyReleasable; const OpenLobStreams: TZSortedList);
     Destructor Destroy; override;
   end;
@@ -2710,9 +2710,8 @@ begin
   end;
 end;
 
-constructor TZAbstracOracleLobStream.Create(LobLocator: POCILobLocator;
-  const OwnerLob: TZAbstractOracleBlob; const Owner: IImmediatelyReleasable;
-  const OpenLobStreams: TZSortedList);
+constructor TZAbstracOracleLobStream.Create(const OwnerLob: TZAbstractOracleBlob;
+  const Owner: IImmediatelyReleasable; const OpenLobStreams: TZSortedList);
 begin
   inherited Create(OwnerLob, Owner, OpenLobStreams);
   FPlainDriver := OwnerLob.FplainDriver;
@@ -3113,12 +3112,12 @@ begin
       SQLT_BFILEE,
       SQLT_CFILEE,
       SQLT_BLOB:  if FHas64BitLobMethods
-                  then FlobStream := TZOracleInternalLobStream64.Create(FLobLocator, Self, FOwner, FOpenLobStreams)
-                  else FlobStream := TZOracleInternalLobStream32.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+                  then FlobStream := TZOracleInternalLobStream64.Create(Self, FOwner, FOpenLobStreams)
+                  else FlobStream := TZOracleInternalLobStream32.Create(Self, FOwner, FOpenLobStreams);
       SQLT_CLOB:  begin
                     if FHas64BitLobMethods
-                    then FlobStream := TZOracleInternalLobStream64.Create(FLobLocator, Self, FOwner, FOpenLobStreams)
-                    else FlobStream := TZOracleInternalLobStream32.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+                    then FlobStream := TZOracleInternalLobStream64.Create(Self, FOwner, FOpenLobStreams)
+                    else FlobStream := TZOracleInternalLobStream32.Create(Self, FOwner, FOpenLobStreams);
                     if (Fcsid =  OCI_UTF16ID) then begin { we do not overwrite FColumnCodePage but for all MBCS we can seek/read/write safely only if we use UTF16 }
                       if (CodePage <> zCP_UTF16) then begin
                         Result := TZCodePageConversionStream.Create(FlobStream, zCP_UTF16, CodePage, FConSettings, FOpenLobStreams);
@@ -3200,8 +3199,8 @@ begin
   if not Lob.IsEmpty then begin
     P := Lob.GetBuffer(R, L);
     if FHas64BitLobMethods
-    then Stream := TZOracleInternalLobStream64.Create(nil, Self, FOwner, OpenLobStreams)
-    else Stream := TZOracleInternalLobStream32.Create(nil, Self, FOwner, OpenLobStreams);
+    then Stream := TZOracleInternalLobStream64.Create(Self, FOwner, OpenLobStreams)
+    else Stream := TZOracleInternalLobStream32.Create(Self, FOwner, OpenLobStreams);
     try
       Stream.CreateTemporary;
       if P <> nil then
@@ -3260,8 +3259,8 @@ begin
   end;
   if P <> nil then begin
     if FHas64BitLobMethods
-    then Stream := TZOracleInternalLobStream64.Create(nil, Self, FOwner, OpenLobStreams)
-    else Stream := TZOracleInternalLobStream32.Create(nil, Self, FOwner, OpenLobStreams);
+    then Stream := TZOracleInternalLobStream64.Create(Self, FOwner, OpenLobStreams)
+    else Stream := TZOracleInternalLobStream32.Create(Self, FOwner, OpenLobStreams);
     try
       Stream.CreateTemporary;
       Assert(Stream.Write(P^, L) = NativeInt(L));
@@ -3277,10 +3276,10 @@ begin
   if (CodePage = FColumnCodePage) and (CodePage <> zCP_UTF16) and IsMBCSCodePage(CodePage) then begin
     FLobStreamMode := LobStreamMode;
     if FHas64BitLobMethods then begin
-      FlobStream := TZOracleInternalLobStream64.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+      FlobStream := TZOracleInternalLobStream64.Create(Self, FOwner, FOpenLobStreams);
       Result := TZOracleRawMultibyteStream64.Create(FlobStream, CodePage, CodePage, FconSettings, FOpenLobStreams, FBytesPerChar);
     end else begin
-      FlobStream := TZOracleInternalLobStream32.Create(FLobLocator, Self, FOwner, FOpenLobStreams);
+      FlobStream := TZOracleInternalLobStream32.Create(Self, FOwner, FOpenLobStreams);
       Result := TZOracleRawMultibyteStream32.Create(FlobStream, CodePage, CodePage, FconSettings, FOpenLobStreams, FBytesPerChar);
     end
   end else Result := inherited CreateLobStream(CodePage, LobStreamMode);
@@ -3306,11 +3305,11 @@ begin
    the bufl param by chars*BytesPerChar ... And of cours we can perform poll reads }
   if (CodePage = FColumnCodePage) and (FBytesPerChar > 1) then begin
     if FHas64BitLobMethods then begin
-      OCIStream64 := TZOracleInternalLobStream64.Create(FLobLocator, Self, FConnection, FOpenLobStreams);
+      OCIStream64 := TZOracleInternalLobStream64.Create(Self, FConnection, FOpenLobStreams);
       Size := OCIStream64.Size;
       OCIStream32 := nil
     end else begin
-      OCIStream32 := TZOracleInternalLobStream32.Create(FLobLocator, Self, FConnection, FOpenLobStreams);
+      OCIStream32 := TZOracleInternalLobStream32.Create(Self, FConnection, FOpenLobStreams);
       Size := OCIStream32.Size;
       OCIStream64 := nil;
     end;
@@ -3518,7 +3517,10 @@ end;
 
 { TZOracleExternalLobStream64 }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result variable does not seem to be set}
+  {$WARN 5024 off : Parameter "Buffer/Count" not used} // readonly
+{$ENDIF}
 function TZOracleExternalLobStream64.Write(const Buffer;
   Count: LongInt): Longint;
 begin
@@ -3528,7 +3530,10 @@ end;
 
 { TZOracleExternalLobStream32 }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result variable does not seem to be set} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result variable does not seem to be set}
+  {$WARN 5024 off : Parameter "Buffer/Count" not used} // readonly
+{$ENDIF}
 function TZOracleExternalLobStream32.Write(const Buffer;
   Count: LongInt): Longint;
 begin

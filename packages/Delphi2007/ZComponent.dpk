@@ -32,9 +32,7 @@ requires
   ZPlain,
   ZDbc,
   ZCore,
-  ZParseSql,
-  vclactnband,
-  vcl;
+  ZParseSql;
 
 contains
   ZAbstractConnection in '..\..\src\component\ZAbstractConnection.pas',
@@ -54,7 +52,6 @@ contains
   ZSqlProcessor in '..\..\src\component\ZSqlProcessor.pas',
   ZSqlStrings in '..\..\src\component\ZSqlStrings.pas',
   ZSqlUpdate in '..\..\src\component\ZSqlUpdate.pas',
-  ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
-  ZStreamBlob in '..\..\src\component\ZStreamBlob.pas';
+  ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas';
 
 end.
