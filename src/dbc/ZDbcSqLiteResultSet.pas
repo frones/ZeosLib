@@ -769,7 +769,7 @@ var P: PAnsiChar;
 begin
   P := GetPAnsiChar(ColumnIndex, Len);
   {$IFDEF WITH_VAR_INIT_WARNING}
-  Result = '';
+  Result := '';
   {$ENDIF}
   if P <> nil
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
