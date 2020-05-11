@@ -333,6 +333,8 @@ begin
             if XSQLVAR.sqltype and 1 = 1 then //nullable?
               Mem := mem + SizeOf(ISC_SHORT); //null indicator;
           end;
+          if Mem = 0 then //see TestTicket426
+            Mem := SizeOf(Cardinal);
           GetMem(FOutData, Mem); //alloc space as one block
           P := FOutData;
           {$R-}

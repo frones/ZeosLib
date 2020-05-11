@@ -475,7 +475,7 @@ var
     {$ELSE}
     R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
     {$ENDIF}
-    DPB := GenerateDPB(Info, ConSettings, CP);
+    DPB := GenerateDPB(FPlainDriver, Info, ConSettings, CP);
     P := Pointer(R);
     L := Min(SizeOf(DBName)-1, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
     if P <> nil then

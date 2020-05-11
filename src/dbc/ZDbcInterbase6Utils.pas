@@ -211,12 +211,12 @@ type
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA);
 
 {Interbase6 Connection Functions}
-function BuildPB(Info: TStrings; VersionCode: Byte;
+function BuildPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings; VersionCode: Byte;
   const FilterPrefix: string; const ParamArr: array of TZIbParam;
   ConSettings: PZConSettings; CP: Word): RawByteString;
-function GenerateDPB(Info: TStrings;
+function GenerateDPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
-function GenerateTPB(Params: TStrings;
+function GenerateTPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Params: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
 procedure GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString; var TEB: TISC_TEB);
 function GetInterbase6DatabaseParamNumber(const Value: String): word;
@@ -504,8 +504,8 @@ end;
 
   @return generated string
 }
-function BuildPB(Info: TStrings; VersionCode: Byte;
-  const FilterPrefix: string; const ParamArr: array of TZIbParam;
+function BuildPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings;
+  VersionCode: Byte; const FilterPrefix: string; const ParamArr: array of TZIbParam;
   ConSettings: PZConSettings; CP: Word): RawByteString;
 var Buf: TRawBuff;
 
@@ -527,8 +527,7 @@ var Buf: TRawBuff;
   end;
 
   procedure NumToPB(Value: Cardinal);
-  var Len: Byte;
-    W: Word absolute Value;
+  var Len: Smallint;
   begin
     case Value of
       0..High(Byte):
@@ -542,19 +541,14 @@ var Buf: TRawBuff;
           Len := 2;
           ToBuff(AnsiChar(Len), Buf, Result);
           PWord(@Value)^ := Word(Value);
-          {$IFDEF ENDIAN_BIG} {$R-}//emulate isc_vax_integer which converts Firebird LE to BE if Hostbyteorder is Endian_big
-          W := (W and $00FF shl 8) or (W and $FF00 shr 8);
-          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF} {$ENDIF ENDIAN_BIG}
-          ToBuff(@W, Len, Buf, Result);
+          PWord(@Value)^ := Word(PlainDriver.isc_vax_integer(@Value, Len));
+          ToBuff(@Value, Len, Buf, Result);
         end;
       else
         begin
           Len := 4;
           ToBuff(AnsiChar(Len), Buf, Result);
-          {$IFDEF ENDIAN_BIG} {$R-}//emulate isc_vax_integer for which converts Firebird LE to BE if Hostbyteorder is Endian_big
-          Value := ((Value shl 8) and $FF00FF00) or ((Value shr 8) and $00FF00FF);
-          Value := (Value shl 16) or (Value shr 16);
-          {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF} {$ENDIF ENDIAN_BIG}
+          Value := Cardinal(PlainDriver.isc_vax_integer(@Value, Len));
           ToBuff(@Value, Len, Buf, Result);
         end;
     end;
@@ -623,9 +617,10 @@ end;
   @param Info - a list connection interbase parameters
   @return a generated string
 }
-function GenerateDPB(Info: TStrings; ConSettings: PZConSettings; CP: Word): RawByteString;
+function GenerateDPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings;
+  ConSettings: PZConSettings; CP: Word): RawByteString;
 begin
-  Result := BuildPB(Info, isc_dpb_version1, DPBPrefix, DatabaseParams, ConSettings, CP);
+  Result := BuildPB(PlainDriver, Info, isc_dpb_version1, DPBPrefix, DatabaseParams, ConSettings, CP);
 end;
 
 {**
@@ -635,10 +630,10 @@ end;
   @param Params - a transaction parameters list
   @return a generated string
 }
-function GenerateTPB(Params: TStrings;
+function GenerateTPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Params: TStrings;
   ConSettings: PZConSettings; CP: Word): RawByteString;
 begin
-  Result := BuildPB(Params, isc_tpb_version3, TPBPrefix, TransactionParams, ConSettings, CP);
+  Result := BuildPB(PlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams, ConSettings, CP);
 end;
 
 {**

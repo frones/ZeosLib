@@ -576,6 +576,8 @@ begin
       FOutMessageMetadata := nil;
     end else begin
       flags := FOutMessageMetadata.getMessageLength(FStatus);
+      if Flags = 0 then //see TestTicket426 (even if not reproducable with FB3 client)
+        Flags := SizeOf(Cardinal);
       GetMem(FOutData, flags);
     end;
     inherited Prepare;

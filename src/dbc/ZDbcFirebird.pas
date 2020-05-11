@@ -365,7 +365,7 @@ procedure TZFirebirdConnection.Open;
 var
   ti: IZFirebirdTransaction;
   DPB: RawByteString;
-  DBCP, ConnectionString, CSNoneCP: String;
+  DBCP, ConnectionString, CSNoneCP, CreateDB: String;
   DBName: array[0..512] of AnsiChar;
   LocaleDB: Boolean;
   P: PAnsiChar;
@@ -386,7 +386,7 @@ var
     {$ELSE}
     R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
     {$ENDIF}
-    DPB := GenerateDPB(Info, ConSettings, CP);
+    DPB := GenerateDPB(FPlainDriver, Info, ConSettings, CP);
     P := Pointer(R);
     L := Min(SizeOf(DBName)-1, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
     if P <> nil then
@@ -407,17 +407,51 @@ begin
 
   AssignISC_Parameters;
   CSNoneCP := Info.Values[DSProps_ResetCodePage];
+  ConnectionString := ConstructConnectionString(LocaleDB);
 
   DBCreated := False;
-  ConnectionString := ConstructConnectionString(LocaleDB);
+  CreateDB := Info.Values[ConnProps_CreateNewDatabase];
+  if (CreateDB <> '') then begin
+    if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
+      Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
+    DBCP := Info.Values['isc_dpb_set_db_charset'];
+    PrepareDPB;
+    FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      HandleError(FStatus, 'IProvider.createDatabase', Self, lcConnect);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+        'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"');
+    DBCreated := True;
+  end;
 reconnect:
-  PrepareDPB;
-  if LocaleDB
-  then P := Pointer(ConSettings.Database)
-  else P := nil;
-  FAttachment := FProvider.attachDatabase(FStatus, P, Length(DPB), Pointer(DPB));
+  if FAttachment = nil then begin
+    PrepareDPB;
+    if LocaleDB
+    then P := Pointer(ConSettings.Database)
+    else P := nil;
+    FAttachment := FProvider.attachDatabase(FStatus, P, Length(DPB), Pointer(DPB));
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      HandleError(FStatus, 'IProvider.attachDatabase', Self, lcConnect);
+    { Logging connection action }
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+        'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
+  end;
+  { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
+  DBName[0] := AnsiChar(isc_info_db_SQL_Dialect);
+  FAttachment.getInfo(FStatus, 1, @DBName[0], SizeOf(DBName)-1, @DBName[1]);
   if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-    HandleError(FStatus, 'IProvider.attachDatabase', Self, lcConnect);
+    HandleError(FStatus, 'IAttachment.getInfo', Self, lcConnect);
+  if DBName[1] = AnsiChar(isc_info_db_SQL_Dialect)
+  then FDialect := ReadInterbase6Number(FPlainDriver, DBName[2])
+  else FDialect := SQL_DIALECT_V5;
+  inherited SetAutoCommit(AutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
+  FRestartTransaction := not AutoCommit;
+
+  FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
+  if (DBCP <> '') and not DBCreated then
+    Exit;
   inherited Open;
   with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
   begin

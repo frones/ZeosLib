@@ -728,7 +728,8 @@ begin
     if OverwritableParams[parAutoCommit] <> '' then
       Params.Insert(0, OverwritableParams[parAutoCommit]);
 
-    Result := BuildPB(Params, isc_tpb_version3, TPBPrefix, TransactionParams, ConSettings, FPB_CP);
+    Result := BuildPB(FInterbaseFirebirdPlainDriver, Params, isc_tpb_version3,
+      TPBPrefix, TransactionParams, ConSettings, FPB_CP);
   finally
     FreeAndNil(Params);
   end;
