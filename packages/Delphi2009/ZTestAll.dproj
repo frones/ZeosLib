@@ -88,7 +88,6 @@
 			<DCCReference Include="..\..\test\dbc\ZTestDbcURL.pas"/>
 			<DCCReference Include="..\..\test\dbc\ZTestDbcUtils.pas"/>
 			<DCCReference Include="..\..\test\component\ZTestConnection.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestData.pas"/>
 			<DCCReference Include="..\..\test\component\ZTestDataSetGeneric.pas"/>
 			<DCCReference Include="..\..\test\component\ZTestEvents.pas"/>
 			<DCCReference Include="..\..\test\component\ZTestExecuteSql.pas"/>

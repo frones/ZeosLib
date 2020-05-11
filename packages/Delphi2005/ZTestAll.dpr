@@ -101,7 +101,6 @@ uses
   ZTestDbcURL in '..\..\test\dbc\ZTestDbcURL.pas',
   ZTestDbcUtils in '..\..\test\dbc\ZTestDbcUtils.pas',
   ZTestConnection in '..\..\test\component\ZTestConnection.pas',
-  ZTestData in '..\..\test\component\ZTestData.pas',
   ZTestDataSetGeneric in '..\..\test\component\ZTestDataSetGeneric.pas',
   ZTestEvents in '..\..\test\component\ZTestEvents.pas',
   ZTestExecuteSql in '..\..\test\component\ZTestExecuteSql.pas',

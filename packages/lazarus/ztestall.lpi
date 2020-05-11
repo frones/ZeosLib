@@ -37,7 +37,7 @@
         <PackageName Value="FCL"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="71">
+    <Units Count="69">
       <Unit0>
         <Filename Value="ztestall.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -247,81 +247,73 @@
         <IsPartOfProject Value="True"/>
       </Unit51>
       <Unit52>
-        <Filename Value="../../test/component/ZTestData.pas"/>
+        <Filename Value="../../test/component/ZTestEvents.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit52>
       <Unit53>
-        <Filename Value="../../test/component/ZTestEvents.pas"/>
+        <Filename Value="../../test/component/ZTestExecuteSql.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit53>
       <Unit54>
-        <Filename Value="../../test/component/ZTestExecuteSql.pas"/>
+        <Filename Value="../../test/component/ZTestSorting.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit54>
       <Unit55>
-        <Filename Value="../../test/component/ZTestMidas.pas"/>
+        <Filename Value="../../test/component/ZTestSqlMetadata.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit55>
       <Unit56>
-        <Filename Value="../../test/component/ZTestSorting.pas"/>
+        <Filename Value="../../test/component/ZTestSqlProcessor.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit56>
       <Unit57>
-        <Filename Value="../../test/component/ZTestSqlMetadata.pas"/>
+        <Filename Value="../../test/component/ZTestSqlStrings.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit57>
       <Unit58>
-        <Filename Value="../../test/component/ZTestSqlProcessor.pas"/>
+        <Filename Value="../../test/component/ZTestSqlTypes.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit58>
       <Unit59>
-        <Filename Value="../../test/component/ZTestSqlStrings.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompADO.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit59>
       <Unit60>
-        <Filename Value="../../test/component/ZTestSqlTypes.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompASA.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit60>
       <Unit61>
-        <Filename Value="../../test/bugreport/ZTestBugCompADO.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugCompMySql.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit61>
       <Unit62>
-        <Filename Value="../../test/bugreport/ZTestBugCompASA.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugDbcASA.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit62>
       <Unit63>
-        <Filename Value="../../test/bugreport/ZTestBugCompMySql.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugDbcCore.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit63>
       <Unit64>
-        <Filename Value="../../test/bugreport/ZTestBugDbcASA.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugDbcDbLib.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit64>
       <Unit65>
-        <Filename Value="../../test/bugreport/ZTestBugDbcCore.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugDbcInterbase.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit65>
       <Unit66>
-        <Filename Value="../../test/bugreport/ZTestBugDbcDbLib.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugDbcMSSQL.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit66>
       <Unit67>
-        <Filename Value="../../test/bugreport/ZTestBugDbcInterbase.pas"/>
+        <Filename Value="../../test/bugreport/ZTestBugDbcMySql.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit67>
       <Unit68>
-        <Filename Value="../../test/bugreport/ZTestBugDbcMSSQL.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit68>
-      <Unit69>
-        <Filename Value="../../test/bugreport/ZTestBugDbcMySql.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit69>
-      <Unit70>
         <Filename Value="../../test/bugreport/ZTestBugDbcOracle.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit70>
+      </Unit68>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
