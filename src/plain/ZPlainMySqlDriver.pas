@@ -720,6 +720,10 @@ TMYSQL_CLIENT_OPTIONS =
     buf:  Pdecimal_digit_ts;  //is an array of decimal_digit_t's
   end;
 
+  /// <summary>
+  ///   Enum for specifying a MySQL fork. Possible values:
+  ///   fUnknown, fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta
+  /// </summary>
   TMySQLFork = (fUnknown, fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta);
 
 const
