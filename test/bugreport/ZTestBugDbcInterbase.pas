@@ -656,7 +656,6 @@ end;
 }
 procedure TZTestDbcInterbaseBugReport.TestTicket426;
 var
-  I: Integer;
   Stmt: IZStatement;
   RS: IZResultSet;
 begin

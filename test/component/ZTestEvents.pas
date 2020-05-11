@@ -54,17 +54,16 @@
 unit ZTestEvents;
 
 interface
+
 {$I ZComponent.inc}
+
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  Classes,
-  {$IFDEF ENABLE_INTERBASE}
-  ZIBEventAlerter,
-  {$ENDIF}
+  Classes, ZIBEventAlerter,
   ZSysUtils, ZSqlTestCase;
 
-{$IFDEF ENABLE_INTERBASE}
 type
   {** Implements a test case for class TZStoredProc. }
   TZTestInterbaseEventAlert = class(TZAbstractCompSQLTestCase)
@@ -80,11 +79,12 @@ type
   published
     procedure TestIBAllerter;
   end;
-{$ENDIF}
+
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 
 implementation
 
-{$IFDEF ENABLE_INTERBASE}
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses ZdbcIntfs;
 
@@ -196,10 +196,7 @@ begin
   end;
 end;
 
-{$ENDIF}
-
 initialization
-  {$IFDEF ENABLE_INTERBASE}
   RegisterTest('component',TZTestInterbaseEventAlert.Suite);
-  {$ENDIF}
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.
