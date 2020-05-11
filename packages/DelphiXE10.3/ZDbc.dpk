@@ -31,12 +31,6 @@ package ZDbc;
 {$IMPLICITBUILD OFF}
 
 requires
-  ZCore,
-  ZParseSQL,
-  ZPlain,
-  rtl;
-
-requires
   ZParseSql,
   ZPlain;
 
