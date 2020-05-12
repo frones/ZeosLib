@@ -1713,6 +1713,7 @@ bind_direct:
         SetLobs;
         Exit;
       end;
+    else raise ZDbcUtils.CreateUnsupportedParameterTypeException(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   FillChar(Bind.indp^, SizeOf(SB2)*ArrayLen, #0);

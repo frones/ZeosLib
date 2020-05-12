@@ -1406,12 +1406,12 @@ end;
 function TZAbstractODBCDatabaseInfo.SupportsTransactionIsolationLevel(
   const Level: TZTransactIsolationLevel): Boolean;
 begin
-  Result := False;
   case Level of
     tiReadUncommitted: Result := GetUSmallDbcInfo(SQL_TXN_ISOLATION_OPTION) and SQL_TXN_READ_UNCOMMITTED = SQL_TXN_READ_UNCOMMITTED;
     tiReadCommitted: Result := GetUSmallDbcInfo(SQL_TXN_ISOLATION_OPTION) and SQL_TXN_READ_COMMITTED = SQL_TXN_READ_COMMITTED;
     tiRepeatableRead: Result := GetUSmallDbcInfo(SQL_TXN_ISOLATION_OPTION) and SQL_TXN_REPEATABLE_READ = SQL_TXN_REPEATABLE_READ;
     tiSerializable: Result := GetUSmallDbcInfo(SQL_TXN_ISOLATION_OPTION) and SQL_TXN_SERIALIZABLE = SQL_TXN_SERIALIZABLE;
+    else Result := False;
   end;
 end;
 
@@ -1476,11 +1476,11 @@ end;
 function TZAbstractODBCDatabaseInfo.SupportsResultSetType(
   const _Type: TZResultSetType): Boolean;
 begin
-  Result := False;
   case _Type of
     rtForwardOnly: Result := GetUIntDbcInfo(SQL_SCROLL_OPTIONS) and SQL_SO_FORWARD_ONLY = SQL_SO_FORWARD_ONLY;
     {rtScrollInsensitive: ; yub they are but not implemented
     rtScrollSensitive: ; }
+    else Result := False;
   end;
 end;
 

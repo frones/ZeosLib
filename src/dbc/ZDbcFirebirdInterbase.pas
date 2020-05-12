@@ -3711,6 +3711,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param sqlType the SQL type code defined in <code>ZDbcIntfs.pas.TZSQLType</code>
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQLType" not used} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
 begin
@@ -3720,6 +3721,7 @@ begin
   FInParamDescripors[Index].sqlind^ := ISC_NULL;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
    Set up parameter PAnsiChar value

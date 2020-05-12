@@ -136,7 +136,6 @@ function GetExecuteBlockString(const Stmt: TZAbstractFirebirdStatement;
   const IsParamIndexArray: TBooleanDynArray;
   const InParamCount, RemainingArrayRows: Integer;
   const CurrentSQLTokens: TRawByteStringDynArray;
-  const PlainDriver: TZFirebird3UpPlainDriver;
   var PreparedRowsOfArray,MaxRowsPerBatch: Integer;
   var TypeTokens: TRawByteStringDynArray;
   InitialStatementType: TZIbSqlStatementType;
@@ -293,6 +292,7 @@ begin
   end;
 
   {EH: now move our data to result ! ONE ALLOC ! of result (: }
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
   SetLength(Result, StmtLength+LBlockLen);
   PResult := Pointer(Result);
   Put([EBStart], PResult);
@@ -538,7 +538,7 @@ label jmpEB;
   begin
     FRawTemp := GetExecuteBlockString(Self,
       FIsParamIndex, BindList.Count, Rows, FCachedQueryRaw,
-      FPlainDriver, PreparedRowsOfArray, FMaxRowsPerBatch,
+      PreparedRowsOfArray, FMaxRowsPerBatch,
       FTypeTokens, FStatementType, FFBConnection.GetXSQLDAMaxSize);
     PrepareArrayStmt(FBatchStmts[False]);
   end;
@@ -590,7 +590,7 @@ begin
     if FMaxRowsPerBatch = 0 then begin //init to find out max rows per batch
 jmpEB:fRawTemp := GetExecuteBlockString(Self,
         FIsParamIndex, BindList.Count, BatchDMLArrayCount, FCachedQueryRaw,
-        FPlainDriver, PreparedRowsOfArray, FMaxRowsPerBatch,
+        PreparedRowsOfArray, FMaxRowsPerBatch,
           FTypeTokens, FStatementType, FFBConnection.GetXSQLDAMaxSize);
     end else
       fRawTemp := '';

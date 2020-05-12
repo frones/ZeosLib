@@ -505,7 +505,7 @@ begin
     ConnectStrings.Values[ConnProps_PWD] := PassWord;
     tmp := ComposeString(ConnectStrings, ';');
   end;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}OutConnectString := '';{$ENDIF}
   SetLength(OutConnectString, 1024);
   try
     CheckDbcError(fPLainDriver.SQLDriverConnect(fHDBC,
@@ -757,6 +757,7 @@ begin
       CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+2, @aLen));
       {$ELSE}
+      {$IFDEF WITH_VAR_INIT_WARNING}Buf := '';{$ENDIF}
       SetLength(Buf, aLen shr 1);
       CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+2, @aLen));
@@ -786,6 +787,7 @@ begin
   if SQL <> '' then begin
     {$IFNDEF UNICODE}
     aSQL := PRawToUnicode(Pointer(SQL), Length(SQL), ConSettings.CTRL_CP);
+    {$IFDEF WITH_VAR_INIT_WARNING}nSQL := '';{$ENDIF}
     SetLength(nSQL, Length(aSQL) shl 1);
     CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLNativeSqlW(fHDBC,
       Pointer(aSQL), Length(aSQL), Pointer(nSQL), Length(nSQL), @NewLength));
@@ -1018,6 +1020,7 @@ begin
       Pointer(aSQL), Length(aSQL), Pointer(nSQL), Length(nSQL), @NewLength));
     Result := PRawToUnicode(Pointer(nSQL), NewLength, ZOSCodePage);
     {$ELSE}
+    {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
     SetLength(Result, Length(SQL) shl 1); //
     CheckDbcError(TODBC3RawPlainDriver(fPlainDriver).SQLNativeSql(fHDBC,
       Pointer(SQL), Length(SQL), Pointer(Result), Length(Result), @NewLength));

@@ -317,6 +317,7 @@ jmpLen:         Precision := XSQLVAR.sqllen;
                 end;
               end;
               stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of milli second fractions
+              {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //nothing todo
             end;
           end;
         end;

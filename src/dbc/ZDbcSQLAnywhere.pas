@@ -695,7 +695,7 @@ end;
 initialization
   SQLAynwhereDriver := TZSQLAnywhereDriver.Create;
   DriverManager.RegisterDriver(SQLAynwhereDriver);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}ConParams := nil;{$ENDIF}
   SetLength(ConParams, 41);
   addParams(0,  [ConnProps_APP, ConnProps_AppInfo]);
   addParams(1,  [ConnProps_ASTART, ConnProps_AutoStart]);

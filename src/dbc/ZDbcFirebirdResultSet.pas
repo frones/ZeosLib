@@ -399,6 +399,7 @@ begin
                 SQL_SHORT:  Precision := 4;
                 SQL_LONG:   Precision := 9;
                 SQL_INT64:  Precision := 18;
+                {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //nothing todo
               end;
             end;
             stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of millisecond fractions

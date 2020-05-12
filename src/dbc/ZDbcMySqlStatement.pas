@@ -1831,6 +1831,7 @@ var
   label move_from_temp;
   begin
     BufferSize := 0;
+    {$IFDEF WITH_VAR_INIT_WARNING}ClientStrings := nil;{$ENDIF}
     SetLength(ClientStrings, BatchDMLArrayCount);
     case VariantType of
       {$IFNDEF UNICODE}
@@ -1914,6 +1915,7 @@ move_from_temp:
             end;
           Bind^.buffer_address^ := Pointer(Bind^.buffer);
         end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //tested alread in inherited call
     end;
     SetLength(ClientStrings, 0);
   end;
@@ -2146,6 +2148,7 @@ begin
         end;
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream: BindLobs;
+    else raise CreateUnsupportedParameterTypeException(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType);
   end;
   Bind^.Iterations := BatchDMLArrayCount;
 end;
@@ -2371,6 +2374,7 @@ begin
                             Bind^.Length[0] := 1;
                             PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
                           end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible
     end;
     Bind^.is_null_address^ := 0;
   end;
@@ -2614,6 +2618,7 @@ begin
                             Bind^.Length[0] := 1;
                             PWord(Bind^.buffer)^ := PWord(EnumBool[Value <> 0])^;
                           end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible
     end;
     Bind^.is_null_address^ := 0;
   end;
@@ -2825,6 +2830,7 @@ begin
               stString, stUnicodeString: RS.UpdatePAnsiChar(J, Result.GetPAnsiChar(J, L), L);
               stBytes, stGUID: RS.UpdateBytes(J, Result.GetBytes(J));
               stAsciiStream..stBinaryStream: RS.UpdateLob(J, Result.GetBlob(J));
+              {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible
             end;
           Inc(J);
         end;
@@ -2900,7 +2906,7 @@ end;
 initialization
 
 { preparable statements: }
-
+{$IFDEF WITH_VAR_INIT_WARNING}MySQL568PreparableTokens := nil;{$ENDIF}
 SetLength(MySQL568PreparableTokens, Ord(myCall)+1);
 MySQL568PreparableTokens[Ord(myDelete)].MatchingGroup := 'DELETE';
 MySQL568PreparableTokens[Ord(myInsert)].MatchingGroup := 'INSERT';

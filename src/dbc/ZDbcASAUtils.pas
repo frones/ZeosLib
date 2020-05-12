@@ -1256,6 +1256,7 @@ begin
   if Handle.SqlCode < SQLE_NOERROR then
   begin
     P := PlainDriver.sqlError_Message( Handle, @ErrorBuf[0], SizeOf( ErrorBuf));
+    {$IFDEF WITH_VAR_INIT_WARNING}ErrorMessage := '';{$ENDIF}
     ZSetString(P, StrLen(P), ErrorMessage);
     //SyntaxError Position in SQLCount
     if not (SupressExceptionID = Handle.SqlCode ) then

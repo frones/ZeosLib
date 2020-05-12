@@ -666,6 +666,8 @@ begin
             else
               Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream);
           end;
+        else raise ZDbcUtils.CreateUnsupportedParameterTypeException(ColumnIndex,
+             Metadata.GetColumnType(ColumnIndex));
       end;
       if WasNull then
       begin
@@ -763,6 +765,8 @@ CheckColumnType:
               RefreshColumnType := RefreshRowAccessor.GetColumnType(RefreshColumnIndex);
               goto CheckColumnType;
             end;
+          else raise ZDbcUtils.CreateUnsupportedParameterTypeException(RefreshColumnIndex,
+               RefreshColumnType);
         end;
       end;
     end;
@@ -847,6 +851,7 @@ begin
       DoBeforeDeleteSQL;
     utModified:
       DoBeforeModifySQL;
+    {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}// do nothing
   end;
 
   if Dataset is TZAbstractRODataset then
@@ -874,6 +879,7 @@ begin
         utDeleted: DoBeforeDeleteSQLStatement(Self, I, ExecuteStatement);
         utInserted: DoBeforeInsertSQLStatement(Self, I, ExecuteStatement);
         utModified: DoBeforeModifySQLStatement(Self, I, ExecuteStatement);
+        {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}// do nothing
       end;
       if ExecuteStatement then begin
         // if Property ValidateUpdateCount isn't set : assume it's true
@@ -895,6 +901,7 @@ begin
                                           OldRowAccessor, NewRowAccessor, Self);
             end;
           utModified: DoAfterModifySQLStatement(Self,I);
+          {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}// do nothing
         end;
       end;
       {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
@@ -926,6 +933,7 @@ begin
             FRefreshSQL.Text:=Tmp;
           end;
         end;
+      {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}// do nothing
     end; {case... }
 //FOSPATCH
 
@@ -938,6 +946,7 @@ begin
     utInserted: DoAfterInsertSQL;
     utDeleted: DoAfterDeleteSQL;
     utModified: DoAfterModifySQL;
+    {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}// do nothing
   end;
 end;
 

@@ -449,13 +449,13 @@ begin
         Result := 'oid'
       else
         Result := 'bytea';
+    else Result := '';
   end;
 end;
 
 procedure SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean; out aOID: OID);
 begin
   case SQLType of
-    stUnknown: aOID := INVALIDOID;
     stBoolean: aOID := BOOLOID;
     stByte, stShort, stSmall: aOID := INT2OID;
     stWord, stInteger: aOID := INT4OID;
@@ -474,6 +474,7 @@ begin
       if IsOidAsBlob
       then aOID := OIDOID
       else aOID := BYTEAOID;
+    else {stUnknown, stArray} aOID := INVALIDOID;
   end;
 end;
 
@@ -647,6 +648,7 @@ begin
   end;
 
   SrcBuffer := DestBuffer; //restore entry
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
   SetLength(Result, DestLength);
   DestBuffer := Pointer(Result);
   if Quoted then begin
@@ -701,6 +703,7 @@ begin
   end;
   SrcBuffer := DestBuffer; //restore
 
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
   SetLength(Result, DestLength);
   DestBuffer := Pointer(Result);
   if Quoted then begin

@@ -175,6 +175,7 @@ function TZSQLStatement.GetParamNamesArray: TStringDynArray;
 var
   I: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, High(FParamIndices) - Low(FParamIndices) + 1);
   for I := Low(Result) to High(Result) do
     Result[I] := FParams[FParamIndices[I + Low(FParamIndices)]];
@@ -372,6 +373,7 @@ begin
   FStatements.Clear;
   SQL := '';
   ParamIndexCount := 0;
+  {$IFDEF WITH_VAR_INIT_WARNING}ParamIndices := nil;{$ENDIF}
   SetLength(ParamIndices, ParamIndexCount);
 
   { Optimization for empty query. }

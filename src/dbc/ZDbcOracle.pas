@@ -1180,6 +1180,7 @@ var
   P: PChar;
 begin
   L := Length(Value);
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
   SetLength(Result, L*2+2);
   P := PChar(Result);
   P^ := #39;
@@ -1300,7 +1301,7 @@ end;
 procedure TZOracleTransaction.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
-
+  //todo
 end;
 
 procedure TZOracleTransaction.Rollback;
