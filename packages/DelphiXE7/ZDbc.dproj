@@ -143,7 +143,7 @@
 	<DCCReference Include="..\..\src\dbc\ZDbcODBCStatement.pas"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcODBCUtils.pas"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcOleDB.pas"/>
-	<DCCReference Include="..\..\src\dbc\ZDbcOleDBMetaData.pas"/>
+	<DCCReference Include="..\..\src\dbc\ZDbcOleDBMetadata.pas"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcOleDBResultSet.pas"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcOleDBStatement.pas"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcOleDBUtils.pas"/>

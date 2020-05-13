@@ -194,7 +194,7 @@
         <UnitName Value="ZDbcOleDB"/>
       </Item43>
       <Item44>
-        <Filename Value="..\..\src\dbc\ZDbcOleDBMetaData.pas"/>
+        <Filename Value="..\..\src\dbc\ZDbcOleDBMetadata.pas"/>
         <UnitName Value="ZDbcOleDBMetadata"/>
       </Item44>
       <Item45>
