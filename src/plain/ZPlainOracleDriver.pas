@@ -1572,9 +1572,9 @@ begin
   //AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8);
   AddCodePage('UTF8', 871, ceUTF8, zCP_UTF8, 'AL32UTF8', 4);
   AddCodePage('AL32UTF8', 873, ceUTF8, zCP_UTF8, '', 4);
-  AddCodePage('UTF16', 1000, ceUTF16, zCP_UTF16, '', 2);
-  AddCodePage('AL16UTF16', 2000, ceUTF16, zCP_UTF16BE, '', 4);
-  AddCodePage('AL16UTF16LE', 2002, ceUTF16, zCP_UTF16, '', 4);
+  //AddCodePage('UTF16', 1000, ceUTF16, zCP_UTF16, '', 2);
+  //AddCodePage('AL16UTF16', 2000, ceUTF16, zCP_UTF16BE, '', 4);
+  //AddCodePage('AL16UTF16LE', 2002, ceUTF16, zCP_UTF16, '', 4);
 end;
 
 procedure TZOracle9iPlainDriver.LoadApi;
