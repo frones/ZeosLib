@@ -677,7 +677,7 @@ type
     OCIResultSetToStmt: function(rsetdp: POCIHandle; errhp: POCIError): sword; cdecl;
 
     OCIDescriptorAlloc: function(parenth: POCIEnv; var descpp: POCIDescriptor;
-      htype: ub4; xtramem_sz: integer; usrmempp: Pointer): sword; cdecl;
+      htype: ub4; xtramem_sz: size_t; usrmempp: Pointer): sword; cdecl;
     OCIDescriptorFree: function(descp: Pointer; htype: ub4): sword; cdecl;
 
     OCILobOpen: function(svchp: POCISvcCtx; errhp: POCIError;

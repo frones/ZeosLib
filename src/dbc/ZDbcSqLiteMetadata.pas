@@ -1441,7 +1441,7 @@ var
     end;
   end;
 begin
-  Result:=inherited UncachedGetColumns(Catalog, Temp_scheme, TempTableNamePattern, ColumnNamePattern);
+  Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
   UndefinedVarcharAsStringLength := (GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
   with GetStatement do begin
