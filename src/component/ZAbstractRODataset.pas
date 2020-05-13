@@ -626,10 +626,6 @@ type
     function GetAsSQLTimeStamp: TSQLTimeStamp; override;
     {$ENDIF}
     procedure Bind(Binding: Boolean); override;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     constructor Create(AOwner: TComponent); override;
   public
@@ -667,10 +663,6 @@ type
     procedure SetAsTimeStamp(const Value: TZTimeStamp);
     procedure SetAsDateTime(Value: TDateTime); override;
     procedure Bind(Binding: Boolean); override;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     constructor Create(AOwner: TComponent); override;
   public
@@ -707,11 +699,7 @@ type
     procedure SetAsTime(const Value: TZTime);
     procedure GetText(var Text: string; DisplayText: Boolean); override;
     procedure SetAsDateTime(Value: TDateTime); override;
-  protected
     procedure Bind(Binding: Boolean); override;
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     property Value: TZTime read GetAsTime write SetAsTime;
     property SecondFractionsScale: Integer read fScale;
@@ -739,10 +727,6 @@ type
     procedure SetAsBoolean(Value: Boolean); override;
     procedure SetVarValue(const Value: Variant); override;
     procedure Bind(Binding: Boolean); override;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
   end;
@@ -758,10 +742,6 @@ type
     procedure SetAsSmallInt(Value: SmallInt);
     function IsRowDataAvailable: Boolean;
     function CreateUnBoundError: EZDatabaseError;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
@@ -783,9 +763,6 @@ type
     function CreateUnBoundError: EZDatabaseError;
     function IsRowDataAvailable: Boolean;
   protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
     procedure Bind(Binding: Boolean); override;
   {$ENDIF}
   protected
@@ -808,10 +785,6 @@ type
     procedure SetAsWord(Value: Word);
     function IsRowDataAvailable: Boolean;
     function CreateUnBoundError: EZDatabaseError;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
@@ -836,9 +809,6 @@ type
   {$IFDEF WITH_FTBYTE}
     function IsRowDataAvailable: Boolean;
   protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
     procedure Bind(Binding: Boolean); override;
   {$ENDIF}
   protected
@@ -873,10 +843,6 @@ type
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
     procedure SetAsString(const Value: string); override;
     procedure SetVarValue(const Value: Variant); override; //delphi hardly try to convert then variant even if null
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     property Value: Integer read GetAsInt write SetAsInt;
   public
@@ -904,10 +870,6 @@ type
     procedure SetAsString(const Value: String); override;
     function GetAsVariant: Variant; override;
     procedure SetVarValue(const Value: Variant); override;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
     {$IFNDEF TFIELD_HAS_ASLARGEINT}
@@ -947,10 +909,6 @@ type
     procedure SetAsString(const Value: String); override;
     procedure SetVarValue(const Value: Variant); override;
   {$IFDEF WITH_FTLONGWORD}
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
   {$ENDIF WITH_FTLONGWORD}
@@ -1014,10 +972,6 @@ type
     function FilledValueWasNull(var Value: Double): Boolean;
     function CreateUnBoundError: EZDatabaseError;
   protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
-  protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
     function GetAsFloat: Double; override;
@@ -1039,10 +993,6 @@ type
     function FilledValueWasNull(var Value: Single): Boolean;
   {$IFDEF WITH_FTSINGLE}
     function CreateUnBoundError: EZDatabaseError;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   {$ENDIF WITH_FTSINGLE}
   protected
   {$IFDEF WITH_FTSINGLE}
@@ -1078,10 +1028,6 @@ type
     {$IFNDEF TFIELD_HAS_ASLARGEINT}procedure SetAsLargeInt(const Value: LargeInt); {$ENDIF}
     function CreateUnBoundError: EZDatabaseError;
   protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
-  protected
     function GetIsNull: Boolean; override;
     function GetAsBCD: TBcd; override;
     function GetAsCurrency: Currency; override;
@@ -1106,10 +1052,6 @@ type
     function FilledValueWasNull(var Value: TBCD): Boolean;
     function IsRowDataAvailable: Boolean;
     function CreateUnBoundError: EZDatabaseError;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   protected
     function GetIsNull: Boolean; override;
     function GetAsCurrency: Currency; override;
@@ -1136,10 +1078,6 @@ type
   protected
     function GetAsGuid: TGUID; {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID}override;{$ENDIF}
     procedure SetAsGuid(const Value: TGUID); {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID}override;{$ENDIF}
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   protected
     function GetIsNull: Boolean; override;
     function GetAsString: String; override;
@@ -1187,10 +1125,6 @@ type
     function GetAsUnicodeString: UnicodeString; {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     procedure SetAsUnicodeString(const Value: UnicodeString); {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     {$ENDIF}
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     constructor Create(AOwner: TComponent); override;
     procedure Clear; override;
@@ -1245,9 +1179,6 @@ type
     {$ENDIF}
   protected
     procedure Bind(Binding: Boolean); override;
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
     {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
@@ -1275,9 +1206,6 @@ type
     procedure GetText(var Text: string; DisplayText: Boolean); override;
   protected
     procedure Bind(Binding: Boolean); override;
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
   end;
@@ -1295,9 +1223,6 @@ type
     procedure SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF}); {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
   protected
     procedure Bind(Binding: Boolean); override;
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
     {$IFNDEF TFIELD_HAS_ASBYTES}
@@ -1343,9 +1268,6 @@ type
     procedure SetVarValue(const Value: Variant); override;
   protected
     procedure Bind(Binding: Boolean); override;
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
@@ -1399,9 +1321,6 @@ type
     procedure SetAsRawByteString(const Value: RawByteString);
   protected
     procedure Bind(Binding: Boolean); override;
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     property AsUnicodeString: UnicodeString read GetAsWideString write SetAsWideString;
@@ -1429,11 +1348,7 @@ type
   protected
     function GetIsNull: Boolean; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
-  protected
     procedure Bind(Binding: Boolean); override;
-    procedure DefineProperties(Filer: TFiler); override;
-    procedure ReadFieldIndex(Reader: TReader);
-    procedure WriteFieldIndex(Writer: TWriter);
   public
     procedure Clear; override;
   end;
@@ -5852,16 +5767,6 @@ begin
   end else Result := True;
 end;
 
-procedure TZInt64Field.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
-procedure TZInt64Field.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 procedure TZInt64Field.Bind(Binding: Boolean);
 begin
   FBound := Binding;
@@ -5892,12 +5797,6 @@ end;
 function TZInt64Field.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZInt64Field.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 procedure TZInt64Field.SetAsCardinal(Value: Cardinal);
@@ -6148,14 +6047,6 @@ end;
 {$ENDIF WITH_FTBYTE}
 
 {$IFDEF WITH_FTBYTE}
-procedure TZByteField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
-end;
-{$ENDIF WITH_FTBYTE}
-
-{$IFDEF WITH_FTBYTE}
 function TZByteField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
@@ -6196,12 +6087,6 @@ begin
   else Result := True;
 end;
 {$ENDIF WITH_FTBYTE}
-{$IFDEF WITH_FTBYTE}
-procedure TZByteField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-{$ENDIF WITH_FTBYTE}
 
 procedure TZByteField.SetAsByte(Value: Byte);
   procedure DoValidate;
@@ -6237,13 +6122,6 @@ begin
     RangeError(Value, Low(Byte), High(Byte));
   SetAsByte(Byte(Value));
 end;
-
-{$IFDEF WITH_FTBYTE}
-procedure TZByteField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-{$ENDIF}
 
 {$IFDEF WITH_FTBYTE}
 procedure TZByteField.Clear;
@@ -6316,20 +6194,6 @@ begin
 end;
 
 {$IFDEF WITH_FTSHORTINT}
-procedure TZShortIntField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
-end;
-{$ENDIF WITH_FTSHORTINT}
-{$IFDEF WITH_FTSHORTINT}
-procedure TZShortIntField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-{$ENDIF WITH_FTSHORTINT}
-
-{$IFDEF WITH_FTSHORTINT}
 function TZShortIntField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
@@ -6368,13 +6232,6 @@ begin
   if IsRowDataAvailable
   then Result := TZAbstractRODataset(DataSet).FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   else Result := True;
-end;
-{$ENDIF WITH_FTSHORTINT}
-
-{$IFDEF WITH_FTSHORTINT}
-procedure TZShortIntField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
 end;
 {$ENDIF WITH_FTSHORTINT}
 
@@ -7066,12 +6923,6 @@ begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
-procedure TZDateField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
-end;
-
 function TZDateField.FilledValueWasNull(var Value: TZDate): Boolean;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
@@ -7191,12 +7042,6 @@ begin
     end else Result := False;;
 end;
 
-procedure TZDateField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
-
 procedure TZDateField.SetAsDate(const Value: TZDate);
 begin
   if not FBound then
@@ -7233,11 +7078,6 @@ begin
   if Value = '' then
     raise EZDatabaseError.CreateFmt(SNeedField, [DisplayName]);
   FInvalidText := Value;
-end;
-
-procedure TZDateField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
 end;
 
 { TZTimeField }
@@ -7280,12 +7120,6 @@ end;
 function TZTimeField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZTimeField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZTimeField.FilledValueWasNull(var Value: TZTime): Boolean;
@@ -7416,6 +7250,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} //ill FPC
 
 function TZTimeField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
@@ -7428,13 +7263,6 @@ begin
       Result := True;
     end else Result := False;
 end;
-
-procedure TZTimeField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
-{$IFDEF FPC} {$POP} {$ENDIF} //ill FPC
 
 procedure TZTimeField.SetAdjSecFracFmt(Value: Boolean);
 begin
@@ -7498,11 +7326,6 @@ begin
   FInvalidText := Value;
 end;
 
-procedure TZTimeField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZDateTimeField }
 
 procedure TZDateTimeField.Bind(Binding: Boolean);
@@ -7556,16 +7379,6 @@ end;
 function TZDateTimeField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-{**
-  Defines a persistent field properties.
-  @param Filer a persistent manager object.
-}
-procedure TZDateTimeField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZDateTimeField.FilledValueWasNull(var Value: TZTimeStamp): Boolean;
@@ -7721,11 +7534,6 @@ begin
     end else Result := False;
 end;
 
-procedure TZDateTimeField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 procedure TZDateTimeField.SetAdjSecFracFmt(Value: Boolean);
 begin
   FLastFormat[True] := '';
@@ -7791,11 +7599,6 @@ begin
   FInvalidText := Value;
 end;
 
-procedure TZDateTimeField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZSmallIntField }
 
 procedure TZSmallIntField.Bind(Binding: Boolean);
@@ -7830,12 +7633,6 @@ begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
-procedure TZSmallIntField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
-end;
-
 function TZSmallIntField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
 begin
   Result := GetAsSmallInt;
@@ -7865,11 +7662,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZSmallIntField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
 end;
 
 procedure TZSmallIntField.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF});
@@ -7907,11 +7699,6 @@ begin
   end;
 end;
 
-procedure TZSmallIntField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZWordField }
 
 procedure TZWordField.Bind(Binding: Boolean);
@@ -7946,12 +7733,6 @@ begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
-procedure TZWordField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
-end;
-
 function TZWordField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
 begin
   Result := GetAsWord;
@@ -7981,11 +7762,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZWordField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
 end;
 
 procedure TZWordField.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF});
@@ -8023,11 +7799,6 @@ begin
   end;
 end;
 
-procedure TZWordField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZIntegerField }
 procedure TZIntegerField.Bind(Binding: Boolean);
 begin
@@ -8059,12 +7830,6 @@ end;
 function TZIntegerField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZIntegerField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZIntegerField.FilledValueWasNull(var Value: Integer): Boolean;
@@ -8122,11 +7887,6 @@ begin
     end else Result := False;
 end;
 
-procedure TZIntegerField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 procedure TZIntegerField.SetAsInt(Value: Integer);
   procedure DoValidate;
   begin
@@ -8174,11 +7934,6 @@ begin
   else SetAsInt(Value);
 end;
 
-procedure TZIntegerField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZCardinalField }
 
 {$IFDEF WITH_FTLONGWORD}
@@ -8205,13 +7960,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-{$ENDIF WITH_FTLONGWORD}
-{$IFDEF WITH_FTLONGWORD}
-procedure TZCardinalField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 {$ENDIF WITH_FTLONGWORD}
 
@@ -8323,13 +8071,6 @@ begin
   end else Result := True;
 end;
 
-{$IFDEF WITH_FTLONGWORD}
-procedure TZCardinalField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-{$ENDIF WITH_FTLONGWORD}
-
 procedure TZCardinalField.SetAsCardinal(Value: Cardinal);
   procedure DoValidate;
   begin
@@ -8397,12 +8138,6 @@ begin
   then Clear
   else SetAsCardinal(Value);
 end;
-{$IFDEF WITH_FTLONGWORD}
-procedure TZCardinalField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-{$ENDIF WITH_FTLONGWORD}
 
 { TZSingleField }
 
@@ -8427,13 +8162,6 @@ constructor TZSingleField.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   Precision := 7;
-end;
-{$ENDIF WITH_FTSINGLE}
-{$IFDEF WITH_FTSINGLE}
-procedure TZSingleField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 {$ENDIF WITH_FTSINGLE}
 
@@ -8552,12 +8280,6 @@ begin
     Result := FResultSet.WasNull;
   end else Result := True;
 end;
-{$IFDEF WITH_FTSINGLE}
-procedure TZSingleField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-{$ENDIF WITH_FTSINGLE}
 
 {$IFNDEF WITH_FTSINGLE}
 procedure TZSingleField.SetAsFloat(Value: Double);
@@ -8601,13 +8323,6 @@ begin
   else SetAsSingle(Value);
 end;
 
-{$IFDEF WITH_FTSINGLE}
-procedure TZSingleField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-{$ENDIF WITH_FTSINGLE}
-
 { TZDoubleField }
 
 procedure TZDoubleField.Bind(Binding: Boolean);
@@ -8638,12 +8353,6 @@ end;
 function TZDoubleField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZDoubleField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function Result does not seem to be initialized} {$ENDIF}
@@ -8732,11 +8441,6 @@ begin
   end else Result := True;
 end;
 
-procedure TZDoubleField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 procedure TZDoubleField.SetAsFloat(Value: Double);
   procedure DoValidate;
   begin
@@ -8772,11 +8476,6 @@ begin
   else SetAsFloat(Value);
 end;
 
-procedure TZDoubleField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZBCDField }
 
 procedure TZBCDField.Bind(Binding: Boolean);
@@ -8807,12 +8506,6 @@ end;
 function TZBCDField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZBCDField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZBCDField.FilledValueWasNull(var Value: Currency): Boolean;
@@ -8927,11 +8620,6 @@ begin
     end else Result := False;
 end;
 
-procedure TZBCDField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 procedure TZBCDField.SetAsCurrency(Value: Currency);
   procedure DoValidate;
   begin
@@ -8969,11 +8657,6 @@ begin
 end;
 {$ENDIF TFIELD_HAS_ASLARGEINT}
 
-procedure TZBCDField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZFMTBCDField }
 
 procedure TZFMTBCDField.Bind(Binding: Boolean);
@@ -9004,12 +8687,6 @@ end;
 function TZFMTBCDField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZFMTBCDField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZFMTBCDField.FilledValueWasNull(var Value: TBCD): Boolean;
@@ -9119,11 +8796,6 @@ begin
     end else Result := False;
 end;
 
-procedure TZFMTBCDField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZFMTBCDField.SetAsCurrency(Value: Currency);
 var BCD: TBCD;
@@ -9132,11 +8804,6 @@ begin
   SetAsBCD(BCD);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
-
-procedure TZFMTBCDField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
 
 { TZBooleanField }
 
@@ -9168,12 +8835,6 @@ end;
 function TZBooleanField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZBooleanField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZBooleanField.FilledValueWasNull(var Value: Boolean): Boolean;
@@ -9231,11 +8892,6 @@ begin
     end else Result := False;
 end;
 
-procedure TZBooleanField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 procedure TZBooleanField.SetAsBoolean(Value: Boolean);
   procedure DoValidate(W: Word);
   begin
@@ -9270,11 +8926,6 @@ begin
   else SetAsBoolean(Value);
 end;
 
-procedure TZBooleanField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZGuidField }
 
 procedure TZGuidField.Bind(Binding: Boolean);
@@ -9305,12 +8956,6 @@ end;
 function TZGuidField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZGuidField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZGuidField.FilledValueWasNull(var Value: TGUID): Boolean;
@@ -9358,11 +9003,6 @@ begin
     end else Result := False;
 end;
 
-procedure TZGuidField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 procedure TZGuidField.SetAsGuid(const Value: TGUID);
 var P: PGUID;
   procedure DoValidate;
@@ -9394,11 +9034,6 @@ begin
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;
-end;
-
-procedure TZGuidField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
 end;
 
 { TZRawStringField }
@@ -9453,12 +9088,6 @@ end;
 function TZRawStringField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZRawStringField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -9555,11 +9184,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZRawStringField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -9740,11 +9364,6 @@ begin
   end;
 end;
 
-procedure TZRawStringField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZUnicodeStringField }
 
 procedure TZUnicodeStringField.Bind(Binding: Boolean);
@@ -9781,12 +9400,6 @@ end;
 function TZUnicodeStringField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZUnicodeStringField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -9848,11 +9461,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZUnicodeStringField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -10003,11 +9611,6 @@ begin
   end;
 end;
 
-procedure TZUnicodeStringField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZBytesField }
 
 procedure TZBytesField.Bind(Binding: Boolean);
@@ -10040,12 +9643,6 @@ begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
-procedure TZBytesField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
-end;
-
 function TZBytesField.GetIsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -10073,16 +9670,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZBytesField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
-procedure TZBytesField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
 end;
 
 { TZVarBytesField }
@@ -10115,12 +9702,6 @@ end;
 function TZVarBytesField.CreateUnBoundError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
-procedure TZVarBytesField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 function TZVarBytesField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
@@ -10166,11 +9747,6 @@ begin
     end else Result := False;
 end;
 
-procedure TZVarBytesField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
 procedure TZVarBytesField.SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF});
 var L: NativeUInt;
 begin
@@ -10185,11 +9761,6 @@ begin
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;
-end;
-
-procedure TZVarBytesField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
 end;
 
 { TZRawCLobField }
@@ -10264,12 +9835,6 @@ begin
     then SetAsWideString(Value)
     {$ENDIF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     else SetAsString(Value);
-end;
-
-procedure TZRawCLobField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -10427,11 +9992,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZRawCLobField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -10606,12 +10166,8 @@ begin
 end;
 {$ENDIF NO_UTF8STRING}
 
-procedure TZRawCLobField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
-
 { TZUnicodeCLobField }
+
 {$IFDEF WITH_WIDEMEMO}
 procedure TZUnicodeCLobField.Bind(Binding: Boolean);
 begin
@@ -10671,12 +10227,6 @@ begin
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;
-end;
-
-procedure TZUnicodeCLobField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -10828,11 +10378,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZUnicodeCLobField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -11000,10 +10545,6 @@ begin
 end;
 {$ENDIF NO_UTF8STRING}
 
-procedure TZUnicodeCLobField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
-end;
 {$ENDIF WITH_WIDEMEMO}
 
 { TZBLobField }
@@ -11038,12 +10579,6 @@ begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
-procedure TZBLobField.DefineProperties(Filer: TFiler);
-begin
-  inherited Defineproperties(Filer);
-  Filer.DefineProperty('ResultSetFieldIndex', ReadFieldIndex, WriteFieldIndex, True);
-end;
-
 function TZBLobField.GetIsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -11071,16 +10606,6 @@ begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-
-procedure TZBLobField.ReadFieldIndex(Reader: TReader);
-begin
-  FFieldIndex := Reader.ReadInteger;
-end;
-
-procedure TZBLobField.WriteFieldIndex(Writer: TWriter);
-begin
-  Writer.WriteInteger(FFieldIndex);
 end;
 
 initialization
