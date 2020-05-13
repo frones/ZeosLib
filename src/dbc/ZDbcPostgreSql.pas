@@ -1502,6 +1502,7 @@ var
   P: PAnsiChar;
   EscapedLen: NativeUInt;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
   if Assigned(FPlainDriver.PQescapeStringConn) or Assigned(FPlainDriver.PQescapeString) then begin
     if (Len+Byte(Ord(Quoted))) shl 1 > (SizeOf(Buf)-1) then begin
       SetLength(Result, (Len+Byte(Ord(Quoted))) shl 1);

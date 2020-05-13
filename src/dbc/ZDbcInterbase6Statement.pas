@@ -613,6 +613,7 @@ begin
       stExecProc: { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
           FOutParamResultSet := CreateResultSet;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //nothing todo
     end;
   { Logging Execution }
   if DriverManager.HasLoggingListener then

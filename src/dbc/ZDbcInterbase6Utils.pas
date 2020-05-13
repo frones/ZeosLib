@@ -605,6 +605,7 @@ begin
           ToBuff(AnsiChar(Length(tmp)), Buf, Result);
           ToBuff(tmp, Buf, Result);
         end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //pvtUnimpl
     end;
   end;
   FlushBuff(Buf, Result);
@@ -1953,6 +1954,7 @@ begin
   end;
 
   {EH: now move our data to result ! ONE ALLOC ! of result (: }
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
   SetLength(Result, StmtLength+LBlockLen);
   PResult := Pointer(Result);
   Put([EBStart], PResult);

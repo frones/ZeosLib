@@ -587,6 +587,7 @@ var
 begin
   OnlyDataFields := True;
   FieldCount := 0;
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, FieldCount);
   Tokens := Tokenizer.TokenizeBufferToList(FieldNames,
     [toSkipEOF, toSkipWhitespaces, toUnifyNumbers]);
@@ -640,20 +641,17 @@ var
   I: Integer;
   Current: TField;
 begin
-  if Expression.Expression <> '' then
-  begin
+  result := nil;
+  if Expression.Expression <> '' then begin
     SetLength(Result, Expression.DefaultVariables.Count);
-    for I := 0 to Expression.DefaultVariables.Count - 1 do
-    begin
+    for I := 0 to Expression.DefaultVariables.Count - 1 do begin
       Current := DataSet.FindField(Expression.DefaultVariables.Names[I]);
       if Current <> nil then
         Result[I] := Current
       else
         Result[I] := nil;
     end;
-  end
-  else
-    SetLength(Result, 0);
+  end;
 end;
 
 {**
@@ -1357,7 +1355,9 @@ begin
   OnlyDataFields := True;
   FieldCount := 0;
   PrevTokenWasField := False;
+  {$IFDEF WITH_VAR_INIT_WARNING}FieldRefs := nil;{$ENDIF}
   SetLength(FieldRefs, FieldCount);
+  {$IFDEF WITH_VAR_INIT_WARNING}CompareKinds := nil;{$ENDIF}
   SetLength(CompareKinds, FieldCount);
   Tokens := CommonTokenizer.TokenizeBufferToList(SortedFields,
     [toSkipEOF, toSkipWhitespaces, toUnifyNumbers]);
@@ -1433,6 +1433,7 @@ function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
 var I, Idx: Integer;
   a: Integer;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Fields.Count);
   IndexPairList := TZIndexPairList.Create;
   IndexPairList.Capacity := Fields.Count;

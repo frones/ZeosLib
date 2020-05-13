@@ -1816,8 +1816,8 @@ begin
       + ' c.relname AS TABLE_NAME, ' + TableType + ' AS TABLE_TYPE,'
       + ' NULL AS REMARKS FROM pg_class c WHERE true ';
   end;
-
   if (Pointer(Types) = nil) then begin
+    {$IFDEF WITH_VAR_INIT_WARNING}LTypes := nil;{$ENDIF}
     SetLength(LTypes, 3);
     // SetLength(LTypes, 6);
     LTypes[0] := 'TABLE';

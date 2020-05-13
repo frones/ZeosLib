@@ -269,6 +269,7 @@ begin
             ErrorStringW := FirstNErrW+'['+IntToUnicode(NativeError)+']:'+FirstMsgW;
           end else begin
             NErrW := IntToUnicode(NativeError);
+            {$IFDEF WITH_VAR_INIT_WARNING}MsgW := '';{$ENDIF}
             SetLength(MsgW, SizeOf(TSQLSTATE)+Length(NErrW)+2+TextLength);
             P := Pointer(MsgW);
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateW, P^, SQL_SQLSTATE_SIZE  shl 1);
@@ -299,6 +300,7 @@ begin
             ErrorStringA := FirstNErrA+'['+IntToRaw(NativeError)+']:'+FirstMsgA;
           end else begin
             NErrA := IntToRaw(NativeError);
+            {$IFDEF WITH_VAR_INIT_WARNING}MsgA := '';{$ENDIF}
             SetLength(MsgA, SizeOf(TSQLSTATE)+Length(NErrA)+2+TextLength);
             P := Pointer(MsgA);
             {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateA, P^, SQL_SQLSTATE_SIZE);
@@ -657,6 +659,7 @@ begin
     stAsciiStream,
     stUnicodeStream,
     stBinaryStream:             Result := SizeOf(Pointer){we use SQL_DATA_AT_EXEC and this userdefined token points to our lob-interface};
+    else raise EZSQLException.Create(SUnsupportedOperation);
   end;
 end;
 
@@ -685,6 +688,7 @@ begin
       //set minimum Major Version 3
       Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0)), 'Couln''t set minimum ODBC-Version 3.0');
     Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC)), 'Couldn''t allocate a DBC handle');
+    {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
     SetLength(Result, 1024);
     aLen := 0;
     if SQL_SUCCEDED(ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,

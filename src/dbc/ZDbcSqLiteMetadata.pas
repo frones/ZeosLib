@@ -1454,6 +1454,7 @@ begin
       ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'table_info('''+TblTmp+''')');
       FillResult(ResSet, UndefinedVarcharAsStringLength, ColumnNamePattern, SchemaTmp, TblTmp);
     end else begin
+      {$IFDEF WITH_VAR_INIT_WARNING}TableTypes := nil;{$ENDIF}
       SetLength(TableTypes, 1);
       TableTypes[0] := 'TABLE';
       TblRS := GetTables(Catalog, SchemaPattern, TableNamePattern, TableTypes);

@@ -581,6 +581,7 @@ begin
                 end;
       stAsciiStream, stUnicodeStream:
         Result := StrToBoolEx(IZBlob(ColumnBuffer).{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetString{$ENDIF});
+      else raise CreateConversionError(ColumnIndex, ColumnType, stBoolean);
     end;
   end;
 end;
@@ -1770,6 +1771,7 @@ Fail:
     RowNo := LastRowNo + 1;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting Operants to "Int64" could prevent overflow errors.} {$ENDIF}
 procedure TAbstractColumnODBCResultSet.Open;
 var
   bufSQLLEN: SQLLEN;
@@ -1803,6 +1805,7 @@ begin
       raise EZSQLException.Create(SCanNotOpenResultSet);
     RowSize := 0;
     LobsInResult := False;
+    {$IFDEF WITH_VAR_INIT_WARNING}StrBuf := nil;{$ENDIF}
     SetLength(StrBuf, (Max(32,
       Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxTableNameLength,
         Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxSchemaNameLength,
@@ -1956,6 +1959,7 @@ begin
     inherited Open;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TAbstractColumnODBCResultSet.ResetCursor;
 begin

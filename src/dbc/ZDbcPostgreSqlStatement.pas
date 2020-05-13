@@ -380,6 +380,7 @@ LenOfBuf: PA := TempBlob.GetBuffer(FRawTemp, L);
   var FTempRaws: TRawByteStringDynArray;
     J: Cardinal;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}FTempRaws := nil;{$ENDIF}
     SetLength(FTempRaws, DynArrayLen);
     case Arr.VArrayVariantType of
       {$IFNDEF UNICODE}
@@ -412,6 +413,7 @@ LenOfBuf: PA := TempBlob.GetBuffer(FRawTemp, L);
                       fUniTemp := PRawToUnicode(TZCharRecDynArray(Dyn)[j].P, TZCharRecDynArray(Dyn)[j].Len, TZCharRecDynArray(Dyn)[j].CP);
                       FTempRaws[j] := ZUnicodeToRaw(fUniTemp, CP)
                     end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} {inherited checked this already}
     end;
     Dyn := FTempRaws;
     BindRawStrings;
@@ -848,6 +850,7 @@ begin
         end;
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream: BindLobs;
+    else raise ZdbcUtils.CreateUnsupportedParameterTypeException(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType);
   end;
 end;
 
@@ -1207,6 +1210,7 @@ var
                         PGNumeric2BCD(PAnsiChar(BindValue.Value)+SizeOf(LengthInt), BCD{%H-});
                         SQLWriter.AddDecimal(BCD, TmpSQL);
                       end;
+          {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} {inherited checked this already}
         end;
         Inc(N);
       end else
@@ -1970,7 +1974,8 @@ begin
       stTimeStamp:  if Finteger_datetimes
                     then DateTime2PG(Value, PInt64(FPQparamValues[InParamIdx])^)
                     else DateTime2PG(Value, PDouble(FPQparamValues[InParamIdx])^);
-                    end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible
+    end;
   end else SetAsRaw;
 end;
 
@@ -2011,6 +2016,7 @@ begin
                       ScaledOrdinal2BCD(Value, 0, PBCD(@fABuffer[0])^);
                       BCD2PGNumeric(PBCD(@fABuffer[0])^, P, FPQparamLengths[InParamIdx]);
                     end;
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible
     end;
   end else SetAsRaw;
 end;
@@ -2073,6 +2079,7 @@ var
                       TS.IsNegative := False;
                       SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},TS);
                     end;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible ?
       end;
   end;
 begin
@@ -2488,6 +2495,7 @@ begin
       stFloat:    Single2PG(Value, FPQparamValues[Idx]);
       stDouble:   Double2PG(Value, FPQparamValues[Idx]);
       stCurrency: Currency2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
+      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible
     end;
   end else SetAsRaw;
 {$ENDIF}

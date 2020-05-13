@@ -304,10 +304,8 @@ begin
   try
     TokenIndex := 0;
 
-    while TokenIndex < Tokens.Count do
-    begin
+    while TokenIndex < Tokens.Count do begin
       TokenType := ttUnknown;
-      TokenValue := NullVariant;
       case Tokens[TokenIndex]^.TokenType of
         ttKeyword:
           begin
@@ -360,8 +358,8 @@ begin
             TokenValue:= EncodeDateTime(StrToDateTime(Temp));
             TokenValue.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF} := Temp; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
-
       if TokenType = ttUnknown then
         raise TZParseError.Create(Format(SUnknownSymbol, [Tokens[TokenIndex]]));
 

@@ -1013,6 +1013,7 @@ begin
                               (ConSettings.ClientCodePage.CharWidth*Ord((FClientEncoding <> ceUTF16) and (TZCharRecDynArray(DA)[i].CP = zCP_UTF16))));
         vtBytes:         for I := 0 to ArrayLen -1 do
                             MaxL := Max(MaxL, Length(TBytesDynArray(DA)[i]));
+        else raise CreateUnsupportedParameterTypeException(Index, SQLType);
       end;
     end
   else MaxL := Bind.BufferLength;
@@ -1233,6 +1234,7 @@ begin
           vtRawByteString: BindRawStrings(FClientCP);
           vtCharRec:       for I := 0 to ArrayLen -1 do
                               MaxL := Max(MaxL, Integer(TZCharRecDynArray(DA)[i].Len));
+           else raise CreateUnsupportedParameterTypeException(Index, SQLType);
         end;
       stBytes:              for I := 0 to ArrayLen -1 do begin
                               if IsNullFromArray(Arr, I)
@@ -1249,7 +1251,9 @@ begin
                               Inc(P, Bind.BufferLength);
                             end;
       stAsciiStream, stUnicodeStream, stBinaryStream: BinLobs;
+      else raise ZDbcUtils.CreateUnsupportedParameterTypeException(Index, SQLType);
     end;
+
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
   if BindAgain then

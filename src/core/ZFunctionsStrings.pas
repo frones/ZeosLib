@@ -266,7 +266,7 @@ begin
     Result := Len1;
     Exit;
   end;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}d := nil;{$ENDIF}
   setlength(d, Len1 + 1, Len2 + 1);
   for i := 0 to Len1 do
     d[i, 0] := i;
