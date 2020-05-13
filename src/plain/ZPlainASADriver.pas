@@ -206,6 +206,12 @@ type
       Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
       LongNames: Word; UnknownUint2: Longword)
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    {ASA16 dbpp_prepare_describe_16, SQLCA *,char *,char *,short int *,char *,struct sqlda *,struct sqlda *,unsigned int, unsigned short int, a_sql_uint32 )))}
+    Fdbpp_prepare_describe_16: procedure (SQLCA: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+      Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
+      LongNames: Word; UnknownUint2: Longword)
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     Fdbpp_select: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
       ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor1,
@@ -466,6 +472,7 @@ begin
     @Fdbpp_describe_cursor   := GetAddress('dbpp_describe_cursor');
     @Fdbpp_prepare_describe  := GetAddress('dbpp_prepare_describe');
     @Fdbpp_prepare_describe_12  := GetAddress('dbpp_prepare_describe_12');
+    @Fdbpp_prepare_describe_16  := GetAddress('dbpp_prepare_describe_16');
     @Fdbpp_select            := GetAddress('dbpp_select');
     @Fdbpp_open              := GetAddress('dbpp_open');
     @Fdbpp_close             := GetAddress('dbpp_close');
@@ -675,7 +682,10 @@ begin
   else
     if Assigned(Fdbpp_prepare_describe_12) then
     Fdbpp_prepare_describe_12(sqlca, nil, ProgName, StatementNum,
-        SqlStatement, nil, Descriptor, WhatToDesc, LongNames, U1);
+        SqlStatement, nil, Descriptor, WhatToDesc, LongNames, U1)
+    else if Assigned(Fdbpp_prepare_describe_16) then
+      Fdbpp_prepare_describe_16(sqlca, nil, ProgName, StatementNum,
+        SqlStatement, nil, Descriptor, WhatToDesc, LongNames, U1)
 end;
 
 procedure TZASABasePlainDriver.db_declare(sqlca: PZASASQLCA; CursorName: PAnsiChar;
