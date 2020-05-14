@@ -255,8 +255,7 @@ type
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     Fdbpp_execute_imm: procedure(sqlca: PZASASQLCA; SqlRecordStatement:
-      PAnsiChar;
-      UnKnown1: Word);
+      PAnsiChar; UnKnown1: Word);
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     Fdbpp_put_into: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;

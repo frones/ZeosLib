@@ -88,11 +88,15 @@ type
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
     FPLainDriver: IZASAPlainDriver;
+    FHostVersion: Integer;
   private
-    procedure StartTransaction; virtual;
     function DetermineASACharSet: String;
+    procedure DetermineHostVersion;
   protected
     procedure InternalCreate; override;
+
+    procedure SetOption(Temporary: Integer; User: PAnsiChar; const Option: string;
+      const Value: string);
   public
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: IZASAPlainDriver;
@@ -105,10 +109,12 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
 
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+
     procedure Commit; override;
     procedure Rollback; override;
-    procedure SetOption(Temporary: Integer; User: PAnsiChar; const Option: string;
-      const Value: string);
+    procedure SetAutoCommit(Value: Boolean); override;
+
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -132,7 +138,7 @@ implementation
 
 uses
   ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZDbcLogging, ZSysUtils, ZEncoding
+  ZSybaseAnalyser, ZDbcLogging, ZSysUtils, ZEncoding, ZMessages
   {$IF not defined(OLDFPC) and not defined(NO_UNIT_CONTNRS)},ZClasses{$IFEND}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -231,10 +237,6 @@ begin
   if Closed or (not Assigned(PlainDriver))then
      Exit;
 
-  if AutoCommit
-  then Commit
-  else Rollback;
-
   GetPlainDriver.db_string_disconnect(FHandle, nil);
   CheckASAError( GetPlainDriver, FHandle, lcDisconnect, ConSettings);
 
@@ -255,13 +257,18 @@ end;
 }
 procedure TZASAConnection.Commit;
 begin
-  if Closed or AutoCommit then
-     Exit;
-
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
   if FHandle <> nil then
   begin
     GetPlainDriver.db_commit(FHandle, 0);
     CheckASAError(GetPlainDriver, FHandle, lcTransaction, ConSettings);
+    if FHostVersion >= 17000000
+    then SetOption(1, nil, 'AUTO_COMMIT', 'Off')
+    else SetOption(1, nil, 'chained', 'On');
+    AutoCommit := False;
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, 'TRANSACTION COMMIT');
   end;
@@ -412,6 +419,7 @@ var
   {$IFDEF UNICODE}
   RawTemp: RawByteString;
   {$ENDIF}
+  ASATL: integer;
 begin
   if not Closed then
      Exit;
@@ -474,24 +482,27 @@ begin
       {$ENDIF}
         CheckASAError(GetPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
 
-    StartTransaction;
-
     //SetConnOptions     RowCount;
 
-  except
-    on E: Exception do
-    begin
-      if Assigned(FHandle) then
-        GetPlainDriver.db_fini(FHandle);
+    inherited Open;
+  finally
+    if IsClosed and (FHandle = nil) then begin
+      GetPlainDriver.db_fini(FHandle);
       FHandle := nil;
-      raise;
     end;
   end;
 
-  inherited Open;
-
   if FClientCodePage = ''  then
     CheckCharEncoding(DetermineASACharSet);
+  DetermineHostVersion;
+  { notify autocommit value of client }
+  AutoCommit := not AutoCommit;
+  SetAutoCommit(not AutoCommit);
+  { set til }
+  ASATL := Ord(TransactIsolationLevel);
+  if ASATL > 1 then
+    ASATL := ASATL - 1;
+  SetOption(1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr(ASATL));
 end;
 
 {**
@@ -503,13 +514,18 @@ end;
 }
 procedure TZASAConnection.Rollback;
 begin
-  if Closed or AutoCommit then
-     Exit;
-
+  if Closed then
+    raise EZSQLException.Create(SConnectionIsNotOpened);
+  if AutoCommit then
+    raise EZSQLException.Create(SCannotUseCommit);
   if Assigned(FHandle) then
   begin
     GetPlainDriver.db_rollback(FHandle, 0);
     CheckASAError(GetPlainDriver, FHandle, lcTransaction, ConSettings);
+    if FHostVersion >= 17000000
+    then SetOption(1, nil, 'AUTO_COMMIT', 'Off')
+    else SetOption(1, nil, 'chained', 'On');
+    AutoCommit := False;
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
   end;
@@ -517,6 +533,21 @@ end;
 
 const
   SQLDA_sqldaid: PAnsiChar = 'SQLDA   ';
+
+procedure TZASAConnection.SetAutoCommit(Value: Boolean);
+begin
+  if Value <> AutoCommit then begin
+    AutoCommit := Value;
+    if not Closed then
+      if Value then
+        if FHostVersion >= 17000000
+        then SetOption(1, nil, 'AUTO_COMMIT', 'On')
+        else SetOption(1, nil, 'chained', 'Off')
+      else if FHostVersion >= 17000000
+        then SetOption(1, nil, 'AUTO_COMMIT', 'Off')
+        else SetOption(1, nil, 'chained', 'On');
+  end;
+end;
 
 procedure TZASAConnection.SetOption(Temporary: Integer; User: PAnsiChar;
   const Option: string; const Value: string);
@@ -551,23 +582,26 @@ begin
   end;
 end;
 
+procedure TZASAConnection.SetTransactionIsolation(
+  Level: TZTransactIsolationLevel);
+var ASATL: integer;
+begin
+  if (Level = tiNone) then
+    Level := tiReadUnCommitted;
+  if Level <>  TransactIsolationLevel then begin
+    if not IsClosed then begin
+      ASATL := Ord(TransactIsolationLevel);
+      if ASATL > 1 then
+        ASATL := ASATL - 1;
+      SetOption(1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr(ASATL));
+    end;
+    TransactIsolationLevel := Level;
+  end;
+end;
+
 {**
    Start transaction
 }
-procedure TZASAConnection.StartTransaction;
-var
-  ASATL: integer;
-begin
-  if AutoCommit then
-    SetOption(1, nil, 'CHAINED', 'OFF')
-  else
-    SetOption(1, nil, 'CHAINED', 'ON');
-  ASATL := Ord(TransactIsolationLevel);
-  if ASATL > 1 then
-    ASATL := ASATL - 1;
-  SetOption(1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr(ASATL));
-end;
-
 function TZASAConnection.DetermineASACharSet: String;
 var
   Stmt: IZStatement;
@@ -579,6 +613,32 @@ begin
     Result := RS.GetString(FirstDbcIndex)
   else
     Result := '';
+  RS := nil;
+  Stmt.Close;
+  Stmt := nil;
+end;
+
+procedure TZASAConnection.DetermineHostVersion;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+  P: PAnsiChar;
+  L: NativeUint;
+  Code, Major, Minior, Sub: Integer;
+begin
+  Stmt := CreateStatementWithParams(Info);
+  RS := Stmt.ExecuteQuery('SELECT PROPERTY(''ProductVersion'')');
+  if RS.Next
+  then P := RS.GetPAnsiChar(FirstDbcIndex, L)
+  else P := nil;
+  if P <> nil then begin
+    Major := ValRawInt(P, Code);
+    Inc(P, Code);
+    Minior := ValRawInt(P, Code);
+    Inc(P, Code);
+    Sub := ValRawInt(P, Code);
+    FHostVersion := ZSysUtils.EncodeSQLVersioning(Major, Minior, Sub);
+  end;
   RS := nil;
   Stmt.Close;
   Stmt := nil;

@@ -387,8 +387,8 @@ begin
     LastUpdateCount := Result;
   end;
   { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
+//  if Connection.GetAutoCommit then
+//    Connection.Commit;
   { Logging SQL Command and values }
   inherited ExecuteUpdatePrepared;
 end;
