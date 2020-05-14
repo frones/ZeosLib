@@ -1986,7 +1986,75 @@ end;
 
 function OCIType2Name(DataType: ub2): String;
 begin
-  Result := '';
+  case DataType of
+    SQLT_CHR: Result := 'CHAR';
+    SQLT_NUM: Result := 'NUMBER';
+    SQLT_INT: Result := 'INT';
+    (*
+    SQLT_FLT = 4  ;       //(ORANET TYPE) Floating point number
+    SQLT_STR = 5  ;       //zero terminated string
+    //see https://stackoverflow.com/questions/25808798/ocidefinebypos-extract-number-value-via-cursor-in-c
+    SQLT_VNU = 6  ;       //NUM with preceding length byte suggested tu use in OCICalls see orl.h
+    SQLT_PDN = 7  ;       //(ORANET TYPE) Packed Decimal Numeric
+    SQLT_LNG = 8  ;       //long
+    SQLT_VCS = 9  ;       //Variable character string
+    SQLT_NON = 10 ;       //Null/empty PCC Descriptor entry
+    SQLT_RID = 11 ;       //rowid
+    SQLT_DAT = 12 ;       //date in oracle format
+    SQLT_VBI = 15 ;       //binary in VCS format
+    SQLT_BFLOAT = 21 ;    //Native Binary float
+    SQLT_BDOUBLE = 22 ;   //NAtive binary double
+    SQLT_BIN = 23 ;       //binary data(DTYBIN)
+    SQLT_LBI = 24 ;       //long binary
+    _SQLT_PLI = 29;
+    SQLT_UIN = 68 ;       //unsigned integer
+    SQLT_SLS = 91 ;       //Display sign leading separate
+    SQLT_LVC = 94 ;       //Longer longs (char)
+    SQLT_LVB = 95 ;       //Longer long binary
+    SQLT_AFC = 96 ;       //char[n] Ansi fixed char
+    SQLT_AVC = 97 ;       //char[n+1] Ansi Var char
+    SQLT_IBFLOAT = 100;   //binary float canonical
+    SQLT_IBDOUBLE = 101;  //binary double canonical
+    SQLT_CUR = 102;       //cursor  type
+    SQLT_RDD = 104;       //rowid descriptor
+    SQLT_LAB = 105;       //label type
+    SQLT_OSL = 106;       //oslabel type
+    SQLT_NTY = 108;       //named object type
+    SQLT_REF = 110;       //ref typ
+    SQLT_CLOB = 112;      //character lob
+    SQLT_BLOB = 113;      //binary lob
+    SQLT_BFILEE = 114;    //binary file lob
+    SQLT_CFILEE = 115;    //character file lob
+    SQLT_RSET = 116;      //result set type
+    SQLT_NCO = 122;       //named collection type (varray or nested table)
+    SQLT_VST = 155;       //OCI STRING type / *OCIString
+    SQLT_ODT = 156;       //OCIDate type
+
+    { datetimes and intervals }
+    SQLT_DATE = 184;            //ANSI Date
+    SQLT_TIME = 185;            //TIME
+    SQLT_TIME_TZ = 186;         //TIME WITH TIME ZONE
+    SQLT_TIMESTAMP = 187;       //TIMESTAMP
+    SQLT_TIMESTAMP_TZ = 188;    //TIMESTAMP WITH TIME ZONE
+    SQLT_INTERVAL_YM = 189;     //INTERVAL YEAR TO MONTH
+    SQLT_INTERVAL_DS = 190;     //INTERVAL DAY TO SECOND
+    SQLT_TIMESTAMP_LTZ = 232;   //TIMESTAMP WITH LOCAL TZ
+
+    _SQLT_REC = 250;
+    _SQLT_TAB = 251;
+    _SQLT_BOL = 252;
+
+    { > typecode defines from oro.h }
+    OCI_TYPECODE_REF              = SQLT_REF; //SQL/OTS OBJECT REFERENCE
+    OCI_TYPECODE_VARRAY           = 247;      //SQL VARRAY  OTS PAGED VARRAY
+    OCI_TYPECODE_TABLE            = 248;      //SQL TABLE  OTS MULTISET
+    OCI_TYPECODE_OBJECT           = SQLT_NTY; //SQL/OTS NAMED OBJECT TYPE
+    OCI_TYPECODE_OPAQUE           = 58;       //SQL/OTS Opaque Types
+    OCI_TYPECODE_NAMEDCOLLECTION  = SQLT_NCO;
+
+    *)
+    else Result := 'unknown'
+  end;
 end;
 
 { TZOraProcDescriptor_A }
@@ -2046,11 +2114,11 @@ begin
     PlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil),
       lcOther,'OCIHandleAlloc', ConSettings);
   Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(Name),
-        Length(Name), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
+        Length(Name), OCI_OTYPE_NAME, 0, _Type, Descriptor);
   if Result <> OCI_SUCCESS then begin
     tmp := '"PUBLIC".'+Name;
     Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(tmp),
-        Length(tmp), OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
+        Length(tmp), OCI_OTYPE_NAME, 0, _Type, Descriptor);
   end;
 
   try
@@ -2241,13 +2309,13 @@ begin
   IC := Connection.GetMetadata.GetIdentifierConvertor;
   Plain := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   { describe the object: }
-  Status := InternalDescribe(ProcSQL, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+  Status := InternalDescribe(ProcSQL, _Type, Plain, OracleConnection.GetErrorHandle,
     OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
   if (Status <> OCI_SUCCESS) then begin
     ps := ZFastCode.PosEx(RawByteString('.'), ProcSQL);
     if ps <> 0 then begin //check wether Package or Schema!
       tmp := Copy(ProcSQL, 1, ps-1);
-      Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+      Status := InternalDescribe(tmp, _Type, Plain, OracleConnection.GetErrorHandle,
         OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
       if Status <> OCI_SUCCESS then begin
         ps2 := ZFastCode.PosEx(RawByteString('.'), ProcSQL, ps+1);
@@ -2358,13 +2426,13 @@ begin
   IC := Connection.GetMetadata.GetIdentifierConvertor;
   Plain := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   { describe the object: }
-  Status := InternalDescribe(ProcSQL, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+  Status := InternalDescribe(ProcSQL, _Type, Plain, OracleConnection.GetErrorHandle,
     OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
   if (Status <> OCI_SUCCESS) then begin
     ps := ZFastCode.Pos(UnicodeString('.'), ProcSQL);
     if ps <> 0 then begin //check wether Package or Schema!
       tmp := Copy(ProcSQL, 1, ps-1);
-      Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
+      Status := InternalDescribe(tmp, _Type, Plain, OracleConnection.GetErrorHandle,
         OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
       if Status <> OCI_SUCCESS then begin
         ps2 := ZFastCode.PosEx(UnicodeString('.'), ProcSQL, ps+1);
@@ -2452,7 +2520,7 @@ jmpDescibe:
   objptr := Pointer(tmp);
   objnm_len := Length(tmp) shl 1;
   Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, objptr,
-        objnm_len, OCI_OTYPE_NAME, 0, OCI_PTYPE_UNK, Descriptor);
+        objnm_len, OCI_OTYPE_NAME, 0, _Type, Descriptor);
   if (Result <> OCI_SUCCESS) and (tmp = Name) then begin
     tmp := '"PUBLIC".'+Name;
     goto jmpDescibe;

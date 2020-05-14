@@ -60,7 +60,7 @@ uses
   Windows,
 {$ENDIF}
   Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
-  {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  TypInfo, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
   ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils, ZClasses
   {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
@@ -613,7 +613,6 @@ type
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     function IsRowDataAvailable: Boolean;
     procedure SetInvalidText(const Value: String);
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     function GetAsDateTime: TDateTime; override;
@@ -650,7 +649,6 @@ type
     procedure SetInvalidText(const Value: String);
     procedure SetAdjSecFracFmt(Value: Boolean);
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     function FilledValueWasNull(Var Value: TZTimeStamp): Boolean;
@@ -690,7 +688,6 @@ type
     procedure SetInvalidText(const Value: String);
     procedure SetAdjSecFracFmt(Value: Boolean);
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     function GetAsDateTime: TDateTime; override;
@@ -718,7 +715,6 @@ type
     FBound: Boolean;
     function FilledValueWasNull(var Value: Boolean): Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     function GetAsBoolean: Boolean; override;
@@ -741,7 +737,6 @@ type
     function GetAsSmallInt: SmallInt;
     procedure SetAsSmallInt(Value: SmallInt);
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
@@ -760,7 +755,6 @@ type
     function GetAsShortInt: ShortInt;
     procedure SetAsShortInt(Value: ShortInt);
   {$IFDEF WITH_FTSHORTINT}
-    function CreateUnBoundError: EZDatabaseError;
     function IsRowDataAvailable: Boolean;
   protected
     procedure Bind(Binding: Boolean); override;
@@ -784,7 +778,6 @@ type
     function GetAsWord: Word;
     procedure SetAsWord(Value: Word);
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
@@ -803,7 +796,6 @@ type
     {$IFDEF WITH_FTBYTE}FFieldIndex: Integer;{$ENDIF}
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     {$IFDEF WITH_FTBYTE}FBound: Boolean;{$ENDIF}
-    {$IFDEF WITH_FTBYTE}function CreateUnBoundError: EZDatabaseError;{$ENDIF}
     function GetAsByte: Byte;
     procedure SetAsByte(Value: Byte);
   {$IFDEF WITH_FTBYTE}
@@ -832,7 +824,6 @@ type
     function GetAsInt: Integer;
     procedure SetAsInt(Value: Integer);
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
@@ -855,7 +846,6 @@ type
     FFieldIndex: Integer;
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     FBound: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
     function IsRowDataAvailable: Boolean;
     function FilledValueWasNull(var Value: Largeint): Boolean;
   protected
@@ -884,7 +874,6 @@ type
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     {$IFDEF WITH_FTLONGWORD}FBound: Boolean;{$ENDIF}
     {$IFDEF WITH_FTLONGWORD}function IsRowDataAvailable: Boolean;{$ENDIF}
-    {$IFDEF WITH_FTLONGWORD}function CreateUnBoundError: EZDatabaseError;{$ENDIF}
   protected
     function GetAsCardinal: Cardinal; {$IFNDEF WITH_FTLONGWORD}override;{$ENDIF}
     procedure SetAsCardinal(Value: Cardinal);{$IFNDEF WITH_FTLONGWORD}override;{$ENDIF}
@@ -970,7 +959,6 @@ type
     FBound: Boolean;
     function IsRowDataAvailable: Boolean;
     function FilledValueWasNull(var Value: Double): Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     procedure Bind(Binding: Boolean); override;
     function GetIsNull: Boolean; override;
@@ -991,9 +979,6 @@ type
     {$IFDEF WITH_FTSINGLE}FBound: Boolean;{$ENDIF}
     {$IFDEF WITH_FTSINGLE}function IsRowDataAvailable: Boolean;{$ENDIF}
     function FilledValueWasNull(var Value: Single): Boolean;
-  {$IFDEF WITH_FTSINGLE}
-    function CreateUnBoundError: EZDatabaseError;
-  {$ENDIF WITH_FTSINGLE}
   protected
   {$IFDEF WITH_FTSINGLE}
     procedure Bind(Binding: Boolean); override;
@@ -1026,7 +1011,6 @@ type
     function IsRowDataAvailable: Boolean;
     function FilledValueWasNull(var Value: Currency): Boolean;
     {$IFNDEF TFIELD_HAS_ASLARGEINT}procedure SetAsLargeInt(const Value: LargeInt); {$ENDIF}
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     function GetAsBCD: TBcd; override;
@@ -1051,7 +1035,6 @@ type
     FBound: Boolean;
     function FilledValueWasNull(var Value: TBCD): Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     function GetAsCurrency: Currency; override;
@@ -1074,7 +1057,6 @@ type
     FBound: Boolean;
     function FilledValueWasNull(var Value: TGUID): Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetAsGuid: TGUID; {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID}override;{$ENDIF}
     procedure SetAsGuid(const Value: TGUID); {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID}override;{$ENDIF}
@@ -1096,7 +1078,6 @@ type
     FValidateBuffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}RawByteString{$ENDIF};
     FBound: Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
     function CreateSizeError: EZDatabaseError;
     procedure SetPWideChar(P: Pointer; Len: NativeUint);
   protected
@@ -1154,7 +1135,6 @@ type
     FValidateBuffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}UnicodeString{$ENDIF};
     FBound: Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
     function CreateSizeError: EZDatabaseError;
     procedure SetPWideChar(P: PWideChar; Len: NativeUint);
   protected
@@ -1200,7 +1180,6 @@ type
     FFieldIndex: Integer;
     fBound: Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
@@ -1215,7 +1194,6 @@ type
     FFieldIndex: Integer;
     fBound: Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
@@ -1239,7 +1217,6 @@ type
     fBound: Boolean;
     FColumnCP: Word;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
     procedure SetPWideChar(P: Pointer; Len: NativeUint);
   public
     function GetIsNull: Boolean; override;
@@ -1294,7 +1271,6 @@ type
     fBound: Boolean;
     FColumnCP: Word;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
     procedure SetPWideChar(P: Pointer; Len: NativeUint);
   public
     function GetIsNull: Boolean; override;
@@ -1344,7 +1320,6 @@ type
     FFieldIndex: Integer;
     fBound: Boolean;
     function IsRowDataAvailable: Boolean;
-    function CreateUnBoundError: EZDatabaseError;
   protected
     function GetIsNull: Boolean; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
@@ -1509,6 +1484,16 @@ destructor EZDatabaseError.Destroy;
 begin
   FreeAndNil(FSpecificData);
   inherited;
+end;
+
+function CreateFieldConvertionError(const Field: TField): EZDataBaseError;
+begin
+  Result := EZDataBaseError.Create(Format(SErrorConvertionField, [Field.DisplayName, GetEnumName(TypeInfo(TFieldType), Ord(Field.DataType))]));
+end;
+
+function CreateUnBoundError(const Field: TField): EZDatabaseError;
+begin
+  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [Field.DisplayName]));
 end;
 
 { TZDataLink }
@@ -3184,6 +3169,7 @@ begin
           {$IFDEF WITH_FTSINGLE}
           ftSingle: RowAccessor.SetFloat(ColumnIndex, PSingle(Buffer)^);
           {$ENDIF WITH_FTSINGLE}
+          else raise CreateFieldConvertionError(Field);
         end
       else RowAccessor.SetNull(ColumnIndex)
     else if Assigned(Buffer) then
@@ -3293,7 +3279,7 @@ begin
         {$IFDEF WITH_FTSINGLE}
         ftSingle: FResultSet.UpdateFloat(ColumnIndex, PSingle(Buffer)^);
         {$ENDIF WITH_FTSINGLE}
-        else ;{ Processes all other fields ... shold not happen }
+        else raise CreateFieldConvertionError(Field);
       end
     else FResultSet.UpdateNull(ColumnIndex);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
@@ -4282,23 +4268,19 @@ procedure TZAbstractRODataset.InternalPost;
     I: longint;
     columnindex : integer;
   begin
-    For I:=0 to Fields.Count-1 do
-      With Fields[i] do
-        Case State of
-         dsEdit:
-          if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
-            raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
-         dsInsert:
-          if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
-            begin
-           // allow autoincrement and defaulted fields to be null;
-              columnindex := Resultset.FindColumn(Fields[i].FieldName);
-              if (Columnindex = InvalidDbcIndex) or
-                 (not FResultSetMetadata.HasDefaultValue(columnIndex) and
-                  not FResultSetMetadata.IsAutoIncrement(columnIndex)) then
-                raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
-            end;
-        End;
+    For I:=0 to Fields.Count-1 do With Fields[i] do
+      if State = dsEdit then begin
+        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
+          raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+      end else if State = dsInsert then
+        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then begin
+         // allow autoincrement and defaulted fields to be null;
+            columnindex := Resultset.FindColumn(Fields[i].FieldName);
+            if (Columnindex = InvalidDbcIndex) or
+               (not FResultSetMetadata.HasDefaultValue(columnIndex) and
+                not FResultSetMetadata.IsAutoIncrement(columnIndex)) then
+              raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+          end;
   end;
 
 begin
@@ -4445,6 +4427,7 @@ begin
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConvertor);
       FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
+      {$IFDEF WITH_VAR_INIT_WARNING}Temp := nil;{$ENDIF}
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);
       if Length(FieldRefs) = 1 then
@@ -4719,6 +4702,7 @@ begin
   { Checks for equal field and values number }
   if Length(FieldRefs) <> Length(DecodedKeyValues) then
     raise EZDatabaseError.Create(SIncorrectSearchFieldsNumber);
+  {$IFDEF WITH_VAR_INIT_WARNING}RowValues := nil;{$ENDIF}
   SetLength(RowValues, Length(DecodedKeyValues));
 
   VariantManager := Connection.DbcConnection.GetClientVariantManager;
@@ -4852,6 +4836,7 @@ begin
   { Fill result array }
   FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
+  {$IFDEF WITH_VAR_INIT_WARNING}ResultValues := nil;{$ENDIF}
   SetLength(ResultValues, Length(FieldRefs));
   {$IFDEF WITH_AllocRecBuf_TRecBuf}
   SearchRowBuffer := PZRowBuffer(AllocRecBuf);
@@ -5751,7 +5736,7 @@ function TZInt64Field.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -5772,7 +5757,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -5782,7 +5767,7 @@ procedure TZInt64Field.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -5792,11 +5777,6 @@ begin
       end;
     end;
   end;
-end;
-
-function TZInt64Field.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 procedure TZInt64Field.SetAsCardinal(Value: Cardinal);
@@ -5829,7 +5809,7 @@ procedure TZInt64Field.SetAsLargeInt(Value: LargeInt);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -5914,7 +5894,7 @@ procedure TZUInt64Field.SetAsUInt64(Value: UInt64);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -6039,17 +6019,10 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
-end;
-{$ENDIF WITH_FTBYTE}
-
-{$IFDEF WITH_FTBYTE}
-function TZByteField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 {$ENDIF WITH_FTBYTE}
 
@@ -6070,7 +6043,7 @@ function TZByteField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -6103,7 +6076,7 @@ procedure TZByteField.SetAsByte(Value: Byte);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -6128,7 +6101,7 @@ procedure TZByteField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -6149,7 +6122,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -6159,7 +6132,7 @@ end;
 procedure TZShortIntField.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF});
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if (Value < Low(ShortInt)) or (Value > High(ShortInt)) then
     RangeError(Value, Low(ShortInt), High(ShortInt));
   SetAsShortInt(ShortInt(Value));
@@ -6180,7 +6153,7 @@ procedure TZShortIntField.SetAsShortInt(Value: ShortInt);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -6192,13 +6165,6 @@ begin
       DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
-
-{$IFDEF WITH_FTSHORTINT}
-function TZShortIntField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-{$ENDIF WITH_FTSHORTINT}
 
 function TZShortIntField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
 begin
@@ -6217,7 +6183,7 @@ function TZShortIntField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -6240,7 +6206,7 @@ procedure TZShortIntField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -6890,7 +6856,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -6900,7 +6866,7 @@ procedure TZDateField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -6916,11 +6882,6 @@ constructor TZDateField.Create(AOwner: TComponent);
 begin
   FInvalidText := 'NAD';
   inherited Create(AOwner);
-end;
-
-function TZDateField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZDateField.FilledValueWasNull(var Value: TZDate): Boolean;
@@ -7034,7 +6995,7 @@ function TZDateField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -7045,7 +7006,7 @@ end;
 procedure TZDateField.SetAsDate(const Value: TZDate);
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     FResultSet.UpdateDate(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
@@ -7087,7 +7048,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     fScale := TZAbstractRODataset(DataSet).FResultSetMetadata.GetScale(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   end;
@@ -7098,7 +7059,7 @@ procedure TZTimeField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -7115,11 +7076,6 @@ begin
   FInvalidText := 'NAT';
   FAdjSecFracFmt := True;
   inherited Create(AOwner);
-end;
-
-function TZTimeField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZTimeField.FilledValueWasNull(var Value: TZTime): Boolean;
@@ -7256,7 +7212,7 @@ function TZTimeField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -7288,7 +7244,7 @@ procedure TZTimeField.SetAsDateTime(Value: TDateTime);
 var T: TZTime;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if Assigned(OnValidate) then
@@ -7307,7 +7263,7 @@ procedure TZTimeField.SetAsTime(const Value: TZTime);
 var T: TZTime;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     T := Value;
@@ -7333,7 +7289,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     fScale := TZAbstractRODataset(DataSet).FResultSetMetadata.GetScale(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   end;
@@ -7344,7 +7300,7 @@ procedure TZDateTimeField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -7374,11 +7330,6 @@ begin
   FAdjSecFracFmt := True;
   FInvalidText := 'NADT';
   inherited;
-end;
-
-function TZDateTimeField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZDateTimeField.FilledValueWasNull(var Value: TZTimeStamp): Boolean;
@@ -7526,7 +7477,7 @@ function TZDateTimeField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -7561,7 +7512,7 @@ procedure TZDateTimeField.SetAsDateTime(Value: TDateTime);
 var TS: TZTimeStamp;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if Assigned(OnValidate) then
@@ -7580,7 +7531,7 @@ procedure TZDateTimeField.SetAsTimeStamp(const Value: TZTimeStamp);
 var TS: TZTimeStamp;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     TS := Value; //make a copy might be a non writable const
@@ -7606,7 +7557,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -7616,7 +7567,7 @@ procedure TZSmallIntField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -7626,11 +7577,6 @@ begin
       end;
     end;
   end;
-end;
-
-function TZSmallIntField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZSmallIntField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
@@ -7656,7 +7602,7 @@ function TZSmallIntField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -7686,7 +7632,7 @@ procedure TZSmallIntField.SetAsSmallInt(Value: SmallInt);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -7706,7 +7652,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -7716,7 +7662,7 @@ procedure TZWordField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -7726,11 +7672,6 @@ begin
       end;
     end;
   end;
-end;
-
-function TZWordField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZWordField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
@@ -7756,7 +7697,7 @@ function TZWordField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -7786,7 +7727,7 @@ procedure TZWordField.SetAsWord(Value: Word);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -7805,7 +7746,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -7815,7 +7756,7 @@ procedure TZIntegerField.Clear;
 begin
   if FieldKind in [fkData, fkInternalCalc] then begin
     if not FBound then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       Prepare4DataManipulation(Self);
       if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -7825,11 +7766,6 @@ begin
       end;
     end;
   end;
-end;
-
-function TZIntegerField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZIntegerField.FilledValueWasNull(var Value: Integer): Boolean;
@@ -7879,7 +7815,7 @@ function TZIntegerField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -7902,7 +7838,7 @@ procedure TZIntegerField.SetAsInt(Value: Integer);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -7942,7 +7878,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -7951,7 +7887,7 @@ end;
 procedure TZCardinalField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -8047,19 +7983,12 @@ function TZCardinalField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-{$ENDIF WITH_FTLONGWORD}
-
-{$IFDEF WITH_FTLONGWORD}
-function TZCardinalField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 {$ENDIF WITH_FTLONGWORD}
 
@@ -8086,7 +8015,7 @@ procedure TZCardinalField.SetAsCardinal(Value: Cardinal);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -8145,7 +8074,7 @@ end;
 procedure TZSingleField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -8206,7 +8135,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -8257,19 +8186,12 @@ function TZSingleField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
       Result := True;
     end else Result := False;
-end;
-{$ENDIF WITH_FTSINGLE}
-
-{$IFDEF WITH_FTSINGLE}
-function TZSingleField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 {$ENDIF WITH_FTSINGLE}
 
@@ -8303,7 +8225,7 @@ procedure TZSingleField.SetAsSingle(value: Single);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -8330,7 +8252,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -8339,7 +8261,7 @@ end;
 procedure TZDoubleField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -8348,11 +8270,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZDoubleField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function Result does not seem to be initialized} {$ENDIF}
@@ -8425,7 +8342,7 @@ function TZDoubleField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -8456,7 +8373,7 @@ procedure TZDoubleField.SetAsFloat(Value: Double);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if Assigned(OnValidate) then
@@ -8483,7 +8400,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -8492,7 +8409,7 @@ end;
 procedure TZBCDField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -8501,11 +8418,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZBCDField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZBCDField.FilledValueWasNull(var Value: Currency): Boolean;
@@ -8612,7 +8524,7 @@ function TZBCDField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -8635,7 +8547,7 @@ procedure TZBCDField.SetAsCurrency(Value: Currency);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
   if (Size < 4) then
@@ -8664,7 +8576,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -8673,7 +8585,7 @@ end;
 procedure TZFMTBCDField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -8682,11 +8594,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZFMTBCDField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZFMTBCDField.FilledValueWasNull(var Value: TBCD): Boolean;
@@ -8788,7 +8695,7 @@ function TZFMTBCDField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -8812,7 +8719,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -8821,7 +8728,7 @@ end;
 procedure TZBooleanField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -8830,11 +8737,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZBooleanField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZBooleanField.FilledValueWasNull(var Value: Boolean): Boolean;
@@ -8884,7 +8786,7 @@ function TZBooleanField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -8908,7 +8810,7 @@ procedure TZBooleanField.SetAsBoolean(Value: Boolean);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if Assigned(OnValidate) then
     DoValidate(Ord(Value));
   with TZAbstractRODataset(DataSet) do begin
@@ -8933,7 +8835,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -8942,7 +8844,7 @@ end;
 procedure TZGuidField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -8951,11 +8853,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZGuidField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZGuidField.FilledValueWasNull(var Value: TGUID): Boolean;
@@ -8995,7 +8892,7 @@ function TZGuidField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -9024,7 +8921,7 @@ var P: PGUID;
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := @Value.D1;
   if Assigned(OnValidate) then
     DoValidate;
@@ -9043,7 +8940,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if (DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     with TZAbstractRODataset(DataSet) do begin
       FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -9059,7 +8956,7 @@ end;
 procedure TZRawStringField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -9083,11 +8980,6 @@ const SFieldOutOfRange = 'Value for field '#39'%s'#39' is out of range.';
 function TZRawStringField.CreateSizeError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format(SFieldOutOfRange, [DisplayName]));
-end;
-
-function TZRawStringField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -9178,7 +9070,7 @@ function TZRawStringField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -9200,7 +9092,7 @@ procedure TZRawStringField.SetAsAnsiString(const Value: AnsiString);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     if (Value = '') or ((FColumnCP = ZOSCodePage) and (ZOSCodePageMaxCharSize = 1) )
     then SetAsRawByteString(Value)
@@ -9228,7 +9120,7 @@ var P: PAnsiChar;
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     P := Pointer(Value);
@@ -9278,7 +9170,7 @@ begin
   SetPWideChar(Pointer(Value), Length(Value));
   {$ELSE}
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     P := Pointer(Value);
@@ -9337,7 +9229,7 @@ var P: PAnsiChar;
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   L := Length(Value);
   if (Value = '') or ((FColumnCP = zCP_UTF8) and (CountOfUtf8Chars(P,L)<=NativeUInt(Size)))
@@ -9349,7 +9241,7 @@ end;
 procedure TZRawStringField.SetPWideChar(P: Pointer; Len: NativeUint);
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   if Len > NativeUInt(Size) then
     raise CreateSizeError;
   if Transliterate or Assigned(OnValidate) then
@@ -9371,7 +9263,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
   end;
@@ -9381,7 +9273,7 @@ end;
 procedure TZUnicodeStringField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -9395,11 +9287,6 @@ end;
 function TZUnicodeStringField.CreateSizeError: EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format(SFieldOutOfRange, [DisplayName]));
-end;
-
-function TZUnicodeStringField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -9455,7 +9342,7 @@ function TZUnicodeStringField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -9498,7 +9385,7 @@ begin
   {$ELSE}
   //we convert all values to UTF16 for Size control except the value and encoding do fit into
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   if P = nil
   then L := 0
@@ -9596,7 +9483,7 @@ procedure TZUnicodeStringField.SetPWideChar(P: PWideChar; Len: NativeUint);
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if Assigned(OnValidate) then
@@ -9618,7 +9505,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -9627,7 +9514,7 @@ end;
 procedure TZBytesField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -9636,11 +9523,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZBytesField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZBytesField.GetIsNull: Boolean;
@@ -9664,7 +9546,7 @@ function TZBytesField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -9679,7 +9561,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -9688,7 +9570,7 @@ end;
 procedure TZVarBytesField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -9697,11 +9579,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZVarBytesField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZVarBytesField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
@@ -9739,7 +9616,7 @@ function TZVarBytesField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -9751,7 +9628,7 @@ procedure TZVarBytesField.SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_A
 var L: NativeUInt;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   L := Length(Value);
   if L = 0
   then Clear
@@ -9770,7 +9647,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
   end;
@@ -9780,7 +9657,7 @@ end;
 procedure TZRawCLobField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -9791,17 +9668,12 @@ begin
   end;
 end;
 
-function TZRawCLobField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
 procedure TZRawCLobField.SetPWideChar(P: Pointer; Len: NativeUint);
 var Clob: IZClob;
     R: RawByteString;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if (FColumnCP = zCP_UTF16) then begin
@@ -9986,7 +9858,7 @@ function TZRawCLobField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -10004,7 +9876,7 @@ var Blob: IZBlob;
     U: UnicodeString;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
@@ -10045,7 +9917,7 @@ var Blob: IZBlob;
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
@@ -10081,7 +9953,7 @@ begin
   SetAsWideString(Value);
   {$ELSE}
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     P := Pointer(Value);
@@ -10140,7 +10012,7 @@ var Blob: IZBlob;
     U: UnicodeString;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
@@ -10174,7 +10046,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
   end;
@@ -10184,7 +10056,7 @@ end;
 procedure TZUnicodeCLobField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -10195,18 +10067,13 @@ begin
   end;
 end;
 
-function TZUnicodeCLobField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
-end;
-
 procedure TZUnicodeCLobField.SetPWideChar(P: Pointer; Len: NativeUint);
 var Blob: IZBlob;
     Clob: IZClob;
     R: RawByteString;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
@@ -10372,7 +10239,7 @@ function TZUnicodeCLobField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
@@ -10390,7 +10257,7 @@ var Blob: IZBlob;
     U: UnicodeString;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
@@ -10431,7 +10298,7 @@ var Blob: IZBlob;
   end;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
@@ -10467,7 +10334,7 @@ begin
   SetPWideChar(Pointer(Value), Length(Value));
   {$ELSE}
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     P := Pointer(Value);
@@ -10519,7 +10386,7 @@ var Blob: IZBlob;
     U: UnicodeString;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   P := Pointer(Value);
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
@@ -10554,7 +10421,7 @@ begin
   FBound := Binding;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
-      raise CreateUnBoundError;
+      raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   end;
   inherited Bind(Binding);
@@ -10563,7 +10430,7 @@ end;
 procedure TZBLobField.Clear;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if not FResultSet.IsNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
@@ -10572,11 +10439,6 @@ begin
         DataEvent(deFieldChange, NativeInt(Self));
     end;
   end;
-end;
-
-function TZBlobField.CreateUnBoundError: EZDatabaseError;
-begin
-  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]));
 end;
 
 function TZBLobField.GetIsNull: Boolean;
@@ -10600,7 +10462,7 @@ function TZBLobField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;
 begin
   if not FBound then
-    raise CreateUnBoundError;
+    raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do
     if GetActiveBuffer(RowBuffer) then begin
       FRowAccessor.RowBuffer := RowBuffer;
