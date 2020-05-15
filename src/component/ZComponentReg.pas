@@ -106,12 +106,13 @@ begin
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
     {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter{$ENDIF}]) ;
 
-  RegisterClasses([TZDateField, TZDateTimeField, TZTimeField, TZBooleanField,
-    TZSmallIntField, TZShortIntField, TZWordField, TZByteField, TZIntegerField,
-    TZInt64Field, TZCardinalField, TZUInt64Field, TZDoubleField, TZSingleField,
-    TZBCDField, TZFMTBCDField, TZGuidField, TZRawStringField,
-    TZUnicodeStringField, TZBytesField, TZVarBytesField, TZRawCLobField,
-    TZUnicodeCLobField, TZBlobField]);
+{$IFDEF FPC}RegisterNoIcon{$ELSE}RegisterClasses{$ENDIF}(
+ [TZDateField, TZDateTimeField, TZTimeField, TZBooleanField,
+  TZSmallIntField, TZShortIntField, TZWordField, TZByteField, TZIntegerField,
+  TZInt64Field, TZCardinalField, TZUInt64Field, TZDoubleField, TZSingleField,
+  TZBCDField, TZFMTBCDField, TZGuidField, TZRawStringField,
+  TZUnicodeStringField, TZBytesField, TZVarBytesField, TZRawCLobField,
+  TZUnicodeCLobField, TZBlobField]);
 {$IFNDEF FPC}                                   // **** Pitfiend addition start
 {$IF DECLARED(IOTAAboutBoxServices)}
     if Assigned(SplashScreenServices) then
