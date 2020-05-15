@@ -163,6 +163,7 @@ type
     FPlainDriver: TZFirebird3UpPlainDriver;
     FBlobId: TISC_QUAD;
     FFBConnection: IZFirebirdConnection;
+    FFBTransaction: IZFirebirdTransaction;
     FReleased: Boolean;
     FBlobInfo: TIbBlobInfo;
     FBlobInfoFilled: Boolean;
@@ -1168,13 +1169,17 @@ end;
 
 procedure TZFirebirdLob.AfterConstruction;
 begin
-  FFBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(Self);
+  FFBTransaction := FFBConnection.GetActiveTransaction;
+  FFBTransaction.RegisterOpenUnCachedLob(Self);
   inherited;
 end;
 
 procedure TZFirebirdLob.BeforeDestruction;
 begin
-  FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+  if FFBTransaction <> nil then begin
+    FFBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FFBTransaction := nil;
+  end;
   inherited;
 end;
 
@@ -1293,7 +1298,9 @@ begin
   if (FFBConnection <> nil) and (FFBConnection.GetActiveTransaction <> nil) and
      (FFBConnection.GetActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
      (Sender <> imm) then begin
-    FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+    FFBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FFBTransaction := nil;
+    FFBConnection := nil;
     Imm.ReleaseImmediat(Sender, AError);
     if FlobStream <> nil then begin
       FlobStream.FReleased := True;

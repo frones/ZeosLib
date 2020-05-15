@@ -140,6 +140,7 @@ type
     FPlainDriver: TZInterbasePlainDriver;
     FBlobId: TISC_QUAD;
     FIBConnection: IZInterbase6Connection;
+    FIBTransaction: IZIBTransaction;
     FReleased: Boolean;
     FBlobInfo: TIbBlobInfo;
     FBlobInfoFilled: Boolean;
@@ -769,13 +770,17 @@ end;
 
 procedure TZInterbase6Lob.AfterConstruction;
 begin
-  FIBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(Self);
+  FIBTransaction := FIBConnection.GetActiveTransaction;
+  FIBTransaction.RegisterOpenUnCachedLob(Self);
   inherited;
 end;
 
 procedure TZInterbase6Lob.BeforeDestruction;
 begin
-  FIBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+  if FIBTransaction <> nil then begin
+    FIBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FIBTransaction := nil;
+  end;
   inherited;
 end;
 
@@ -893,7 +898,9 @@ begin
   if (FIBConnection <> nil) and (FIBConnection.GetActiveTransaction <> nil) and
      (FIBConnection.GetActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
      (Sender <> imm) then begin
-    FIBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+    FIBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FIBTransaction := nil;
+    FIBConnection := nil;
     Imm.ReleaseImmediat(Sender, AError);
     if FlobStream <> nil then begin
       FlobStream.FReleased := True;
