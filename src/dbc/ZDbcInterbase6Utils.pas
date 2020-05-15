@@ -922,6 +922,7 @@ function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
 var
   StatusVector: TARRAY_ISC_STATUS;
   iError : Integer; //Error for disconnect
+  L: LengthInt;
 begin
   { Allocate an sql statement }
   if StmtHandle = 0 then
@@ -930,8 +931,11 @@ begin
     CheckInterbase6Error(PlainDriver, StatusVector, ConSettings, lcOther, SQL);
   end;
   { Prepare an sql statement }
+  L := Length(SQL);
+  if L > High(Word) then
+    L := 0; //fall back to C-String behavior
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-    Length(SQL), Pointer(SQL), Dialect, nil);
+    Word(L), Pointer(SQL), Dialect, nil);
 
   iError := CheckInterbase6Error(PlainDriver, StatusVector, ConSettings, lcPrepStmt, SQL); //Check for disconnect AVZ
 
