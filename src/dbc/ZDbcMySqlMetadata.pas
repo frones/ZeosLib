@@ -427,8 +427,6 @@ end;
   @return the list
 }
 function TZMySQLDatabaseInfo.GetSQLKeywords: string;
-var
-  Major, Minor: Integer;
 begin
   Result := 'AUTO_INCREMENT,BINARY,BLOB,ENUM,INFILE,LOAD,MEDIUMINT,OPTION,'
     + 'OUTFILE,REPLACE,SET,TEXT,UNSIGNED,ZEROFILL';

@@ -72,7 +72,7 @@ contains
   ZDbcODBCStatement in '..\..\src\dbc\ZDbcODBCStatement.pas',
   ZDbcODBCUtils in '..\..\src\dbc\ZDbcODBCUtils.pas',
   ZDbcOleDB in '..\..\src\dbc\ZDbcOleDB.pas',
-  ZDbcOleDBMetaData in '..\..\src\dbc\ZDbcOleDBMetaData.pas',
+  ZDbcOleDBMetadata in '..\..\src\dbc\ZDbcOleDBMetadata.pas',
   ZDbcOleDBResultSet in '..\..\src\dbc\ZDbcOleDBResultSet.pas',
   ZDbcOleDBStatement in '..\..\src\dbc\ZDbcOleDBStatement.pas',
   ZDbcOleDBUtils in '..\..\src\dbc\ZDbcOleDBUtils.pas',

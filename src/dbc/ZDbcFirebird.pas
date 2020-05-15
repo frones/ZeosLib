@@ -114,6 +114,7 @@ type
     FProvider: IProvider;
     FAttachment: IAttachment;
     FStatus: IStatus;
+    FUtil: IUtil;
     FPlainDriver: TZFirebird3UpPlainDriver;
     function ConstructConnectionString(out LocalDB: Boolean): String;
   protected
@@ -217,7 +218,7 @@ begin
       Result := Result + '/' + Database
     end else
       Result := Result + Database;
-  end else if (Protocol <> 'local') and (HostName <> 'localhost') then
+  end else if (Protocol <> 'local') and (HostName <> 'localhost') and (HostName <> '') then
     if Port <> 0
       then Result := HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database
       else Result := HostName + ':' + Database
@@ -371,12 +372,12 @@ var
   P: PAnsiChar;
   DBCreated: Boolean;
   Statement: IZStatement;
+  CP: Word;
   procedure PrepareDPB;
   var
     R: RawByteString;
     P: PAnsiChar;
     L: LengthInt;
-    CP: Word;
   begin
     if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
     then CP := zOSCodePage
@@ -399,6 +400,7 @@ begin
     Exit;
   FProvider := FMaster.getDispatcher;
   FStatus := FMaster.getStatus;
+  FUtil := FMaster.getUtilInterface;
   DBCP := '';
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
@@ -412,17 +414,30 @@ begin
   DBCreated := False;
   CreateDB := Info.Values[ConnProps_CreateNewDatabase];
   if (CreateDB <> '') then begin
-    if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
-      Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-    DBCP := Info.Values['isc_dpb_set_db_charset'];
-    PrepareDPB;
-    FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
+    if StrToBoolEx(CreateDB) then begin
+      if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
+        Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
+      DBCP := Info.Values['isc_dpb_set_db_charset'];
+      PrepareDPB;
+      FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
+      Info.Values[ConnProps_CreateNewDatabase] := '';
+      DBCreated := True;
+    end else begin
+      if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
+      then CP := zOSCodePage
+      else CP := zCP_UTF8;
+      {$IFDEF UNICODE}
+      DPB := ZUnicodeToRaw(CreateDB, CP);
+      {$ELSE}
+      DPB := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
+      {$ENDIF}
+      FAttachment := FUtil.executeCreateDatabase(FStatus, Length(DPB), Pointer(DPB), fDialect, @DbCreated);
+    end;
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleError(FStatus, 'IProvider.createDatabase', Self, lcConnect);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
         'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"');
-    DBCreated := True;
   end;
 reconnect:
   if FAttachment = nil then begin

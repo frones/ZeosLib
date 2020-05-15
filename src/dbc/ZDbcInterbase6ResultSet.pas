@@ -140,6 +140,7 @@ type
     FPlainDriver: TZInterbasePlainDriver;
     FBlobId: TISC_QUAD;
     FIBConnection: IZInterbase6Connection;
+    FIBTransaction: IZIBTransaction;
     FReleased: Boolean;
     FBlobInfo: TIbBlobInfo;
     FBlobInfoFilled: Boolean;
@@ -757,7 +758,8 @@ begin
         TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, FOpenLobStreams);
       UpdateLob(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, Result);
     end else raise CreateCanNotAccessBlobRecordException(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, SQLType);
-  end;
+  end else
+    Result := nil;
 end;
 
 class function TZInterbaseCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
@@ -769,13 +771,17 @@ end;
 
 procedure TZInterbase6Lob.AfterConstruction;
 begin
-  FIBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(Self);
+  FIBTransaction := FIBConnection.GetActiveTransaction;
+  FIBTransaction.RegisterOpenUnCachedLob(Self);
   inherited;
 end;
 
 procedure TZInterbase6Lob.BeforeDestruction;
 begin
-  FIBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+  if FIBTransaction <> nil then begin
+    FIBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FIBTransaction := nil;
+  end;
   inherited;
 end;
 
@@ -893,7 +899,9 @@ begin
   if (FIBConnection <> nil) and (FIBConnection.GetActiveTransaction <> nil) and
      (FIBConnection.GetActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
      (Sender <> imm) then begin
-    FIBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+    FIBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FIBTransaction := nil;
+    FIBConnection := nil;
     Imm.ReleaseImmediat(Sender, AError);
     if FlobStream <> nil then begin
       FlobStream.FReleased := True;

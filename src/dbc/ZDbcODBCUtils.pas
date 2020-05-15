@@ -637,17 +637,16 @@ end;
 function CalcBufSize(ColumnSize: Integer; ODBC_CType: SQLSMALLINT; SQLType: TZSQLType;
   ClientCodePage: PZCodePage): SQLSMALLINT;
 begin
-  Result := ColumnSize;
   case SQLType of
-    stBoolean, stByte, stShort:                         Result := 1;
-    stWord, stSmall:                                    Result := 2;
-    stLongWord, stInteger,stFloat:                      Result := 4;
-    stULong, stLong, stDouble:                          Result := 8;
-    stCurrency, stBigDecimal:   Result := SizeOf(TSQL_NUMERIC_STRUCT);
+    stBoolean, stByte, stShort:   Result := 1;
+    stWord, stSmall:              Result := 2;
+    stLongWord, stInteger,stFloat:Result := 4;
+    stULong, stLong, stDouble:    Result := 8;
+    stCurrency, stBigDecimal:     Result := SizeOf(TSQL_NUMERIC_STRUCT);
     stString,
     stUnicodeString:            if ClientCodePage^.Encoding >= ceUTF16
-                                then Result := (Result +1) shl 1
-                                else Result := Result*ClientCodePage^.CharWidth +1;
+                                then Result := (ColumnSize +1) shl 1
+                                else Result := ColumnSize*ClientCodePage^.CharWidth +1;
     stGUID:                     Result := SizeOf(TGUID);
     stDate:                     Result := SizeOf(TSQL_DATE_STRUCT);
     stTime:                     if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType=SQL_C_SS_TIME2)
@@ -659,7 +658,7 @@ begin
     stAsciiStream,
     stUnicodeStream,
     stBinaryStream:             Result := SizeOf(Pointer){we use SQL_DATA_AT_EXEC and this userdefined token points to our lob-interface};
-    else raise EZSQLException.Create(SUnsupportedOperation);
+    else Result := ColumnSize;
   end;
 end;
 

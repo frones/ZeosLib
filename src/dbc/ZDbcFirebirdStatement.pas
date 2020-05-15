@@ -122,7 +122,7 @@ implementation
 
 uses Math,
   ZMessages, ZSysUtils, ZFastCode, ZEncoding, ZVariant,
-  ZDbcLogging, ZDbcFirebirdResultSet, ZDbcResultSet,
+  ZDbcLogging, ZDbcFirebirdResultSet, ZDbcResultSet, ZDbcCachedResultSet,
   ZDbcUtils;
 
 const
@@ -353,7 +353,7 @@ function TZAbstractFirebirdStatement.CreateResultSet: IZResultSet;
 var
   NativeResultSet: TZAbstractFirebirdResultSet;
   CachedResolver: TZInterbaseFirebirdCachedResolver;
-  CachedResultSet: TZFirebirdCachedResultSet;
+  CachedResultSet: TZCachedResultSet;
 begin
   if FOpenResultSet <> nil then
     Result := IZResultSet(FOpenResultSet)
@@ -365,7 +365,9 @@ begin
     if ((GetResultSetType <> rtForwardOnly) or (GetResultSetConcurrency = rcUpdatable)) and (FResultSet <> nil) then begin
       NativeResultSet.SetType(rtForwardOnly);
       CachedResolver := TZInterbaseFirebirdCachedResolver.Create(Self, NativeResultSet.GetMetadata);
-      CachedResultSet := TZFirebirdCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
+      if CachedLob
+      then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
+      else CachedResultSet := TZFirebirdCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(rcUpdatable);
       Result := CachedResultSet;
     end else

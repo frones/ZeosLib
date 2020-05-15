@@ -187,7 +187,7 @@ function TZAbstractInterbase6PreparedStatement.CreateResultSet: IZResultSet;
 var
   NativeResultSet: TZInterbase6XSQLDAResultSet;
   CachedResolver: TZInterbaseFirebirdCachedResolver;
-  CachedResultSet: TZInterbaseCachedResultSet;
+  CachedResultSet: TZCachedResultSet;
 begin
   if FOpenResultSet <> nil then
     Result := IZResultSet(FOpenResultSet)
@@ -198,7 +198,9 @@ begin
       if FIBConnection.IsFirebirdLib and (FIBConnection.GetHostVersion >= 2000000) //is the SQL2003 st. IS DISTINCT FROM supported?
       then CachedResolver  := TZFirebird2upCachedResolver.Create(Self, NativeResultSet.GetMetadata)
       else CachedResolver  := TZInterbaseFirebirdCachedResolver.Create(Self, NativeResultSet.GetMetadata);
-      CachedResultSet := TZInterbaseCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
+      if CachedLob
+      then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
+      else CachedResultSet := TZInterbaseCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
       Result := CachedResultSet;
     end else

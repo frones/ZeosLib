@@ -1400,7 +1400,7 @@ var
   var CLob: IZClob;
     current: IZBlob;
   begin
-    Current := Lob; //keep recount greter than 1
+    Current := Lob; //keep recount greater than 1
     if Current.QueryInterface(IZCLob, Clob) = S_OK
     then Result := TZLocalMemCLob.CreateFromClob(Clob, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], ConSettings, FOpenLobStreams)
     else Result := TZLocalMemBLob.CreateFromBlob(Current, FOpenLobStreams)

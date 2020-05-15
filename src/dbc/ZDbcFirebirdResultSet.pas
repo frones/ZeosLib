@@ -163,6 +163,7 @@ type
     FPlainDriver: TZFirebird3UpPlainDriver;
     FBlobId: TISC_QUAD;
     FFBConnection: IZFirebirdConnection;
+    FFBTransaction: IZFirebirdTransaction;
     FReleased: Boolean;
     FBlobInfo: TIbBlobInfo;
     FBlobInfoFilled: Boolean;
@@ -403,6 +404,7 @@ begin
               end;
             end;
             stTime, stTimeStamp: Scale := {-}4; //fb supports 10s of millisecond fractions
+            {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //nothing todo
           end;
         end;
       end;
@@ -1111,7 +1113,8 @@ begin
         TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, FOpenLobStreams);
       UpdateLob(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, Result);
     end else raise CreateCanNotAccessBlobRecordException(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, SQLType);
-  end;
+  end else
+    Result := nil;
 end;
 
 class function TZFirebirdCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
@@ -1167,13 +1170,17 @@ end;
 
 procedure TZFirebirdLob.AfterConstruction;
 begin
-  FFBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(Self);
+  FFBTransaction := FFBConnection.GetActiveTransaction;
+  FFBTransaction.RegisterOpenUnCachedLob(Self);
   inherited;
 end;
 
 procedure TZFirebirdLob.BeforeDestruction;
 begin
-  FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+  if FFBTransaction <> nil then begin
+    FFBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FFBTransaction := nil;
+  end;
   inherited;
 end;
 
@@ -1292,7 +1299,9 @@ begin
   if (FFBConnection <> nil) and (FFBConnection.GetActiveTransaction <> nil) and
      (FFBConnection.GetActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and
      (Sender <> imm) then begin
-    FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(Self);
+    FFBTransaction.DeRegisterOpenUnCachedLob(Self);
+    FFBTransaction := nil;
+    FFBConnection := nil;
     Imm.ReleaseImmediat(Sender, AError);
     if FlobStream <> nil then begin
       FlobStream.FReleased := True;

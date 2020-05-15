@@ -101,6 +101,7 @@ type
     procedure TestProcAbtest_WithoutParamCheck;
     procedure TestSF418_DESC;
     procedure TestSF418_ASC;
+    procedure TestSF427;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1456,6 +1457,32 @@ begin
     FreeAndNil(Query);
   end;
 end;
+
+procedure ZTestCompInterbaseBugReport.TestSF427;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.Connection.Connect;
+    Query.Connection.ExecuteDirect('insert into blob_values (b_id, b_text) values (2, ''y'')');
+    Query.SQL.Text := 'select * from blob_values';
+    Query.Open;
+    Query.Connection.StartTransaction;
+    try
+      Query.Connection.ExecuteDirect('delete from blob_values');
+      Query.Connection.ExecuteDirect('insert into blob_values (b_id, b_text) values (1, ''x'')');
+      Query.Connection.Commit;
+    except
+      Query.Connection.Rollback;
+      raise;
+    end;
+  finally
+    Query.Close;
+    Query.Free;
+  end;
+end;
+
 
 { ZTestCompInterbaseBugReportMBCs }
 
