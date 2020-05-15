@@ -106,8 +106,7 @@ begin
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
     {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter{$ENDIF}]) ;
 
-{$IFDEF FPC}RegisterNoIcon{$ELSE}RegisterClasses{$ENDIF}(
- [TZDateField, TZDateTimeField, TZTimeField, TZBooleanField,
+RegisterNoIcon([TZDateField, TZDateTimeField, TZTimeField, TZBooleanField,
   TZSmallIntField, TZShortIntField, TZWordField, TZByteField, TZIntegerField,
   TZInt64Field, TZCardinalField, TZUInt64Field, TZDoubleField, TZSingleField,
   TZBCDField, TZFMTBCDField, TZGuidField, TZRawStringField,
