@@ -758,7 +758,8 @@ begin
         TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, FOpenLobStreams);
       UpdateLob(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, Result);
     end else raise CreateCanNotAccessBlobRecordException(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, SQLType);
-  end;
+  end else
+    Result := nil;
 end;
 
 class function TZInterbaseCachedResultSet.GetRowAccessorClass: TZRowAccessorClass;
