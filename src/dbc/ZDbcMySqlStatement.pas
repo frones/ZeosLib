@@ -393,7 +393,9 @@ begin
   ParamCount := BindList.Count;
   inherited Unprepare;
   FExecCount := 0;
-  FlushPendingResults;
+  //FlushPendingResults; //EH: if we receive a "Malformed communication packet" error
+  //i.e. old lib for new servers, we leak mem everywhere
+  //thus i commented it...
   try
     if not FEmulatedParams and (FMYSQL_STMT <> nil) then begin
       //cancel all pending results:
@@ -639,7 +641,7 @@ end;
 
 procedure TZAbstractMySQLPreparedStatement.UnPrepareInParameters;
 begin
-  inherited UnPrepareInParameters;
+  SetBindCapacity(0);
   FBindAgain := True;
   FChunkedData := False;
 end;
