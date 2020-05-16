@@ -364,7 +364,7 @@ begin
     { EH: i have noticed several exception if i use a scrollable cursor ... }
     if ((GetResultSetType <> rtForwardOnly) or (GetResultSetConcurrency = rcUpdatable)) and (FResultSet <> nil) then begin
       NativeResultSet.SetType(rtForwardOnly);
-      CachedResolver := TZInterbaseFirebirdCachedResolver.Create(Self, NativeResultSet.GetMetadata);
+      CachedResolver := TZFirebird2upCachedResolver.Create(Self, NativeResultSet.GetMetadata);
       if CachedLob
       then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
       else CachedResultSet := TZFirebirdCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
