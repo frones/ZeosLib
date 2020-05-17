@@ -172,7 +172,7 @@ begin
 
   for I := Low(Tables) to High(Tables) do
   begin
-    ResultSet := MD.GetTables(Catalog, Schema, Tables[I], TableTypes);
+    ResultSet := MD.GetTables(Catalog, Schema, Connection.GetMetadata.AddEscapeCharToWildcards(Tables[I]), TableTypes);
     CheckNotNull(ResultSet, 'The resultset is nil');
     CheckEquals(ResultSet.First, True, 'No ' + Tables[I] + ' table');
     CheckEquals(Catalog, Resultset.GetStringByName('TABLE_CAT'));

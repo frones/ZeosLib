@@ -188,6 +188,7 @@ const
   Tables: array[0..8] of string = ('people', 'blob_values', 'cargo', 'date_values', 'department', 'equipment', 'equipment2', 'number_values', 'string_values');
 var
   I: Integer;
+  Table: String;
 begin
   ResultSet := MD.GetTables(Catalog, Schema, '%', TableTypes);
   CheckNotNull(ResultSet);
@@ -195,7 +196,9 @@ begin
 
   for I := Low(Tables) to High(Tables) do
   begin
-    ResultSet := MD.GetTables(Catalog, Schema, Tables[I], TableTypes);
+    Table := Connection.GetMetadata.AddEscapeCharToWildcards(Tables[I]);
+    if Connection.GetServerProvider = spIB_FB then Table := UpperCase(Table);
+    ResultSet := MD.GetTables(Catalog, Schema, Table, TableTypes);
     CheckNotNull(ResultSet, 'The resultset is nil');
     CheckEquals(ResultSet.First, True, 'No ' + Tables[I] + ' table');
     CheckEquals(Catalog, Resultset.GetStringByName('TABLE_CAT'));
@@ -659,9 +662,9 @@ begin
     end;
   end;
  
-  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN_ID');
+  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN\_ID');
   PrintResultSet(ResultSet, False);
-  Check(ResultSet.Next, 'There should be a sequence "GEN_ID"');
+  Check(ResultSet.Next, 'There should be a sequence "GEN\_ID"');
   CheckEquals(CatalogNameIndex, Resultset.FindColumn('SEQUENCE_CAT'));
   CheckEquals(SchemaNameIndex, Resultset.FindColumn('SEQUENCE_SCHEM'));
   CheckEquals(SequenceNameIndex, Resultset.FindColumn('SEQUENCE_NAME'));
@@ -681,7 +684,7 @@ begin
     Exit;
   end;
 
-  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT_RETURNING_BI');
+  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT\_RETURNING\_BI');
   PrintResultSet(ResultSet, False);
   Check(ResultSet.Next, 'There should be a trigger "INSERT_RETURNING_BI"');
 
