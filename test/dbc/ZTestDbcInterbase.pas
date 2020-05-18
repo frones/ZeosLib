@@ -185,16 +185,21 @@ end;
 procedure TZTestDbcInterbaseCase.FB_TestUpdateCounts_Returning;
 var Stmt: IZStatement;
   Cnt: Integer;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
-  Stmt := Connection.CreateStatement;
-  try
-    CheckNotNull(Stmt);
-    Cnt := Stmt.ExecuteUpdate('update people set p_id = p_id where p_id = 5 returning p_id'); //fb does not support multiple rows yet
-    Check(Cnt = 1, 'updatecount is not equal');
-    Stmt.Close;
-  finally
-    Stmt.Close;
-    Stmt := nil;
+  Supports(Connection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+
+  if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000) then begin
+    Stmt := Connection.CreateStatement;
+    try
+      CheckNotNull(Stmt);
+      Cnt := Stmt.ExecuteUpdate('update people set p_id = p_id where p_id = 5 returning p_id'); //fb does not support multiple rows yet
+      Check(Cnt = 1, 'updatecount is not equal');
+      Stmt.Close;
+    finally
+      Stmt.Close;
+      Stmt := nil;
+    end;
   end;
 end;
 
@@ -795,35 +800,40 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
   ResCount: Integer;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
-  Statement := Connection.CreateStatement;
-  CheckNotNull(Statement);
-  Statement.SetResultSetType(rtScrollInsensitive);
-  Statement.SetResultSetConcurrency(rcUpdatable);
+  Supports(Connection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
 
-  // Cleanup
-  Statement.ExecuteUpdate(SQLDel);
+  if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000) then begin
+    Statement := Connection.CreateStatement;
+    CheckNotNull(Statement);
+    Statement.SetResultSetType(rtScrollInsensitive);
+    Statement.SetResultSetConcurrency(rcUpdatable);
 
-  // Exec query
-  ResultSet := Statement.ExecuteQuery(SQLIns);
-  CheckNotNull(ResultSet);
-  ResultSet.Next;
-  CheckValues(ResultSet);
-  ResultSet.Close;
+    // Cleanup
+    Statement.ExecuteUpdate(SQLDel);
 
-  // Cleanup
-  Statement.ExecuteUpdate(SQLDel);
+    // Exec query
+    ResultSet := Statement.ExecuteQuery(SQLIns);
+    CheckNotNull(ResultSet);
+    ResultSet.Next;
+    CheckValues(ResultSet);
+    ResultSet.Close;
 
-  // Exec update
-  ResCount := Statement.ExecuteUpdate(SQLIns);
-  Check(ResCount > 0);
-  ResultSet := Statement.GetResultSet;
-  CheckNotNull(ResultSet);
-  ResultSet.Next;
-  CheckValues(ResultSet);
-  ResultSet.Close;
+    // Cleanup
+    Statement.ExecuteUpdate(SQLDel);
 
-  Statement.Close;
+    // Exec update
+    ResCount := Statement.ExecuteUpdate(SQLIns);
+    Check(ResCount > 0);
+    ResultSet := Statement.GetResultSet;
+    CheckNotNull(ResultSet);
+    ResultSet.Next;
+    CheckValues(ResultSet);
+    ResultSet.Close;
+
+    Statement.Close;
+  end;
 end;
 
 procedure TZTestDbcInterbaseCase.TestClientVersionNumber;

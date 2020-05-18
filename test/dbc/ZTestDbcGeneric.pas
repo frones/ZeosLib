@@ -485,10 +485,10 @@ var RS: IZResultSet;
     if (ProtocolType = protSQLite) and (SQLType = stBigDecimal) then
       Exit;
     RS.GetBigDecimal(ColumnIndex, BCD);
-    if not ((ProtocolType = protFirebird) and (RS.GetType = rtForwardOnly)) then
+    if not ((Provider = spIB_FB) and (RS.GetType = rtForwardOnly)) then
       CheckEquals(Precision, Ord(RS.GetMetadata.GetPrecision(ColumnIndex)), Protocol+': Precision mismatch, for column "'+S+'"');
     if not (((ColumnIndex = BigD18_1_Index) or (ColumnIndex = Curr15_2_Index)) and
-              (RS.GetType = rtForwardOnly) and (ProtocolType = protFirebird)) then
+              (RS.GetType = rtForwardOnly) and (Provider = spIB_FB)) then
       CheckEquals(Ord(SQLType), Ord(RS.GetMetadata.GetColumnType(ColumnIndex)), Protocol+': SQLType mismatch, for column "'+S+'"');
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
     CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD));
