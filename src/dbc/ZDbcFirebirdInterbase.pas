@@ -1045,20 +1045,25 @@ var I: Integer;
   function AddToCache(const ProcName: String): Boolean;
   var RS: IZResultSet;
     Stmt: IZStatement;
+    DbInfo: IZInterbaseDatabaseInfo;
   begin
     Result := False;
-    Stmt := IZConnection(fWeakReferenceOfSelfInterface).CreateStatementWithParams(Info);
-    RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
-    if RS <> nil then try
-      if RS.Next then begin
-        Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
-        FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
-      end else
-        Raise EZUnsupportedException.Create(SUnsupportedOperation);
-    finally
-      RS.Close;
-      RS := nil;
-      Stmt := nil;
+    Supports(GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+
+    if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 1005000) then begin
+      Stmt := IZConnection(fWeakReferenceOfSelfInterface).CreateStatementWithParams(Info);
+      RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
+      if RS <> nil then try
+        if RS.Next then begin
+          Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
+          FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
+        end else
+          Raise EZUnsupportedException.Create(SUnsupportedOperation);
+      finally
+        RS.Close;
+        RS := nil;
+        Stmt := nil;
+      end;
     end;
   end;
 begin
