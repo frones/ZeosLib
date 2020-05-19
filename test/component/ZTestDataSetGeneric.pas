@@ -116,7 +116,7 @@ type
     TTestMethod = procedure of object;
   {$IFEND}
 
-  {$IFDEF ENABLE_INTERBASE}
+  {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
   TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
   private
     CurrentTest: string;
@@ -2809,7 +2809,7 @@ begin
   end;
 end;
 
-{$IFDEF ENABLE_INTERBASE}
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 const
   TBL_NAME = 'Guids';
