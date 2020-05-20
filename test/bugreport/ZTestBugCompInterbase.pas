@@ -752,6 +752,7 @@ begin
 
   // Skip this test if we are not on Firebird 2.0+. Returning was added in that
   // version.
+  Connection.Connect;
   Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
   if Assigned(DbInfo) then begin
     if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
@@ -812,6 +813,7 @@ begin
 
   // Skip this test if we are not on Firebird 2.0+. Returning was added in that
   // version.
+  Connection.Connect;
   Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
   if Assigned(DbInfo) then begin
     if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
@@ -1131,6 +1133,7 @@ begin
 
   // Skip this test if we are not on Firebird 2.0+. Returning was added in that
   // version.
+  Connection.Connect;
   Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
   if Assigned(DbInfo) then begin
     if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
@@ -1198,6 +1201,7 @@ var
   Query: TZQuery;
   DbInfo: IZInterbaseDatabaseInfo;
 begin
+  Connection.Connect;
   Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
   if Assigned(DbInfo) then begin
     if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
@@ -1264,6 +1268,7 @@ var
 begin
   //skip this test if we are not on Firebird 2.0+ - the ability to cast a parameter
   //was introduced in Firebird 2.0. Earlier versions and Interbase can't run this test.
+  Connection.Connect;
   Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
   if Assigned(DbInfo) then begin
     if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
