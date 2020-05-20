@@ -134,7 +134,7 @@ implementation
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 
 uses
-  SyncObjs, ZDbcLogging{$IFDEF UNICODE}, ZCompatibility{$ENDIF}
+  SyncObjs, ZDbcLogging{.$IFDEF UNICODE}, ZCompatibility{.$ENDIF}
   {$IFDEF UNICODE}, ZEncoding{$ENDIF};
 
 const
