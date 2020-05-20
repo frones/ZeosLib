@@ -494,6 +494,7 @@ begin
   Stmt := Connection.CreateStatement;
   try
     // generate test data
+    Stmt.ExecuteUpdate('delete from TestTicket363');
     for I:= 1 to 10 do
       Stmt.ExecuteUpdate('insert into TestTicket363 (id, "value") values (' + ZFastCode.IntTostr(I) + ', ''testing #' + ZFastCode.IntToStr(I) + ''')');
     // direct approach (just like mORMot with SynDBZeos)
