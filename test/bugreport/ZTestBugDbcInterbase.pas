@@ -458,7 +458,7 @@ begin
   ResultSet.Close;
   ResultSet := nil;
 
-  ResultSet := Metadata.GetTables('', '', 'DEP_VIEW', nil);
+  ResultSet := Metadata.GetTables('', '', 'DEP\_VIEW', nil);
   with ResultSet do begin
     Next;
     CheckEquals('', GetString(CatalogNameIndex));
