@@ -401,11 +401,15 @@ begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, SQL, ConSettings);
+      if FCharSetID = OCI_UTF16ID
+      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
+      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
     Status := FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil,
       OCI_ATTR_ROW_COUNT, FOCIError);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, SQL, ConSettings);
+      if FCharSetID = OCI_UTF16ID
+      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
+      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
     LastUpdateCount := upCnt;
     if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then
       FOutParamResultSet := CreateResultSet;
@@ -437,7 +441,9 @@ begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, SQL, ConSettings);
+      if ConSettings.ClientCodePage.Encoding = ceUTF16
+      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
+      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
     Result := CreateResultSet;
@@ -495,7 +501,9 @@ begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, status, lcExecute, SQL, ConSettings);
+      if ConSettings.ClientCodePage.Encoding = ceUTF16
+      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
+      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
     if ((FStatementType = OCI_STMT_BEGIN) or (FStatementType = OCI_STMT_DECLARE)) and (BindList.HasOutOrInOutOrResultParam) then
@@ -525,7 +533,7 @@ begin
     for I := OCIBind.curelen-1 downto OldSize do begin
       Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(PAnsiChar(OCIBind.valuep)+I*SizeOf(POCIDescriptor))^, OCIBind.DescriptorType);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, 'OCIDescriptorFree', ConSettings);
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecute, 'OCIDescriptorFree', Self);
     end;
   end;
 
@@ -560,7 +568,7 @@ begin
         Status := FPlainDriver.OCIDescriptorAlloc(FOracleConnection.GetConnectionHandle,
             PPOCIDescriptor(OCIBind.valuep+I*SizeOf(POCIDescriptor))^, OCIBind.DescriptorType, 0, nil);
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, 'OCIDescriptorAlloc', ConSettings);
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecute, 'OCIDescriptorAlloc', Self);
       end;
   end else begin
     if OCIBind.valuep <> nil then begin
@@ -576,13 +584,13 @@ begin
     Status := FPlainDriver.OCIBindByPos(FOCIStmt, OCIBind.bindpp, FOCIError, Index + 1,
       OCIBind.valuep, OCIBind.value_sz, OCIBind.dty, OCIBind.indp, nil, nil, 0, nil, OCI_DEFAULT);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, 'OCIBindByPos', ConSettings);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIBindByPos', Self);
     if SQLType = stUnicodeString then begin
       acsid := OCI_UTF16ID;
       Status := FplainDriver.OCIAttrSet(OCIBind.bindpp, OCI_HTYPE_BIND, @acsid,
            0, OCI_ATTR_CHARSET_ID, FOCIError);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, 'OCIAttrSet(OCI_ATTR_CHARSET_ID)', ConSettings);
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIAttrSet(OCI_ATTR_CHARSET_ID)', Self);
     end;
   end;
 end;
@@ -604,7 +612,7 @@ begin
       Status := FPlainDriver.OCIHandleAlloc(FOracleConnection.GetConnectionHandle,
         FOCIError, OCI_HTYPE_ERROR, 0, nil);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIHandleAlloc(OCIError-Handle)', ConSettings);
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcPrepStmt, 'OCIAttrSet(OCI_ATTR_CHARSET_ID)', Self);
     end;
 
     if (FOCIStmt = nil) then begin
@@ -627,28 +635,31 @@ begin
         Status := FPlainDriver.OCIHandleAlloc(FOracleConnection.GetConnectionHandle,
           FOCIStmt, OCI_HTYPE_STMT, 0, nil);
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIHandleAlloc(OCIStmt-Handle)', ConSettings);
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcPrepStmt, 'OCIHandleAlloc(OCIStmt-Handle)', Self);
         Status := FPlainDriver.OCIStmtPrepare(FOCIStmt, FOCIError, stmt,
           stmt_len, OCI_NTV_SYNTAX, OCI_DEFAULT);
       end;
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcPrepStmt, 'OCIStmtPrepare(2)', ConSettings);
+        if FCharSetID = OCI_UTF16ID
+        then FOracleConnection.HandleErrorOrWarningW(FOCIError, Status, lcPrepStmt, FWSQL, Self)
+        else FOracleConnection.HandleErrorOrWarningA(FOCIError, Status, lcPrepStmt, FASQL, Self);
     end;
     { get statement type }
     Status := FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @FStatementType,
       nil, OCI_ATTR_STMT_TYPE, FOCIError);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIAttrGet(OCI_ATTR_STMT_TYPE)', ConSettings);
+      Self.FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther,
+        'OCIAttrGet(OCI_ATTR_STMT_TYPE)', Self);
     if FStatementType = OCI_STMT_SELECT then begin
       //set prefetch by memory! not by Rows!
       Prefetch := 0;
       Status := FPlainDriver.OCIAttrSet(FOCIStmt,OCI_HTYPE_STMT, @Prefetch ,0, OCI_ATTR_PREFETCH_ROWS,FOCIError);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIAttrSet(OCI_ATTR_PREFETCH_ROWS)', ConSettings);
+        FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCIAttrSet(OCI_ATTR_PREFETCH_ROWS)', Self);
       Prefetch := FRowPrefetchMemory;
       Status := FPlainDriver.OCIAttrSet(FOCIStmt,OCI_HTYPE_STMT,@Prefetch,0,OCI_ATTR_PREFETCH_MEMORY,FOCIError);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIAttrSet(OCI_ATTR_PREFETCH_MEMORY)', ConSettings);
+        FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCIAttrSet(OCI_ATTR_PREFETCH_MEMORY)', Self);
     end;
     inherited Prepare;
   end;
@@ -707,13 +718,13 @@ begin
       else Status := FPlainDriver.OCIHandleFree(FOCIStmt, OCI_HTYPE_STMT);
       FOCIStmt := nil;
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcUnprepStmt, SQL, ConSettings)
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcUnprepStmt, SQL, Self);
     end;
     if FOCIError <> nil then begin
       Status := FPlainDriver.OCIHandleFree(FOCIError, OCI_HTYPE_ERROR);
       FOCIError := nil;
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, SQL, ConSettings)
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcUnprepStmt, SQL, Self);
     end;
   end;
 end;
@@ -813,13 +824,13 @@ begin
   try
     if FProcDescriptor = nil then
       { describe the object: }
-      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, FClientCP);
+      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, Connection as IZOracleConnection, FClientCP);
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       {$IFDEF UNICODE}
       ProcSQL := ZUnicodeToRaw(StoredProcName, FClientCP);
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, ProcSQL);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, ProcSQL);
       {$ELSE}
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, StoredProcName);
       {$ENDIF}
     end;
     ProcSQL := '';
@@ -898,14 +909,14 @@ begin
     FParamsRegistered := True;
     FRegisteringParamFromMetadata := True;
     if FProcDescriptor = nil then
-      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, FClientCP);
+      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, Connection as IZOracleConnection, FClientCP);
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       { describe the object: }
       {$IFDEF UNICODE}
       R := ZUnicodeToRaw(StoredProcName, FClientCP);
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, R);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, R);
       {$ELSE}
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, StoredProcName);
       {$ENDIF}
     end;
     if FProcDescriptor <> nil then begin
@@ -975,7 +986,7 @@ begin
     SQLT_VNU: begin
         Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(NativeInt), OCI_NUMBER_SIGNED, POCINumber(Bind.valuep));
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCINumberFromInt', Self);
       end;
     SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
                 PInt64(Bind.valuep)^ := Value
@@ -1026,7 +1037,7 @@ begin
   if Bind.dty = SQLT_VNU then begin
     Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(NativeUInt), OCI_NUMBER_UNSIGNED, POCINumber(Bind.valuep));
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCINumberFromInt', Self);
   end else if Bind.dty = SQLT_INT then
     if Bind.value_sz = SizeOf(Int64) then
       PInt64(Bind.valuep)^ := Value
@@ -1087,7 +1098,7 @@ begin
     SQLT_VNU:   begin
                   status := FPlainDriver.OCINumberFromReal(FOracleConnection.GetErrorHandle, @Value, SizeOf(Double), POCINumber(Bind.valuep));
                   if Status <> OCI_SUCCESS then
-                    CheckOracleError(FPLainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCINumberFromReal', Self);
                 end;
     SQLT_BFLOAT:  PSingle(Bind.valuep)^ := Value;
     SQLT_BDOUBLE: PDouble(Bind.valuep)^ := Value;
@@ -1107,7 +1118,7 @@ begin
                     FOCIError, PPOCIDescriptor(Bind.valuep)^, TS.Year, TS.Month, TS.Day,
                       TS.Hour, TS.Minute, TS.Second, TS.Fractions, nil, 0);
                   if Status <> OCI_SUCCESS then
-                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIDateTimeConstruct', Self);
                 end;
     SQLT_INT,
     SQLT_UIN:   {$IFDEF CPU64}
@@ -1189,7 +1200,7 @@ begin
                     FOCIError, PPOCIDescriptor(Bind.valuep)^, TS.Year, TS.Month, TS.Day,
                       TS.Hour, TS.Minute, TS.Second, TS.Fractions, nil, 0);
                   if Status <> OCI_SUCCESS then
-                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIDateTimeConstruct', Self);
                 end;
 
     SQLT_INT:   {$IFDEF CPU64}
@@ -1570,7 +1581,7 @@ bind_direct:
           Status := FPlainDriver.OCIBindByPos(FOCIStmt, Bind.bindpp, FOCIError, ParameterIndex + 1,
             Pointer(Value), Bind.value_sz, Bind.dty, Bind.indp, nil, nil, 0, nil, OCI_DEFAULT);
           if Status <> OCI_SUCCESS then
-            CheckOracleError(FPlainDriver, FOCIError, Status, lcExecute, SQL, ConSettings);
+            FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIBindByPos', Self);
         end else case Bind.value_sz of
           8: PDouble(Bind^.valuep)^ := TDoubleDynArray(Value)[0];
           4: PCardinal(Bind^.valuep)^ := TCardinalDynArray(Value)[0];
@@ -1661,7 +1672,7 @@ bind_direct:
               FOCIError, PPOCIDescriptor(Bind^.valuep+I*SizeOf(POCIDescriptor))^, //direct addressing descriptor to array. So we don't need to free the mem again
               PTS^.Year, PTS^.Month, PTS^.Day, PTS^.Hour, PTS^.Minute, PTS^.Second, PTS^.Fractions, nil, 0);
           if Status <> OCI_SUCCESS then
-            CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDateTimeConstruct', ConSettings);
+            FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIDateTimeConstruct', Self);
         end;
       end;
     stGUID: begin
@@ -1754,7 +1765,7 @@ begin
                     FOCIError, PPOCIDescriptor(Bind.valuep)^, Value.Year, Value.Month, Value.Day,
                       0, 0, 0, 0, nil, 0);
                   if Status <> OCI_SUCCESS then
-                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIDateTimeConstruct', Self);
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
@@ -1939,7 +1950,7 @@ begin
     SQLT_VNU: begin
         Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(NativeInt), OCI_NUMBER_SIGNED, POCINumber(Bind.valuep));
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCINumberFromInt', Self);
       end;
     SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
                 PInt64(Bind.valuep)^ := Value
@@ -2210,7 +2221,7 @@ begin
                       cPascalIntegralDatePart.Month, cPascalIntegralDatePart.Day,
                       Value.Hour, Value.Minute, Value.Second, Value.Fractions, nil, 0);
                   if Status <> OCI_SUCCESS then
-                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIDateTimeConstruct', Self);
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
@@ -2273,7 +2284,7 @@ begin
                     FOCIError, PPOCIDescriptor(Bind.valuep)^, Value.Year, Value.Month, Value.Day,
                       Value.Hour, Value.Minute, Value.Second, Value.Fractions, nil, 0);
                   if Status <> OCI_SUCCESS then
-                    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, '', ConSettings);
+                    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIDateTimeConstruct', Self);
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
@@ -2341,7 +2352,7 @@ begin
     SQLT_VNU: begin
         Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf({$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF}), OCI_NUMBER_SIGNED, POCINumber(Bind.valuep));
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCINumberFromInt', ConSettings);
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCINumberFromInt', Self);
       end;
     SQLT_INT: if Bind.value_sz = SizeOf(Int64) then
                 PInt64(Bind.valuep)^ := Value
@@ -2846,13 +2857,13 @@ begin
   try
     if FProcDescriptor = nil then
       { describe the object: }
-      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, FClientCP);
+      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection, ConSettings.CTRL_CP);
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       {$IFDEF UNICODE}
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, StoredProcName);
       {$ELSE}
       ProcSQL := ZRawToUnicode(StoredProcName, ConSettings.CTRL_CP);
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, ProcSQL);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, ProcSQL);
       {$ENDIF}
     end;
     ProcSQL := '';
@@ -2929,14 +2940,14 @@ begin
     FParamsRegistered := True;
     FRegisteringParamFromMetadata := True;
     if FProcDescriptor = nil then
-      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, FClientCP);
+      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection, FClientCP);
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       { describe the object: }
       {$IFNDEF UNICODE}
       S := ZRawToUnicode(StoredProcName, ConSettings.CTRL_CP);
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, S);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, S);
       {$ELSE}
-      FProcDescriptor.Describe(OCI_PTYPE_UNK, Connection, StoredProcName);
+      FProcDescriptor.Describe(OCI_PTYPE_UNK, StoredProcName);
       {$ENDIF}
     end;
     if FProcDescriptor <> nil then begin
