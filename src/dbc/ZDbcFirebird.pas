@@ -116,9 +116,9 @@ type
     FStatus: IStatus;
     FUtil: IUtil;
     FPlainDriver: TZFirebird3UpPlainDriver;
-    function ConstructConnectionString(out LocalDB: Boolean): String;
+    function ConstructConnectionString: String;
   protected
-    procedure DetermineClientTypeAndVersion; override;
+    //procedure DetermineClientTypeAndVersion; override; FUtil.getgetClientVersion returns 872 for FB3
     procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
@@ -199,12 +199,11 @@ end;
 {**
   Constructs the connection string for the current connection
 }
-function TZFirebirdConnection.ConstructConnectionString(out LocalDB: Boolean): String;
+function TZFirebirdConnection.ConstructConnectionString: String;
 var Protocol: String;
 begin
   Protocol := Info.Values[ConnProps_FBProtocol];
   Protocol := LowerCase(Protocol);
-  LocalDB := False;
   if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet')) then begin
     Result := Protocol+'://';
     if protocol = 'inet' then begin
@@ -222,10 +221,9 @@ begin
     if Port <> 0
       then Result := HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database
       else Result := HostName + ':' + Database
-    else begin
-      Result := Database;
-      LocalDB := True;
-    end;
+    else if StrToBoolEx(Info.Values[ConnProps_CreateNewDatabase])
+      then Result := Database
+      else Result := '';
 end;
 
 {**
@@ -255,11 +253,6 @@ begin
   if FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] = EmptyRaw then
     FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Params);
   Result := TZFirebirdTransaction.Create(Self, AutoCommit, ReadOnly, FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel]);
-end;
-
-procedure TZFirebirdConnection.DetermineClientTypeAndVersion;
-begin
-  FClientVersion := 3000000 //just a dummy by now
 end;
 
 procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
@@ -368,7 +361,6 @@ var
   DPB: RawByteString;
   DBCP, ConnectionString, CSNoneCP, CreateDB: String;
   DBName: array[0..512] of AnsiChar;
-  LocaleDB: Boolean;
   P: PAnsiChar;
   DBCreated: Boolean;
   Statement: IZStatement;
@@ -409,30 +401,16 @@ begin
 
   AssignISC_Parameters;
   CSNoneCP := Info.Values[DSProps_ResetCodePage];
-  ConnectionString := ConstructConnectionString(LocaleDB);
+  ConnectionString := ConstructConnectionString;
 
   DBCreated := False;
   CreateDB := Info.Values[ConnProps_CreateNewDatabase];
-  if (CreateDB <> '') then begin
-    if StrToBoolEx(CreateDB) then begin
-      if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
-        Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-      DBCP := Info.Values['isc_dpb_set_db_charset'];
-      PrepareDPB;
-      FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
-      Info.Values[ConnProps_CreateNewDatabase] := '';
-      DBCreated := True;
-    end else begin
-      if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
-      then CP := zOSCodePage
-      else CP := zCP_UTF8;
-      {$IFDEF UNICODE}
-      DPB := ZUnicodeToRaw(CreateDB, CP);
-      {$ELSE}
-      DPB := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
-      {$ENDIF}
-      FAttachment := FUtil.executeCreateDatabase(FStatus, Length(DPB), Pointer(DPB), fDialect, @DbCreated);
-    end;
+  if (CreateDB <> '') and StrToBoolEx(CreateDB) then begin
+    DBCP := Info.Values['isc_dpb_set_db_charset'];
+    PrepareDPB;
+    FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
+    Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
+    DBCreated := True;
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleError(FStatus, 'IProvider.createDatabase', Self, lcConnect);
     if DriverManager.HasLoggingListener then
@@ -442,10 +420,8 @@ begin
 reconnect:
   if FAttachment = nil then begin
     PrepareDPB;
-    if LocaleDB
-    then P := Pointer(ConSettings.Database)
-    else P := nil;
-    FAttachment := FProvider.attachDatabase(FStatus, P, Length(DPB), Pointer(DPB));
+    P := Pointer(ConSettings.Database);
+    FAttachment := FProvider.attachDatabase(FStatus, PAnsichar(P), Length(DPB), Pointer(DPB));
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleError(FStatus, 'IProvider.attachDatabase', Self, lcConnect);
     { Logging connection action }

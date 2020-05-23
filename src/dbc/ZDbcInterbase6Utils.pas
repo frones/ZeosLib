@@ -477,8 +477,9 @@ implementation
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 
 uses
-  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils, ZEncoding
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  ZFastCode, ZSysUtils, ZDbcUtils, ZEncoding, ZClasses,
+  ZDbcInterbase6;
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 begin
@@ -512,7 +513,7 @@ end;
 function BuildPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings;
   VersionCode: Byte; const FilterPrefix: string; const ParamArr: array of TZIbParam;
   ConSettings: PZConSettings; CP: Word): RawByteString;
-var Buf: TRawBuff;
+var Writer: TZRawSQLStringWriter;
 
   procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: String);
   var
@@ -530,35 +531,6 @@ var Buf: TRawBuff;
       ParamValue := Trim(Copy(S, Pos + 1, MaxInt));
     end;
   end;
-
-  procedure NumToPB(Value: Cardinal);
-  var Len: Smallint;
-  begin
-    case Value of
-      0..High(Byte):
-        begin
-          Len := 1;
-          ToBuff(AnsiChar(Len), Buf, Result);
-          ToBuff(AnsiChar(Byte(Value)), Buf, Result);
-        end;
-      High(Byte)+1..High(Word):
-        begin
-          Len := 2;
-          ToBuff(AnsiChar(Len), Buf, Result);
-          PWord(@Value)^ := Word(Value);
-          PWord(@Value)^ := Word(PlainDriver.isc_vax_integer(@Value, Len));
-          ToBuff(@Value, Len, Buf, Result);
-        end;
-      else
-        begin
-          Len := 4;
-          ToBuff(AnsiChar(Len), Buf, Result);
-          Value := Cardinal(PlainDriver.isc_vax_integer(@Value, Len));
-          ToBuff(@Value, Len, Buf, Result);
-        end;
-    end;
-  end;
-
 var
   I, IntValue: Integer;
   ParamName: String;
@@ -566,54 +538,69 @@ var
   tmp: RawByteString;
   PParam: PZIbParam;
 begin
-  Buf.Buf[0] := AnsiChar(VersionCode);
-  Buf.Pos := 1;
   Result := EmptyRaw;
-  for I := 0 to Info.Count - 1 do
-  begin
-    ExtractParamNameAndValue(Info.Strings[I], ParamName, ParamValue);
-    if ZFastCode.Pos(FilterPrefix, ParamName) <> 1 then
-      Continue;
-    PParam := FindPBParam(ParamName, ParamArr);
-    if PParam = nil then
-      raise EZSQLException.CreateFmt('Unknown PB parameter "%s"', [ParamName]);
+  Writer := TZRawSQLStringWriter.Create(1024);
+  try
+    Writer.AddChar(AnsiChar(VersionCode), Result);
+    for I := 0 to Info.Count - 1 do begin
+      ExtractParamNameAndValue(Info.Strings[I], ParamName, ParamValue);
+      if ZFastCode.Pos(FilterPrefix, ParamName) <> 1 then
+        Continue;
+      PParam := FindPBParam(ParamName, ParamArr);
+      if PParam = nil then
+        raise EZSQLException.CreateFmt('Unknown PB parameter "%s"', [ParamName]);
 
-    case PParam.ValueType of
-      pvtNone:
-        if VersionCode = isc_tpb_version3 then
-          ToBuff(AnsiChar(PParam.Number), Buf, Result)
-        else
-        begin
-          ToBuff(AnsiChar(PParam.Number), Buf, Result);
-          ToBuff(AnsiChar(#0), Buf, Result);
-        end;
-      pvtByteZ:
-        begin
-          ToBuff(AnsiChar(PParam.Number), Buf, Result);
-          ToBuff(AnsiChar(#1), Buf, Result);
-          ToBuff(AnsiChar(#0), Buf, Result);
-        end;
-      pvtNum:
-        begin
-          ToBuff(AnsiChar(PParam.Number), Buf, Result);
-          IntValue := StrToInt(ParamValue);
-          NumToPB(IntValue);
-        end;
-      pvtString:
-        begin
-          {$IFDEF UNICODE}
-          tmp := ZUnicodeToRaw(ParamValue, CP);
-          {$ELSE}
-          tmp := ZConvertStringToRawWithAutoEncode(ParamValue, ConSettings^.CTRL_CP, CP);
-          {$ENDIF}
-          ToBuff(AnsiChar(PParam.Number), Buf, Result);
-          ToBuff(AnsiChar(Length(tmp)), Buf, Result);
-          ToBuff(tmp, Buf, Result);
-        end;
-      {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //pvtUnimpl
+      case PParam.ValueType of
+        pvtNone: begin
+            Writer.AddChar(AnsiChar(PParam.Number), Result);
+            if VersionCode < isc_tpb_version3 then
+              Writer.AddChar(AnsiChar(#0), Result);
+          end;
+        pvtByteZ: begin
+            Writer.AddChar(AnsiChar(PParam.Number), Result);
+            Writer.AddChar(AnsiChar(#1), Result);
+            Writer.AddChar(AnsiChar(#0), Result);
+          end;
+        pvtNum:
+          begin
+            Writer.AddChar(AnsiChar(PParam.Number), Result);
+            IntValue := StrToInt(ParamValue);
+            case IntValue of
+              0..High(Byte): begin
+                  Writer.AddChar(AnsiChar(Byte(1)), Result);
+                  Writer.AddChar(AnsiChar(Byte(IntValue)), Result);
+                end;
+              High(Byte)+1..High(Word): begin
+                  Writer.AddChar(AnsiChar(Byte(2)), Result);
+                  PWord(@IntValue)^ := Word(IntValue);
+                  PWord(@IntValue)^ := Word(PlainDriver.isc_vax_integer(@IntValue, 2));
+                  Writer.AddText(@IntValue, 2, Result);
+                end;
+              else begin
+                  Writer.AddChar(AnsiChar(Byte(4)), Result);
+                  IntValue := Cardinal(PlainDriver.isc_vax_integer(@IntValue, 4));
+                  Writer.AddText(@IntValue, 4, Result);
+                end;
+            end;
+          end;
+        pvtString:
+          begin
+            {$IFDEF UNICODE}
+            tmp := ZUnicodeToRaw(ParamValue, CP);
+            {$ELSE}
+            tmp := ZConvertStringToRawWithAutoEncode(ParamValue, ConSettings^.CTRL_CP, CP);
+            {$ENDIF}
+            Writer.AddChar(AnsiChar(PParam.Number), Result);
+            Writer.AddChar(AnsiChar(Length(tmp)), Result);
+            Writer.AddText(tmp, Result);
+          end;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //pvtUnimpl
+      end;
     end;
+    Writer.Finalize(Result);
+  finally
+    FreeAndNil(Writer);
   end;
-  FlushBuff(Buf, Result);
 end;
 
 {**

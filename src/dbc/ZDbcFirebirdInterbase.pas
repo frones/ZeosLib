@@ -113,6 +113,8 @@ type
   private
     FWeakTransactionManagerPtr: Pointer;
   protected
+    FIsFirebirdLib: Boolean; // never use this directly, always use IsFirbirdLib
+    FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
     FHardCommit: boolean;
     FDialect: Word;
     FProcedureTypesCache, FSubTypeTestCharIDCache: TStrings;
@@ -126,7 +128,7 @@ type
     FXSQLDAMaxSize: Cardinal;
     FInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     procedure BeforeUrlAssign; override;
-    procedure DetermineClientTypeAndVersion; virtual; abstract;
+    procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
     function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
       Info: TStrings): RawByteString;
@@ -353,7 +355,7 @@ type
     FDialect: Cardinal;
     FInData, FOutData: Pointer;
     FCodePageArray: TWordDynArray;
-  procedure ExceuteBatch;
+    procedure ExceuteBatch;
     function SplittQuery(const SQL: SQLString): RawByteString;
 
     procedure WriteLobBuffer(Index: Cardinal; P: PAnsiChar; Len: NativeUInt); virtual; abstract;
@@ -522,23 +524,69 @@ var
   RoleName: string;
   ConnectTimeout, Idx: integer;
   WireCompression: Boolean;
+  procedure ParseCreateNewDBStringToISC(const Value: String);
+  var CreateDB: String;
+      I: Integer;
+      P, PEnd: PChar;
+  begin
+    CreateDB := UpperCase(Value);
+    I := PosEx('CHARACTER', CreateDB);
+    if I > 0 then begin
+      I := PosEx('SET', CreateDB, I);
+      P := Pointer(CreateDB);
+      Inc(I, 3); Inc(P, I); Inc(I);
+      While P^ = ' ' do begin
+        Inc(I); Inc(P);
+      end;
+      PEnd := P;
+      While ((Ord(PEnd^) >= Ord('A')) and (Ord(PEnd^) <= Ord('Z'))) or
+            ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
+        Inc(PEnd);
+      Info.Values['isc_dpb_set_db_charset'] :=  Copy(CreateDB, I, (PEnd-P));
+    end else if Info.Values['isc_dpb_set_db_charset'] = '' then
+      Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
+    if Info.Values['isc_dpb_set_db_charset'] = '' then
+      Info.Values['isc_dpb_set_db_charset'] := FClientCodePage;
+
+    I := PosEx('PAGE', CreateDB);
+    if I > 0 then begin
+      I := PosEx('SIZE', CreateDB, I);
+      P := Pointer(CreateDB);
+      Inc(I, 4); Inc(P, I); Inc(I);
+      While P^ = ' ' do begin
+        Inc(I); Inc(P);
+      end;
+      PEnd := P;
+      While ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
+        Inc(PEnd);
+      Info.Values['isc_dpb_page_size'] :=  Copy(CreateDB, I, (PEnd-P));
+    end else Info.Values['isc_dpb_page_size'] := '4096'; //default
+  end;
 begin
   { set default sql dialect it can be overriden }
   FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
-
   Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
+  RoleName := Info.Values[ConnProps_CreateNewDatabase];
+
+  if (GetClientVersion >= 2005000) and IsFirebirdLib and (Length(RoleName) > 5) then begin
+    ParseCreateNewDBStringToISC(RoleName);
+    Info.Values[ConnProps_CreateNewDatabase] := 'true';
+  end;
+
   { Processes connection properties. }
   if Info.Values['isc_dpb_username'] = '' then
     Info.Values['isc_dpb_username'] := Url.UserName;
   if Info.Values['isc_dpb_password'] = '' then
     Info.Values['isc_dpb_password'] := Url.Password;
 
-  if FClientCodePage = '' then //was set on inherited Create(...)
-    if Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
-    begin
-      FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
+  if FClientCodePage = '' then begin //was set on inherited Create(...)
+    FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
+    if FClientCodePage = '' then
+      FClientCodePage := Info.Values['isc_dpb_set_db_charset'];
+    if FClientCodePage <> '' then
       CheckCharEncoding(FClientCodePage, True);
-    end;
+  end;
+
   Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
   RoleName := Trim(Info.Values[ConnProps_Rolename]);
@@ -617,6 +665,60 @@ begin
   FreeAndNil(FGUIDProps);
   FreeAndNil(FSubTypeTestCharIDCache);
   inherited Destroy;
+end;
+
+procedure TZInterbaseFirebirdConnection.DetermineClientTypeAndVersion;
+var
+  FbPos, Major, Minor, Release: Integer;
+  Buff: array[0..50] of AnsiChar;
+  P, PDot, PEnd: PAnsiChar;
+begin
+  P := @Buff[0];
+  PDot := P;
+  if Assigned(FInterbaseFirebirdPlainDriver.isc_get_client_version) then begin
+    FbPos := 0;
+    FInterbaseFirebirdPlainDriver.isc_get_client_version(P);
+    PEnd := P+ZFastCode.StrLen(P);
+    while P < PEnd do begin
+      if (FbPos < 2) and (PByte(P)^ = Byte('.')) then begin
+        PDot := P +1; //mark start of fake minior version
+        Inc(FbPos);
+      end else
+        PByte(P)^ := PByte(P)^ or $20; //Lowercase the buffer for the PosEx scan
+      Inc(P);
+    end;
+    P := PDot;
+  end else
+    Exit;
+  FbPos := ZFastCode.PosEx(RawByteString('firebird'), P, PEnd-P);
+  if FbPos > 0 then begin
+    FIsFirebirdLib := true;
+    { to get relase version read to next dot }
+    while (PDot < PEnd) and (PByte(PDot)^ >= Byte('0')) and (PByte(PDot)^ <= Byte('9')) do
+      Inc(PDot);
+    Release := ZFastCode.RawToIntDef(P, PDot, 0);
+    { skip the Firebird brand including the space }
+    Inc(P, FbPos + 8);
+    PDot := P; { read to next dot }
+    while (PDot < PEnd) and (PByte(PDot)^ >= Byte('0')) and (PByte(PDot)^ <= Byte('9')) do
+      Inc(PDot);
+    Major := ZFastCode.RawToIntDef(P, PDot, 0);
+    Inc(PDot); //skip the dot
+    P := PDot; { read to end or next non numeric char }
+    while (PDot < PEnd) and (PByte(PDot)^ >= Byte('0')) and (PByte(PDot)^ <= Byte('9')) do
+      Inc(PDot);
+    Minor := ZFastCode.RawToIntDef(P, PDot, 0);
+  end else begin
+    Release := 0;
+    if Assigned(FInterbaseFirebirdPlainDriver.isc_get_client_major_version)
+    then Major := FInterbaseFirebirdPlainDriver.isc_get_client_major_version()
+    else Major := 0;
+    if Assigned(FInterbaseFirebirdPlainDriver.isc_get_client_minor_version)
+    then Minor := FInterbaseFirebirdPlainDriver.isc_get_client_minor_version()
+    else Minor := 0;
+    FIsInterbaseLib := Major <> 0;
+  end;
+  FClientVersion := Major * 1000000 + Minor * 1000 + Release;
 end;
 
 const
