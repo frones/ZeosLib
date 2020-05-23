@@ -1202,12 +1202,7 @@ jmpConcat:I := 1;
               if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
-            //Writer.AddText(' Code: ', ErrorMessage);
-            //Writer.AddOrd(ErrorCode, ErrorMessage);
-            //Writer.AddText(' Message: ', ErrorMessage);
             Writer.AddText(@FWordBuffer[0], ZFastCode.StrLen(PAnsiChar(@FWordBuffer[0])), ErrorMessage);
-            if NewStatus = OCI_SUCCESS then
-              Break;
             Inc(I);
           end;
         end;
@@ -1294,12 +1289,7 @@ jmpConcat:I := 1;
               if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
-            //Writer.AddText(' Code: ', ErrorMessage);
-            //Writer.AddOrd(ErrorCode, ErrorMessage);
-            //Writer.AddText(' Message: ', ErrorMessage);
             Writer.AddText(@FWordBuffer[0], {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@FWordBuffer[0])), ErrorMessage);
-            if NewStatus = OCI_SUCCESS then
-              Break;
             Inc(I);
           end;
         end;

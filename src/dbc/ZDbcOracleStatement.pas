@@ -2702,7 +2702,7 @@ begin
         {$ELSE}
         if ConSettings.AutoEncode
         then ParamWriter.Finalize(Tmp)
-        else Tmp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, FClientCP);
+        else Tmp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, ConSettings^.CTRL_CP);
         {$ENDIF}
         Add(Tmp, False);
       end;
