@@ -82,6 +82,9 @@ type
   End;
 
   {** Implements ASA Database Connection. }
+
+  { TZSQLAnywhereConnection }
+
   TZSQLAnywhereConnection = class(TZAbstractDbcConnection, IZConnection,
     IZTransaction, IZSQLAnywhereConnection)
   private
@@ -90,6 +93,7 @@ type
     Fa_sqlany_connection: Pa_sqlany_connection;
     Fa_sqlany_interface_context: Pa_sqlany_interface_context;
     Fapi_version: Tsacapi_u32;
+    FLastWarning: EZSQLWarning;
   private
     function DetermineASACharSet: String;
   protected
@@ -110,6 +114,7 @@ type
       IZCallableStatement;
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
+    function GetWarnings: EZSQLWarning; override;
 
     procedure Commit;
     procedure Rollback;
@@ -269,9 +274,10 @@ begin
 
   if Assigned(FplainDriver.sqlany_clear_error) then
     FplainDriver.sqlany_clear_error(Fa_sqlany_connection);
-  if ErrCode > 0 then //that's a Warning
-
-  else begin
+  if ErrCode > 0 then begin//that's a Warning
+    ClearWarnings;
+    FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
+  end else begin
     DriverManager.LogError(LoggingCategory, ConSettings^.Protocol, ErrBuf, ErrCode, Msg);
     Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
     raise Exception;
@@ -573,6 +579,17 @@ begin
   if IsClosed then
     Open;
   Result := TZSQLAnywherePreparedStatement.Create(Self, SQL, Info);
+end;
+
+{**
+  Returns the first warning reported by calls on this Connection.
+  <P><B>Note:</B> Subsequent warnings will be chained to this
+  SQLWarning.
+  @return the first SQLWarning or null
+}
+function TZSQLAnywhereConnection.GetWarnings: EZSQLWarning;
+begin
+  Result := FLastWarning;
 end;
 
 {**
