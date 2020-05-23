@@ -79,6 +79,8 @@ type
     fLastAutoCommit: Boolean;
     FClientEncoding: TZCharEncoding;
     FODBCConnection: IZODBCConnection;
+    FODBCConnectionW: IZODBCConnectionW;
+    FODBCConnectionA: IZODBCConnectionA;
     FCallResultCache: TZCollection;
     FExecRETCODE: SQLRETURN;
     fParamBindings: PZODBCParamBindArray;
@@ -91,8 +93,7 @@ type
     function ExecutDirect: RETCODE; virtual; abstract;
     procedure InternalPrepare; virtual;
     procedure CheckStmtError(RETCODE: SQLRETURN);
-    procedure CheckDbcError(RETCODE: SQLRETURN);
-    procedure HandleError(RETCODE: SQLRETURN; Handle: SQLHANDLE; HandleType: SQLSMALLINT);
+    procedure HandleError(RETCODE: SQLRETURN; Handle: SQLHANDLE);
     function InternalCreateResultSet: IZResultSet;
     procedure InternalBeforePrepare;
     function GetCurrentResultSet: IZResultSet;
@@ -273,21 +274,19 @@ type
   is being executed by another thread.
 }
 procedure TZAbstractODBCStatement.Cancel;
+var Ret: SQLRETURN;
 begin
-  if fHSTMT <> nil then
-    CheckStmtError(FPlainDriver.SQLCancel(fHSTMT));
-end;
-
-procedure TZAbstractODBCStatement.CheckDbcError(RETCODE: SQLRETURN);
-begin
-  if RETCODE <> SQL_SUCCESS then
-    HandleError(RETCODE, fPHDBC^, SQL_HANDLE_DBC);
+  if fHSTMT <> nil then begin
+    Ret := FPlainDriver.SQLCancel(fHSTMT);
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLCancel', lcOther, Self);
+  end;
 end;
 
 procedure TZAbstractODBCStatement.CheckStmtError(RETCODE: SQLRETURN);
 begin
   if RETCODE <> SQL_SUCCESS then
-    HandleError(RETCODE, fHSTMT, SQL_HANDLE_STMT);
+    HandleError(RETCODE, fHSTMT);
 end;
 
 procedure TZAbstractODBCStatement.ClearCallResultCache;
@@ -312,7 +311,7 @@ constructor TZAbstractODBCStatement.Create(const Connection: IZODBCConnection;
   var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  fPlainDriver := TZODBC3PlainDriver(Connection.GetPlainDriver.GetInstance);
+  fPlainDriver := Connection.GetPlainDriver;
   fStreamSupport := Connection.ODBCVersion >= {%H-}Word(SQL_OV_ODBC3_80);
   fPHDBC := @ConnectionHandle;
   FZBufferLength := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
@@ -321,12 +320,15 @@ begin
   fMoreResultsIndicator := TZMoreResultsIndicator(Ord(not Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets));
   FClientEncoding := ConSettings^.ClientCodePage.Encoding;
   FODBCConnection := Connection;
+  FODBCConnection.QueryInterface(IZODBCConnectionW, FODBCConnectionW);
+  FODBCConnection.QueryInterface(IZODBCConnectionA, FODBCConnectionA);
 end;
 
 function TZAbstractODBCStatement.ExecutePrepared: Boolean;
 var
   RowCount: SQLLEN;
   ColumnCount: SQLSMALLINT;
+  var Ret: SQLRETURN;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := 0;
@@ -336,12 +338,16 @@ begin
   if BindList.HasOutOrInOutOrResultParam then
     Result := Supports(FCallResultCache[0], IZResultSet, FLastResultSet)
   else begin
-    CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+    Ret := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLNumResultCols', lcOther, Self);
     if ColumnCount > 0 then begin
       LastUpdateCount := -1;
       LastResultSet := GetCurrentResultSet;
     end else begin
-      CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+      Ret := fPlainDriver.SQLRowCount(fHSTMT, @RowCount);
+      if Ret <> SQL_SUCCESS then
+        FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLRowCount', lcOther, Self);
       LastUpdateCount := RowCount;
       LastResultSet := nil;
     end;
@@ -351,12 +357,15 @@ end;
 
 function TZAbstractODBCStatement.ExecuteQueryPrepared: IZResultSet;
 var ColumnCount: SQLSMALLINT;
+  Ret: SQLRETURN;
 begin
   PrepareOpenedResultSetsForReusing;
   Prepare;
   BindInParameters;
   InternalExecute;
-  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+  Ret := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
+  if Ret <> SQL_SUCCESS then
+    FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLNumResultCols', lcOther, Self);
   if BindList.HasOutOrInOutOrResultParam then begin
      FetchCallResults;
      Result := GetFirstResultSet;
@@ -374,6 +383,7 @@ end;
 
 function TZAbstractODBCStatement.ExecuteUpdatePrepared: Integer;
 var RowCount: SQLLEN;
+  Ret: SQLRETURN;
 begin
   if Assigned(FOpenResultSet) then IZResultSet(FOpenResultSet).Close;
   if Assigned(LastResultSet) then LastResultSet.Close;
@@ -385,7 +395,9 @@ begin
   if BindList.HasOutOrInOutOrResultParam then
     Result := LastUpdateCount
   else begin
-    CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+    Ret := fPlainDriver.SQLRowCount(fHSTMT, @RowCount);
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLRowCount', lcOther, Self);
     if (RowCount = -1) and GetMoreResults and (fLastResultSet = nil)
     then RowCount := LastUpdateCount
     else LastUpdateCount := LastUpdateCount + RowCount;
@@ -397,11 +409,14 @@ procedure TZAbstractODBCStatement.FetchCallResults;
 var CallResultCache: TZCollection;
   ColumnCount: SQLSMALLINT;
   RowCount: SQLLEN;
+  RET: SQLRETURN;
 begin
   if FCallResultCache <> nil then
     ClearCallResultCache;
   CallResultCache := TZCollection.Create;
-  CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+  Ret := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
+  if Ret <> SQL_SUCCESS then
+    FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLNumResultCols', lcOther, Self);
   if (fMoreResultsIndicator <> mriHasNoMoreResults) and (ColumnCount > 0) then begin
     FLastResultSet := InternalCreateResultSet;
     CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
@@ -414,6 +429,8 @@ begin
     fMoreResultsIndicator := mriHasMoreResults;
   end else begin
     CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLRowCount', lcOther, Self);
     LastUpdateCount := RowCount;
     CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
   end;
@@ -508,34 +525,44 @@ begin
     if RETCODE = SQL_SUCCESS then begin
       Result := True;
       fMoreResultsIndicator := mriHasMoreResults;
-      CheckStmtError(fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount));
+      RETCODE := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
+      if RETCODE <> SQL_SUCCESS then
+        FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fHSTMT, 'SQLNumResultCols', lcOther, Self);
       if ColumnCount > 0
       then LastResultSet := GetCurrentResultSet
       else begin
-        CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
+        RETCODE := fPlainDriver.SQLRowCount(fHSTMT, @RowCount);
+        if RETCODE <> SQL_SUCCESS then
+          FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fHSTMT, 'SQLRowCount', lcOther, Self);
         LastUpdateCount := RowCount;
       end;
     end else if RETCODE = SQL_NO_DATA then begin
       if fMoreResultsIndicator <> mriHasMoreResults then
         fMoreResultsIndicator := mriHasNoMoreResults;
     end else
-      CheckStmtError(RETCODE);
+      FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fHSTMT, 'SQLMoreResults', lcExecute, Self);
   end;
 end;
 
 procedure TZAbstractODBCStatement.HandleError(RETCODE: SQLRETURN;
-  Handle: SQLHANDLE; HandleType: SQLSMALLINT);
+  Handle: SQLHANDLE);
 begin
-  CheckODBCError(RETCODE, Handle, HandleType, SQL, Self, FODBCConnection);
+  FODBCConnection.HandleStmtErrorOrWarning(RETCODE, Handle,
+    SQL, lcOther, Self);
 end;
 
 procedure TZAbstractODBCStatement.InternalBeforePrepare;
+var Ret: SQLRETURN;
 begin
   if FCallResultCache <> nil then
     ClearCallResultCache;
   if not Assigned(fHSTMT) then begin
-    CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT));
-    CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0));
+    Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT);
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle(Stmt)', lcOther, Self);
+    Ret := fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0);
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLSetStmtAttr(Timeout)', lcOther, Self);
     fMoreResultsIndicator := mriUnknown;
     FHandleState := hsAllocated;
   end;
@@ -616,12 +643,17 @@ begin
 end;
 
 procedure TZAbstractODBCStatement.Prepare;
+var Ret: SQLRETURN;
 begin
   if FCallResultCache <> nil then
     ClearCallResultCache;
   if not Assigned(fHSTMT) then begin
-    CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT));
-    CheckStmtError(fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0));
+    Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT);
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle (SQL_HANDLE_STMT)', lcOther, Self);
+    Ret := fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0);
+    if Ret <> SQL_SUCCESS then
+      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLSetStmtAttr (SQL_ATTR_QUERY_TIMEOUT)', lcOther, Self);
     fMoreResultsIndicator := mriUnknown;
     FHandleState := hsAllocated;
   end;
@@ -634,8 +666,11 @@ begin
     InternalPrepare;
     inherited Prepare;
   end else if Ord(FHandleState) <> Ord(hsAllocated) then
-    if Assigned(fHSTMT) and Assigned(fPHDBC^) then
-      CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
+    if Assigned(fHSTMT) and Assigned(fPHDBC^) then begin
+      Ret := fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE);
+      if Ret <> SQL_SUCCESS then
+        FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLFreeStmt', lcOther, Self);
+    end;
 end;
 
 procedure TZAbstractODBCStatement.PrepareOpenedResultSetsForReusing;
@@ -657,6 +692,8 @@ procedure TZAbstractODBCStatement.ReleaseConnection;
 begin
   inherited ReleaseConnection;
   FODBCConnection := nil;
+  FODBCConnectionW := nil;
+  FODBCConnectionA := nil;
 end;
 
 function TZAbstractODBCStatement.SupportsSingleColumnArrays: Boolean;
@@ -680,7 +717,9 @@ end;
 
 function TZODBCPreparedStatementW.ExecutDirect: RETCODE;
 begin
-  Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL))
+  Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
+  if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
+    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, fWSQL, lcExecute, Self);
 end;
 
 function TZODBCPreparedStatementW.GetUnicodeEncodedSQL(
@@ -711,10 +750,13 @@ begin
 end;
 
 procedure TZODBCPreparedStatementW.InternalPrepare;
+var Ret: SQLRETURN;
 begin
   fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
   if fDEFERPREPARE then begin
-    CheckStmtError(TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL)));
+    Ret := TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL));
+    if Ret <> SQL_SUCCESS then
+      FODBCConnectionW.HandleStmtErrorOrWarningW(Ret, fHSTMT, fWSQL, lcExecute, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
   end else
@@ -732,6 +774,8 @@ end;
 function TZODBCPreparedStatementA.ExecutDirect: RETCODE;
 begin
   Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(ASQL), Length(ASQL));
+  if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
+    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, fASQL, lcExecute, Self);
 end;
 
 function TZODBCPreparedStatementA.GetRawEncodedSQL(
@@ -758,10 +802,13 @@ begin
 end;
 
 procedure TZODBCPreparedStatementA.InternalPrepare;
+var Ret: SQLRETURN;
 begin
   fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
   if fDEFERPREPARE then begin
-    CheckStmtError(TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL)));
+    Ret := TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL));
+    if Ret <> SQL_SUCCESS then
+      FODBCConnectionA.HandleStmtErrorOrWarningA(Ret, fHSTMT, fASQL, lcExecute, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
   end else
@@ -2922,7 +2969,9 @@ end;
 
 function TZODBCStatementW.ExecutDirect: RETCODE;
 begin
-  Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL))
+  Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
+  if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
+    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, fWSQL, lcExecute, Self);
 end;
 
 { TZODBCStatementA }
@@ -2935,7 +2984,9 @@ end;
 
 function TZODBCStatementA.ExecutDirect: RETCODE;
 begin
-  Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(fASQL), Length(fASQL))
+  Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(fASQL), Length(fASQL));
+  if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
+    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, fASQL, lcExecute, Self);
 end;
 
 initialization

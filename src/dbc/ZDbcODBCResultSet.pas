@@ -265,7 +265,7 @@ implementation
 uses Math,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZMessages, ZEncoding, ZDbcProperties,
-  ZDbcUtils;
+  ZDbcUtils, ZDbcLogging;
 
 { TAbstractODBCResultSet }
 
@@ -273,8 +273,8 @@ procedure TAbstractODBCResultSet.CheckStmtError(RETCODE: SQLRETURN);
   procedure HandleError;
   begin
     if Statement <> nil
-    then CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, Statement.GetSQL, Self, fConnection)
-    else CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, 'MetaData-call', Self, fConnection);
+    then fConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, Statement.GetSQL, lcExecute, Self)
+    else fConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, 'MetaData-call', lcExecute, Self);
   end;
 begin
   if RETCODE <> SQL_SUCCESS then
@@ -1402,6 +1402,7 @@ end;
   value returned is <code>zero</code>
   @exception SQLException if a database access error occurs
 }
+{$IFDEF FPC} {$PUSH} {$WARN 6018 off : Unreachable code} {$ENDIF} //depents to record size
 procedure TAbstractODBCResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 var L: LengthInt;
 label Fill;
@@ -1490,6 +1491,7 @@ begin
   end else
 Fill: FillChar(Result, SizeOf(TZTime), #0);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TAbstractODBCResultSet.GetULong(ColumnIndex: Integer): UInt64;
@@ -1655,6 +1657,7 @@ constructor TAbstractColumnODBCResultSet.Create(const Statement: IZStatement;
   const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
   const EnhancedColInfo: Boolean);
 var Supported: SQLUSMALLINT;
+  Ret: SQLRETURN;
 begin
   inherited Create(Statement, SQL, TZODBCResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
   fConnection := Connection;
@@ -1663,12 +1666,16 @@ begin
   fPHSTMT := @StmtHandle;
   fZBufferSize := ZBufferSize;
   fChunkSize := ChunkSize;
-  fConnection.CheckDbcError(fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported));
+  Ret := fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported);
+  if Ret <> SQL_SUCCESS then
+    fConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetFunctions', lcOther, Statement);
   fEnhancedColInfo := EnhancedColInfo and (Supported = SQL_TRUE);
   fCurrentBufRowNo := 0;
   fFreeHandle := not Assigned(StmtHandle);
-  Connection.CheckDbcError(fPlainDriver.SQLGetInfo(ConnectionHandle,
-    SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil));
+  Ret := fPlainDriver.SQLGetInfo(ConnectionHandle,
+    SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil);
+  if Ret <> SQL_SUCCESS then
+    fConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetInfo', lcOther, Statement);
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
   fCursorOpened := True;
@@ -1679,13 +1686,16 @@ end;
 constructor TAbstractColumnODBCResultSet.CreateForMetadataCall(
   out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
   {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
+var Ret: SQLRETURN;
 begin
   FIsMetaData := True;
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
-  Connection.CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
+  Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle);
+  if Ret <> SQL_SUCCESS then
+    Connection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle(Stmt)', lcOther, Self);
 end;
 
 {**
