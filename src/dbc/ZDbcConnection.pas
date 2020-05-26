@@ -125,7 +125,7 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
-    FWordBuffer: TWordBuffer; //have a static buffer for any conversion oslt
+    FByteBuffer: TByteBuffer; //have a static buffer for any conversion oslt
     fWeakReferenceOfSelfInterface: Pointer;
     FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
@@ -236,7 +236,6 @@ type
     function GetServerProvider: TZServerProvider; virtual;
   protected
     function GetByteBufferAddress: PByteBuffer;
-    function GetWordBufferAddress: PWordBuffer;
     property Closed: Boolean read IsClosed write FClosed;
   end;
 
@@ -1488,11 +1487,6 @@ begin
   Result := nil;
 end;
 
-function TZAbstractDbcConnection.GetWordBufferAddress: PWordBuffer;
-begin
-  Result := @FWordBuffer[0];
-end;
-
 {**
   Clears all warnings reported for this <code>Connection</code> object.
   After a call to this method, the method <code>getWarnings</code>
@@ -1528,7 +1522,7 @@ end;
 
 function TZAbstractDbcConnection.GetByteBufferAddress: PByteBuffer;
 begin
-  Result := @FWordBuffer[0];
+  Result := @FByteBuffer[0];
 end;
 
 function TZAbstractDbcConnection.GetEscapeString(const Value: ZWideString): ZWideString;

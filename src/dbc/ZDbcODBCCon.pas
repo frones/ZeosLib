@@ -85,6 +85,7 @@ type
     function GetPlainDriver: TZODBC3PlainDriver;
     procedure SetLastWarning(Warning: EZSQLWarning);
     function ODBCVersion: SQLUSMALLINT;
+    function GetByteBufferAddress: PByteBuffer;
   End;
 
   TZAbstractODBCConnection = class(TZAbstractDbcConnection,

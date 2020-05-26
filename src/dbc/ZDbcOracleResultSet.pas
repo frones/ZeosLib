@@ -102,6 +102,7 @@ type
     FTempLob: IZBlob;
     FClientCP: Word;
     FvnuInfo: TZvnuInfo;
+    fByteBuffer: PByteBuffer;
     function GetFinalObject(Obj: POCIObject): POCIObject;
     function CreateOCIConvertError(ColumnIndex: Integer; DataType: ub2): EZOCIConvertError;
     procedure FreeOracleSQLVars;
@@ -381,6 +382,7 @@ var P: PAnsiChar;
   Year: SmallInt;
   L: NativeUInt;
   Millis: Cardinal absolute L;
+  Status: SWord;
   procedure AddJSONEscapeA(P: PAnsichar; Len: LengthInt);
   begin
     JSONWriter.Add('"');
@@ -444,19 +446,18 @@ begin
         { the oracle soft decimal }
         SQLT_VNU        : case ZDbcOracleUtils.nvuKind(POCINumber(P), FvnuInfo) of
                             nvu0: JSONWriter.Add('0');
-                            vnuNegInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], NegOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
-                            vnuPosInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PosOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
+                            vnuNegInt: JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), NegOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
+                            vnuPosInt: JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PosOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
                             vnuPosCurr: JSONWriter.AddCurr64(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                            //vnuPosCurr: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PosNVUCurr2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             vnuNegCurr: JSONWriter.AddCurr64(NegNvu2Curr(POCINumber(P), FvnuInfo));
-                            //vnuNegCurr: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], NegNVUCurr2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             nvuNegInf: JSONWriter.AddShort('"-Infinity"');
                             nvuPosInf: JSONWriter.AddShort('"Infinity"');
                             else begin
-                              FStatus:= FPlainDriver.OCINumberToReal(FOCIError, POCINumber(P), SizeOf(Double), @FTinyBuffer[0]);
-                              if FStatus = OCI_Success
-                              then JSONWriter.AddDouble(PDouble(@FTinyBuffer[0])^)
-                              else CheckOracleError(FPLainDriver, FOCIError, FStatus, lcOther, 'OCINumberToReal', ConSettings);
+                              Status:= FPlainDriver.OCINumberToReal(FOCIError, POCINumber(P), SizeOf(Double), Pointer(FByteBuffer));
+                              if Status = OCI_Success
+                              then JSONWriter.AddDouble(PDouble(FByteBuffer)^)
+                              else Self.FOracleConnection.HandleErrorOrWarning(FOCIError,
+                                Status, lcOther, 'OCINumberToReal', Self);
                             end;
                           end;
         { the charter types we support }
@@ -488,15 +489,15 @@ begin
                             if POraDate(P)^.Cent < 100 then
                               JSONWriter.Add('-');
                             if ColType <> stTime then begin
-                              DateToIso8601PChar(@FTinyBuffer[0], True, (POraDate(P)^.Cent-100)*100+POraDate(P)^.Year-100,
+                              DateToIso8601PChar(PUTF8Char(fByteBuffer), True, (POraDate(P)^.Cent-100)*100+POraDate(P)^.Year-100,
                                 POraDate(P)^.month, POraDate(P)^.day);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
                             end else if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('0000-00-00');
                             if (ColType <> stDate) then begin
-                              TimeToIso8601PChar(@FTinyBuffer[0], True, POraDate(P)^.Hour-1,
+                              TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, POraDate(P)^.Hour-1,
                                 POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             end;
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
@@ -515,15 +516,15 @@ begin
                           // attention : this code handles all timestamps on 01/01/0001 as a pure time value
                           // reason : oracle doesn't have a pure time datatype so all time comparisons compare
                           //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-                            DateToIso8601PChar(@FTinyBuffer[0], True, Abs(Year), Month, Day);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            DateToIso8601PChar(PUTF8Char(fByteBuffer), True, Abs(Year), Month, Day);
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
                           end else if jcoMongoISODate in JSONComposeOptions then
                             JSONWriter.AddShort('0000-00-00');
                           if (ColType <> stDate) and (FPlainDriver.OCIDateTimeGetTime(FOCIEnv,
                              FOCIError, {%H-}PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
-                            TimeToIso8601PChar(@FTinyBuffer[0], True, Hour, Minute, Second,
+                            TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, Hour, Minute, Second,
                               Millis div 1000000, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                           end;
                           if jcoMongoISODate in JSONComposeOptions
                           then JSONWriter.AddShort('Z)"')
@@ -634,6 +635,7 @@ constructor TZOracleAbstractResultSet_A.Create(
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   FOracleConnection := Statement.GetConnection as IZOracleConnection;
+  fByteBuffer := FOracleConnection.GetByteBufferAddress;
   FStmtHandle := StmtHandle;
   FOCIError := ErrorHandle;
   FPlainDriver := FOracleConnection.GetPlainDriver;
@@ -761,8 +763,8 @@ var TS: TZTimeStamp;
 label dbl, sin, set_Result, jmpW2A, jmpTestN;
   procedure RawFromNVU;
   begin
-    Nvu2BCD(POCINumber(Result), PBCD(@FTinyBuffer[0])^);
-    FRawTemp := BcdToSQLRaw(PBCD(@FTinyBuffer[0])^);
+    Nvu2BCD(POCINumber(Result), PBCD(fByteBuffer)^);
+    FRawTemp := BcdToSQLRaw(PBCD(fByteBuffer)^);
   end;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -810,9 +812,9 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSetting
       SQLT_VNU:
         case nvuKind(POCINumber(Result), FvnuInfo) of
           nvu0: begin
-              FTinyBuffer[0] := Ord('0');
+              fByteBuffer[0] := Ord('0');
               Len := 1;
-              Result := @FTinyBuffer[0];
+              Result := PAnsiChar(fByteBuffer);
             end;
           nvuNegInf: begin
               Result := Pointer(rNegInfinity);
@@ -823,19 +825,19 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSetting
               Len := 8;
             end;
           vnuNegInt: begin
-              Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
-              Result := @FTinyBuffer[0];
+              Result := PAnsiChar(fByteBuffer);
+              Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, Result);
             end;
           vnuPosInt: begin
-              Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
-              Result := @FTinyBuffer[0];
+              Result := PAnsiChar(fByteBuffer);
+              Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, Result);
             end;
           vnuPosCurr: begin
-              CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), PAnsiChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuNegCurr: begin
-              CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), PAnsiChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           else begin
@@ -847,32 +849,32 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSetting
       { the ordinals we yet do support }
       SQLT_INT: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(Int64): IntToRaw(PInt64(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Integer): IntToRaw(PInteger(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(SmallInt): IntToRaw(PSmallInt(Result)^, @FTinyBuffer[0], @Result);
-                    else IntToRaw(PShortInt(Result)^, @FTinyBuffer, @Result[0]);
+                    SizeOf(Int64): IntToRaw(PInt64(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(Integer): IntToRaw(PInteger(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(SmallInt): IntToRaw(PSmallInt(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    else IntToRaw(PShortInt(Result)^, PAnsiChar(fByteBuffer), @Result[0]);
                   end;
                   goto set_Result;
                 end;
       SQLT_UIN: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(UInt64): IntToRaw(PUInt64(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Cardinal): IntToRaw(PCardinal(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(SmallInt): IntToRaw(Cardinal(PWord(Result)^), @FTinyBuffer[0], @Result);
-                    else IntToRaw(Cardinal(PByte(Result)^), @FTinyBuffer, @Result[0]);
+                    SizeOf(UInt64): IntToRaw(PUInt64(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(Cardinal): IntToRaw(PCardinal(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(SmallInt): IntToRaw(Cardinal(PWord(Result)^), PAnsiChar(fByteBuffer), @Result);
+                    else IntToRaw(Cardinal(PByte(Result)^), PAnsiChar(fByteBuffer), @Result[0]);
                   end;
-set_Result:       Len := Result - @FTinyBuffer[0];
-                  Result := @FTinyBuffer[0];
+set_Result:       Len := Result - PAnsiChar(fByteBuffer);
+                  Result :=PAnsiChar(fByteBuffer);
                 end;
       { the FPU floats we do support }
       SQLT_BFLOAT:  goto sin;
       SQLT_BDOUBLE: goto dbl;
       SQLT_FLT: begin
                   if SQLVarHolder^.value_sz = SizeOf(Double) then
-      dbl:          Len := FloatToSQLRaw(PDouble(Result)^, @FTinyBuffer)
+      dbl:          Len := FloatToSQLRaw(PDouble(Result)^, PAnsiChar(fByteBuffer))
                   else
-      sin:          Len := FloatToSQLRaw(PSingle(Result)^, @FTinyBuffer);
-                  Result := @FTinyBuffer[0];
+      sin:          Len := FloatToSQLRaw(PSingle(Result)^, PAnsiChar(fByteBuffer));
+                  Result := PAnsiChar(fByteBuffer);
                 end;
       { the binary raw we support }
       SQLT_VBI: begin
@@ -891,7 +893,7 @@ set_Result:       Len := Result - @FTinyBuffer[0];
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
                   GetTimeStamp(ColumnIndex, TS);
-                  Result := @fTinyBuffer[0];
+                  Result := PAnsiChar(fByteBuffer);
                   Len := DateTimeToRaw(TS.Year, TS.Month, TS.Day,
                     TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                     Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
@@ -936,8 +938,8 @@ var TS: TZTimeStamp;
 label dbl, sin, set_from_tmp, set_Result, jmpA2W;
   procedure UniFromNVU;
   begin
-    Nvu2BCD(POCINumber(P), PBCD(@FTinyBuffer[0])^);
-    FUniTemp := ZSysUtils.BcdToSQLUni(PBCD(@FTinyBuffer[0])^);
+    Nvu2BCD(POCINumber(P), PBCD(fByteBuffer)^);
+    FUniTemp := ZSysUtils.BcdToSQLUni(PBCD(fByteBuffer)^);
   end;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -991,9 +993,9 @@ jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
       SQLT_VNU:
         case nvuKind(POCINumber(P), FvnuInfo) of
           nvu0: begin
-              PWord(@FTinyBuffer[0])^ := Ord('0');
+              PWord(fByteBuffer)^ := Ord('0');
               Len := 1;
-              Result := @FTinyBuffer[0];
+              Result := PWideChar(fByteBuffer);
             end;
           nvuNegInf: begin
               Result := Pointer(wNegInfinity);
@@ -1004,19 +1006,19 @@ jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
               Len := 8;
             end;
           vnuNegInt: begin
-              IntToUnicode(NegNvu2Int(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              IntToUnicode(NegNvu2Int(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuPosInt: begin
-              IntToUnicode(PosNvu2Int(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              IntToUnicode(PosNvu2Int(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuPosCurr: begin
-              CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuNegCurr: begin
-              CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           else begin
@@ -1028,32 +1030,32 @@ jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
       { the ordinals we yet do support }
       SQLT_INT: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(Int64): IntToUnicode(PInt64(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Integer): IntToUnicode(PInteger(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(SmallInt): IntToUnicode(PSmallInt(P)^, @FTinyBuffer[0], @Result);
-                    else IntToUnicode(PShortInt(P)^, @FTinyBuffer, @Result[0]);
+                    SizeOf(Int64): IntToUnicode(PInt64(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(Integer): IntToUnicode(PInteger(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(SmallInt): IntToUnicode(PSmallInt(P)^, PWideChar(fByteBuffer), @Result);
+                    else IntToUnicode(PShortInt(P)^, PWideChar(fByteBuffer), @Result);
                   end;
                   goto set_Result;
                 end;
       SQLT_UIN: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(UInt64): IntToUnicode(PUInt64(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Cardinal): IntToUnicode(PCardinal(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Word): IntToUnicode(Cardinal(PWord(P)^), @FTinyBuffer[0], @Result);
-                    else IntToUnicode(Cardinal(PByte(P)^), @FTinyBuffer, @Result[0]);
+                    SizeOf(UInt64): IntToUnicode(PUInt64(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(Cardinal): IntToUnicode(PCardinal(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(Word): IntToUnicode(Cardinal(PWord(P)^), PWideChar(fByteBuffer), @Result);
+                    else IntToUnicode(Cardinal(PByte(P)^), PWideChar(fByteBuffer), @Result);
                   end;
-set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
-                  Result := @FTinyBuffer[0];
+set_Result:       Len := Result - PWideChar(fByteBuffer);
+                  Result := PWideChar(fByteBuffer);
                 end;
       { the FPU floats we du support }
       SQLT_BFLOAT:  goto sin;
       SQLT_BDOUBLE: goto dbl;
       SQLT_FLT: begin
                   if SQLVarHolder^.value_sz = SizeOf(Double) then
-      dbl:          Len := FloatToSQLUnicode(PDouble(P)^, @FTinyBuffer)
+      dbl:          Len := FloatToSQLUnicode(PDouble(P)^, PWideChar(fByteBuffer))
                   else
-      sin:          Len := FloatToSQLUnicode(PSingle(P)^, @FTinyBuffer);
-                  Result := @FTinyBuffer
+      sin:          Len := FloatToSQLUnicode(PSingle(P)^, PWideChar(fByteBuffer));
+                  Result := PWideChar(fByteBuffer)
                 end;
       { the binary raw we support }
       SQLT_VBI: begin
@@ -1072,7 +1074,7 @@ set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
                   GetTimeStamp(ColumnIndex, TS);
-                  Result := @fTinyBuffer[0];
+                  Result := PWideChar(fByteBuffer);
                   Len := DateTimeToUni(TS.Year, TS.Month, TS.Day,
                     TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                     Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
@@ -1313,11 +1315,11 @@ begin
                   vnuNegCurr: Result := NegNvu2Int(POCINumber(P), FvnuInfo);
                   else begin
                       Status := FplainDriver.OCINumberToReal(FOCIError, POCINumber(P),
-                        SizeOf(Double), @FTinyBuffer[0]);
+                        SizeOf(Double), Pointer(fByteBuffer));
                       if Status <> OCI_SUCCESS then
                         FOracleConnection.HandleErrorOrWarning(FOCIError,
                           Status, lcOther, 'OCINumberToReal', Self);
-                      Result := Trunc(PDouble(@FTinyBuffer[0])^);
+                      Result := Trunc(PDouble(fByteBuffer)^);
                     end;
                 end;
       { the ordinals we yet do support }
@@ -1422,13 +1424,13 @@ begin
                   vnuNegCurr: Result := NegNvu2Int(POCINumber(P), FvnuInfo);
                   else begin
                       Status := FplainDriver.OCINumberToReal(FOCIError, POCINumber(P),
-                        SizeOf(Double), @FTinyBuffer[0]);
+                        SizeOf(Double), Pointer(fByteBuffer));
                       if Status <> OCI_SUCCESS then
                         FOracleConnection.HandleErrorOrWarning(FOCIError,
                           Status, lcOther, 'OCINumberToReal', Self);
-                      if PDouble(@FTinyBuffer[0])^ < 0
+                      if PDouble(fByteBuffer)^ < 0
                       then Result := 0
-                      else Result := Trunc(PDouble(@FTinyBuffer[0])^);
+                      else Result := Trunc(PDouble(fByteBuffer)^);
                     end;
                 end;
       { the ordinals we yet do support }
@@ -1737,11 +1739,11 @@ begin
             vnuNegCurr: Result := NegNvu2Curr(POCINumber(P), FvnuInfo);
             else begin
                 Status := FplainDriver.OCINumberToReal(FOCIError, POCINumber(P),
-                  SizeOf(Double), @FTinyBuffer[0]);
+                  SizeOf(Double), Pointer(fByteBuffer));
                 if Status <> OCI_SUCCESS then
                   FOracleConnection.HandleErrorOrWarning(FOCIError,
                           Status, lcOther, 'OCINumberToReal', Self);
-                Result := PDouble(@FTinyBuffer[0])^;
+                Result := PDouble(fByteBuffer)^;
               end;
         end;
       { the ordinals we yet do support }

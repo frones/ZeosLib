@@ -79,6 +79,7 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMARSConnection: Boolean;
+    function GetByteBufferAddress: PByteBuffer;
   end;
 
   {** Implements a generic OleDB Connection. }

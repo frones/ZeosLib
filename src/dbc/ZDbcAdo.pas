@@ -80,6 +80,7 @@ type
   IZAdoConnection = interface (IZConnection)
     ['{50D1AF76-0174-41CD-B90B-4FB770EFB14F}']
     function GetAdoConnection: ZPlainAdo.Connection;
+    function GetByteBufferAddress: PByteBuffer;
   end;
 
   {** Implements a generic Ado Connection. }

@@ -107,6 +107,7 @@ type
     function IsFirebirdLib: Boolean;
     function IsInterbaseLib: Boolean;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
+    function GetByteBufferAddress: PByteBuffer;
   end;
 
   TZInterbaseFirebirdConnection = Class(TZAbstractDbcConnection)
@@ -277,6 +278,7 @@ type
   protected
     FGUIDProps: TZInterbaseFirebirdStatementGUIDProps;
     FIsMetadataResultSet: Boolean;
+    FByteBuffer: PByteBuffer;
   public
     //EH: this field is a weak resultset reference
     //it may be an address of a cached resultset which owns this instance.
@@ -355,6 +357,7 @@ type
     FDialect: Cardinal;
     FInData, FOutData: Pointer;
     FCodePageArray: TWordDynArray;
+    FByteBuffer: PByteBuffer;
     procedure ExceuteBatch;
     function SplittQuery(const SQL: SQLString): RawByteString;
 
@@ -1724,22 +1727,22 @@ begin
           SQL_SHORT     : if sqlscale = 0 then
                             JSONWriter.Add(PISC_SHORT(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), @FTinyBuffer, @P, -sqlscale);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                            ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(FByteBuffer), @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PAnsiChar(P)-PAnsiChar(FByteBuffer));
                           end;
           SQL_LONG      : if sqlscale = 0 then
                             JSONWriter.Add(PISC_LONG(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(PISC_LONG(sqldata)^, @FTinyBuffer, @P, -sqlscale);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                            ScaledOrdinal2Raw(PISC_LONG(sqldata)^, PAnsiChar(FByteBuffer), @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PAnsiChar(P)-PAnsiChar(FByteBuffer));
                           end;
           SQL_INT64     : if (sqlscale = 0) then
                             JSONWriter.Add(PISC_INT64(sqldata)^)
                           else if sqlScale = -4 then
                             JSONWriter.AddCurr64(PISC_INT64(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(PISC_INT64(sqldata)^, @FTinyBuffer, @P, -sqlscale);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                            ScaledOrdinal2Raw(PISC_INT64(sqldata)^, PAnsiChar(FByteBuffer), @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PAnsiChar(P)-PAnsiChar(FByteBuffer));
                           end;
           SQL_TIMESTAMP : begin
                             if jcoMongoISODate in JSONComposeOptions then
@@ -1750,12 +1753,12 @@ begin
                               JSONWriter.Add('"');
                             isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
                               TempDate.Year, TempDate.Month, Tempdate.Day);
-                            DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, TempDate.Day);
+                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Year, TempDate.Month, TempDate.Day);
                             isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
                               TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                            TimeToIso8601PChar(@FTinyBuffer[10], True, TempDate.Hour, TempDate.Minute,
+                            TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TempDate.Hour, TempDate.Minute,
                               TempDate.Second, TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
@@ -1780,9 +1783,9 @@ begin
                               JSONWriter.Add('"');
                             isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
                               TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                            TimeToIso8601PChar(@FTinyBuffer[0], True, TempDate.Hour, TempDate.Minute,
+                            TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Hour, TempDate.Minute,
                               TempDate.Second,  TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
@@ -1795,8 +1798,8 @@ begin
                             else
                               JSONWriter.Add('"');
                             isc_decode_date(PISC_DATE(sqldata)^, TempDate.Year, TempDate.Month, Tempdate.Day);
-                            DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, Tempdate.Day);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Year, TempDate.Month, Tempdate.Day);
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),10);
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
@@ -1822,6 +1825,7 @@ constructor TZAbstractInterbaseFirebirdResultSet.Create(
 var Connection: IZConnection;
 begin
   Connection := Statement.GetConnection;
+  FByteBuffer := (Connection as IZInterbaseFirebirdConnection).GetByteBufferAddress;
   inherited Create(Statement, SQL, TZInterbaseFirebirdResultSetMetadata.Create(
     Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
   FGUIDProps := TZInterbaseFirebirdStatementGUIDProps.Create(Statement);
@@ -2582,19 +2586,19 @@ begin
     end else case sqltype of
       SQL_D_FLOAT,
       SQL_DOUBLE    : begin
-                        Len := FloatToSQLRaw(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
+                        Len := FloatToSQLRaw(PDouble(sqldata)^, Result);
                       end;
       SQL_LONG      : if sqlscale = 0 then begin
-                        IntToRaw(PISC_LONG(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PISC_LONG(sqldata)^, PAnsiChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PISC_LONG(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Raw(PISC_LONG(sqldata)^, PAnsiChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_FLOAT     : begin
-                        Len := FloatToSQLRaw(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
+                        Len := FloatToSQLRaw(PSingle(sqldata)^, Result);
                       end;
       SQL_BOOLEAN   : if PISC_BOOLEAN(sqldata)^ <> 0 then begin
                         Result := Pointer(BoolStrsRaw[True]);
@@ -2611,20 +2615,20 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if sqlscale = 0 then begin
-                        IntToRaw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if sqlscale = 0 then begin
-                        IntToRaw(PISC_INT64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PISC_INT64(sqldata)^, PAnsiChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PISC_INT64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
-set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Raw(PISC_INT64(sqldata)^, PAnsiChar(FByteBuffer), @Result, Byte(-sqlscale));
+set_Results:            Len := Result - PAnsiChar(FByteBuffer);
+                        Result := PAnsiChar(FByteBuffer);
                       end;
       SQL_TEXT,
       SQL_VARYING   : Result := GetPCharFromTextVar(Len);
@@ -2634,7 +2638,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(FByteBuffer);
                         Len := DateTimeToRaw(TempDate.Year, TempDate.Month,
                           TempDate.Day, TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 10000,
@@ -2643,14 +2647,14 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(FByteBuffer);
                         Len := DateToRaw(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(FByteBuffer);
                         Len := TimeToRaw(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 10000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
@@ -2703,12 +2707,12 @@ begin
     end else case sqltype of
       SQL_D_FLOAT,
       SQL_DOUBLE    : begin
-                        Len := FloatToSQLUnicode(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(FByteBuffer);
+                        Len := FloatToSQLUnicode(PDouble(sqldata)^, Result);
                       end;
       SQL_FLOAT     : begin
-                        Len := FloatToSQLUnicode(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(FByteBuffer);
+                        Len := FloatToSQLUnicode(PSingle(sqldata)^, Result);
                       end;
       SQL_BOOLEAN   : if PISC_BOOLEAN(sqldata)^ <> 0 then begin
                         Result := Pointer(BoolStrsW[True]);
@@ -2725,27 +2729,27 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if sqlscale = 0 then begin
-                        IntToUnicode(Integer(PISC_SHORT(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Integer(PISC_SHORT(sqldata)^), PWideChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(Integer(PISC_SHORT(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Unicode(Integer(PISC_SHORT(sqldata)^), PWideChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_LONG      : if sqlscale = 0 then begin
-                        IntToUnicode(PISC_LONG(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PISC_LONG(sqldata)^, PWideChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PISC_LONG(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Unicode(PISC_LONG(sqldata)^, PWideChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if sqlscale = 0 then begin
-                        IntToUnicode(PISC_INT64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PISC_INT64(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PISC_INT64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
-set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Unicode(PISC_INT64(sqldata)^, PWideChar(fByteBuffer), @Result, Byte(-sqlscale));
+set_Results:            Len := Result - PWideChar(FByteBuffer);
+                        Result := PWideChar(FByteBuffer);
                       end;
       SQL_TEXT,
       SQL_VARYING   : begin
@@ -2764,7 +2768,7 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := DateTimeToUni(TempDate.Year,
                           TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 10000,
@@ -2773,14 +2777,14 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := DateToUni(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := TimeToUni(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 100000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
@@ -3034,6 +3038,7 @@ constructor TZAbstractFirebirdInterbasePreparedStatement.Create(
 begin
   Self.ConSettings := Connection.GetConSettings;
   FDB_CP_ID := ConSettings.ClientCodePage.ID;
+  FByteBuffer := Connection.GetByteBufferAddress;
   inherited Create(Connection, SQL, Info);
   FDialect := Connection.GetDialect;
   FCodePageArray := Connection.GetInterbaseFirebirdPlainDriver.GetCodePageArray;
@@ -3289,10 +3294,10 @@ begin
       SQL_QUAD      : BCD2ScaledOrdinal(Value, sqldata, SizeOf(ISC_INT64), -sqlscale);
       SQL_TEXT,
       SQL_VARYING   : begin
-                        L := BcdToRaw(Value, @fABuffer[0], '.');
+                        L := BcdToRaw(Value, PAnsiChar(FByteBuffer), '.');
                         if sqllen < L then
                           L := sqllen;
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       else InternalBindDouble(Index, BCDToDouble(Value));
@@ -3529,11 +3534,11 @@ begin
                         PISC_INT64(sqldata)^ := I64 * IBScaleDivisor[4+sqlscale]; //inc sqlscale digits
       SQL_TEXT,
       SQL_VARYING   : begin
-                        CurrToRaw(Value, @fABuffer[0], @P);
-                        L := P - PAnsiChar(@fABuffer[0]);
+                        CurrToRaw(Value, PAnsiChar(FByteBuffer), @P);
+                        L := P - PAnsiChar(FByteBuffer);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       else raise CreateConversionError(Index, stCurrency);
@@ -3563,11 +3568,11 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case sqltype of
       SQL_VARYING   : begin
-                        L := DateToRaw(Value.Year, Value.Month, Value.Day, @fABuffer[0],
+                        L := DateToRaw(Value.Year, Value.Month, Value.Day, PAnsiChar(FByteBuffer),
                             ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       SQL_TYPE_TIME : PISC_TIME(sqldata)^ := 0;
@@ -3609,10 +3614,10 @@ begin
       SQL_FLOAT     : PSingle(sqldata)^   := Value;
       SQL_TEXT,
       SQL_VARYING   : begin
-          L := FloatToSqlRaw(Value, @fABuffer[0]);
+          L := FloatToSqlRaw(Value, PAnsiChar(FByteBuffer));
           if LengthInt(sqllen) < L then
             L := LengthInt(sqllen);
-          Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+          Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
           PISC_VARYING(sqldata).strlen := L;
         end;
       else InternalBindDouble(Index, Value);
@@ -3643,10 +3648,10 @@ begin
       SQL_FLOAT     : PSingle(sqldata)^   := Value;
       SQL_TEXT,
       SQL_VARYING   : begin
-          L := FloatToSqlRaw(Value, @fABuffer[0]);
+          L := FloatToSqlRaw(Value, PAnsiChar(FByteBuffer));
           if LengthInt(sqllen) < L then
             L := LengthInt(sqllen);
-          Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+          Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
           PISC_VARYING(sqldata).strlen := L;
         end;
       else InternalBindDouble(Index, Value);
@@ -3677,7 +3682,7 @@ begin
                           L := SizeOf(TGUID);
                         end else begin
                           //see https://firebirdsql.org/refdocs/langrefupd25-intfunc-uuid_to_char.html
-                          P := @fABuffer[0];
+                          P := PAnsiChar(FByteBuffer);
                           GUIDToBuffer(@Value.D1, P, []);
                           L := 36;
                         end;
@@ -3691,7 +3696,7 @@ begin
       SQL_QUAD      : if codepage = zCP_Binary then
                         WriteLobBuffer(Index, @Value.D1, SizeOf(TGUID))
                       else begin
-                        P := @fABuffer[0];
+                        P := PAnsiChar(FByteBuffer);
                         GUIDToBuffer(@Value.D1, P, []);
                         WriteLobBuffer(Index, P, 36)
                       end;
@@ -4130,10 +4135,10 @@ begin
       SQL_TEXT,
       SQL_VARYING   : begin
                         L := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                            @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, False);
+                            PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.TimeFormat, False, False);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       SQL_TYPE_DATE : isc_encode_date(PISC_DATE(sqldata)^, 1899, 12, 31);
@@ -4177,10 +4182,11 @@ begin
       SQL_VARYING   : begin
                         L := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
                             Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                            @fABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
+                            PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateTimeFormat,
+                            False, Value.IsNegative);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       SQL_TYPE_DATE : isc_encode_date(PISC_DATE(sqldata)^, Value.Year, Value.Month, Value.Day);

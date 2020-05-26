@@ -90,6 +90,7 @@ type
     fTempBlob: IZBlob;
     fClientCP, fCtrlCP: Word;
     FOleDBConnection: IZOleDBConnection;
+    FByteBuffer: PByteBuffer;
   private
     FData: Pointer;
     FLength: DBLENGTH;
@@ -473,8 +474,8 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
           end;
         DBTYPE_NUMERIC: begin
                           FLength := SQL_MAX_NUMERIC_LEN;
-                          SQLNumeric2Raw(FData, @fTinyBuffer[0], FLength);
-                          JSONWriter.AddJSONEscape(@fTinyBuffer[0], FLength);
+                          SQLNumeric2Raw(FData, PAnsiChar(FByteBuffer), FLength);
+                          JSONWriter.AddJSONEscape(PAnsiChar(FByteBuffer), FLength);
                         end;
         //DBTYPE_UDT = 132;
         DBTYPE_DBDATE:    begin
@@ -486,9 +487,9 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
                               JSONWriter.Add('"');
                             if PDBDate(FData)^.year < 0 then
                               JSONWriter.Add('-');
-                            DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PDBDate(FData)^.year),
+                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, Abs(PDBDate(FData)^.year),
                               PDBDate(FData)^.month, PDBDate(FData)^.day);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),10);
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('T00:00:00Z")')
                             else JSONWriter.Add('"');
@@ -500,9 +501,9 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                             end else
                               JSONWriter.Add('"');
-                            TimeToIso8601PChar(@FTinyBuffer[0], True, PDBTime(FData)^.hour,
+                            TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PDBTime(FData)^.hour,
                               PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
@@ -516,12 +517,12 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
                               JSONWriter.Add('"');
                             if PDBTimeStamp(FData)^.year < 0 then
                               JSONWriter.Add('-');
-                            DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PDBTimeStamp(FData)^.Year),
+                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, Abs(PDBTimeStamp(FData)^.Year),
                                PDBTimeStamp(FData)^.Month, PDBTimeStamp(FData)^.Day);
                             MS := (PDBTimeStamp(FData)^.fraction * Byte(ord(jcoMilliseconds in JSONComposeOptions))) div 1000000;
-                            TimeToIso8601PChar(@FTinyBuffer[10], True, PDBTimeStamp(FData)^.Hour,
+                            TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, PDBTimeStamp(FData)^.Hour,
                               PDBTimeStamp(FData)^.Minute, PDBTimeStamp(FData)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
@@ -530,8 +531,8 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
         //DBTYPE_FILETIME = 64;
         //DBTYPE_PROPVARIANT = 138;
         DBTYPE_VARNUMERIC: begin
-                            SQLNumeric2Raw(FData, @fTinyBuffer[0], FLength);
-                            JSONWriter.AddJSONEscape(@fTinyBuffer[0], FLength);
+                            SQLNumeric2Raw(FData, PAnsiChar(FByteBuffer), FLength);
+                            JSONWriter.AddJSONEscape(PUTF8Char(FByteBuffer), FLength);
                           end;
       end;
       JSONWriter.Add(',');
@@ -692,73 +693,73 @@ begin
                         Len := 5;
                       end;
     DBTYPE_I1:        begin
-                        IntToRaw(Integer(PShortInt(FData)^), @FTinyBuffer[0], @Result);
+                        IntToRaw(Integer(PShortInt(FData)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I2:        begin
-                        IntToRaw(Integer(PSmallInt(FData)^), @FTinyBuffer[0], @Result);
+                        IntToRaw(Integer(PSmallInt(FData)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I4,
     DBTYPE_ERROR:     begin
-                        IntToRaw(PInteger(FData)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PInteger(FData)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I8:        begin
-                        IntToRaw(PInt64(FData)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PInt64(FData)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI1:       begin
-                        IntToRaw(Cardinal(PByte(FData)^), @FTinyBuffer[0], @Result);
+                        IntToRaw(Cardinal(PByte(FData)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI2:       begin
-                        IntToRaw(Cardinal(PWord(FData)^), @FTinyBuffer[0], @Result);
+                        IntToRaw(Cardinal(PWord(FData)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     {$IFNDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI4:       begin
-                        IntToRaw(PCardinal(FData)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PCardinal(FData)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     {$IFDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI8:       begin
-                        IntToRaw(PUInt64(FData)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PUInt64(FData)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_R4:        begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := FloatToSQLRaw(PSingle(FData)^, Result);
                       end;
     DBTYPE_R8:        begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := FloatToSQLRaw(PDouble(FData)^, Result);
                       end;
     DBTYPE_CY:        begin
-                        CurrToRaw(PCurrency(FData)^, @FTinyBuffer[0], @Result);
-set_from_buf:           Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                        Result := PAnsiChar(@FTinyBuffer[0])
+                        CurrToRaw(PCurrency(FData)^, PAnsiChar(fByteBuffer), @Result);
+set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
+                        Result := PAnsiChar(fByteBuffer);
                       end;
     DBTYPE_DATE:      begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
                           Result, ConSettings.ReadFormatSettings, False);
                       end;
     DBTYPE_DBDATE:    begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := DateToRaw(Abs(PDBDate(FData)^.year),
                           PDBDate(FData)^.month, PDBDate(FData)^.day,
                           Result, ConSettings.ReadFormatSettings.DateFormat,
                           False, PDBDate(FData)^.year < 0);
                       end;
     DBTYPE_DBTIME:    begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := TimeToRaw(PDBTime(FData)^.hour,
                           PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := DateTimeToRaw(Word(Abs(PDBTimeStamp(FData)^.year)),
                           PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
                           PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
@@ -772,9 +773,9 @@ set_from_buf:           Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         goto set_from_tmp;
                       end;
     DBTYPE_GUID:      begin
-                        GUIDToBuffer(FData, PAnsiChar(@FTinyBuffer[0]), []);
+                        GUIDToBuffer(FData, PAnsiChar(fByteBuffer), []);
                         Len := 36;
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                       end;
     DBTYPE_STR:       if FColBind.cbMaxLen = 0 then begin
                         fTempBlob := GetBlob(ColumnIndex);
@@ -808,8 +809,8 @@ set_from_tmp:         Len := Length(FRawTemp);
                     end;
     DBTYPE_VARNUMERIC: begin
                       Len := FLength;
-set_from_num:         Result := @fTinyBuffer[0];
-                      SQLNumeric2Raw(fData, @fTinyBuffer[0], Len);
+set_from_num:         Result := PAnsiChar(fByteBuffer);
+                      SQLNumeric2Raw(fData, Result, Len);
                     end;
     //DBTYPE_UDT	= 132;
     //DBTYPE_FILETIME	= 64;
@@ -843,73 +844,73 @@ begin
                         Len := 5;
                       end;
     DBTYPE_I1:        begin
-                        IntToUnicode(Integer(PShortInt(FData)^), @FTinyBuffer[0], @Result);
+                        IntToUnicode(Integer(PShortInt(FData)^), PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I2:        begin
-                        IntToUnicode(Integer(PSmallInt(FData)^), @FTinyBuffer[0], @Result);
+                        IntToUnicode(Integer(PSmallInt(FData)^), PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I4,
     DBTYPE_ERROR:     begin
-                        IntToUnicode(PInteger(FData)^, @FTinyBuffer[0], @Result);
+                        IntToUnicode(PInteger(FData)^, PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_I8:        begin
-                        IntToUnicode(PInt64(FData)^, @FTinyBuffer[0], @Result);
+                        IntToUnicode(PInt64(FData)^, PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI1:       begin
-                        IntToUnicode(Cardinal(PByte(FData)^), @FTinyBuffer[0], @Result);
+                        IntToUnicode(Cardinal(PByte(FData)^), PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_UI2:       begin
-                        IntToUnicode(Cardinal(PWord(FData)^), @FTinyBuffer[0], @Result);
+                        IntToUnicode(Cardinal(PWord(FData)^), PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     {$IFNDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI4:       begin
-                        IntToUnicode(PCardinal(FData)^, @FTinyBuffer[0], @Result);
+                        IntToUnicode(PCardinal(FData)^, PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     {$IFDEF CPUX64}DBTYPE_HCHAPTER,{$ENDIF} //NativeUnit
     DBTYPE_UI8:       begin
-                        IntToUnicode(PUInt64(FData)^, @FTinyBuffer[0], @Result);
+                        IntToUnicode(PUInt64(FData)^, PWideChar(fByteBuffer), @Result);
                         goto set_from_buf;
                       end;
     DBTYPE_R4:        begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := FloatToSQLUnicode(PSingle(FData)^, Result);
                       end;
     DBTYPE_R8:        begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := FloatToSQLUnicode(PDouble(FData)^, Result);
                       end;
     DBTYPE_CY:        begin
-                        CurrToUnicode(PCurrency(FData)^, @FTinyBuffer[0], @Result);
-set_from_buf:           Len := Result - PWideChar(@FTinyBuffer[0]);
-                        Result := PWideChar(@FTinyBuffer[0])
+                        CurrToUnicode(PCurrency(FData)^, PWideChar(fByteBuffer), @Result);
+set_from_buf:           Len := Result - PWideChar(fByteBuffer);
+                        Result := PWideChar(fByteBuffer);
                       end;
     DBTYPE_DATE:      begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := DateTimeToUnicodeSQLTimeStamp(PDateTime(FData)^,
-                          @FTinyBuffer, ConSettings.ReadFormatSettings, False);
+                          Result, ConSettings.ReadFormatSettings, False);
                       end;
     DBTYPE_DBDATE:    begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := DateToUni(Abs(PDBDate(FData)^.year),
                           PDBDate(FData)^.month, PDBDate(FData)^.day,
                           Result, ConSettings.ReadFormatSettings.DateFormat,
                           False, PDBDate(FData)^.year < 0);
                       end;
     DBTYPE_DBTIME:    begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := TimeToUni(PDBTime(FData)^.hour,
                           PDBTime(FData)^.minute, PDBTime(FData)^.second,0,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
     DBTYPE_DBTIMESTAMP: begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := DateTimeToUni(Abs(PDBTimeStamp(FData)^.year),
                           PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day,
                           PDBTimeStamp(FData)^.hour, PDBTimeStamp(FData)^.minute,
@@ -922,9 +923,9 @@ set_from_buf:           Len := Result - PWideChar(@FTinyBuffer[0]);
                         goto set_from_tmp;
                       end;
     DBTYPE_GUID:      begin
-                        GUIDToBuffer(FData, PWideChar(@FTinyBuffer[0]), []);
+                        GUIDToBuffer(FData, PWideChar(fByteBuffer), []);
                         Len := 36;
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                       end;
     DBTYPE_STR: begin
                   if FColBind.cbMaxLen = 0 then
@@ -956,7 +957,7 @@ set_from_clob:    fTempBlob := GetBlob(ColumnIndex); //localize
                     end;
     DBTYPE_VARNUMERIC: begin
                       Len := FLength;
-set_from_num:         Result := @fTinyBuffer[0];
+set_from_num:         Result := PWideChar(fByteBuffer);
                       SQLNumeric2Uni(fData, Result, Len);
                     end;
     //DBTYPE_UDT	= 132;
@@ -2092,6 +2093,7 @@ var
   ColumnInfo: TZColumnInfo;
 begin
   FOleDBConnection := (Statement.GetConnection as IZOleDBConnection);
+  FByteBuffer := FOleDBConnection.GetByteBufferAddress;
   inherited Create(Statement, Statement.GetSQL, nil, FOleDBConnection.GetConSettings);
   fCtrlCP := ConSettings.CTRL_CP;
   fClientCP := ConSettings.ClientCodePage.CP;
@@ -2167,6 +2169,7 @@ begin
   then inherited Create(Statement, SQL, TZOleDBMSSQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self), Statement.GetConnection.GetConSettings)
   else}
+  FByteBuffer := FOleDBConnection.GetByteBufferAddress;
   inherited Create(Statement, SQL, nil, FOleDBConnection.GetConSettings);
   FRowSet := RowSet;
   FZBufferSize := ZBufferSize;

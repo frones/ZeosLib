@@ -317,8 +317,6 @@ type
   end;
 
   TZAbstractReadOnlyResultSet = class(TZAbstractResultSet)
-  protected
-    FTinyBuffer: Array[Byte] of Byte;
   public //getter
     function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetString(ColumnIndex: Integer): String;

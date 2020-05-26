@@ -94,6 +94,7 @@ type
     FSupportsMultipleResultSets: Boolean;
     FOutParameterAvailibility: TOleEnum;
     FCallResultCache: TZCollection;
+    FByteBuffer: PByteBuffer;
     procedure CheckError(Status: HResult; LoggingCategory: TZLoggingCategory;
        const DBBINDSTATUSArray: TDBBINDSTATUSDynArray = nil);
     procedure PrepareOpenedResultSetsForReusing;
@@ -292,6 +293,7 @@ begin
   DatabaseInfo := Connection.GetMetadata.GetDatabaseInfo;
   FSupportsMultipleResultSets := DatabaseInfo.SupportsMultipleResultSets;
   FOutParameterAvailibility := (DatabaseInfo as IZOleDBDatabaseInfo).GetOutParameterAvailability;
+  FByteBuffer := (Connection as IZOleDBConnection).GetByteBufferAddress;
   DatabaseInfo := nil;
 end;
 
@@ -1430,9 +1432,9 @@ begin
         end;
       DBTYPE_WSTR: case SQLType of
             stFloat, stDouble: if Bind.cbMaxLen < 128 then begin
-                  L := FloatToUnicode(Value, @fWBuffer[0]) shl 1;
+                  L := FloatToUnicode(Value, PWideChar(fByteBuffer)) shl 1;
                   if L < Bind.cbMaxLen
-                  then Move(fWBuffer[0], Data^, L)
+                  then Move(PWideChar(fByteBuffer)^, Data^, L)
                   else RaiseExceeded(Index);
                   PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L;
                 end else
@@ -1474,8 +1476,8 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
             else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
         end;
       DBTYPE_NUMERIC: begin
-                        Double2BCD(Value, PBCD(@fWBuffer[0])^);
-                        BCD2SQLNumeric(PBCD(@fWBuffer[0])^, PDB_NUMERIC(Data));
+                        Double2BCD(Value, PBCD(fByteBuffer)^);
+                        BCD2SQLNumeric(PBCD(fByteBuffer)^, PDB_NUMERIC(Data));
                       end;
       //DBTYPE_VARNUMERIC:;
       else raise CreateOleDBConvertErrror(Index, Bind.wType, SQLType);
@@ -1800,9 +1802,9 @@ begin
       DBTYPE_BOOL:      PWordBool(Data)^ := not CompareMem(@Value.Fraction[0], @{$IFDEF NO_CONST_ZEROBCD}ZeroBCDFraction[0]{$ELSE}NullBcd.Fraction[0]{$ENDIF}, MaxFMTBcdDigits);
       DBTYPE_VARIANT:   POleVariant(Data)^ := BcdToSQLUni(Value);
       DBTYPE_WSTR: if Bind.cbMaxLen < {$IFDEF FPC}Byte{$ENDIF}(Value.Precision+2) shl 1 then begin //(64nibbles+dot+neg sign) -> test final length
-                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, @fWBuffer[0], '.') shl 1;
+                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, PWideChar(fByteBuffer), '.') shl 1;
                     if PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ < Bind.cbMaxLen
-                    then Move(fWBuffer[0], Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
+                    then Move(PWideChar(fByteBuffer)^, Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
                     else RaiseExceeded(Index);
                   end else begin
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, PWideChar(Data), '.') shl 1;
@@ -2088,10 +2090,10 @@ begin
       DBTYPE_UI8:       PUInt64(Data)^ := PInt64(@Value)^ div 10000;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       DBTYPE_WSTR: if Bind.cbMaxLen < 44 then begin //(19digits+dot+neg sign) -> test final length
-                    CurrToUnicode(Value, @fWBuffer[0], @PEnd);
-                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PAnsiChar(@fWBuffer[0]);
+                    CurrToUnicode(Value, PWideChar(fByteBuffer), @PEnd);
+                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PAnsiChar(fByteBuffer);//size in bytes
                     if PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ < Bind.cbMaxLen
-                    then Move(fWBuffer[0], Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
+                    then Move(PWideChar(fByteBuffer)^, Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
                     else RaiseExceeded(Index);
                   end else begin
                     CurrToUnicode(Value, PWideChar(Data), @PEnd);
@@ -2385,34 +2387,37 @@ begin
           DBTYPE_CY:    SQLWriter.AddDecimal(PCurrency(Data)^, Result);
           DBTYPE_GUID:  SQLWriter.AddGUID(PGUID(Data)^, [guidWithBrackets, guidQuoted], Result);
           DBTYPE_NUMERIC: begin
-                        SQLNumeric2Raw(PDB_Numeric(Data), @fABuffer[0], Len);
-                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                        SQLNumeric2Raw(PDB_Numeric(Data), PAnsiChar(FByteBuffer), Len);
+                        SQLWriter.AddText(PAnsiChar(FByteBuffer), Len, Result);
                       end;
           DBTYPE_BYTES: SQLWriter.AddHexBinary(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, True, Result);
           DBTYPE_WSTR:  SQLWriter.AddText(SQLQuotedStr(PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, ConSettings.CTRL_CP),#39), Result);
           DBTYPE_DBDATE:begin
                         Len := DateToRaw(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
-                          PDBDATE(Data)^.day, PAnsiChar(@fABuffer[0]), ConSettings.WriteFormatSettings.DateFormat, True, PDBDATE(Data)^.year <0);
-                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                          PDBDATE(Data)^.day, PAnsiChar(fByteBuffer),
+                          ConSettings.WriteFormatSettings.DateFormat, True, PDBDATE(Data)^.year <0);
+                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
                       end;
           DBTYPE_DATE:  SQLWriter.AddDate(PDateTime(Data)^, ConSettings.WriteFormatSettings.DateFormat, Result);
           DBTYPE_DBTIME: begin
                         Len := TimeToRaw(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
-                          PDBTIME(Data)^.second, 0, @fABuffer[0],  ConSettings.WriteFormatSettings.TimeFormat, True, False);
-                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                          PDBTIME(Data)^.second, 0, PAnsiChar(fByteBuffer),
+                          ConSettings.WriteFormatSettings.TimeFormat, True, False);
+                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
                       end;
           DBTYPE_DBTIME2: begin
                         Len := TimeToRaw(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
-                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction, @fABuffer[0],
+                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction, PAnsiChar(fByteBuffer),
                           ConSettings.WriteFormatSettings.DateTimeFormat, True, False);
-                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
                       end;
           DBTYPE_DBTIMESTAMP: begin
                         Len := DateTimeToRaw(Abs(PDBTimeStamp(Data)^.year),
                           PDBTimeStamp(Data).month, PDBTimeStamp(Data).day, PDBTimeStamp(Data).hour,
-                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,  PDBTimeStamp(Data)^.fraction,
-                          @fABuffer[0],  ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
-                        SQLWriter.AddText(@fABuffer[0], Len, Result);
+                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,
+                          PDBTimeStamp(Data)^.fraction, PAnsiChar(fByteBuffer),
+                          ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
+                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
                       end;
           else Result := '(unknown)';
         end;
@@ -2643,8 +2648,8 @@ begin
       (DBTYPE_GUID or DBTYPE_BYREF): if Len = SizeOf(TGUID) then
                           PPointer(Data)^ := Value
                         else begin
-                          ValidGUIDToBinary(Value, @fWBuffer[0]);
-                          BindList.Put(Index, PGUID(@fWBuffer[0])^);
+                          ValidGUIDToBinary(Value, PAnsiChar(fByteBuffer));
+                          BindList.Put(Index, PGUID(fByteBuffer)^);
                           PPointer(Data)^ := BindList[Index].Value;
                         end;
       DBTYPE_BYTES,
@@ -2761,8 +2766,8 @@ begin
       DBTYPE_I8:        PInt64(Data)^   := UnicodeToInt64Def(Value, Value+Len, 0);
       DBTYPE_GUID:      ValidGUIDToBinary(Value, Data);
       DBTYPE_GUID or DBTYPE_BYREF: begin
-                          ValidGUIDToBinary(Value, @fWBuffer[0]);
-                          BindList.Put(Index, PGUID(@fWBuffer[0])^);
+                          ValidGUIDToBinary(Value, PAnsiChar(fByteBuffer));
+                          BindList.Put(Index, PGUID(fByteBuffer)^);
                           PPointer(Data)^ := BindList[Index].Value;
                         end;
       DBTYPE_BYTES, (DBTYPE_BYTES or DBTYPE_BYREF): begin

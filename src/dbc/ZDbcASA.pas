@@ -79,6 +79,7 @@ type
     ['{FAAAFCE0-F550-4098-96C6-580145813EBF}']
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: TZASAPlainDriver;
+    function GetByteBufferAddress: PByteBuffer;
 //    procedure CreateNewDatabase(const SQL: String);
   end;
 

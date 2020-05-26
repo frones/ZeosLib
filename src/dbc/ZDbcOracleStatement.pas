@@ -80,6 +80,7 @@ type
     FCanBindInt64: Boolean;
     FCharSetID: ub2;
     FParamNames: TRawByteStringDynArray;
+    FByteBuffer: PByteBuffer;
   protected
     procedure InitBuffer(SQLType: TZSQLType; OCIBind: PZOCIParamBind; Index, ElementCnt: Cardinal; ActualLength: LengthInt = 0);
     function CreateResultSet: IZResultSet;
@@ -343,6 +344,8 @@ begin
   FPlainDriver := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
   ResultSetType := rtForwardOnly;
   fOracleConnection := Connection as IZOracleConnection;
+  FByteBuffer := fOracleConnection.GetByteBufferAddress;
+
   FCanBindInt64 := Connection.GetClientVersion >= 11002000;
   FRowPrefetchMemory := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_RowPrefetchSize, ''), 131072);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072);
@@ -1158,8 +1161,12 @@ procedure TZAbstractOraclePreparedStatement.SetBigDecimal(Index: Integer;
 var
   Bind: PZOCIParamBind;
   status: sword;
-  TS: TZTimeStamp;
   SQLType: TZSQLType;
+  Msec: Word;
+  TS: TZTimeStamp;
+  I64: Int64;
+  U64: UInt64 absolute I64;
+  Dbl: Double absolute i64;
   procedure SetRaw;
   begin
     SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(BCDToStr(Value)))
@@ -1184,7 +1191,8 @@ begin
     SQLT_BFLOAT:  PSingle(Bind.valuep)^ := BCDToDouble(Value);
     SQLT_BDOUBLE: PDouble(Bind.valuep)^ := BCDToDouble(Value);
     SQLT_DAT:   begin
-                  DecodeDate(BCDToDouble(Value), TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
+                  Dbl := BCDToDouble(Value);
+                  DecodeDate(Dbl, PZDate(fByteBuffer).Year, TS.Month, TS.Day); //oracle does not accept 0 dates
                   POraDate(Bind^.valuep).Cent   := TS.Year div 100 +100;
                   POraDate(Bind^.valuep).Year   := TS.Year mod 100 +100;
                   POraDate(Bind^.valuep).Month  := TS.Month;
@@ -1192,10 +1200,10 @@ begin
                   POraDate(Bind^.valuep).Day    := TS.Day;
                 end;
     SQLT_TIMESTAMP: begin
-                  PDouble(@fABuffer[0])^ := BCDToDouble(Value);
-                  DecodeDate(PDouble(@fABuffer[0])^, TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
-                  DecodeTime(PDouble(@fABuffer[0])^, TS.Hour, TS.Minute, TS.Second, PWord(@TS.Fractions)^);
-                  TS.Fractions := Word(TS.Fractions) * 1000000;
+                  Dbl := BCDToDouble(Value);
+                  DecodeDate(Dbl, TS.Year, TS.Month, TS.Day); //oracle does not accept 0 dates
+                  DecodeTime(Dbl, TS.Hour, TS.Minute, TS.Second, Msec);
+                  TS.Fractions := Msec * 1000000;
                   Status := FPlainDriver.OCIDateTimeConstruct(FOracleConnection.GetConnectionHandle,
                     FOCIError, PPOCIDescriptor(Bind.valuep)^, TS.Year, TS.Month, TS.Day,
                       TS.Hour, TS.Minute, TS.Second, TS.Fractions, nil, 0);
@@ -1203,16 +1211,22 @@ begin
                     FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCIDateTimeConstruct', Self);
                 end;
 
-    SQLT_INT:   {$IFDEF CPU64}
-                BindSInteger(Index, stLong, BCD2Int64(Value));
-                {$ELSE}
-                SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2Int64(Value));
-                {$ENDIF}
-    SQLT_UIN:   {$IFDEF CPU64}
-                BindSInteger(Index, stULong, BCD2UInt64(Value));
-                {$ELSE}
-                SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2UInt64(Value));
-                {$ENDIF}
+    SQLT_INT:   begin
+                  i64 := BCD2Int64(Value);
+                  {$IFDEF CPU64}
+                  BindSInteger(Index, stLong, i64);
+                  {$ELSE}
+                  SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, i64);
+                  {$ENDIF}
+                end;
+    SQLT_UIN:   begin
+                  U64 := BCD2UInt64(Value);
+                  {$IFDEF CPU64}
+                  BindUInteger(Index, stULong, U64);
+                  {$ELSE}
+                  SetULong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, U64);
+                  {$ENDIF}
+                end;
     else        SetRaw;
   end;
   Bind.indp[0] := 0;
@@ -1769,9 +1783,9 @@ begin
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
-                Len := DateToRaw(Value.Year, Value.Month, Value.Day, @fABuffer[0],
+                Len := DateToRaw(Value.Year, Value.Month, Value.Day, PAnsiChar(FByteBuffer),
                   ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-                BindRawStr(Index, @fABuffer[0], Len);
+                BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
                 Exit;
               end;
     else      begin
@@ -2226,8 +2240,8 @@ begin
     SQLT_CLOB,
     SQLT_LVC: begin
                 Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                  @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-                BindRawStr(Index, @fABuffer[0], Len);
+                  PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
                 Exit;
               end;
     else      begin
@@ -2290,8 +2304,8 @@ begin
     SQLT_LVC: begin
                 Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
                   Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                  @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-                BindRawStr(Index, @fABuffer[0], Len);
+                  PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
                 Exit;
               end;
     else      begin

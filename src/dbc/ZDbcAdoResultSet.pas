@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -95,6 +95,7 @@ type
     FValueAddr: Pointer;
     FValueType: Word;
     FColValue: OleVariant;
+    FByteBuffer: PByteBuffer;
     function CreateAdoConvertError(ColumnIndex: Integer; DataType: Word): EZADOConvertError;
   protected
     procedure Open; override;
@@ -167,7 +168,7 @@ implementation
 uses
   Variants, {$IFDEF FPC}ZPlainOleDBDriver{$ELSE}OleDB{$ENDIF}, ActiveX,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZDbcUtils;
+  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZDbcUtils, ZDbcAdo;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
@@ -215,8 +216,8 @@ begin
                           P := @FColValue;
                           if PDecimal(P).scale > 0 then begin
                             ScaledOrdinal2Bcd(UInt64(PDecimal(P).Lo64), PDecimal(P).scale, BCD, PDecimal(P).sign > 0);
-                            Len := ZSysUtils.BcdToRaw(BCd, @fTinyBuffer[0], '.');
-                            JSONWriter.AddNoJSONEscape(@fTinyBuffer[0], Len);
+                            Len := ZSysUtils.BcdToRaw(BCd, PAnsiChar(FByteBuffer), '.');
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), Len);
                           end else if PDecimal(P).sign > 0 then
                             JSONWriter.Add(Int64(-UInt64(PDecimal(P).Lo64)))
                           else
@@ -304,6 +305,7 @@ begin
     TZADOResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
   FAdoRecordSet := AdoRecordSet;
+  FByteBuffer := (Statement.GetConnection as IZAdoConnection).GetByteBufferAddress;
   Open;
 end;
 
@@ -730,53 +732,53 @@ begin
                         Len := 5;
                       end;
       VT_UI1, VT_UI2, VT_UI4, VT_UINT: begin
-                        IntToRaw(GetUInt(ColumnIndex), @FTinyBuffer[0], @Result);
+                        IntToRaw(GetUInt(ColumnIndex), PAnsiChar(fByteBuffer), @Result);
                         goto Set_From_Buf;
                       end;
       VT_I1,  VT_I2,  VT_I4,  VT_INT, VT_HRESULT, VT_ERROR: begin
-                        IntToRaw(GetInt(ColumnIndex), @FTinyBuffer[0], @Result);
+                        IntToRaw(GetInt(ColumnIndex), PAnsiChar(fByteBuffer), @Result);
                         goto Set_From_Buf;
                       end;
       VT_UI8:         begin
-                        IntToRaw(PUInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PUInt64(FValueAddr)^, PAnsiChar(fByteBuffer), @Result);
                         goto Set_From_Buf;
                       end;
       VT_I8:          begin
-                        IntToRaw(PInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
+                        IntToRaw(PInt64(FValueAddr)^, PAnsiChar(fByteBuffer), @Result);
                         goto Set_From_Buf;
                       end;
       VT_CY:          begin
-                        CurrToRaw(PCurrency(FValueAddr)^, @FTinyBuffer[0], @Result);
-Set_From_Buf:           Len := Result - PAnsiChar(@fTinyBuffer[0]);
-                        Result := @fTinyBuffer[0];
+                        CurrToRaw(PCurrency(FValueAddr)^, PAnsiChar(fByteBuffer), @Result);
+Set_From_Buf:           Len := Result - PAnsiChar(fByteBuffer);
+                        Result := PAnsiChar(fByteBuffer);
                       end;
       VT_DECIMAL:     begin
                         Result := @FColValue;
                         ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD{%H-}, PDecimal(Result).sign > 0);
-                        Result := @fTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := ZSysUtils.BcdToRaw(BCd, Result, '.');
                       end;
       VT_R4:          begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := FloatToSQLRaw(PSingle(FValueAddr)^, Result);
                       end;
       VT_R8:          begin
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
                         Len := FloatToSQLRaw(PDouble(FValueAddr)^, Result);
                       end;
       VT_DATE:        case Type_ of
                         adDate, adDBDate: begin
-                            Result := @FTinyBuffer[0];
+                            Result := PAnsiChar(fByteBuffer);
                             Len := DateTimeToRawSQLDate(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         adDBTime: begin
-                            Result := @FTinyBuffer[0];
+                            Result := PAnsiChar(fByteBuffer);
                             Len := DateTimeToRawSQLTime(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         else begin
-                            Result := @FTinyBuffer[0];
+                            Result := PAnsiChar(fByteBuffer);
                             Len := DateTimeToRawSQLTimeStamp(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
@@ -827,52 +829,52 @@ begin
                         Len := 5;
                       end;
       VT_UI1, VT_UI2, VT_UI4, VT_UINT: begin
-                        IntToUnicode(GetUInt(ColumnIndex), @FTinyBuffer[0], @Result);
+                        IntToUnicode(GetUInt(ColumnIndex), PWideChar(fByteBuffer), @Result);
                         goto Set_From_Buf; end;
       VT_I1,  VT_I2,  VT_I4,  VT_INT, VT_HRESULT, VT_ERROR: begin
-                        IntToUnicode(GetInt(ColumnIndex), @FTinyBuffer[0], @Result);
+                        IntToUnicode(GetInt(ColumnIndex), PWideChar(fByteBuffer), @Result);
                         goto Set_From_Buf;
                       end;
       VT_UI8:         begin
-                        IntToUnicode(PUInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
+                        IntToUnicode(PUInt64(FValueAddr)^, PWideChar(fByteBuffer), @Result);
                         goto Set_From_Buf;
                       end;
       VT_I8:          begin
-                        IntToUnicode(PInt64(FValueAddr)^, @FTinyBuffer[0], @Result);
+                        IntToUnicode(PInt64(FValueAddr)^, PWideChar(fByteBuffer), @Result);
                         goto Set_From_Buf;
                       end;
       VT_CY:          begin
-                        CurrToUnicode(PCurrency(FValueAddr)^, @FTinyBuffer[0], @Result);
-Set_From_Buf:           Len := Result - PWideChar(@fTinyBuffer[0]);
-                        Result := @fTinyBuffer[0];
+                        CurrToUnicode(PCurrency(FValueAddr)^, PWideChar(fByteBuffer), @Result);
+Set_From_Buf:           Len := Result - PWideChar(fByteBuffer);
+                        Result := PWideChar(fByteBuffer);
                       end;
       VT_DECIMAL:     begin
                         Result := @FColValue;
                         ScaledOrdinal2Bcd(UInt64(PDecimal(Result).Lo64), PDecimal(Result).scale, BCD{%H-}, PDecimal(Result).sign > 0);
-                        Result := @fTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := ZSysUtils.BcdToUni(BCd, Result, '.');
                       end;
       VT_R4:          begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := FloatToSQLUnicode(PSingle(FValueAddr)^, Result);
                       end;
       VT_R8:          begin
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := FloatToSQLUnicode(PDouble(FValueAddr)^, Result);
                       end;
       VT_DATE:        case Type_ of
                         adDate, adDBDate: begin
-                            Result := @FTinyBuffer[0];
+                            Result := PWideChar(fByteBuffer);
                             Len := DateTimeToUnicodeSQLDate(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         adDBTime: begin
-                            Result := @FTinyBuffer[0];
+                            Result := PWideChar(fByteBuffer);
                             Len := DateTimeToUnicodeSQLTime(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;
                         else begin
-                            Result := @FTinyBuffer[0];
+                            Result := PWideChar(fByteBuffer);
                             Len := DateTimeToUnicodeSQLTimeStamp(TDateTime(PDouble(FValueAddr)^),
                               Result, ConSettings.ReadFormatSettings, False);
                           end;

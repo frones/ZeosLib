@@ -84,6 +84,7 @@ type
     FSqlData: IZASASQLDA;
     FASAConnection: IZASAConnection;
     FPlainDriver: TZASAPlainDriver;
+    FByteBuffer: PByteBuffer;
   private
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -313,16 +314,16 @@ begin
                                   if PZASASQLDateTime(sqlData).Year < 0 then
                                     JSONWriter.Add('-');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
-                                    DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PZASASQLDateTime(sqlData).Year),
+                                    DateToIso8601PChar(PUTF8Char(fByteBuffer), True, Abs(PZASASQLDateTime(sqlData).Year),
                                     PZASASQLDateTime(sqlData).Month + 1, PZASASQLDateTime(sqlData).Day);
-                                    JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
                                   end else if jcoMongoISODate in JSONComposeOptions then
                                     JSONWriter.AddShort('0000-00-00');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
-                                    TimeToIso8601PChar(@FTinyBuffer[0], True, PZASASQLDateTime(sqlData).Hour,
+                                    TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
                                     PZASASQLDateTime(sqlData).Minute, PZASASQLDateTime(sqlData).Second,
                                     PZASASQLDateTime(sqlData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                                   end;
                                   if jcoMongoISODate in JSONComposeOptions
                                   then JSONWriter.AddShort('Z)"')
@@ -373,6 +374,7 @@ begin
   FCursorName := CursorName;
   FCachedBlob := CachedBlob;
   FASAConnection := Statement.GetConnection as IZASAConnection;
+  FByteBuffer := FASAConnection.GetByteBufferAddress;
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
   FStmtNum := StmtNum;
   ResultSetType := rtScrollSensitive;
@@ -1038,7 +1040,7 @@ begin
   with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
     case sqlType and $FFFE of
       DT_TINYINT    : begin
-                        IntToRaw(Cardinal(PByte(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Cardinal(PByte(sqldata)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIT        : if PByte(sqldata)^ <> 0 then begin
@@ -1049,37 +1051,37 @@ begin
                         Len := 5;
                       end;
       DT_SMALLINT   : begin
-                        IntToRaw(Integer(PSmallInt(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Integer(PSmallInt(sqldata)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSSMALLINT: begin
-                        IntToRaw(Cardinal(PWord(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Cardinal(PWord(sqldata)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_INT        : begin
-                        IntToRaw(PInteger(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PInteger(sqldata)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSINT     : begin
-                        IntToRaw(PCardinal(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PCardinal(sqldata)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIGINT     : begin
-                        IntToRaw(PInt64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PInt64(sqldata)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSBIGINT  : begin
-                        IntToRaw(PUInt64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
-set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        IntToRaw(PUInt64(sqldata)^, PAnsiChar(fByteBuffer), @Result);
+set_Results:            Len := Result - PAnsiChar(fByteBuffer);
+                        Result := PAnsiChar(fByteBuffer);
                       end;
       DT_FLOAT      : begin
-                        Len := FloatToSQLRaw(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLRaw(PSingle(sqldata)^, PAnsiChar(fByteBuffer));
+                        Result := PAnsiChar(fByteBuffer);
                       end;
       DT_DOUBLE     : begin
-                        Len := FloatToSQLRaw(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLRaw(PDouble(sqldata)^, PAnsiChar(fByteBuffer));
+                        Result := PAnsiChar(fByteBuffer);
                       end;
       DT_VARCHAR,
       DT_NVARCHAR,
@@ -1098,7 +1100,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         else Result := Pointer(FRawTemp);
                       end;
       DT_TIMESTAMP_STRUCT : begin
-                      Result := @FTinyBuffer[0];
+                      Result := PAnsiChar(fByteBuffer);
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
                         stDate: Len := DateToRaw(PZASASQLDateTime(SQLData).Year,
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
@@ -1139,7 +1141,7 @@ begin
   with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}], TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
     case sqlType and $FFFE of
       DT_TINYINT    : begin
-                        IntToUnicode(Cardinal(PByte(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Cardinal(PByte(sqldata)^), PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIT        : if PByte(sqldata)^ <> 0 then begin
@@ -1150,37 +1152,37 @@ begin
                         Len := 5;
                       end;
       DT_SMALLINT   : begin
-                        IntToUnicode(Integer(PSmallInt(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Integer(PSmallInt(sqldata)^), PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSSMALLINT: begin
-                        IntToUnicode(Cardinal(PWord(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Cardinal(PWord(sqldata)^), PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_INT        : begin
-                        IntToUnicode(PInteger(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PInteger(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSINT     : begin
-                        IntToUnicode(PCardinal(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PCardinal(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIGINT     : begin
-                        IntToUnicode(PInt64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PInt64(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSBIGINT  : begin
-                        IntToUnicode(PUInt64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
-set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        IntToUnicode(PUInt64(sqldata)^, PWideChar(fByteBuffer), @Result);
+set_Results:            Len := Result - PWideChar(fByteBuffer);
+                        Result := PWideChar(fByteBuffer);
                       end;
       DT_FLOAT      : begin
-                        Len := FloatToSQLUnicode(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLUnicode(PSingle(sqldata)^, PWideChar(fByteBuffer));
+                        Result := PWideChar(fByteBuffer);
                       end;
       DT_DOUBLE     : begin
-                        Len := FloatToSQLUnicode(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLUnicode(PDouble(sqldata)^, PWideChar(fByteBuffer));
+                        Result := PWideChar(fByteBuffer);
                       end;
       DT_NVARCHAR,
       DT_VARCHAR    : begin
@@ -1203,7 +1205,7 @@ set_from_uni:           Len := Length(FUniTemp);
                         else Result := Pointer(FUniTemp);
                       end;
       DT_TIMESTAMP_STRUCT : begin
-                      Result := @FTinyBuffer[0];
+                      Result := PWideChar(fByteBuffer);
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
                         stDate: Len := DateToUni(Abs(PZASASQLDateTime(SQLData).Year),
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,

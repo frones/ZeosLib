@@ -1082,7 +1082,7 @@ var
   RawStr: RawByteString;
 begin
   // TODO: having ZPRawToString we could convert the string directly without SetString
-  {$IFDEF WITH_VAR_INIT_WARNING}RawStr := '';{$ENDIF}
+  {$IFDEF FPC}RawStr := '';{$ENDIF}
   ZSetString(PAnsiChar(Buffer), BufLen, RawStr);
   if ConSettings <> nil then
     Result := ConSettings^.ConvFuncs.ZRawToString(RawStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)

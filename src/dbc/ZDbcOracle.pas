@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -87,6 +87,7 @@ type
     function GetTransactionHandle: POCITrans;
     function GetDescribeHandle: POCIDescribe;
     function GetPlainDriver: TZOraclePlainDriver;
+    function GetByteBufferAddress: PByteBuffer;
 
     procedure HandleErrorOrWarning(ErrorHandle: POCIError; Status: sword;
       LogCategory: TZLoggingCategory; const LogMessage: String;
@@ -1192,7 +1193,7 @@ jmpConcat:I := 1;
           ErrorMessage := '';
           while true do begin
             NewStatus := FPlainDriver.OCIErrorGet(ErrorHandle, I, nil, ErrorCode,
-              @FWordBuffer[0], SizeOf(TWordBuffer)-1, OCI_HTYPE_ERROR);
+              PAnsiChar(@FByteBuffer[0]), SizeOf(TByteBuffer)-1, OCI_HTYPE_ERROR);
             if NewStatus = OCI_NO_DATA  then
               Break;
             if (i > 1)
@@ -1202,7 +1203,7 @@ jmpConcat:I := 1;
               if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
-            Writer.AddText(@FWordBuffer[0], ZFastCode.StrLen(PAnsiChar(@FWordBuffer[0])), ErrorMessage);
+            Writer.AddText(@FByteBuffer[0], ZFastCode.StrLen(PAnsiChar(@FByteBuffer[0])), ErrorMessage);
             Inc(I);
           end;
         end;
@@ -1279,7 +1280,7 @@ jmpConcat:I := 1;
           ErrorMessage := '';
           while true do begin
             NewStatus := FPlainDriver.OCIErrorGet(ErrorHandle, I, nil, ErrorCode,
-              @FWordBuffer[0], SizeOf(TWordBuffer)-1, OCI_HTYPE_ERROR);
+              @FByteBuffer[0], SizeOf(TByteBuffer)-1, OCI_HTYPE_ERROR);
             if NewStatus = OCI_NO_DATA  then
               Break;
             if (i > 1)
@@ -1289,7 +1290,7 @@ jmpConcat:I := 1;
               if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
-            Writer.AddText(@FWordBuffer[0], {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@FWordBuffer[0])), ErrorMessage);
+            Writer.AddText(@FByteBuffer[0], {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@fByteBuffer[0])), ErrorMessage);
             Inc(I);
           end;
         end;
