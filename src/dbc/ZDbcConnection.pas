@@ -1277,6 +1277,7 @@ begin
     RefCountAdded := False; //destructor did call close;
   try
     try
+      ClearWarnings;
       CloseRegisteredStatements;
     finally
       InternalClose;

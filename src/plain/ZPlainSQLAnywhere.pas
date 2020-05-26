@@ -62,6 +62,40 @@ uses Classes, ZCompatibility, ZPlainDriver;
 const
   SQLAnyLibrary = {$IFDEF MSWINDOWS}'dbcapi'{$ELSE}'libdbcapi'{$ENDIF}+SharedSuffix;
 
+  SQLE_NOERROR                          = 0;
+  SQLE_NOTFOUND                         = 100;
+  SQLE_TRUNCATED                        = 101;
+  SQLE_TEMPORARY_TABLE                  = 102;
+  SQLE_CANNOT_CONVERT                   = 103;
+  SQLE_ROW_UPDATED_WARNING              = 104;
+  SQLE_PROCEDURE_COMPLETE               = 105;
+  SQLE_COLUMN_VALUE_CHANGED             = 106;
+  SQLE_SYNTAX_EXTENSION_WARNING         = 107;
+  SQLE_CURSOR_OPERATION_CONFLICT        = 108;
+  SQLE_NULL_VALUE_ELIMINATED            = 109;
+  SQLE_BACKUP_PAGE_INCOMPLETE           = 110;
+  SQLE_CANNOT_EXECUTE_STMT              = 111;
+  SQLE_MORE_INFO                        = 112;
+  SQLE_INVALID_OPTION_ON_CONNECT        = 113;
+  SQLE_CANNOT_PERFORM_CHAR_TRANSLATION  = 114;
+  SQLE_UNSUPPORTED_CHARACTER_SET_WARNING = 115;
+  SQLE_UNSUPPORTED_LANGUAGE             = 116;
+  SQLE_UNSUPPORTED_CHARSET_AND_LANGUAGE = 117;
+  SQLE_INVALID_USER_ESTIMATE            = 118;
+  SQLE_UNABLE_TO_OPEN_BACKUP_LOG        = 119;
+  SQLE_UNKNOWN_OPTION                   = 120;
+  SQLE_CURSOR_OPTIONS_CHANGED           = 121;
+  SQLE_DATABASE_NEW                     = 123;
+  SQLE_CANNOT_CONVERT_LOAD_TABLE        = 124;
+  SQLE_INPUT_ILLEGAL_MULTIBYTE_WARNING  = 125;
+  SQLE_OUTPUT_ILLEGAL_MULTIBYTE_WARNING = 126;
+  SQLE_INPUT_SIMPLE_SUBSTITUTION_WARNING = 127;
+  SQLE_OUTPUT_SIMPLE_SUBSTITUTION_WARNING = 128;
+  SQLE_ROW_DROPPED_DURING_SCHEMA_UPGRADE = 130;
+  SQLE_CANNOT_DUMP_STRING_HISTOGRAM     = 132;
+  SQLE_COMPRESSING_ENCRYPTED_DB         = 135;
+  SQLE_WARNING                          = 200;
+
   /// <summary>
   ///  Version 1 was the initial version of the C/C++ API.
   /// </summary>
@@ -1520,7 +1554,6 @@ type
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
-
 
 {$ENDIF ZEOS_DISABLE_ASA}
 implementation

@@ -116,6 +116,7 @@ type
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
     function GetWarnings: EZSQLWarning; override;
+    procedure ClearWarnings; override;
 
     procedure Commit;
     procedure Rollback;
@@ -240,7 +241,9 @@ begin
   P := Pointer(ErrBuf);
   PByte(P)^ := 0;
   ErrCode := FSQLAnyPlainDriver.sqlany_error(Fa_sqlany_connection, Pointer(ErrBuf), err_len);
-  if ErrCode = 0 then begin
+  if (ErrCode = SQLE_NOERROR) or
+     (ErrCode = SQLE_NOTFOUND) //no line found
+  then begin
     if Assigned(FSQLAnyPlainDriver.sqlany_clear_error) then
       FSQLAnyPlainDriver.sqlany_clear_error(Fa_sqlany_connection);
     Exit;
@@ -291,6 +294,17 @@ const
   cAutoCommit: array[Boolean, Boolean] of RawByteString =(
     ('SET OPTION chained=''On''', 'SET OPTION chained=''Off'''),
     ('SET TEMPORARY OPTION AUTO_COMMIT=''Off''', 'SET TEMPORARY OPTION AUTO_COMMIT=''On'''));
+
+{**
+  Clears all warnings reported for this <code>Connection</code> object.
+  After a call to this method, the method <code>getWarnings</code>
+    returns null until a new warning is reported for this Connection.
+}
+procedure TZSQLAnywhereConnection.ClearWarnings;
+begin
+  FreeAndNil(FLastWarning);
+end;
+
 {**
   Makes all changes made since the previous
   commit/rollback permanent and releases any database locks
