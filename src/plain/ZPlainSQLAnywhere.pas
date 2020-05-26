@@ -1,7 +1,14 @@
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{        Native Plain Drivers for SQL Anywhere CAPI       }
+{                                                         }
+{            Originally written by EgonHugeist            }
+{                                                         }
+{*********************************************************}
+
 {@********************************************************}
 {    Copyright (c) 1999-2020 Zeos Development Group       }
-{                                                         }
-{           Originally written by EgonHugeist             }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }

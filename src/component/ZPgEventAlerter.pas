@@ -3,13 +3,12 @@
 {                 Zeos Database Objects                   }
 {         Interbase Database Connectivity Classes         }
 {                                                         }
-{    Copyright (c) 1999-2003 Zeos Development Group       }
 {            Written by Sergey Merkuriev                  }
 {                                                         }
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }

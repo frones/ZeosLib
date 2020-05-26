@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -132,14 +132,12 @@ type
 const
   { size of SQLSTATE  }
   SQL_SQLSTATE_SIZE = 5;
-  { size of SQLSTATE for unicode }
-  SQL_SQLSTATE_SIZEW = 10;
 type
   PSQLSTATE = ^TSQLSTATE;
   TSQLSTATE = array[0..SQL_SQLSTATE_SIZE] of SQLCHAR;
 
   PSQLSTATE_W = ^TSQLSTATE_W;
-  TSQLSTATE_W = array[0..SQL_SQLSTATE_SIZEW] of SQLCHAR;
+  TSQLSTATE_W = array[0..SQL_SQLSTATE_SIZE] of SQLWCHAR;
 
   {.$A-}
 //* transfer types for DATE, TIME, TIMESTAMP */
