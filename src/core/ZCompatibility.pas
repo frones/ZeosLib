@@ -90,6 +90,7 @@ type
 {$ELSE}
   {$IFNDEF HAVE_TRUE_NATIVE_TYPES}  //introduced since D2007 but "stable" since XE2
   NativeInt             = Integer;
+  PNativeInt            = ^NativeInt;
   NativeUInt            = LongWord;
   PNativeUInt           = ^NativeUInt;
   PWord                 = ^Word; // M.A.
