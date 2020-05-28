@@ -316,11 +316,11 @@ begin
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end else if (Ord(ColumnType) >= Ord(stAsciiStream)) then begin
       if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt^, Index, Fdata_info) = 0 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data_info', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data_info', Self);
       Result := (Fdata_info.is_null = 0);
     end else begin
       if FplainDriver.sqlany_get_column(Fa_sqlany_stmt^, Index, Pointer(ABind)) = 0 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_column', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_column', Self);
       Result := (ABind.is_null^ = 0);
       FData :=  ABind.buffer;
       if ABind.length = nil
@@ -816,7 +816,7 @@ set_Results:            Len := Result - PAnsiChar(FByteBuffer);
                       ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt^, ColumnIndex,
                         0, Result, SizeOf(TByteBuffer)-1);
                       if ColumnIndex < 0 then
-                        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data', Self);
+                        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data', Self);
                       Len := Cardinal(ColumnIndex);
                     end else FromLob;
     DT_TIMESTAMP_STRUCT : begin
@@ -938,7 +938,7 @@ set_from_uni:         Len := Length(FUniTemp);
                       ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt^, ColumnIndex,
                         0, Result, SizeOf(TByteBuffer)-1);
                       if ColumnIndex < 0 then
-                        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data', Self);
+                        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data', Self);
                       Len := Cardinal(ColumnIndex);
                       goto Convert;
                     end else FromLob;
@@ -1187,7 +1187,7 @@ begin
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     else begin
       if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt^, ColumnIndex, Fdata_info) = 0 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data_info', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data_info', Self);
       Result := Fdata_info.is_null <> 0;
     end
   end;
@@ -1268,7 +1268,7 @@ begin
       if Row > LastRowNo then
         LastRowNo := Row;
     end else
-jmpErr: FSQLAnyConnection.HandleError(lcExecute, 'sqlany_fetch_absolute', Self)
+jmpErr: FSQLAnyConnection.HandleErrorOrWarning(lcExecute, 'sqlany_fetch_absolute', Self)
   end;
   RowNo := Row;
 end;
@@ -1326,7 +1326,7 @@ begin
         LastRowNo := RowNo;
     end else
 jmpErr:if (RowNo = 1) then
-      FSQLAnyConnection.HandleError(lcExecute, 'sqlany_fetch_next', Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcExecute, 'sqlany_fetch_next', Self);
   end;
 end;
 
@@ -1354,7 +1354,7 @@ begin
     ColumnInfo := TZSQLAnywhereColumnInfo.Create;
     ColumnsInfo.Add(ColumnInfo);
     if FPlainDriver.sqlany_get_column_info(Fa_sqlany_stmt^, I, sqlany_column_info) <> 1 then
-      FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_column_info', Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_column_info', Self);
     ColumnInfo.NativeType := sqlany_column_info.native_type;
     ColumnInfo.Nullable := TZColumnNullableType(sqlany_column_info.nullable <> 0);
     ColumnInfo.ReadOnly := True;
@@ -1429,7 +1429,7 @@ begin
   end;
   if FIteration > 1 then
     if FplainDriver.sqlany_set_rowset_size(Fa_sqlany_stmt^, FIteration) <> 1 then
-      FSQLAnyConnection.HandleError(lcOther, 'sqlany_set_rowset_size', Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_set_rowset_size', Self);
   FMaxBufIndex := FIteration;
   { allocate just one block of memory for the data buffers }
   GetMem(FColumnData, (RowSize * FIteration));
@@ -1448,7 +1448,7 @@ begin
     if ((FIteration > 1) or (Fapi_version >= SQLANY_API_VERSION_4)) then begin
       Bind.is_address := 0;
       if FplainDriver.sqlany_bind_column(Fa_sqlany_stmt^, Cardinal(I), Pointer(ABind)) <> 1 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_bind_column', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_bind_column', Self);
       IsBound := True;
     end;
     if not IsBound and (Fdata_info = nil) then //need that for IsNull()
@@ -1557,7 +1557,7 @@ begin
     Result := FPlainDriver.sqlany_get_data(FOwnerLob.Fa_sqlany_stmt, FOwnerLob.FColumnIndex,
       FPosition, @Buffer, Count);
     if Result < 0 then
-      FOwnerLob.FConnection.HandleError(lcOther, 'sqlany_get_data', Self);
+      FOwnerLob.FConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data', Self);
     FPosition := FPosition+TSize_t(Result);
   end;
 end;

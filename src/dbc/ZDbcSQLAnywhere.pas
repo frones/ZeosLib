@@ -76,7 +76,7 @@ type
     ['{6464E444-68E8-4233-ABF0-3B820D40883F}']
     function Get_a_sqlany_connection: Pa_sqlany_connection;
     function Get_api_version: Tsacapi_u32;
-    procedure HandleError(LoggingCategory: TZLoggingCategory;
+    procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
       const Msg: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
     function GetPlainDriver: TZSQLAnywherePlainDriver;
     function GetByteBufferAddress: PByteBuffer;
@@ -103,8 +103,8 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
     function Get_a_sqlany_connection: Pa_sqlany_connection;
-    procedure HandleError(LoggingCategory: TZLoggingCategory;
-      const Msg: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
+    procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
+      const Msg: RawByteString; const Sender: IImmediatelyReleasable);
     function GetPlainDriver: TZSQLAnywherePlainDriver;
     function Get_api_version: Tsacapi_u32;
   public
@@ -222,9 +222,9 @@ end;
   interface, raises the error. So this method should be called only if an error
   is expected
 }
-procedure TZSQLAnywhereConnection.HandleError(
+procedure TZSQLAnywhereConnection.HandleErrorOrWarning(
   LoggingCategory: TZLoggingCategory; const Msg: RawByteString;
-  const ImmediatelyReleasable: IImmediatelyReleasable);
+  const Sender: IImmediatelyReleasable);
 var err_len, st_len: Tsize_t;
   ErrBuf: RawByteString;
   State, ErrMsg: String;
@@ -233,14 +233,9 @@ var err_len, st_len: Tsize_t;
   Exception: EZSQLException;
   P: PAnsiChar;
 begin
-  if Assigned(FSQLAnyPlainDriver.sqlany_error_length)
-  then err_len := FSQLAnyPlainDriver.sqlany_error_length(Fa_sqlany_connection)
-  else err_len := 1025;
-  ErrBuf := '';
-  SetLength(ErrBuf, err_len -1);
-  P := Pointer(ErrBuf);
+  P := @FByteBuffer[0];
   PByte(P)^ := 0;
-  ErrCode := FSQLAnyPlainDriver.sqlany_error(Fa_sqlany_connection, Pointer(ErrBuf), err_len);
+  ErrCode := FSQLAnyPlainDriver.sqlany_error(Fa_sqlany_connection, P, SizeOf(TByteBuffer)-1);
   if (ErrCode = SQLE_NOERROR) or
      (ErrCode = SQLE_NOTFOUND) //no line found
   then begin
@@ -249,13 +244,9 @@ begin
     Exit;
   end;
 
-  if not Assigned(FSQLAnyPlainDriver.sqlany_error_length)
-  then err_len := ZFastCode.StrLen(Pointer(ErrBuf))
-  else Dec(err_len);
-  SetLength(ErrBuf, err_len);
-
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogError(LoggingCategory, 'sqlany', Msg, ErrCode, ErrBuf);
+  err_len := ZFastCode.StrLen(P);
+  ErrBuf := '';
+  ZSetString(P, err_len, errBuf);
 
   st_len := FSQLAnyPlainDriver.sqlany_sqlstate(Fa_sqlany_connection, @StateBuf[0], SizeOf(StateBuf));
   Dec(st_len);
@@ -271,7 +262,7 @@ begin
   {$ENDIF}
   ErrMsg := ErrMsg + ' The SQL: ';
   {$IFDEF UNICODE}
-  ErrMsg := ErrMsg + ZRawToUnicode(Msg, ImmediatelyReleasable.GetConSettings.ClientCodePage.CP);
+  ErrMsg := ErrMsg + ZRawToUnicode(Msg, ConSettings.ClientCodePage.CP);
   {$ELSE}
   ErrMsg := ErrMsg + Msg;
   {$ENDIF}
@@ -281,10 +272,21 @@ begin
   if ErrCode > 0 then begin//that's a Warning
     ClearWarnings;
     FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
-  end else begin
-    DriverManager.LogError(LoggingCategory, ConSettings^.Protocol, ErrBuf, ErrCode, Msg);
-    Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
-    raise Exception;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ErrBuf);
+  end else begin  //that's an error
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogError(LoggingCategory, ConSettings^.Protocol, ErrBuf, ErrCode, Msg);
+    if (ErrCode = SQLE_CONNECTION_NOT_FOUND) or (ErrCode = SQLE_CONNECTION_TERMINATED) or
+       (ErrCode = SQLE_COMMUNICATIONS_ERROR) then begin
+      Exception := EZSQLConnectionLost.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
+      if (Sender <> nil)
+      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Exception))
+      else ReleaseImmediat(Self, EZSQLConnectionLost(Exception));
+    end else
+      Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
+    if Exception <> nil then
+       raise Exception;
   end;
 end;
 
@@ -325,7 +327,7 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     if FSQLAnyPlainDriver.sqlany_commit(Fa_sqlany_connection) <> 1 then
-      HandleError(lcTransaction, cCommit, Self);
+      HandleErrorOrWarning(lcTransaction, cCommit, Self);
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, cCommit);
     AutoCommit := True;
@@ -382,7 +384,7 @@ procedure TZSQLAnywhereConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
   if FSQLAnyPlainDriver.sqlany_execute_immediate(Fa_sqlany_connection, Pointer(SQL)) <> 1 then
-    HandleError(lcExecute, SQL, Self);
+    HandleErrorOrWarning(lcExecute, SQL, Self);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 
@@ -498,7 +500,7 @@ jmpInit:
       end;
     SQLStringWriter.Finalize(ConStr);
     if FSQLAnyPlainDriver.sqlany_connect(Fa_sqlany_connection, Pointer(ConStr)) <> 1 then
-      HandleError(lcConnect, ConStr, Self);
+      HandleErrorOrWarning(lcConnect, ConStr, Self);
     inherited Open;
   finally
     Info.EndUpdate;
@@ -627,7 +629,7 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     if FSQLAnyPlainDriver.sqlany_rollback(Fa_sqlany_connection) <> 1 then
-      HandleError(lcTransaction, cRollback, Self);
+      HandleErrorOrWarning(lcTransaction, cRollback, Self);
     DriverManager.LogMessage(lcTransaction,
       ConSettings^.Protocol, cRollback);
     AutoCommit := True;
