@@ -63,6 +63,7 @@
 {$IFDEF SYSTEMINLINE} //global FPC define
   {$DEFINE WITH_INLINE}           // compiler supports inline methodes
 {$ENDIF}
+{$DEFINE WITH_REGISTER_CLASSES_BUG}// FPC is not able to handle non visual component classes(supported since D5) except using RegisterNoIcon method
 {$DEFINE HAVE_INSERT_BOOKMARK_BUG} //FPC does set bfEOF on Append but on Insert a row the Bookmark-Flag is bfCurrent while it should be bfInsert min v3.1
 {$DEFINE WITH_UNIDIRECTIONALBUG} //still buggy with IsUnidirectional prop of TDataSet FPC still moves the recordBuffer-> visit TestReadOnlyQueryUniDirectional and TZAbstractRODataset.GetRecord
 {$IFNDEF CPU386}
