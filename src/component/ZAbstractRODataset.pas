@@ -4322,7 +4322,7 @@ procedure TZAbstractRODataset.GetBookmarkData(
   Buffer: TRecordBuffer;
   Data: {$IFDEF WITH_BOOKMARKDATA_TBOOKMARK}TBookMark{$ELSE}Pointer{$ENDIF});
 begin
-  PNativeInt(Data)^ := PZRowBuffer(Buffer)^.Index;
+  PInteger(Data)^ := PZRowBuffer(Buffer)^.Index;
 end;
 
 {**
