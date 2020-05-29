@@ -519,7 +519,7 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
                               JSONWriter.Add('"');
                             TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PDBTime(FData)^.hour,
                               PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');

@@ -347,7 +347,7 @@ begin
                         else
                           TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                             PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                        JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                        JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                         if jcoMongoISODate in JSONComposeOptions
                         then JSONWriter.AddShort('Z)"')
                         else JSONWriter.Add('"');

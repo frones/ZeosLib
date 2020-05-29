@@ -505,9 +505,7 @@ begin
                                     MS := (PMYSQL_TIME(Bind^.Buffer)^.second_part) div 1000000;
                                     TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
                                       PMYSQL_TIME(Bind^.Buffer)^.Minute, PMYSQL_TIME(Bind^.Buffer)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    if jcoMilliseconds in JSONComposeOptions
-                                    then JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),12)
-                                    else JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),8);
+                                    JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions));
                                     goto FinalizeDT;
                                   end;
           FIELD_TYPE_BIT        : if Bind^.Length[0] = 1

@@ -496,8 +496,8 @@ begin
                               JSONWriter.AddShort('0000-00-00');
                             if (ColType <> stDate) then begin
                               TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, POraDate(P)^.Hour-1,
-                                POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', False);
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9));
                             end;
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
@@ -524,7 +524,7 @@ begin
                              FOCIError, {%H-}PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
                             TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, Hour, Minute, Second,
                               Millis div 1000000, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                           end;
                           if jcoMongoISODate in JSONComposeOptions
                           then JSONWriter.AddShort('Z)"')

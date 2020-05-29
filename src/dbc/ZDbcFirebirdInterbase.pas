@@ -1785,7 +1785,7 @@ begin
                               TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
                             TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Hour, TempDate.Minute,
                               TempDate.Second,  TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
