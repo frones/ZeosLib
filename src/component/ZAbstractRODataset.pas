@@ -4188,7 +4188,7 @@ procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: TBookmark);
 procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: Pointer);
 {$ENDIF}
 begin
-  if not GotoRow(PNativeInt(Bookmark)^) then
+  if not GotoRow(PInteger(Bookmark)^) then
     raise EZDatabaseError.Create(SBookmarkWasNotFound);
 end;
 
@@ -4356,8 +4356,8 @@ begin
   if not Assigned(Bookmark1) or not Assigned(Bookmark2) then
     Exit;
 
-  Index1 := CurrentRows.IndexOf(Pointer(PNativeInt(Bookmark1)^));
-  Index2 := CurrentRows.IndexOf(Pointer(PNativeInt(Bookmark2)^));
+  Index1 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark1)^));
+  Index2 := CurrentRows.IndexOf(Pointer(PInteger(Bookmark2)^));
 
   if Index1 < Index2 then Result := -1
   else if Index1 > Index2 then Result := 1;
@@ -4390,7 +4390,7 @@ function TZAbstractRODataset.BookmarkValid(Bookmark: TBookmark): Boolean;
 begin
   Result := False;
   if Active and Assigned(Bookmark) and (FResultSet <> nil) and (CurrentRows <> nil) then
-    Result := CurrentRows.IndexOf(Pointer(PNativeInt(Bookmark)^)) >= 0;
+    Result := CurrentRows.IndexOf(Pointer(PInteger(Bookmark)^)) >= 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
