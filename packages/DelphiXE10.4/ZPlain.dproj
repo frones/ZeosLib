@@ -86,7 +86,7 @@
         <DCC_Description>Zeos Plain Database API</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_LegacyIFEND>true</DCC_LegacyIFEND>
-        <DllSuffix>260</DllSuffix>
+        <DllSuffix>270</DllSuffix>
         <PostBuildEventExecuteWhen>TargetOutOfDate</PostBuildEventExecuteWhen>
         <SanitizedProjectName>ZPlain</SanitizedProjectName>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>

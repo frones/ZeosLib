@@ -87,7 +87,7 @@
         <DCC_Description>Zeos Low Level Database API</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
-        <DllSuffix>260</DllSuffix>
+        <DllSuffix>270</DllSuffix>
         <SanitizedProjectName>ZDbc</SanitizedProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">

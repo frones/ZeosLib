@@ -85,7 +85,7 @@
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <DCC_Description>Zeos Database Components</DCC_Description>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
-        <DllSuffix>260</DllSuffix>
+        <DllSuffix>270</DllSuffix>
         <DCC_LegacyIFEND>true</DCC_LegacyIFEND>
         <SanitizedProjectName>ZComponent</SanitizedProjectName>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
@@ -204,7 +204,7 @@
                 </Source>
             </Delphi.Personality>
             <Deployment Version="3">
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\20.0\Bpl\Win32\ZComponent260.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\20.0\Bpl\Win32\ZComponent270.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>ZComponent.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
