@@ -497,7 +497,7 @@ begin
                             if (ColType <> stDate) then begin
                               TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, POraDate(P)^.Hour-1,
                                 POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', False);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9));
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9);
                             end;
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
