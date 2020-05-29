@@ -102,6 +102,7 @@ type
     FPlainDriver: TZASAPlainDriver;
     FHandle: PZASASQLCA;
     FCursorName: PAnsiChar;
+    FConnection: IZASAConnection;
     procedure CreateException(const  Msg: string);
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -110,8 +111,8 @@ type
   protected
     procedure ReadBlob(const Index: Word; var Buffer: Pointer; Length: LongWord);
   public
-    constructor Create(const PlainDriver: TZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
+    constructor Create(const Connection: IZASAConnection;
+      CursorName: PAnsiChar; NumVars: Word = StdVars);
     destructor Destroy; override;
 
     procedure AllocateSQLDA( NumVars: Word);
@@ -147,22 +148,9 @@ function ConvertASATypeToSQLType(const SQLType: SmallInt): TZSQLType;
 function ConvertASATypeToString( SQLType: SmallInt): String;
 
 function ConvertASAJDBCToSqlType(const FieldType: SmallInt): TZSQLType;
-{**
-  Checks for possible sql errors.
-  @param PlainDriver a MySQL plain driver.
-  @param Handle a MySQL connection handle.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
-procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
-  const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
-  const ConSettings: PZConSettings; const LogMessage: RawByteString = EmptyRaw;
-  const SupressExceptionID: Integer = 0);
 
 procedure DescribeCursor(const ASAConnection: IZASAConnection; const SQLData: IZASASQLDA;
   const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
-
-function RandomString(Len: integer): string;
 
 const SQLType2ASATypeMap: array[TZSQLType] of SmallInt =
   (DT_NOTYPE, //
@@ -267,14 +255,15 @@ begin
   SetFieldType(FSQLDA, Index, ASAType, Len);
 end;
 
-constructor TZASASQLDA.Create(const PlainDriver: TZASAPlainDriver; Handle: PZASASQLCA;
-   CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
+constructor TZASASQLDA.Create(const Connection: IZASAConnection;
+   CursorName: PAnsiChar; NumVars: Word = StdVars);
 begin
-  FPlainDriver := PlainDriver;
-  FHandle := Handle;
+  FConnection := Connection;
+  FPlainDriver := Connection.GetPlainDriver;
+  FHandle := Connection.GetDBHandle;
   FCursorName := CursorName;
   AllocateSQLDA(NumVars);
-  FConSettings := ConSettings;
+  FConSettings := Connection.GetConSettings;
   inherited Create;
 end;
 
@@ -549,7 +538,8 @@ begin
 
           while True do begin
             FPlainDriver.dbpp_get_data(FHandle, FCursorName, Index + 1, Offs, TempSQLDA, 0);
-            CheckASAError( FPlainDriver, FHandle, lcOther, FConSettings);
+            if FHandle.sqlCode <> SQLE_NOERROR then
+               FConnection.HandleErrorOrWarning(lcOther, 'dbpp_get_data', FConnection);
             if ( sqlind^ < 0 ) then
               break;
             Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
@@ -754,73 +744,25 @@ begin
   end;
 end;
 
-{**
-  Checks for possible sql errors.
-  @param PlainDriver a MySQL plain driver.
-  @param Handle a MySQL connection handle.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
-procedure CheckASAError(const PlainDriver: TZASAPlainDriver;
-  const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
-  const ConSettings: PZConSettings; const LogMessage: RawByteString = EmptyRaw;
-  const SupressExceptionID: Integer = 0);
-var
-  ErrorBuf: array[0..1024] of AnsiChar;
-  ErrorMessage: RawByteString;
-  P: PAnsiChar;
-begin
-  if Handle.SqlCode < SQLE_NOERROR then
-  begin
-    P := PlainDriver.sqlError_Message( Handle, @ErrorBuf[0], SizeOf( ErrorBuf));
-    {$IFDEF FPC}ErrorMessage := '';{$ENDIF}
-    ZSetString(P, StrLen(P), ErrorMessage);
-    //SyntaxError Position in SQLCount
-    if not (SupressExceptionID = Handle.SqlCode ) then
-    begin
-      DriverManager.LogError( LogCategory, ConSettings^.Protocol, LogMessage,
-        Handle.SqlCode, ErrorMessage);
-
-      raise EZSQLException.CreateWithCode( Handle.SqlCode,
-        Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
-    end;
-  end;
-end;
-
 procedure DescribeCursor(const ASAConnection: IZASAConnection; const SQLData: IZASASQLDA;
   const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
 var PlainDriver: TZASAPlainDriver;
+    ASASQLCA: PZASASQLCA;
 begin
-  //SQLData.AllocateSQLDA( StdVars);
-  with ASAConnection do
-  begin
-    PlainDriver := TZASAPlainDriver(GetIZPlainDriver.GetInstance);
-    PlainDriver.dbpp_describe_cursor(GetDBHandle, Pointer(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
-    ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
-    if SQLData.GetData^.sqld <= 0 then
-      raise EZSQLException.Create( SCanNotRetrieveResultSetData)
-    else if ( SQLData.GetData^.sqld > SQLData.GetData^.sqln) then
-    begin
-      SQLData.AllocateSQLDA( SQLData.GetData^.sqld);
-      PlainDriver.dbpp_describe_cursor(GetDBHandle, PAnsiChar(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
-      ZDbcASAUtils.CheckASAError(PlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
-    end;
-    //SQLData.InitFields;
+  PlainDriver := ASAConnection.GetPlainDriver;
+  ASASQLCA := ASAConnection.GetDBHandle;
+  PlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
+  if ASASQLCA.sqlCode <> SQLE_NOERROR then
+    ASAConnection.HandleErrorOrWarning(lcExecute, SQL, ASAConnection);
+  if SQLData.GetData^.sqld <= 0 then
+    raise EZSQLException.Create( SCanNotRetrieveResultSetData)
+  else if ( SQLData.GetData^.sqld > SQLData.GetData^.sqln) then begin
+    SQLData.AllocateSQLDA( SQLData.GetData^.sqld);
+    PlainDriver.dbpp_describe_cursor(ASASQLCA, PAnsiChar(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
+    if ASASQLCA.sqlCode <> SQLE_NOERROR then
+      ASAConnection.HandleErrorOrWarning(lcExecute, SQL, ASAConnection);
   end;
-end;
-
-{**
-   Generate specific length random string and return it
-   @param Len a length result string
-   @return random string
-}
-function RandomString( Len: integer): string;
-begin
-  Result := '';
-  while Length( Result) < Len do
-    Result := Result + ZFastCode.IntToStr(Random(High(Integer)));
-  if Length( Result) > Len then
-    Result := Copy( Result, 1, Len);
+  //SQLData.InitFields;
 end;
 
 {$ENDIF ZEOS_DISABLE_ASA}

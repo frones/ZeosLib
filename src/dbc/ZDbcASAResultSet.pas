@@ -194,7 +194,8 @@ type
   protected
     function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public //IImmediatelyReleasable
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost);
     function GetConSettings: PZConSettings;
   public
     constructor Create(const Connection: IZASAConnection; ASASQLDA: PASASQLDA;
@@ -323,7 +324,7 @@ begin
                                     TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
                                     PZASASQLDateTime(sqlData).Minute, PZASASQLDateTime(sqlData).Second,
                                     PZASASQLDateTime(sqlData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                                   end;
                                   if jcoMongoISODate in JSONComposeOptions
                                   then JSONWriter.AddShort('Z)"')
@@ -1448,22 +1449,24 @@ end;
     <code>false</code> otherwise
 }
 function TZASANativeResultSet.MoveAbsolute(Row: Integer): Boolean;
+var ASASQLCA: PZASASQLCA;
 begin
   Result := False;
   if Closed or ((MaxRows > 0) and (Row >= MaxRows)) then
     Exit;
+  ASASQLCA := FASAConnection.GetDBHandle;
+  FPlainDriver.dbpp_fetch(ASASQLCA,
+    Pointer(FCursorName), CUR_ABSOLUTE, Row, FSQLDA, BlockSize, CUR_FORREGULAR);
+  if ASASQLCA.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
+  if (ASASQLCA.sqlCode <> SQLE_NOERROR) and (ASASQLCA.sqlCode <> SQLE_NOTFOUND) then
+    FASAConnection.HandleErrorOrWarning(lcOther, 'dbpp_fetch', Self);
 
-  FPlainDriver.dbpp_fetch(FASAConnection.GetDBHandle,
-    Pointer(FCursorName), CUR_ABSOLUTE, Row, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-  ZDbcASAUtils.CheckASAError(FPlainDriver,
-    FASAConnection.GetDBHandle, lcOther, ConSettings);
-
-  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
+  if ASASQLCA.sqlCode <> SQLE_NOTFOUND then begin
     RowNo := Row;
     Result := True;
     FFetchStat := 0;
   end else begin
-    FFetchStat := FASAConnection.GetDBHandle.sqlerrd[2];
+    FFetchStat := ASASQLCA.sqlerrd[2];
     if FFetchStat > 0 then
       LastRowNo := Max(Row - FFetchStat, 0);
   end;
@@ -1487,17 +1490,21 @@ end;
     <code>false</code> otherwise
 }
 function TZASANativeResultSet.MoveRelative(Rows: Integer): Boolean;
+var ASASQLCA: PZASASQLCA;
 begin
   Result := False;
   if Closed or ((RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows))) then
     Exit;
-  FPlainDriver.dbpp_fetch(FASAConnection.GetDBHandle,
-    Pointer(FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-    ZDbcASAUtils.CheckASAError(FPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, ConSettings, EmptyRaw, SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
-  if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
-  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
-    //if (RowNo > 0) or (RowNo + Rows < 0) then
+  ASASQLCA := FASAConnection.GetDBHandle;
+  FPlainDriver.dbpp_fetch(ASASQLCA,
+    Pointer(FCursorName), CUR_RELATIVE, Rows, FSQLDA, BlockSize, CUR_FORREGULAR);
+  //handle a known null resultset issue (cursor not open)
+  //EH: is this correct?
+  if ASASQLCA.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
+  if (ASASQLCA.sqlCode <> SQLE_NOERROR) and (ASASQLCA.sqlCode <> SQLE_NOTFOUND) then
+    FASAConnection.HandleErrorOrWarning(lcOther, 'dbpp_fetch', Self);
+
+  if ASASQLCA.sqlCode <> SQLE_NOTFOUND then begin
     RowNo := RowNo + Rows;
     if Rows > 0 then
       LastRowNo := RowNo;
@@ -1679,7 +1686,8 @@ begin
     end;
     PZASABlobStruct(ASASQLVAR.sqlData).array_len := Count;
     FPlainDriver.dbpp_get_data(Fsqlca, FCursorName, FColumnNumber, FPosition, FASASQLDA, 0);
-    CheckASAError( FPlainDriver, Fsqlca, lcOther, FConSettings);
+    if (Fsqlca.sqlCode <> SQLE_NOERROR) then
+      FOwnerLob.FConnection.HandleErrorOrWarning(lcOther, 'dbpp_get_data', Self);
     Result := PZASABlobStruct(ASASQLVAR.sqlData)^.stored_len;
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(
       PZASABlobStruct(ASASQLVAR.sqlData)^.arr[0], Buffer, Result);
@@ -1742,17 +1750,19 @@ end;
 
 function TZASALob.CreateLobStream(CodePage: Word;
   LobStreamMode: TZLobStreamMode): TStream;
+var ASASQLCA: PZASASQLCA;
 begin
   if FReleased
   then Result := nil
   else begin
+    ASASQLCA := FConnection.GetDBHandle;
     if LobStreamMode <> lsmRead then
       raise CreateReadOnlyException;
     if FCurrentRowAddr^ <> FLobRowNo then begin
-      FPlainDriver.dbpp_fetch(FConnection.GetDBHandle,
+      FPlainDriver.dbpp_fetch(ASASQLCA,
         Pointer(FCursorName), CUR_ABSOLUTE, FLobRowNo, FASASQLDA, BlockSize, CUR_FORREGULAR);
-      ZDbcASAUtils.CheckASAError(FPlainDriver,
-        FConnection.GetDBHandle, lcOther, FConSettings);
+      if (ASASQLCA.sqlCode <> SQLE_NOERROR) then
+        FConnection.HandleErrorOrWarning(lcOther, 'dbpp_fetch', Self);
     end;
     Result := TZASAStream.Create(Self);
     if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
